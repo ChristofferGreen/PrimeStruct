@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <vector>
 
 #include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
@@ -19,6 +20,8 @@ using IsFileErrorBindingFn = std::function<bool(const Expr &)>;
 using SetReferenceArrayInfoForBindingFn = std::function<void(const Expr &, LocalInfo &)>;
 using ApplyStructBindingInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using IsStringBindingFn = std::function<bool(const Expr &)>;
+using EmitExprForBindingFn = std::function<bool(const Expr &, const LocalMap &)>;
+using IsEntryArgsNameFn = std::function<bool(const Expr &, const LocalMap &)>;
 
 struct StatementBindingTypeInfo {
   LocalInfo::Kind kind = LocalInfo::Kind::Value;
@@ -55,5 +58,18 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                  const IsStringBindingFn &isStringBinding,
                                  LocalInfo &infoOut,
                                  std::string &error);
+bool emitStringStatementBindingInitializer(const Expr &stmt,
+                                           const Expr &init,
+                                           LocalMap &localsIn,
+                                           int32_t &nextLocal,
+                                           std::vector<IrInstruction> &instructions,
+                                           const IsBindingMutableFn &isBindingMutable,
+                                           const std::function<int32_t(const std::string &)> &internString,
+                                           const EmitExprForBindingFn &emitExpr,
+                                           const InferBindingExprKindFn &inferExprKind,
+                                           const std::function<int32_t()> &allocTempLocal,
+                                           const IsEntryArgsNameFn &isEntryArgsName,
+                                           const std::function<void()> &emitArrayIndexOutOfBounds,
+                                           std::string &error);
 
 } // namespace primec::ir_lowerer

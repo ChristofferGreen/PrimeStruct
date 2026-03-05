@@ -11295,6 +11295,171 @@ TEST_CASE("ir lowerer statement binding helper rejects unknown uninitialized val
   CHECK(error == "native backend requires a concrete uninitialized storage type on storageSlot");
 }
 
+TEST_CASE("ir lowerer statement binding helper emits literal string bindings") {
+  primec::Expr stmt;
+  stmt.name = "label";
+  stmt.isBinding = true;
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::StringLiteral;
+  init.stringValue = "\"hello\"utf8";
+
+  primec::ir_lowerer::LocalMap locals;
+  int32_t nextLocal = 5;
+  std::vector<primec::IrInstruction> instructions;
+  int emitExprCalls = 0;
+  int boundsCalls = 0;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::emitStringStatementBindingInitializer(
+      stmt,
+      init,
+      locals,
+      nextLocal,
+      instructions,
+      [](const primec::Expr &) { return false; },
+      [](const std::string &decoded) {
+        CHECK(decoded == "hello");
+        return 17;
+      },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      []() { return 200; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&]() { ++boundsCalls; },
+      error));
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 0);
+  CHECK(boundsCalls == 0);
+  CHECK(nextLocal == 6);
+  auto it = locals.find("label");
+  REQUIRE(it != locals.end());
+  CHECK(it->second.index == 5);
+  CHECK(it->second.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(it->second.stringSource == primec::ir_lowerer::LocalInfo::StringSource::TableIndex);
+  CHECK(it->second.stringIndex == 17);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 17);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 5);
+}
+
+TEST_CASE("ir lowerer statement binding helper emits checked argv string bindings") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr stmt;
+  stmt.name = "argText";
+  stmt.isBinding = true;
+
+  primec::Expr argvName;
+  argvName.kind = primec::Expr::Kind::Name;
+  argvName.name = "argv";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 2;
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "at";
+  init.args = {argvName, indexExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  int32_t nextLocal = 9;
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextTempLocal = 40;
+  int boundsCalls = 0;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::emitStringStatementBindingInitializer(
+      stmt,
+      init,
+      locals,
+      nextLocal,
+      instructions,
+      [](const primec::Expr &) { return true; },
+      [](const std::string &) { return 0; },
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI32, expr.literalValue});
+        return true;
+      },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Literal) {
+          return ValueKind::Int32;
+        }
+        return ValueKind::Unknown;
+      },
+      [&]() { return nextTempLocal++; },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        return expr.kind == primec::Expr::Kind::Name && expr.name == "argv";
+      },
+      [&]() {
+        ++boundsCalls;
+        instructions.push_back({primec::IrOpcode::PushI32, 999});
+      },
+      error));
+  CHECK(error.empty());
+  CHECK(boundsCalls == 2);
+  CHECK(nextLocal == 10);
+  auto it = locals.find("argText");
+  REQUIRE(it != locals.end());
+  CHECK(it->second.index == 9);
+  CHECK(it->second.isMutable);
+  CHECK(it->second.valueKind == ValueKind::String);
+  CHECK(it->second.stringSource == primec::ir_lowerer::LocalInfo::StringSource::ArgvIndex);
+  CHECK(it->second.argvChecked);
+
+  bool sawPushArgc = false;
+  for (const auto &instruction : instructions) {
+    if (instruction.op == primec::IrOpcode::PushArgc) {
+      sawPushArgc = true;
+      break;
+    }
+  }
+  CHECK(sawPushArgc);
+}
+
+TEST_CASE("ir lowerer statement binding helper rejects non-string source bindings") {
+  primec::Expr stmt;
+  stmt.name = "label";
+  stmt.isBinding = true;
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Name;
+  init.name = "src";
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo srcInfo;
+  srcInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  srcInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  srcInfo.stringSource = primec::ir_lowerer::LocalInfo::StringSource::None;
+  locals.emplace("src", srcInfo);
+
+  int32_t nextLocal = 3;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::emitStringStatementBindingInitializer(
+      stmt,
+      init,
+      locals,
+      nextLocal,
+      instructions,
+      [](const primec::Expr &) { return false; },
+      [](const std::string &) { return 0; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      []() { return 0; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      []() {},
+      error));
+  CHECK(error == "native backend requires string bindings to use string literals, bindings, or entry args");
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;
