@@ -376,6 +376,8 @@ bool applyPrimecOutputDefaults(Options &out) {
       out.outputPath = stem + ".glsl";
     } else if (out.emitKind == "spirv") {
       out.outputPath = stem + ".spv";
+    } else if (out.emitKind == "wasm") {
+      out.outputPath = stem + ".wasm";
     } else {
       out.outputPath = stem;
     }

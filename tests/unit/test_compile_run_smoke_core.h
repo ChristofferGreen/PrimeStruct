@@ -220,6 +220,27 @@ main() {
   CHECK(diagnostics.find("Usage: primec") == std::string::npos);
 }
 
+TEST_CASE("primec options default to wasm extension for emit kind") {
+  std::vector<std::string> args = {
+      "primec",
+      "--emit=wasm",
+      "/tmp/compile_default_wasm_output.prime",
+  };
+  std::vector<char *> argv;
+  argv.reserve(args.size());
+  for (std::string &arg : args) {
+    argv.push_back(arg.data());
+  }
+
+  primec::Options options;
+  std::string parseError;
+  CHECK(primec::parseOptions(
+      static_cast<int>(argv.size()), argv.data(), primec::OptionsParserMode::Primec, options, parseError));
+  CHECK(parseError.empty());
+  CHECK(options.emitKind == "wasm");
+  CHECK(options.outputPath == "compile_default_wasm_output.wasm");
+}
+
 TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
 [return<int>]

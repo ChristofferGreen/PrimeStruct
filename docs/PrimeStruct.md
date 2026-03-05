@@ -124,6 +124,7 @@ module {
 - `primec --emit=wasm input.prime -o module`
   - Routes through canonical IR into `WasmEmitter`.
   - Current state: CLI and diagnostics wiring is in place; non-empty function lowering still reports a backend emit diagnostic until Wasm codegen TODOs land.
+  - When `-o` is omitted, output defaults to `<input-stem>.wasm`.
 - `primevm input.prime --entry /main -- <args>`
   - Runs the source via the PrimeStruct VM (equivalent to `primec --emit=vm`). `--entry` defaults to `/main` if omitted.
   - `--debug-json` streams VM debug events as NDJSON to stdout (`session_start`, hook events, and `stop` records with snapshots).

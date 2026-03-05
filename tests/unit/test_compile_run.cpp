@@ -1,6 +1,8 @@
 #include "third_party/doctest.h"
 
 #include "primec/IrSerializer.h"
+#include "primec/Options.h"
+#include "primec/OptionsParser.h"
 
 #include <algorithm>
 #include <cctype>
