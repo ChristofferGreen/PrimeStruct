@@ -898,6 +898,90 @@ TEST_CASE("spinning cube optional startup visual smoke checks") {
   CHECK(dom.find("Host running") != std::string::npos || dom.find("Wasm load skipped") != std::string::npos);
 }
 
+TEST_CASE("spinning cube browser startup smoke proves wasm bootstrap") {
+  std::filesystem::path sampleDir =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
+  if (!std::filesystem::exists(sampleDir)) {
+    sampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(sampleDir));
+
+  const std::filesystem::path cubePath = sampleDir / "cube.prime";
+  const std::filesystem::path indexPath = sampleDir / "index.html";
+  const std::filesystem::path mainJsPath = sampleDir / "main.js";
+  const std::filesystem::path wgslPath = sampleDir / "cube.wgsl";
+  REQUIRE(std::filesystem::exists(cubePath));
+  REQUIRE(std::filesystem::exists(indexPath));
+  REQUIRE(std::filesystem::exists(mainJsPath));
+  REQUIRE(std::filesystem::exists(wgslPath));
+
+  std::string browserCmd = "";
+  if (runCommand("chromium --version > /dev/null 2>&1") == 0) {
+    browserCmd = "chromium";
+  } else if (runCommand("google-chrome --version > /dev/null 2>&1") == 0) {
+    browserCmd = "google-chrome";
+  } else if (runCommand("chrome --version > /dev/null 2>&1") == 0) {
+    browserCmd = "chrome";
+  } else if (runCommand("google-chrome-stable --version > /dev/null 2>&1") == 0) {
+    browserCmd = "google-chrome-stable";
+  }
+
+  if (browserCmd.empty() || runCommand("python3 --version > /dev/null 2>&1") != 0) {
+    INFO("no headless browser+python available; skip spinning cube browser startup smoke");
+    return;
+  }
+  if (runCommand(browserCmd + " --headless --disable-gpu --dump-dom about:blank > /dev/null 2>&1") != 0) {
+    INFO("browser runtime lacks headless mode; skip spinning cube browser startup smoke");
+    return;
+  }
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_startup_smoke";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path wasmPath = outDir / "cube.wasm";
+  const std::string compileWasmCmd =
+      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(wasmPath.string()) + " --entry /main";
+  CHECK(runCommand(compileWasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+
+  std::filesystem::copy_file(indexPath, outDir / "index.html", std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(mainJsPath, outDir / "main.js", std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(wgslPath, outDir / "cube.wgsl", std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+
+  const std::filesystem::path serverLogPath = outDir / "server.log";
+  const std::filesystem::path serverPidPath = outDir / "server.pid";
+  const std::filesystem::path browserDomPath = outDir / "browser.dom.txt";
+  const std::filesystem::path browserErrPath = outDir / "browser.err.txt";
+
+  const int port = 18767;
+  const std::string startServerCmd = "python3 -m http.server " + std::to_string(port) + " --bind 127.0.0.1 --directory " +
+                                     quoteShellArg(outDir.string()) + " > " + quoteShellArg(serverLogPath.string()) +
+                                     " 2>&1 & echo $! > " + quoteShellArg(serverPidPath.string());
+  CHECK(runCommand(startServerCmd) == 0);
+  CHECK(runCommand("sleep 1") == 0);
+
+  const std::string runBrowserCmd = browserCmd + " --headless --disable-gpu --virtual-time-budget=6000 --dump-dom " +
+                                    "http://127.0.0.1:" + std::to_string(port) + "/index.html > " +
+                                    quoteShellArg(browserDomPath.string()) + " 2> " + quoteShellArg(browserErrPath.string());
+  const int browserCode = runCommand(runBrowserCmd);
+  runCommand("kill $(cat " + quoteShellArg(serverPidPath.string()) + ") > /dev/null 2>&1");
+
+  CHECK(browserCode == 0);
+  const std::string dom = readFile(browserDomPath.string());
+  CHECK(dom.find("Host running with cube.wasm and cube.wgsl bootstrap.") != std::string::npos);
+  CHECK(dom.find("Wasm load skipped") == std::string::npos);
+}
+
 TEST_CASE("spinning cube docs command snippets stay executable") {
   std::filesystem::path webReadmePath =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "README.md";
