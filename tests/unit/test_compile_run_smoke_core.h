@@ -1148,6 +1148,127 @@ main() {
   }
 }
 
+TEST_CASE("graphics api contract doc-linked constraints stay locked") {
+  std::filesystem::path graphicsDocPath = std::filesystem::current_path() / "docs" / "Graphics_API_Design.md";
+  if (!std::filesystem::exists(graphicsDocPath)) {
+    graphicsDocPath = std::filesystem::current_path().parent_path() / "docs" / "Graphics_API_Design.md";
+  }
+  REQUIRE(std::filesystem::exists(graphicsDocPath));
+  const std::string graphicsDoc = readFile(graphicsDocPath.string());
+
+  const std::vector<std::string> lockedConstraintIds = {
+      "GFX-CORE-API-NAMESPACE",
+      "GFX-CORE-SURFACE-V1",
+      "GFX-CORE-NO-EXT-NS",
+      "GFX-PROFILE-IDENTIFIERS",
+      "GFX-PROFILE-GATING",
+      "GFX-DIAG-PROFILE-CONTEXT",
+  };
+  for (const std::string &constraintId : lockedConstraintIds) {
+    CAPTURE(constraintId);
+    CHECK(graphicsDoc.find(constraintId) != std::string::npos);
+  }
+
+  const std::vector<std::string> lockedCoreSymbols = {
+      "Buffer<T>",
+      "Texture2D<T>",
+      "Sampler",
+      "ShaderModule",
+      "Pipeline",
+      "BindGroupLayout",
+      "BindGroup",
+      "CommandEncoder",
+      "RenderPass",
+      "Queue",
+      "Swapchain",
+  };
+  for (const std::string &symbol : lockedCoreSymbols) {
+    CAPTURE(symbol);
+    CHECK(graphicsDoc.find(symbol) != std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-CORE-NO-EXT-NS");
+    const std::string source = R"(
+import /std/gfx/ext/*
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+    const std::string srcPath = writeTemp("gfx_contract_no_ext_namespace.prime", source);
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / "primec_gfx_contract_no_ext_namespace.err.json").string();
+    const std::string command = "./primec --emit=vm " + quoteShellArg(srcPath) +
+                                " --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(command) == 2);
+    const std::string diagnostics = readFile(errPath);
+    CHECK(diagnostics.find("unknown import path: /std/gfx/ext/*") != std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-PROFILE-IDENTIFIERS");
+    const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+    const std::string srcPath = writeTemp("gfx_contract_profile_identifier_reject.prime", source);
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / "primec_gfx_contract_profile_identifier_reject.err.txt").string();
+    const std::string command = "./primec --emit=wasm --wasm-profile webgpu-browser " + quoteShellArg(srcPath) +
+                                " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(command) == 2);
+    const std::string diagnostics = readFile(errPath);
+    CHECK(diagnostics.find("unsupported --wasm-profile value: webgpu-browser (expected wasi|browser)") !=
+          std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-PROFILE-GATING");
+    CAPTURE("GFX-DIAG-PROFILE-CONTEXT");
+    const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line("gfx"utf8)
+  return(0i32)
+}
+)";
+    const std::string srcPath = writeTemp("gfx_contract_profile_gating_reject.prime", source);
+    const std::string wasmPath =
+        (std::filesystem::temp_directory_path() / "primec_gfx_contract_profile_gating_reject.wasm").string();
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / "primec_gfx_contract_profile_gating_reject.err.json").string();
+    const std::string command = "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(srcPath) + " -o " +
+                                quoteShellArg(wasmPath) + " --entry /main --emit-diagnostics 2> " +
+                                quoteShellArg(errPath);
+    CHECK(runCommand(command) == 2);
+    const std::string diagnostics = readFile(errPath);
+    CHECK(diagnostics.find("unsupported effect mask bits for wasm-browser target") != std::string::npos);
+    CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") != std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-CORE-API-NAMESPACE");
+    const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+    const std::string srcPath = writeTemp("gfx_contract_backend_emit_extension_reject.prime", source);
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / "primec_gfx_contract_backend_emit_extension_reject.err.txt").string();
+    const std::string command =
+        "./primec --emit=metal " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(command) == 2);
+    const std::string diagnostics = readFile(errPath);
+    CHECK(diagnostics.find("Usage: primec") != std::string::npos);
+  }
+}
+
 TEST_CASE("rejects stdlib version flag") {
   const std::string source = R"(
 [return<int>]

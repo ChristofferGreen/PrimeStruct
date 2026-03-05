@@ -1,53 +1,28 @@
 # PrimeStruct Graphics API Design
 
-Status: Draft (v0)
+Status: Locked (v1 Core Contract)
+Last updated: 2026-03-05
 
-This document defines the proposed graphics API architecture for PrimeStruct
-across browser and native backends.
+This document defines the locked cross-backend graphics API contract for the
+spinning-cube program family. The goal is to keep one portable language surface,
+apply profile-gated validation at compile time, and avoid backend-specific
+language namespaces in v1.
 
-## Goals
-- Provide one stable graphics API surface for PrimeStruct programs.
-- Support browser, native desktop, and macOS Metal targets with aligned
-  semantics.
-- Keep behavior deterministic where practical (resource creation order,
-  pipeline state hashing, diagnostics ordering).
-- Enable the spinning-cube sample as a shared cross-target milestone.
+## Scope
+- Covers the PrimeStruct language-facing graphics contract only.
+- Defines locked Core/API constraints and profile-gating rules.
+- Establishes conformance hooks that tests must exercise.
 
-## Non-goals (v1)
-- Exposing backend-specific extension namespaces in the language surface.
-- Full parity with every backend-specific advanced feature.
-- Solving all rendering domains (ray tracing, mesh shaders, bindless, etc.).
+## v1 Principles
+- One core graphics language surface under `/std/gfx/*`.
+- No backend extension namespace in the language surface for v1.
+- Profile differences are enforced with compile-time gating and deterministic
+diagnostics.
+- Browser, native desktop, and macOS Metal targets share one simulation/data
+contract; only host/shader artifacts vary by profile.
 
-## Decision Summary
-1. PrimeStruct uses a single portable graphics API surface (`PrimeGfx Core`).
-2. Backend support is controlled via explicit profiles:
-   - `metal-osx`
-   - `vulkan-native`
-   - `webgpu-browser`
-3. Feature differences are enforced through capability/limit gating, not
-   backend-specific language APIs.
-4. Backend-specific escape hatches are deferred until concrete gaps are proven
-   by at least two production use cases.
-
-## Architecture
-### Layer model
-1. Language layer:
-   - Core graphics types and calls under `/std/gfx/*`.
-   - No `/std/gfx/ext/*` namespace in v1.
-2. Compiler layer:
-   - Profile-aware validation of effects, types, and resource constraints.
-   - Shader translation path selected by profile.
-3. Runtime layer:
-   - Backend adapter per profile.
-   - Uniform command model from Core calls to backend command submission.
-
-### Compile-time profile gating
-- A profile is selected per build target.
-- Unsupported features fail at compile time with deterministic diagnostics.
-- Profile checks happen before backend emission.
-
-## PrimeGfx Core (proposed)
-### Resource model
+## Locked Core Surface (v1)
+The locked core object model names are:
 - `Buffer<T>`
 - `Texture2D<T>`
 - `Sampler`
@@ -55,100 +30,44 @@ across browser and native backends.
 - `Pipeline`
 - `BindGroupLayout`
 - `BindGroup`
-
-### Command model
 - `CommandEncoder`
 - `RenderPass`
 - `Queue`
-- `Swapchain`/presentation surface abstraction
+- `Swapchain`
 
-### Core operations
-- Create/destroy resources.
-- Upload/download buffer data (download support may be profile-gated).
-- Create shader modules and pipeline objects.
-- Bind resources and issue draw commands.
-- Submit command buffers and present frames.
+These names are stable contract anchors. Concrete implementation and lowering
+work for these names is staged by follow-up TODO items.
 
-## Shader Strategy
-### Direction
-- Keep one logical shader contract in PrimeStruct.
-- Emit profile-specific shader artifacts:
-  - `webgpu-browser`: WGSL-oriented output.
-  - `metal-osx`: MSL (`.metal`/`metallib`) output path.
-  - `vulkan-native`: SPIR-V path.
+## Locked Profile Set (v1)
+The graphics profiles tracked by this contract are:
+- `wasm-browser`
+- `native-desktop`
+- `metal-osx`
 
-### Immediate constraints
-- Keep v1 to a minimal graphics-safe subset used by the spinning-cube example.
-- Reject unsupported shader constructs at compile time with profile-aware
-  diagnostics.
+Current compiler flags may expose profile selectors differently (for example,
+`--wasm-profile browser` with alias `wasm-browser`). The contract profile names
+above remain the canonical design identifiers.
 
-## Capability and Limits Model
-Each profile advertises:
-- Supported shader stages.
-- Buffer/texture formats.
-- Resource binding limits.
-- Push-constant/uniform support policy.
-- Feature flags (for example: depth formats, instancing, index type support).
+## Locked Constraints and Conformance Hooks
 
-Compiler behavior:
-- Validate Core API usage against selected profile limits.
-- Produce stable diagnostics with explicit profile context.
+| ID | Locked Constraint | Conformance Hook |
+| --- | --- | --- |
+| `GFX-CORE-API-NAMESPACE` | Graphics API surface is rooted at `/std/gfx/*` and does not use backend-specific language namespaces. | `graphics_api_contract_doc_linked_constraints` (doc lock + unsupported backend emit check) |
+| `GFX-CORE-SURFACE-V1` | The v1 core object model names listed in this document are locked. | `graphics_api_contract_doc_linked_constraints` (doc lock checks) |
+| `GFX-CORE-NO-EXT-NS` | `/std/gfx/ext/*` is forbidden in v1. | `graphics_api_contract_doc_linked_constraints` (compile diagnostic check) |
+| `GFX-PROFILE-IDENTIFIERS` | Profile identifiers are locked to `wasm-browser`, `native-desktop`, `metal-osx`. | `graphics_api_contract_doc_linked_constraints` (profile value rejection check) |
+| `GFX-PROFILE-GATING` | Unsupported profile features fail at compile time before backend emission. | `graphics_api_contract_doc_linked_constraints` (wasm-browser reject check) |
+| `GFX-DIAG-PROFILE-CONTEXT` | Profile-gated failures must include deterministic profile/backend context in diagnostics. | `graphics_api_contract_doc_linked_constraints` (diagnostic content check) |
 
-Runtime behavior:
-- Validate hardware/runtime-reported limits against compile assumptions.
-- Fail early with deterministic error codes if runtime limits are insufficient.
+## Non-goals (v1)
+- No `/std/gfx/ext/*` backend extension namespace.
+- No requirement for parity with advanced backend-specific features.
+- No expansion to additional backend profile names without contract update and
+conformance tests.
 
-## Determinism Rules
-- Stable ordering for resource binding layout generation.
-- Stable pipeline key/hash computation.
-- Stable diagnostic ordering for profile validation failures.
-- Deterministic simulation loop for example workloads (fixed-step updates).
-
-## Testing Strategy
-### Unit tests
-- Core API validation logic.
-- Profile capability matrix checks.
-- Shader artifact metadata checks.
-
-### Compile-run tests
-- Positive/negative profile-gated compile cases.
-- VM/native/Wasm simulation parity for shared cube transform math.
-
-### Integration tests
-- Build artifact checks for all targets (`.wasm`, native binary, shader assets).
-- macOS Metal shader compile smoke (`xcrun metal`, `metallib`).
-- Optional browser startup smoke checks where CI environment allows.
-
-### Golden/snapshot tests
-- Diagnostic output snapshots for unsupported feature paths.
-- Pipeline/resource layout serialization snapshots.
-
-## Spinning Cube Milestone Contract
-The spinning-cube sample is the first conformance target for this design.
-
-Required:
-- Shared simulation logic.
-- Browser host path (`webgpu-browser`).
-- Native host path.
-- macOS Metal host path.
-- Cross-target deterministic transform progression checks.
-
-## Evolution Policy
-- Do not add backend-specific `/std/gfx/ext/*` APIs in v1.
-- Re-evaluate extension namespaces only if:
-  1. A concrete missing feature cannot be represented in Core.
-  2. The feature is justified by at least two real workloads.
-  3. The team approves a compatibility and testing plan.
-
-## Open Questions
-- Final shader intermediate strategy between front-end and profile emitters.
-- Resource lifetime/ownership details for long-lived pipelines.
-- Exact balance of compile-time vs runtime validation for hardware limits.
-- Synchronization model surface (barriers/events) for post-v1.
-
-## Next Steps
-1. Lock the minimal `PrimeGfx Core` surface for spinning-cube scope.
-2. Define profile capability tables (`metal-osx`, `vulkan-native`,
-   `webgpu-browser`) in code and tests.
-3. Implement profile-gated compiler diagnostics.
-4. Wire first end-to-end sample pipelines with artifact checks in CI.
+## Change Control
+Any change to this contract requires:
+1. Update this document (including locked IDs or rationale).
+2. Update doc-linked conformance tests for every affected locked constraint.
+3. Update `docs/todo.md` with explicit follow-up work if implementation is
+split across multiple PRs.
