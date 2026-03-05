@@ -35,6 +35,11 @@ enum class UninitializedStorageInitDropEmitResult {
   Emitted,
   Error,
 };
+enum class UninitializedStorageTakeEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
 
 struct StatementBindingTypeInfo {
   LocalInfo::Kind kind = LocalInfo::Kind::Value;
@@ -93,6 +98,13 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
     const std::function<int32_t()> &allocTempLocal,
     const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
+    std::string &error);
+UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
+    const EmitExprForBindingFn &emitExpr,
     std::string &error);
 
 } // namespace primec::ir_lowerer

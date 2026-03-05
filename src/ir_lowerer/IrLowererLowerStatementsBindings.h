@@ -201,20 +201,21 @@
     if (uninitializedInitDropResult == ir_lowerer::UninitializedStorageInitDropEmitResult::Emitted) {
       return true;
     }
-    if (stmt.kind == Expr::Kind::Call && !stmt.isMethodCall && isSimpleCallName(stmt, "take") &&
-        stmt.args.size() == 1) {
-      UninitializedStorageAccess access;
-      bool resolved = false;
-      if (!resolveUninitializedStorage(stmt.args.front(), localsIn, access, resolved)) {
-        return false;
-      }
-      if (resolved) {
-        if (!emitExpr(stmt, localsIn)) {
-          return false;
-        }
-        function.instructions.push_back({IrOpcode::Pop, 0});
-        return true;
-      }
+    const auto uninitializedTakeResult = ir_lowerer::tryEmitUninitializedStorageTakeStatement(
+        stmt,
+        localsIn,
+        function.instructions,
+        [&](const Expr &storageExpr,
+            const LocalMap &valueLocals,
+            ir_lowerer::UninitializedStorageAccessInfo &accessOut,
+            bool &resolvedOut) { return resolveUninitializedStorage(storageExpr, valueLocals, accessOut, resolvedOut); },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+        error);
+    if (uninitializedTakeResult == ir_lowerer::UninitializedStorageTakeEmitResult::Error) {
+      return false;
+    }
+    if (uninitializedTakeResult == ir_lowerer::UninitializedStorageTakeEmitResult::Emitted) {
+      return true;
     }
     PrintBuiltin printBuiltin;
     if (stmt.kind == Expr::Kind::Call && getPrintBuiltin(stmt, printBuiltin)) {

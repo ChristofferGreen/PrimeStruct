@@ -11661,6 +11661,112 @@ TEST_CASE("ir lowerer statement binding helper validates uninitialized init drop
   CHECK(error == "drop requires uninitialized storage");
 }
 
+TEST_CASE("ir lowerer statement binding helper emits uninitialized take statements") {
+  using EmitResult = primec::ir_lowerer::UninitializedStorageTakeEmitResult;
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Name;
+  storageExpr.name = "slot";
+
+  primec::Expr takeCall;
+  takeCall.kind = primec::Expr::Kind::Call;
+  takeCall.name = "take";
+  takeCall.args = {storageExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageTakeStatement(
+            takeCall,
+            locals,
+            instructions,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::UninitializedStorageAccessInfo &,
+               bool &resolved) {
+              resolved = true;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI64, 7});
+              return true;
+            },
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::Pop);
+}
+
+TEST_CASE("ir lowerer statement binding helper skips non-emittable take statements") {
+  using EmitResult = primec::ir_lowerer::UninitializedStorageTakeEmitResult;
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Name;
+  storageExpr.name = "slot";
+
+  primec::Expr takeCall = storageExpr;
+  takeCall.kind = primec::Expr::Kind::Call;
+  takeCall.name = "take";
+  takeCall.args = {storageExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageTakeStatement(
+            takeCall,
+            locals,
+            instructions,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::UninitializedStorageAccessInfo &,
+               bool &resolved) {
+              resolved = false;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+
+  primec::Expr wrongArity = takeCall;
+  wrongArity.args.push_back(storageExpr);
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageTakeStatement(
+            wrongArity,
+            locals,
+            instructions,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::UninitializedStorageAccessInfo &,
+               bool &resolved) {
+              resolved = true;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer statement binding helper surfaces take resolution errors") {
+  using EmitResult = primec::ir_lowerer::UninitializedStorageTakeEmitResult;
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Name;
+  storageExpr.name = "slot";
+
+  primec::Expr takeCall;
+  takeCall.kind = primec::Expr::Kind::Call;
+  takeCall.name = "take";
+  takeCall.args = {storageExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageTakeStatement(
+            takeCall,
+            locals,
+            instructions,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::UninitializedStorageAccessInfo &,
+               bool &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            error) == EmitResult::Error);
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

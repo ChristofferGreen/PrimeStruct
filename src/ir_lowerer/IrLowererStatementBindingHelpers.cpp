@@ -441,4 +441,30 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
   return UninitializedStorageInitDropEmitResult::Emitted;
 }
 
+UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
+    const EmitExprForBindingFn &emitExpr,
+    std::string &error) {
+  if (stmt.kind != Expr::Kind::Call || stmt.isMethodCall || !isSimpleCallName(stmt, "take") || stmt.args.size() != 1) {
+    return UninitializedStorageTakeEmitResult::NotMatched;
+  }
+
+  UninitializedStorageAccessInfo access;
+  bool resolved = false;
+  if (!resolveUninitializedStorage(stmt.args.front(), localsIn, access, resolved)) {
+    return UninitializedStorageTakeEmitResult::Error;
+  }
+  if (!resolved) {
+    return UninitializedStorageTakeEmitResult::NotMatched;
+  }
+  if (!emitExpr(stmt, localsIn)) {
+    return UninitializedStorageTakeEmitResult::Error;
+  }
+  instructions.push_back({IrOpcode::Pop, 0});
+  return UninitializedStorageTakeEmitResult::Emitted;
+}
+
 } // namespace primec::ir_lowerer
