@@ -321,4 +321,76 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
   return sawValue ? lastKind : LocalInfo::ValueKind::Unknown;
 }
 
+MathBuiltinReturnKindResolution inferMathBuiltinReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    bool hasMathImport,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  std::string builtin;
+
+  if (getBuiltinClampName(expr, hasMathImport)) {
+    if (expr.args.size() != 3) {
+      return MathBuiltinReturnKindResolution::Resolved;
+    }
+    auto first = inferExprKind(expr.args[0], localsIn);
+    auto second = inferExprKind(expr.args[1], localsIn);
+    auto third = inferExprKind(expr.args[2], localsIn);
+    kindOut = combineNumericKinds(combineNumericKinds(first, second), third);
+    return MathBuiltinReturnKindResolution::Resolved;
+  }
+  if (getBuiltinMinMaxName(expr, builtin, hasMathImport) ||
+      getBuiltinPowName(expr, builtin, hasMathImport) ||
+      getBuiltinHypotName(expr, builtin, hasMathImport) ||
+      getBuiltinCopysignName(expr, builtin, hasMathImport) ||
+      getBuiltinTrig2Name(expr, builtin, hasMathImport)) {
+    if (expr.args.size() != 2) {
+      return MathBuiltinReturnKindResolution::Resolved;
+    }
+    auto left = inferExprKind(expr.args[0], localsIn);
+    auto right = inferExprKind(expr.args[1], localsIn);
+    kindOut = combineNumericKinds(left, right);
+    return MathBuiltinReturnKindResolution::Resolved;
+  }
+  if (getBuiltinLerpName(expr, builtin, hasMathImport) ||
+      getBuiltinFmaName(expr, builtin, hasMathImport)) {
+    if (expr.args.size() != 3) {
+      return MathBuiltinReturnKindResolution::Resolved;
+    }
+    auto first = inferExprKind(expr.args[0], localsIn);
+    auto second = inferExprKind(expr.args[1], localsIn);
+    auto third = inferExprKind(expr.args[2], localsIn);
+    kindOut = combineNumericKinds(combineNumericKinds(first, second), third);
+    return MathBuiltinReturnKindResolution::Resolved;
+  }
+  if (getBuiltinMathPredicateName(expr, builtin, hasMathImport)) {
+    if (expr.args.size() != 1) {
+      return MathBuiltinReturnKindResolution::Resolved;
+    }
+    kindOut = LocalInfo::ValueKind::Bool;
+    return MathBuiltinReturnKindResolution::Resolved;
+  }
+  if (getBuiltinAngleName(expr, builtin, hasMathImport) ||
+      getBuiltinTrigName(expr, builtin, hasMathImport) ||
+      getBuiltinArcTrigName(expr, builtin, hasMathImport) ||
+      getBuiltinHyperbolicName(expr, builtin, hasMathImport) ||
+      getBuiltinArcHyperbolicName(expr, builtin, hasMathImport) ||
+      getBuiltinExpName(expr, builtin, hasMathImport) ||
+      getBuiltinLogName(expr, builtin, hasMathImport) ||
+      getBuiltinAbsSignName(expr, builtin, hasMathImport) ||
+      getBuiltinSaturateName(expr, builtin, hasMathImport) ||
+      getBuiltinRoundingName(expr, builtin, hasMathImport) ||
+      getBuiltinRootName(expr, builtin, hasMathImport)) {
+    if (expr.args.size() != 1) {
+      return MathBuiltinReturnKindResolution::Resolved;
+    }
+    kindOut = inferExprKind(expr.args.front(), localsIn);
+    return MathBuiltinReturnKindResolution::Resolved;
+  }
+
+  return MathBuiltinReturnKindResolution::NotMatched;
+}
+
 } // namespace primec::ir_lowerer

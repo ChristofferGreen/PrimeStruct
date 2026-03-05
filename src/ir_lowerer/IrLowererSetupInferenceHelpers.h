@@ -25,6 +25,8 @@ using SetupInferenceBindingValueKindFn =
     std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
 using ApplySetupInferenceStructInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using InferSetupInferenceStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
+using SetupInferenceCombineNumericKindsFn =
+    std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
 
 enum class CallExpressionReturnKindResolution {
   NotResolved,
@@ -32,6 +34,10 @@ enum class CallExpressionReturnKindResolution {
   MatchedButUnsupported,
 };
 enum class ArrayMapAccessElementKindResolution {
+  NotMatched,
+  Resolved,
+};
+enum class MathBuiltinReturnKindResolution {
   NotMatched,
   Resolved,
 };
@@ -76,5 +82,12 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
     const ApplySetupInferenceStructInfoFn &applyStructArrayInfo,
     const ApplySetupInferenceStructInfoFn &applyStructValueInfo,
     const InferSetupInferenceStructExprPathFn &inferStructExprPath);
+MathBuiltinReturnKindResolution inferMathBuiltinReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    bool hasMathImport,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
+    LocalInfo::ValueKind &kindOut);
 
 } // namespace primec::ir_lowerer
