@@ -123,6 +123,25 @@ bool emitBodyStatementsWithFileScope(
     const std::function<void()> &pushFileScope,
     const std::function<void()> &emitCurrentFileScopeCleanup,
     const std::function<void()> &popFileScope);
+bool declareForConditionBinding(
+    const Expr &binding,
+    LocalMap &locals,
+    int32_t &nextLocal,
+    const std::function<bool(const Expr &)> &isBindingMutable,
+    const std::function<LocalInfo::Kind(const Expr &)> &bindingKind,
+    const std::function<bool(const Expr &)> &hasExplicitBindingTypeTransform,
+    const std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)> &bindingValueKind,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const std::function<void(const Expr &, LocalInfo &)> &applyStructArrayInfo,
+    const std::function<void(const Expr &, LocalInfo &)> &applyStructValueInfo,
+    std::string &error);
+bool emitForConditionBindingInit(
+    const Expr &binding,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error);
 struct BufferInitInfo {
   int32_t count = 0;
   LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;

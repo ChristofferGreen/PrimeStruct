@@ -14426,6 +14426,172 @@ TEST_CASE("ir lowerer flow helpers emit body statements with file scope") {
   CHECK(events[2] == "after");
 }
 
+TEST_CASE("ir lowerer flow helpers declare for-condition bindings") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  using Kind = primec::ir_lowerer::LocalInfo::Kind;
+
+  primec::Expr initExpr;
+  initExpr.kind = primec::Expr::Kind::Literal;
+  initExpr.intWidth = 32;
+  initExpr.literalValue = 1;
+
+  primec::Expr bindingExpr;
+  bindingExpr.kind = primec::Expr::Kind::Name;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "cond";
+  bindingExpr.args = {initExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  int32_t nextLocal = 7;
+  std::string error;
+  CHECK(primec::ir_lowerer::declareForConditionBinding(
+      bindingExpr,
+      locals,
+      nextLocal,
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &) { return Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, Kind) { return ValueKind::Int64; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      error));
+  CHECK(error.empty());
+  CHECK(nextLocal == 8);
+  auto it = locals.find("cond");
+  REQUIRE(it != locals.end());
+  CHECK(it->second.index == 7);
+  CHECK(it->second.valueKind == ValueKind::Int32);
+
+  primec::Expr structBindingExpr = bindingExpr;
+  structBindingExpr.name = "cond_struct";
+  CHECK(primec::ir_lowerer::declareForConditionBinding(
+      structBindingExpr,
+      locals,
+      nextLocal,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, Kind) { return ValueKind::Unknown; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string("/Vec3"); },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      error));
+  auto structIt = locals.find("cond_struct");
+  REQUIRE(structIt != locals.end());
+  CHECK(structIt->second.structTypeName == "/Vec3");
+  CHECK(structIt->second.valueKind == ValueKind::Unknown);
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::declareForConditionBinding(
+      bindingExpr,
+      locals,
+      nextLocal,
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &) { return Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, Kind) { return ValueKind::Int64; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      error));
+  CHECK(error == "binding redefines existing name: cond");
+
+  primec::Expr badArityExpr = bindingExpr;
+  badArityExpr.args.clear();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::declareForConditionBinding(
+      badArityExpr,
+      locals,
+      nextLocal,
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &) { return Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, Kind) { return ValueKind::Int64; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      error));
+  CHECK(error == "binding requires exactly one argument");
+}
+
+TEST_CASE("ir lowerer flow helpers init for-condition bindings") {
+  primec::Expr initExpr;
+  initExpr.kind = primec::Expr::Kind::Literal;
+  initExpr.intWidth = 32;
+  initExpr.literalValue = 9;
+
+  primec::Expr bindingExpr;
+  bindingExpr.kind = primec::Expr::Kind::Name;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "cond";
+  bindingExpr.args = {initExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 13;
+  locals.emplace("cond", info);
+
+  std::vector<primec::IrInstruction> instructions;
+  int emitExprCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitForConditionBindingInit(
+      bindingExpr,
+      locals,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return true;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      error));
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[0].imm == 13);
+
+  primec::Expr missingBindingExpr = bindingExpr;
+  missingBindingExpr.name = "missing";
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitForConditionBindingInit(
+      missingBindingExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [&](primec::IrOpcode, uint64_t) {},
+      error));
+  CHECK(error == "binding missing local: missing");
+
+  primec::Expr badArityExpr = bindingExpr;
+  badArityExpr.args.clear();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitForConditionBindingInit(
+      badArityExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [&](primec::IrOpcode, uint64_t) {},
+      error));
+  CHECK(error == "binding requires exactly one argument");
+
+  instructions.clear();
+  emitExprCalls = 0;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitForConditionBindingInit(
+      bindingExpr,
+      locals,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return false;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      error));
+  CHECK(emitExprCalls == 1);
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer flow helpers resolve buffer init info") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 

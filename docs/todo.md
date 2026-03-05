@@ -21,10 +21,11 @@ Legend:
 - ✓ Continue expression-call refactor by extracting `File(...)` constructor dispatch from `IrLowererLowerEmitExpr.h` into compileable helpers with direct unit coverage.
 - ✓ Continue expression-call refactor by extracting `Result.why`/`FileError.why` dispatch orchestration from `IrLowererLowerEmitExpr.h` into compileable helpers with direct unit coverage.
 - ✓ Continue expression-call refactor by extracting buffer builtin + count/access dispatch paths from `IrLowererLowerEmitExpr.h` into compileable helpers with direct unit coverage.
-- ◐ Refactor complex loop/control-flow statement lowering in `IrLowererLowerStatementsLoops.h` (phase 1 extracted counted-loop kind resolution + counter/check/decrement scaffolding for `loop`/`repeat` to compileable `IrLowererFlowHelpers.{h,cpp}` with helper-unit coverage; phase 2 extracted `while`/`for` body-scope orchestration to compileable `IrLowererFlowHelpers.{h,cpp}` with helper-unit coverage).
+- ◐ Refactor complex loop/control-flow statement lowering in `IrLowererLowerStatementsLoops.h` (phase 1 extracted counted-loop kind resolution + counter/check/decrement scaffolding for `loop`/`repeat` to compileable `IrLowererFlowHelpers.{h,cpp}` with helper-unit coverage; phase 2 extracted `while`/`for` body-scope orchestration to compileable `IrLowererFlowHelpers.{h,cpp}` with helper-unit coverage; phase 3 extracted `for` condition-binding declare/init helpers to compileable `IrLowererFlowHelpers.{h,cpp}` with helper-unit coverage).
 - ✓ Continue loop/control-flow refactor by extracting counted-loop scaffolding for `loop`/`repeat` from `IrLowererLowerStatementsLoops.h` into compileable helpers with direct unit coverage.
 - ✓ Continue loop/control-flow refactor by extracting `while`/`for` body-scope orchestration from `IrLowererLowerStatementsLoops.h` into compileable helpers with direct unit coverage.
-- ○ Continue loop/control-flow refactor by extracting `for` condition-binding declare/init helpers from `IrLowererLowerStatementsLoops.h` into compileable helpers with direct unit coverage.
+- ✓ Continue loop/control-flow refactor by extracting `for` condition-binding declare/init helpers from `IrLowererLowerStatementsLoops.h` into compileable helpers with direct unit coverage.
+- ○ Continue loop/control-flow refactor by extracting vector helper statement lowering (`push`/`pop`/`reserve`/`clear`/`remove_at`/`remove_swap`) from `IrLowererLowerStatementsLoops.h` into compileable helpers with direct unit coverage.
 - ◐ Refactor complex binding/storage statement lowering in `IrLowererLowerStatementsBindings.h`.
 - ◐ Refactor complex statement-call lowering in `IrLowererLowerStatementsCalls.h`.
 - ◐ Refactor setup inference and adapter wiring in `IrLowererLowerSetupInference.h`.

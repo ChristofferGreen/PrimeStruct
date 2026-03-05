@@ -107,56 +107,6 @@
         error = "for requires init, condition, step, and body";
         return false;
       }
-      auto declareLoopBinding = [&](const Expr &binding, LocalMap &locals) -> bool {
-        if (binding.args.size() != 1) {
-          error = "binding requires exactly one argument";
-          return false;
-        }
-        if (locals.count(binding.name) > 0) {
-          error = "binding redefines existing name: " + binding.name;
-          return false;
-        }
-        LocalInfo info;
-        info.index = nextLocal++;
-        info.isMutable = isBindingMutable(binding);
-        info.kind = bindingKind(binding);
-        info.valueKind = LocalInfo::ValueKind::Unknown;
-        info.mapKeyKind = LocalInfo::ValueKind::Unknown;
-        info.mapValueKind = LocalInfo::ValueKind::Unknown;
-        if (hasExplicitBindingTypeTransform(binding)) {
-          info.valueKind = bindingValueKind(binding, info.kind);
-        } else if (info.kind == LocalInfo::Kind::Value) {
-          info.valueKind = inferExprKind(binding.args.front(), locals);
-          if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-            std::string inferredStruct = inferStructExprPath(binding.args.front(), locals);
-            if (!inferredStruct.empty()) {
-              info.structTypeName = inferredStruct;
-            } else {
-              info.valueKind = LocalInfo::ValueKind::Int32;
-            }
-          }
-        }
-        applyStructArrayInfo(binding, info);
-        applyStructValueInfo(binding, info);
-        locals.emplace(binding.name, info);
-        return true;
-      };
-      auto emitLoopBindingInit = [&](const Expr &binding, LocalMap &locals) -> bool {
-        if (binding.args.size() != 1) {
-          error = "binding requires exactly one argument";
-          return false;
-        }
-        auto it = locals.find(binding.name);
-        if (it == locals.end()) {
-          error = "binding missing local: " + binding.name;
-          return false;
-        }
-        if (!emitExpr(binding.args.front(), locals)) {
-          return false;
-        }
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      };
       LocalMap loopLocals = localsIn;
       if (!emitStatement(stmt.args[0], loopLocals)) {
         return false;
@@ -169,7 +119,23 @@
         return false;
       }
       if (cond.isBinding) {
-        if (!declareLoopBinding(cond, loopLocals)) {
+        if (!ir_lowerer::declareForConditionBinding(
+                cond,
+                loopLocals,
+                nextLocal,
+                [&](const Expr &bindingExpr) { return isBindingMutable(bindingExpr); },
+                [&](const Expr &bindingExpr) { return bindingKind(bindingExpr); },
+                [&](const Expr &bindingExpr) { return hasExplicitBindingTypeTransform(bindingExpr); },
+                [&](const Expr &bindingExpr, LocalInfo::Kind kind) { return bindingValueKind(bindingExpr, kind); },
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                  return inferExprKind(valueExpr, valueLocals);
+                },
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                  return inferStructExprPath(valueExpr, valueLocals);
+                },
+                [&](const Expr &bindingExpr, LocalInfo &info) { applyStructArrayInfo(bindingExpr, info); },
+                [&](const Expr &bindingExpr, LocalInfo &info) { applyStructValueInfo(bindingExpr, info); },
+                error)) {
           return false;
         }
       }
@@ -177,7 +143,14 @@
       const size_t checkIndex = function.instructions.size();
       LocalInfo::ValueKind condKind = LocalInfo::ValueKind::Unknown;
       if (cond.isBinding) {
-        if (!emitLoopBindingInit(cond, loopLocals)) {
+        if (!ir_lowerer::emitForConditionBindingInit(
+                cond,
+                loopLocals,
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                  return emitExpr(valueExpr, valueLocals);
+                },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                error)) {
           return false;
         }
         Expr condName;

@@ -352,6 +352,76 @@ bool emitBodyStatementsWithFileScope(
   return true;
 }
 
+bool declareForConditionBinding(
+    const Expr &binding,
+    LocalMap &locals,
+    int32_t &nextLocal,
+    const std::function<bool(const Expr &)> &isBindingMutable,
+    const std::function<LocalInfo::Kind(const Expr &)> &bindingKind,
+    const std::function<bool(const Expr &)> &hasExplicitBindingTypeTransform,
+    const std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)> &bindingValueKind,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const std::function<void(const Expr &, LocalInfo &)> &applyStructArrayInfo,
+    const std::function<void(const Expr &, LocalInfo &)> &applyStructValueInfo,
+    std::string &error) {
+  if (binding.args.size() != 1) {
+    error = "binding requires exactly one argument";
+    return false;
+  }
+  if (locals.count(binding.name) > 0) {
+    error = "binding redefines existing name: " + binding.name;
+    return false;
+  }
+
+  LocalInfo info;
+  info.index = nextLocal++;
+  info.isMutable = isBindingMutable(binding);
+  info.kind = bindingKind(binding);
+  info.valueKind = LocalInfo::ValueKind::Unknown;
+  info.mapKeyKind = LocalInfo::ValueKind::Unknown;
+  info.mapValueKind = LocalInfo::ValueKind::Unknown;
+  if (hasExplicitBindingTypeTransform(binding)) {
+    info.valueKind = bindingValueKind(binding, info.kind);
+  } else if (info.kind == LocalInfo::Kind::Value) {
+    info.valueKind = inferExprKind(binding.args.front(), locals);
+    if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+      std::string inferredStruct = inferStructExprPath(binding.args.front(), locals);
+      if (!inferredStruct.empty()) {
+        info.structTypeName = inferredStruct;
+      } else {
+        info.valueKind = LocalInfo::ValueKind::Int32;
+      }
+    }
+  }
+  applyStructArrayInfo(binding, info);
+  applyStructValueInfo(binding, info);
+  locals.emplace(binding.name, info);
+  return true;
+}
+
+bool emitForConditionBindingInit(
+    const Expr &binding,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error) {
+  if (binding.args.size() != 1) {
+    error = "binding requires exactly one argument";
+    return false;
+  }
+  auto it = localsIn.find(binding.name);
+  if (it == localsIn.end()) {
+    error = "binding missing local: " + binding.name;
+    return false;
+  }
+  if (!emitExpr(binding.args.front(), localsIn)) {
+    return false;
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(it->second.index));
+  return true;
+}
+
 bool resolveBufferInitInfo(const Expr &expr,
                            const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
                            BufferInitInfo &out,
