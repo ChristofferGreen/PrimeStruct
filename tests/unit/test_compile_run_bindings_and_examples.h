@@ -213,6 +213,31 @@ TEST_CASE("spinning cube shared source compiles across profile targets") {
   CHECK(readFile(metalErrPath).find("Usage: primec") != std::string::npos);
 }
 
+TEST_CASE("spinning cube rotation parity entry compiles across targets") {
+  std::filesystem::path cubePath =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "cube.prime";
+  if (!std::filesystem::exists(cubePath)) {
+    cubePath = std::filesystem::current_path() / "examples" / "web" / "spinning_cube" / "cube.prime";
+  }
+  REQUIRE(std::filesystem::exists(cubePath));
+
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_entry_native_smoke").string();
+  const std::string wasmPath =
+      (std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_entry_browser_smoke.wasm").string();
+
+  const std::string nativeCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
+                                quoteShellArg(nativePath) + " --entry /cubeRotationParity120";
+  CHECK(runCommand(nativeCmd) == 0);
+  CHECK(std::filesystem::exists(nativePath));
+
+  const std::string wasmBrowserCmd =
+      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(wasmPath) + " --entry /cubeRotationParity120";
+  CHECK(runCommand(wasmBrowserCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+}
+
 TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
   std::filesystem::path sampleDir =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
