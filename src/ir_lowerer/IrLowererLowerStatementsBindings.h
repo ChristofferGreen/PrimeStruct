@@ -217,42 +217,20 @@
     if (uninitializedTakeResult == ir_lowerer::UninitializedStorageTakeEmitResult::Emitted) {
       return true;
     }
-    PrintBuiltin printBuiltin;
-    if (stmt.kind == Expr::Kind::Call && getPrintBuiltin(stmt, printBuiltin)) {
-      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-        error = printBuiltin.name + " does not support body arguments";
-        return false;
-      }
-      if (stmt.args.size() != 1) {
-        error = printBuiltin.name + " requires exactly one argument";
-        return false;
-      }
-      return emitPrintArg(stmt.args.front(), localsIn, printBuiltin);
+    const auto printPathSpaceResult = ir_lowerer::tryEmitPrintPathSpaceStatementBuiltin(
+        stmt,
+        localsIn,
+        [&](const Expr &argExpr, const LocalMap &valueLocals, const ir_lowerer::PrintBuiltin &builtin) {
+          return emitPrintArg(argExpr, valueLocals, builtin);
+        },
+        [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+        [&](const Expr &argExpr, const LocalMap &valueLocals) { return emitExpr(argExpr, valueLocals); },
+        function.instructions,
+        error);
+    if (printPathSpaceResult == ir_lowerer::StatementPrintPathSpaceEmitResult::Error) {
+      return false;
     }
-    PathSpaceBuiltin pathSpaceBuiltin;
-    if (stmt.kind == Expr::Kind::Call && getPathSpaceBuiltin(stmt, pathSpaceBuiltin) && !resolveDefinitionCall(stmt)) {
-      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-        error = pathSpaceBuiltin.name + " does not support body arguments";
-        return false;
-      }
-      if (!stmt.templateArgs.empty()) {
-        error = pathSpaceBuiltin.name + " does not support template arguments";
-        return false;
-      }
-      if (stmt.args.size() != pathSpaceBuiltin.argumentCount) {
-        error = pathSpaceBuiltin.name + " requires exactly " + std::to_string(pathSpaceBuiltin.argumentCount) +
-                " argument" + (pathSpaceBuiltin.argumentCount == 1 ? "" : "s");
-        return false;
-      }
-      for (const auto &arg : stmt.args) {
-        if (arg.kind == Expr::Kind::StringLiteral) {
-          continue;
-        }
-        if (!emitExpr(arg, localsIn)) {
-          return false;
-        }
-        function.instructions.push_back({IrOpcode::Pop, 0});
-      }
+    if (printPathSpaceResult == ir_lowerer::StatementPrintPathSpaceEmitResult::Emitted) {
       return true;
     }
     if (isReturnCall(stmt)) {

@@ -467,4 +467,58 @@ UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
   return UninitializedStorageTakeEmitResult::Emitted;
 }
 
+StatementPrintPathSpaceEmitResult tryEmitPrintPathSpaceStatementBuiltin(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const EmitPrintArgForStatementFn &emitPrintArg,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    const EmitExprForBindingFn &emitExpr,
+    std::vector<IrInstruction> &instructions,
+    std::string &error) {
+  PrintBuiltin printBuiltin;
+  if (stmt.kind == Expr::Kind::Call && getPrintBuiltin(stmt, printBuiltin)) {
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error = printBuiltin.name + " does not support body arguments";
+      return StatementPrintPathSpaceEmitResult::Error;
+    }
+    if (stmt.args.size() != 1) {
+      error = printBuiltin.name + " requires exactly one argument";
+      return StatementPrintPathSpaceEmitResult::Error;
+    }
+    if (!emitPrintArg(stmt.args.front(), localsIn, printBuiltin)) {
+      return StatementPrintPathSpaceEmitResult::Error;
+    }
+    return StatementPrintPathSpaceEmitResult::Emitted;
+  }
+
+  PathSpaceBuiltin pathSpaceBuiltin;
+  if (stmt.kind == Expr::Kind::Call && getPathSpaceBuiltin(stmt, pathSpaceBuiltin) && !resolveDefinitionCall(stmt)) {
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error = pathSpaceBuiltin.name + " does not support body arguments";
+      return StatementPrintPathSpaceEmitResult::Error;
+    }
+    if (!stmt.templateArgs.empty()) {
+      error = pathSpaceBuiltin.name + " does not support template arguments";
+      return StatementPrintPathSpaceEmitResult::Error;
+    }
+    if (stmt.args.size() != pathSpaceBuiltin.argumentCount) {
+      error = pathSpaceBuiltin.name + " requires exactly " + std::to_string(pathSpaceBuiltin.argumentCount) +
+              " argument" + (pathSpaceBuiltin.argumentCount == 1 ? "" : "s");
+      return StatementPrintPathSpaceEmitResult::Error;
+    }
+    for (const auto &arg : stmt.args) {
+      if (arg.kind == Expr::Kind::StringLiteral) {
+        continue;
+      }
+      if (!emitExpr(arg, localsIn)) {
+        return StatementPrintPathSpaceEmitResult::Error;
+      }
+      instructions.push_back({IrOpcode::Pop, 0});
+    }
+    return StatementPrintPathSpaceEmitResult::Emitted;
+  }
+
+  return StatementPrintPathSpaceEmitResult::NotMatched;
+}
+
 } // namespace primec::ir_lowerer

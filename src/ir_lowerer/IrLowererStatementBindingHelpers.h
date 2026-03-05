@@ -13,6 +13,7 @@ namespace primec::ir_lowerer {
 
 struct StructSlotLayoutInfo;
 struct UninitializedStorageAccessInfo;
+struct PrintBuiltin;
 
 using HasExplicitBindingTypeTransformFn = std::function<bool(const Expr &)>;
 using BindingKindFn = std::function<LocalInfo::Kind(const Expr &)>;
@@ -29,6 +30,8 @@ using ResolveUninitializedStorageForStatementFn =
     std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>;
 using ResolveStructSlotLayoutForStatementFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
 using EmitStructCopyFromPtrsForStatementFn = std::function<bool(int32_t, int32_t, int32_t)>;
+using EmitPrintArgForStatementFn = std::function<bool(const Expr &, const LocalMap &, const PrintBuiltin &)>;
+using ResolveDefinitionCallForStatementFn = std::function<const Definition *(const Expr &)>;
 
 enum class UninitializedStorageInitDropEmitResult {
   NotMatched,
@@ -36,6 +39,11 @@ enum class UninitializedStorageInitDropEmitResult {
   Error,
 };
 enum class UninitializedStorageTakeEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
+enum class StatementPrintPathSpaceEmitResult {
   NotMatched,
   Emitted,
   Error,
@@ -105,6 +113,14 @@ UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
     std::vector<IrInstruction> &instructions,
     const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
     const EmitExprForBindingFn &emitExpr,
+    std::string &error);
+StatementPrintPathSpaceEmitResult tryEmitPrintPathSpaceStatementBuiltin(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const EmitPrintArgForStatementFn &emitPrintArg,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    const EmitExprForBindingFn &emitExpr,
+    std::vector<IrInstruction> &instructions,
     std::string &error);
 
 } // namespace primec::ir_lowerer

@@ -11767,6 +11767,136 @@ TEST_CASE("ir lowerer statement binding helper surfaces take resolution errors")
             error) == EmitResult::Error);
 }
 
+TEST_CASE("ir lowerer statement binding helper emits print statement builtins") {
+  using EmitResult = primec::ir_lowerer::StatementPrintPathSpaceEmitResult;
+
+  primec::Expr argExpr;
+  argExpr.kind = primec::Expr::Kind::Literal;
+  argExpr.intWidth = 32;
+  argExpr.literalValue = 3;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "print_line";
+  stmt.args = {argExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  int printCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitPrintPathSpaceStatementBuiltin(
+            stmt,
+            locals,
+            [&](const primec::Expr &printedArg, const primec::ir_lowerer::LocalMap &, const primec::ir_lowerer::PrintBuiltin &builtin) {
+              ++printCalls;
+              CHECK(printedArg.literalValue == 3);
+              CHECK(builtin.name == "print_line");
+              CHECK(builtin.newline);
+              CHECK(builtin.target == primec::ir_lowerer::PrintTarget::Out);
+              return true;
+            },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(printCalls == 1);
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer statement binding helper validates print statement builtin diagnostics") {
+  using EmitResult = primec::ir_lowerer::StatementPrintPathSpaceEmitResult;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "print";
+  stmt.hasBodyArguments = true;
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitPrintPathSpaceStatementBuiltin(
+            stmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, const primec::ir_lowerer::PrintBuiltin &) {
+              return true;
+            },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "print does not support body arguments");
+
+  stmt.hasBodyArguments = false;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitPrintPathSpaceStatementBuiltin(
+            stmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, const primec::ir_lowerer::PrintBuiltin &) {
+              return true;
+            },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "print requires exactly one argument");
+}
+
+TEST_CASE("ir lowerer statement binding helper emits pathspace statement builtins") {
+  using EmitResult = primec::ir_lowerer::StatementPrintPathSpaceEmitResult;
+
+  primec::Expr stringArg;
+  stringArg.kind = primec::Expr::Kind::StringLiteral;
+  stringArg.stringValue = "\"id\"utf8";
+  primec::Expr dynamicArg;
+  dynamicArg.kind = primec::Expr::Kind::Name;
+  dynamicArg.name = "value";
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "notify";
+  stmt.args = {stringArg, dynamicArg};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  int emitExprCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitPrintPathSpaceStatementBuiltin(
+            stmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, const primec::ir_lowerer::PrintBuiltin &) {
+              return true;
+            },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              instructions.push_back({primec::IrOpcode::PushI32, 42});
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::Pop);
+
+  primec::Definition def;
+  error.clear();
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitPrintPathSpaceStatementBuiltin(
+            stmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, const primec::ir_lowerer::PrintBuiltin &) {
+              return true;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * { return &def; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            instructions,
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;
