@@ -643,6 +643,118 @@ TEST_CASE("virtual-register liveness tie-breaks equal intervals by register id")
   CHECK(intervals[2].ranges[0].endPosition == intervals[3].ranges[0].endPosition);
 }
 
+TEST_CASE("linear-scan allocator has deterministic spill placement on loop cfg") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 6});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::string error;
+  primec::IrVirtualRegisterModule virtualModule;
+  REQUIRE(primec::lowerIrModuleToBlockVirtualRegisters(module, virtualModule, error));
+  CHECK(error.empty());
+
+  primec::IrVirtualRegisterModuleLiveness liveness;
+  REQUIRE(primec::buildIrVirtualRegisterLiveness(virtualModule, liveness, error));
+  CHECK(error.empty());
+
+  primec::IrLinearScanAllocatorOptions options;
+  options.physicalRegisterCount = 1;
+  options.spillPolicy = primec::IrLinearScanSpillPolicy::SpillFarthestEnd;
+  primec::IrLinearScanModuleAllocation allocation;
+  REQUIRE(primec::allocateIrVirtualRegistersLinearScan(liveness, options, allocation, error));
+  CHECK(error.empty());
+  REQUIRE(allocation.functions.size() == 1);
+
+  const auto &functionAllocation = allocation.functions[0];
+  CHECK(functionAllocation.spillSlotCount == 2u);
+  REQUIRE(functionAllocation.assignments.size() == 7);
+
+  CHECK(functionAllocation.assignments[0].virtualRegister == 0u);
+  CHECK(functionAllocation.assignments[0].spilled);
+  CHECK(functionAllocation.assignments[0].spillSlot == 0u);
+  CHECK(functionAllocation.assignments[1].virtualRegister == 1u);
+  CHECK_FALSE(functionAllocation.assignments[1].spilled);
+  CHECK(functionAllocation.assignments[1].physicalRegister == 0u);
+  CHECK(functionAllocation.assignments[2].virtualRegister == 2u);
+  CHECK_FALSE(functionAllocation.assignments[2].spilled);
+  CHECK(functionAllocation.assignments[2].physicalRegister == 0u);
+  CHECK(functionAllocation.assignments[3].virtualRegister == 3u);
+  CHECK_FALSE(functionAllocation.assignments[3].spilled);
+  CHECK(functionAllocation.assignments[3].physicalRegister == 0u);
+  CHECK(functionAllocation.assignments[4].virtualRegister == 4u);
+  CHECK_FALSE(functionAllocation.assignments[4].spilled);
+  CHECK(functionAllocation.assignments[4].physicalRegister == 0u);
+  CHECK(functionAllocation.assignments[5].virtualRegister == 5u);
+  CHECK(functionAllocation.assignments[5].spilled);
+  CHECK(functionAllocation.assignments[5].spillSlot == 1u);
+  CHECK(functionAllocation.assignments[6].virtualRegister == 6u);
+  CHECK_FALSE(functionAllocation.assignments[6].spilled);
+  CHECK(functionAllocation.assignments[6].physicalRegister == 0u);
+}
+
+TEST_CASE("linear-scan allocator tie-break keeps lower register id resident") {
+  primec::IrVirtualRegisterModuleLiveness liveness;
+  primec::IrVirtualRegisterFunctionLiveness function;
+  function.functionName = "/main";
+  function.intervals = {
+      {1, {{0, 4}}},
+      {0, {{0, 4}}},
+      {2, {{5, 6}}},
+  };
+  liveness.functions.push_back(std::move(function));
+
+  primec::IrLinearScanAllocatorOptions options;
+  options.physicalRegisterCount = 1;
+  options.spillPolicy = primec::IrLinearScanSpillPolicy::SpillFarthestEnd;
+
+  primec::IrLinearScanModuleAllocation allocation;
+  std::string error;
+  REQUIRE(primec::allocateIrVirtualRegistersLinearScan(liveness, options, allocation, error));
+  CHECK(error.empty());
+  REQUIRE(allocation.functions.size() == 1);
+  const auto &assignments = allocation.functions[0].assignments;
+  REQUIRE(assignments.size() == 3);
+
+  CHECK(assignments[0].virtualRegister == 0u);
+  CHECK_FALSE(assignments[0].spilled);
+  CHECK(assignments[0].physicalRegister == 0u);
+  CHECK(assignments[1].virtualRegister == 1u);
+  CHECK(assignments[1].spilled);
+  CHECK(assignments[1].spillSlot == 0u);
+  CHECK(assignments[2].virtualRegister == 2u);
+  CHECK_FALSE(assignments[2].spilled);
+  CHECK(assignments[2].physicalRegister == 0u);
+}
+
+TEST_CASE("linear-scan allocator rejects unknown spill policy") {
+  primec::IrVirtualRegisterModuleLiveness liveness;
+  primec::IrVirtualRegisterFunctionLiveness function;
+  function.functionName = "/main";
+  function.intervals = {
+      {0, {{0, 1}}},
+  };
+  liveness.functions.push_back(std::move(function));
+
+  primec::IrLinearScanAllocatorOptions options;
+  options.physicalRegisterCount = 1;
+  options.spillPolicy = static_cast<primec::IrLinearScanSpillPolicy>(99);
+
+  primec::IrLinearScanModuleAllocation allocation;
+  std::string error;
+  CHECK_FALSE(primec::allocateIrVirtualRegistersLinearScan(liveness, options, allocation, error));
+  CHECK(error.find("spill policy") != std::string::npos);
+}
+
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 namespace {
 std::string quoteIrPipelineShellArg(const std::string &value) {
