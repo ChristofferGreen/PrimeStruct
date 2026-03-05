@@ -526,6 +526,174 @@ TEST_CASE("spinning cube transform rotation parity stays aligned across backends
   CHECK(hostSnapshotOutput.find("snapshot_code=" + std::to_string(ExpectedSnapshotCode)) != std::string::npos);
 }
 
+TEST_CASE("spinning cube integration artifact matrix stays valid") {
+  std::filesystem::path webSampleDir =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
+  std::filesystem::path metalSampleDir =
+      std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
+  if (!std::filesystem::exists(webSampleDir)) {
+    webSampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
+  if (!std::filesystem::exists(metalSampleDir)) {
+    metalSampleDir = std::filesystem::current_path() / "examples" / "metal" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(webSampleDir));
+  REQUIRE(std::filesystem::exists(metalSampleDir));
+
+  const std::filesystem::path cubePath = webSampleDir / "cube.prime";
+  const std::filesystem::path indexPath = webSampleDir / "index.html";
+  const std::filesystem::path mainJsPath = webSampleDir / "main.js";
+  const std::filesystem::path wgslPath = webSampleDir / "cube.wgsl";
+  const std::filesystem::path metalPath = metalSampleDir / "cube.metal";
+  REQUIRE(std::filesystem::exists(cubePath));
+  REQUIRE(std::filesystem::exists(indexPath));
+  REQUIRE(std::filesystem::exists(mainJsPath));
+  REQUIRE(std::filesystem::exists(wgslPath));
+  REQUIRE(std::filesystem::exists(metalPath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_artifact_matrix";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path wasmPath = outDir / "cube.wasm";
+  const std::filesystem::path nativePath = outDir / "cube_native";
+  const std::filesystem::path loaderDir = outDir / "loader";
+  std::filesystem::create_directories(loaderDir, ec);
+  REQUIRE(!ec);
+
+  const std::string compileWasmCmd =
+      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(wasmPath.string()) + " --entry /main";
+  CHECK(runCommand(compileWasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativePath.string()) +
+      " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(std::filesystem::exists(nativePath));
+  CHECK(std::filesystem::file_size(nativePath) > 0);
+
+  std::filesystem::copy_file(indexPath, loaderDir / "index.html",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(mainJsPath, loaderDir / "main.js",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(wgslPath, loaderDir / "cube.wgsl",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+
+  CHECK(std::filesystem::exists(loaderDir / "index.html"));
+  CHECK(std::filesystem::exists(loaderDir / "main.js"));
+  CHECK(std::filesystem::exists(loaderDir / "cube.wgsl"));
+  CHECK(readFile((loaderDir / "index.html").string()).find("cube-canvas") != std::string::npos);
+  CHECK(readFile((loaderDir / "main.js").string()).find("./cube.wasm") != std::string::npos);
+  CHECK(readFile((loaderDir / "cube.wgsl").string()).find("@vertex") != std::string::npos);
+
+  const auto readBinary = [](const std::filesystem::path &path, std::vector<unsigned char> &bytes) {
+    bytes.clear();
+    std::ifstream file(path, std::ios::binary);
+    if (!file.good()) {
+      return false;
+    }
+    file.seekg(0, std::ios::end);
+    const std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+    if (size <= 0) {
+      return false;
+    }
+    bytes.resize(static_cast<size_t>(size));
+    file.read(reinterpret_cast<char *>(bytes.data()), size);
+    return file.good() || file.eof();
+  };
+
+  const auto fnv1a64 = [](const std::vector<unsigned char> &bytes) {
+    unsigned long long hash = 1469598103934665603ull;
+    for (unsigned char b : bytes) {
+      hash ^= static_cast<unsigned long long>(b);
+      hash *= 1099511628211ull;
+    }
+    return hash;
+  };
+
+  std::vector<unsigned char> wasmBytes;
+  REQUIRE(readBinary(wasmPath, wasmBytes));
+  REQUIRE(wasmBytes.size() >= 8);
+  CHECK(wasmBytes[0] == 0x00);
+  CHECK(wasmBytes[1] == 0x61);
+  CHECK(wasmBytes[2] == 0x73);
+  CHECK(wasmBytes[3] == 0x6d);
+
+  std::vector<unsigned char> nativeBytes;
+  REQUIRE(readBinary(nativePath, nativeBytes));
+
+  std::vector<std::pair<std::string, std::filesystem::path>> artifacts = {
+      {"cube.wasm", wasmPath},
+      {"cube_native", nativePath},
+      {"loader/index.html", loaderDir / "index.html"},
+      {"loader/main.js", loaderDir / "main.js"},
+      {"loader/cube.wgsl", loaderDir / "cube.wgsl"},
+  };
+
+  const bool hasXcrun = runCommand("xcrun --version > /dev/null 2>&1") == 0;
+  if (hasXcrun) {
+    const std::filesystem::path airPath = outDir / "cube.air";
+    const std::filesystem::path metallibPath = outDir / "cube.metallib";
+    const std::string compileMetalCmd = "xcrun metal -std=metal3.0 -c " + quoteShellArg(metalPath.string()) + " -o " +
+                                        quoteShellArg(airPath.string());
+    CHECK(runCommand(compileMetalCmd) == 0);
+    CHECK(std::filesystem::exists(airPath));
+    const std::string compileMetallibCmd =
+        "xcrun metallib " + quoteShellArg(airPath.string()) + " -o " + quoteShellArg(metallibPath.string());
+    CHECK(runCommand(compileMetallibCmd) == 0);
+    CHECK(std::filesystem::exists(metallibPath));
+    artifacts.push_back({"cube.air", airPath});
+    artifacts.push_back({"cube.metallib", metallibPath});
+  }
+
+  const std::filesystem::path manifestPath = outDir / "artifact_manifest.json";
+  std::ofstream manifest(manifestPath);
+  REQUIRE(manifest.good());
+  manifest << "{\n";
+  manifest << "  \"version\": 1,\n";
+  manifest << "  \"profile\": \"spinning_cube\",\n";
+  manifest << "  \"artifacts\": [\n";
+  for (size_t i = 0; i < artifacts.size(); ++i) {
+    const auto &entry = artifacts[i];
+    std::vector<unsigned char> bytes;
+    REQUIRE(readBinary(entry.second, bytes));
+    const unsigned long long hash = fnv1a64(bytes);
+    manifest << "    {\"name\":\"" << entry.first << "\",\"size\":" << bytes.size() << ",\"hash_fnv1a64\":\"" << hash
+             << "\"}";
+    if (i + 1 != artifacts.size()) {
+      manifest << ",";
+    }
+    manifest << "\n";
+  }
+  manifest << "  ]\n";
+  manifest << "}\n";
+  manifest.close();
+  CHECK(std::filesystem::exists(manifestPath));
+
+  const std::string manifestText = readFile(manifestPath.string());
+  CHECK(manifestText.find("\"version\": 1") != std::string::npos);
+  CHECK(manifestText.find("\"profile\": \"spinning_cube\"") != std::string::npos);
+  CHECK(manifestText.find("\"artifacts\": [") != std::string::npos);
+  CHECK(manifestText.find("\"name\":\"cube.wasm\"") != std::string::npos);
+  CHECK(manifestText.find("\"name\":\"cube_native\"") != std::string::npos);
+  CHECK(manifestText.find("\"name\":\"loader/index.html\"") != std::string::npos);
+  CHECK(manifestText.find("\"name\":\"loader/main.js\"") != std::string::npos);
+  CHECK(manifestText.find("\"name\":\"loader/cube.wgsl\"") != std::string::npos);
+  CHECK(manifestText.find("\"hash_fnv1a64\":\"0\"") == std::string::npos);
+}
+
 TEST_CASE("spinning cube metal shader path compiles and enforces profile gating") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";

@@ -70,3 +70,13 @@ This example is a milestone target for cross-platform backend work.
 - Keep sample dependencies minimal (no framework requirement).
 - Include a small debug HUD (tick count + frame time) once VM debug events can be surfaced in web tooling.
 - Keep simulation/update logic shared; only rendering/host glue should vary by target.
+
+## Integration Artifact Matrix
+- CI/compile-run integration coverage builds:
+  - `cube.wasm` (browser profile)
+  - `cube_native` (native profile)
+  - loader assets (`index.html`, `main.js`, `cube.wgsl`)
+  - optional macOS shader outputs (`cube.air`, `cube.metallib`) when `xcrun`
+    is available.
+- The integration test emits an `artifact_manifest.json` with per-artifact size
+  and deterministic FNV-1a hash fields for schema/hash validation.
