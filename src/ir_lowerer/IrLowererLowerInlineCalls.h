@@ -61,152 +61,50 @@
     }
 
     LocalMap calleeLocals;
-    for (size_t i = 0; i < callParams.size(); ++i) {
-      const Expr &param = callParams[i];
-      LocalInfo paramInfo;
-      paramInfo.index = nextLocal++;
-      if (!ir_lowerer::inferCallParameterLocalInfo(param,
-                                                   callerLocals,
-                                                   isBindingMutable,
-                                                   hasExplicitBindingTypeTransform,
-                                                   bindingKind,
-                                                   bindingValueKind,
-                                                   inferExprKind,
-                                                   isFileErrorBinding,
-                                                   setReferenceArrayInfo,
-                                                   applyStructArrayInfo,
-                                                   applyStructValueInfo,
-                                                   isStringBinding,
-                                                   paramInfo,
-                                                   error)) {
-        inlineStack.erase(callee.fullPath);
-        return false;
-      }
-
-      if (isStringBinding(param)) {
-        if (!orderedArgs[i]) {
-          error = "argument count mismatch";
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        LocalInfo::StringSource source = LocalInfo::StringSource::None;
-        int32_t index = -1;
-        bool argvChecked = true;
-        if (!emitStringValueForCall(*orderedArgs[i], callerLocals, source, index, argvChecked)) {
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        paramInfo.valueKind = LocalInfo::ValueKind::String;
-        paramInfo.stringSource = source;
-        paramInfo.stringIndex = index;
-        paramInfo.argvChecked = argvChecked;
-        calleeLocals.emplace(param.name, paramInfo);
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index)});
-        continue;
-      }
-
-      if (paramInfo.kind == LocalInfo::Kind::Value && !paramInfo.structTypeName.empty()) {
-        if (!orderedArgs[i]) {
-          error = "argument count mismatch";
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        std::string argStruct = inferStructExprPath(*orderedArgs[i], callerLocals);
-        if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
-          error = "struct parameter type mismatch";
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        StructSlotLayout layout;
-        if (!resolveStructSlotLayout(paramInfo.structTypeName, layout)) {
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        const int32_t baseLocal = nextLocal;
-        nextLocal += layout.totalSlots;
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
-        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index)});
-        if (!emitExpr(*orderedArgs[i], callerLocals)) {
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        const int32_t srcPtrLocal = allocTempLocal();
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-        if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        calleeLocals.emplace(param.name, paramInfo);
-        continue;
-      }
-
-      if (paramInfo.kind == LocalInfo::Kind::Reference && !paramInfo.structTypeName.empty()) {
-        if (!orderedArgs[i]) {
-          error = "argument count mismatch";
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        std::string argStruct = inferStructExprPath(*orderedArgs[i], callerLocals);
-        if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
-          error = "struct parameter type mismatch";
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        const Expr &argExpr = *orderedArgs[i];
-        auto emitStructReference = [&](const Expr &arg) -> bool {
-          if (arg.kind == Expr::Kind::Name) {
-            auto it = callerLocals.find(arg.name);
-            if (it != callerLocals.end()) {
-              if (it->second.kind == LocalInfo::Kind::Reference) {
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-                return true;
-              }
-              if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
-                function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});
-                return true;
-              }
-            }
-          }
-          if (!emitExpr(arg, callerLocals)) {
-            return false;
-          }
-          const int32_t tempLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempLocal)});
-          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(tempLocal)});
-          return true;
-        };
-        if (!emitStructReference(argExpr)) {
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        calleeLocals.emplace(param.name, paramInfo);
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index)});
-        continue;
-      }
-
-      if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown || paramInfo.valueKind == LocalInfo::ValueKind::String) {
-        error = "native backend only supports numeric/bool, string, or struct parameters";
-        inlineStack.erase(callee.fullPath);
-        return false;
-      }
-
-      if (!orderedArgs[i]) {
-        error = "argument count mismatch";
-        inlineStack.erase(callee.fullPath);
-        return false;
-      }
-      if (!emitExpr(*orderedArgs[i], callerLocals)) {
-        inlineStack.erase(callee.fullPath);
-        return false;
-      }
-      calleeLocals.emplace(param.name, paramInfo);
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index)});
-      if (paramInfo.isFileHandle) {
-        fileScopeStack.back().push_back(paramInfo.index);
-      }
+    if (!ir_lowerer::emitInlineDefinitionCallParameters(
+            callParams,
+            orderedArgs,
+            callerLocals,
+            nextLocal,
+            calleeLocals,
+            [&](const Expr &param, LocalInfo &infoOut, std::string &errorOut) {
+              return ir_lowerer::inferCallParameterLocalInfo(param,
+                                                             callerLocals,
+                                                             isBindingMutable,
+                                                             hasExplicitBindingTypeTransform,
+                                                             bindingKind,
+                                                             bindingValueKind,
+                                                             inferExprKind,
+                                                             isFileErrorBinding,
+                                                             setReferenceArrayInfo,
+                                                             applyStructArrayInfo,
+                                                             applyStructValueInfo,
+                                                             isStringBinding,
+                                                             infoOut,
+                                                             errorOut);
+            },
+            [&](const Expr &param) { return isStringBinding(param); },
+            [&](const Expr &argExpr,
+                const LocalMap &locals,
+                LocalInfo::StringSource &sourceOut,
+                int32_t &indexOut,
+                bool &argvCheckedOut) {
+              return emitStringValueForCall(argExpr, locals, sourceOut, indexOut, argvCheckedOut);
+            },
+            [&](const Expr &argExpr, const LocalMap &locals) { return inferStructExprPath(argExpr, locals); },
+            [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+              return resolveStructSlotLayout(structPath, layoutOut);
+            },
+            [&](const Expr &argExpr, const LocalMap &locals) { return emitExpr(argExpr, locals); },
+            [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
+              return emitStructCopySlots(destBaseLocal, srcPtrLocal, slotCount);
+            },
+            [&]() { return allocTempLocal(); },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            [&](int32_t localIndex) { fileScopeStack.back().push_back(localIndex); },
+            error)) {
+      inlineStack.erase(callee.fullPath);
+      return false;
     }
 
     auto inheritGpuLocal = [&](const char *name) {
