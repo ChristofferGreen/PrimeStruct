@@ -670,6 +670,71 @@ main() {
   CHECK(diagnostics.find("Usage: primec") == std::string::npos);
 }
 
+TEST_CASE("primec emit-diagnostics rejects unsupported wasm IR features with stable payloads") {
+  struct NegativeCase {
+    std::string name;
+    std::string source;
+    std::string expectedMessageFragment;
+  };
+
+  const std::vector<NegativeCase> cases = {
+      {
+          "unsupported_opcode_i64",
+          R"(
+[return<int>]
+main() {
+  [i64] value{plus(1i64, 2i64)}
+  return(3i32)
+}
+)",
+          "unsupported opcode for wasm target",
+      },
+      {
+          "unsupported_opcode_print_i32",
+          R"(
+[return<int> effects(io_out)]
+main() {
+  print(1i32)
+  return(0i32)
+}
+)",
+          "unsupported opcode for wasm target",
+      },
+      {
+          "unsupported_effect_heap_alloc",
+          R"(
+[return<int> effects(heap_alloc)]
+main() {
+  return(0i32)
+}
+)",
+          "unsupported effect mask bits for wasm target",
+      },
+  };
+
+  for (const auto &negative : cases) {
+    CAPTURE(negative.name);
+    const std::string srcPath = writeTemp("compile_emit_wasm_negative_" + negative.name + ".prime", negative.source);
+    const std::string wasmPath =
+        (std::filesystem::temp_directory_path() / ("primec_emit_wasm_negative_" + negative.name + ".wasm")).string();
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / ("primec_emit_wasm_negative_" + negative.name + ".json")).string();
+
+    const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                                " --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(wasmCmd) == 2);
+
+    const std::string diagnostics = readFile(errPath);
+    CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+    CHECK(diagnostics.find("\"code\":\"PSC2001\"") != std::string::npos);
+    CHECK(diagnostics.find("\"severity\":\"error\"") != std::string::npos);
+    CHECK(diagnostics.find(negative.expectedMessageFragment) != std::string::npos);
+    CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") != std::string::npos);
+    CHECK(diagnostics.find("\"stage\":\"ir-validate\"") == std::string::npos);
+    CHECK(diagnostics.find("Usage: primec") == std::string::npos);
+  }
+}
+
 TEST_CASE("rejects stdlib version flag") {
   const std::string source = R"(
 [return<int>]
