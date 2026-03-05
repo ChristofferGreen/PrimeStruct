@@ -1140,6 +1140,7 @@ bool VmDebugSession::initFromModule(const IrModule &module,
   frames_.clear();
   result_ = 0;
   pauseRequested_ = false;
+  nextHookSequence_ = 0;
   for (size_t i = 0; i < module.functions.size(); ++i) {
     size_t localCount = 0;
     for (const auto &inst : module.functions[i].instructions) {
@@ -1243,6 +1244,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       return;
     }
     VmDebugInstructionHookEvent event;
+    event.sequence = nextHookSequence_++;
     event.snapshot = snapshot();
     event.opcode = inst.op;
     event.immediate = inst.imm;
@@ -1253,6 +1255,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       return;
     }
     VmDebugCallHookEvent event;
+    event.sequence = nextHookSequence_++;
     event.snapshot = snapshot();
     event.functionIndex = functionIndex;
     event.returnsValueToCaller = returnsValueToCaller;
@@ -1265,6 +1268,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
   auto finishFault = [&]() {
     if (hooks_.fault) {
       VmDebugFaultHookEvent event;
+      event.sequence = nextHookSequence_++;
       event.snapshot = snapshot();
       event.opcode = inst.op;
       event.immediate = inst.imm;

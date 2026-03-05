@@ -1224,6 +1224,12 @@ module {
 - **Phase 3 (IDE/LSP):** go-to-definition, completion, and signature help using the same symbol tables as the compiler. Provide diagnostics in LSP format plus an editor adapter.
 - **Phase 4 (runtime):** VM/native stack traces mapped via source maps, crash reports emitted with IR/AST hashes, and opt-in runtime tracing for effect/capability usage.
 
+### VM Debug Event Ordering
+- `VmDebugSession` hook callbacks are emitted in one total order with a monotonically increasing `sequence` value that starts at `0` on each `start(...)`.
+- Per instruction, hooks fire in this order: `beforeInstruction` -> zero or more in-instruction call events (`callPush` / `callPop`) -> `afterInstruction`.
+- Faulted instructions emit `beforeInstruction` and then `fault`; they do not emit `afterInstruction`.
+- For identical IR + entry arguments + control flow (`step`/`continue` decisions), the emitted hook event stream is deterministic and replayable.
+
 ### Semantics Parallelism (Investigation)
 We plan to parallelize semantic validation across root functions using a
 deterministic diagnostics pipeline. See `docs/Semantics_Multithreaded_Pass.md`

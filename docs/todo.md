@@ -166,7 +166,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a first-class VM debug session API (separate from `Vm::execute`) with deterministic controls: `step`, `continue`, and `pause`. Testing: golden step transcripts for representative IR programs.
 - ✓ Expand `VmDebugSession` opcode coverage to parity with `Vm::execute` and add opcode-matrix stepping regressions for unsupported instruction families.
 - ✓ Add VM runtime debug hook plumbing (`beforeInstruction`, `afterInstruction`, `callPush`, `callPop`, `fault`). Testing: hook coverage tests for every event kind.
-- ○ Make debug event ordering deterministic and document ordering guarantees. Testing: event-sequence snapshot tests and deterministic replay equivalence checks.
+- ✓ Make debug event ordering deterministic and document ordering guarantees. Testing: event-sequence snapshot tests and deterministic replay equivalence checks.
 - ○ Add IR-level breakpoints keyed by `(functionIndex, ip)`. Testing: compile-run suites with single/multiple breakpoints and branch-path coverage.
 - ○ Add `primevm --debug-json` NDJSON event streaming mode. Testing: CLI integration tests validating NDJSON schema and field stability.
 - ○ Add on-demand snapshot payloads (call stack, current frame locals, operand stack, instruction pointer) to debug JSON mode. Testing: snapshot shape/value assertions across step boundaries.

@@ -113,18 +113,21 @@ struct VmDebugSnapshot {
 };
 
 struct VmDebugInstructionHookEvent {
+  uint64_t sequence = 0;
   VmDebugSnapshot snapshot;
   IrOpcode opcode = IrOpcode::PushI32;
   uint64_t immediate = 0;
 };
 
 struct VmDebugCallHookEvent {
+  uint64_t sequence = 0;
   VmDebugSnapshot snapshot;
   size_t functionIndex = 0;
   bool returnsValueToCaller = false;
 };
 
 struct VmDebugFaultHookEvent {
+  uint64_t sequence = 0;
   VmDebugSnapshot snapshot;
   IrOpcode opcode = IrOpcode::PushI32;
   uint64_t immediate = 0;
@@ -188,6 +191,7 @@ private:
   VmDebugSessionState state_ = VmDebugSessionState::Idle;
   uint64_t result_ = 0;
   bool pauseRequested_ = false;
+  uint64_t nextHookSequence_ = 0;
   VmDebugHooks hooks_;
 };
 

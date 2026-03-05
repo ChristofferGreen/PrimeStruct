@@ -354,6 +354,115 @@ TEST_CASE("vm debug runtime hooks cover all event kinds") {
   CHECK(faultRecorder.faultMessages.front() == "unknown IR opcode");
 }
 
+TEST_CASE("vm debug hook event ordering is deterministic and replayable") {
+  auto collectEventSequence = [&](std::vector<std::string> &out, std::string &error) {
+    primec::VmDebugSession session;
+    primec::VmDebugHooks hooks;
+    hooks.userData = &out;
+    hooks.beforeInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *userData) {
+      auto &events = *static_cast<std::vector<std::string> *>(userData);
+      events.push_back(std::to_string(event.sequence) + " before " + std::to_string(static_cast<uint32_t>(event.opcode)) +
+                       " f" + std::to_string(event.snapshot.functionIndex) + " ip" +
+                       std::to_string(event.snapshot.instructionPointer) + " d" + std::to_string(event.snapshot.callDepth));
+    };
+    hooks.afterInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *userData) {
+      auto &events = *static_cast<std::vector<std::string> *>(userData);
+      events.push_back(std::to_string(event.sequence) + " after " + std::to_string(static_cast<uint32_t>(event.opcode)) +
+                       " f" + std::to_string(event.snapshot.functionIndex) + " ip" +
+                       std::to_string(event.snapshot.instructionPointer) + " d" + std::to_string(event.snapshot.callDepth));
+    };
+    hooks.callPush = [](const primec::VmDebugCallHookEvent &event, void *userData) {
+      auto &events = *static_cast<std::vector<std::string> *>(userData);
+      events.push_back(std::to_string(event.sequence) + " callPush t" + std::to_string(event.functionIndex) + " rv" +
+                       std::to_string(event.returnsValueToCaller ? 1 : 0) + " f" +
+                       std::to_string(event.snapshot.functionIndex) + " ip" +
+                       std::to_string(event.snapshot.instructionPointer) + " d" + std::to_string(event.snapshot.callDepth));
+    };
+    hooks.callPop = [](const primec::VmDebugCallHookEvent &event, void *userData) {
+      auto &events = *static_cast<std::vector<std::string> *>(userData);
+      events.push_back(std::to_string(event.sequence) + " callPop t" + std::to_string(event.functionIndex) + " rv" +
+                       std::to_string(event.returnsValueToCaller ? 1 : 0) + " f" +
+                       std::to_string(event.snapshot.functionIndex) + " ip" +
+                       std::to_string(event.snapshot.instructionPointer) + " d" + std::to_string(event.snapshot.callDepth));
+    };
+    hooks.fault = [](const primec::VmDebugFaultHookEvent &event, void *userData) {
+      auto &events = *static_cast<std::vector<std::string> *>(userData);
+      events.push_back(std::to_string(event.sequence) + " fault " + std::to_string(static_cast<uint32_t>(event.opcode)) +
+                       " f" + std::to_string(event.snapshot.functionIndex) + " ip" +
+                       std::to_string(event.snapshot.instructionPointer) + " d" + std::to_string(event.snapshot.callDepth) +
+                       " m=" + std::string(event.message));
+    };
+    session.setHooks(hooks);
+
+    primec::IrModule module;
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+    mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    primec::IrFunction calleeFn;
+    calleeFn.name = "/double";
+    calleeFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+    calleeFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+    calleeFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    module.functions.push_back(std::move(mainFn));
+    module.functions.push_back(std::move(calleeFn));
+    module.entryIndex = 0;
+
+    if (!session.start(module, error)) {
+      return false;
+    }
+    primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+    if (!session.continueExecution(stopReason, error)) {
+      return false;
+    }
+    return stopReason == primec::VmDebugStopReason::Exit && session.snapshot().result == 9;
+  };
+
+  std::vector<std::string> firstRun;
+  std::string error;
+  REQUIRE(collectEventSequence(firstRun, error));
+  CHECK(error.empty());
+
+  const auto opcodeId = [](primec::IrOpcode opcode) { return std::to_string(static_cast<uint32_t>(opcode)); };
+  const auto beforeLine = [&](size_t sequence, primec::IrOpcode opcode, std::string_view suffix) {
+    return std::to_string(sequence) + " before " + opcodeId(opcode) + std::string(suffix);
+  };
+  const auto afterLine = [&](size_t sequence, primec::IrOpcode opcode, std::string_view suffix) {
+    return std::to_string(sequence) + " after " + opcodeId(opcode) + std::string(suffix);
+  };
+  const std::vector<std::string> expected = {
+      beforeLine(0, primec::IrOpcode::PushI32, " f0 ip0 d1"),
+      afterLine(1, primec::IrOpcode::PushI32, " f0 ip1 d1"),
+      beforeLine(2, primec::IrOpcode::Call, " f0 ip1 d1"),
+      "3 callPush t1 rv1 f1 ip0 d2",
+      afterLine(4, primec::IrOpcode::Call, " f1 ip0 d2"),
+      beforeLine(5, primec::IrOpcode::PushI32, " f1 ip0 d2"),
+      afterLine(6, primec::IrOpcode::PushI32, " f1 ip1 d2"),
+      beforeLine(7, primec::IrOpcode::MulI32, " f1 ip1 d2"),
+      afterLine(8, primec::IrOpcode::MulI32, " f1 ip2 d2"),
+      beforeLine(9, primec::IrOpcode::ReturnI32, " f1 ip2 d2"),
+      "10 callPop t1 rv1 f0 ip2 d1",
+      afterLine(11, primec::IrOpcode::ReturnI32, " f0 ip2 d1"),
+      beforeLine(12, primec::IrOpcode::PushI32, " f0 ip2 d1"),
+      afterLine(13, primec::IrOpcode::PushI32, " f0 ip3 d1"),
+      beforeLine(14, primec::IrOpcode::AddI32, " f0 ip3 d1"),
+      afterLine(15, primec::IrOpcode::AddI32, " f0 ip4 d1"),
+      beforeLine(16, primec::IrOpcode::ReturnI32, " f0 ip4 d1"),
+      "17 callPop t0 rv0 f0 ip0 d0",
+      afterLine(18, primec::IrOpcode::ReturnI32, " f0 ip0 d0"),
+  };
+  CHECK(firstRun == expected);
+
+  std::vector<std::string> secondRun;
+  error.clear();
+  REQUIRE(collectEventSequence(secondRun, error));
+  CHECK(error.empty());
+  CHECK(secondRun == firstRun);
+}
+
 TEST_CASE("vm debug opcode matrix matches vm execute for expanded families") {
   struct OpcodeMatrixCase {
     std::string name;
