@@ -535,4 +535,39 @@ PointerBuiltinCallReturnKindResolution inferPointerBuiltinCallReturnKind(
   return PointerBuiltinCallReturnKindResolution::Resolved;
 }
 
+ComparisonOperatorCallReturnKindResolution inferComparisonOperatorCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+
+  std::string builtin;
+  if (getBuiltinComparisonName(expr, builtin)) {
+    kindOut = LocalInfo::ValueKind::Bool;
+    return ComparisonOperatorCallReturnKindResolution::Resolved;
+  }
+
+  if (!getBuiltinOperatorName(expr, builtin)) {
+    return ComparisonOperatorCallReturnKindResolution::NotMatched;
+  }
+
+  if (builtin == "negate") {
+    if (expr.args.size() != 1) {
+      return ComparisonOperatorCallReturnKindResolution::Resolved;
+    }
+    kindOut = inferExprKind(expr.args.front(), localsIn);
+    return ComparisonOperatorCallReturnKindResolution::Resolved;
+  }
+
+  if (expr.args.size() != 2) {
+    return ComparisonOperatorCallReturnKindResolution::Resolved;
+  }
+  auto left = inferExprKind(expr.args[0], localsIn);
+  auto right = inferExprKind(expr.args[1], localsIn);
+  kindOut = combineNumericKinds(left, right);
+  return ComparisonOperatorCallReturnKindResolution::Resolved;
+}
+
 } // namespace primec::ir_lowerer

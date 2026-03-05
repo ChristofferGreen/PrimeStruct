@@ -285,23 +285,18 @@
           }
           return LocalInfo::ValueKind::Unknown;
         }
-        std::string builtin;
-        if (getBuiltinComparisonName(expr, builtin)) {
-          return LocalInfo::ValueKind::Bool;
-        }
-        if (getBuiltinOperatorName(expr, builtin)) {
-          if (builtin == "negate") {
-            if (expr.args.size() != 1) {
-              return LocalInfo::ValueKind::Unknown;
-            }
-            return inferExprKind(expr.args.front(), localsIn);
-          }
-          if (expr.args.size() != 2) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          auto left = inferExprKind(expr.args[0], localsIn);
-          auto right = inferExprKind(expr.args[1], localsIn);
-          return combineNumericKinds(left, right);
+        LocalInfo::ValueKind comparisonOperatorKind = LocalInfo::ValueKind::Unknown;
+        if (inferComparisonOperatorCallReturnKind(
+                expr,
+                localsIn,
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferExprKind(candidateExpr, candidateLocals);
+                },
+                [&](LocalInfo::ValueKind left, LocalInfo::ValueKind right) {
+                  return combineNumericKinds(left, right);
+                },
+                comparisonOperatorKind) == ComparisonOperatorCallReturnKindResolution::Resolved) {
+          return comparisonOperatorKind;
         }
         LocalInfo::ValueKind mathBuiltinKind = LocalInfo::ValueKind::Unknown;
         if (inferMathBuiltinReturnKind(

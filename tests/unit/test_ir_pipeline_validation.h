@@ -12275,6 +12275,126 @@ TEST_CASE("ir lowerer setup inference helper handles invalid pointer builtin cal
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper infers comparison/operator return kinds") {
+  using Resolution = primec::ir_lowerer::ComparisonOperatorCallReturnKindResolution;
+
+  primec::Expr x;
+  x.kind = primec::Expr::Kind::Name;
+  x.name = "x";
+  primec::Expr y;
+  y.kind = primec::Expr::Kind::Name;
+  y.name = "y";
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "equal";
+  comparisonExpr.args = {x, y};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::inferComparisonOperatorCallReturnKind(
+            comparisonExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
+  primec::Expr plusExpr;
+  plusExpr.kind = primec::Expr::Kind::Call;
+  plusExpr.name = "plus";
+  plusExpr.args = {x, y};
+  CHECK(primec::ir_lowerer::inferComparisonOperatorCallReturnKind(
+            plusExpr,
+            {},
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Name && expr.name == "y") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+              }
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind right) {
+              return (left == primec::ir_lowerer::LocalInfo::ValueKind::Int64 ||
+                      right == primec::ir_lowerer::LocalInfo::ValueKind::Int64)
+                         ? primec::ir_lowerer::LocalInfo::ValueKind::Int64
+                         : primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr negateExpr;
+  negateExpr.kind = primec::Expr::Kind::Call;
+  negateExpr.name = "negate";
+  negateExpr.args = {x};
+  CHECK(primec::ir_lowerer::inferComparisonOperatorCallReturnKind(
+            negateExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+}
+
+TEST_CASE("ir lowerer setup inference helper handles invalid comparison/operator calls") {
+  using Resolution = primec::ir_lowerer::ComparisonOperatorCallReturnKindResolution;
+
+  primec::Expr nonOperatorCall;
+  nonOperatorCall.kind = primec::Expr::Kind::Call;
+  nonOperatorCall.name = "clamp";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  CHECK(primec::ir_lowerer::inferComparisonOperatorCallReturnKind(
+            nonOperatorCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr invalidNegate;
+  invalidNegate.kind = primec::Expr::Kind::Call;
+  invalidNegate.name = "negate";
+  invalidNegate.args = {};
+  CHECK(primec::ir_lowerer::inferComparisonOperatorCallReturnKind(
+            invalidNegate,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr invalidPlus;
+  invalidPlus.kind = primec::Expr::Kind::Call;
+  invalidPlus.name = "plus";
+  invalidPlus.args = {nonOperatorCall};
+  CHECK(primec::ir_lowerer::inferComparisonOperatorCallReturnKind(
+            invalidPlus,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";

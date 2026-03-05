@@ -57,6 +57,10 @@ enum class PointerBuiltinCallReturnKindResolution {
   NotMatched,
   Resolved,
 };
+enum class ComparisonOperatorCallReturnKindResolution {
+  NotMatched,
+  Resolved,
+};
 
 LocalInfo::ValueKind inferPointerTargetValueKind(
     const Expr &expr,
@@ -126,6 +130,12 @@ PointerBuiltinCallReturnKindResolution inferPointerBuiltinCallReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,
     const InferSetupInferenceValueKindFn &inferPointerTargetKind,
+    LocalInfo::ValueKind &kindOut);
+ComparisonOperatorCallReturnKindResolution inferComparisonOperatorCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
     LocalInfo::ValueKind &kindOut);
 
 } // namespace primec::ir_lowerer
