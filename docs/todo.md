@@ -237,6 +237,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add scheduler regression coverage for spill-latency penalties so spilled-use instructions are prioritized when dependencies are otherwise equal. Testing: virtual-register scheduling snapshot with manual spill flags and latency assertions.
 - ✓ Add scheduler regression coverage for equal-latency/equal-readiness tie-breaks so lower original instruction index wins deterministically. Testing: virtual-register scheduling snapshot with paired arithmetic ops and equal latency assertions.
 - ✓ Add scheduler regression coverage for barrier ordering boundaries so barrier opcodes cannot move across pre/post instruction regions. Testing: virtual-register scheduling snapshot asserting pre-barrier and post-barrier relative ordering.
+- ✓ Add scheduler regression coverage for spilled-definition latency penalties so instructions defining spilled registers are prioritized when dependencies are otherwise equal. Testing: virtual-register scheduling snapshot with manual spilled-def flag and latency assertions.
 
 **Docs Alignment**
 - ✓ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term (CLI/docs now require `--import-path` and reject `--include-path`; pipeline/import-resolver diagnostics and import-conformance tests/docs use `import` wording).
