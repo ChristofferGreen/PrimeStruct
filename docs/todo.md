@@ -225,6 +225,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a single `scripts/run_spinning_cube_demo.sh` helper that runs web, native, and Metal checks in order with clear PASS/FAIL/SKIP summary and stable exit codes. Testing: script self-check in CI with deterministic summary text.
 - ✓ Validate `scripts/run_spinning_cube_demo.sh --port-base` input and emit deterministic argument diagnostics (`exit 2`) for non-integer values. Testing: script self-check with invalid `--port-base` value asserts stable error text and exit code.
 - ✓ Validate missing values for `scripts/run_spinning_cube_demo.sh` flags (`--primec`, `--work-dir`, `--port-base`) and emit deterministic argument diagnostics (`exit 2`). Testing: script self-check with missing `--port-base` value asserts stable error text and exit code.
+- ✓ Add a regression test that locks deterministic diagnostics for missing `--work-dir` value in `scripts/run_spinning_cube_demo.sh` (`exit 2` + stable error text).
 
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.

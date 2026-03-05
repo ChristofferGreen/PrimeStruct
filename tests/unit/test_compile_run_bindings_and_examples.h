@@ -1259,6 +1259,32 @@ TEST_CASE("spinning cube demo script rejects missing primec value") {
         std::string::npos);
 }
 
+TEST_CASE("spinning cube demo script rejects missing work-dir value") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "run_spinning_cube_demo.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_spinning_cube_demo.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_missing_workdir_value";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path outPath = outDir / "script.out.txt";
+  const std::filesystem::path errPath = outDir / "script.err.txt";
+  const std::string command =
+      quoteShellArg(scriptPath.string()) + " --primec /bin/true --work-dir > " + quoteShellArg(outPath.string()) +
+      " 2> " + quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 2);
+  CHECK(readFile(outPath.string()).empty());
+  CHECK(readFile(errPath.string()).find("[spinning-cube-demo] ERROR: missing value for --work-dir") !=
+        std::string::npos);
+}
+
 TEST_CASE("spinning cube metal shader path compiles and enforces profile gating") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
