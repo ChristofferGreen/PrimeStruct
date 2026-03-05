@@ -318,32 +318,71 @@ bool runCompilePipeline(const Options &options,
                           options.defaultEffects,
                           options.entryDefaultEffects,
                           options.semanticTransforms,
-                          &semanticDiagnosticInfo)) {
+                          &semanticDiagnosticInfo,
+                          options.collectDiagnostics)) {
     errorStage = CompilePipelineErrorStage::Semantic;
     if (diagnosticInfo != nullptr) {
-      diagnosticInfo->normalizedMessage = error;
-      if (semanticDiagnosticInfo.line > 0 && semanticDiagnosticInfo.column > 0) {
-        diagnosticInfo->primarySpan.file = options.inputPath;
-        diagnosticInfo->primarySpan.line = semanticDiagnosticInfo.line;
-        diagnosticInfo->primarySpan.column = semanticDiagnosticInfo.column;
-        diagnosticInfo->primarySpan.endLine = semanticDiagnosticInfo.line;
-        diagnosticInfo->primarySpan.endColumn = semanticDiagnosticInfo.column;
-        diagnosticInfo->hasPrimarySpan = true;
-      }
-      diagnosticInfo->relatedSpans.clear();
-      diagnosticInfo->relatedSpans.reserve(semanticDiagnosticInfo.relatedSpans.size());
-      for (const auto &related : semanticDiagnosticInfo.relatedSpans) {
-        if (related.line <= 0 || related.column <= 0) {
-          continue;
+      if (!semanticDiagnosticInfo.records.empty()) {
+        diagnosticInfo->records.clear();
+        diagnosticInfo->records.reserve(semanticDiagnosticInfo.records.size());
+        for (const auto &semanticRecord : semanticDiagnosticInfo.records) {
+          CompilePipelineDiagnosticInfo::RecordInfo record;
+          record.normalizedMessage = semanticRecord.message;
+          if (semanticRecord.line > 0 && semanticRecord.column > 0) {
+            record.primarySpan.file = options.inputPath;
+            record.primarySpan.line = semanticRecord.line;
+            record.primarySpan.column = semanticRecord.column;
+            record.primarySpan.endLine = semanticRecord.line;
+            record.primarySpan.endColumn = semanticRecord.column;
+            record.hasPrimarySpan = true;
+          }
+          record.relatedSpans.reserve(semanticRecord.relatedSpans.size());
+          for (const auto &semanticRelated : semanticRecord.relatedSpans) {
+            if (semanticRelated.line <= 0 || semanticRelated.column <= 0) {
+              continue;
+            }
+            DiagnosticRelatedSpan span;
+            span.span.file = options.inputPath;
+            span.span.line = semanticRelated.line;
+            span.span.column = semanticRelated.column;
+            span.span.endLine = semanticRelated.line;
+            span.span.endColumn = semanticRelated.column;
+            span.label = semanticRelated.label;
+            record.relatedSpans.push_back(std::move(span));
+          }
+          diagnosticInfo->records.push_back(std::move(record));
         }
-        DiagnosticRelatedSpan span;
-        span.span.file = options.inputPath;
-        span.span.line = related.line;
-        span.span.column = related.column;
-        span.span.endLine = related.line;
-        span.span.endColumn = related.column;
-        span.label = related.label;
-        diagnosticInfo->relatedSpans.push_back(std::move(span));
+        if (!diagnosticInfo->records.empty()) {
+          diagnosticInfo->normalizedMessage = diagnosticInfo->records.front().normalizedMessage;
+          diagnosticInfo->primarySpan = diagnosticInfo->records.front().primarySpan;
+          diagnosticInfo->relatedSpans = diagnosticInfo->records.front().relatedSpans;
+          diagnosticInfo->hasPrimarySpan = diagnosticInfo->records.front().hasPrimarySpan;
+        }
+      } else {
+        diagnosticInfo->normalizedMessage = error;
+        if (semanticDiagnosticInfo.line > 0 && semanticDiagnosticInfo.column > 0) {
+          diagnosticInfo->primarySpan.file = options.inputPath;
+          diagnosticInfo->primarySpan.line = semanticDiagnosticInfo.line;
+          diagnosticInfo->primarySpan.column = semanticDiagnosticInfo.column;
+          diagnosticInfo->primarySpan.endLine = semanticDiagnosticInfo.line;
+          diagnosticInfo->primarySpan.endColumn = semanticDiagnosticInfo.column;
+          diagnosticInfo->hasPrimarySpan = true;
+        }
+        diagnosticInfo->relatedSpans.clear();
+        diagnosticInfo->relatedSpans.reserve(semanticDiagnosticInfo.relatedSpans.size());
+        for (const auto &related : semanticDiagnosticInfo.relatedSpans) {
+          if (related.line <= 0 || related.column <= 0) {
+            continue;
+          }
+          DiagnosticRelatedSpan span;
+          span.span.file = options.inputPath;
+          span.span.line = related.line;
+          span.span.column = related.column;
+          span.span.endLine = related.line;
+          span.span.endColumn = related.column;
+          span.label = related.label;
+          diagnosticInfo->relatedSpans.push_back(std::move(span));
+        }
       }
     }
     return false;

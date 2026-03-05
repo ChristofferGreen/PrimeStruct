@@ -3,8 +3,11 @@
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
 
+#include <algorithm>
 #include <cctype>
 #include <functional>
+#include <limits>
+#include <unordered_map>
 #include <utility>
 
 namespace primec::semantics {
@@ -14,13 +17,15 @@ SemanticsValidator::SemanticsValidator(const Program &program,
                                        std::string &error,
                                        const std::vector<std::string> &defaultEffects,
                                        const std::vector<std::string> &entryDefaultEffects,
-                                       SemanticDiagnosticInfo *diagnosticInfo)
+                                       SemanticDiagnosticInfo *diagnosticInfo,
+                                       bool collectDiagnostics)
     : program_(program),
       entryPath_(entryPath),
       error_(error),
       defaultEffects_(defaultEffects),
       entryDefaultEffects_(entryDefaultEffects),
-      diagnosticInfo_(diagnosticInfo) {
+      diagnosticInfo_(diagnosticInfo),
+      collectDiagnostics_(collectDiagnostics) {
   if (diagnosticInfo_ != nullptr) {
     *diagnosticInfo_ = {};
   }
@@ -144,7 +149,108 @@ void SemanticsValidator::captureExecutionContext(const Execution &exec) {
   captureRelatedSpan(exec.sourceLine, exec.sourceColumn, "execution: " + exec.fullPath);
 }
 
+bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
+  std::unordered_map<std::string, std::vector<const Definition *>> definitionsByPath;
+  definitionsByPath.reserve(program_.definitions.size());
+  for (const auto &def : program_.definitions) {
+    definitionsByPath[def.fullPath].push_back(&def);
+  }
+
+  struct DuplicateGroup {
+    std::string path;
+    std::vector<const Definition *> definitions;
+  };
+  std::vector<DuplicateGroup> duplicateGroups;
+  duplicateGroups.reserve(definitionsByPath.size());
+  for (auto &entry : definitionsByPath) {
+    if (entry.second.size() <= 1) {
+      continue;
+    }
+    auto &defs = entry.second;
+    std::stable_sort(defs.begin(), defs.end(), [](const Definition *left, const Definition *right) {
+      const int leftLine = left->sourceLine > 0 ? left->sourceLine : std::numeric_limits<int>::max();
+      const int rightLine = right->sourceLine > 0 ? right->sourceLine : std::numeric_limits<int>::max();
+      if (leftLine != rightLine) {
+        return leftLine < rightLine;
+      }
+      const int leftColumn = left->sourceColumn > 0 ? left->sourceColumn : std::numeric_limits<int>::max();
+      const int rightColumn = right->sourceColumn > 0 ? right->sourceColumn : std::numeric_limits<int>::max();
+      if (leftColumn != rightColumn) {
+        return leftColumn < rightColumn;
+      }
+      return left->fullPath < right->fullPath;
+    });
+    duplicateGroups.push_back(DuplicateGroup{entry.first, defs});
+  }
+  if (duplicateGroups.empty()) {
+    return true;
+  }
+
+  std::stable_sort(duplicateGroups.begin(), duplicateGroups.end(), [](const DuplicateGroup &left, const DuplicateGroup &right) {
+    const Definition *leftDef = left.definitions.front();
+    const Definition *rightDef = right.definitions.front();
+    const int leftLine = leftDef->sourceLine > 0 ? leftDef->sourceLine : std::numeric_limits<int>::max();
+    const int rightLine = rightDef->sourceLine > 0 ? rightDef->sourceLine : std::numeric_limits<int>::max();
+    if (leftLine != rightLine) {
+      return leftLine < rightLine;
+    }
+    const int leftColumn = leftDef->sourceColumn > 0 ? leftDef->sourceColumn : std::numeric_limits<int>::max();
+    const int rightColumn = rightDef->sourceColumn > 0 ? rightDef->sourceColumn : std::numeric_limits<int>::max();
+    if (leftColumn != rightColumn) {
+      return leftColumn < rightColumn;
+    }
+    return left.path < right.path;
+  });
+
+  if (diagnosticInfo_ != nullptr) {
+    diagnosticInfo_->records.clear();
+    diagnosticInfo_->records.reserve(duplicateGroups.size());
+    for (const auto &group : duplicateGroups) {
+      SemanticDiagnosticRecord record;
+      record.message = "duplicate definition: " + group.path;
+      const Definition *primary = group.definitions.front();
+      if (primary->sourceLine > 0 && primary->sourceColumn > 0) {
+        record.line = primary->sourceLine;
+        record.column = primary->sourceColumn;
+      }
+      for (const Definition *def : group.definitions) {
+        if (def->sourceLine <= 0 || def->sourceColumn <= 0) {
+          continue;
+        }
+        const std::string label = "definition: " + def->fullPath;
+        bool duplicateSpan = false;
+        for (const auto &existing : record.relatedSpans) {
+          if (existing.line == def->sourceLine && existing.column == def->sourceColumn && existing.label == label) {
+            duplicateSpan = true;
+            break;
+          }
+        }
+        if (duplicateSpan) {
+          continue;
+        }
+        SemanticDiagnosticRelatedSpan span;
+        span.line = def->sourceLine;
+        span.column = def->sourceColumn;
+        span.label = label;
+        record.relatedSpans.push_back(std::move(span));
+      }
+      diagnosticInfo_->records.push_back(std::move(record));
+    }
+    if (!diagnosticInfo_->records.empty()) {
+      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
+      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
+      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
+    }
+  }
+
+  error_ = "duplicate definition: " + duplicateGroups.front().path;
+  return false;
+}
+
 bool SemanticsValidator::run() {
+  if (collectDiagnostics_ && !collectDuplicateDefinitionDiagnostics()) {
+    return false;
+  }
   if (!buildDefinitionMaps()) {
     return false;
   }

@@ -16,7 +16,10 @@ Legend:
 - ✓ Replace `std::system` archive extraction/tool invocation with an injected process abstraction for testability.
 - ✓ Add backend capability matrix tests specifically for call semantics (recursion, tail-call, indirect-call policy).
 - File-level refactoring/splitting roadmap items were removed from active TODOs by request (March 5, 2026).
-- ◐ Extend diagnostics to support multi-error collection mode with stable ordering (not just first-error exit) (phase 1 added `--collect-diagnostics` parse-stage collection with stable location ordering and multi-record JSON emission in `primec`/`primevm`).
+- ✓ Add `--collect-diagnostics` parse-stage collection with stable location ordering and multi-record JSON emission in `primec`/`primevm`.
+- ✓ Add semantic-stage multi-error collection for duplicate definitions with stable source ordering in `primec`/`primevm` JSON diagnostics.
+- ○ Extend semantic-stage collection to aggregate additional build-map errors (import conflicts, invalid transforms, return-kind resolution) instead of first-error exit.
+- ○ Extend semantic-stage collection through definition/execution validation passes to emit independent errors in one run with stable ordering.
 
 **Pipeline & CLI**
 - ✓ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.

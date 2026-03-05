@@ -19,7 +19,8 @@ public:
                      std::string &error,
                      const std::vector<std::string> &defaultEffects,
                      const std::vector<std::string> &entryDefaultEffects,
-                     SemanticDiagnosticInfo *diagnosticInfo);
+                     SemanticDiagnosticInfo *diagnosticInfo,
+                     bool collectDiagnostics);
 
   bool run();
 
@@ -71,6 +72,7 @@ private:
   void captureExprContext(const Expr &expr);
   void captureDefinitionContext(const Definition &def);
   void captureExecutionContext(const Execution &exec);
+  bool collectDuplicateDefinitionDiagnostics();
 
   ReturnKind inferExprReturnKind(const Expr &expr,
                                 const std::vector<ParameterInfo> &params,
@@ -278,6 +280,7 @@ private:
   const std::vector<std::string> &defaultEffects_;
   const std::vector<std::string> &entryDefaultEffects_;
   SemanticDiagnosticInfo *diagnosticInfo_ = nullptr;
+  bool collectDiagnostics_ = false;
 
   std::unordered_set<std::string> defaultEffectSet_;
   std::unordered_set<std::string> entryDefaultEffectSet_;
