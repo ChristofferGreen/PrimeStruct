@@ -1077,6 +1077,94 @@ TEST_CASE("scheduler prioritizes spilled-register latency penalty") {
   CHECK(addSpilledLatency == 4u);
 }
 
+TEST_CASE("scheduler ties pick lower original instruction index") {
+  primec::IrVirtualRegisterModule module;
+  primec::IrVirtualRegisterFunction function;
+  function.name = "/main";
+  primec::IrVirtualRegisterBlock block;
+  block.startInstructionIndex = 0;
+  block.endInstructionIndex = 7;
+  block.reachable = true;
+
+  primec::IrVirtualRegisterInstruction inst0;
+  inst0.instruction = {primec::IrOpcode::PushI32, 11};
+  inst0.defRegisters = {0};
+  block.instructions.push_back(inst0);
+
+  primec::IrVirtualRegisterInstruction inst1;
+  inst1.instruction = {primec::IrOpcode::PushI32, 22};
+  inst1.defRegisters = {1};
+  block.instructions.push_back(inst1);
+
+  primec::IrVirtualRegisterInstruction inst2;
+  inst2.instruction = {primec::IrOpcode::PushI32, 33};
+  inst2.defRegisters = {2};
+  block.instructions.push_back(inst2);
+
+  primec::IrVirtualRegisterInstruction inst3;
+  inst3.instruction = {primec::IrOpcode::PushI32, 44};
+  inst3.defRegisters = {3};
+  block.instructions.push_back(inst3);
+
+  primec::IrVirtualRegisterInstruction inst4;
+  inst4.instruction = {primec::IrOpcode::AddI32, 0};
+  inst4.useRegisters = {0, 1};
+  inst4.defRegisters = {4};
+  block.instructions.push_back(inst4);
+
+  primec::IrVirtualRegisterInstruction inst5;
+  inst5.instruction = {primec::IrOpcode::SubI32, 0};
+  inst5.useRegisters = {2, 3};
+  inst5.defRegisters = {5};
+  block.instructions.push_back(inst5);
+
+  primec::IrVirtualRegisterInstruction inst6;
+  inst6.instruction = {primec::IrOpcode::ReturnI32, 0};
+  inst6.useRegisters = {4};
+  block.instructions.push_back(inst6);
+
+  function.blocks.push_back(std::move(block));
+  module.functions.push_back(std::move(function));
+
+  primec::IrLinearScanModuleAllocation allocation;
+  primec::IrLinearScanFunctionAllocation functionAllocation;
+  functionAllocation.functionName = "/main";
+  for (uint32_t reg = 0; reg <= 5; ++reg) {
+    primec::IrLinearScanRegisterAssignment assignment;
+    assignment.virtualRegister = reg;
+    assignment.spilled = false;
+    functionAllocation.assignments.push_back(assignment);
+  }
+  allocation.functions.push_back(std::move(functionAllocation));
+
+  primec::IrVirtualRegisterScheduledModule scheduled;
+  std::string error;
+  REQUIRE(primec::scheduleIrVirtualRegisters(module, allocation, scheduled, error));
+  CHECK(error.empty());
+  REQUIRE(scheduled.functions.size() == 1);
+  REQUIRE(scheduled.functions[0].blocks.size() == 1);
+  const auto &scheduledBlock = scheduled.functions[0].blocks[0];
+  REQUIRE(scheduledBlock.instructions.size() == 7);
+
+  std::vector<size_t> scheduledOrder;
+  for (const auto &instruction : scheduledBlock.instructions) {
+    scheduledOrder.push_back(instruction.originalInstructionIndex);
+  }
+  CHECK(scheduledOrder == std::vector<size_t>{0, 1, 2, 3, 4, 5, 6});
+
+  uint32_t addLatency = 0;
+  uint32_t subLatency = 0;
+  for (const auto &instruction : scheduledBlock.instructions) {
+    if (instruction.originalInstructionIndex == 4) {
+      addLatency = instruction.latencyScore;
+    } else if (instruction.originalInstructionIndex == 5) {
+      subLatency = instruction.latencyScore;
+    }
+  }
+  CHECK(addLatency == 2u);
+  CHECK(subLatency == 2u);
+}
+
 TEST_CASE("scheduler rejects allocation name mismatch") {
   primec::IrVirtualRegisterModule module;
   primec::IrVirtualRegisterFunction function;

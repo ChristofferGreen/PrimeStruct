@@ -235,6 +235,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Document allocator/scheduler design, heuristics, and debug dump formats in `docs/PrimeStruct.md`. Testing: doc-linked dump examples validated by snapshot tests.
 - ✓ Add regression coverage for debug dump per-function ordering tie-breaks when function indices match (sort by function name). Testing: deterministic snapshot asserting `(functionIndex, functionName)` ordering.
 - ✓ Add scheduler regression coverage for spill-latency penalties so spilled-use instructions are prioritized when dependencies are otherwise equal. Testing: virtual-register scheduling snapshot with manual spill flags and latency assertions.
+- ✓ Add scheduler regression coverage for equal-latency/equal-readiness tie-breaks so lower original instruction index wins deterministically. Testing: virtual-register scheduling snapshot with paired arithmetic ops and equal latency assertions.
 
 **Docs Alignment**
 - ✓ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term (CLI/docs now require `--import-path` and reject `--include-path`; pipeline/import-resolver diagnostics and import-conformance tests/docs use `import` wording).
