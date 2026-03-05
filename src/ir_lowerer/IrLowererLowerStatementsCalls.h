@@ -70,28 +70,26 @@
   if (entryOnErrorIt != onErrorByDef.end()) {
     entryOnError = entryOnErrorIt->second;
   }
-  OnErrorScope entryOnErrorScope(currentOnError, entryOnError);
   std::optional<ResultReturnInfo> entryResult;
   if (entryHasResultInfo) {
     entryResult = entryResultInfo;
   }
-  ResultReturnScope entryResultScope(currentReturnResult, entryResult);
-  pushFileScope();
-  for (const auto &stmt : entryDef->statements) {
-    if (!emitStatement(stmt, locals)) {
-      return false;
-    }
-  }
-  emitFileScopeCleanup(fileScopeStack.back());
-  popFileScope();
-
-  if (!sawReturn) {
-    if (returnsVoid) {
-      function.instructions.push_back({IrOpcode::ReturnVoid, 0});
-    } else {
-      error = "native backend requires an explicit return statement";
-      return false;
-    }
+  const auto entryExecutionResult = ir_lowerer::emitEntryCallableExecutionWithCleanup(
+      *entryDef,
+      returnsVoid,
+      sawReturn,
+      currentOnError,
+      entryOnError,
+      currentReturnResult,
+      entryResult,
+      [&](const Expr &stmt) { return emitStatement(stmt, locals); },
+      [&]() { pushFileScope(); },
+      [&]() { emitFileScopeCleanup(fileScopeStack.back()); },
+      [&]() { popFileScope(); },
+      function.instructions,
+      error);
+  if (entryExecutionResult == ir_lowerer::EntryCallableExecutionResult::Error) {
+    return false;
   }
 
   auto appendReturnForDefinition = [&](const std::string &defPath, const ReturnInfo &returnInfo) -> bool {

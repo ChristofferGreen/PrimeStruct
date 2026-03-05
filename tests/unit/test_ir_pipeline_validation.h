@@ -12972,6 +12972,116 @@ TEST_CASE("ir lowerer statement call helper orchestrates callable lowering") {
             error) == Result::Error);
 }
 
+TEST_CASE("ir lowerer statement call helper orchestrates entry execution cleanup") {
+  using Result = primec::ir_lowerer::EntryCallableExecutionResult;
+
+  primec::Definition entry;
+  entry.fullPath = "/main/entry";
+  primec::Expr stmtA;
+  stmtA.kind = primec::Expr::Kind::Call;
+  stmtA.name = "first";
+  primec::Expr stmtB;
+  stmtB.kind = primec::Expr::Kind::Call;
+  stmtB.name = "second";
+  entry.statements = {stmtA, stmtB};
+
+  bool sawReturn = false;
+  std::optional<primec::ir_lowerer::OnErrorHandler> currentOnError;
+  currentOnError = primec::ir_lowerer::OnErrorHandler{.handlerPath = "/main/prev"};
+  const std::optional<primec::ir_lowerer::OnErrorHandler> entryOnError =
+      primec::ir_lowerer::OnErrorHandler{.handlerPath = "/main/handler"};
+  std::optional<primec::ir_lowerer::ResultReturnInfo> currentReturnResult;
+  currentReturnResult = primec::ir_lowerer::ResultReturnInfo{.isResult = false, .hasValue = false};
+  const std::optional<primec::ir_lowerer::ResultReturnInfo> entryResult =
+      primec::ir_lowerer::ResultReturnInfo{.isResult = true, .hasValue = true};
+
+  int emitStatementCalls = 0;
+  int pushCalls = 0;
+  int cleanupCalls = 0;
+  int popCalls = 0;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitEntryCallableExecutionWithCleanup(
+            entry,
+            true,
+            sawReturn,
+            currentOnError,
+            entryOnError,
+            currentReturnResult,
+            entryResult,
+            [&](const primec::Expr &) {
+              ++emitStatementCalls;
+              return true;
+            },
+            [&]() { ++pushCalls; },
+            [&]() { ++cleanupCalls; },
+            [&]() { ++popCalls; },
+            instructions,
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(sawReturn);
+  CHECK(emitStatementCalls == 2);
+  CHECK(pushCalls == 1);
+  CHECK(cleanupCalls == 1);
+  CHECK(popCalls == 1);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions.front().op == primec::IrOpcode::ReturnVoid);
+  REQUIRE(currentOnError.has_value());
+  CHECK(currentOnError->handlerPath == "/main/prev");
+  REQUIRE(currentReturnResult.has_value());
+  CHECK_FALSE(currentReturnResult->isResult);
+}
+
+TEST_CASE("ir lowerer statement call helper validates entry execution diagnostics") {
+  using Result = primec::ir_lowerer::EntryCallableExecutionResult;
+
+  primec::Definition entry;
+  entry.fullPath = "/main/entry";
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "body";
+  entry.statements = {stmt};
+
+  bool sawReturn = false;
+  std::optional<primec::ir_lowerer::OnErrorHandler> currentOnError;
+  std::optional<primec::ir_lowerer::ResultReturnInfo> currentReturnResult;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitEntryCallableExecutionWithCleanup(
+            entry,
+            true,
+            sawReturn,
+            currentOnError,
+            std::nullopt,
+            currentReturnResult,
+            std::nullopt,
+            [&](const primec::Expr &) { return false; },
+            []() {},
+            []() {},
+            []() {},
+            instructions,
+            error) == Result::Error);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+
+  error.clear();
+  CHECK(primec::ir_lowerer::emitEntryCallableExecutionWithCleanup(
+            entry,
+            false,
+            sawReturn,
+            currentOnError,
+            std::nullopt,
+            currentReturnResult,
+            std::nullopt,
+            [&](const primec::Expr &) { return true; },
+            []() {},
+            []() {},
+            []() {},
+            instructions,
+            error) == Result::Error);
+  CHECK(error == "native backend requires an explicit return statement");
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

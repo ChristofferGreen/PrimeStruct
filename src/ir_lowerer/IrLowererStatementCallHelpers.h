@@ -2,10 +2,12 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
+#include "IrLowererFlowHelpers.h"
 #include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
 #include "primec/Ir.h"
@@ -32,6 +34,10 @@ enum class AssignOrExprStatementEmitResult {
   Error,
 };
 enum class CallableDefinitionOrchestrationResult {
+  Emitted,
+  Error,
+};
+enum class EntryCallableExecutionResult {
   Emitted,
   Error,
 };
@@ -95,6 +101,20 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
     IrFunction &function,
     int32_t &nextLocal,
     std::vector<IrFunction> &outFunctions,
+    std::string &error);
+EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
+    bool &sawReturn,
+    std::optional<OnErrorHandler> &currentOnError,
+    const std::optional<OnErrorHandler> &entryOnError,
+    std::optional<ResultReturnInfo> &currentReturnResult,
+    const std::optional<ResultReturnInfo> &entryResult,
+    const std::function<bool(const Expr &)> &emitStatement,
+    const std::function<void()> &pushFileScope,
+    const std::function<void()> &emitCurrentFileScopeCleanup,
+    const std::function<void()> &popFileScope,
+    std::vector<IrInstruction> &instructions,
     std::string &error);
 
 } // namespace primec::ir_lowerer

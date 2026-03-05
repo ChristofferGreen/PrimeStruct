@@ -430,4 +430,40 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
   return CallableDefinitionOrchestrationResult::Emitted;
 }
 
+EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
+    bool &sawReturn,
+    std::optional<OnErrorHandler> &currentOnError,
+    const std::optional<OnErrorHandler> &entryOnError,
+    std::optional<ResultReturnInfo> &currentReturnResult,
+    const std::optional<ResultReturnInfo> &entryResult,
+    const std::function<bool(const Expr &)> &emitStatement,
+    const std::function<void()> &pushFileScope,
+    const std::function<void()> &emitCurrentFileScopeCleanup,
+    const std::function<void()> &popFileScope,
+    std::vector<IrInstruction> &instructions,
+    std::string &error) {
+  OnErrorScope entryOnErrorScope(currentOnError, entryOnError);
+  ResultReturnScope entryResultScope(currentReturnResult, entryResult);
+  pushFileScope();
+  for (const auto &stmt : entryDef.statements) {
+    if (!emitStatement(stmt)) {
+      return EntryCallableExecutionResult::Error;
+    }
+  }
+  emitCurrentFileScopeCleanup();
+  popFileScope();
+
+  if (!sawReturn) {
+    if (definitionReturnsVoid) {
+      instructions.push_back({IrOpcode::ReturnVoid, 0});
+    } else {
+      error = "native backend requires an explicit return statement";
+      return EntryCallableExecutionResult::Error;
+    }
+  }
+  return EntryCallableExecutionResult::Emitted;
+}
+
 } // namespace primec::ir_lowerer
