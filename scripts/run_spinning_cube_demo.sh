@@ -56,7 +56,7 @@ if (( PORT_BASE < 1 || PORT_BASE > 65535 )); then
   exit 2
 fi
 
-if [[ ! -x "$PRIMEC_BIN" ]]; then
+if [[ ! -f "$PRIMEC_BIN" || ! -x "$PRIMEC_BIN" ]]; then
   echo "[spinning-cube-demo] ERROR: primec binary not found: $PRIMEC_BIN" >&2
   exit 2
 fi
