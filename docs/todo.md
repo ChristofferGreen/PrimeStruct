@@ -245,6 +245,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Require `--primec` to reference an executable file (not just any executable path) in `scripts/run_spinning_cube_demo.sh` and lock deterministic rejection for directory paths. Testing: script regression with a directory-valued `--primec` asserts `exit 2` + stable `primec binary not found` text.
 - ✓ Add a regression test that locks deterministic fail-summary behavior when native compilation fails with a generic error in `scripts/run_spinning_cube_demo.sh` (`NATIVE: FAIL`, `RESULT: FAIL`, exit code `1`).
 - ✓ Add a regression test that locks deterministic diagnostics when `scripts/run_spinning_cube_demo.sh` falls back to default `build-debug/primec` and that binary is missing (`exit 2` + stable `primec binary not found` text with the computed default path).
+- ✓ Add a regression test that locks deterministic diagnostics when the fallback default `build-debug/primec` path exists but is not executable in `scripts/run_spinning_cube_demo.sh` (`exit 2` + stable `primec binary not found` text with the computed default path).
 
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
