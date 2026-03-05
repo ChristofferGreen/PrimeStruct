@@ -362,7 +362,7 @@ main([array<string>] args) {
   }
 }
 
-TEST_CASE("spinning cube native host target builds and runs") {
+TEST_CASE("spinning cube native host runtime smoke emits success marker") {
   std::filesystem::path webSampleDir =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
   std::filesystem::path nativeSampleDir =
@@ -411,9 +411,13 @@ TEST_CASE("spinning cube native host target builds and runs") {
   CHECK(runCommand(compileHostCmd) == 0);
   CHECK(std::filesystem::exists(hostBinaryPath));
 
+  const std::filesystem::path hostOutPath =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_host_runtime.out.txt";
   const std::string runHostCmd =
-      quoteShellArg(hostBinaryPath.string()) + " " + quoteShellArg(cubeNativePath.string());
+      quoteShellArg(hostBinaryPath.string()) + " " + quoteShellArg(cubeNativePath.string()) + " > " +
+      quoteShellArg(hostOutPath.string());
   CHECK(runCommand(runHostCmd) == 0);
+  CHECK(readFile(hostOutPath.string()).find("native host verified cube simulation output") != std::string::npos);
 }
 
 TEST_CASE("spinning cube fixed-step snapshots stay deterministic") {
