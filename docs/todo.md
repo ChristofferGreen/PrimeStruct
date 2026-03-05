@@ -21,7 +21,8 @@ Legend:
 - ✓ Extend semantic-stage collection to aggregate import/build-map errors (unsupported `/std/math`, private import paths, unknown import paths, and import name conflicts) with stable ordering.
 - ✓ Extend semantic-stage collection to aggregate invalid-transform build-map errors (definition transform validation) instead of first-error exit.
 - ✓ Extend semantic-stage collection to aggregate return-kind resolution build-map errors instead of first-error exit.
-- ○ Extend semantic-stage collection through definition/execution validation passes to emit independent errors in one run with stable ordering.
+- ✓ Extend semantic-stage collection through definition/execution validation passes to emit independent errors in one run with stable ordering.
+- ○ Add intra-definition/execution body multi-error recovery so a single definition/execution can report more than one semantic error per pass.
 
 **Pipeline & CLI**
 - ✓ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.

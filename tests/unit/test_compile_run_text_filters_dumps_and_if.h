@@ -780,6 +780,180 @@ main() {
   CHECK(secondMessage < thirdMessage);
 }
 
+TEST_CASE("primec collect-diagnostics emits stable multi-semantic payload for definition pass errors") {
+  const std::string source = R"(
+[return<int>]
+first() {
+  return(nope(1i32))
+}
+[return<int>]
+second() {
+  return(missing(2i32))
+}
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_definitions.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_definitions_err.json").string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: nope\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: missing\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /first\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /second\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"unknown call target: nope\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown call target: missing\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primevm collect-diagnostics emits stable multi-semantic payload for definition pass errors") {
+  const std::string source = R"(
+[return<int>]
+first() {
+  return(nope(1i32))
+}
+[return<int>]
+second() {
+  return(missing(2i32))
+}
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_definitions.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_definitions_err.json").string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: nope\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: missing\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /first\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /second\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"unknown call target: nope\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown call target: missing\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primec collect-diagnostics emits stable multi-semantic payload for execution pass errors") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+
+run_missing_one()
+run_missing_two()
+)";
+  const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_executions.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_executions_err.json").string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown execution target: /run_missing_one\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown execution target: /run_missing_two\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /run_missing_one\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /run_missing_two\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"unknown execution target: /run_missing_one\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown execution target: /run_missing_two\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primevm collect-diagnostics emits stable multi-semantic payload for execution pass errors") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+
+run_missing_one()
+run_missing_two()
+)";
+  const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_executions.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_executions_err.json").string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown execution target: /run_missing_one\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown execution target: /run_missing_two\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /run_missing_one\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /run_missing_two\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"unknown execution target: /run_missing_one\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown execution target: /run_missing_two\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
 TEST_CASE("primevm emit-diagnostics reports structured semantic payload") {
   const std::string source = R"(
 [return<int>]

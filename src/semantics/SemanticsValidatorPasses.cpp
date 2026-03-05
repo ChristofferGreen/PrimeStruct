@@ -185,7 +185,31 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
 }
 
 bool SemanticsValidator::validateDefinitions() {
-  for (const auto &def : program_.definitions) {
+  std::vector<SemanticDiagnosticRecord> collectedRecords;
+  const bool collectDiagnostics = collectDiagnostics_ && diagnosticInfo_ != nullptr;
+  auto resetCollectedState = [&]() {
+    if (!collectDiagnostics) {
+      return;
+    }
+    diagnosticInfo_->line = 0;
+    diagnosticInfo_->column = 0;
+    diagnosticInfo_->relatedSpans.clear();
+  };
+  auto pushCollectedRecord = [&]() {
+    if (!collectDiagnostics || error_.empty()) {
+      return;
+    }
+    SemanticDiagnosticRecord record;
+    record.message = error_;
+    record.line = diagnosticInfo_->line;
+    record.column = diagnosticInfo_->column;
+    record.relatedSpans = diagnosticInfo_->relatedSpans;
+    collectedRecords.push_back(std::move(record));
+    error_.clear();
+    resetCollectedState();
+  };
+
+  auto validateDefinition = [&](const Definition &def) -> bool {
     DefinitionContextScope definitionScope(*this, def);
     ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
     auto isStructDefinition = [&](const Definition &candidate) {
@@ -293,7 +317,30 @@ bool SemanticsValidator::validateDefinitions() {
         return false;
       }
     }
+    return true;
+  };
+
+  for (const auto &def : program_.definitions) {
+    resetCollectedState();
+    if (!validateDefinition(def)) {
+      if (!collectDiagnostics) {
+        return false;
+      }
+      pushCollectedRecord();
+    }
   }
+
+  if (collectDiagnostics && !collectedRecords.empty()) {
+    diagnosticInfo_->records = std::move(collectedRecords);
+    if (!diagnosticInfo_->records.empty()) {
+      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
+      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
+      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
+      error_ = diagnosticInfo_->records.front().message;
+    }
+    return false;
+  }
+
   return true;
 }
 
@@ -944,7 +991,31 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
 }
 
 bool SemanticsValidator::validateExecutions() {
-  for (const auto &exec : program_.executions) {
+  std::vector<SemanticDiagnosticRecord> collectedRecords;
+  const bool collectDiagnostics = collectDiagnostics_ && diagnosticInfo_ != nullptr;
+  auto resetCollectedState = [&]() {
+    if (!collectDiagnostics) {
+      return;
+    }
+    diagnosticInfo_->line = 0;
+    diagnosticInfo_->column = 0;
+    diagnosticInfo_->relatedSpans.clear();
+  };
+  auto pushCollectedRecord = [&]() {
+    if (!collectDiagnostics || error_.empty()) {
+      return;
+    }
+    SemanticDiagnosticRecord record;
+    record.message = error_;
+    record.line = diagnosticInfo_->line;
+    record.column = diagnosticInfo_->column;
+    record.relatedSpans = diagnosticInfo_->relatedSpans;
+    collectedRecords.push_back(std::move(record));
+    error_.clear();
+    resetCollectedState();
+  };
+
+  auto validateExecution = [&](const Execution &exec) -> bool {
     ExecutionContextScope executionScope(*this, exec);
     ValidationContextScope validationContextScope(*this, buildExecutionValidationContext(exec));
     bool sawEffects = false;
@@ -1074,7 +1145,30 @@ bool SemanticsValidator::validateExecutions() {
       }
       expireReferenceBorrowsForRemainder({}, execLocals, exec.bodyArguments, bodyIndex + 1);
     }
+    return true;
+  };
+
+  for (const auto &exec : program_.executions) {
+    resetCollectedState();
+    if (!validateExecution(exec)) {
+      if (!collectDiagnostics) {
+        return false;
+      }
+      pushCollectedRecord();
+    }
   }
+
+  if (collectDiagnostics && !collectedRecords.empty()) {
+    diagnosticInfo_->records = std::move(collectedRecords);
+    if (!diagnosticInfo_->records.empty()) {
+      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
+      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
+      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
+      error_ = diagnosticInfo_->records.front().message;
+    }
+    return false;
+  }
+
   return true;
 }
 
