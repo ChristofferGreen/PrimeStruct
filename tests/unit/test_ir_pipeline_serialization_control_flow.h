@@ -1686,6 +1686,135 @@ TEST_CASE("native backend cache mode regression matrix covers branches and call 
 
   CHECK(sawSpillOrReloadImprovement);
 }
+
+TEST_CASE("native backend optimization conformance perf gates enforce parity and thresholds") {
+  struct PerfGateCase {
+    std::string name;
+    primec::IrModule module;
+    uint64_t minSpillReduction = 0;
+    uint64_t minReloadReduction = 0;
+  };
+
+  std::vector<PerfGateCase> cases;
+
+  {
+    primec::IrModule module;
+    module.entryIndex = 0;
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 10});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+    mainFn.instructions.push_back({primec::IrOpcode::DivI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+    mainFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+    mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    module.functions.push_back(std::move(mainFn));
+    cases.push_back({"arithmetic_chain", std::move(module), 1u, 1u});
+  }
+
+  {
+    primec::IrModule module;
+    module.entryIndex = 0;
+
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+    mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    primec::IrFunction helperFn;
+    helperFn.name = "/helper";
+    helperFn.instructions.push_back({primec::IrOpcode::PushF32, 0x3FC00000u}); // 1.5f
+    helperFn.instructions.push_back({primec::IrOpcode::PushF32, 0x40000000u}); // 2.0f
+    helperFn.instructions.push_back({primec::IrOpcode::AddF32, 0});
+    helperFn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+    helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    module.functions.push_back(std::move(mainFn));
+    module.functions.push_back(std::move(helperFn));
+    cases.push_back({"call_float_mix", std::move(module), 1u, 1u});
+  }
+
+  primec::NativeEmitter emitter;
+  primec::NativeEmitterOptions cacheOnOptions;
+  cacheOnOptions.enableRegisterCache = true;
+  primec::NativeEmitterOptions cacheOffOptions;
+  cacheOffOptions.enableRegisterCache = false;
+
+  uint64_t totalSpillReduction = 0;
+  uint64_t totalReloadReduction = 0;
+
+  for (const auto &testCase : cases) {
+    primec::Vm vm;
+    uint64_t vmResult = 0;
+    std::string error;
+    INFO("perf gate case: " << testCase.name);
+    REQUIRE(vm.execute(testCase.module, vmResult, error));
+    CHECK(error.empty());
+
+    primec::NativeEmitterInstrumentation cacheOffStatsA;
+    primec::NativeEmitterInstrumentation cacheOnStatsA;
+    primec::NativeEmitterInstrumentation cacheOffStatsB;
+    primec::NativeEmitterInstrumentation cacheOnStatsB;
+
+    const std::string exeOffPathA =
+        (std::filesystem::temp_directory_path() / ("primec_native_ir_perf_gate_off_a_" + testCase.name)).string();
+    const std::string exeOnPathA =
+        (std::filesystem::temp_directory_path() / ("primec_native_ir_perf_gate_on_a_" + testCase.name)).string();
+    const std::string exeOffPathB =
+        (std::filesystem::temp_directory_path() / ("primec_native_ir_perf_gate_off_b_" + testCase.name)).string();
+    const std::string exeOnPathB =
+        (std::filesystem::temp_directory_path() / ("primec_native_ir_perf_gate_on_b_" + testCase.name)).string();
+
+    REQUIRE(emitter.emitExecutable(testCase.module, exeOffPathA, error, &cacheOffStatsA, cacheOffOptions));
+    CHECK(error.empty());
+    REQUIRE(emitter.emitExecutable(testCase.module, exeOnPathA, error, &cacheOnStatsA, cacheOnOptions));
+    CHECK(error.empty());
+    REQUIRE(emitter.emitExecutable(testCase.module, exeOffPathB, error, &cacheOffStatsB, cacheOffOptions));
+    CHECK(error.empty());
+    REQUIRE(emitter.emitExecutable(testCase.module, exeOnPathB, error, &cacheOnStatsB, cacheOnOptions));
+    CHECK(error.empty());
+
+    const int offExitA = runIrPipelineNativeBinary(exeOffPathA);
+    const int onExitA = runIrPipelineNativeBinary(exeOnPathA);
+    const int offExitB = runIrPipelineNativeBinary(exeOffPathB);
+    const int onExitB = runIrPipelineNativeBinary(exeOnPathB);
+    CHECK(offExitA == static_cast<int>(vmResult));
+    CHECK(onExitA == static_cast<int>(vmResult));
+    CHECK(offExitB == static_cast<int>(vmResult));
+    CHECK(onExitB == static_cast<int>(vmResult));
+    CHECK(offExitA == onExitA);
+    CHECK(offExitB == onExitB);
+
+    CHECK(cacheOffStatsA.totalValueStackPushCount == cacheOnStatsA.totalValueStackPushCount);
+    CHECK(cacheOffStatsA.totalValueStackPopCount == cacheOnStatsA.totalValueStackPopCount);
+    CHECK(cacheOffStatsA.totalSpillCount >= cacheOnStatsA.totalSpillCount);
+    CHECK(cacheOffStatsA.totalReloadCount >= cacheOnStatsA.totalReloadCount);
+
+    const uint64_t spillReduction = cacheOffStatsA.totalSpillCount - cacheOnStatsA.totalSpillCount;
+    const uint64_t reloadReduction = cacheOffStatsA.totalReloadCount - cacheOnStatsA.totalReloadCount;
+    CHECK(spillReduction >= testCase.minSpillReduction);
+    CHECK(reloadReduction >= testCase.minReloadReduction);
+    totalSpillReduction += spillReduction;
+    totalReloadReduction += reloadReduction;
+
+    // Parity lock: repeated runs must produce stable optimization counters.
+    CHECK(cacheOffStatsA.totalValueStackPushCount == cacheOffStatsB.totalValueStackPushCount);
+    CHECK(cacheOffStatsA.totalValueStackPopCount == cacheOffStatsB.totalValueStackPopCount);
+    CHECK(cacheOffStatsA.totalSpillCount == cacheOffStatsB.totalSpillCount);
+    CHECK(cacheOffStatsA.totalReloadCount == cacheOffStatsB.totalReloadCount);
+    CHECK(cacheOnStatsA.totalValueStackPushCount == cacheOnStatsB.totalValueStackPushCount);
+    CHECK(cacheOnStatsA.totalValueStackPopCount == cacheOnStatsB.totalValueStackPopCount);
+    CHECK(cacheOnStatsA.totalSpillCount == cacheOnStatsB.totalSpillCount);
+    CHECK(cacheOnStatsA.totalReloadCount == cacheOnStatsB.totalReloadCount);
+  }
+
+  CHECK(totalSpillReduction >= 2u);
+  CHECK(totalReloadReduction >= 2u);
+}
 #endif
 
 TEST_CASE("native emitter debug dump format is deterministic and ordered") {
