@@ -13,7 +13,137 @@ constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::CallVoid);
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
                                      EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |
                                      EffectGpuDispatch | EffectPathSpaceBind | EffectPathSpaceSchedule;
-constexpr uint64_t KnownWasmEffectMask = EffectIoOut | EffectIoErr | EffectFileWrite;
+constexpr uint64_t KnownWasmWasiEffectMask = EffectIoOut | EffectIoErr | EffectFileWrite;
+constexpr uint64_t KnownWasmBrowserEffectMask = 0ull;
+
+bool isWasmTarget(IrValidationTarget target) {
+  return target == IrValidationTarget::Wasm || target == IrValidationTarget::WasmBrowser;
+}
+
+const char *wasmTargetName(IrValidationTarget target) {
+  if (target == IrValidationTarget::WasmBrowser) {
+    return "wasm-browser";
+  }
+  return "wasm";
+}
+
+bool isWasmOpcodeAllowedWasi(IrOpcode op) {
+  switch (op) {
+    case IrOpcode::PushI32:
+    case IrOpcode::LoadLocal:
+    case IrOpcode::StoreLocal:
+    case IrOpcode::Dup:
+    case IrOpcode::Pop:
+    case IrOpcode::AddI32:
+    case IrOpcode::SubI32:
+    case IrOpcode::MulI32:
+    case IrOpcode::DivI32:
+    case IrOpcode::NegI32:
+    case IrOpcode::CmpEqI32:
+    case IrOpcode::CmpNeI32:
+    case IrOpcode::CmpLtI32:
+    case IrOpcode::CmpLeI32:
+    case IrOpcode::CmpGtI32:
+    case IrOpcode::CmpGeI32:
+    case IrOpcode::PushF32:
+    case IrOpcode::PushF64:
+    case IrOpcode::AddF32:
+    case IrOpcode::SubF32:
+    case IrOpcode::MulF32:
+    case IrOpcode::DivF32:
+    case IrOpcode::NegF32:
+    case IrOpcode::AddF64:
+    case IrOpcode::SubF64:
+    case IrOpcode::MulF64:
+    case IrOpcode::DivF64:
+    case IrOpcode::NegF64:
+    case IrOpcode::CmpEqF32:
+    case IrOpcode::CmpNeF32:
+    case IrOpcode::CmpLtF32:
+    case IrOpcode::CmpLeF32:
+    case IrOpcode::CmpGtF32:
+    case IrOpcode::CmpGeF32:
+    case IrOpcode::CmpEqF64:
+    case IrOpcode::CmpNeF64:
+    case IrOpcode::CmpLtF64:
+    case IrOpcode::CmpLeF64:
+    case IrOpcode::CmpGtF64:
+    case IrOpcode::CmpGeF64:
+    case IrOpcode::ConvertI32ToF32:
+    case IrOpcode::ConvertI32ToF64:
+    case IrOpcode::ConvertI64ToF32:
+    case IrOpcode::ConvertI64ToF64:
+    case IrOpcode::ConvertU64ToF32:
+    case IrOpcode::ConvertU64ToF64:
+    case IrOpcode::ConvertF32ToI32:
+    case IrOpcode::ConvertF32ToI64:
+    case IrOpcode::ConvertF32ToU64:
+    case IrOpcode::ConvertF64ToI32:
+    case IrOpcode::ConvertF64ToI64:
+    case IrOpcode::ConvertF64ToU64:
+    case IrOpcode::ConvertF32ToF64:
+    case IrOpcode::ConvertF64ToF32:
+    case IrOpcode::PushArgc:
+    case IrOpcode::PrintString:
+    case IrOpcode::PrintArgv:
+    case IrOpcode::PrintArgvUnsafe:
+    case IrOpcode::FileOpenRead:
+    case IrOpcode::FileOpenWrite:
+    case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileClose:
+    case IrOpcode::FileFlush:
+    case IrOpcode::FileWriteI32:
+    case IrOpcode::FileWriteI64:
+    case IrOpcode::FileWriteU64:
+    case IrOpcode::FileWriteString:
+    case IrOpcode::FileWriteByte:
+    case IrOpcode::FileWriteNewline:
+    case IrOpcode::JumpIfZero:
+    case IrOpcode::Jump:
+    case IrOpcode::Call:
+    case IrOpcode::CallVoid:
+    case IrOpcode::ReturnVoid:
+    case IrOpcode::ReturnI32:
+    case IrOpcode::ReturnF32:
+    case IrOpcode::ReturnF64:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool isWasiOnlyOpcode(IrOpcode op) {
+  switch (op) {
+    case IrOpcode::PushArgc:
+    case IrOpcode::PrintString:
+    case IrOpcode::PrintArgv:
+    case IrOpcode::PrintArgvUnsafe:
+    case IrOpcode::FileOpenRead:
+    case IrOpcode::FileOpenWrite:
+    case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileClose:
+    case IrOpcode::FileFlush:
+    case IrOpcode::FileWriteI32:
+    case IrOpcode::FileWriteI64:
+    case IrOpcode::FileWriteU64:
+    case IrOpcode::FileWriteString:
+    case IrOpcode::FileWriteByte:
+    case IrOpcode::FileWriteNewline:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool isWasmOpcodeAllowedForTarget(IrOpcode op, IrValidationTarget target) {
+  if (!isWasmOpcodeAllowedWasi(op)) {
+    return false;
+  }
+  if (target == IrValidationTarget::WasmBrowser && isWasiOnlyOpcode(op)) {
+    return false;
+  }
+  return true;
+}
 
 bool failFunction(size_t functionIndex,
                   const std::string &functionName,
@@ -99,11 +229,21 @@ bool validateFunction(const IrModule &module,
   if ((function.metadata.capabilityMask & ~KnownEffectMask) != 0u) {
     return failFunction(functionIndex, function.name, "unsupported capability mask bits", error);
   }
-  if (target == IrValidationTarget::Wasm && (function.metadata.effectMask & ~KnownWasmEffectMask) != 0u) {
-    return failFunction(functionIndex, function.name, "unsupported effect mask bits for wasm target", error);
-  }
-  if (target == IrValidationTarget::Wasm && (function.metadata.capabilityMask & ~KnownWasmEffectMask) != 0u) {
-    return failFunction(functionIndex, function.name, "unsupported capability mask bits for wasm target", error);
+  if (isWasmTarget(target)) {
+    const uint64_t allowedMask =
+        target == IrValidationTarget::WasmBrowser ? KnownWasmBrowserEffectMask : KnownWasmWasiEffectMask;
+    if ((function.metadata.effectMask & ~allowedMask) != 0u) {
+      return failFunction(functionIndex,
+                          function.name,
+                          "unsupported effect mask bits for " + std::string(wasmTargetName(target)) + " target",
+                          error);
+    }
+    if ((function.metadata.capabilityMask & ~allowedMask) != 0u) {
+      return failFunction(functionIndex,
+                          function.name,
+                          "unsupported capability mask bits for " + std::string(wasmTargetName(target)) + " target",
+                          error);
+    }
   }
 
   for (size_t instructionIndex = 0; instructionIndex < function.instructions.size(); ++instructionIndex) {
@@ -112,90 +252,12 @@ bool validateFunction(const IrModule &module,
     if (opcodeValue < MinOpcode || opcodeValue > MaxOpcode) {
       return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode", error);
     }
-    if (target == IrValidationTarget::Wasm) {
-      switch (inst.op) {
-        case IrOpcode::PushI32:
-        case IrOpcode::LoadLocal:
-        case IrOpcode::StoreLocal:
-        case IrOpcode::Dup:
-        case IrOpcode::Pop:
-        case IrOpcode::AddI32:
-        case IrOpcode::SubI32:
-        case IrOpcode::MulI32:
-        case IrOpcode::DivI32:
-        case IrOpcode::NegI32:
-        case IrOpcode::CmpEqI32:
-        case IrOpcode::CmpNeI32:
-        case IrOpcode::CmpLtI32:
-        case IrOpcode::CmpLeI32:
-        case IrOpcode::CmpGtI32:
-        case IrOpcode::CmpGeI32:
-        case IrOpcode::PushF32:
-        case IrOpcode::PushF64:
-        case IrOpcode::AddF32:
-        case IrOpcode::SubF32:
-        case IrOpcode::MulF32:
-        case IrOpcode::DivF32:
-        case IrOpcode::NegF32:
-        case IrOpcode::AddF64:
-        case IrOpcode::SubF64:
-        case IrOpcode::MulF64:
-        case IrOpcode::DivF64:
-        case IrOpcode::NegF64:
-        case IrOpcode::CmpEqF32:
-        case IrOpcode::CmpNeF32:
-        case IrOpcode::CmpLtF32:
-        case IrOpcode::CmpLeF32:
-        case IrOpcode::CmpGtF32:
-        case IrOpcode::CmpGeF32:
-        case IrOpcode::CmpEqF64:
-        case IrOpcode::CmpNeF64:
-        case IrOpcode::CmpLtF64:
-        case IrOpcode::CmpLeF64:
-        case IrOpcode::CmpGtF64:
-        case IrOpcode::CmpGeF64:
-        case IrOpcode::ConvertI32ToF32:
-        case IrOpcode::ConvertI32ToF64:
-        case IrOpcode::ConvertI64ToF32:
-        case IrOpcode::ConvertI64ToF64:
-        case IrOpcode::ConvertU64ToF32:
-        case IrOpcode::ConvertU64ToF64:
-        case IrOpcode::ConvertF32ToI32:
-        case IrOpcode::ConvertF32ToI64:
-        case IrOpcode::ConvertF32ToU64:
-        case IrOpcode::ConvertF64ToI32:
-        case IrOpcode::ConvertF64ToI64:
-        case IrOpcode::ConvertF64ToU64:
-        case IrOpcode::ConvertF32ToF64:
-        case IrOpcode::ConvertF64ToF32:
-        case IrOpcode::PushArgc:
-        case IrOpcode::PrintString:
-        case IrOpcode::PrintArgv:
-        case IrOpcode::PrintArgvUnsafe:
-        case IrOpcode::FileOpenRead:
-        case IrOpcode::FileOpenWrite:
-        case IrOpcode::FileOpenAppend:
-        case IrOpcode::FileClose:
-        case IrOpcode::FileFlush:
-        case IrOpcode::FileWriteI32:
-        case IrOpcode::FileWriteI64:
-        case IrOpcode::FileWriteU64:
-        case IrOpcode::FileWriteString:
-        case IrOpcode::FileWriteByte:
-        case IrOpcode::FileWriteNewline:
-        case IrOpcode::JumpIfZero:
-        case IrOpcode::Jump:
-        case IrOpcode::Call:
-        case IrOpcode::CallVoid:
-        case IrOpcode::ReturnVoid:
-        case IrOpcode::ReturnI32:
-        case IrOpcode::ReturnF32:
-        case IrOpcode::ReturnF64:
-          break;
-        default:
-          return failInstruction(
-              functionIndex, function.name, instructionIndex, "unsupported opcode for wasm target", error);
-      }
+    if (isWasmTarget(target) && !isWasmOpcodeAllowedForTarget(inst.op, target)) {
+      return failInstruction(functionIndex,
+                             function.name,
+                             instructionIndex,
+                             "unsupported opcode for " + std::string(wasmTargetName(target)) + " target",
+                             error);
     }
     switch (inst.op) {
       case IrOpcode::JumpIfZero:

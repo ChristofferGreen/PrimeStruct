@@ -384,6 +384,7 @@ int main(int argc, char **argv) {
       }
       std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl|spirv|wasm] <input.prime> [-o <output>] "
                    "[--entry /path] [--import-path <dir>] [-I <dir>] "
+                   "[--wasm-profile wasi|browser] "
                    "[--text-transforms <list>] [--text-transform-rules <rules>] "
                    "[--semantic-transform-rules <rules>] [--semantic-transforms <list>] "
                    "[--transform-list <list>] [--no-text-transforms] [--no-semantic-transforms] "
@@ -679,6 +680,8 @@ int main(int argc, char **argv) {
   }
 
   if (options.emitKind == "wasm") {
+    const primec::IrValidationTarget wasmValidationTarget =
+        options.wasmProfile == "browser" ? primec::IrValidationTarget::WasmBrowser : primec::IrValidationTarget::Wasm;
     primec::IrLowerer lowerer;
     primec::IrModule ir;
     if (!lowerer.lower(program,
@@ -690,7 +693,7 @@ int main(int argc, char **argv) {
       return emitFailure(
           options, primec::DiagnosticCode::LoweringError, "Wasm lowering error: ", error, 2, {"backend: wasm"});
     }
-    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Wasm, error)) {
+    if (!primec::validateIrModule(ir, wasmValidationTarget, error)) {
       return emitFailure(options,
                          primec::DiagnosticCode::LoweringError,
                          "Wasm IR validation error: ",
@@ -707,7 +710,7 @@ int main(int argc, char **argv) {
                            2,
                            {"backend: wasm", "stage: ir-inline"});
       }
-      if (!primec::validateIrModule(ir, primec::IrValidationTarget::Wasm, error)) {
+      if (!primec::validateIrModule(ir, wasmValidationTarget, error)) {
         return emitFailure(options,
                            primec::DiagnosticCode::LoweringError,
                            "Wasm IR validation error: ",

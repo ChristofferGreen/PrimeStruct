@@ -12,6 +12,7 @@ enum class DebugJsonSnapshotMode { None, Stop, All };
 
 struct Options {
   std::string emitKind;
+  std::string wasmProfile = "wasi";
   bool listTransforms = false;
   bool emitDiagnostics = false;
   bool debugJson = false;

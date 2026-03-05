@@ -199,7 +199,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add wasm32-wasi decimal formatting for `FileWriteI32`/`FileWriteI64`/`FileWriteU64` instead of the current deterministic unsupported-error fallback. Testing: runtime file-output conformance tests for signed/unsigned numeric writes.
 - ✓ Add deterministic compile-run parity tests comparing VM vs Wasm behavior for supported programs. Testing: locked parity corpus with stable outputs and exit codes.
 - ✓ Add negative conformance tests rejecting unsupported IR features in Wasm mode with stable diagnostics. Testing: diagnostics snapshot tests with code + notes + stage metadata.
-- ○ Split Wasm backend profiles (`wasm-wasi` and `wasm-browser`) and gate unsupported operations per profile. Testing: profile-matrix compile tests (accept/reject) for effects/opcodes.
+- ✓ Split Wasm backend profiles (`wasm-wasi` and `wasm-browser`) and gate unsupported operations per profile. Testing: profile-matrix compile tests (accept/reject) for effects/opcodes.
 - ○ Document Wasm backend limits (memory model, imports, unsupported ops/effects) in `docs/PrimeStruct.md` and syntax/spec references. Testing: doc-linked conformance cases that exercise every documented limit.
 - ○ Add tooling/CI hooks to optionally execute Wasm outputs when a runtime is available. Testing: CI coverage with runtime-detected execution and explicit skip assertions when unavailable.
 

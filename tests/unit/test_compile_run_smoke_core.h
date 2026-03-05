@@ -647,6 +647,48 @@ TEST_CASE("primec options default to wasm extension for emit kind") {
   CHECK(options.outputPath == "compile_default_wasm_output.wasm");
 }
 
+TEST_CASE("primec options parse wasm profile aliases and validate values") {
+  auto parsePrimec = [](std::vector<std::string> args, primec::Options &options, std::string &error) {
+    std::vector<char *> argv;
+    argv.reserve(args.size());
+    for (std::string &arg : args) {
+      argv.push_back(arg.data());
+    }
+    return primec::parseOptions(
+        static_cast<int>(argv.size()), argv.data(), primec::OptionsParserMode::Primec, options, error);
+  };
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK(parsePrimec({"primec", "--emit=wasm", "--wasm-profile=wasm-browser", "/tmp/input.prime"}, options, error));
+    CHECK(error.empty());
+    CHECK(options.wasmProfile == "browser");
+  }
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK(parsePrimec({"primec", "--emit=wasm", "--wasm-profile", "wasm-wasi", "/tmp/input.prime"}, options, error));
+    CHECK(error.empty());
+    CHECK(options.wasmProfile == "wasi");
+  }
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK_FALSE(parsePrimec({"primec", "--emit=wasm", "--wasm-profile=desktop", "/tmp/input.prime"}, options, error));
+    CHECK(error.find("unsupported --wasm-profile value: desktop (expected wasi|browser)") != std::string::npos);
+  }
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK_FALSE(parsePrimec({"primec", "--emit=wasm", "--wasm-profile"}, options, error));
+    CHECK(error.find("--wasm-profile requires a value") != std::string::npos);
+  }
+}
+
 TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
 [return<int>]
@@ -735,6 +777,94 @@ main() {
   }
 }
 
+TEST_CASE("primec wasm profile matrix gates wasi-only effects and opcodes") {
+  struct ProfileCase {
+    std::string name;
+    std::string profile;
+    std::string source;
+    bool expectSuccess = false;
+    std::string expectedError;
+  };
+
+  const std::vector<ProfileCase> cases = {
+      {
+          "wasi_accepts_io_effects",
+          "wasi",
+          R"(
+[return<int> effects(io_out)]
+main() {
+  print_line("ok"utf8)
+  return(0i32)
+}
+)",
+          true,
+          "",
+      },
+      {
+          "browser_accepts_compute_subset",
+          "browser",
+          R"(
+[return<int>]
+main() {
+  return(plus(2i32, 3i32))
+}
+)",
+          true,
+          "",
+      },
+      {
+          "browser_rejects_io_effects",
+          "browser",
+          R"(
+[return<int> effects(io_out)]
+main() {
+  return(0i32)
+}
+)",
+          false,
+          "unsupported effect mask bits for wasm-browser target",
+      },
+      {
+          "browser_rejects_argv_opcode",
+          "browser",
+          R"(
+[return<int>]
+main([array<string>] args) {
+  return(args.count())
+}
+)",
+          false,
+          "unsupported opcode for wasm-browser target",
+      },
+  };
+
+  for (const auto &profileCase : cases) {
+    CAPTURE(profileCase.name);
+    const std::string srcPath =
+        writeTemp("compile_emit_wasm_profile_matrix_" + profileCase.name + ".prime", profileCase.source);
+    const std::string wasmPath =
+        (std::filesystem::temp_directory_path() / ("primec_emit_wasm_profile_matrix_" + profileCase.name + ".wasm"))
+            .string();
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / ("primec_emit_wasm_profile_matrix_" + profileCase.name + ".json"))
+            .string();
+
+    const std::string wasmCmd = "./primec --emit=wasm --wasm-profile " + profileCase.profile + " " +
+                                quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                                " --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
+    if (profileCase.expectSuccess) {
+      CHECK(runCommand(wasmCmd) == 0);
+      CHECK(std::filesystem::exists(wasmPath));
+      continue;
+    }
+
+    CHECK(runCommand(wasmCmd) == 2);
+    const std::string diagnostics = readFile(errPath);
+    CHECK(diagnostics.find(profileCase.expectedError) != std::string::npos);
+    CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") != std::string::npos);
+  }
+}
+
 TEST_CASE("rejects stdlib version flag") {
   const std::string source = R"(
 [return<int>]
@@ -763,6 +893,7 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(primecErr.find("Usage: primec") != std::string::npos);
   CHECK(primecErr.find("[--emit=cpp|exe|native|ir|vm|glsl|spirv|wasm]") != std::string::npos);
   CHECK(primecErr.find("[--import-path <dir>] [-I <dir>]") != std::string::npos);
+  CHECK(primecErr.find("[--wasm-profile wasi|browser]") != std::string::npos);
   CHECK(primecErr.find("[--text-transforms <list>]") != std::string::npos);
   CHECK(primecErr.find("[--ir-inline]") != std::string::npos);
   CHECK(primecErr.find("--text-filters <list>") == std::string::npos);

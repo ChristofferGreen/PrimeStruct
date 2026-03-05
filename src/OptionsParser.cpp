@@ -40,6 +40,18 @@ bool parseDebugJsonSnapshotMode(std::string_view value, DebugJsonSnapshotMode &o
   return false;
 }
 
+bool normalizeWasmProfile(const std::string &value, std::string &normalized) {
+  if (value == "wasi" || value == "wasm-wasi") {
+    normalized = "wasi";
+    return true;
+  }
+  if (value == "browser" || value == "wasm-browser") {
+    normalized = "browser";
+    return true;
+  }
+  return false;
+}
+
 std::string trimWhitespace(const std::string &text) {
   size_t start = 0;
   while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
@@ -485,6 +497,25 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.listTransforms = true;
     } else if (isPrimecMode && arg == "-o" && i + 1 < argc) {
       out.outputPath = argv[++i];
+    } else if (isPrimecMode && arg == "--wasm-profile" && i + 1 < argc) {
+      const std::string value = argv[++i];
+      if (!normalizeWasmProfile(value, out.wasmProfile)) {
+        error = "unsupported --wasm-profile value: " + value + " (expected wasi|browser)";
+        return false;
+      }
+    } else if (isPrimecMode && arg == "--wasm-profile") {
+      error = "--wasm-profile requires a value";
+      return false;
+    } else if (isPrimecMode && arg.rfind("--wasm-profile=", 0) == 0) {
+      const std::string value = arg.substr(std::string("--wasm-profile=").size());
+      if (value.empty()) {
+        error = "--wasm-profile requires a value";
+        return false;
+      }
+      if (!normalizeWasmProfile(value, out.wasmProfile)) {
+        error = "unsupported --wasm-profile value: " + value + " (expected wasi|browser)";
+        return false;
+      }
     } else if (arg == "--entry" && i + 1 < argc) {
       out.entryPath = argv[++i];
     } else if (arg.rfind("--entry=", 0) == 0) {
