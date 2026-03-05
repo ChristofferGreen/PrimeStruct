@@ -10,8 +10,11 @@
 #include "primec/VmDebugDap.h"
 
 #include <algorithm>
+#include <cctype>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -191,6 +194,195 @@ bool writeTraceLines(const std::string &path, const std::vector<std::string> &li
   return true;
 }
 
+struct TraceCheckpoint {
+  uint64_t sequence = 0;
+  std::string event;
+  std::string reason;
+  std::string snapshotJson;
+  std::string snapshotPayloadJson;
+};
+
+bool readTextFile(const std::string &path, std::string &out, std::string &error) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in.good()) {
+    error = "failed to open replay trace: " + path;
+    return false;
+  }
+  std::ostringstream buffer;
+  buffer << in.rdbuf();
+  if (!in.good() && !in.eof()) {
+    error = "failed to read replay trace: " + path;
+    return false;
+  }
+  out = buffer.str();
+  return true;
+}
+
+bool extractJsonUnsignedField(std::string_view json, std::string_view key, uint64_t &outValue) {
+  const std::string needle = std::string("\"") + std::string(key) + "\":";
+  const size_t keyPos = json.find(needle);
+  if (keyPos == std::string_view::npos) {
+    return false;
+  }
+  size_t valuePos = keyPos + needle.size();
+  if (valuePos >= json.size() || std::isdigit(static_cast<unsigned char>(json[valuePos])) == 0) {
+    return false;
+  }
+  size_t valueEnd = valuePos;
+  while (valueEnd < json.size() && std::isdigit(static_cast<unsigned char>(json[valueEnd])) != 0) {
+    ++valueEnd;
+  }
+  try {
+    size_t consumed = 0;
+    const unsigned long long parsed = std::stoull(std::string(json.substr(valuePos, valueEnd - valuePos)), &consumed);
+    if (consumed != valueEnd - valuePos) {
+      return false;
+    }
+    outValue = static_cast<uint64_t>(parsed);
+    return true;
+  } catch (...) {
+    return false;
+  }
+}
+
+bool extractJsonStringField(std::string_view json, std::string_view key, std::string &outValue) {
+  const std::string needle = std::string("\"") + std::string(key) + "\":";
+  const size_t keyPos = json.find(needle);
+  if (keyPos == std::string_view::npos) {
+    return false;
+  }
+  size_t valuePos = keyPos + needle.size();
+  if (valuePos >= json.size() || json[valuePos] != '"') {
+    return false;
+  }
+  ++valuePos;
+  size_t valueEnd = valuePos;
+  bool escaped = false;
+  while (valueEnd < json.size()) {
+    const char c = json[valueEnd];
+    if (!escaped && c == '"') {
+      outValue.assign(json.substr(valuePos, valueEnd - valuePos));
+      return true;
+    }
+    if (!escaped && c == '\\') {
+      escaped = true;
+    } else {
+      escaped = false;
+    }
+    ++valueEnd;
+  }
+  return false;
+}
+
+bool extractJsonObjectField(std::string_view json, std::string_view key, std::string &outValue) {
+  const std::string needle = std::string("\"") + std::string(key) + "\":";
+  const size_t keyPos = json.find(needle);
+  if (keyPos == std::string_view::npos) {
+    return false;
+  }
+  size_t valuePos = keyPos + needle.size();
+  if (valuePos >= json.size() || json[valuePos] != '{') {
+    return false;
+  }
+  const size_t objectStart = valuePos;
+  size_t objectEnd = valuePos;
+  size_t depth = 0;
+  bool inString = false;
+  bool escaped = false;
+  while (objectEnd < json.size()) {
+    const char c = json[objectEnd];
+    if (inString) {
+      if (!escaped && c == '"') {
+        inString = false;
+      }
+      if (!escaped && c == '\\') {
+        escaped = true;
+      } else {
+        escaped = false;
+      }
+      ++objectEnd;
+      continue;
+    }
+    if (c == '"') {
+      inString = true;
+      escaped = false;
+      ++objectEnd;
+      continue;
+    }
+    if (c == '{') {
+      ++depth;
+    } else if (c == '}') {
+      if (depth == 0) {
+        return false;
+      }
+      --depth;
+      if (depth == 0) {
+        ++objectEnd;
+        outValue.assign(json.substr(objectStart, objectEnd - objectStart));
+        return true;
+      }
+    }
+    ++objectEnd;
+  }
+  return false;
+}
+
+bool parseTraceCheckpoints(const std::string &traceText, std::vector<TraceCheckpoint> &outCheckpoints, std::string &error) {
+  outCheckpoints.clear();
+  uint64_t lastSequence = 0;
+  bool haveSequence = false;
+
+  std::stringstream stream(traceText);
+  std::string line;
+  while (std::getline(stream, line)) {
+    if (!line.empty() && line.back() == '\r') {
+      line.pop_back();
+    }
+    if (line.empty()) {
+      continue;
+    }
+
+    std::string event;
+    if (!extractJsonStringField(line, "event", event)) {
+      continue;
+    }
+
+    uint64_t sequence = 0;
+    const bool hasSequence = extractJsonUnsignedField(line, "sequence", sequence);
+    if (hasSequence) {
+      lastSequence = sequence;
+      haveSequence = true;
+    }
+
+    std::string snapshotJson;
+    std::string snapshotPayloadJson;
+    if (!extractJsonObjectField(line, "snapshot", snapshotJson) ||
+        !extractJsonObjectField(line, "snapshot_payload", snapshotPayloadJson)) {
+      continue;
+    }
+
+    TraceCheckpoint checkpoint;
+    checkpoint.sequence = hasSequence ? sequence : (haveSequence ? lastSequence : 0);
+    checkpoint.event = event;
+    if (event == "stop") {
+      if (!extractJsonStringField(line, "reason", checkpoint.reason)) {
+        checkpoint.reason = "stop";
+      }
+    } else {
+      checkpoint.reason = event;
+    }
+    checkpoint.snapshotJson = std::move(snapshotJson);
+    checkpoint.snapshotPayloadJson = std::move(snapshotPayloadJson);
+    outCheckpoints.push_back(std::move(checkpoint));
+  }
+
+  if (outCheckpoints.empty()) {
+    error = "replay trace has no checkpoint-capable events";
+    return false;
+  }
+  return true;
+}
+
 int emitFailure(const primec::Options &options,
                 primec::DiagnosticCode code,
                 const std::string &plainPrefix,
@@ -268,6 +460,7 @@ int main(int argc, char **argv) {
                    "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                    "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "
                    "[--debug-json] [--debug-json-snapshots [none|stop|all]] [--debug-trace <path>] [--debug-dap] "
+                   "[--debug-replay <trace>] [--debug-replay-sequence <n>] "
                    "[--collect-diagnostics] "
                    "[--default-effects <list>] [--ir-inline] [--dump-stage pre_ast|ast|ast-semantic|ir] "
                    "[-- <program args...>]\n";
@@ -393,6 +586,54 @@ int main(int argc, char **argv) {
     args.push_back(arg);
   }
   uint64_t result = 0;
+  if (!options.debugReplayPath.empty()) {
+    std::string traceText;
+    if (!readTextFile(options.debugReplayPath, traceText, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::RuntimeError,
+                         "VM error: ",
+                         error,
+                         3,
+                         {"backend: vm", "stage: debug-replay"});
+    }
+
+    std::vector<TraceCheckpoint> checkpoints;
+    if (!parseTraceCheckpoints(traceText, checkpoints, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::RuntimeError,
+                         "VM error: ",
+                         error,
+                         3,
+                         {"backend: vm", "stage: debug-replay"});
+    }
+
+    const uint64_t targetSequence = options.debugReplaySequence.value_or(checkpoints.back().sequence);
+    size_t checkpointIndex = 0;
+    for (size_t i = 0; i < checkpoints.size(); ++i) {
+      if (checkpoints[i].sequence <= targetSequence) {
+        checkpointIndex = i;
+      } else {
+        break;
+      }
+    }
+    const TraceCheckpoint &checkpoint = checkpoints[checkpointIndex];
+
+    std::string replayLine = std::string("{\"version\":1,\"event\":\"replay_checkpoint\",\"target_sequence\":") +
+                             std::to_string(targetSequence) + ",\"checkpoint_sequence\":" +
+                             std::to_string(checkpoint.sequence) + ",\"checkpoint_event\":\"" +
+                             jsonEscape(checkpoint.event) + "\",\"reason\":\"" + jsonEscape(checkpoint.reason) +
+                             "\",\"snapshot\":" + checkpoint.snapshotJson + ",\"snapshot_payload\":" +
+                             checkpoint.snapshotPayloadJson + "}";
+    std::cout << replayLine << "\n";
+
+    if (!options.debugReplaySequence.has_value() && checkpoint.event == "stop" && checkpoint.reason == "Exit") {
+      uint64_t replayResult = 0;
+      if (extractJsonUnsignedField(checkpoint.snapshotJson, "result", replayResult)) {
+        return static_cast<int>(static_cast<int32_t>(replayResult));
+      }
+    }
+    return 0;
+  }
   if (options.debugDap) {
     primec::VmDebugDapRunResult dapResult;
     if (!primec::runVmDebugDapSession(ir, args, options.inputPath, std::cin, std::cout, dapResult, error)) {

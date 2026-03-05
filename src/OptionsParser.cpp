@@ -421,6 +421,52 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
         error = "--debug-trace requires an output path";
         return false;
       }
+    } else if (!isPrimecMode && arg == "--debug-replay" && i + 1 < argc) {
+      out.debugReplayPath = argv[++i];
+    } else if (!isPrimecMode && arg == "--debug-replay") {
+      error = "--debug-replay requires an input trace path";
+      return false;
+    } else if (!isPrimecMode && arg.rfind("--debug-replay=", 0) == 0) {
+      out.debugReplayPath = arg.substr(std::string("--debug-replay=").size());
+      if (out.debugReplayPath.empty()) {
+        error = "--debug-replay requires an input trace path";
+        return false;
+      }
+    } else if (!isPrimecMode && arg == "--debug-replay-sequence" && i + 1 < argc) {
+      const std::string value = argv[++i];
+      try {
+        size_t consumed = 0;
+        const unsigned long long parsed = std::stoull(value, &consumed);
+        if (consumed != value.size()) {
+          error = "invalid --debug-replay-sequence value: " + value;
+          return false;
+        }
+        out.debugReplaySequence = static_cast<uint64_t>(parsed);
+      } catch (...) {
+        error = "invalid --debug-replay-sequence value: " + value;
+        return false;
+      }
+    } else if (!isPrimecMode && arg == "--debug-replay-sequence") {
+      error = "--debug-replay-sequence requires a numeric value";
+      return false;
+    } else if (!isPrimecMode && arg.rfind("--debug-replay-sequence=", 0) == 0) {
+      const std::string value = arg.substr(std::string("--debug-replay-sequence=").size());
+      if (value.empty()) {
+        error = "--debug-replay-sequence requires a numeric value";
+        return false;
+      }
+      try {
+        size_t consumed = 0;
+        const unsigned long long parsed = std::stoull(value, &consumed);
+        if (consumed != value.size()) {
+          error = "invalid --debug-replay-sequence value: " + value;
+          return false;
+        }
+        out.debugReplaySequence = static_cast<uint64_t>(parsed);
+      } catch (...) {
+        error = "invalid --debug-replay-sequence value: " + value;
+        return false;
+      }
     } else if (!isPrimecMode && arg == "--debug-dap") {
       out.debugDap = true;
     } else if (!isPrimecMode && arg == "--debug-json-snapshots") {
@@ -565,6 +611,22 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
     }
     if (out.debugJson && !out.debugTracePath.empty()) {
       error = "--debug-json cannot be combined with --debug-trace";
+      return false;
+    }
+    if (!out.debugReplayPath.empty() && out.debugJson) {
+      error = "--debug-replay cannot be combined with --debug-json";
+      return false;
+    }
+    if (!out.debugReplayPath.empty() && out.debugDap) {
+      error = "--debug-replay cannot be combined with --debug-dap";
+      return false;
+    }
+    if (!out.debugReplayPath.empty() && !out.debugTracePath.empty()) {
+      error = "--debug-replay cannot be combined with --debug-trace";
+      return false;
+    }
+    if (out.debugReplaySequence.has_value() && out.debugReplayPath.empty()) {
+      error = "--debug-replay-sequence requires --debug-replay";
       return false;
     }
     if (out.debugJsonSnapshotMode != DebugJsonSnapshotMode::None && !out.debugJson) {

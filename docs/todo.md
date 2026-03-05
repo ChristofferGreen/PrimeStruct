@@ -181,7 +181,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add stdio JSON-RPC framing + request router for the VM debug adapter so external DAP clients (for example VS Code) can drive it directly. Testing: request/response framing transcript tests and end-to-end adapter process smoke tests.
 - ✓ Extend VM debug snapshot payloads so adapter `scopes/variables` can expose concrete locals for non-top stack frames (not just the active frame). Testing: nested-frame variable inspection tests with deterministic values across step/continue flows.
 - ✓ Add optional deterministic trace capture (event log) behind an explicit debug flag. Testing: trace completeness/ordering regression tests.
-- ○ Add checkpointed replay/time-travel on top of trace capture. Testing: checkpoint/restore equivalence tests and replay determinism regression suites.
+- ✓ Add checkpointed replay/time-travel on top of trace capture. Testing: checkpoint/restore equivalence tests and replay determinism regression suites.
 
 **WebAssembly Emitter**
 - ○ Add a new `WasmEmitter` backend entrypoint that consumes canonical `IrModule` (no AST-side Wasm lowering path). Testing: unit tests that emit/validate minimal Wasm modules.

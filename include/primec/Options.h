@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -15,6 +17,8 @@ struct Options {
   bool debugJson = false;
   bool debugDap = false;
   std::string debugTracePath;
+  std::string debugReplayPath;
+  std::optional<uint64_t> debugReplaySequence;
   DebugJsonSnapshotMode debugJsonSnapshotMode = DebugJsonSnapshotMode::None;
   bool collectDiagnostics = false;
   std::string inputPath;
