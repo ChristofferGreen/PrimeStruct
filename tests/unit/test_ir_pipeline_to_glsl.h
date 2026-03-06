@@ -201,6 +201,36 @@ TEST_CASE("ir to glsl emitter writes i64 compare and return opcodes") {
   CHECK(glsl.find("return stack[--sp];") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes i64 arithmetic opcodes") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(9))});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(4))});
+  fn.instructions.push_back({primec::IrOpcode::SubI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(2))});
+  fn.instructions.push_back({primec::IrOpcode::MulI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(5))});
+  fn.instructions.push_back({primec::IrOpcode::AddI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(3))});
+  fn.instructions.push_back({primec::IrOpcode::DivI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::NegI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("stack[sp++] = left - right;") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = left * right;") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = left + right;") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = left / right;") != std::string::npos);
+  CHECK(glsl.find("stack[sp - 1] = -stack[sp - 1];") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter writes f32 literal push") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;

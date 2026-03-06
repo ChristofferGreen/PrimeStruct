@@ -119,6 +119,23 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::AddI64:
+      emitBinary("+");
+      return true;
+    case IrOpcode::SubI64:
+      emitBinary("-");
+      return true;
+    case IrOpcode::MulI64:
+      emitBinary("*");
+      return true;
+    case IrOpcode::DivI64:
+      emitBinary("/");
+      return true;
+    case IrOpcode::NegI64:
+      out << "        stack[sp - 1] = -stack[sp - 1];\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::AddF32:
       emitBinaryF32("+");
       return true;
