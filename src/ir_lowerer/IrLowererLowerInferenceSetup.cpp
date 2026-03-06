@@ -416,10 +416,6 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
     errorOut = "native backend missing inference expr-kind call-return setup state: resolveMethodCallDefinition";
     return false;
   }
-  if (!stateInOut.getReturnInfo) {
-    errorOut = "native backend missing inference expr-kind call-return setup state: getReturnInfo";
-    return false;
-  }
 
   const auto *defMap = input.defMap;
   const auto resolveExprPath = input.resolveExprPath;

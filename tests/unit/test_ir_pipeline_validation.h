@@ -695,6 +695,50 @@ TEST_CASE("ir lowerer inference expr-kind call-return setup wires callback") {
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer inference expr-kind call-return setup supports deferred return-info wiring") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/callee", &callee},
+  };
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.resolveMethodCallDefinition = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return static_cast<const primec::Definition *>(nullptr);
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &) { return std::string("/callee"); },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(state.inferCallExprDirectReturnKind));
+
+  state.getReturnInfo = [](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    if (path != "/callee") {
+      return false;
+    }
+    out.returnsVoid = false;
+    out.returnsArray = false;
+    out.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+    return true;
+  };
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  const auto result = state.inferCallExprDirectReturnKind(callExpr, primec::ir_lowerer::LocalMap{}, kindOut);
+  CHECK(result == primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
 TEST_CASE("ir lowerer inference expr-kind call-return setup validates dependencies") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
@@ -2762,11 +2806,11 @@ TEST_CASE("emitter expr control if-block binding-prelude step resolves binding m
         CHECK(candidateBranchTypes.empty());
         CHECK(candidateReturnKinds.empty());
         CHECK(candidateAllowMathBare);
-        return primec::Emitter::ReturnKind::I32;
+        return primec::Emitter::ReturnKind::Int;
       },
       [&](primec::Emitter::ReturnKind kind) {
         ++typeNameCalls;
-        CHECK(kind == primec::Emitter::ReturnKind::I32);
+        CHECK(kind == primec::Emitter::ReturnKind::Int);
         return std::string("i32");
       });
   CHECK(inferredResult.handled);
