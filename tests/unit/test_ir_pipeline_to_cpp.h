@@ -456,6 +456,29 @@ TEST_CASE("ir to cpp emitter writes file write newline opcode") {
   CHECK(cpp.find("psWriteAll(fileLineFd, &fileLineValue, 1)") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter writes file write string opcode") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("/dev/null");
+  module.stringTable.push_back("hello");
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::FileOpenWrite, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileWriteString, 1});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("int fileStringFd = static_cast<int>(fileStringHandle & 0xffffffffu);") != std::string::npos);
+  CHECK(cpp.find("psWriteAll(fileStringFd, ps_string_table[1], 5ull)") != std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes file open read opcode") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
