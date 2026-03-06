@@ -1137,10 +1137,13 @@ TEST_CASE("exe-ir emitter clamps f32/f64 to i64 conversion edges") {
   const std::string source = R"(
 [return<int>]
 main() {
+  [i64] minValue{plus(-9223372036854775807i64, -1i64)}
   if(not(equal(convert<i64>(divide(0.0f32, 0.0f32)), 0i64)), then() { return(1i32) }, else() { })
   if(not(equal(convert<i64>(divide(1.0f32, 0.0f32)), 9223372036854775807i64)), then() { return(2i32) }, else() { })
-  if(not(equal(convert<i64>(divide(0.0f64, 0.0f64)), 0i64)), then() { return(3i32) }, else() { })
-  if(not(equal(convert<i64>(divide(1.0f64, 0.0f64)), 9223372036854775807i64)), then() { return(4i32) }, else() { })
+  if(not(equal(convert<i64>(divide(-1.0f32, 0.0f32)), minValue)), then() { return(3i32) }, else() { })
+  if(not(equal(convert<i64>(divide(0.0f64, 0.0f64)), 0i64)), then() { return(4i32) }, else() { })
+  if(not(equal(convert<i64>(divide(1.0f64, 0.0f64)), 9223372036854775807i64)), then() { return(5i32) }, else() { })
+  if(not(equal(convert<i64>(divide(-1.0f64, 0.0f64)), minValue)), then() { return(6i32) }, else() { })
   return(0i32)
 }
 )";
@@ -1157,10 +1160,13 @@ TEST_CASE("exe emitter uses ir backend for f32/f64 to i64 conversion edges") {
   const std::string source = R"(
 [return<int>]
 main() {
+  [i64] minValue{plus(-9223372036854775807i64, -1i64)}
   if(not(equal(convert<i64>(divide(0.0f32, 0.0f32)), 0i64)), then() { return(1i32) }, else() { })
   if(not(equal(convert<i64>(divide(1.0f32, 0.0f32)), 9223372036854775807i64)), then() { return(2i32) }, else() { })
-  if(not(equal(convert<i64>(divide(0.0f64, 0.0f64)), 0i64)), then() { return(3i32) }, else() { })
-  if(not(equal(convert<i64>(divide(1.0f64, 0.0f64)), 9223372036854775807i64)), then() { return(4i32) }, else() { })
+  if(not(equal(convert<i64>(divide(-1.0f32, 0.0f32)), minValue)), then() { return(3i32) }, else() { })
+  if(not(equal(convert<i64>(divide(0.0f64, 0.0f64)), 0i64)), then() { return(4i32) }, else() { })
+  if(not(equal(convert<i64>(divide(1.0f64, 0.0f64)), 9223372036854775807i64)), then() { return(5i32) }, else() { })
+  if(not(equal(convert<i64>(divide(-1.0f64, 0.0f64)), minValue)), then() { return(6i32) }, else() { })
   return(0i32)
 }
 )";
