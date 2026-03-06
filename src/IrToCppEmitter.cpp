@@ -122,6 +122,27 @@ bool moduleUsesF64Helpers(const IrModule &module) {
   return false;
 }
 
+bool usesClampI32ConvertHelpers(IrOpcode opcode) {
+  switch (opcode) {
+    case IrOpcode::ConvertF32ToI32:
+    case IrOpcode::ConvertF64ToI32:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool moduleUsesClampI32ConvertHelpers(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (usesClampI32ConvertHelpers(instruction.op)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool usesFileIoHelpers(IrOpcode opcode) {
   switch (opcode) {
     case IrOpcode::FileOpenRead:
@@ -519,7 +540,8 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::ConvertF32ToI32:
       out << "        float value = psBitsToF32(stack[--sp]);\n";
-      out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));\n";
+      out << "        int32_t converted = psConvertF32ToI32(value);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(converted));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
@@ -555,7 +577,8 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::ConvertF64ToI32:
       out << "        double value = psBitsToF64(stack[--sp]);\n";
-      out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));\n";
+      out << "        int32_t converted = psConvertF64ToI32(value);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(converted));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
@@ -853,10 +876,15 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   std::ostringstream body;
   const bool needsF32Helpers = moduleUsesF32Helpers(module);
   const bool needsF64Helpers = moduleUsesF64Helpers(module);
+  const bool needsClampI32ConvertHelpers = moduleUsesClampI32ConvertHelpers(module);
   const bool needsFileIoHelpers = moduleUsesFileIoHelpers(module);
   body << "#include <cstddef>\n";
   body << "#include <cstdint>\n";
   body << "#include <string>\n";
+  if (needsClampI32ConvertHelpers) {
+    body << "#include <cmath>\n";
+    body << "#include <limits>\n";
+  }
   if (needsF32Helpers || needsF64Helpers) {
     body << "#include <cstring>\n";
   }
@@ -890,6 +918,32 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     body << "  uint64_t bits = 0;\n";
     body << "  std::memcpy(&bits, &value, sizeof(bits));\n";
     body << "  return bits;\n";
+    body << "}\n\n";
+  }
+  if (needsClampI32ConvertHelpers) {
+    body << "static int32_t psConvertF32ToI32(float value) {\n";
+    body << "  if (std::isnan(value)) {\n";
+    body << "    return 0;\n";
+    body << "  }\n";
+    body << "  if (value <= static_cast<float>(std::numeric_limits<int32_t>::min())) {\n";
+    body << "    return std::numeric_limits<int32_t>::min();\n";
+    body << "  }\n";
+    body << "  if (value >= static_cast<float>(std::numeric_limits<int32_t>::max())) {\n";
+    body << "    return std::numeric_limits<int32_t>::max();\n";
+    body << "  }\n";
+    body << "  return static_cast<int32_t>(value);\n";
+    body << "}\n\n";
+    body << "static int32_t psConvertF64ToI32(double value) {\n";
+    body << "  if (std::isnan(value)) {\n";
+    body << "    return 0;\n";
+    body << "  }\n";
+    body << "  if (value <= static_cast<double>(std::numeric_limits<int32_t>::min())) {\n";
+    body << "    return std::numeric_limits<int32_t>::min();\n";
+    body << "  }\n";
+    body << "  if (value >= static_cast<double>(std::numeric_limits<int32_t>::max())) {\n";
+    body << "    return std::numeric_limits<int32_t>::max();\n";
+    body << "  }\n";
+    body << "  return static_cast<int32_t>(value);\n";
     body << "}\n\n";
   }
   if (needsFileIoHelpers) {

@@ -499,8 +499,8 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));") !=
-        std::string::npos);
+  CHECK(output.find("static int32_t psConvertF64ToI32(double value)") != std::string::npos);
+  CHECK(output.find("int32_t converted = psConvertF64ToI32(value);") != std::string::npos);
 }
 
 TEST_CASE("cpp emitter uses ir backend for f64 to i32 conversion") {
@@ -517,8 +517,8 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));") !=
-        std::string::npos);
+  CHECK(output.find("static int32_t psConvertF64ToI32(double value)") != std::string::npos);
+  CHECK(output.find("int32_t converted = psConvertF64ToI32(value);") != std::string::npos);
   CHECK(output.find("ps_entry_0") != std::string::npos);
 }
 

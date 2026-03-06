@@ -509,10 +509,13 @@ TEST_CASE("cpp-ir backend writes f64 conversion helpers") {
   CHECK(result.exitCode == 0);
 
   const std::string source = readTextFile(outputPath);
+  CHECK(source.find("#include <cmath>") != std::string::npos);
+  CHECK(source.find("#include <limits>") != std::string::npos);
+  CHECK(source.find("static int32_t psConvertF32ToI32(float value)") != std::string::npos);
+  CHECK(source.find("static int32_t psConvertF64ToI32(double value)") != std::string::npos);
   CHECK(source.find("stack[sp++] = psF64ToBits(static_cast<double>(value));") != std::string::npos);
   CHECK(source.find("stack[sp++] = psF32ToBits(static_cast<float>(value));") != std::string::npos);
-  CHECK(source.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));") !=
-        std::string::npos);
+  CHECK(source.find("int32_t converted = psConvertF64ToI32(value);") != std::string::npos);
 }
 
 TEST_CASE("glsl-ir backend writes GLSL source") {

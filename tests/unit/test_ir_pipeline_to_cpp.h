@@ -75,9 +75,31 @@ TEST_CASE("ir to cpp emitter writes f64 to i32 conversion") {
   std::string error;
   REQUIRE(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
+  CHECK(cpp.find("#include <cmath>") != std::string::npos);
+  CHECK(cpp.find("#include <limits>") != std::string::npos);
+  CHECK(cpp.find("static int32_t psConvertF64ToI32(double value)") != std::string::npos);
   CHECK(cpp.find("double value = psBitsToF64(stack[--sp]);") != std::string::npos);
-  CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));") !=
-        std::string::npos);
+  CHECK(cpp.find("int32_t converted = psConvertF64ToI32(value);") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(converted));") != std::string::npos);
+}
+
+TEST_CASE("ir to cpp emitter writes f32 to i32 conversion clamp helper") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("static int32_t psConvertF32ToI32(float value)") != std::string::npos);
+  CHECK(cpp.find("int32_t converted = psConvertF32ToI32(value);") != std::string::npos);
 }
 
 TEST_CASE("ir to cpp emitter writes print and argv opcodes") {
