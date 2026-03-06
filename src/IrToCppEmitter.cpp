@@ -79,6 +79,31 @@ bool moduleUsesF32Helpers(const IrModule &module) {
   return false;
 }
 
+bool usesF64Helpers(IrOpcode opcode) {
+  switch (opcode) {
+    case IrOpcode::CmpEqF64:
+    case IrOpcode::CmpNeF64:
+    case IrOpcode::CmpLtF64:
+    case IrOpcode::CmpLeF64:
+    case IrOpcode::CmpGtF64:
+    case IrOpcode::CmpGeF64:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool moduleUsesF64Helpers(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (usesF64Helpers(instruction.op)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 std::string irFunctionSymbol(size_t functionIndex) {
   return "ps_fn_" + std::to_string(functionIndex);
 }
@@ -140,6 +165,13 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
   };
+  const auto emitCompareF64 = [&](const char *op) {
+    out << "        double right = psBitsToF64(stack[--sp]);\n";
+    out << "        double left = psBitsToF64(stack[--sp]);\n";
+    out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
+    out << "        pc = " << nextIndex << ";\n";
+    out << "        break;\n";
+  };
   const auto emitPrintValue = [&](const char *valueExpr, uint64_t flags) {
     const char *stream = (flags & PrintFlagStderr) != 0 ? "std::cerr" : "std::cout";
     const bool newline = (flags & PrintFlagNewline) != 0;
@@ -173,6 +205,11 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     }
+    case IrOpcode::PushF64:
+      out << "        stack[sp++] = static_cast<uint64_t>(" << instruction.imm << "ull);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::LoadLocal:
       if (instruction.imm > MaxLocalIndex) {
         error = "IrToCppEmitter local index out of range at instruction " + std::to_string(index);
@@ -328,6 +365,24 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::CmpGeF32:
       emitCompareF32(">=");
+      return true;
+    case IrOpcode::CmpEqF64:
+      emitCompareF64("==");
+      return true;
+    case IrOpcode::CmpNeF64:
+      emitCompareF64("!=");
+      return true;
+    case IrOpcode::CmpLtF64:
+      emitCompareF64("<");
+      return true;
+    case IrOpcode::CmpLeF64:
+      emitCompareF64("<=");
+      return true;
+    case IrOpcode::CmpGtF64:
+      emitCompareF64(">");
+      return true;
+    case IrOpcode::CmpGeF64:
+      emitCompareF64(">=");
       return true;
     case IrOpcode::ConvertI32ToF32:
       out << "        int32_t value = static_cast<int32_t>(stack[--sp]);\n";
@@ -507,9 +562,10 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
 
   std::ostringstream body;
   const bool needsF32Helpers = moduleUsesF32Helpers(module);
+  const bool needsF64Helpers = moduleUsesF64Helpers(module);
   body << "#include <cstddef>\n";
   body << "#include <cstdint>\n";
-  if (needsF32Helpers) {
+  if (needsF32Helpers || needsF64Helpers) {
     body << "#include <cstring>\n";
   }
   body << "\n";
@@ -525,6 +581,13 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     body << "  uint32_t bits = 0;\n";
     body << "  std::memcpy(&bits, &value, sizeof(bits));\n";
     body << "  return static_cast<uint64_t>(bits);\n";
+    body << "}\n\n";
+  }
+  if (needsF64Helpers) {
+    body << "static double psBitsToF64(uint64_t raw) {\n";
+    body << "  double value = 0.0;\n";
+    body << "  std::memcpy(&value, &raw, sizeof(value));\n";
+    body << "  return value;\n";
     body << "}\n\n";
   }
   body << "static const char *ps_string_table[] = {\n";
