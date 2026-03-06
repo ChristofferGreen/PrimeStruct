@@ -198,6 +198,89 @@ TEST_CASE("ir lowerer entry setup step rejects missing entry") {
   CHECK(entryCapabilityMask == 0);
 }
 
+TEST_CASE("ir lowerer imports structs setup step builds maps and layouts") {
+  primec::Program program;
+
+  primec::Definition structDef;
+  structDef.fullPath = "/Vec2";
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  structDef.transforms.push_back(structTransform);
+
+  primec::Expr xField;
+  xField.kind = primec::Expr::Kind::Name;
+  xField.isBinding = true;
+  xField.name = "x";
+  primec::Transform xType;
+  xType.name = "i32";
+  xField.transforms.push_back(xType);
+  structDef.statements.push_back(xField);
+
+  primec::Expr yField;
+  yField.kind = primec::Expr::Kind::Name;
+  yField.isBinding = true;
+  yField.name = "y";
+  primec::Transform yType;
+  yType.name = "i32";
+  yField.transforms.push_back(yType);
+  structDef.statements.push_back(yField);
+  program.definitions.push_back(structDef);
+
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  program.definitions.push_back(entryDef);
+
+  primec::IrModule module;
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_set<std::string> structNames;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::vector<primec::ir_lowerer::LayoutFieldBinding>> structFieldInfoByName;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::runLowerImportsStructsSetup(
+      program, module, defMap, structNames, importAliases, structFieldInfoByName, error));
+  CHECK(error.empty());
+  CHECK(defMap.find("/Vec2") != defMap.end());
+  CHECK(defMap.find("/main") != defMap.end());
+  CHECK(structNames.count("/Vec2") == 1);
+  CHECK(importAliases.empty());
+  CHECK(structFieldInfoByName.count("/Vec2") == 1);
+  CHECK(structFieldInfoByName.at("/Vec2").size() == 2);
+  CHECK(module.structLayouts.size() == 1);
+  CHECK(module.structLayouts.front().name == "/Vec2");
+}
+
+TEST_CASE("ir lowerer imports structs setup step rejects unknown field envelopes") {
+  primec::Program program;
+  primec::Definition structDef;
+  structDef.fullPath = "/Broken";
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  structDef.transforms.push_back(structTransform);
+
+  primec::Expr badField;
+  badField.kind = primec::Expr::Kind::Name;
+  badField.isBinding = true;
+  badField.name = "value";
+  primec::Transform badType;
+  badType.name = "UnknownEnvelope";
+  badField.transforms.push_back(badType);
+  structDef.statements.push_back(badField);
+
+  program.definitions.push_back(structDef);
+
+  primec::IrModule module;
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_set<std::string> structNames;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::vector<primec::ir_lowerer::LayoutFieldBinding>> structFieldInfoByName;
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerImportsStructsSetup(
+      program, module, defMap, structNames, importAliases, structFieldInfoByName, error));
+  CHECK_FALSE(error.empty());
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -241,6 +324,12 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   REQUIRE(std::filesystem::exists(setupHeaderPath));
   const std::string setupHeaderSource = readText(setupHeaderPath);
   CHECK(setupHeaderSource.find("runLowerEntrySetup(") != std::string::npos);
+
+  const std::filesystem::path importsHeaderPath =
+      std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerSetupImportsStructs.h";
+  REQUIRE(std::filesystem::exists(importsHeaderPath));
+  const std::string importsHeaderSource = readText(importsHeaderPath);
+  CHECK(importsHeaderSource.find("runLowerImportsStructsSetup(") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

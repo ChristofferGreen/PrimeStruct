@@ -16,6 +16,7 @@
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererLowerEntrySetup.h"
+#include "IrLowererLowerImportsStructsSetup.h"
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"
 #include "IrLowererOperatorArcHyperbolicHelpers.h"

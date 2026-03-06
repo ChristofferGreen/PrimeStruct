@@ -40,6 +40,7 @@
 #include "src/ir_lowerer/IrLowererInlineStructArgHelpers.h"
 #include "src/ir_lowerer/IrLowererLowerEffects.h"
 #include "src/ir_lowerer/IrLowererLowerEntrySetup.h"
+#include "src/ir_lowerer/IrLowererLowerImportsStructsSetup.h"
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArithmeticHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.h"
