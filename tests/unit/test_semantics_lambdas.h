@@ -114,4 +114,29 @@ main() {
   CHECK(error.find("invalid lambda capture") != std::string::npos);
 }
 
+TEST_CASE("lambda capture-all allows explicit known names") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] base{1i32}
+  [=, value base]([i32] offset) { return(plus(base, offset)) }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+}
+
+TEST_CASE("lambda capture-all rejects explicit unknown names") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] base{1i32}
+  [=, value missing]([i32] offset) { return(offset) }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown capture: missing") != std::string::npos);
+}
+
 TEST_SUITE_END();
