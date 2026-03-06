@@ -315,6 +315,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("count call keeps user-defined map helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(plus(count(values), 12i32))
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("capacity method keeps user-defined vector helper precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

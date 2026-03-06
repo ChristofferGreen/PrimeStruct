@@ -217,6 +217,24 @@ main() {
   CHECK(runCommand(runCmd) == 98);
 }
 
+TEST_CASE("runs vm with user map count call shadow") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(96i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_map_count_call_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 96);
+}
+
 TEST_CASE("runs vm with user vector capacity method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
