@@ -3183,6 +3183,73 @@ TEST_CASE("native window launcher visual smoke fails when rotation does not chan
         std::string::npos);
 }
 
+TEST_CASE("native window launcher compile run coverage validates host build and visual smoke") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "run_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  if (runCommand("uname -s | grep -Fq Darwin") != 0) {
+    INFO("SKIP: non-macOS runner; launcher compile/run coverage requires macOS");
+    return;
+  }
+  if (runCommand("command -v launchctl > /dev/null 2>&1") != 0) {
+    INFO("SKIP: launchctl unavailable; launcher compile/run coverage requires GUI-capable macOS");
+    return;
+  }
+  if (runCommand("launchctl print gui/$(id -u) > /dev/null 2>&1") != 0) {
+    INFO("SKIP: GUI session unavailable; launcher compile/run coverage requires GUI-capable macOS");
+    return;
+  }
+  if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun unavailable; launcher compile/run coverage requires Xcode command-line tools");
+    return;
+  }
+  if (runCommand("xcrun --find metal > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun metal unavailable; launcher compile/run coverage requires Metal tooling");
+    return;
+  }
+  if (runCommand("xcrun --find metallib > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun metallib unavailable; launcher compile/run coverage requires Metal tooling");
+    return;
+  }
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_native_window_launcher_compile_run_coverage";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path launcherOutPath = outDir / "launcher.out.txt";
+  const std::filesystem::path launcherErrPath = outDir / "launcher.err.txt";
+  const std::string command =
+      quoteShellArg(scriptPath.string()) + " --primec ./primec --out-dir " + quoteShellArg(outDir.string()) +
+      " --visual-smoke --max-frames 120 > " + quoteShellArg(launcherOutPath.string()) + " 2> " +
+      quoteShellArg(launcherErrPath.string());
+  CHECK(runCommand(command) == 0);
+
+  const std::string output = readFile(launcherOutPath.string());
+  const std::string diagnostics = readFile(launcherErrPath.string());
+  CHECK(diagnostics.find("[native-window-launcher] ERROR:") == std::string::npos);
+  CHECK(output.find("[native-window-launcher] Compiling cube simulation stream binary") != std::string::npos);
+  CHECK(output.find("[native-window-launcher] Compiling native window host") != std::string::npos);
+  CHECK(output.find("[native-window-launcher] Launching native window host") != std::string::npos);
+  CHECK(output.find("[native-window-launcher] VISUAL-SMOKE: window_shown=PASS") != std::string::npos);
+  CHECK(output.find("[native-window-launcher] VISUAL-SMOKE: render_loop_alive=PASS") != std::string::npos);
+  CHECK(output.find("[native-window-launcher] VISUAL-SMOKE: rotation_changes_over_time=PASS") !=
+        std::string::npos);
+  CHECK(output.find("[native-window-launcher] VISUAL-SMOKE: PASS") != std::string::npos);
+  CHECK(output.find("[native-window-launcher] PASS: launch completed") != std::string::npos);
+  CHECK(output.find("[native-window-launcher] VISUAL-SMOKE: SKIP") == std::string::npos);
+
+  CHECK(std::filesystem::exists(outDir / "cube_native_frame_stream"));
+  CHECK(std::filesystem::exists(outDir / "spinning_cube_window_host"));
+  CHECK(std::filesystem::exists(outDir / "native_window_host.log"));
+}
+
 TEST_CASE("native window preflight script validates required tools and GUI session") {
   std::filesystem::path scriptPath =
       std::filesystem::path("..") / "scripts" / "preflight_native_spinning_cube_window.sh";
