@@ -2026,6 +2026,36 @@ TEST_CASE("if missing else return fails missing return checks") {
   CHECK(error.find("missing return statement") != std::string::npos);
 }
 
+TEST_CASE("for condition binding bool passes") {
+  primec::Program program;
+  primec::Expr initBinding = makeBinding("i", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(0)});
+  primec::Expr condBinding = makeBinding("keepGoing", {makeTransform("bool")}, {makeBool(true)});
+  primec::Expr stepCall = makeCall("increment", {makeName("i")});
+  primec::Expr bodyBlock = makeCall("body", {}, {}, {makeCall("/return", {makeLiteral(7)})});
+  bodyBlock.hasBodyArguments = true;
+  primec::Expr forCall = makeCall("for", {initBinding, condBinding, stepCall, bodyBlock});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {forCall, makeCall("/return", {makeLiteral(0)})}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("for condition binding requires bool") {
+  primec::Program program;
+  primec::Expr initBinding = makeBinding("i", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(0)});
+  primec::Expr condBinding = makeBinding("keepGoing", {makeTransform("i32")}, {makeLiteral(1)});
+  primec::Expr stepCall = makeCall("increment", {makeName("i")});
+  primec::Expr bodyBlock = makeCall("body", {}, {}, {makeCall("/return", {makeLiteral(7)})});
+  bodyBlock.hasBodyArguments = true;
+  primec::Expr forCall = makeCall("for", {initBinding, condBinding, stepCall, bodyBlock});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {forCall, makeCall("/return", {makeLiteral(0)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("for condition requires bool") != std::string::npos);
+}
+
 TEST_CASE("missing return statement fails") {
   primec::Program program;
   primec::Expr binding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});

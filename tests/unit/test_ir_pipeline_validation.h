@@ -6403,23 +6403,26 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
     return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   };
 
-  const std::filesystem::path semanticsStatementControlFlowHeaderPath =
-      std::filesystem::path("src") / "semantics" / "SemanticsValidatorStatementControlFlow.h";
-  REQUIRE(std::filesystem::exists(semanticsStatementControlFlowHeaderPath));
-  const std::string semanticsStatementControlFlowHeaderSource = readText(semanticsStatementControlFlowHeaderPath);
-  CHECK(semanticsStatementControlFlowHeaderSource.find(
-            "runSemanticsValidatorStatementCanIterateMoreThanOnceStep(countExpr, allowBoolCount)") !=
-        std::string::npos);
-  CHECK(semanticsStatementControlFlowHeaderSource.find("runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(count)") !=
-        std::string::npos);
-
   const std::filesystem::path semanticsStatementPath =
       std::filesystem::path("src") / "semantics" / "SemanticsValidatorStatement.cpp";
   REQUIRE(std::filesystem::exists(semanticsStatementPath));
   const std::string semanticsStatementSource = readText(semanticsStatementPath);
+  CHECK(semanticsStatementSource.find("bool SemanticsValidator::validateStatement") != std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementLoopCountStep.h\"") !=
         std::string::npos);
-  CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementReturns.h\"") == std::string::npos);
+  CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementHelpers.h\"") == std::string::npos);
+  CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementBindings.h\"") == std::string::npos);
+  CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementControlFlow.h\"") == std::string::npos);
+
+  const std::filesystem::path semanticsStatementHelpersHeaderPath =
+      std::filesystem::path("src") / "semantics" / "SemanticsValidatorStatementHelpers.h";
+  CHECK_FALSE(std::filesystem::exists(semanticsStatementHelpersHeaderPath));
+  const std::filesystem::path semanticsStatementBindingsHeaderPath =
+      std::filesystem::path("src") / "semantics" / "SemanticsValidatorStatementBindings.h";
+  CHECK_FALSE(std::filesystem::exists(semanticsStatementBindingsHeaderPath));
+  const std::filesystem::path semanticsStatementControlFlowHeaderPath =
+      std::filesystem::path("src") / "semantics" / "SemanticsValidatorStatementControlFlow.h";
+  CHECK_FALSE(std::filesystem::exists(semanticsStatementControlFlowHeaderPath));
 
   const std::filesystem::path semanticsStatementReturnsPath =
       std::filesystem::path("src") / "semantics" / "SemanticsValidatorStatementReturns.cpp";
