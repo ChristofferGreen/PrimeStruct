@@ -543,6 +543,26 @@ TEST_CASE("ir to glsl emitter writes narrowed f64 literal and return opcodes") {
   CHECK(glsl.find("// Narrowed GLSL path returns f64 values through f32 payloads.") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes narrowed f64 add opcode") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushF64, 0x3ff8000000000000ull});
+  fn.instructions.push_back({primec::IrOpcode::PushF64, 0x4000000000000000ull});
+  fn.instructions.push_back({primec::IrOpcode::AddF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnF64, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("// Narrowed GLSL path lowers f64 add through f32 payloads.") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = floatBitsToInt(left + right);") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter rejects unsupported opcodes") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
@@ -553,8 +573,8 @@ TEST_CASE("ir to glsl emitter rejects unsupported opcodes") {
   fn.instructions.push_back({primec::IrOpcode::ConvertF32ToF64, 0});
   fn.instructions.push_back({primec::IrOpcode::PushF32, 0x40000000u});
   fn.instructions.push_back({primec::IrOpcode::ConvertF32ToF64, 0});
-  fn.instructions.push_back({primec::IrOpcode::AddF64, 0});
-  fn.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::CmpEqF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
 
   std::string glsl;
