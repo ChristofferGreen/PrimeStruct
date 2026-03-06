@@ -1496,6 +1496,40 @@ TEST_CASE("emitter expr control name step resolves constants and locals") {
   CHECK(*localResolved == "e");
 }
 
+TEST_CASE("emitter expr control float-literal step formats literals") {
+  primec::Expr notFloatExpr;
+  notFloatExpr.kind = primec::Expr::Kind::Literal;
+  notFloatExpr.literalValue = 1;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlFloatLiteralStep(notFloatExpr).has_value());
+
+  primec::Expr float64Expr;
+  float64Expr.kind = primec::Expr::Kind::FloatLiteral;
+  float64Expr.floatWidth = 64;
+  float64Expr.floatValue = "3.5";
+  const auto float64Value = primec::emitter::runEmitterExprControlFloatLiteralStep(float64Expr);
+  REQUIRE(float64Value.has_value());
+  CHECK(*float64Value == "3.5");
+
+  primec::Expr float32WholeExpr = float64Expr;
+  float32WholeExpr.floatWidth = 32;
+  float32WholeExpr.floatValue = "2";
+  const auto float32Whole = primec::emitter::runEmitterExprControlFloatLiteralStep(float32WholeExpr);
+  REQUIRE(float32Whole.has_value());
+  CHECK(*float32Whole == "2.0f");
+
+  primec::Expr float32FractionExpr = float32WholeExpr;
+  float32FractionExpr.floatValue = "2.25";
+  const auto float32Fraction = primec::emitter::runEmitterExprControlFloatLiteralStep(float32FractionExpr);
+  REQUIRE(float32Fraction.has_value());
+  CHECK(*float32Fraction == "2.25f");
+
+  primec::Expr float32ExponentExpr = float32WholeExpr;
+  float32ExponentExpr.floatValue = "1e3";
+  const auto float32Exponent = primec::emitter::runEmitterExprControlFloatLiteralStep(float32ExponentExpr);
+  REQUIRE(float32Exponent.has_value());
+  CHECK(*float32Exponent == "1e3f");
+}
+
 TEST_CASE("semantics validator expr capture split step tokenizes captures") {
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep("").empty());
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep(" \t \n").empty());
@@ -1704,12 +1738,14 @@ TEST_CASE("emitter expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(emitterExprControlHeaderPath));
   const std::string emitterExprControlHeaderSource = readText(emitterExprControlHeaderPath);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
 
   const std::filesystem::path emitterExprPath =
       std::filesystem::path("src") / "emitter" / "EmitterExpr.cpp";
   REQUIRE(std::filesystem::exists(emitterExprPath));
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
 }
 
 TEST_CASE("semantics validator expr source delegation stays stable") {

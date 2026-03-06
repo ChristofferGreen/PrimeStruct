@@ -16,6 +16,7 @@ add_library(primec_lib
   src/emitter/EmitterEmitSetupLifecycleHelperStep.cpp
   src/emitter/EmitterEmitSetupMathImport.cpp
   src/emitter/EmitterExpr.cpp
+  src/emitter/EmitterExprControlFloatLiteralStep.cpp
   src/emitter/EmitterExprControlNameStep.cpp
   src/emitter/EmitterHelpersBuiltins.cpp
   src/emitter/EmitterHelpersTypes.cpp

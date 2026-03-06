@@ -14,16 +14,8 @@
   if (expr.kind == Expr::Kind::BoolLiteral) {
     return expr.boolValue ? "true" : "false";
   }
-  if (expr.kind == Expr::Kind::FloatLiteral) {
-    if (expr.floatWidth == 64) {
-      return expr.floatValue;
-    }
-    std::string literal = expr.floatValue;
-    if (literal.find('.') == std::string::npos && literal.find('e') == std::string::npos &&
-        literal.find('E') == std::string::npos) {
-      literal += ".0";
-    }
-    return literal + "f";
+  if (const auto floatExpr = emitter::runEmitterExprControlFloatLiteralStep(expr); floatExpr.has_value()) {
+    return *floatExpr;
   }
   if (expr.kind == Expr::Kind::StringLiteral) {
     return "std::string_view(" + stripStringLiteralSuffix(expr.stringValue) + ")";
