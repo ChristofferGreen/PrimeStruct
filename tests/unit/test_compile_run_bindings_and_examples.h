@@ -2362,6 +2362,73 @@ TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiri
   CHECK(source.find("pipelineDesc.vertexDescriptor = vertexDesc;") != std::string::npos);
 }
 
+TEST_CASE("spinning cube metal host pipeline creation regression stays fixed") {
+  std::filesystem::path metalSampleDir =
+      std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
+  if (!std::filesystem::exists(metalSampleDir)) {
+    metalSampleDir = std::filesystem::current_path() / "examples" / "metal" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(metalSampleDir));
+
+  const std::filesystem::path metalShaderPath = metalSampleDir / "cube.metal";
+  const std::filesystem::path metalHostPath = metalSampleDir / "metal_host.mm";
+  REQUIRE(std::filesystem::exists(metalShaderPath));
+  REQUIRE(std::filesystem::exists(metalHostPath));
+
+  if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun unavailable; cannot run metal pipeline creation regression");
+    return;
+  }
+  if (runCommand("xcrun --find metal > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun metal unavailable; cannot run metal pipeline creation regression");
+    return;
+  }
+  if (runCommand("xcrun --find metallib > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun metallib unavailable; cannot run metal pipeline creation regression");
+    return;
+  }
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_pipeline_regression";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path airPath = outDir / "cube.air";
+  const std::filesystem::path metallibPath = outDir / "cube.metallib";
+  const std::filesystem::path hostBinaryPath = outDir / "metal_host";
+  const std::filesystem::path hostStdoutPath = outDir / "metal_host.stdout.txt";
+  const std::filesystem::path hostStderrPath = outDir / "metal_host.stderr.txt";
+
+  const std::string compileMetalCmd = "xcrun metal -std=metal3.0 -c " + quoteShellArg(metalShaderPath.string()) +
+                                      " -o " + quoteShellArg(airPath.string());
+  CHECK(runCommand(compileMetalCmd) == 0);
+  CHECK(std::filesystem::exists(airPath));
+
+  const std::string compileLibraryCmd =
+      "xcrun metallib " + quoteShellArg(airPath.string()) + " -o " + quoteShellArg(metallibPath.string());
+  CHECK(runCommand(compileLibraryCmd) == 0);
+  CHECK(std::filesystem::exists(metallibPath));
+
+  const std::string compileHostCmd =
+      "xcrun clang++ -std=c++17 -fobjc-arc " + quoteShellArg(metalHostPath.string()) +
+      " -framework Foundation -framework Metal -o " + quoteShellArg(hostBinaryPath.string());
+  CHECK(runCommand(compileHostCmd) == 0);
+  CHECK(std::filesystem::exists(hostBinaryPath));
+
+  const std::string runHostCmd = quoteShellArg(hostBinaryPath.string()) + " " + quoteShellArg(metallibPath.string()) +
+                                 " > " + quoteShellArg(hostStdoutPath.string()) + " 2> " +
+                                 quoteShellArg(hostStderrPath.string());
+  CHECK(runCommand(runHostCmd) == 0);
+
+  const std::string hostStdout = readFile(hostStdoutPath.string());
+  const std::string hostStderr = readFile(hostStderrPath.string());
+  CHECK(hostStdout.find("frame_rendered=1") != std::string::npos);
+  CHECK(hostStderr.find("failed to create render pipeline:") == std::string::npos);
+  CHECK(hostStderr.find("Vertex function has input attributes but no vertex descriptor was set.") == std::string::npos);
+}
+
 TEST_CASE("spinning cube metal full-path smoke renders frame") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
