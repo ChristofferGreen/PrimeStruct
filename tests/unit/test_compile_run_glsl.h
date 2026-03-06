@@ -16,6 +16,44 @@ main() {
   CHECK(output.find("void main()") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir emitter writes IR-lowered shader for integer subset") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] counter{1i32}
+  assign(counter, plus(counter, 2i32))
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_ir_i32_subset.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_ir_i32_subset.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("int ps_entry_0()") != std::string::npos);
+  CHECK(output.find("switch (pc)") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
+TEST_CASE("glsl-ir emitter reports unsupported opcodes") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [f32] value{1.5f32}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_ir_unsupported_opcode.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_ir_unsupported_opcode_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=glsl-ir " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("ir-to-glsl failed: IrToGlslEmitter unsupported opcode") != std::string::npos);
+}
+
 TEST_CASE("defaults to glsl extension for emit=glsl") {
   const std::string source = R"(
 [return<void>]
@@ -91,6 +129,27 @@ main() {
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_spirv_minimal.spv").string();
 
   const std::string compileCmd = "./primec --emit=spirv " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(std::filesystem::exists(outPath));
+  CHECK(std::filesystem::file_size(outPath) > 0);
+}
+
+TEST_CASE("spirv-ir emitter writes spirv when tool available") {
+  if (!hasSpirvTools()) {
+    return;
+  }
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  assign(value, plus(value, 2i32))
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_spirv_ir_minimal.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_spirv_ir_minimal.spv").string();
+
+  const std::string compileCmd = "./primec --emit=spirv-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(std::filesystem::exists(outPath));
   CHECK(std::filesystem::file_size(outPath) > 0);

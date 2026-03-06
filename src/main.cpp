@@ -6,6 +6,7 @@
 #include "primec/IrBackends.h"
 #include "primec/IrInliner.h"
 #include "primec/IrLowerer.h"
+#include "primec/IrToGlslEmitter.h"
 #include "primec/IrValidation.h"
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
@@ -298,6 +299,43 @@ std::string injectComputeLayout(const std::string &glslSource) {
   return glslSource.substr(0, lineEnd + 1) + layoutLine + glslSource.substr(lineEnd + 1);
 }
 
+bool emitGlslSourceFromIrModule(const primec::Program &program,
+                                const primec::Options &options,
+                                std::string &glslSource,
+                                std::string &error) {
+  primec::IrLowerer lowerer;
+  primec::IrModule ir;
+  if (!lowerer.lower(program,
+                     options.entryPath,
+                     options.defaultEffects,
+                     options.entryDefaultEffects,
+                     ir,
+                     error)) {
+    error = "lowering failed: " + error;
+    return false;
+  }
+  if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
+    error = "ir validation failed: " + error;
+    return false;
+  }
+  if (options.inlineIrCalls) {
+    if (!primec::inlineIrModuleCalls(ir, error)) {
+      error = "ir inline failed: " + error;
+      return false;
+    }
+    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
+      error = "ir validation failed: " + error;
+      return false;
+    }
+  }
+  primec::IrToGlslEmitter emitter;
+  if (!emitter.emitSource(ir, glslSource, error)) {
+    error = "ir-to-glsl failed: " + error;
+    return false;
+  }
+  return true;
+}
+
 int emitFailure(const primec::Options &options,
                 primec::DiagnosticCode code,
                 const std::string &plainPrefix,
@@ -541,6 +579,72 @@ int main(int argc, char **argv) {
     if (!ensureOutputDirectory(resolved, error)) {
       return emitFailure(options, primec::DiagnosticCode::OutputError, "Output error: ", error, 2);
     }
+  }
+
+  if (options.emitKind == "glsl-ir") {
+    std::string glslSource;
+    if (!emitGlslSourceFromIrModule(program, options, glslSource, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "GLSL-IR emit error: ",
+                         error,
+                         2,
+                         {"backend: glsl-ir"});
+    }
+    if (!writeFile(options.outputPath, glslSource)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::OutputError,
+                         "Failed to write output: ",
+                         options.outputPath,
+                         2);
+    }
+    return 0;
+  }
+
+  if (options.emitKind == "spirv-ir") {
+    std::string glslSource;
+    if (!emitGlslSourceFromIrModule(program, options, glslSource, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "SPIR-V IR emit error: ",
+                         error,
+                         2,
+                         {"backend: spirv-ir"});
+    }
+    std::string spirvSource = injectComputeLayout(glslSource);
+    std::string toolName;
+    if (!primec::findSpirvCompiler(processRunner, toolName)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "SPIR-V emit error: ",
+                         "glslangValidator or glslc not found",
+                         2,
+                         {"backend: spirv-ir"});
+    }
+
+    const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    std::filesystem::path tempPath =
+        std::filesystem::temp_directory_path() / ("primec_spirv_ir_" + std::to_string(timestamp) + ".comp");
+    if (!writeFile(tempPath.string(), spirvSource)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::OutputError,
+                         "Failed to write output: ",
+                         tempPath.string(),
+                         2);
+    }
+
+    bool ok = primec::compileSpirv(processRunner, toolName, tempPath, options.outputPath);
+    std::error_code ec;
+    std::filesystem::remove(tempPath, ec);
+    if (!ok) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "SPIR-V emit error: ",
+                         "tool invocation failed",
+                         2,
+                         {"backend: spirv-ir"});
+    }
+    return 0;
   }
 
   if (options.emitKind == "glsl") {
