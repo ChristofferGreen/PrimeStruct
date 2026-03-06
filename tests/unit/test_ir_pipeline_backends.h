@@ -243,6 +243,30 @@ TEST_CASE("cpp-ir backend rejects empty non-entry function bodies") {
   CHECK(error == "ir-to-cpp failed: IrToCppEmitter function has no instructions at index 1");
 }
 
+TEST_CASE("cpp-ir backend reports invalid entry index diagnostics") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 3;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path outputPath =
+      std::filesystem::current_path() / "primec_tests" / "unused_invalid_entry_index.cpp";
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "cpp_ir_backend_invalid_entry_index_error.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  CHECK_FALSE(backend->emit(module, options, result, error));
+  CHECK(error.find("ir-to-cpp failed:") != std::string::npos);
+  CHECK(error.find("invalid IR entry index") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir backend reports file write string index diagnostics") {
   const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
   REQUIRE(backend != nullptr);
