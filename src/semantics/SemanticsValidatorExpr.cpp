@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorExprCaptureSplitStep.h"
 
 #include "primec/StringLiteral.h"
 

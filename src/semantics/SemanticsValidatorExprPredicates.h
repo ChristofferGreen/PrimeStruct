@@ -5,27 +5,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                       size_t statementIndex) {
   ExprContextScope exprScope(*this, expr);
   if (expr.isLambda) {
-    auto splitTokens = [](const std::string &text) {
-      std::vector<std::string> tokens;
-      std::string token;
-      bool inToken = false;
-      for (char c : text) {
-        if (std::isspace(static_cast<unsigned char>(c)) != 0) {
-          if (inToken) {
-            tokens.push_back(token);
-            token.clear();
-            inToken = false;
-          }
-          continue;
-        }
-        token.push_back(c);
-        inToken = true;
-      }
-      if (inToken) {
-        tokens.push_back(token);
-      }
-      return tokens;
-    };
     auto addCapturedBinding = [&](std::unordered_map<std::string, BindingInfo> &lambdaLocals,
                                   const std::string &name) -> bool {
       if (lambdaLocals.count(name) > 0) {
@@ -63,7 +42,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       captureNames.reserve(expr.lambdaCaptures.size());
       explicitNames.reserve(expr.lambdaCaptures.size());
       for (const auto &capture : expr.lambdaCaptures) {
-        std::vector<std::string> tokens = splitTokens(capture);
+        std::vector<std::string> tokens = runSemanticsValidatorExprCaptureSplitStep(capture);
         if (tokens.empty()) {
           error_ = "invalid lambda capture";
           return false;

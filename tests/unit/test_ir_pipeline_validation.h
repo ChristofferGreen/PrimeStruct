@@ -1267,6 +1267,29 @@ TEST_CASE("emitter expr control name step resolves constants and locals") {
   CHECK(*localResolved == "e");
 }
 
+TEST_CASE("semantics validator expr capture split step tokenizes captures") {
+  CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep("").empty());
+  CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep(" \t \n").empty());
+
+  const auto single =
+      primec::semantics::runSemanticsValidatorExprCaptureSplitStep("value");
+  REQUIRE(single.size() == 1);
+  CHECK(single[0] == "value");
+
+  const auto pair =
+      primec::semantics::runSemanticsValidatorExprCaptureSplitStep("ref   item");
+  REQUIRE(pair.size() == 2);
+  CHECK(pair[0] == "ref");
+  CHECK(pair[1] == "item");
+
+  const auto mixed =
+      primec::semantics::runSemanticsValidatorExprCaptureSplitStep("  =   ref\tname  ");
+  REQUIRE(mixed.size() == 3);
+  CHECK(mixed[0] == "=");
+  CHECK(mixed[1] == "ref");
+  CHECK(mixed[2] == "name");
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -1391,6 +1414,30 @@ TEST_CASE("emitter expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(emitterExprPath));
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
+}
+
+TEST_CASE("semantics validator expr source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path semanticsExprPredicatesHeaderPath =
+      std::filesystem::path("src") / "semantics" / "SemanticsValidatorExprPredicates.h";
+  REQUIRE(std::filesystem::exists(semanticsExprPredicatesHeaderPath));
+  const std::string semanticsExprPredicatesHeaderSource = readText(semanticsExprPredicatesHeaderPath);
+  CHECK(semanticsExprPredicatesHeaderSource.find("runSemanticsValidatorExprCaptureSplitStep(capture)") !=
+        std::string::npos);
+
+  const std::filesystem::path semanticsExprPath =
+      std::filesystem::path("src") / "semantics" / "SemanticsValidatorExpr.cpp";
+  REQUIRE(std::filesystem::exists(semanticsExprPath));
+  const std::string semanticsExprSource = readText(semanticsExprPath);
+  CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

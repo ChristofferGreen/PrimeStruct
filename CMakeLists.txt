@@ -96,6 +96,7 @@ add_library(primec_lib
   src/semantics/SemanticsValidate.cpp
   src/semantics/SemanticsValidator.cpp
   src/semantics/SemanticsValidatorBuild.cpp
+  src/semantics/SemanticsValidatorExprCaptureSplitStep.cpp
   src/semantics/SemanticsValidatorExpr.cpp
   src/semantics/SemanticsValidatorInfer.cpp
   src/semantics/SemanticsValidatorPasses.cpp
