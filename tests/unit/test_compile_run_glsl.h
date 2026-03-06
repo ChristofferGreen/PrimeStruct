@@ -32,7 +32,7 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("int ps_entry_0()") != std::string::npos);
+  CHECK(output.find("int ps_entry_0(inout int stack[1024], inout int sp)") != std::string::npos);
   CHECK(output.find("switch (pc)") != std::string::npos);
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
@@ -233,6 +233,56 @@ main() {
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir emitter writes IR-lowered shader for helper-call subset") {
+  const std::string source = R"(
+[return<i32>]
+helper() {
+  return(7i32)
+}
+
+[return<void>]
+main() {
+  [i32] value{helper()}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_ir_helper_call_subset.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_ir_helper_call_subset.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("inout int stack[1024], inout int sp") != std::string::npos);
+  CHECK(output.find("stack[sp++] = ps_entry_") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter uses ir backend for helper-call subset") {
+  const std::string source = R"(
+[return<i32>]
+helper() {
+  return(7i32)
+}
+
+[return<void>]
+main() {
+  [i32] value{helper()}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_helper_call_ir_first.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_helper_call_ir_first.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("inout int stack[1024], inout int sp") != std::string::npos);
+  CHECK(output.find("stack[sp++] = ps_entry_") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter matches glsl-ir on shared corpus") {
   struct DifferentialCase {
     const char *name;
@@ -313,6 +363,21 @@ main() {
 main() {
   [i32] count{7i32}
   [f32] asFloat{convert<f32>(count)}
+  return()
+}
+)",
+      },
+      {
+          "helper_call",
+          R"(
+[return<i32>]
+helper() {
+  return(7i32)
+}
+
+[return<void>]
+main() {
+  [i32] value{helper()}
   return()
 }
 )",

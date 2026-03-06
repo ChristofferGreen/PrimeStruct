@@ -11,6 +11,7 @@ bool emitInstruction(const IrInstruction &instruction,
                      size_t index,
                      size_t nextIndex,
                      size_t instructionCount,
+                     size_t functionCount,
                      std::ostringstream &out,
                      std::string &error) {
   constexpr uint64_t MaxLocalIndex = 1023;
@@ -196,6 +197,24 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = (cond == 0) ? " << instruction.imm << " : " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::Call:
+      if (instruction.imm >= functionCount) {
+        error = "IrToGlslEmitter call target out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      out << "        stack[sp++] = ps_entry_" << instruction.imm << "(stack, sp);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::CallVoid:
+      if (instruction.imm >= functionCount) {
+        error = "IrToGlslEmitter call target out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      out << "        ps_entry_" << instruction.imm << "(stack, sp);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::ReturnF32:
       out << "        return stack[--sp];\n";
       return true;
@@ -210,6 +229,44 @@ bool emitInstruction(const IrInstruction &instruction,
               std::to_string(static_cast<int>(instruction.op));
       return false;
   }
+}
+
+bool emitFunction(const IrFunction &function,
+                  size_t functionIndex,
+                  size_t functionCount,
+                  std::ostringstream &out,
+                  std::string &error) {
+  if (function.instructions.empty()) {
+    error = "IrToGlslEmitter function has no instructions at index " + std::to_string(functionIndex);
+    return false;
+  }
+
+  out << "int ps_entry_" << functionIndex << "(inout int stack[1024], inout int sp) {\n";
+  out << "  int locals[1024];\n";
+  out << "  for (int i = 0; i < 1024; ++i) {\n";
+  out << "    locals[i] = 0;\n";
+  out << "  }\n";
+  out << "  int pc = 0;\n";
+  out << "  while (true) {\n";
+  out << "    switch (pc) {\n";
+
+  const size_t instructionCount = function.instructions.size();
+  for (size_t i = 0; i < instructionCount; ++i) {
+    const size_t next = i + 1;
+    out << "      case " << i << ": {\n";
+    if (!emitInstruction(function.instructions[i], i, next, instructionCount, functionCount, out, error)) {
+      return false;
+    }
+    out << "      }\n";
+  }
+
+  out << "      default: {\n";
+  out << "        return 0;\n";
+  out << "      }\n";
+  out << "    }\n";
+  out << "  }\n";
+  out << "}\n";
+  return true;
 }
 
 } // namespace
@@ -233,35 +290,18 @@ bool IrToGlslEmitter::emitSource(const IrModule &module, std::string &out, std::
   body << "layout(std430, binding = 0) buffer PrimeStructOutput {\n";
   body << "  int value;\n";
   body << "} ps_output;\n";
-  body << "int ps_entry_" << static_cast<size_t>(module.entryIndex) << "() {\n";
-  body << "  int stack[1024];\n";
-  body << "  int locals[1024];\n";
-  body << "  for (int i = 0; i < 1024; ++i) {\n";
-  body << "    locals[i] = 0;\n";
-  body << "  }\n";
-  body << "  int sp = 0;\n";
-  body << "  int pc = 0;\n";
-  body << "  while (true) {\n";
-  body << "    switch (pc) {\n";
-
-  const size_t instructionCount = entry.instructions.size();
-  for (size_t i = 0; i < instructionCount; ++i) {
-    const size_t next = i + 1;
-    body << "      case " << i << ": {\n";
-    if (!emitInstruction(entry.instructions[i], i, next, instructionCount, body, error)) {
+  for (size_t i = 0; i < module.functions.size(); ++i) {
+    body << "int ps_entry_" << i << "(inout int stack[1024], inout int sp);\n";
+  }
+  for (size_t i = 0; i < module.functions.size(); ++i) {
+    if (!emitFunction(module.functions[i], i, module.functions.size(), body, error)) {
       return false;
     }
-    body << "      }\n";
   }
-
-  body << "      default: {\n";
-  body << "        return 0;\n";
-  body << "      }\n";
-  body << "    }\n";
-  body << "  }\n";
-  body << "}\n";
   body << "void main() {\n";
-  body << "  ps_output.value = ps_entry_" << static_cast<size_t>(module.entryIndex) << "();\n";
+  body << "  int stack[1024];\n";
+  body << "  int sp = 0;\n";
+  body << "  ps_output.value = ps_entry_" << static_cast<size_t>(module.entryIndex) << "(stack, sp);\n";
   body << "}\n";
 
   out = body.str();

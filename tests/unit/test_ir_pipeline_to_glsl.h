@@ -28,7 +28,7 @@ TEST_CASE("ir to glsl emitter writes numeric stack program") {
   CHECK(error.empty());
   CHECK(glsl.find("#version 450") != std::string::npos);
   CHECK(glsl.find("layout(std430, binding = 0) buffer PrimeStructOutput") != std::string::npos);
-  CHECK(glsl.find("int ps_entry_0()") != std::string::npos);
+  CHECK(glsl.find("int ps_entry_0(inout int stack[1024], inout int sp)") != std::string::npos);
   CHECK(glsl.find("switch (pc)") != std::string::npos);
   CHECK(glsl.find("case 0") != std::string::npos);
   CHECK(glsl.find("stack[sp++] = 2;") != std::string::npos);
@@ -57,6 +57,39 @@ TEST_CASE("ir to glsl emitter writes jump and conditional jump control flow") {
   CHECK(error.empty());
   CHECK(glsl.find("pc = (cond == 0) ? 4 : 2;") != std::string::npos);
   CHECK(glsl.find("pc = 5;") != std::string::npos);
+}
+
+TEST_CASE("ir to glsl emitter writes call and callvoid opcodes") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction entry;
+  entry.name = "/main";
+  entry.instructions.push_back({primec::IrOpcode::Call, 1});
+  entry.instructions.push_back({primec::IrOpcode::CallVoid, 2});
+  entry.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(entry);
+
+  primec::IrFunction callee;
+  callee.name = "/helper";
+  callee.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  callee.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(callee);
+
+  primec::IrFunction voidCallee;
+  voidCallee.name = "/side_effect";
+  voidCallee.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(voidCallee);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("int ps_entry_1(inout int stack[1024], inout int sp);") != std::string::npos);
+  CHECK(glsl.find("int ps_entry_2(inout int stack[1024], inout int sp);") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = ps_entry_1(stack, sp);") != std::string::npos);
+  CHECK(glsl.find("ps_entry_2(stack, sp);") != std::string::npos);
 }
 
 TEST_CASE("ir to glsl emitter writes f32 literal push") {
@@ -202,6 +235,22 @@ TEST_CASE("ir to glsl emitter rejects out-of-range local indices") {
   std::string error;
   CHECK_FALSE(emitter.emitSource(module, glsl, error));
   CHECK(error.find("local index out of range") != std::string::npos);
+}
+
+TEST_CASE("ir to glsl emitter rejects out-of-range call targets") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::Call, 9});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, glsl, error));
+  CHECK(error.find("call target out of range") != std::string::npos);
 }
 
 TEST_SUITE_END();
