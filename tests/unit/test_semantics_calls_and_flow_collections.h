@@ -854,4 +854,51 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("user definition named at accepts named arguments") {
+  const std::string source = R"(
+[return<int>]
+at([i32] value, [i32] index) {
+  return(plus(value, index))
+}
+
+[return<int>]
+main() {
+  return(at([value] 3i32, [index] 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("user definition named at_unsafe accepts named arguments") {
+  const std::string source = R"(
+[return<int>]
+at_unsafe([i32] value, [i32] index) {
+  return(minus(value, index))
+}
+
+[return<int>]
+main() {
+  return(at_unsafe([value] 7i32, [index] 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("array access builtin still rejects named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(at([value] values, [index] 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_SUITE_END();
