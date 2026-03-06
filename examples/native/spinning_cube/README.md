@@ -33,9 +33,16 @@ lowering parity is restored.
 5. Optional non-GUI integration smoke:
    - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream --simulation-smoke`
 
+The window host now renders an indexed cube mesh each frame and updates
+transform uniforms from the deterministic fixed-step simulation stream.
+
 Expected diagnostics include:
 - `simulation_stream_loaded=1`
 - `simulation_fixed_step_millis=16`
+- `shader_library_ready=1`
+- `vertex_buffer_ready=1`
+- `index_buffer_ready=1`
+- `uniform_buffer_ready=1`
 - `window_created=1`
 - `swapchain_layer_created=1`
 - `pipeline_ready=1`

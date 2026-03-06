@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -12,6 +14,8 @@
 #include <limits>
 #include <string>
 #include <vector>
+
+#include <simd/simd.h>
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>
@@ -23,32 +27,25 @@ constexpr const char *WindowShaderSource = R"(
 #include <metal_stdlib>
 using namespace metal;
 
+struct WindowVertexIn {
+  float3 position [[attribute(0)]];
+  float4 color [[attribute(1)]];
+};
+
+struct WindowUniforms {
+  float4x4 modelViewProjection;
+};
+
 struct VertexOut {
   float4 position [[position]];
   float4 color;
 };
 
-vertex VertexOut windowVertexMain(uint vertexId [[vertex_id]],
-                                  constant float &angle [[buffer(0)]]) {
-  const float2 positions[3] = {
-      float2(0.0f, 0.60f),
-      float2(-0.55f, -0.45f),
-      float2(0.55f, -0.45f),
-  };
-  const float4 colors[3] = {
-      float4(0.95f, 0.24f, 0.32f, 1.0f),
-      float4(0.23f, 0.86f, 0.41f, 1.0f),
-      float4(0.18f, 0.56f, 1.00f, 1.0f),
-  };
-
-  float s = sin(angle);
-  float c = cos(angle);
-  float2 p = positions[vertexId];
-  float2 rotated = float2(c * p.x - s * p.y, s * p.x + c * p.y);
-
+vertex VertexOut windowVertexMain(WindowVertexIn in [[stage_in]],
+                                  constant WindowUniforms &uniforms [[buffer(1)]]) {
   VertexOut out;
-  out.position = float4(rotated, 0.0f, 1.0f);
-  out.color = colors[vertexId];
+  out.position = uniforms.modelViewProjection * float4(in.position, 1.0f);
+  out.color = in.color;
   return out;
 }
 
@@ -68,6 +65,80 @@ struct SimulationFrameState {
   int axisXCenti = 0;
   int axisYCenti = 0;
 };
+
+struct WindowVertex {
+  simd_float3 position;
+  simd_float4 color;
+};
+
+struct WindowUniforms {
+  simd_float4x4 modelViewProjection;
+};
+
+constexpr std::array<WindowVertex, 8> CubeVertices = {{
+    {{-0.6f, -0.6f, -0.6f}, {1.0f, 0.2f, 0.2f, 1.0f}},
+    {{0.6f, -0.6f, -0.6f}, {0.2f, 1.0f, 0.2f, 1.0f}},
+    {{0.6f, 0.6f, -0.6f}, {0.2f, 0.2f, 1.0f, 1.0f}},
+    {{-0.6f, 0.6f, -0.6f}, {1.0f, 1.0f, 0.2f, 1.0f}},
+    {{-0.6f, -0.6f, 0.6f}, {1.0f, 0.2f, 1.0f, 1.0f}},
+    {{0.6f, -0.6f, 0.6f}, {0.2f, 1.0f, 1.0f, 1.0f}},
+    {{0.6f, 0.6f, 0.6f}, {1.0f, 0.6f, 0.2f, 1.0f}},
+    {{-0.6f, 0.6f, 0.6f}, {0.7f, 0.7f, 0.7f, 1.0f}},
+}};
+
+constexpr std::array<uint16_t, 36> CubeIndices = {{
+    4, 5, 6, 4, 6, 7,
+    0, 2, 1, 0, 3, 2,
+    0, 4, 7, 0, 7, 3,
+    1, 2, 6, 1, 6, 5,
+    3, 7, 6, 3, 6, 2,
+    0, 1, 5, 0, 5, 4,
+}};
+
+simd_float4x4 makeIdentityMatrix() {
+  return (simd_float4x4){
+      {1.0f, 0.0f, 0.0f, 0.0f},
+      {0.0f, 1.0f, 0.0f, 0.0f},
+      {0.0f, 0.0f, 1.0f, 0.0f},
+      {0.0f, 0.0f, 0.0f, 1.0f},
+  };
+}
+
+simd_float4x4 makeTranslationMatrix(float x, float y, float z) {
+  simd_float4x4 matrix = makeIdentityMatrix();
+  matrix.columns[3] = {x, y, z, 1.0f};
+  return matrix;
+}
+
+simd_float4x4 makeRotationMatrix(float angleRadians, simd_float3 axis) {
+  const simd_float3 normalizedAxis = simd_normalize(axis);
+  const float x = normalizedAxis.x;
+  const float y = normalizedAxis.y;
+  const float z = normalizedAxis.z;
+  const float c = std::cos(angleRadians);
+  const float s = std::sin(angleRadians);
+  const float oneMinusC = 1.0f - c;
+
+  return (simd_float4x4){
+      {c + (x * x * oneMinusC), (x * y * oneMinusC) + (z * s), (x * z * oneMinusC) - (y * s), 0.0f},
+      {(y * x * oneMinusC) - (z * s), c + (y * y * oneMinusC), (y * z * oneMinusC) + (x * s), 0.0f},
+      {(z * x * oneMinusC) + (y * s), (z * y * oneMinusC) - (x * s), c + (z * z * oneMinusC), 0.0f},
+      {0.0f, 0.0f, 0.0f, 1.0f},
+  };
+}
+
+simd_float4x4 makePerspectiveMatrix(float fovYRadians, float aspect, float nearPlane, float farPlane) {
+  const float yScale = 1.0f / std::tan(fovYRadians * 0.5f);
+  const float xScale = yScale / aspect;
+  const float zRange = farPlane - nearPlane;
+
+  return (simd_float4x4){
+      {xScale, 0.0f, 0.0f, 0.0f},
+      {0.0f, yScale, 0.0f, 0.0f},
+      {0.0f, 0.0f, -(farPlane + nearPlane) / zRange, -1.0f},
+      {0.0f, 0.0f, -(2.0f * farPlane * nearPlane) / zRange, 0.0f},
+  };
+}
 
 bool parsePositiveInt(const char *text, int &valueOut) {
   if (text == nullptr || *text == '\0') {
@@ -198,6 +269,11 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   id<MTLDevice> _device;
   id<MTLCommandQueue> _queue;
   id<MTLRenderPipelineState> _pipeline;
+  id<MTLDepthStencilState> _depthState;
+  id<MTLBuffer> _vertexBuffer;
+  id<MTLBuffer> _indexBuffer;
+  id<MTLBuffer> _uniformBuffer;
+  id<MTLTexture> _depthTexture;
   NSTimer *_frameTimer;
   int _maxFrames;
   int _frameIndex;
@@ -207,6 +283,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   bool _simulationSmokeMode;
   std::string _cubeSimulationPath;
   std::vector<SimulationFrameState> _simulationFrames;
+  NSUInteger _indexCount;
+  CGSize _depthTextureSize;
 }
 
 - (instancetype)initWithMaxFrames:(int)maxFrames
@@ -221,6 +299,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     _printedSimulationFrame = false;
     _simulationSmokeMode = simulationSmokeMode;
     _cubeSimulationPath = cubeSimulationPath;
+    _indexCount = CubeIndices.size();
+    _depthTextureSize = CGSizeMake(0.0, 0.0);
   }
   return self;
 }
@@ -233,6 +313,22 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   }
   gExitCode = code;
   [NSApp terminate:nil];
+}
+
+- (void)ensureDepthTextureForSize:(CGSize)drawableSize {
+  if (_depthTexture != nil && _depthTextureSize.width == drawableSize.width && _depthTextureSize.height == drawableSize.height) {
+    return;
+  }
+
+  MTLTextureDescriptor *depthDescriptor =
+      [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
+                                                         width:static_cast<NSUInteger>(drawableSize.width)
+                                                        height:static_cast<NSUInteger>(drawableSize.height)
+                                                     mipmapped:NO];
+  depthDescriptor.storageMode = MTLStorageModePrivate;
+  depthDescriptor.usage = MTLTextureUsageRenderTarget;
+  _depthTexture = [_device newTextureWithDescriptor:depthDescriptor];
+  _depthTextureSize = drawableSize;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
@@ -279,6 +375,7 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     [self failAndTerminate:72 message:"failed to compile window host shaders" details:details];
     return;
   }
+  std::cout << "shader_library_ready=1\n";
 
   id<MTLFunction> vertexFn = [library newFunctionWithName:@"windowVertexMain"];
   id<MTLFunction> fragmentFn = [library newFunctionWithName:@"windowFragmentMain"];
@@ -287,10 +384,23 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     return;
   }
 
+  MTLVertexDescriptor *vertexDescriptor = [[MTLVertexDescriptor alloc] init];
+  vertexDescriptor.attributes[0].format = MTLVertexFormatFloat3;
+  vertexDescriptor.attributes[0].offset = offsetof(WindowVertex, position);
+  vertexDescriptor.attributes[0].bufferIndex = 0;
+  vertexDescriptor.attributes[1].format = MTLVertexFormatFloat4;
+  vertexDescriptor.attributes[1].offset = offsetof(WindowVertex, color);
+  vertexDescriptor.attributes[1].bufferIndex = 0;
+  vertexDescriptor.layouts[0].stride = sizeof(WindowVertex);
+  vertexDescriptor.layouts[0].stepRate = 1;
+  vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+
   MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
   pipelineDesc.vertexFunction = vertexFn;
   pipelineDesc.fragmentFunction = fragmentFn;
+  pipelineDesc.vertexDescriptor = vertexDescriptor;
   pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+  pipelineDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 
   NSError *pipelineError = nil;
   _pipeline = [_device newRenderPipelineStateWithDescriptor:pipelineDesc error:&pipelineError];
@@ -300,6 +410,41 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     return;
   }
 
+  MTLDepthStencilDescriptor *depthDescriptor = [[MTLDepthStencilDescriptor alloc] init];
+  depthDescriptor.depthCompareFunction = MTLCompareFunctionLess;
+  depthDescriptor.depthWriteEnabled = YES;
+  _depthState = [_device newDepthStencilStateWithDescriptor:depthDescriptor];
+  if (_depthState == nil) {
+    [self failAndTerminate:75 message:"failed to create depth state" details:""];
+    return;
+  }
+
+  _vertexBuffer = [_device newBufferWithBytes:CubeVertices.data()
+                                        length:(CubeVertices.size() * sizeof(WindowVertex))
+                                       options:MTLResourceStorageModeShared];
+  if (_vertexBuffer == nil) {
+    [self failAndTerminate:76 message:"failed to create vertex buffer" details:""];
+    return;
+  }
+
+  _indexBuffer = [_device newBufferWithBytes:CubeIndices.data()
+                                       length:(CubeIndices.size() * sizeof(uint16_t))
+                                      options:MTLResourceStorageModeShared];
+  if (_indexBuffer == nil) {
+    [self failAndTerminate:77 message:"failed to create index buffer" details:""];
+    return;
+  }
+
+  _uniformBuffer = [_device newBufferWithLength:sizeof(WindowUniforms) options:MTLResourceStorageModeShared];
+  if (_uniformBuffer == nil) {
+    [self failAndTerminate:78 message:"failed to create uniform buffer" details:""];
+    return;
+  }
+
+  std::cout << "vertex_buffer_ready=1\n";
+  std::cout << "index_buffer_ready=1\n";
+  std::cout << "uniform_buffer_ready=1\n";
+
   NSRect frame = NSMakeRect(120.0, 120.0, 960.0, 640.0);
   const NSWindowStyleMask styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                                       NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
@@ -308,7 +453,7 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
                                           backing:NSBackingStoreBuffered
                                             defer:NO];
   if (_window == nil) {
-    [self failAndTerminate:75 message:"failed to create native window" details:""];
+    [self failAndTerminate:79 message:"failed to create native window" details:""];
     return;
   }
   _window.title = @"PrimeStruct Spinning Cube (Window Host)";
@@ -356,6 +501,11 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
       return;
     }
     _metalLayer.drawableSize = drawableSize;
+    [self ensureDepthTextureForSize:drawableSize];
+    if (_depthTexture == nil) {
+      [self failAndTerminate:80 message:"failed to create depth texture" details:""];
+      return;
+    }
 
     id<CAMetalDrawable> drawable = [_metalLayer nextDrawable];
     if (drawable == nil) {
@@ -366,6 +516,21 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
         std::min(static_cast<size_t>(_frameIndex), _simulationFrames.size() - 1);
     const SimulationFrameState &simulationFrame = _simulationFrames[frameSlot];
     const float angle = static_cast<float>(simulationFrame.angleMilli) / 1000.0f;
+
+    const simd_float3 axisRaw = {
+        static_cast<float>(simulationFrame.axisXCenti) / 100.0f,
+        static_cast<float>(simulationFrame.axisYCenti) / 100.0f,
+        0.35f,
+    };
+    const simd_float3 axis = simd_length(axisRaw) < 0.001f ? simd_float3{0.0f, 1.0f, 0.0f} : axisRaw;
+
+    const float aspect = static_cast<float>(drawableSize.width / drawableSize.height);
+    const simd_float4x4 model = makeRotationMatrix(angle, axis);
+    const simd_float4x4 view = makeTranslationMatrix(0.0f, 0.0f, -3.0f);
+    const simd_float4x4 projection = makePerspectiveMatrix(1.0471976f, aspect, 0.1f, 20.0f);
+
+    auto *uniforms = reinterpret_cast<WindowUniforms *>(_uniformBuffer.contents);
+    uniforms->modelViewProjection = simd_mul(projection, simd_mul(view, model));
 
     const double axisXNorm =
         std::clamp((static_cast<double>(simulationFrame.axisXCenti) + 100.0) / 200.0, 0.0, 1.0);
@@ -378,17 +543,27 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     pass.colorAttachments[0].storeAction = MTLStoreActionStore;
     pass.colorAttachments[0].clearColor =
         MTLClearColorMake(0.03 + (0.08 * axisXNorm), 0.04 + (0.08 * axisYNorm), 0.06, 1.0);
+    pass.depthAttachment.texture = _depthTexture;
+    pass.depthAttachment.loadAction = MTLLoadActionClear;
+    pass.depthAttachment.storeAction = MTLStoreActionDontCare;
+    pass.depthAttachment.clearDepth = 1.0;
 
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
     id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
     if (encoder == nil) {
-      [self failAndTerminate:76 message:"failed to create render command encoder" details:""];
+      [self failAndTerminate:81 message:"failed to create render command encoder" details:""];
       return;
     }
 
     [encoder setRenderPipelineState:_pipeline];
-    [encoder setVertexBytes:&angle length:sizeof(float) atIndex:0];
-    [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+    [encoder setDepthStencilState:_depthState];
+    [encoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0];
+    [encoder setVertexBuffer:_uniformBuffer offset:0 atIndex:1];
+    [encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+                        indexCount:_indexCount
+                         indexType:MTLIndexTypeUInt16
+                       indexBuffer:_indexBuffer
+                 indexBufferOffset:0];
     [encoder endEncoding];
 
     [commandBuffer presentDrawable:drawable];

@@ -181,9 +181,15 @@ xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm
 /tmp/spinning_cube_window_host --cube-sim /tmp/cube_native_frame_stream --max-frames 120
 ```
 Expected runtime behavior:
-- Startup: opens a desktop window and configures a `CAMetalLayer` swapchain.
+- Startup: opens a desktop window, configures a `CAMetalLayer` swapchain, and
+  creates cube pipeline resources (shader library + vertex/index/uniform
+  buffers).
+- Rendering: submits indexed cube draw calls each frame with transform
+  uniforms updated from the deterministic simulation stream.
 - Diagnostics: prints `simulation_stream_loaded=1`,
-  `simulation_fixed_step_millis=16`, `window_created=1`,
+  `simulation_fixed_step_millis=16`, `shader_library_ready=1`,
+  `vertex_buffer_ready=1`, `index_buffer_ready=1`,
+  `uniform_buffer_ready=1`, `window_created=1`,
   `swapchain_layer_created=1`, `pipeline_ready=1`, and `frame_rendered=1`.
 
 ### macOS Metal

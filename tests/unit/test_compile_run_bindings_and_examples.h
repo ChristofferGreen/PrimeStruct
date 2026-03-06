@@ -556,6 +556,30 @@ TEST_CASE("spinning cube native host runtime smoke emits success marker") {
   CHECK(readFile(hostOutPath.string()).find("native host verified cube simulation output") != std::string::npos);
 }
 
+TEST_CASE("spinning cube native window host locks indexed cube pipeline resources") {
+  std::filesystem::path nativeSampleDir =
+      std::filesystem::path("..") / "examples" / "native" / "spinning_cube";
+  if (!std::filesystem::exists(nativeSampleDir)) {
+    nativeSampleDir = std::filesystem::current_path() / "examples" / "native" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(nativeSampleDir));
+
+  const std::filesystem::path hostSourcePath = nativeSampleDir / "window_host.mm";
+  REQUIRE(std::filesystem::exists(hostSourcePath));
+  const std::string hostSource = readFile(hostSourcePath.string());
+
+  CHECK(hostSource.find("struct WindowVertexIn") != std::string::npos);
+  CHECK(hostSource.find("constant WindowUniforms &uniforms [[buffer(1)]]") != std::string::npos);
+  CHECK(hostSource.find("CubeVertices") != std::string::npos);
+  CHECK(hostSource.find("CubeIndices") != std::string::npos);
+  CHECK(hostSource.find("newBufferWithBytes:CubeVertices.data()") != std::string::npos);
+  CHECK(hostSource.find("newBufferWithBytes:CubeIndices.data()") != std::string::npos);
+  CHECK(hostSource.find("newBufferWithLength:sizeof(WindowUniforms)") != std::string::npos);
+  CHECK(hostSource.find("setVertexBuffer:_vertexBuffer offset:0 atIndex:0") != std::string::npos);
+  CHECK(hostSource.find("setVertexBuffer:_uniformBuffer offset:0 atIndex:1") != std::string::npos);
+  CHECK(hostSource.find("drawIndexedPrimitives:MTLPrimitiveTypeTriangle") != std::string::npos);
+}
+
 TEST_CASE("spinning cube native window host sample compiles and validates args deterministically") {
   std::filesystem::path webSampleDir =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
@@ -582,6 +606,10 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(hostSource.find("--simulation-smoke") != std::string::npos);
   CHECK(hostSource.find("simulation_stream_loaded=1") != std::string::npos);
   CHECK(hostSource.find("simulation_fixed_step_millis=16") != std::string::npos);
+  CHECK(hostSource.find("shader_library_ready=1") != std::string::npos);
+  CHECK(hostSource.find("vertex_buffer_ready=1") != std::string::npos);
+  CHECK(hostSource.find("index_buffer_ready=1") != std::string::npos);
+  CHECK(hostSource.find("uniform_buffer_ready=1") != std::string::npos);
   CHECK(hostSource.find("simulation_tick=") != std::string::npos);
   CHECK(hostSource.find("window_created=1") != std::string::npos);
   CHECK(hostSource.find("swapchain_layer_created=1") != std::string::npos);
@@ -653,6 +681,16 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(runCommand(badFramesCmd) == 64);
   CHECK(readFile(badFramesOutPath.string()).empty());
   CHECK(readFile(badFramesErrPath.string()).find("invalid value for --max-frames: 0") != std::string::npos);
+
+  const std::filesystem::path badStreamOutPath = outDir / "window_host.bad_stream.out.txt";
+  const std::filesystem::path badStreamErrPath = outDir / "window_host.bad_stream.err.txt";
+  const std::string badStreamCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --cube-sim /usr/bin/true --simulation-smoke > " +
+      quoteShellArg(badStreamOutPath.string()) + " 2> " + quoteShellArg(badStreamErrPath.string());
+  CHECK(runCommand(badStreamCmd) == 69);
+  CHECK(readFile(badStreamOutPath.string()).empty());
+  CHECK(readFile(badStreamErrPath.string())
+            .find("failed to load cube simulation stream: cube simulation stream was empty") != std::string::npos);
 
   const std::filesystem::path frameStreamBinaryPath = outDir / "cube_native_frame_stream";
   const std::string compileFrameStreamCmd =
@@ -1297,8 +1335,12 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "`cubeNativeAbiUniformMeshIndexCount`",
       "`201` (`cubeNativeAbiStatusInvalidDeltaMillis`) means invalid tick delta.",
       "Conformance wrappers (`cubeNativeAbiConformance*`) lock deterministic ABI",
+      "Rendering: submits indexed cube draw calls each frame with transform",
+      "uniforms updated from the deterministic simulation stream.",
       "Diagnostics: prints `simulation_stream_loaded=1`,",
-      "`simulation_fixed_step_millis=16`, `window_created=1`,",
+      "`simulation_fixed_step_millis=16`, `shader_library_ready=1`,",
+      "`vertex_buffer_ready=1`, `index_buffer_ready=1`,",
+      "`uniform_buffer_ready=1`, `window_created=1`,",
       "`swapchain_layer_created=1`, `pipeline_ready=1`, and `frame_rendered=1`.",
       "For a visible rotating window today, use the browser path (`index.html` + `main.js`).",
       "shared-source `/main` is still unsupported for native emit until",
