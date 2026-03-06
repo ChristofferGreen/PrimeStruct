@@ -119,6 +119,20 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::LoadIndirect:
+      out << "        // GLSL backend loads locals through deterministic aligned byte-slot addressing.\n";
+      out << "        uint loadIndirectAddress = uint(stack[--sp]);\n";
+      out << "        int loadIndirectValue = 0;\n";
+      out << "        if ((loadIndirectAddress & 7u) == 0u) {\n";
+      out << "          uint loadIndirectIndex = loadIndirectAddress >> 3u;\n";
+      out << "          if (loadIndirectIndex <= " << MaxLocalIndex << "u) {\n";
+      out << "            loadIndirectValue = locals[loadIndirectIndex];\n";
+      out << "          }\n";
+      out << "        }\n";
+      out << "        stack[sp++] = loadIndirectValue;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::Dup:
       out << "        stack[sp] = stack[sp - 1];\n";
       out << "        ++sp;\n";

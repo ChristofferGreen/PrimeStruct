@@ -1008,6 +1008,31 @@ TEST_CASE("ir to glsl emitter writes address-of-local opcode") {
   CHECK(glsl.find("stack[sp++] = 56;") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes load-indirect opcode") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 41});
+  fn.instructions.push_back({primec::IrOpcode::StoreLocal, 3});
+  fn.instructions.push_back({primec::IrOpcode::AddressOfLocal, 3});
+  fn.instructions.push_back({primec::IrOpcode::LoadIndirect, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("// GLSL backend loads locals through deterministic aligned byte-slot addressing.") !=
+        std::string::npos);
+  CHECK(glsl.find("uint loadIndirectAddress = uint(stack[--sp]);") != std::string::npos);
+  CHECK(glsl.find("if ((loadIndirectAddress & 7u) == 0u) {") != std::string::npos);
+  CHECK(glsl.find("loadIndirectValue = locals[loadIndirectIndex];") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = loadIndirectValue;") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter rejects file-write-string out-of-range index") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
@@ -1047,7 +1072,7 @@ TEST_CASE("ir to glsl emitter rejects unsupported opcodes") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::LoadIndirect, 0});
+  fn.instructions.push_back({primec::IrOpcode::StoreIndirect, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
 
