@@ -30,4 +30,14 @@ bool runSemanticsValidatorStatementCanIterateMoreThanOnceStep(const Expr &countE
   return *knownCount > 1u;
 }
 
+bool runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Literal || expr.isUnsigned) {
+    return false;
+  }
+  if (expr.intWidth == 32) {
+    return static_cast<int32_t>(expr.literalValue) < 0;
+  }
+  return static_cast<int64_t>(expr.literalValue) < 0;
+}
+
 } // namespace primec::semantics

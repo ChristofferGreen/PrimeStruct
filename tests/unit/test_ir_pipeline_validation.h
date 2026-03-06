@@ -1325,10 +1325,18 @@ TEST_CASE("semantics validator statement loop-count step resolves iteration boun
   negativeLiteral.isUnsigned = false;
   negativeLiteral.intWidth = 32;
   negativeLiteral.literalValue = static_cast<uint64_t>(static_cast<int32_t>(-1));
+  CHECK(primec::semantics::runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(negativeLiteral));
   const auto negativeKnown =
       primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(negativeLiteral, false);
   REQUIRE(negativeKnown.has_value());
   CHECK(*negativeKnown == 0u);
+
+  primec::Expr positiveLiteral = negativeLiteral;
+  positiveLiteral.literalValue = 1;
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(positiveLiteral));
+
+  primec::Expr unsignedLiteralForNegative = unsignedLiteral;
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(unsignedLiteralForNegative));
 
   primec::Expr oneLiteral;
   oneLiteral.kind = primec::Expr::Kind::Literal;
@@ -1512,6 +1520,8 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   const std::string semanticsStatementControlFlowHeaderSource = readText(semanticsStatementControlFlowHeaderPath);
   CHECK(semanticsStatementControlFlowHeaderSource.find(
             "runSemanticsValidatorStatementCanIterateMoreThanOnceStep(countExpr, allowBoolCount)") !=
+        std::string::npos);
+  CHECK(semanticsStatementControlFlowHeaderSource.find("runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(count)") !=
         std::string::npos);
 
   const std::filesystem::path semanticsStatementPath =

@@ -45,15 +45,6 @@
     return true;
   };
   auto isBoolLiteralFalse = [](const Expr &expr) -> bool { return expr.kind == Expr::Kind::BoolLiteral && !expr.boolValue; };
-  auto isNegativeIntegerLiteral = [&](const Expr &expr) -> bool {
-    if (expr.kind != Expr::Kind::Literal || expr.isUnsigned) {
-      return false;
-    }
-    if (expr.intWidth == 32) {
-      return static_cast<int32_t>(expr.literalValue) < 0;
-    }
-    return static_cast<int64_t>(expr.literalValue) < 0;
-  };
   auto canIterateMoreThanOnce = [&](const Expr &countExpr, bool allowBoolCount) -> bool {
     return runSemanticsValidatorStatementCanIterateMoreThanOnceStep(countExpr, allowBoolCount);
   };
@@ -83,7 +74,7 @@
       error_ = "loop count requires integer";
       return false;
     }
-    if (isNegativeIntegerLiteral(count)) {
+    if (runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(count)) {
       error_ = "loop count must be non-negative";
       return false;
     }
