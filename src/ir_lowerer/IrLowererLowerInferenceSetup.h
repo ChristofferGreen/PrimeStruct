@@ -28,6 +28,8 @@ struct LowerInferenceSetupBootstrapState {
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferBufferElementKind;
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferLiteralOrNameExprKind;
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferCallExprBaseKind;
+  std::function<CallExpressionReturnKindResolution(const Expr &, const LocalMap &, LocalInfo::ValueKind &)>
+      inferCallExprDirectReturnKind;
 
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
@@ -64,6 +66,13 @@ struct LowerInferenceExprKindCallBaseSetupInput {
   std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>
       resolveUninitializedStorage;
 };
+struct LowerInferenceExprKindCallReturnSetupInput {
+  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+
+  ResolveExprPathFn resolveExprPath;
+  IsArrayCountCallFn isArrayCountCall;
+  IsStringCountCallFn isStringCountCall;
+};
 
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
@@ -77,5 +86,8 @@ bool runLowerInferenceExprKindBaseSetup(const LowerInferenceExprKindBaseSetupInp
 bool runLowerInferenceExprKindCallBaseSetup(const LowerInferenceExprKindCallBaseSetupInput &input,
                                             LowerInferenceSetupBootstrapState &stateInOut,
                                             std::string &errorOut);
+bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallReturnSetupInput &input,
+                                              LowerInferenceSetupBootstrapState &stateInOut,
+                                              std::string &errorOut);
 
 } // namespace primec::ir_lowerer

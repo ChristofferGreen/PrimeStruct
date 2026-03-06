@@ -24,6 +24,7 @@
   auto &inferBufferElementKind = inferenceSetupBootstrap.inferBufferElementKind;
   auto &inferLiteralOrNameExprKind = inferenceSetupBootstrap.inferLiteralOrNameExprKind;
   auto &inferCallExprBaseKind = inferenceSetupBootstrap.inferCallExprBaseKind;
+  auto &inferCallExprDirectReturnKind = inferenceSetupBootstrap.inferCallExprDirectReturnKind;
   auto &resolveMethodCallDefinition = inferenceSetupBootstrap.resolveMethodCallDefinition;
   auto &inferPointerTargetKind = inferenceSetupBootstrap.inferPointerTargetKind;
 
@@ -44,6 +45,17 @@
               .inferStructExprPath = inferStructExprPath,
               .resolveStructFieldSlot = resolveStructFieldSlot,
               .resolveUninitializedStorage = resolveUninitializedStorage,
+          },
+          inferenceSetupBootstrap,
+          error)) {
+    return false;
+  }
+  if (!ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+          {
+              .defMap = &defMap,
+              .resolveExprPath = resolveExprPath,
+              .isArrayCountCall = isArrayCountCall,
+              .isStringCountCall = isStringCountCall,
           },
           inferenceSetupBootstrap,
           error)) {
@@ -70,47 +82,7 @@
           return callBaseKind;
         }
         LocalInfo::ValueKind callReturnKind = LocalInfo::ValueKind::Unknown;
-        const auto callReturnResolution = resolveCallExpressionReturnKind(
-            expr,
-            localsIn,
-            [&](const Expr &candidate,
-                const LocalMap &,
-                LocalInfo::ValueKind &kindOut,
-                bool &matchedOut) {
-              bool definitionMatched = false;
-              const bool resolved = resolveDefinitionCallReturnKind(
-                  candidate, defMap, resolveExprPath, getReturnInfo, false, kindOut, &definitionMatched);
-              matchedOut = definitionMatched;
-              return resolved;
-            },
-            [&](const Expr &candidate,
-                const LocalMap &candidateLocals,
-                LocalInfo::ValueKind &kindOut,
-                bool &matchedOut) {
-              bool countMethodResolved = false;
-              const bool resolved = resolveCountMethodCallReturnKind(candidate,
-                                                                    candidateLocals,
-                                                                    isArrayCountCall,
-                                                                    isStringCountCall,
-                                                                    resolveMethodCallDefinition,
-                                                                    getReturnInfo,
-                                                                    false,
-                                                                    kindOut,
-                                                                    &countMethodResolved);
-              matchedOut = countMethodResolved;
-              return resolved;
-            },
-            [&](const Expr &candidate,
-                const LocalMap &candidateLocals,
-                LocalInfo::ValueKind &kindOut,
-                bool &matchedOut) {
-              bool methodResolved = false;
-              const bool resolved = resolveMethodCallReturnKind(
-                  candidate, candidateLocals, resolveMethodCallDefinition, getReturnInfo, false, kindOut, &methodResolved);
-              matchedOut = methodResolved;
-              return resolved;
-            },
-            callReturnKind);
+        const auto callReturnResolution = inferCallExprDirectReturnKind(expr, localsIn, callReturnKind);
         if (callReturnResolution == CallExpressionReturnKindResolution::Resolved) {
           return callReturnKind;
         }

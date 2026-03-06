@@ -393,4 +393,87 @@ bool runLowerInferenceExprKindCallBaseSetup(const LowerInferenceExprKindCallBase
   return true;
 }
 
+bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallReturnSetupInput &input,
+                                              LowerInferenceSetupBootstrapState &stateInOut,
+                                              std::string &errorOut) {
+  if (input.defMap == nullptr) {
+    errorOut = "native backend missing inference expr-kind call-return setup dependency: defMap";
+    return false;
+  }
+  if (!input.resolveExprPath) {
+    errorOut = "native backend missing inference expr-kind call-return setup dependency: resolveExprPath";
+    return false;
+  }
+  if (!input.isArrayCountCall) {
+    errorOut = "native backend missing inference expr-kind call-return setup dependency: isArrayCountCall";
+    return false;
+  }
+  if (!input.isStringCountCall) {
+    errorOut = "native backend missing inference expr-kind call-return setup dependency: isStringCountCall";
+    return false;
+  }
+  if (!stateInOut.resolveMethodCallDefinition) {
+    errorOut = "native backend missing inference expr-kind call-return setup state: resolveMethodCallDefinition";
+    return false;
+  }
+  if (!stateInOut.getReturnInfo) {
+    errorOut = "native backend missing inference expr-kind call-return setup state: getReturnInfo";
+    return false;
+  }
+
+  const auto *defMap = input.defMap;
+  const auto resolveExprPath = input.resolveExprPath;
+  const auto isArrayCountCall = input.isArrayCountCall;
+  const auto isStringCountCall = input.isStringCountCall;
+
+  stateInOut.inferCallExprDirectReturnKind =
+      [defMap, resolveExprPath, isArrayCountCall, isStringCountCall, &stateInOut](
+          const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
+        return resolveCallExpressionReturnKind(
+            expr,
+            localsIn,
+            [&](const Expr &candidate, const LocalMap &, LocalInfo::ValueKind &candidateKindOut, bool &matchedOut) {
+              bool definitionMatched = false;
+              const bool resolved = resolveDefinitionCallReturnKind(
+                  candidate, *defMap, resolveExprPath, stateInOut.getReturnInfo, false, candidateKindOut, &definitionMatched);
+              matchedOut = definitionMatched;
+              return resolved;
+            },
+            [&](const Expr &candidate,
+                const LocalMap &candidateLocals,
+                LocalInfo::ValueKind &candidateKindOut,
+                bool &matchedOut) {
+              bool countMethodResolved = false;
+              const bool resolved = resolveCountMethodCallReturnKind(candidate,
+                                                                    candidateLocals,
+                                                                    isArrayCountCall,
+                                                                    isStringCountCall,
+                                                                    stateInOut.resolveMethodCallDefinition,
+                                                                    stateInOut.getReturnInfo,
+                                                                    false,
+                                                                    candidateKindOut,
+                                                                    &countMethodResolved);
+              matchedOut = countMethodResolved;
+              return resolved;
+            },
+            [&](const Expr &candidate,
+                const LocalMap &candidateLocals,
+                LocalInfo::ValueKind &candidateKindOut,
+                bool &matchedOut) {
+              bool methodResolved = false;
+              const bool resolved = resolveMethodCallReturnKind(candidate,
+                                                                candidateLocals,
+                                                                stateInOut.resolveMethodCallDefinition,
+                                                                stateInOut.getReturnInfo,
+                                                                false,
+                                                                candidateKindOut,
+                                                                &methodResolved);
+              matchedOut = methodResolved;
+              return resolved;
+            },
+            kindOut);
+      };
+  return true;
+}
+
 } // namespace primec::ir_lowerer
