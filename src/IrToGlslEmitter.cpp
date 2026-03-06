@@ -185,6 +185,9 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = (cond == 0) ? " << instruction.imm << " : " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::ReturnF32:
+      out << "        return stack[--sp];\n";
+      return true;
     case IrOpcode::ReturnI32:
       out << "        return stack[--sp];\n";
       return true;

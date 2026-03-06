@@ -138,6 +138,23 @@ TEST_CASE("ir to glsl emitter writes i32 to f32 conversion opcode") {
   CHECK(glsl.find("stack[sp++] = floatBitsToInt(float(stack[--sp]));") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes f32 return opcode") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushF32, 0x3fc00000u});
+  fn.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("return stack[--sp];") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter rejects unsupported opcodes") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;

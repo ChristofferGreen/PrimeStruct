@@ -193,6 +193,42 @@ main() {
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir emitter writes IR-lowered shader for f32 return subset") {
+  const std::string source = R"(
+[return<f32>]
+main() {
+  return(1.5f32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_ir_f32_return_subset.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_ir_f32_return_subset.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("return stack[--sp];") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter uses ir backend for f32 return subset") {
+  const std::string source = R"(
+[return<f32>]
+main() {
+  return(1.5f32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_f32_return_ir_first.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_f32_return_ir_first.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("return stack[--sp];") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter matches glsl-ir on shared corpus") {
   struct DifferentialCase {
     const char *name;
