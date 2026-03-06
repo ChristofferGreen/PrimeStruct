@@ -547,6 +547,13 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::FileWriteU64:
+      out << "        // GLSL backend cannot write files; consume value/handle and push deterministic success code.\n";
+      out << "        sp -= 2;\n";
+      out << "        stack[sp++] = 0;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::LoadStringByte:
       if (instruction.imm >= stringTable.size()) {
         error = "IrToGlslEmitter string index out of range at instruction " + std::to_string(index);

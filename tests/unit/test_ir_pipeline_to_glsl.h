@@ -904,13 +904,35 @@ TEST_CASE("ir to glsl emitter writes file-write-i64 stub opcode") {
   CHECK(glsl.find("stack[sp++] = 0;") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes file-write-u64 stub opcode") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, -1});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, 7});
+  fn.instructions.push_back({primec::IrOpcode::FileWriteU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("// GLSL backend cannot write files; consume value/handle and push deterministic success code.") !=
+        std::string::npos);
+  CHECK(glsl.find("sp -= 2;") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = 0;") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter rejects unsupported opcodes") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::FileWriteU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileWriteString, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
 
