@@ -60,14 +60,31 @@
       callPath.has_value()) {
     full = *callPath;
   }
-  if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 && nameMap.count(full) == 0 &&
-      !isArrayCountCall(expr, localTypes) && !isMapCountCall(expr, localTypes) && !isStringCountCall(expr, localTypes)) {
-    Expr methodExpr = expr;
-    methodExpr.isMethodCall = true;
-    std::string methodPath;
-    if (resolveMethodCallPath(methodExpr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
-      full = methodPath;
-    }
+  if (const auto countRewritePath = emitter::runEmitterExprControlCountRewriteStep(
+          expr,
+          full,
+          nameMap,
+          localTypes,
+          [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
+            return isArrayCountCall(candidate, candidateLocalTypes);
+          },
+          [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
+            return isMapCountCall(candidate, candidateLocalTypes);
+          },
+          [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
+            return isStringCountCall(candidate, candidateLocalTypes);
+          },
+          [&](const Expr &methodExpr, std::string &methodPathOut) {
+            return resolveMethodCallPath(methodExpr,
+                                         localTypes,
+                                         importAliases,
+                                         structTypeMap,
+                                         returnKinds,
+                                         returnStructs,
+                                         methodPathOut);
+          });
+      countRewritePath.has_value()) {
+    full = *countRewritePath;
   }
   if (isBuiltinBlock(expr, nameMap) && expr.hasBodyArguments) {
     if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
