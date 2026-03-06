@@ -1024,6 +1024,9 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "Required frameworks: `Foundation`, `Metal`, `AppKit`, and `QuartzCore`.",
       "Minimum OS: macOS 14.0 (Sonoma).",
       "No Linux/Windows native window host support.",
+      "Native emit `/main` is currently unsupported (`native backend does not support return type on /cubeInit`).",
+      "Native smoke runs through `/mainNative` and `examples/native/spinning_cube/main.cpp`.",
+      "For a visible rotating window today, use the browser path (`index.html` + `main.js`).",
       "shared-source `/main` is still unsupported for native emit until",
       "Diagnostics: prints `native host verified cube simulation output`.",
       "Diagnostics: prints `frame_rendered=1`.",
@@ -1033,6 +1036,9 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
     CAPTURE(snippet);
     CHECK(readme.find(snippet) != std::string::npos);
   }
+  CHECK(readme.find("Render the same spinning cube as a native desktop executable.") == std::string::npos);
+  CHECK(readme.find("A native desktop run shows the same rotating cube behavior from the same simulation source.") ==
+        std::string::npos);
 
   std::filesystem::path rootDir = std::filesystem::current_path();
   if (!std::filesystem::exists(rootDir / "examples" / "web" / "spinning_cube")) {

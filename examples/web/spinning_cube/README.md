@@ -4,9 +4,15 @@ This example is a milestone target for cross-platform backend work.
 
 ## Goal
 - Render a colored spinning cube in a web browser using PrimeStruct-generated artifacts.
-- Render the same spinning cube as a native desktop executable.
-- Render the same spinning cube through a macOS Metal-targeted graphics path.
 - Keep simulation deterministic so animation state matches VM/native/Wasm reference runs.
+- Keep native and Metal host smoke paths aligned with the shared simulation data contract.
+
+## Current Native Status (Parity Gap)
+- Native emit `/main` is currently unsupported (`native backend does not support return type on /cubeInit`).
+- Native smoke runs through `/mainNative` and `examples/native/spinning_cube/main.cpp`.
+- For a visible rotating window today, use the browser path (`index.html` + `main.js`).
+- macOS Metal currently provides shader/host smoke (`frame_rendered=1`) rather than full windowed runtime parity.
+- Windowed native parity target is tracked in `docs/todo.md` under `Native Windowed Spinning Cube (Roadmap)`.
 
 ## First Supported Native Window Target (v1)
 - Target: macOS + Metal window host (`examples/native/spinning_cube/window_host.mm`).
@@ -61,8 +67,8 @@ This example is a milestone target for cross-platform backend work.
 
 ## Acceptance Criteria
 - The page shows a rotating cube without manual setup beyond launching a local static server.
-- A native desktop run shows the same rotating cube behavior from the same simulation source.
-- A macOS Metal run shows the same rotating cube behavior using Metal shader output.
+- A native smoke run (`/mainNative` + `spinning_cube_host`) reports deterministic success.
+- A macOS Metal smoke run reports deterministic startup success (`frame_rendered=1`).
 - Rotation is time-step deterministic for a fixed delta (same angle progression for the same tick count).
 - Builds emit stable artifacts for all targets: Wasm module, native executable, shader outputs, and host glue assets.
 - Unsupported language features/effects for the browser profile fail at compile time with clear diagnostics.
