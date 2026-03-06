@@ -255,6 +255,49 @@ main() {
   CHECK(output.find("ps_entry_0") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir emitter writes pointer indirect paths") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{3i32}
+  [Reference<i32> mut] ref{location(value)}
+  assign(ref, 8i32)
+  return(ref)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_pointer_indirect.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ir_pointer_indirect.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("loadIndirectAddress % 16ull") != std::string::npos);
+  CHECK(output.find("storeIndirectAddress % 16ull") != std::string::npos);
+  CHECK(output.find("locals[storeIndirectIndex] = storeIndirectValue;") != std::string::npos);
+}
+
+TEST_CASE("cpp emitter uses ir backend for pointer indirect paths") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{3i32}
+  [Reference<i32> mut] ref{location(value)}
+  assign(ref, 8i32)
+  return(ref)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_pointer_indirect_ir_first.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_pointer_indirect_ir_first.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("loadIndirectAddress % 16ull") != std::string::npos);
+  CHECK(output.find("ps_entry_0") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir emitter writes callable dispatch paths") {
   const std::string source = R"(
 [return<void> effects(io_out)]
@@ -654,6 +697,43 @@ main() {
   CHECK(runCommand(exePath) == (97 + 98 + 3));
 }
 
+TEST_CASE("exe-ir emitter compiles and runs pointer indirect paths") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{3i32}
+  [Reference<i32> mut] ref{location(value)}
+  assign(ref, 8i32)
+  return(ref)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_pointer_indirect.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_pointer_indirect").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 8);
+}
+
+TEST_CASE("exe-ir emitter reports misaligned pointer dereference") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{5i32}
+  return(dereference(plus(location(value), 8i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_pointer_misaligned.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_pointer_misaligned").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_exe_ir_pointer_misaligned.err").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " 2> " + errPath) == 1);
+  CHECK(readFile(errPath).find("unaligned indirect address in IR") != std::string::npos);
+}
+
 TEST_CASE("exe-ir emitter compiles and runs call and callvoid paths") {
   const std::string source = R"(
 [return<void> effects(io_out)]
@@ -748,6 +828,24 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == (97 + 98 + 3));
+}
+
+TEST_CASE("exe emitter uses ir backend for pointer indirect paths") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{3i32}
+  [Reference<i32> mut] ref{location(value)}
+  assign(ref, 8i32)
+  return(ref)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_pointer_indirect_ir_first.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_pointer_indirect_ir_first").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 8);
 }
 
 TEST_CASE("exe-ir emitter compiles and runs f64 arithmetic subset") {

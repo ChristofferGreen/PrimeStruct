@@ -253,6 +253,48 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::AddressOfLocal:
+      if (instruction.imm > MaxLocalIndex) {
+        error = "IrToCppEmitter local index out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      out << "        stack[sp++] = static_cast<uint64_t>(" << instruction.imm << "ull * " << IrSlotBytes
+          << "ull);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::LoadIndirect:
+      out << "        uint64_t loadIndirectAddress = stack[--sp];\n";
+      out << "        if ((loadIndirectAddress % " << IrSlotBytes << "ull) != 0ull) {\n";
+      out << "          std::cerr << \"unaligned indirect address in IR\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
+      out << "        uint64_t loadIndirectIndex = loadIndirectAddress / " << IrSlotBytes << "ull;\n";
+      out << "        if (loadIndirectIndex > " << MaxLocalIndex << "ull) {\n";
+      out << "          std::cerr << \"invalid indirect address in IR\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
+      out << "        stack[sp++] = locals[loadIndirectIndex];\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::StoreIndirect:
+      out << "        uint64_t storeIndirectValue = stack[--sp];\n";
+      out << "        uint64_t storeIndirectAddress = stack[--sp];\n";
+      out << "        if ((storeIndirectAddress % " << IrSlotBytes << "ull) != 0ull) {\n";
+      out << "          std::cerr << \"unaligned indirect address in IR\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
+      out << "        uint64_t storeIndirectIndex = storeIndirectAddress / " << IrSlotBytes << "ull;\n";
+      out << "        if (storeIndirectIndex > " << MaxLocalIndex << "ull) {\n";
+      out << "          std::cerr << \"invalid indirect address in IR\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
+      out << "        locals[storeIndirectIndex] = storeIndirectValue;\n";
+      out << "        stack[sp++] = storeIndirectValue;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::Dup:
       out << "        stack[sp] = stack[sp - 1];\n";
       out << "        ++sp;\n";

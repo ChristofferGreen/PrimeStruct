@@ -131,6 +131,32 @@ TEST_CASE("ir to cpp emitter writes string byte load opcode") {
   CHECK(cpp.find("ps_string_table[0][stringByteIndex]") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter writes indirect local pointer opcodes") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  fn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  fn.instructions.push_back({primec::IrOpcode::AddressOfLocal, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 8});
+  fn.instructions.push_back({primec::IrOpcode::StoreIndirect, 0});
+  fn.instructions.push_back({primec::IrOpcode::AddressOfLocal, 0});
+  fn.instructions.push_back({primec::IrOpcode::LoadIndirect, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(0ull * 16ull);") != std::string::npos);
+  CHECK(cpp.find("loadIndirectAddress % 16ull") != std::string::npos);
+  CHECK(cpp.find("locals[loadIndirectIndex]") != std::string::npos);
+  CHECK(cpp.find("locals[storeIndirectIndex] = storeIndirectValue;") != std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes jump and conditional jump control flow") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
@@ -196,8 +222,8 @@ TEST_CASE("ir to cpp emitter rejects unsupported opcodes") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::AddressOfLocal, 0});
-  fn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(fn);
 
   std::string cpp;
@@ -227,6 +253,22 @@ TEST_CASE("ir to cpp emitter rejects out-of-range local indices") {
   fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
   fn.instructions.push_back({primec::IrOpcode::StoreLocal, 2048});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, cpp, error));
+  CHECK(error.find("local index out of range") != std::string::npos);
+}
+
+TEST_CASE("ir to cpp emitter rejects out-of-range address-of-local index") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::AddressOfLocal, 4096});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
   module.functions.push_back(fn);
 
   std::string cpp;
