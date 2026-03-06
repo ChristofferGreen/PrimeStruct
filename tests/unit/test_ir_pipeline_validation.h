@@ -1815,6 +1815,131 @@ TEST_CASE("ir lowerer return/calls setup validates dependencies") {
   CHECK_FALSE(static_cast<bool>(emitFileErrorWhy));
 }
 
+TEST_CASE("ir lowerer statements/calls step emits assign-or-expr fallback") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Name;
+  stmt.name = "value";
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valueInfo;
+  valueInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  valueInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valueInfo.index = 7;
+  locals.emplace("value", valueInfo);
+
+  int emitExprCalls = 0;
+  int allocTempCalls = 0;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerStatementsCallsStep(
+      {
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+          },
+          .emitExpr =
+              [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+                ++emitExprCalls;
+                auto it = localsIn.find(expr.name);
+                if (it == localsIn.end()) {
+                  return false;
+                }
+                instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+                return true;
+              },
+          .allocTempLocal = [&]() { return allocTempCalls++; },
+          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
+          .findDefinitionByPath = [](const std::string &) { return static_cast<const primec::Definition *>(nullptr); },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveMethodCallDefinition =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return static_cast<const primec::Definition *>(nullptr);
+              },
+          .resolveDefinitionCall = [](const primec::Expr &) { return static_cast<const primec::Definition *>(nullptr); },
+          .getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+          .emitInlineDefinitionCall =
+              [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+                return false;
+              },
+          .instructions = &instructions,
+      },
+      stmt,
+      locals,
+      error));
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  CHECK(allocTempCalls == 0);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].op == primec::IrOpcode::Pop);
+}
+
+TEST_CASE("ir lowerer statements/calls step validates dependencies") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Name;
+  stmt.name = "value";
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerStatementsCallsStep(
+      {
+          .inferExprKind = {},
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .allocTempLocal = []() { return 0; },
+          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
+          .findDefinitionByPath = [](const std::string &) { return static_cast<const primec::Definition *>(nullptr); },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveMethodCallDefinition =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return static_cast<const primec::Definition *>(nullptr);
+              },
+          .resolveDefinitionCall = [](const primec::Expr &) { return static_cast<const primec::Definition *>(nullptr); },
+          .getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+          .emitInlineDefinitionCall =
+              [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+                return false;
+              },
+          .instructions = &instructions,
+      },
+      stmt,
+      locals,
+      error));
+  CHECK(error == "native backend missing statements/calls step dependency: inferExprKind");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerStatementsCallsStep(
+      {
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .allocTempLocal = []() { return 0; },
+          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
+          .findDefinitionByPath = [](const std::string &) { return static_cast<const primec::Definition *>(nullptr); },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveMethodCallDefinition =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return static_cast<const primec::Definition *>(nullptr);
+              },
+          .resolveDefinitionCall = [](const primec::Expr &) { return static_cast<const primec::Definition *>(nullptr); },
+          .getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+          .emitInlineDefinitionCall =
+              [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+                return false;
+              },
+          .instructions = nullptr,
+      },
+      stmt,
+      locals,
+      error));
+  CHECK(error == "native backend missing statements/calls step dependency: instructions");
+}
+
 TEST_CASE("ir lowerer expr emit setup wires unary passthrough callbacks") {
   primec::ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
   primec::ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
@@ -4919,6 +5044,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
       cursor = pos;
     }
   }
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsCallsStep.h\"") != std::string::npos);
 
   const std::filesystem::path setupHeaderPath =
       std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerSetupEntryEffects.h";
@@ -4976,6 +5102,16 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(emitExprHeaderSource.find("runLowerExprEmitSetup(") != std::string::npos);
   CHECK(emitExprHeaderSource.find("runLowerExprEmitMovePassthroughStep(") != std::string::npos);
   CHECK(emitExprHeaderSource.find("runLowerExprEmitUploadReadbackPassthroughStep(") != std::string::npos);
+
+  const std::filesystem::path statementsCallsHeaderPath =
+      std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerStatementsCalls.h";
+  REQUIRE(std::filesystem::exists(statementsCallsHeaderPath));
+  const std::string statementsCallsHeaderSource = readText(statementsCallsHeaderPath);
+  CHECK(statementsCallsHeaderSource.find("runLowerStatementsCallsStep(") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("tryEmitBufferStoreStatement(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("tryEmitDispatchStatement(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("tryEmitDirectCallStatement(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("emitAssignOrExprStatementWithPop(") == std::string::npos);
 }
 
 TEST_CASE("emitter emit setup source delegation stays stable") {

@@ -21,6 +21,7 @@
 #include "IrLowererLowerLocalsSetup.h"
 #include "IrLowererLowerExprEmitSetup.h"
 #include "IrLowererLowerReturnCallsSetup.h"
+#include "IrLowererLowerStatementsCallsStep.h"
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"
 #include "IrLowererOperatorArcHyperbolicHelpers.h"

@@ -1,68 +1,40 @@
-    const auto bufferStoreResult = ir_lowerer::tryEmitBufferStoreStatement(
-        stmt,
-        localsIn,
-        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
-        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
-        [&]() { return allocTempLocal(); },
-        function.instructions,
-        error);
-    if (bufferStoreResult == ir_lowerer::BufferStoreStatementEmitResult::Error) {
-      return false;
-    }
-    if (bufferStoreResult == ir_lowerer::BufferStoreStatementEmitResult::Emitted) {
-      return true;
-    }
-    const auto dispatchResult = ir_lowerer::tryEmitDispatchStatement(
-        stmt,
-        localsIn,
-        [&](const Expr &valueExpr) { return resolveExprPath(valueExpr); },
-        [&](const std::string &path) -> const Definition * {
-          auto it = defMap.find(path);
-          return it == defMap.end() ? nullptr : it->second;
+    return ir_lowerer::runLowerStatementsCallsStep(
+        {
+            .inferExprKind =
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+            .emitExpr = [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+            .allocTempLocal = [&]() { return allocTempLocal(); },
+            .resolveExprPath = [&](const Expr &valueExpr) { return resolveExprPath(valueExpr); },
+            .findDefinitionByPath = [&](const std::string &path) -> const Definition * {
+              auto it = defMap.find(path);
+              return it == defMap.end() ? nullptr : it->second;
+            },
+            .isArrayCountCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
+              return isArrayCountCall(callExpr, callLocals);
+            },
+            .isStringCountCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
+              return isStringCountCall(callExpr, callLocals);
+            },
+            .isVectorCapacityCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
+              return isVectorCapacityCall(callExpr, callLocals);
+            },
+            .resolveMethodCallDefinition = [&](const Expr &callExpr, const LocalMap &callLocals) {
+              return resolveMethodCallDefinition(callExpr, callLocals);
+            },
+            .resolveDefinitionCall = [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+            .getReturnInfo =
+                [&](const std::string &definitionPath, ReturnInfo &returnInfo) {
+                  return getReturnInfo(definitionPath, returnInfo);
+                },
+            .emitInlineDefinitionCall =
+                [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool expectValue) {
+                  return emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
+                },
+            .instructions = &function.instructions,
         },
-        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
-        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
-        [&]() { return allocTempLocal(); },
-        [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool expectValue) {
-          return emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
-        },
-        function.instructions,
-        error);
-    if (dispatchResult == ir_lowerer::DispatchStatementEmitResult::Error) {
-      return false;
-    }
-    if (dispatchResult == ir_lowerer::DispatchStatementEmitResult::Emitted) {
-      return true;
-    }
-    const auto directCallResult = ir_lowerer::tryEmitDirectCallStatement(
         stmt,
         localsIn,
-        [&](const Expr &callExpr, const LocalMap &callLocals) { return isArrayCountCall(callExpr, callLocals); },
-        [&](const Expr &callExpr, const LocalMap &callLocals) { return isStringCountCall(callExpr, callLocals); },
-        [&](const Expr &callExpr, const LocalMap &callLocals) { return isVectorCapacityCall(callExpr, callLocals); },
-        [&](const Expr &callExpr, const LocalMap &callLocals) { return resolveMethodCallDefinition(callExpr, callLocals); },
-        [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
-        [&](const std::string &definitionPath, ReturnInfo &returnInfo) { return getReturnInfo(definitionPath, returnInfo); },
-        [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool expectValue) {
-          return emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
-        },
-        function.instructions,
         error);
-    if (directCallResult == ir_lowerer::DirectCallStatementEmitResult::Error) {
-      return false;
-    }
-    if (directCallResult == ir_lowerer::DirectCallStatementEmitResult::Emitted) {
-      return true;
-    }
-    const auto assignOrExprResult = ir_lowerer::emitAssignOrExprStatementWithPop(
-        stmt,
-        localsIn,
-        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
-        function.instructions);
-    if (assignOrExprResult == ir_lowerer::AssignOrExprStatementEmitResult::Error) {
-      return false;
-    }
-    return true;
   };
 
   std::optional<OnErrorHandler> entryOnError;
