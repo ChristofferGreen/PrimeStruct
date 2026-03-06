@@ -251,6 +251,22 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a regression test that locks deterministic `--work-dir` handling for paths containing spaces in `scripts/run_spinning_cube_demo.sh` (stub-run PASS with expected `WEB/NATIVE/METAL` SKIP summary lines and work-dir native artifact directory creation).
 - ✓ Add a regression test that locks deterministic web-skip behavior when browser commands exist but are unavailable in `scripts/run_spinning_cube_demo.sh` (`WEB: SKIP (headless browser unavailable)` with overall PASS under stubbed native/metal skip paths).
 
+**Native Windowed Spinning Cube (Roadmap)**
+- ○ Define the first supported target for native window bring-up (`macOS + Metal window host`) and document explicit prerequisites/tools (`xcrun`, frameworks, minimum macOS version) plus non-goals for v1.
+- ○ Reopen native compile parity for the shared sample: make `./build-debug/primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native --entry /main` succeed again (currently fails with `native backend does not support return type on /cubeInit`) or intentionally split a native-specific entrypoint and document that split.
+- ○ Reconcile spinning-cube docs/status language with reality until parity is restored (mark current native `/main` compile status as unsupported where relevant, and point readers to supported windowed paths).
+- ○ Add native-backend-compatible cube entrypoints in `cube.prime` for per-frame host driving (avoid unsupported struct-return lowering paths by exposing scalar/flat outputs the native backend can consume today).
+- ○ Define a stable host ABI contract for windowed native rendering (`init`, fixed-step `tick`, transform/uniform outputs, error/return conventions) and lock it in docs + compile-run conformance tests.
+- ○ Add a real windowed native host sample (`examples/native/spinning_cube/window_host.mm`) that creates a desktop window, swapchain/layer, and render loop instead of the current headless verification host.
+- ○ Wire host-to-simulation integration so each rendered frame pulls updated rotation/transform state from compiled PrimeStruct code with deterministic fixed-step timing.
+- ○ Add native rendering pipeline resources for the host path (vertex/index buffers, uniform updates, shader compilation/loading) and draw the cube each frame.
+- ○ Add minimal runtime controls/exit handling (window close + ESC) and deterministic startup diagnostics for success/failure paths.
+- ○ Add deterministic failure diagnostics for window-host startup stages (window creation, GPU device acquisition, pipeline setup, shader load, first frame submission) with stable error text and exit codes.
+- ○ Add a one-command launcher script (`scripts/run_native_spinning_cube_window.sh`) that builds the native cube artifact + window host and then launches the app.
+- ○ Define and add native window visual smoke criteria (`window shown`, `render loop alive`, `rotation changes over time`) with CI skip rules for non-macOS/non-GUI runners.
+- ○ Add compile/run validation coverage for the new launcher and host build, with explicit CI skip behavior on non-macOS or non-GUI runners.
+- ○ Done condition: on a supported macOS machine, running `./scripts/run_native_spinning_cube_window.sh` opens a native window and shows a visibly rotating cube for at least 10 seconds.
+
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
 - ✓ Add deterministic counter/debug dump output for instrumentation and optimization phases. Testing: dump-format snapshot tests with stable ordering.
