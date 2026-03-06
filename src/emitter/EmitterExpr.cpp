@@ -7,6 +7,7 @@
 #include "EmitterExprControlBuiltinBlockBindingFallbackStep.h"
 #include "EmitterExprControlBuiltinBlockBindingPreludeStep.h"
 #include "EmitterExprControlBuiltinBlockBindingQualifiersStep.h"
+#include "EmitterExprControlBuiltinBlockStatementStep.h"
 #include "EmitterExprControlBuiltinBlockFinalValueStep.h"
 #include "EmitterExprControlBoolLiteralStep.h"
 #include "EmitterExprControlBuiltinBlockPreludeStep.h"

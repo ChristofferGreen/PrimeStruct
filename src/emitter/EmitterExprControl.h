@@ -232,9 +232,23 @@
         }
         continue;
       }
-      out << "(void)"
-          << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, blockTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
-          << "; ";
+      if (const auto statementStep = emitter::runEmitterExprControlBuiltinBlockStatementStep(
+              stmt,
+              [&](const Expr &candidate) {
+                return emitExpr(candidate,
+                                nameMap,
+                                paramMap,
+                                structTypeMap,
+                                importAliases,
+                                blockTypes,
+                                returnKinds,
+                                resultInfos,
+                                returnStructs,
+                                allowMathBare);
+              });
+          statementStep.handled) {
+        out << statementStep.emittedStatement;
+      }
     }
     out << "}())";
     return out.str();

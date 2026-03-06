@@ -2441,6 +2441,31 @@ TEST_CASE("emitter expr control builtin-block binding-qualifiers step resolves c
   CHECK_FALSE(missingCallback.useRef);
 }
 
+TEST_CASE("emitter expr control builtin-block statement step emits void expression statements") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "act";
+
+  const auto missingEmit = primec::emitter::runEmitterExprControlBuiltinBlockStatementStep(
+      stmt,
+      {});
+  CHECK_FALSE(missingEmit.handled);
+  CHECK(missingEmit.emittedStatement.empty());
+
+  int emitCalls = 0;
+  const auto emitted = primec::emitter::runEmitterExprControlBuiltinBlockStatementStep(
+      stmt,
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Call);
+        CHECK(candidate.name == "act");
+        return std::string("emit_stmt");
+      });
+  CHECK(emitted.handled);
+  CHECK(emitCalls == 1);
+  CHECK(emitted.emittedStatement == "(void)emit_stmt; ");
+}
+
 TEST_CASE("emitter expr control body-wrapper step rewrites body-argument calls") {
   primec::Expr noBodyExpr;
   noBodyExpr.kind = primec::Expr::Kind::Call;
@@ -2765,6 +2790,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingQualifiersStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockStatementStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingPreludeStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockFinalValueStep(") !=
@@ -2796,6 +2823,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingFallbackStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingQualifiersStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockStatementStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingPreludeStep.h\"") !=
         std::string::npos);
