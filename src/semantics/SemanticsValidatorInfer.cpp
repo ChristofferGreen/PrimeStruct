@@ -786,16 +786,40 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string elemType;
       std::string keyType;
       std::string valueType;
-      if (resolveVectorTarget(expr.args.front(), elemType) || resolveArrayTarget(expr.args.front(), elemType) ||
-          resolveStringTarget(expr.args.front()) ||
-          resolveMapTarget(expr.args.front(), keyType, valueType)) {
-        return ReturnKind::Int;
+      if (resolveVectorTarget(expr.args.front(), elemType)) {
+        if (defMap_.find("/vector/count") == defMap_.end()) {
+          return ReturnKind::Int;
+        }
+        resolved = "/vector/count";
+        hasResolvedPath = true;
+      } else if (resolveArrayTarget(expr.args.front(), elemType)) {
+        if (defMap_.find("/array/count") == defMap_.end()) {
+          return ReturnKind::Int;
+        }
+        resolved = "/array/count";
+        hasResolvedPath = true;
+      } else if (resolveStringTarget(expr.args.front())) {
+        if (defMap_.find("/string/count") == defMap_.end()) {
+          return ReturnKind::Int;
+        }
+        resolved = "/string/count";
+        hasResolvedPath = true;
+      } else if (resolveMapTarget(expr.args.front(), keyType, valueType)) {
+        if (defMap_.find("/map/count") == defMap_.end()) {
+          return ReturnKind::Int;
+        }
+        resolved = "/map/count";
+        hasResolvedPath = true;
       }
     }
     if (expr.isMethodCall && expr.name == "capacity" && expr.args.size() == 1) {
       std::string elemType;
       if (resolveVectorTarget(expr.args.front(), elemType)) {
-        return ReturnKind::Int;
+        if (defMap_.find("/vector/capacity") == defMap_.end()) {
+          return ReturnKind::Int;
+        }
+        resolved = "/vector/capacity";
+        hasResolvedPath = true;
       }
     }
     if (expr.isMethodCall) {

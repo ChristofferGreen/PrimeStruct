@@ -142,14 +142,14 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
     errorOut = "method call missing receiver";
     return false;
   }
-  if (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) {
-    return false;
-  }
-  if (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) {
-    return false;
-  }
+  const bool allowBuiltinFallback =
+      (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
+      (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn));
   const Expr &receiver = callExpr.args.front();
   if (isEntryArgsName && isEntryArgsName(receiver, localsIn)) {
+    if (allowBuiltinFallback) {
+      return false;
+    }
     errorOut = "unknown method target for " + callExpr.name;
     return false;
   }
@@ -393,6 +393,11 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const ResolveReceiverExprPathFn &resolveExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
+  const bool allowBuiltinFallback =
+      (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
+      (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn));
+
+  const std::string priorError = errorOut;
   const Expr *receiver = nullptr;
   if (!resolveMethodCallReceiverExpr(callExpr,
                                      localsIn,
@@ -401,6 +406,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                      isEntryArgsName,
                                      receiver,
                                      errorOut)) {
+    if (allowBuiltinFallback) {
+      errorOut = priorError;
+    }
     return nullptr;
   }
   if (receiver == nullptr) {
@@ -419,10 +427,23 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                    typeName,
                                    resolvedTypePath,
                                    errorOut)) {
+    if (allowBuiltinFallback) {
+      errorOut = priorError;
+    }
     return nullptr;
   }
-  return resolveMethodDefinitionFromReceiverTarget(
-      callExpr.name, typeName, resolvedTypePath, defMap, errorOut);
+  std::string lookupError;
+  const Definition *resolvedDef = resolveMethodDefinitionFromReceiverTarget(
+      callExpr.name, typeName, resolvedTypePath, defMap, lookupError);
+  if (resolvedDef == nullptr) {
+    if (allowBuiltinFallback) {
+      errorOut = priorError;
+      return nullptr;
+    }
+    errorOut = std::move(lookupError);
+    return nullptr;
+  }
+  return resolvedDef;
 }
 
 bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,

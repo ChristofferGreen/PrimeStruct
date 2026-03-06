@@ -163,17 +163,21 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     return InlineCallDispatchResult::Error;
   }
 
-  if (expr.isMethodCall && !isArrayCountCall(expr) && !isStringCountCall(expr) &&
-      !isVectorCapacityCall(expr)) {
+  if (expr.isMethodCall) {
+    const bool isBuiltinCountLikeMethod =
+        isArrayCountCall(expr) || isStringCountCall(expr) || isVectorCapacityCall(expr);
     const Definition *callee = resolveMethodCallDefinition(expr);
-    const auto emitResult = emitResolvedInlineDefinitionCall(
-        expr, callee, emitInlineDefinitionCall, error);
-    if (emitResult == ResolvedInlineCallResult::NoCallee) {
+    if (callee != nullptr) {
+      const auto emitResult = emitResolvedInlineDefinitionCall(
+          expr, callee, emitInlineDefinitionCall, error);
+      return emitResult == ResolvedInlineCallResult::Emitted
+                 ? InlineCallDispatchResult::Emitted
+                 : InlineCallDispatchResult::Error;
+    }
+    if (!isBuiltinCountLikeMethod) {
       return InlineCallDispatchResult::Error;
     }
-    return emitResult == ResolvedInlineCallResult::Emitted
-               ? InlineCallDispatchResult::Emitted
-               : InlineCallDispatchResult::Error;
+    error.clear();
   }
 
   if (const Definition *callee = resolveDefinitionCall(expr)) {

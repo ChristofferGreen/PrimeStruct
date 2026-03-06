@@ -8691,6 +8691,29 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             },
             error) == Result::Error);
 
+  primec::Expr methodCountCall;
+  methodCountCall.kind = primec::Expr::Kind::Call;
+  methodCountCall.name = "count";
+  methodCountCall.isMethodCall = true;
+  methodCountCall.args.push_back(countArg);
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            methodCountCall,
+            [](const primec::Expr &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+
   primec::Expr directCall;
   directCall.kind = primec::Expr::Kind::Call;
   directCall.name = "helper";
@@ -8829,6 +8852,35 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               return false;
             },
             error) == Result::Error);
+
+  primec::Expr methodCountCall;
+  methodCountCall.kind = primec::Expr::Kind::Call;
+  methodCountCall.name = "count";
+  methodCountCall.isMethodCall = true;
+  primec::Expr methodCountReceiver;
+  methodCountReceiver.kind = primec::Expr::Kind::Name;
+  methodCountReceiver.name = "ctx";
+  methodCountCall.args.push_back(methodCountReceiver);
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            methodCountCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   primec::Expr directCall;
   directCall.kind = primec::Expr::Kind::Call;
@@ -12479,7 +12531,7 @@ TEST_CASE("ir lowerer setup type helper reports method receiver selection diagno
   CHECK(error == "unknown method target for count");
 }
 
-TEST_CASE("ir lowerer setup type helper bypasses array count and vector capacity method calls") {
+TEST_CASE("ir lowerer setup type helper allows count/capacity receiver probing") {
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;
   receiverExpr.name = "items";
@@ -12490,9 +12542,9 @@ TEST_CASE("ir lowerer setup type helper bypasses array count and vector capacity
   methodCall.isMethodCall = true;
   methodCall.args.push_back(receiverExpr);
 
-  const primec::Expr *receiverOut = &methodCall;
-  std::string error = "stale";
-  CHECK_FALSE(primec::ir_lowerer::resolveMethodCallReceiverExpr(
+  const primec::Expr *receiverOut = nullptr;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodCallReceiverExpr(
       methodCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
@@ -12500,12 +12552,14 @@ TEST_CASE("ir lowerer setup type helper bypasses array count and vector capacity
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       receiverOut,
       error));
-  CHECK(receiverOut == nullptr);
-  CHECK(error == "stale");
+  REQUIRE(receiverOut != nullptr);
+  CHECK(receiverOut->name == "items");
+  CHECK(error.empty());
 
-  receiverOut = &methodCall;
-  error = "stale";
-  CHECK_FALSE(primec::ir_lowerer::resolveMethodCallReceiverExpr(
+  methodCall.name = "capacity";
+  receiverOut = nullptr;
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodCallReceiverExpr(
       methodCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -12513,8 +12567,9 @@ TEST_CASE("ir lowerer setup type helper bypasses array count and vector capacity
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       receiverOut,
       error));
-  CHECK(receiverOut == nullptr);
-  CHECK(error == "stale");
+  REQUIRE(receiverOut != nullptr);
+  CHECK(receiverOut->name == "items");
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer setup type helper resolves method call definitions from expressions") {
@@ -12592,6 +12647,40 @@ TEST_CASE("ir lowerer setup type helper resolves struct receiver method definiti
       error);
   CHECK(resolved == &structMethodDef);
   CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper keeps builtin count/capacity fallback when no override definition exists") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "count";
+  methodCall.isMethodCall = true;
+  methodCall.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo itemsLocal;
+  itemsLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  locals.emplace("items", itemsLocal);
+
+  std::string error = "stale";
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return std::string(); },
+            {},
+            error) == nullptr);
+  CHECK(error == "stale");
 }
 
 TEST_CASE("ir lowerer setup type helper reports method call definition diagnostics from expressions") {

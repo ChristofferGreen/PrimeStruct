@@ -252,20 +252,25 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return DirectCallStatementEmitResult::NotMatched;
   }
 
-  if (stmt.isMethodCall && !isArrayCountCall(stmt, localsIn) && !isStringCountCall(stmt, localsIn) &&
-      !isVectorCapacityCall(stmt, localsIn)) {
+  if (stmt.isMethodCall) {
+    const bool isBuiltinCountLikeMethod =
+        isArrayCountCall(stmt, localsIn) || isStringCountCall(stmt, localsIn) ||
+        isVectorCapacityCall(stmt, localsIn);
     const Definition *callee = resolveMethodCallDefinition(stmt, localsIn);
-    if (!callee) {
+    if (!callee && !isBuiltinCountLikeMethod) {
       return DirectCallStatementEmitResult::Error;
     }
-    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      error = "native backend does not support block arguments on calls";
-      return DirectCallStatementEmitResult::Error;
+    if (callee) {
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+        error = "native backend does not support block arguments on calls";
+        return DirectCallStatementEmitResult::Error;
+      }
+      if (!emitInlineDefinitionCall(stmt, *callee, localsIn, false)) {
+        return DirectCallStatementEmitResult::Error;
+      }
+      return DirectCallStatementEmitResult::Emitted;
     }
-    if (!emitInlineDefinitionCall(stmt, *callee, localsIn, false)) {
-      return DirectCallStatementEmitResult::Error;
-    }
-    return DirectCallStatementEmitResult::Emitted;
+    error.clear();
   }
 
   const Definition *callee = resolveDefinitionCall(stmt);

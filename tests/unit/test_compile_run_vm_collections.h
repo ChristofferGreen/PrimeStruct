@@ -181,6 +181,42 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with user array count method shadow") {
+  const std::string source = R"(
+[return<int>]
+/array/count([array<i32>] values) {
+  return(99i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_array_count_method_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 99);
+}
+
+TEST_CASE("runs vm with user vector capacity method shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.capacity())
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_capacity_method_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 77);
+}
+
 TEST_CASE("runs vm with vector push helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

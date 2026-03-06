@@ -1609,33 +1609,28 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
       std::string elemType;
+      auto setCollectionMethodTarget = [&](const char *path) {
+        resolvedOut = path;
+        isBuiltinOut = defMap_.count(resolvedOut) == 0;
+        return true;
+      };
       if (methodName == "count") {
         if (resolveVectorTarget(receiver, elemType)) {
-          resolvedOut = "/vector/count";
-          isBuiltinOut = true;
-          return true;
+          return setCollectionMethodTarget("/vector/count");
         }
         if (resolveArrayTarget(receiver, elemType)) {
-          resolvedOut = "/array/count";
-          isBuiltinOut = true;
-          return true;
+          return setCollectionMethodTarget("/array/count");
         }
         if (resolveStringTarget(receiver)) {
-          resolvedOut = "/string/count";
-          isBuiltinOut = true;
-          return true;
+          return setCollectionMethodTarget("/string/count");
         }
         if (resolveMapTarget(receiver)) {
-          resolvedOut = "/map/count";
-          isBuiltinOut = true;
-          return true;
+          return setCollectionMethodTarget("/map/count");
         }
       }
       if (methodName == "capacity") {
         if (resolveVectorTarget(receiver, elemType)) {
-          resolvedOut = "/vector/capacity";
-          isBuiltinOut = true;
-          return true;
+          return setCollectionMethodTarget("/vector/capacity");
         }
       }
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
