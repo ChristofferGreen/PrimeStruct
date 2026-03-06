@@ -195,6 +195,14 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::MulF64:
+      out << "        // Narrowed GLSL path lowers f64 mul through f32 payloads.\n";
+      out << "        float right = intBitsToFloat(stack[--sp]);\n";
+      out << "        float left = intBitsToFloat(stack[--sp]);\n";
+      out << "        stack[sp++] = floatBitsToInt(left * right);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::CmpEqI32:
       emitCompare("==");
       return true;
