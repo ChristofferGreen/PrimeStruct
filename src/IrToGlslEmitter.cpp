@@ -138,6 +138,13 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::DivI64:
       emitBinary("/");
       return true;
+    case IrOpcode::DivU64:
+      out << "        uint right = uint(stack[--sp]);\n";
+      out << "        uint left = uint(stack[--sp]);\n";
+      out << "        stack[sp++] = int(left / right);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::NegI64:
       out << "        stack[sp - 1] = -stack[sp - 1];\n";
       out << "        pc = " << nextIndex << ";\n";
