@@ -153,6 +153,46 @@ main() {
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir emitter writes IR-lowered shader for i32 to f32 conversion subset") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] count{7i32}
+  [f32] asFloat{convert<f32>(count)}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_ir_i32_to_f32_subset.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_ir_i32_to_f32_subset.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = floatBitsToInt(float(stack[--sp]));") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter uses ir backend for i32 to f32 conversion subset") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] count{7i32}
+  [f32] asFloat{convert<f32>(count)}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_i32_to_f32_ir_first.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_i32_to_f32_ir_first.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = floatBitsToInt(float(stack[--sp]));") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter matches glsl-ir on shared corpus") {
   struct DifferentialCase {
     const char *name;
@@ -226,6 +266,17 @@ main() {
 }
 )",
       },
+      {
+          "i32_to_f32_convert",
+          R"(
+[return<void>]
+main() {
+  [i32] count{7i32}
+  [f32] asFloat{convert<f32>(count)}
+  return()
+}
+)",
+      },
   };
 
   for (const auto &testCase : cases) {
@@ -272,7 +323,7 @@ TEST_CASE("glsl emitter falls back to legacy output on ir emit-stage failures") 
   const std::string source = R"(
 [return<void>]
 main() {
-  [f32] asFloat{convert<f32>(1i32)}
+  [f64] wide{1.5f64}
   return()
 }
 )";
@@ -284,7 +335,7 @@ main() {
                                  " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("float asFloat") != std::string::npos);
+  CHECK(output.find("double wide") != std::string::npos);
   CHECK(output.find("PrimeStructOutput") == std::string::npos);
 }
 
@@ -438,7 +489,7 @@ TEST_CASE("spirv emitter falls back to legacy glsl on ir emit-stage failures") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [f32] asFloat{convert<f32>(1i32)};
+  [f64] wide{1.5f64};
   return();
 }
 )";
