@@ -181,6 +181,26 @@ TEST_CASE("ir to glsl emitter writes pushi64 opcode when value fits i32") {
   CHECK(glsl.find("stack[sp++] = 42;") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes i64 compare and return opcodes") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(2))});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(3))});
+  fn.instructions.push_back({primec::IrOpcode::CmpLtI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("stack[sp++] = (left < right) ? 1 : 0;") != std::string::npos);
+  CHECK(glsl.find("return stack[--sp];") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter writes f32 literal push") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;

@@ -155,6 +155,24 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::CmpGeI32:
       emitCompare(">=");
       return true;
+    case IrOpcode::CmpEqI64:
+      emitCompare("==");
+      return true;
+    case IrOpcode::CmpNeI64:
+      emitCompare("!=");
+      return true;
+    case IrOpcode::CmpLtI64:
+      emitCompare("<");
+      return true;
+    case IrOpcode::CmpLeI64:
+      emitCompare("<=");
+      return true;
+    case IrOpcode::CmpGtI64:
+      emitCompare(">");
+      return true;
+    case IrOpcode::CmpGeI64:
+      emitCompare(">=");
+      return true;
     case IrOpcode::CmpEqF32:
       emitCompareF32("==");
       return true;
@@ -278,6 +296,9 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        return stack[--sp];\n";
       return true;
     case IrOpcode::ReturnI32:
+      out << "        return stack[--sp];\n";
+      return true;
+    case IrOpcode::ReturnI64:
       out << "        return stack[--sp];\n";
       return true;
     case IrOpcode::ReturnVoid:
