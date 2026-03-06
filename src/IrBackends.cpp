@@ -10,6 +10,7 @@
 #include "primec/WasmEmitter.h"
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -47,6 +48,19 @@ bool writeTextFile(const std::string &path, const std::string &data) {
   }
   out << data;
   return static_cast<bool>(out);
+}
+
+std::string injectComputeLayout(const std::string &glslSource) {
+  const std::string layoutLine = "layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;\n";
+  size_t versionPos = glslSource.find("#version");
+  if (versionPos == std::string::npos) {
+    return "#version 450\n" + layoutLine + glslSource;
+  }
+  size_t lineEnd = glslSource.find('\n', versionPos);
+  if (lineEnd == std::string::npos) {
+    return glslSource + "\n" + layoutLine;
+  }
+  return glslSource.substr(0, lineEnd + 1) + layoutLine + glslSource.substr(lineEnd + 1);
 }
 
 class VmIrBackend final : public IrBackend {
@@ -278,6 +292,73 @@ public:
   }
 };
 
+class SpirvIrBackend final : public IrBackend {
+public:
+  std::string_view emitKind() const override {
+    return "spirv-ir";
+  }
+
+  const IrBackendDiagnostics &diagnostics() const override {
+    static constexpr IrBackendDiagnostics Diagnostics = {
+        .loweringDiagnosticCode = DiagnosticCode::LoweringError,
+        .validationDiagnosticCode = DiagnosticCode::LoweringError,
+        .inliningDiagnosticCode = DiagnosticCode::LoweringError,
+        .emitDiagnosticCode = DiagnosticCode::EmitError,
+        .loweringErrorPrefix = "SPIR-V IR lowering error: ",
+        .validationErrorPrefix = "SPIR-V IR validation error: ",
+        .inliningErrorPrefix = "SPIR-V IR inlining error: ",
+        .emitErrorPrefix = "SPIR-V IR emit error: ",
+        .backendTag = "spirv-ir",
+    };
+    return Diagnostics;
+  }
+
+  IrValidationTarget validationTarget(const Options & /*options*/) const override {
+    return IrValidationTarget::Any;
+  }
+
+  bool requiresOutputPath() const override {
+    return true;
+  }
+
+  bool emit(const IrModule &module,
+            const IrBackendEmitOptions &options,
+            IrBackendEmitResult & /*result*/,
+            std::string &error) const override {
+    IrToGlslEmitter emitter;
+    std::string glslSource;
+    if (!emitter.emitSource(module, glslSource, error)) {
+      error = "ir-to-glsl failed: " + error;
+      return false;
+    }
+
+    const std::string spirvSource = injectComputeLayout(glslSource);
+    const ProcessRunner &processRunner = systemProcessRunner();
+    std::string toolName;
+    if (!findSpirvCompiler(processRunner, toolName)) {
+      error = "glslangValidator or glslc not found";
+      return false;
+    }
+
+    const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::filesystem::path tempPath =
+        std::filesystem::temp_directory_path() / ("primec_spirv_ir_" + std::to_string(timestamp) + ".comp");
+    if (!writeTextFile(tempPath.string(), spirvSource)) {
+      error = tempPath.string();
+      return false;
+    }
+
+    const bool ok = compileSpirv(processRunner, toolName, tempPath, options.outputPath);
+    std::error_code ec;
+    std::filesystem::remove(tempPath, ec);
+    if (!ok) {
+      error = "tool invocation failed";
+      return false;
+    }
+    return true;
+  }
+};
+
 class CppIrBackend final : public IrBackend {
 public:
   std::string_view emitKind() const override {
@@ -382,20 +463,22 @@ public:
   }
 };
 
-const std::array<const IrBackend *, 7> &registeredBackends() {
+const std::array<const IrBackend *, 8> &registeredBackends() {
   static const VmIrBackend VmBackend;
   static const NativeIrBackend NativeBackend;
   static const SerializeIrBackend IrBackendImpl;
   static const WasmIrBackend WasmBackend;
   static const GlslIrBackend GlslBackend;
+  static const SpirvIrBackend SpirvBackend;
   static const CppIrBackend CppBackend;
   static const ExeIrBackend ExeBackend;
-  static const std::array<const IrBackend *, 7> Backends = {
+  static const std::array<const IrBackend *, 8> Backends = {
       &VmBackend,
       &NativeBackend,
       &IrBackendImpl,
       &WasmBackend,
       &GlslBackend,
+      &SpirvBackend,
       &CppBackend,
       &ExeBackend,
   };

@@ -36,7 +36,8 @@ std::string readTextFile(const std::filesystem::path &path) {
 } // namespace
 
 TEST_CASE("ir backend registry reports deterministic order and lookup") {
-  const std::vector<std::string_view> expectedKinds = {"vm", "native", "ir", "wasm", "glsl-ir", "cpp-ir", "exe-ir"};
+  const std::vector<std::string_view> expectedKinds = {
+      "vm", "native", "ir", "wasm", "glsl-ir", "spirv-ir", "cpp-ir", "exe-ir"};
   CHECK(primec::listIrBackendKinds() == expectedKinds);
 
   for (std::string_view kind : expectedKinds) {
@@ -178,6 +179,28 @@ TEST_CASE("glsl-ir backend reports emitter diagnostics") {
   primec::IrBackendEmitOptions options;
   options.outputPath = (std::filesystem::current_path() / "primec_tests" / "unused.glsl").string();
   options.inputPath = "glsl_ir_backend_error.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  CHECK_FALSE(backend->emit(module, options, result, error));
+  CHECK(error.find("ir-to-glsl failed:") != std::string::npos);
+}
+
+TEST_CASE("spirv-ir backend reports emitter diagnostics") {
+  const primec::IrBackend *backend = primec::findIrBackend("spirv-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushF32, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+  module.functions.push_back(function);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = (std::filesystem::current_path() / "primec_tests" / "unused.spv").string();
+  options.inputPath = "spirv_ir_backend_error.prime";
   primec::IrBackendEmitResult result;
   std::string error;
   CHECK_FALSE(backend->emit(module, options, result, error));
