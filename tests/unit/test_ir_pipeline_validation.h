@@ -3178,6 +3178,79 @@ TEST_CASE("emitter expr control if branch wrapper step wraps branch body") {
   CHECK(missingBody.emittedExpr.empty());
 }
 
+TEST_CASE("emitter expr control if branch body step emits ordered statements") {
+  primec::Expr first;
+  first.kind = primec::Expr::Kind::Name;
+  first.name = "first";
+
+  primec::Expr second;
+  second.kind = primec::Expr::Kind::Name;
+  second.name = "second";
+
+  primec::Expr third;
+  third.kind = primec::Expr::Kind::Name;
+  third.name = "third";
+
+  primec::Expr candidate;
+  candidate.kind = primec::Expr::Kind::Call;
+  candidate.bodyArguments = {first, second, third};
+
+  int emitCalls = 0;
+  const auto emitted = primec::emitter::runEmitterExprControlIfBranchBodyStep(
+      candidate,
+      [&](const primec::Expr &stmt, bool isLast) {
+        ++emitCalls;
+        if (stmt.name == "first") {
+          CHECK_FALSE(isLast);
+          return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{
+              true, "first; ", false};
+        }
+        if (stmt.name == "second") {
+          CHECK_FALSE(isLast);
+          return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{
+              true, "second; ", true};
+        }
+        CHECK_FALSE(true);
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      });
+  CHECK(emitted.handled);
+  CHECK(emitCalls == 2);
+  CHECK(emitted.emittedBody == "first; second; ");
+
+  int skipCalls = 0;
+  primec::Expr twoStmtCandidate;
+  twoStmtCandidate.kind = primec::Expr::Kind::Call;
+  twoStmtCandidate.bodyArguments = {first, second};
+  const auto skipFirst = primec::emitter::runEmitterExprControlIfBranchBodyStep(
+      twoStmtCandidate,
+      [&](const primec::Expr &stmt, bool) {
+        ++skipCalls;
+        if (stmt.name == "first") {
+          return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+        }
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{
+            true, "second; ", false};
+      });
+  CHECK(skipFirst.handled);
+  CHECK(skipCalls == 2);
+  CHECK(skipFirst.emittedBody == "second; ");
+
+  const auto emptyBody = primec::emitter::runEmitterExprControlIfBranchBodyStep(
+      primec::Expr{},
+      [&](const primec::Expr &, bool) {
+        CHECK_FALSE(true);
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      });
+  CHECK_FALSE(emptyBody.handled);
+  CHECK(emptyBody.emittedBody.empty());
+
+  const auto missingCallback = primec::emitter::runEmitterExprControlIfBranchBodyStep(
+      candidate,
+      {});
+  CHECK_FALSE(missingCallback.handled);
+  CHECK(missingCallback.emittedBody.empty());
+}
+
 TEST_CASE("emitter expr control if-block statement step emits void statements") {
   primec::Expr stmt;
   stmt.kind = primec::Expr::Kind::Name;
@@ -3491,6 +3564,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchPreludeStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchWrapperStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingPreludeStep(") !=
@@ -3544,6 +3619,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingFallbackStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchPreludeStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchWrapperStep.h\"") !=
         std::string::npos);
