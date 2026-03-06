@@ -337,39 +337,37 @@
       }
       return std::string{};
     };
-  if (const auto ternaryStep = emitter::runEmitterExprControlIfTernaryStep(
-          [&]() {
-            return emitExpr(expr.args[0],
-                            nameMap,
-                            paramMap,
-                            structTypeMap,
-                            importAliases,
-                            localTypes,
-                            returnKinds,
-                            resultInfos,
-                            returnStructs,
-                            allowMathBare);
-          },
-          [&]() { return emitBranchValueExpr(expr.args[1], localTypes); },
-          [&]() { return emitBranchValueExpr(expr.args[2], localTypes); });
-      ternaryStep.handled) {
-    return ternaryStep.emittedExpr;
-  }
-
-  std::ostringstream out;
-  out << "("
-      << emitExpr(expr.args[0],
-                  nameMap,
-                  paramMap,
-                  structTypeMap,
-                  importAliases,
-                  localTypes,
-                  returnKinds,
-                  resultInfos,
-                  returnStructs,
-                  allowMathBare)
-      << " ? "
-      << emitBranchValueExpr(expr.args[1], localTypes) << " : " << emitBranchValueExpr(expr.args[2], localTypes)
-      << ")";
-  return out.str();
+    const auto emitIfConditionExpr = [&]() {
+      return emitExpr(expr.args[0],
+                      nameMap,
+                      paramMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare);
+    };
+    const auto emitThenBranchValueExpr = [&]() {
+      return emitBranchValueExpr(expr.args[1], localTypes);
+    };
+    const auto emitElseBranchValueExpr = [&]() {
+      return emitBranchValueExpr(expr.args[2], localTypes);
+    };
+    if (const auto ternaryStep = emitter::runEmitterExprControlIfTernaryStep(
+            emitIfConditionExpr,
+            emitThenBranchValueExpr,
+            emitElseBranchValueExpr);
+        ternaryStep.handled) {
+      return ternaryStep.emittedExpr;
+    }
+    if (const auto ternaryFallbackStep = emitter::runEmitterExprControlIfTernaryFallbackStep(
+            emitIfConditionExpr,
+            emitThenBranchValueExpr,
+            emitElseBranchValueExpr);
+        ternaryFallbackStep.handled) {
+      return ternaryFallbackStep.emittedExpr;
+    }
+    return std::string{};
   }

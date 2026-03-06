@@ -48,6 +48,7 @@ add_library(primec_lib
   src/emitter/EmitterExprControlIfBlockStatementStep.cpp
   src/emitter/EmitterExprControlIfBlockFinalValueStep.cpp
   src/emitter/EmitterExprControlIfBlockEarlyReturnStep.cpp
+  src/emitter/EmitterExprControlIfTernaryFallbackStep.cpp
   src/emitter/EmitterExprControlIfTernaryStep.cpp
   src/emitter/EmitterExprControlIfEnvelopeStep.cpp
   src/emitter/EmitterExprControlIntegerLiteralStep.cpp
