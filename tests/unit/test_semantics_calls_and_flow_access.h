@@ -189,6 +189,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("templated method call on user-defined vector call receiver resolves by return type") {
+  const std::string source = R"(
+namespace vector {
+  [return<i32>]
+  wrap([i32] self) {
+    return(plus(self, 10i32))
+  }
+}
+
+namespace i32 {
+  [return<i32>]
+  wrap<T>([i32] self) {
+    return(self)
+  }
+}
+
+[return<i32>]
+vector([i32] value) {
+  return(value)
+}
+
+[return<i32>]
+main() {
+  return(vector(1i32).wrap<i32>())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("method calls reject template args for block-inferred receiver") {
   const std::string source = R"(
 namespace i32 {

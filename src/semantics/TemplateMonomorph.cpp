@@ -336,16 +336,30 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   } else if (receiver.kind == Expr::Kind::StringLiteral) {
     typeName = "string";
   } else if (receiver.kind == Expr::Kind::Call) {
-    std::string collection;
-    if (getBuiltinCollectionName(receiver, collection)) {
-      typeName = collection;
-    }
-    if (typeName.empty() && !receiver.isMethodCall && !receiver.isBinding) {
+    if (!receiver.isMethodCall && !receiver.isBinding) {
       std::string resolved = resolveCalleePath(receiver, receiver.namespacePrefix, ctx);
       auto defIt = ctx.sourceDefs.find(resolved);
-      if (defIt != ctx.sourceDefs.end() && isStructDefinition(defIt->second)) {
-        pathOut = resolved + "/" + expr.name;
-        return true;
+      if (defIt != ctx.sourceDefs.end()) {
+        if (isStructDefinition(defIt->second)) {
+          pathOut = resolved + "/" + expr.name;
+          return true;
+        }
+        for (const auto &transform : defIt->second.transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          const std::string &returnType = transform.templateArgs.front();
+          if (returnType == "auto") {
+            continue;
+          }
+          typeName = returnType;
+          break;
+        }
+      } else {
+        std::string collection;
+        if (getBuiltinCollectionName(receiver, collection)) {
+          typeName = collection;
+        }
       }
     }
   }
