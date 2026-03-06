@@ -1,33 +1,20 @@
 #include "primec/ExternalTooling.h"
 
 #include <string>
+#include <vector>
 
 namespace primec {
 
-std::string quoteShellPath(const std::filesystem::path &path) {
-  std::string text = path.string();
-  std::string quoted = "\"";
-  for (char c : text) {
-    if (c == '\"') {
-      quoted += "\\\"";
-    } else {
-      quoted += c;
-    }
-  }
-  quoted += "\"";
-  return quoted;
-}
-
-bool commandSucceeds(const ProcessRunner &runner, const std::string &command) {
-  return runner.run(command) == 0;
+bool commandSucceeds(const ProcessRunner &runner, const std::vector<std::string> &args) {
+  return runner.run(args) == 0;
 }
 
 bool findSpirvCompiler(const ProcessRunner &runner, std::string &toolName) {
-  if (commandSucceeds(runner, "glslangValidator -v > /dev/null 2>&1")) {
+  if (commandSucceeds(runner, {"glslangValidator", "-v"})) {
     toolName = "glslangValidator";
     return true;
   }
-  if (commandSucceeds(runner, "glslc --version > /dev/null 2>&1")) {
+  if (commandSucceeds(runner, {"glslc", "--version"})) {
     toolName = "glslc";
     return true;
   }
@@ -38,22 +25,21 @@ bool compileSpirv(const ProcessRunner &runner,
                   const std::string &toolName,
                   const std::filesystem::path &inputPath,
                   const std::filesystem::path &outputPath) {
-  std::string command;
+  std::vector<std::string> args;
   if (toolName == "glslangValidator") {
-    command = "glslangValidator -V -S comp " + quoteShellPath(inputPath) + " -o " + quoteShellPath(outputPath);
+    args = {"glslangValidator", "-V", "-S", "comp", inputPath.string(), "-o", outputPath.string()};
   } else if (toolName == "glslc") {
-    command = "glslc -fshader-stage=compute " + quoteShellPath(inputPath) + " -o " + quoteShellPath(outputPath);
+    args = {"glslc", "-fshader-stage=compute", inputPath.string(), "-o", outputPath.string()};
   } else {
     return false;
   }
-  return commandSucceeds(runner, command);
+  return commandSucceeds(runner, args);
 }
 
 bool compileCppExecutable(const ProcessRunner &runner,
                           const std::filesystem::path &cppPath,
                           const std::filesystem::path &outputPath) {
-  std::string command = "clang++ -std=c++23 -O2 " + quoteShellPath(cppPath) + " -o " + quoteShellPath(outputPath);
-  return commandSucceeds(runner, command);
+  return commandSucceeds(runner, {"clang++", "-std=c++23", "-O2", cppPath.string(), "-o", outputPath.string()});
 }
 
 } // namespace primec

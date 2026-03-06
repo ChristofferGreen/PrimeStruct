@@ -60,21 +60,21 @@ bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path
 
 class RecordingProcessRunner final : public primec::ProcessRunner {
 public:
-  explicit RecordingProcessRunner(std::function<int(const std::string &)> handler = {})
+  explicit RecordingProcessRunner(std::function<int(const std::vector<std::string> &)> handler = {})
       : handler_(std::move(handler)) {}
 
-  int run(const std::string &command) const override {
-    commands.push_back(command);
+  int run(const std::vector<std::string> &args) const override {
+    commands.push_back(args);
     if (handler_) {
-      return handler_(command);
+      return handler_(args);
     }
     return 1;
   }
 
-  mutable std::vector<std::string> commands;
+  mutable std::vector<std::vector<std::string>> commands;
 
 private:
-  std::function<int(const std::string &)> handler_;
+  std::function<int(const std::vector<std::string> &)> handler_;
 };
 } // namespace
 
@@ -763,14 +763,18 @@ TEST_CASE("import resolver uses injected process runner for archive extraction e
   writeFile(archivePath, "not-a-real-zip");
   const std::string srcPath = writeFile(baseDir / "main.prime", "import<\"/lib.prime\", version=\"1.0\">\n");
 
-  RecordingProcessRunner runner([](const std::string &) { return 1; });
+  RecordingProcessRunner runner([](const std::vector<std::string> &) { return 1; });
   primec::ImportResolver resolver(&runner);
   std::string source;
   std::string error;
   CHECK_FALSE(resolver.expandImports(srcPath, source, error, {archivePath.string()}));
   CHECK(error.find("failed to extract archive:") == 0);
   REQUIRE(runner.commands.size() == 1);
-  CHECK(runner.commands.front().find("unzip -q -o ") == 0);
+  CHECK(runner.commands.front().size() == 6);
+  CHECK(runner.commands.front()[0] == "unzip");
+  CHECK(runner.commands.front()[1] == "-q");
+  CHECK(runner.commands.front()[2] == "-o");
+  CHECK(runner.commands.front()[4] == "-d");
 }
 
 TEST_CASE("import resolver supports injected process runner success path") {
@@ -788,8 +792,8 @@ TEST_CASE("import resolver supports injected process runner success path") {
   CHECK(createZip(archivePath, archiveSource));
 
   const std::string srcPath = writeFile(baseDir / "main.prime", "import<\"/lib.prime\", version=\"1.2\">\n");
-  RecordingProcessRunner runner([](const std::string &command) {
-    return primec::systemProcessRunner().run(command);
+  RecordingProcessRunner runner([](const std::vector<std::string> &args) {
+    return primec::systemProcessRunner().run(args);
   });
   primec::ImportResolver resolver(&runner);
 
@@ -799,7 +803,11 @@ TEST_CASE("import resolver supports injected process runner success path") {
   CHECK(error.empty());
   CHECK(source.find("INJECTED_RUNNER_OK") != std::string::npos);
   REQUIRE_FALSE(runner.commands.empty());
-  CHECK(runner.commands.front().find("unzip -q -o ") == 0);
+  CHECK(runner.commands.front().size() == 6);
+  CHECK(runner.commands.front()[0] == "unzip");
+  CHECK(runner.commands.front()[1] == "-q");
+  CHECK(runner.commands.front()[2] == "-o");
+  CHECK(runner.commands.front()[4] == "-d");
 }
 
 TEST_SUITE_END();

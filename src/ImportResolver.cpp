@@ -328,19 +328,6 @@ bool tryConsumeIncludeKeyword(const std::string &payload, size_t &pos, const std
   return true;
 }
 
-std::string quoteShellArg(const std::string &value) {
-  std::string quoted = "'";
-  for (char c : value) {
-    if (c == '\'') {
-      quoted += "'\\''";
-    } else {
-      quoted += c;
-    }
-  }
-  quoted += "'";
-  return quoted;
-}
-
 bool extractArchive(const std::filesystem::path &archive,
                     const ProcessRunner &processRunner,
                     std::filesystem::path &outDir,
@@ -354,9 +341,7 @@ bool extractArchive(const std::filesystem::path &archive,
     error = "failed to create archive cache directory: " + outDir.string();
     return false;
   }
-  std::string command =
-      "unzip -q -o " + quoteShellArg(absPath) + " -d " + quoteShellArg(outDir.string());
-  if (processRunner.run(command) != 0) {
+  if (processRunner.run({"unzip", "-q", "-o", absPath, "-d", outDir.string()}) != 0) {
     error = "failed to extract archive: " + absPath;
     return false;
   }

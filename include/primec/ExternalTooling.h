@@ -4,12 +4,11 @@
 
 #include <filesystem>
 #include <string>
+#include <vector>
 
 namespace primec {
 
-std::string quoteShellPath(const std::filesystem::path &path);
-
-bool commandSucceeds(const ProcessRunner &runner, const std::string &command);
+bool commandSucceeds(const ProcessRunner &runner, const std::vector<std::string> &args);
 
 bool findSpirvCompiler(const ProcessRunner &runner, std::string &toolName);
 
