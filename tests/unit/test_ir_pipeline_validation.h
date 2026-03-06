@@ -1530,6 +1530,36 @@ TEST_CASE("emitter expr control float-literal step formats literals") {
   CHECK(*float32Exponent == "1e3f");
 }
 
+TEST_CASE("emitter expr control integer-literal step formats literals") {
+  primec::Expr notIntegerExpr;
+  notIntegerExpr.kind = primec::Expr::Kind::FloatLiteral;
+  notIntegerExpr.floatValue = "1.0";
+  CHECK_FALSE(primec::emitter::runEmitterExprControlIntegerLiteralStep(notIntegerExpr).has_value());
+
+  primec::Expr signed32Expr;
+  signed32Expr.kind = primec::Expr::Kind::Literal;
+  signed32Expr.isUnsigned = false;
+  signed32Expr.intWidth = 32;
+  signed32Expr.literalValue = static_cast<uint64_t>(static_cast<int32_t>(-3));
+  const auto signed32Value = primec::emitter::runEmitterExprControlIntegerLiteralStep(signed32Expr);
+  REQUIRE(signed32Value.has_value());
+  CHECK(*signed32Value == "-3");
+
+  primec::Expr unsignedExpr = signed32Expr;
+  unsignedExpr.isUnsigned = true;
+  unsignedExpr.literalValue = 7;
+  const auto unsignedValue = primec::emitter::runEmitterExprControlIntegerLiteralStep(unsignedExpr);
+  REQUIRE(unsignedValue.has_value());
+  CHECK(*unsignedValue == "static_cast<uint64_t>(7)");
+
+  primec::Expr signed64Expr = signed32Expr;
+  signed64Expr.intWidth = 64;
+  signed64Expr.literalValue = 11;
+  const auto signed64Value = primec::emitter::runEmitterExprControlIntegerLiteralStep(signed64Expr);
+  REQUIRE(signed64Value.has_value());
+  CHECK(*signed64Value == "static_cast<int64_t>(11)");
+}
+
 TEST_CASE("emitter expr control if-envelope step recognizes block envelopes") {
   primec::Expr notCall;
   notCall.kind = primec::Expr::Kind::Literal;
@@ -1780,6 +1810,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(emitterExprControlHeaderPath));
   const std::string emitterExprControlHeaderSource = readText(emitterExprControlHeaderPath);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIntegerLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEnvelopeStep(candidate)") !=
         std::string::npos);
@@ -1789,6 +1820,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(emitterExprPath));
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIntegerLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);
 }

@@ -3,6 +3,7 @@
 #include "EmitterHelpers.h"
 #include "EmitterExprControlFloatLiteralStep.h"
 #include "EmitterExprControlIfEnvelopeStep.h"
+#include "EmitterExprControlIntegerLiteralStep.h"
 #include "EmitterExprControlNameStep.h"
 
 #include <functional>

@@ -1,15 +1,5 @@
-  if (expr.kind == Expr::Kind::Literal) {
-    if (!expr.isUnsigned && expr.intWidth == 32) {
-      return std::to_string(static_cast<int64_t>(expr.literalValue));
-    }
-    if (expr.isUnsigned) {
-      std::ostringstream out;
-      out << "static_cast<uint64_t>(" << static_cast<uint64_t>(expr.literalValue) << ")";
-      return out.str();
-    }
-    std::ostringstream out;
-    out << "static_cast<int64_t>(" << static_cast<int64_t>(expr.literalValue) << ")";
-    return out.str();
+  if (const auto integerExpr = emitter::runEmitterExprControlIntegerLiteralStep(expr); integerExpr.has_value()) {
+    return *integerExpr;
   }
   if (expr.kind == Expr::Kind::BoolLiteral) {
     return expr.boolValue ? "true" : "false";
