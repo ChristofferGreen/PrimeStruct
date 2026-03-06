@@ -217,7 +217,9 @@ bool SemanticsValidator::validateDefinitions() {
         isRepeatCall(expr) || isReturnCall(expr) || isBlockCall(expr)) {
       return true;
     }
+    const std::string resolved = resolveCalleePath(expr);
     std::string builtinName;
+    const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
            getBuiltinMutationName(expr, builtinName) ||
            getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name)) ||
@@ -227,7 +229,7 @@ bool SemanticsValidator::validateDefinitions() {
            getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
-           getBuiltinCollectionName(expr, builtinName);
+           isCollectionBuiltin;
   };
   auto collectDefinitionIntraBodyCallDiagnostics = [&](const Definition &def,
                                                         std::vector<SemanticDiagnosticRecord> &out) {
@@ -1217,7 +1219,9 @@ bool SemanticsValidator::validateExecutions() {
         isRepeatCall(expr) || isReturnCall(expr) || isBlockCall(expr)) {
       return true;
     }
+    const std::string resolved = resolveCalleePath(expr);
     std::string builtinName;
+    const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
            getBuiltinMutationName(expr, builtinName) ||
            getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name)) ||
@@ -1227,7 +1231,7 @@ bool SemanticsValidator::validateExecutions() {
            getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
-           getBuiltinCollectionName(expr, builtinName);
+           isCollectionBuiltin;
   };
   auto collectExecutionIntraBodyCallDiagnostics = [&](const Execution &exec,
                                                       std::vector<SemanticDiagnosticRecord> &out) {
