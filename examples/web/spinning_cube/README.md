@@ -190,7 +190,8 @@ Expected runtime behavior:
   `simulation_fixed_step_millis=16`, `shader_library_ready=1`,
   `vertex_buffer_ready=1`, `index_buffer_ready=1`,
   `uniform_buffer_ready=1`, `window_created=1`,
-  `swapchain_layer_created=1`, `pipeline_ready=1`, and `frame_rendered=1`.
+  `swapchain_layer_created=1`, `pipeline_ready=1`, `startup_success=1`,
+  `frame_rendered=1`, and `exit_reason=max_frames`.
 
 ### macOS Metal
 ```bash

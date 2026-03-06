@@ -256,15 +256,37 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   return true;
 }
 
+@class PrimeStructWindowHostDelegate;
+
+@interface PrimeStructWindow : NSWindow
+@property(nonatomic, assign) PrimeStructWindowHostDelegate *hostDelegate;
+@end
+
 @interface PrimeStructWindowHostDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
 - (instancetype)initWithMaxFrames:(int)maxFrames
                 cubeSimulationPath:(const std::string &)cubeSimulationPath
                simulationSmokeMode:(bool)simulationSmokeMode;
+- (void)handleEscapeKey;
 - (void)renderFrame:(NSTimer *)timer;
 @end
 
+@implementation PrimeStructWindow
+
+- (void)keyDown:(NSEvent *)event {
+  NSString *characters = [event charactersIgnoringModifiers];
+  if (event.keyCode == 53 || [characters isEqualToString:@"\e"]) {
+    if (self.hostDelegate != nil) {
+      [self.hostDelegate handleEscapeKey];
+      return;
+    }
+  }
+  [super keyDown:event];
+}
+
+@end
+
 @implementation PrimeStructWindowHostDelegate {
-  NSWindow *_window;
+  PrimeStructWindow *_window;
   CAMetalLayer *_metalLayer;
   id<MTLDevice> _device;
   id<MTLCommandQueue> _queue;
@@ -281,6 +303,7 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   bool _printedFirstFrame;
   bool _printedSimulationFrame;
   bool _simulationSmokeMode;
+  bool _startupComplete;
   std::string _cubeSimulationPath;
   std::vector<SimulationFrameState> _simulationFrames;
   NSUInteger _indexCount;
@@ -298,6 +321,7 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     _printedFirstFrame = false;
     _printedSimulationFrame = false;
     _simulationSmokeMode = simulationSmokeMode;
+    _startupComplete = false;
     _cubeSimulationPath = cubeSimulationPath;
     _indexCount = CubeIndices.size();
     _depthTextureSize = CGSizeMake(0.0, 0.0);
@@ -306,6 +330,11 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 }
 
 - (void)failAndTerminate:(int)code message:(const char *)message details:(const char *)details {
+  if (_startupComplete) {
+    std::cerr << "runtime_failure=1\n";
+  } else {
+    std::cerr << "startup_failure=1\n";
+  }
   if (details == nullptr || details[0] == '\0') {
     std::cerr << message << "\n";
   } else {
@@ -448,14 +477,15 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   NSRect frame = NSMakeRect(120.0, 120.0, 960.0, 640.0);
   const NSWindowStyleMask styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                                       NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
-  _window = [[NSWindow alloc] initWithContentRect:frame
-                                        styleMask:styleMask
-                                          backing:NSBackingStoreBuffered
-                                            defer:NO];
+  _window = [[PrimeStructWindow alloc] initWithContentRect:frame
+                                                  styleMask:styleMask
+                                                    backing:NSBackingStoreBuffered
+                                                      defer:NO];
   if (_window == nil) {
     [self failAndTerminate:79 message:"failed to create native window" details:""];
     return;
   }
+  _window.hostDelegate = self;
   _window.title = @"PrimeStruct Spinning Cube (Window Host)";
   _window.delegate = self;
 
@@ -475,6 +505,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   std::cout << "window_created=1\n";
   std::cout << "swapchain_layer_created=1\n";
   std::cout << "pipeline_ready=1\n";
+  std::cout << "startup_success=1\n";
+  _startupComplete = true;
 
   _frameTimer = [NSTimer scheduledTimerWithTimeInterval:(1.0 / 60.0)
                                                   target:self
@@ -588,10 +620,21 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     _renderedFrameCount += 1;
 
     if (_maxFrames > 0 && _renderedFrameCount >= _maxFrames) {
+      std::cout << "exit_reason=max_frames\n";
       gExitCode = 0;
       [NSApp terminate:nil];
     }
   }
+}
+
+- (void)handleEscapeKey {
+  if (_frameTimer != nil) {
+    [_frameTimer invalidate];
+    _frameTimer = nil;
+  }
+  std::cout << "exit_reason=esc_key\n";
+  gExitCode = 0;
+  [NSApp terminate:nil];
 }
 
 - (void)windowWillClose:(NSNotification *)notification {
@@ -600,6 +643,7 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     [_frameTimer invalidate];
     _frameTimer = nil;
   }
+  std::cout << "exit_reason=window_close\n";
   gExitCode = 0;
   [NSApp terminate:nil];
 }

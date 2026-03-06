@@ -578,6 +578,13 @@ TEST_CASE("spinning cube native window host locks indexed cube pipeline resource
   CHECK(hostSource.find("setVertexBuffer:_vertexBuffer offset:0 atIndex:0") != std::string::npos);
   CHECK(hostSource.find("setVertexBuffer:_uniformBuffer offset:0 atIndex:1") != std::string::npos);
   CHECK(hostSource.find("drawIndexedPrimitives:MTLPrimitiveTypeTriangle") != std::string::npos);
+  CHECK(hostSource.find("keyCode == 53") != std::string::npos);
+  CHECK(hostSource.find("handleEscapeKey") != std::string::npos);
+  CHECK(hostSource.find("startup_success=1") != std::string::npos);
+  CHECK(hostSource.find("startup_failure=1") != std::string::npos);
+  CHECK(hostSource.find("exit_reason=window_close") != std::string::npos);
+  CHECK(hostSource.find("exit_reason=esc_key") != std::string::npos);
+  CHECK(hostSource.find("exit_reason=max_frames") != std::string::npos);
 }
 
 TEST_CASE("spinning cube native window host sample compiles and validates args deterministically") {
@@ -610,6 +617,11 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(hostSource.find("vertex_buffer_ready=1") != std::string::npos);
   CHECK(hostSource.find("index_buffer_ready=1") != std::string::npos);
   CHECK(hostSource.find("uniform_buffer_ready=1") != std::string::npos);
+  CHECK(hostSource.find("startup_success=1") != std::string::npos);
+  CHECK(hostSource.find("startup_failure=1") != std::string::npos);
+  CHECK(hostSource.find("exit_reason=max_frames") != std::string::npos);
+  CHECK(hostSource.find("exit_reason=window_close") != std::string::npos);
+  CHECK(hostSource.find("exit_reason=esc_key") != std::string::npos);
   CHECK(hostSource.find("simulation_tick=") != std::string::npos);
   CHECK(hostSource.find("window_created=1") != std::string::npos);
   CHECK(hostSource.find("swapchain_layer_created=1") != std::string::npos);
@@ -689,6 +701,8 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
       quoteShellArg(badStreamOutPath.string()) + " 2> " + quoteShellArg(badStreamErrPath.string());
   CHECK(runCommand(badStreamCmd) == 69);
   CHECK(readFile(badStreamOutPath.string()).empty());
+  CHECK(readFile(badStreamErrPath.string())
+            .find("startup_failure=1") != std::string::npos);
   CHECK(readFile(badStreamErrPath.string())
             .find("failed to load cube simulation stream: cube simulation stream was empty") != std::string::npos);
 
@@ -1341,7 +1355,8 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "`simulation_fixed_step_millis=16`, `shader_library_ready=1`,",
       "`vertex_buffer_ready=1`, `index_buffer_ready=1`,",
       "`uniform_buffer_ready=1`, `window_created=1`,",
-      "`swapchain_layer_created=1`, `pipeline_ready=1`, and `frame_rendered=1`.",
+      "`swapchain_layer_created=1`, `pipeline_ready=1`, `startup_success=1`,",
+      "`frame_rendered=1`, and `exit_reason=max_frames`.",
       "For a visible rotating window today, use the browser path (`index.html` + `main.js`).",
       "shared-source `/main` is still unsupported for native emit until",
       "Diagnostics: prints `native host verified cube simulation output`.",

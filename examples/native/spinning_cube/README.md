@@ -46,4 +46,10 @@ Expected diagnostics include:
 - `window_created=1`
 - `swapchain_layer_created=1`
 - `pipeline_ready=1`
+- `startup_success=1`
 - `frame_rendered=1`
+- `exit_reason=max_frames` (bounded smoke run)
+
+Close handling diagnostics:
+- `exit_reason=window_close` when the user closes the window.
+- `exit_reason=esc_key` when ESC is pressed in the focused window.
