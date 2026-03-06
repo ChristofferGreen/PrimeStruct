@@ -389,12 +389,20 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::Dup:
+      out << "        if (sp == 0) {\n";
+      out << "          std::cerr << \"IR stack underflow on dup\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
       out << "        stack[sp] = stack[sp - 1];\n";
       out << "        ++sp;\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::Pop:
+      out << "        if (sp == 0) {\n";
+      out << "          std::cerr << \"IR stack underflow on pop\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
       out << "        --sp;\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
