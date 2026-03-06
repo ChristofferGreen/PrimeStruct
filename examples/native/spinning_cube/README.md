@@ -22,6 +22,10 @@ Shared-source `/main` remains unsupported for native emit until struct-return
 lowering parity is restored.
 
 ## Window Host Build (macOS)
+From the repo root, a one-command launcher can build and run the window host:
+- `./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec`
+
+Or run the manual steps:
 1. Build the deterministic simulation stream binary:
    - `./primec --emit=native ../../web/spinning_cube/cube.prime -o ./cube_native_frame_stream --entry /cubeNativeAbiEmitFrameStream`
 2. Build the native window host:

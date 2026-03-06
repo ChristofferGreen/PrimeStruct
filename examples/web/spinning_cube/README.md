@@ -196,6 +196,17 @@ Expected runtime behavior:
   `startup_failure_stage`, `startup_failure_reason`, and
   `startup_failure_exit_code` fields before exit.
 
+### Native Window Launcher (macOS)
+```bash
+./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec
+```
+- Builds both the cube simulation stream binary and the native window host into
+  `build-debug/spinning-cube-native-window`, then launches the host.
+- Runs `scripts/preflight_native_spinning_cube_window.sh` first unless
+  `--skip-preflight` is provided.
+- Optional launcher flags: `--out-dir`, `--max-frames`, and
+  `--simulation-smoke`.
+
 ### macOS Metal
 ```bash
 xcrun metal -std=metal3.0 -c examples/metal/spinning_cube/cube.metal -o /tmp/cube.air
