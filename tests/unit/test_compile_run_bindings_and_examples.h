@@ -342,6 +342,38 @@ TEST_CASE("spinning cube native window ABI contract conformance stays determinis
   }
 }
 
+TEST_CASE("spinning cube native window host frame stream entry stays deterministic") {
+  std::filesystem::path cubePath =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "cube.prime";
+  if (!std::filesystem::exists(cubePath)) {
+    cubePath = std::filesystem::current_path() / "examples" / "web" / "spinning_cube" / "cube.prime";
+  }
+  REQUIRE(std::filesystem::exists(cubePath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_window_frame_stream";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path streamBinaryPath = outDir / "cube_native_frame_stream";
+  const std::string compileCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(streamBinaryPath.string()) +
+      " --entry /cubeNativeAbiEmitFrameStream";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(std::filesystem::exists(streamBinaryPath));
+
+  const std::filesystem::path streamOutPath = outDir / "cube_native_frame_stream.out.txt";
+  const std::string runCmd =
+      quoteShellArg(streamBinaryPath.string()) + " > " + quoteShellArg(streamOutPath.string());
+  CHECK(runCommand(runCmd) == 0);
+
+  const std::string streamOutput = readFile(streamOutPath.string());
+  CHECK(streamOutput.rfind("0\n0\n100\n0\n1\n16\n99\n1\n", 0) == 0);
+  CHECK(streamOutput.find("\n2\n32\n98\n2\n") != std::string::npos);
+}
+
 TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
   std::filesystem::path sampleDir =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
@@ -525,19 +557,32 @@ TEST_CASE("spinning cube native host runtime smoke emits success marker") {
 }
 
 TEST_CASE("spinning cube native window host sample compiles and validates args deterministically") {
+  std::filesystem::path webSampleDir =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
   std::filesystem::path nativeSampleDir =
       std::filesystem::path("..") / "examples" / "native" / "spinning_cube";
+  if (!std::filesystem::exists(webSampleDir)) {
+    webSampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
   if (!std::filesystem::exists(nativeSampleDir)) {
     nativeSampleDir = std::filesystem::current_path() / "examples" / "native" / "spinning_cube";
   }
+  REQUIRE(std::filesystem::exists(webSampleDir));
   REQUIRE(std::filesystem::exists(nativeSampleDir));
 
+  const std::filesystem::path cubePath = webSampleDir / "cube.prime";
   const std::filesystem::path hostSourcePath = nativeSampleDir / "window_host.mm";
+  REQUIRE(std::filesystem::exists(cubePath));
   REQUIRE(std::filesystem::exists(hostSourcePath));
 
   const std::string hostSource = readFile(hostSourcePath.string());
   CHECK(hostSource.find("#import <AppKit/AppKit.h>") != std::string::npos);
   CHECK(hostSource.find("#import <QuartzCore/CAMetalLayer.h>") != std::string::npos);
+  CHECK(hostSource.find("--cube-sim") != std::string::npos);
+  CHECK(hostSource.find("--simulation-smoke") != std::string::npos);
+  CHECK(hostSource.find("simulation_stream_loaded=1") != std::string::npos);
+  CHECK(hostSource.find("simulation_fixed_step_millis=16") != std::string::npos);
+  CHECK(hostSource.find("simulation_tick=") != std::string::npos);
   CHECK(hostSource.find("window_created=1") != std::string::npos);
   CHECK(hostSource.find("swapchain_layer_created=1") != std::string::npos);
   CHECK(hostSource.find("pipeline_ready=1") != std::string::npos);
@@ -569,7 +614,27 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
                               " 2> " + quoteShellArg(helpErrPath.string());
   CHECK(runCommand(helpCmd) == 0);
   CHECK(readFile(helpErrPath.string()).empty());
-  CHECK(readFile(helpOutPath.string()).find("usage: window_host [--max-frames <positive-int>]") != std::string::npos);
+  CHECK(readFile(helpOutPath.string())
+            .find("usage: window_host --cube-sim <path> [--max-frames <positive-int>] [--simulation-smoke]") !=
+        std::string::npos);
+
+  const std::filesystem::path missingCubeOutPath = outDir / "window_host.missing_cube.out.txt";
+  const std::filesystem::path missingCubeErrPath = outDir / "window_host.missing_cube.err.txt";
+  const std::string missingCubeCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --max-frames 1 > " + quoteShellArg(missingCubeOutPath.string()) + " 2> " +
+      quoteShellArg(missingCubeErrPath.string());
+  CHECK(runCommand(missingCubeCmd) == 64);
+  CHECK(readFile(missingCubeOutPath.string()).empty());
+  CHECK(readFile(missingCubeErrPath.string()).find("missing required --cube-sim <path>") != std::string::npos);
+
+  const std::filesystem::path missingCubeValueOutPath = outDir / "window_host.missing_cube_value.out.txt";
+  const std::filesystem::path missingCubeValueErrPath = outDir / "window_host.missing_cube_value.err.txt";
+  const std::string missingCubeValueCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --cube-sim > " + quoteShellArg(missingCubeValueOutPath.string()) + " 2> " +
+      quoteShellArg(missingCubeValueErrPath.string());
+  CHECK(runCommand(missingCubeValueCmd) == 64);
+  CHECK(readFile(missingCubeValueOutPath.string()).empty());
+  CHECK(readFile(missingCubeValueErrPath.string()).find("missing value for --cube-sim") != std::string::npos);
 
   const std::filesystem::path badArgOutPath = outDir / "window_host.bad_arg.out.txt";
   const std::filesystem::path badArgErrPath = outDir / "window_host.bad_arg.err.txt";
@@ -588,6 +653,30 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(runCommand(badFramesCmd) == 64);
   CHECK(readFile(badFramesOutPath.string()).empty());
   CHECK(readFile(badFramesErrPath.string()).find("invalid value for --max-frames: 0") != std::string::npos);
+
+  const std::filesystem::path frameStreamBinaryPath = outDir / "cube_native_frame_stream";
+  const std::string compileFrameStreamCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(frameStreamBinaryPath.string()) +
+      " --entry /cubeNativeAbiEmitFrameStream";
+  CHECK(runCommand(compileFrameStreamCmd) == 0);
+  CHECK(std::filesystem::exists(frameStreamBinaryPath));
+
+  const std::filesystem::path smokeOutPath = outDir / "window_host.simulation_smoke.out.txt";
+  const std::filesystem::path smokeErrPath = outDir / "window_host.simulation_smoke.err.txt";
+  const std::string smokeCmd = quoteShellArg(hostBinaryPath.string()) + " --cube-sim " +
+                               quoteShellArg(frameStreamBinaryPath.string()) +
+                               " --simulation-smoke > " + quoteShellArg(smokeOutPath.string()) + " 2> " +
+                               quoteShellArg(smokeErrPath.string());
+  CHECK(runCommand(smokeCmd) == 0);
+  CHECK(readFile(smokeErrPath.string()).empty());
+  const std::string smokeOutput = readFile(smokeOutPath.string());
+  CHECK(smokeOutput.find("simulation_stream_loaded=1") != std::string::npos);
+  CHECK(smokeOutput.find("simulation_frames_loaded=600") != std::string::npos);
+  CHECK(smokeOutput.find("simulation_fixed_step_millis=16") != std::string::npos);
+  CHECK(smokeOutput.find("simulation_smoke_tick=0") != std::string::npos);
+  CHECK(smokeOutput.find("simulation_smoke_angle_milli=0") != std::string::npos);
+  CHECK(smokeOutput.find("simulation_smoke_axis_x_centi=100") != std::string::npos);
+  CHECK(smokeOutput.find("simulation_smoke_axis_y_centi=0") != std::string::npos);
 }
 
 TEST_CASE("spinning cube fixed-step snapshots stay deterministic") {
@@ -1174,9 +1263,10 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "python3 -m http.server 8080 --bind 127.0.0.1 --directory examples/web/spinning_cube",
       "./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native --entry /mainNative",
       "c++ -std=c++17 examples/native/spinning_cube/main.cpp -o /tmp/spinning_cube_host",
+      "./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native_frame_stream --entry /cubeNativeAbiEmitFrameStream",
       "xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework "
       "AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host",
-      "/tmp/spinning_cube_window_host --max-frames 120",
+      "/tmp/spinning_cube_window_host --cube-sim /tmp/cube_native_frame_stream --max-frames 120",
       "xcrun metal -std=metal3.0 -c examples/metal/spinning_cube/cube.metal -o /tmp/cube.air",
       "xcrun metallib /tmp/cube.air -o /tmp/cube.metallib",
       "xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework "
@@ -1199,6 +1289,7 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "`cubeNativeFrameInit*`, `cubeNativeFrameStep*`,",
       "`cubeNativeMeshVertexCount`, `cubeNativeMeshIndexCount`, and",
       "`cubeNativeFrameStepSnapshotCode`.",
+      "`cubeNativeAbiEmitFrameStream`.",
       "## Native Window Host ABI Contract (v1)",
       "`cubeNativeAbiVersion` returns `1`.",
       "`cubeNativeAbiFixedStepMillis` returns `16` (host step size in milliseconds).",
@@ -1206,8 +1297,9 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "`cubeNativeAbiUniformMeshIndexCount`",
       "`201` (`cubeNativeAbiStatusInvalidDeltaMillis`) means invalid tick delta.",
       "Conformance wrappers (`cubeNativeAbiConformance*`) lock deterministic ABI",
-      "Diagnostics: prints `window_created=1`, `swapchain_layer_created=1`,",
-      "`pipeline_ready=1`, and `frame_rendered=1`.",
+      "Diagnostics: prints `simulation_stream_loaded=1`,",
+      "`simulation_fixed_step_millis=16`, `window_created=1`,",
+      "`swapchain_layer_created=1`, `pipeline_ready=1`, and `frame_rendered=1`.",
       "For a visible rotating window today, use the browser path (`index.html` + `main.js`).",
       "shared-source `/main` is still unsupported for native emit until",
       "Diagnostics: prints `native host verified cube simulation output`.",
@@ -1302,6 +1394,13 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       " --entry /mainNative";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(std::filesystem::exists(nativePath));
+
+  const std::filesystem::path nativeFrameStreamPath = outDir / "cube_native_frame_stream";
+  const std::string compileNativeFrameStreamCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(nativeFrameStreamPath.string()) + " --entry /cubeNativeAbiEmitFrameStream";
+  CHECK(runCommand(compileNativeFrameStreamCmd) == 0);
+  CHECK(std::filesystem::exists(nativeFrameStreamPath));
 
   std::string cxx = "";
   if (runCommand("c++ --version > /dev/null 2>&1") == 0) {

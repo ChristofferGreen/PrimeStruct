@@ -51,7 +51,8 @@ This example is a milestone target for cross-platform backend work.
     `cubeNativeFrameStepSnapshotCode`.
   - Native window host ABI v1 entrypoints:
     `cubeNativeAbiVersion`, `cubeNativeAbiInit*`, `cubeNativeAbiTick*`,
-    `cubeNativeAbiUniform*`, and `cubeNativeAbiConformance*`.
+    `cubeNativeAbiUniform*`, `cubeNativeAbiConformance*`, and
+    `cubeNativeAbiEmitFrameStream`.
   - `mainNative`: native-only split entrypoint for host smoke while native
     `/main` support remains blocked on struct-return lowering.
 
@@ -81,6 +82,10 @@ This example is a milestone target for cross-platform backend work.
   - `201` (`cubeNativeAbiStatusInvalidDeltaMillis`) means invalid tick delta.
   - Conformance wrappers (`cubeNativeAbiConformance*`) lock deterministic ABI
     behavior in compile-run tests.
+- Host integration stream:
+  - `cubeNativeAbiEmitFrameStream` prints deterministic fixed-step frame-state
+    quads (`tick`, `angleMilli`, `axisXCenti`, `axisYCenti`) for host-driven
+    render loops.
 
 ## Current Browser Host Assets
 - `index.html` provides the canvas shell and module bootstrap.
@@ -171,13 +176,15 @@ Expected runtime behavior:
 
 ### Native Window Host (macOS)
 ```bash
+./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native_frame_stream --entry /cubeNativeAbiEmitFrameStream
 xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host
-/tmp/spinning_cube_window_host --max-frames 120
+/tmp/spinning_cube_window_host --cube-sim /tmp/cube_native_frame_stream --max-frames 120
 ```
 Expected runtime behavior:
 - Startup: opens a desktop window and configures a `CAMetalLayer` swapchain.
-- Diagnostics: prints `window_created=1`, `swapchain_layer_created=1`,
-  `pipeline_ready=1`, and `frame_rendered=1`.
+- Diagnostics: prints `simulation_stream_loaded=1`,
+  `simulation_fixed_step_millis=16`, `window_created=1`,
+  `swapchain_layer_created=1`, `pipeline_ready=1`, and `frame_rendered=1`.
 
 ### macOS Metal
 ```bash

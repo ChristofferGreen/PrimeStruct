@@ -22,14 +22,20 @@ Shared-source `/main` remains unsupported for native emit until struct-return
 lowering parity is restored.
 
 ## Window Host Build (macOS)
-1. Build the native window host:
+1. Build the deterministic simulation stream binary:
+   - `./primec --emit=native ../../web/spinning_cube/cube.prime -o ./cube_native_frame_stream --entry /cubeNativeAbiEmitFrameStream`
+2. Build the native window host:
    - `xcrun clang++ -std=c++17 -fobjc-arc window_host.mm -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o spinning_cube_window_host`
-2. Run the window host:
-   - `./spinning_cube_window_host`
-3. Optional bounded smoke run:
-   - `./spinning_cube_window_host --max-frames 120`
+3. Run the window host:
+   - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream`
+4. Optional bounded smoke run:
+   - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream --max-frames 120`
+5. Optional non-GUI integration smoke:
+   - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream --simulation-smoke`
 
 Expected diagnostics include:
+- `simulation_stream_loaded=1`
+- `simulation_fixed_step_millis=16`
 - `window_created=1`
 - `swapchain_layer_created=1`
 - `pipeline_ready=1`

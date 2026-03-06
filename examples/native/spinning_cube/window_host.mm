@@ -2,11 +2,20 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <string>
+#include <vector>
+
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/wait.h>
+#endif
 
 namespace {
 
@@ -48,7 +57,17 @@ fragment float4 windowFragmentMain(VertexOut in [[stage_in]]) {
 }
 )";
 
+constexpr int SimulationStreamFieldsPerFrame = 4;
+constexpr int SimulationFixedStepMillis = 16;
+
 int gExitCode = 0;
+
+struct SimulationFrameState {
+  int tick = 0;
+  int angleMilli = 0;
+  int axisXCenti = 0;
+  int axisYCenti = 0;
+};
 
 bool parsePositiveInt(const char *text, int &valueOut) {
   if (text == nullptr || *text == '\0') {
@@ -66,8 +85,110 @@ bool parsePositiveInt(const char *text, int &valueOut) {
   return true;
 }
 
+bool parseSignedInt(const char *text, int &valueOut) {
+  if (text == nullptr || *text == '\0') {
+    return false;
+  }
+  char *end = nullptr;
+  const long parsed = std::strtol(text, &end, 10);
+  if (end == text || *end != '\0') {
+    return false;
+  }
+  if (parsed < std::numeric_limits<int>::min() || parsed > std::numeric_limits<int>::max()) {
+    return false;
+  }
+  valueOut = static_cast<int>(parsed);
+  return true;
+}
+
+std::string shellQuote(const std::string &value) {
+  std::string quoted = "'";
+  for (char c : value) {
+    if (c == '\'') {
+      quoted += "'\\''";
+    } else {
+      quoted += c;
+    }
+  }
+  quoted += "'";
+  return quoted;
+}
+
+int decodeExitCode(int rawCode) {
+#if defined(__unix__) || defined(__APPLE__)
+  if (rawCode == -1) {
+    return -1;
+  }
+  if (WIFEXITED(rawCode)) {
+    return WEXITSTATUS(rawCode);
+  }
+  return -1;
+#else
+  return rawCode;
+#endif
+}
+
+bool loadSimulationFrames(const std::string &cubeSimulationPath,
+                          std::vector<SimulationFrameState> &framesOut,
+                          std::string &errorOut) {
+  framesOut.clear();
+  const std::string command = shellQuote(cubeSimulationPath);
+  FILE *pipe = popen(command.c_str(), "r");
+  if (pipe == nullptr) {
+    errorOut = "failed to execute cube simulation binary";
+    return false;
+  }
+
+  std::vector<int> values;
+  std::array<char, 256> buffer{};
+  while (std::fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
+    std::string line(buffer.data());
+    while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
+      line.pop_back();
+    }
+    if (line.empty()) {
+      continue;
+    }
+    int parsedValue = 0;
+    if (!parseSignedInt(line.c_str(), parsedValue)) {
+      errorOut = "invalid cube simulation stream value: " + line;
+      pclose(pipe);
+      return false;
+    }
+    values.push_back(parsedValue);
+  }
+
+  const int rawExitCode = pclose(pipe);
+  const int exitCode = decodeExitCode(rawExitCode);
+  if (exitCode != 0) {
+    errorOut = "cube simulation binary exited with code " + std::to_string(exitCode);
+    return false;
+  }
+  if (values.empty()) {
+    errorOut = "cube simulation stream was empty";
+    return false;
+  }
+  if (values.size() % SimulationStreamFieldsPerFrame != 0) {
+    errorOut = "cube simulation stream value count was not divisible by 4";
+    return false;
+  }
+
+  for (size_t i = 0; i < values.size(); i += SimulationStreamFieldsPerFrame) {
+    SimulationFrameState frame;
+    frame.tick = values[i];
+    frame.angleMilli = values[i + 1];
+    frame.axisXCenti = values[i + 2];
+    frame.axisYCenti = values[i + 3];
+    framesOut.push_back(frame);
+  }
+
+  return true;
+}
+
 @interface PrimeStructWindowHostDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
-- (instancetype)initWithMaxFrames:(int)maxFrames;
+- (instancetype)initWithMaxFrames:(int)maxFrames
+                cubeSimulationPath:(const std::string &)cubeSimulationPath
+               simulationSmokeMode:(bool)simulationSmokeMode;
 - (void)renderFrame:(NSTimer *)timer;
 @end
 
@@ -80,15 +201,26 @@ bool parsePositiveInt(const char *text, int &valueOut) {
   NSTimer *_frameTimer;
   int _maxFrames;
   int _frameIndex;
+  int _renderedFrameCount;
   bool _printedFirstFrame;
+  bool _printedSimulationFrame;
+  bool _simulationSmokeMode;
+  std::string _cubeSimulationPath;
+  std::vector<SimulationFrameState> _simulationFrames;
 }
 
-- (instancetype)initWithMaxFrames:(int)maxFrames {
+- (instancetype)initWithMaxFrames:(int)maxFrames
+                cubeSimulationPath:(const std::string &)cubeSimulationPath
+               simulationSmokeMode:(bool)simulationSmokeMode {
   self = [super init];
   if (self != nil) {
     _maxFrames = maxFrames;
     _frameIndex = 0;
+    _renderedFrameCount = 0;
     _printedFirstFrame = false;
+    _printedSimulationFrame = false;
+    _simulationSmokeMode = simulationSmokeMode;
+    _cubeSimulationPath = cubeSimulationPath;
   }
   return self;
 }
@@ -105,6 +237,27 @@ bool parsePositiveInt(const char *text, int &valueOut) {
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
   (void)notification;
+
+  std::string simulationError;
+  if (!loadSimulationFrames(_cubeSimulationPath, _simulationFrames, simulationError)) {
+    [self failAndTerminate:69 message:"failed to load cube simulation stream" details:simulationError.c_str()];
+    return;
+  }
+
+  std::cout << "simulation_stream_loaded=1\n";
+  std::cout << "simulation_frames_loaded=" << _simulationFrames.size() << "\n";
+  std::cout << "simulation_fixed_step_millis=" << SimulationFixedStepMillis << "\n";
+
+  if (_simulationSmokeMode) {
+    const SimulationFrameState &frame = _simulationFrames.front();
+    std::cout << "simulation_smoke_tick=" << frame.tick << "\n";
+    std::cout << "simulation_smoke_angle_milli=" << frame.angleMilli << "\n";
+    std::cout << "simulation_smoke_axis_x_centi=" << frame.axisXCenti << "\n";
+    std::cout << "simulation_smoke_axis_y_centi=" << frame.axisYCenti << "\n";
+    gExitCode = 0;
+    [NSApp terminate:nil];
+    return;
+  }
 
   _device = MTLCreateSystemDefaultDevice();
   if (_device == nil) {
@@ -188,7 +341,7 @@ bool parsePositiveInt(const char *text, int &valueOut) {
 - (void)renderFrame:(NSTimer *)timer {
   (void)timer;
   @autoreleasepool {
-    if (_metalLayer == nil || _queue == nil || _pipeline == nil) {
+    if (_metalLayer == nil || _queue == nil || _pipeline == nil || _simulationFrames.empty()) {
       return;
     }
 
@@ -209,11 +362,22 @@ bool parsePositiveInt(const char *text, int &valueOut) {
       return;
     }
 
+    const size_t frameSlot =
+        std::min(static_cast<size_t>(_frameIndex), _simulationFrames.size() - 1);
+    const SimulationFrameState &simulationFrame = _simulationFrames[frameSlot];
+    const float angle = static_cast<float>(simulationFrame.angleMilli) / 1000.0f;
+
+    const double axisXNorm =
+        std::clamp((static_cast<double>(simulationFrame.axisXCenti) + 100.0) / 200.0, 0.0, 1.0);
+    const double axisYNorm =
+        std::clamp((static_cast<double>(simulationFrame.axisYCenti) + 100.0) / 200.0, 0.0, 1.0);
+
     MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
     pass.colorAttachments[0].texture = drawable.texture;
     pass.colorAttachments[0].loadAction = MTLLoadActionClear;
     pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-    pass.colorAttachments[0].clearColor = MTLClearColorMake(0.03, 0.04, 0.06, 1.0);
+    pass.colorAttachments[0].clearColor =
+        MTLClearColorMake(0.03 + (0.08 * axisXNorm), 0.04 + (0.08 * axisYNorm), 0.06, 1.0);
 
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
     id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
@@ -222,7 +386,6 @@ bool parsePositiveInt(const char *text, int &valueOut) {
       return;
     }
 
-    const float angle = static_cast<float>(_frameIndex) * 0.025f;
     [encoder setRenderPipelineState:_pipeline];
     [encoder setVertexBytes:&angle length:sizeof(float) atIndex:0];
     [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
@@ -231,13 +394,25 @@ bool parsePositiveInt(const char *text, int &valueOut) {
     [commandBuffer presentDrawable:drawable];
     [commandBuffer commit];
 
-    _frameIndex += 1;
+    if (!_printedSimulationFrame) {
+      std::cout << "simulation_tick=" << simulationFrame.tick << "\n";
+      std::cout << "simulation_angle_milli=" << simulationFrame.angleMilli << "\n";
+      std::cout << "simulation_axis_x_centi=" << simulationFrame.axisXCenti << "\n";
+      std::cout << "simulation_axis_y_centi=" << simulationFrame.axisYCenti << "\n";
+      _printedSimulationFrame = true;
+    }
+
     if (!_printedFirstFrame) {
       std::cout << "frame_rendered=1\n";
       _printedFirstFrame = true;
     }
 
-    if (_maxFrames > 0 && _frameIndex >= _maxFrames) {
+    if (_frameIndex + 1 < static_cast<int>(_simulationFrames.size())) {
+      _frameIndex += 1;
+    }
+    _renderedFrameCount += 1;
+
+    if (_maxFrames > 0 && _renderedFrameCount >= _maxFrames) {
       gExitCode = 0;
       [NSApp terminate:nil];
     }
@@ -260,10 +435,14 @@ bool parsePositiveInt(const char *text, int &valueOut) {
 
 int main(int argc, char **argv) {
   int maxFrames = 0;
+  std::string cubeSimulationPath;
+  bool simulationSmokeMode = false;
+
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
     if (arg == "--help") {
-      std::cout << "usage: window_host [--max-frames <positive-int>]\n";
+      std::cout
+          << "usage: window_host --cube-sim <path> [--max-frames <positive-int>] [--simulation-smoke]\n";
       return 0;
     }
     if (arg == "--max-frames") {
@@ -280,15 +459,35 @@ int main(int argc, char **argv) {
       i += 1;
       continue;
     }
+    if (arg == "--cube-sim") {
+      if (i + 1 >= argc) {
+        std::cerr << "missing value for --cube-sim\n";
+        return 64;
+      }
+      cubeSimulationPath = argv[i + 1];
+      i += 1;
+      continue;
+    }
+    if (arg == "--simulation-smoke") {
+      simulationSmokeMode = true;
+      continue;
+    }
     std::cerr << "unknown arg: " << arg << "\n";
+    return 64;
+  }
+
+  if (cubeSimulationPath.empty()) {
+    std::cerr << "missing required --cube-sim <path>\n";
     return 64;
   }
 
   @autoreleasepool {
     NSApplication *app = [NSApplication sharedApplication];
-    app.activationPolicy = NSApplicationActivationPolicyRegular;
-    PrimeStructWindowHostDelegate *delegate =
-        [[PrimeStructWindowHostDelegate alloc] initWithMaxFrames:maxFrames];
+    app.activationPolicy =
+        simulationSmokeMode ? NSApplicationActivationPolicyProhibited : NSApplicationActivationPolicyRegular;
+    PrimeStructWindowHostDelegate *delegate = [[PrimeStructWindowHostDelegate alloc] initWithMaxFrames:maxFrames
+                                                                                     cubeSimulationPath:cubeSimulationPath
+                                                                                    simulationSmokeMode:simulationSmokeMode];
     app.delegate = delegate;
     [app run];
   }
