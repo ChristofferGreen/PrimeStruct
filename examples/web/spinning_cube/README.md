@@ -11,7 +11,8 @@ This example is a milestone target for cross-platform backend work.
 - Native emit `/main` is currently unsupported (`native backend does not support return type on /cubeInit`).
 - Native smoke runs through `/mainNative` and `examples/native/spinning_cube/main.cpp`.
 - For a visible rotating window today, use the browser path (`index.html` + `main.js`).
-- macOS Metal currently provides shader/host smoke (`frame_rendered=1`) rather than full windowed runtime parity.
+- macOS now has a real native window host sample at
+  `examples/native/spinning_cube/window_host.mm` (window/layer/render-loop bring-up).
 - Windowed native parity target is tracked in `docs/todo.md` under `Native Windowed Spinning Cube (Roadmap)`.
 
 ## First Supported Native Window Target (v1)
@@ -167,6 +168,16 @@ Expected runtime behavior:
 - Diagnostics: prints `native host verified cube simulation output`.
 - Note: shared-source `/main` is still unsupported for native emit until
   struct-return lowering parity is restored.
+
+### Native Window Host (macOS)
+```bash
+xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host
+/tmp/spinning_cube_window_host --max-frames 120
+```
+Expected runtime behavior:
+- Startup: opens a desktop window and configures a `CAMetalLayer` swapchain.
+- Diagnostics: prints `window_created=1`, `swapchain_layer_created=1`,
+  `pipeline_ready=1`, and `frame_rendered=1`.
 
 ### macOS Metal
 ```bash

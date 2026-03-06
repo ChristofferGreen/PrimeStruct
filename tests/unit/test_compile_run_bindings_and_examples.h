@@ -524,6 +524,72 @@ TEST_CASE("spinning cube native host runtime smoke emits success marker") {
   CHECK(readFile(hostOutPath.string()).find("native host verified cube simulation output") != std::string::npos);
 }
 
+TEST_CASE("spinning cube native window host sample compiles and validates args deterministically") {
+  std::filesystem::path nativeSampleDir =
+      std::filesystem::path("..") / "examples" / "native" / "spinning_cube";
+  if (!std::filesystem::exists(nativeSampleDir)) {
+    nativeSampleDir = std::filesystem::current_path() / "examples" / "native" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(nativeSampleDir));
+
+  const std::filesystem::path hostSourcePath = nativeSampleDir / "window_host.mm";
+  REQUIRE(std::filesystem::exists(hostSourcePath));
+
+  const std::string hostSource = readFile(hostSourcePath.string());
+  CHECK(hostSource.find("#import <AppKit/AppKit.h>") != std::string::npos);
+  CHECK(hostSource.find("#import <QuartzCore/CAMetalLayer.h>") != std::string::npos);
+  CHECK(hostSource.find("window_created=1") != std::string::npos);
+  CHECK(hostSource.find("swapchain_layer_created=1") != std::string::npos);
+  CHECK(hostSource.find("pipeline_ready=1") != std::string::npos);
+  CHECK(hostSource.find("frame_rendered=1") != std::string::npos);
+
+  if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
+    INFO("xcrun unavailable; skipping native window host compile smoke");
+    return;
+  }
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_window_host_compile";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path hostBinaryPath = outDir / "spinning_cube_window_host";
+  const std::string compileHostCmd =
+      "xcrun clang++ -std=c++17 -fobjc-arc " + quoteShellArg(hostSourcePath.string()) +
+      " -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o " +
+      quoteShellArg(hostBinaryPath.string());
+  CHECK(runCommand(compileHostCmd) == 0);
+  CHECK(std::filesystem::exists(hostBinaryPath));
+
+  const std::filesystem::path helpOutPath = outDir / "window_host.help.out.txt";
+  const std::filesystem::path helpErrPath = outDir / "window_host.help.err.txt";
+  const std::string helpCmd = quoteShellArg(hostBinaryPath.string()) + " --help > " + quoteShellArg(helpOutPath.string()) +
+                              " 2> " + quoteShellArg(helpErrPath.string());
+  CHECK(runCommand(helpCmd) == 0);
+  CHECK(readFile(helpErrPath.string()).empty());
+  CHECK(readFile(helpOutPath.string()).find("usage: window_host [--max-frames <positive-int>]") != std::string::npos);
+
+  const std::filesystem::path badArgOutPath = outDir / "window_host.bad_arg.out.txt";
+  const std::filesystem::path badArgErrPath = outDir / "window_host.bad_arg.err.txt";
+  const std::string badArgCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --bogus > " + quoteShellArg(badArgOutPath.string()) + " 2> " +
+      quoteShellArg(badArgErrPath.string());
+  CHECK(runCommand(badArgCmd) == 64);
+  CHECK(readFile(badArgOutPath.string()).empty());
+  CHECK(readFile(badArgErrPath.string()).find("unknown arg: --bogus") != std::string::npos);
+
+  const std::filesystem::path badFramesOutPath = outDir / "window_host.bad_frames.out.txt";
+  const std::filesystem::path badFramesErrPath = outDir / "window_host.bad_frames.err.txt";
+  const std::string badFramesCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --max-frames 0 > " + quoteShellArg(badFramesOutPath.string()) + " 2> " +
+      quoteShellArg(badFramesErrPath.string());
+  CHECK(runCommand(badFramesCmd) == 64);
+  CHECK(readFile(badFramesOutPath.string()).empty());
+  CHECK(readFile(badFramesErrPath.string()).find("invalid value for --max-frames: 0") != std::string::npos);
+}
+
 TEST_CASE("spinning cube fixed-step snapshots stay deterministic") {
   std::filesystem::path webSampleDir =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
@@ -1108,6 +1174,9 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "python3 -m http.server 8080 --bind 127.0.0.1 --directory examples/web/spinning_cube",
       "./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native --entry /mainNative",
       "c++ -std=c++17 examples/native/spinning_cube/main.cpp -o /tmp/spinning_cube_host",
+      "xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework "
+      "AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host",
+      "/tmp/spinning_cube_window_host --max-frames 120",
       "xcrun metal -std=metal3.0 -c examples/metal/spinning_cube/cube.metal -o /tmp/cube.air",
       "xcrun metallib /tmp/cube.air -o /tmp/cube.metallib",
       "xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework "
@@ -1125,6 +1194,8 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "No Linux/Windows native window host support.",
       "Native emit `/main` is currently unsupported (`native backend does not support return type on /cubeInit`).",
       "Native smoke runs through `/mainNative` and `examples/native/spinning_cube/main.cpp`.",
+      "macOS now has a real native window host sample at",
+      "`examples/native/spinning_cube/window_host.mm` (window/layer/render-loop bring-up).",
       "`cubeNativeFrameInit*`, `cubeNativeFrameStep*`,",
       "`cubeNativeMeshVertexCount`, `cubeNativeMeshIndexCount`, and",
       "`cubeNativeFrameStepSnapshotCode`.",
@@ -1135,6 +1206,8 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "`cubeNativeAbiUniformMeshIndexCount`",
       "`201` (`cubeNativeAbiStatusInvalidDeltaMillis`) means invalid tick delta.",
       "Conformance wrappers (`cubeNativeAbiConformance*`) lock deterministic ABI",
+      "Diagnostics: prints `window_created=1`, `swapchain_layer_created=1`,",
+      "`pipeline_ready=1`, and `frame_rendered=1`.",
       "For a visible rotating window today, use the browser path (`index.html` + `main.js`).",
       "shared-source `/main` is still unsupported for native emit until",
       "Diagnostics: prints `native host verified cube simulation output`.",
@@ -1160,6 +1233,7 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
   const std::filesystem::path mainJsPath = rootDir / "examples" / "web" / "spinning_cube" / "main.js";
   const std::filesystem::path wgslPath = rootDir / "examples" / "web" / "spinning_cube" / "cube.wgsl";
   const std::filesystem::path nativeHostPath = rootDir / "examples" / "native" / "spinning_cube" / "main.cpp";
+  const std::filesystem::path nativeWindowHostPath = rootDir / "examples" / "native" / "spinning_cube" / "window_host.mm";
   const std::filesystem::path metalShaderPath = rootDir / "examples" / "metal" / "spinning_cube" / "cube.metal";
   const std::filesystem::path metalHostPath = rootDir / "examples" / "metal" / "spinning_cube" / "metal_host.mm";
   REQUIRE(std::filesystem::exists(cubePath));
@@ -1167,6 +1241,7 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
   REQUIRE(std::filesystem::exists(mainJsPath));
   REQUIRE(std::filesystem::exists(wgslPath));
   REQUIRE(std::filesystem::exists(nativeHostPath));
+  REQUIRE(std::filesystem::exists(nativeWindowHostPath));
   REQUIRE(std::filesystem::exists(metalShaderPath));
   REQUIRE(std::filesystem::exists(metalHostPath));
 
@@ -1251,6 +1326,14 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
   }
 
   if (runCommand("xcrun --version > /dev/null 2>&1") == 0) {
+    const std::filesystem::path nativeWindowHostBinPath = outDir / "spinning_cube_window_host";
+    const std::string compileWindowHostCmd =
+        "xcrun clang++ -std=c++17 -fobjc-arc " + quoteShellArg(nativeWindowHostPath.string()) +
+        " -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o " +
+        quoteShellArg(nativeWindowHostBinPath.string());
+    CHECK(runCommand(compileWindowHostCmd) == 0);
+    CHECK(std::filesystem::exists(nativeWindowHostBinPath));
+
     const std::filesystem::path airPath = outDir / "cube.air";
     const std::filesystem::path metallibPath = outDir / "cube.metallib";
     const std::filesystem::path metalHostBinPath = outDir / "metal_host";
