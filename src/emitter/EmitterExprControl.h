@@ -411,7 +411,8 @@
               }
               return emitter::EmitterExprControlIfBranchBodyEmitResult{};
             }
-            if (const auto statementStep = emitter::runEmitterExprControlIfBlockStatementStep(
+            if (const auto statementStep =
+                    emitter::runEmitterExprControlIfBranchBodyStatementStep(
                     stmt,
                     [&](const Expr &candidate) {
                       return emitExpr(candidate,
@@ -426,8 +427,7 @@
                                       allowMathBare);
                     });
                 statementStep.handled) {
-              return emitter::EmitterExprControlIfBranchBodyEmitResult{
-                  true, statementStep.emittedStatement, false};
+              return statementStep.emitted;
             }
             return emitter::EmitterExprControlIfBranchBodyEmitResult{};
           });
