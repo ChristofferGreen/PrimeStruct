@@ -4,6 +4,7 @@
 #include "EmitterExprControlBuiltinBlockEarlyReturnStep.h"
 #include "EmitterExprControlBuiltinBlockBindingAutoStep.h"
 #include "EmitterExprControlBuiltinBlockBindingExplicitStep.h"
+#include "EmitterExprControlBuiltinBlockBindingFallbackStep.h"
 #include "EmitterExprControlBuiltinBlockBindingPreludeStep.h"
 #include "EmitterExprControlBuiltinBlockFinalValueStep.h"
 #include "EmitterExprControlBoolLiteralStep.h"
