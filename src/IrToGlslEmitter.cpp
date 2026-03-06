@@ -1,5 +1,6 @@
 #include "primec/IrToGlslEmitter.h"
 
+#include <bit>
 #include <cstdint>
 #include <limits>
 #include <sstream>
@@ -75,6 +76,16 @@ bool emitInstruction(const IrInstruction &instruction,
     }
     case IrOpcode::PushF32: {
       const uint32_t bits = static_cast<uint32_t>(instruction.imm);
+      out << "        stack[sp++] = int(uint(" << bits << "u));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    }
+    case IrOpcode::PushF64: {
+      const double value = std::bit_cast<double>(instruction.imm);
+      const float narrowed = static_cast<float>(value);
+      const uint32_t bits = std::bit_cast<uint32_t>(narrowed);
+      out << "        // Narrowed GLSL path lowers f64 literals through f32 payloads.\n";
       out << "        stack[sp++] = int(uint(" << bits << "u));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
@@ -459,6 +470,10 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        return stack[--sp];\n";
       return true;
     case IrOpcode::ReturnI64:
+      out << "        return stack[--sp];\n";
+      return true;
+    case IrOpcode::ReturnF64:
+      out << "        // Narrowed GLSL path returns f64 values through f32 payloads.\n";
       out << "        return stack[--sp];\n";
       return true;
     case IrOpcode::ReturnVoid:
