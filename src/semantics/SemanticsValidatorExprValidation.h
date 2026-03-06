@@ -1151,7 +1151,7 @@
           }
           if (arg.kind == Expr::Kind::Call) {
             std::string builtinName;
-            if (getBuiltinCollectionName(arg, builtinName)) {
+            if (defMap_.find(resolveCalleePath(arg)) == defMap_.end() && getBuiltinCollectionName(arg, builtinName)) {
               return false;
             }
           }
@@ -1227,7 +1227,8 @@
           bool ok = false;
           if (expr.args[1].kind == Expr::Kind::Call) {
             std::string collection;
-            if (getBuiltinCollectionName(expr.args[1], collection) && collection == "array") {
+            if (defMap_.find(resolveCalleePath(expr.args[1])) == defMap_.end() &&
+                getBuiltinCollectionName(expr.args[1], collection) && collection == "array") {
               ok = true;
             }
           }
