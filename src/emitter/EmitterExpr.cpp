@@ -16,6 +16,7 @@
 #include "EmitterExprControlCountRewriteStep.h"
 #include "EmitterExprControlFieldAccessStep.h"
 #include "EmitterExprControlFloatLiteralStep.h"
+#include "EmitterExprControlIfBlockBindingAutoStep.h"
 #include "EmitterExprControlIfBlockBindingPreludeStep.h"
 #include "EmitterExprControlIfBlockFinalValueStep.h"
 #include "EmitterExprControlIfBlockEarlyReturnStep.h"

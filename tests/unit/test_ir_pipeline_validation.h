@@ -2820,6 +2820,69 @@ TEST_CASE("emitter expr control if-block binding-prelude step resolves binding m
   CHECK_FALSE(missingCallbacks.handled);
 }
 
+TEST_CASE("emitter expr control if-block binding-auto step emits auto bindings") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "item";
+
+  primec::Emitter::BindingInfo binding;
+  binding.isMutable = false;
+  binding.typeName = "auto";
+
+  const auto nonAuto = primec::emitter::runEmitterExprControlIfBlockBindingAutoStep(
+      stmt,
+      binding,
+      false,
+      [&](const primec::Expr &) { return "unused"; });
+  CHECK_FALSE(nonAuto.handled);
+  CHECK(nonAuto.emittedStatement.empty());
+
+  primec::Expr initExpr;
+  initExpr.kind = primec::Expr::Kind::Literal;
+  initExpr.literalValue = 9;
+  stmt.args = {initExpr};
+
+  int emitCalls = 0;
+  const auto constAuto = primec::emitter::runEmitterExprControlIfBlockBindingAutoStep(
+      stmt,
+      binding,
+      true,
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Literal);
+        CHECK(candidate.literalValue == 9);
+        return std::string("emit_init");
+      });
+  CHECK(constAuto.handled);
+  CHECK(emitCalls == 1);
+  CHECK(constAuto.emittedStatement == "const auto item = emit_init; ");
+
+  binding.isMutable = true;
+  emitCalls = 0;
+  const auto mutableAuto = primec::emitter::runEmitterExprControlIfBlockBindingAutoStep(
+      stmt,
+      binding,
+      true,
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Literal);
+        CHECK(candidate.literalValue == 9);
+        return std::string("emit_mutable");
+      });
+  CHECK(mutableAuto.handled);
+  CHECK(emitCalls == 1);
+  CHECK(mutableAuto.emittedStatement == "auto item = emit_mutable; ");
+
+  const auto missingEmit = primec::emitter::runEmitterExprControlIfBlockBindingAutoStep(
+      stmt,
+      binding,
+      true,
+      {});
+  CHECK(missingEmit.handled);
+  CHECK(missingEmit.emittedStatement == "auto item; ");
+}
+
 TEST_CASE("semantics validator expr capture split step tokenizes captures") {
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep("").empty());
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep(" \t \n").empty());
@@ -3055,6 +3118,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlStringLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlMethodPathStep(") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingAutoStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingPreludeStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockFinalValueStep(") !=
@@ -3093,6 +3158,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFieldAccessStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIntegerLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingAutoStep.h\"") !=
+        std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingPreludeStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockFinalValueStep.h\"") !=
