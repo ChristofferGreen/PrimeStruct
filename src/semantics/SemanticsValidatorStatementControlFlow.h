@@ -562,95 +562,130 @@
   }
   std::string vectorHelper;
   if (getVectorStatementHelperName(stmt, vectorHelper)) {
-    if (hasNamedArguments(stmt.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return false;
+    std::string vectorHelperResolved = resolveCalleePath(stmt);
+    if (defMap_.find(vectorHelperResolved) == defMap_.end() && stmt.isMethodCall && !stmt.args.empty()) {
+      const Expr &receiver = stmt.args.front();
+      if (receiver.kind == Expr::Kind::Name) {
+        std::string typeName;
+        if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+          typeName = paramBinding->typeName;
+        } else {
+          auto it = locals.find(receiver.name);
+          if (it != locals.end()) {
+            typeName = it->second.typeName;
+          }
+        }
+        if (!typeName.empty() && typeName != "Pointer" && typeName != "Reference") {
+          std::string resolvedType;
+          if (isPrimitiveBindingTypeName(typeName)) {
+            resolvedType = "/" + normalizeBindingTypeName(typeName);
+          } else {
+            resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+            if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
+              auto importIt = importAliases_.find(typeName);
+              if (importIt != importAliases_.end()) {
+                resolvedType = importIt->second;
+              }
+            }
+          }
+          const std::string methodTarget = resolvedType + "/" + stmt.name;
+          if (!resolvedType.empty() && defMap_.count(methodTarget) > 0) {
+            vectorHelperResolved = methodTarget;
+          }
+        }
+      }
     }
-    if (!stmt.templateArgs.empty()) {
-      error_ = vectorHelper + " does not accept template arguments";
-      return false;
-    }
-    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      error_ = vectorHelper + " does not accept block arguments";
-      return false;
-    }
-    if (vectorHelper == "push") {
-      if (stmt.args.size() != 2) {
-        error_ = "push requires exactly two arguments";
+    if (defMap_.find(vectorHelperResolved) == defMap_.end()) {
+      if (hasNamedArguments(stmt.argNames)) {
+        error_ = "named arguments not supported for builtin calls";
         return false;
       }
-      if (activeEffects_.count("heap_alloc") == 0) {
-        error_ = "push requires heap_alloc effect";
+      if (!stmt.templateArgs.empty()) {
+        error_ = vectorHelper + " does not accept template arguments";
         return false;
       }
-      const BindingInfo *binding = nullptr;
-      if (!validateVectorHelperTarget(stmt.args.front(), "push", binding)) {
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+        error_ = vectorHelper + " does not accept block arguments";
         return false;
       }
-      if (!validateExpr(params, locals, stmt.args.front()) ||
-          !validateExpr(params, locals, stmt.args[1])) {
-        return false;
+      if (vectorHelper == "push") {
+        if (stmt.args.size() != 2) {
+          error_ = "push requires exactly two arguments";
+          return false;
+        }
+        if (activeEffects_.count("heap_alloc") == 0) {
+          error_ = "push requires heap_alloc effect";
+          return false;
+        }
+        const BindingInfo *binding = nullptr;
+        if (!validateVectorHelperTarget(stmt.args.front(), "push", binding)) {
+          return false;
+        }
+        if (!validateExpr(params, locals, stmt.args.front()) ||
+            !validateExpr(params, locals, stmt.args[1])) {
+          return false;
+        }
+        if (!validateVectorElementType(stmt.args[1], binding->typeTemplateArg)) {
+          return false;
+        }
+        return true;
       }
-      if (!validateVectorElementType(stmt.args[1], binding->typeTemplateArg)) {
-        return false;
+      if (vectorHelper == "reserve") {
+        if (stmt.args.size() != 2) {
+          error_ = "reserve requires exactly two arguments";
+          return false;
+        }
+        if (activeEffects_.count("heap_alloc") == 0) {
+          error_ = "reserve requires heap_alloc effect";
+          return false;
+        }
+        const BindingInfo *binding = nullptr;
+        if (!validateVectorHelperTarget(stmt.args.front(), "reserve", binding)) {
+          return false;
+        }
+        if (!validateExpr(params, locals, stmt.args.front()) ||
+            !validateExpr(params, locals, stmt.args[1])) {
+          return false;
+        }
+        if (!isIntegerOrBoolExpr(stmt.args[1])) {
+          error_ = "reserve requires integer capacity";
+          return false;
+        }
+        return true;
       }
-      return true;
-    }
-    if (vectorHelper == "reserve") {
-      if (stmt.args.size() != 2) {
-        error_ = "reserve requires exactly two arguments";
-        return false;
+      if (vectorHelper == "remove_at" || vectorHelper == "remove_swap") {
+        if (stmt.args.size() != 2) {
+          error_ = vectorHelper + " requires exactly two arguments";
+          return false;
+        }
+        const BindingInfo *binding = nullptr;
+        if (!validateVectorHelperTarget(stmt.args.front(), vectorHelper.c_str(), binding)) {
+          return false;
+        }
+        if (!validateExpr(params, locals, stmt.args.front()) ||
+            !validateExpr(params, locals, stmt.args[1])) {
+          return false;
+        }
+        if (!isIntegerOrBoolExpr(stmt.args[1])) {
+          error_ = vectorHelper + " requires integer index";
+          return false;
+        }
+        return true;
       }
-      if (activeEffects_.count("heap_alloc") == 0) {
-        error_ = "reserve requires heap_alloc effect";
-        return false;
+      if (vectorHelper == "pop" || vectorHelper == "clear") {
+        if (stmt.args.size() != 1) {
+          error_ = vectorHelper + " requires exactly one argument";
+          return false;
+        }
+        const BindingInfo *binding = nullptr;
+        if (!validateVectorHelperTarget(stmt.args.front(), vectorHelper.c_str(), binding)) {
+          return false;
+        }
+        if (!validateExpr(params, locals, stmt.args.front())) {
+          return false;
+        }
+        return true;
       }
-      const BindingInfo *binding = nullptr;
-      if (!validateVectorHelperTarget(stmt.args.front(), "reserve", binding)) {
-        return false;
-      }
-      if (!validateExpr(params, locals, stmt.args.front()) ||
-          !validateExpr(params, locals, stmt.args[1])) {
-        return false;
-      }
-      if (!isIntegerOrBoolExpr(stmt.args[1])) {
-        error_ = "reserve requires integer capacity";
-        return false;
-      }
-      return true;
-    }
-    if (vectorHelper == "remove_at" || vectorHelper == "remove_swap") {
-      if (stmt.args.size() != 2) {
-        error_ = vectorHelper + " requires exactly two arguments";
-        return false;
-      }
-      const BindingInfo *binding = nullptr;
-      if (!validateVectorHelperTarget(stmt.args.front(), vectorHelper.c_str(), binding)) {
-        return false;
-      }
-      if (!validateExpr(params, locals, stmt.args.front()) ||
-          !validateExpr(params, locals, stmt.args[1])) {
-        return false;
-      }
-      if (!isIntegerOrBoolExpr(stmt.args[1])) {
-        error_ = vectorHelper + " requires integer index";
-        return false;
-      }
-      return true;
-    }
-    if (vectorHelper == "pop" || vectorHelper == "clear") {
-      if (stmt.args.size() != 1) {
-        error_ = vectorHelper + " requires exactly one argument";
-        return false;
-      }
-      const BindingInfo *binding = nullptr;
-      if (!validateVectorHelperTarget(stmt.args.front(), vectorHelper.c_str(), binding)) {
-        return false;
-      }
-      if (!validateExpr(params, locals, stmt.args.front())) {
-        return false;
-      }
-      return true;
     }
   }
   auto resolveBodyArgumentTarget = [&](const Expr &callExpr, std::string &resolvedOut) {

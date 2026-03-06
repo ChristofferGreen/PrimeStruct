@@ -686,4 +686,42 @@ main() {
   CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
+TEST_CASE("user definition named push is not treated as builtin vector helper") {
+  const std::string source = R"(
+[return<void>]
+push([i32] value) {
+}
+
+[return<int>]
+main() {
+  push([value] 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("struct push helper statement call is not treated as builtin vector helper") {
+  const std::string source = R"(
+Counter {
+  [i32 mut] value{0i32}
+  push([i32] next) {
+    assign(this.value, next)
+  }
+}
+
+[return<int>]
+main() {
+  [Counter mut] counter{Counter()}
+  counter.push(7i32)
+  return(counter.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();
