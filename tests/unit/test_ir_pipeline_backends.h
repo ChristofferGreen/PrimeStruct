@@ -512,7 +512,7 @@ TEST_CASE("glsl-ir backend writes GLSL source") {
 
   const std::string source = readTextFile(outputPath);
   CHECK(source.find("#version 450") != std::string::npos);
-  CHECK(source.find("ps_output.value = ps_entry_0();") != std::string::npos);
+  CHECK(source.find("ps_output.value = ps_entry_0(stack, sp);") != std::string::npos);
 }
 
 TEST_CASE("glsl-ir backend reports emitter diagnostics") {
@@ -523,8 +523,8 @@ TEST_CASE("glsl-ir backend reports emitter diagnostics") {
   module.entryIndex = 0;
   primec::IrFunction function;
   function.name = "/main";
-  function.instructions.push_back({primec::IrOpcode::PushF32, 0});
-  function.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+  function.instructions.push_back({primec::IrOpcode::PushF64, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnF64, 0});
   module.functions.push_back(function);
 
   primec::IrBackendEmitOptions options;
@@ -545,8 +545,8 @@ TEST_CASE("spirv-ir backend reports emitter diagnostics") {
   module.entryIndex = 0;
   primec::IrFunction function;
   function.name = "/main";
-  function.instructions.push_back({primec::IrOpcode::PushF32, 0});
-  function.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+  function.instructions.push_back({primec::IrOpcode::PushF64, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnF64, 0});
   module.functions.push_back(function);
 
   primec::IrBackendEmitOptions options;

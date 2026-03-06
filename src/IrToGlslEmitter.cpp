@@ -180,6 +180,21 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::PrintString:
+      out << "        // GLSL backend ignores print-string side effects.\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::PrintI32:
+    case IrOpcode::PrintI64:
+    case IrOpcode::PrintU64:
+    case IrOpcode::PrintStringDynamic:
+    case IrOpcode::PrintArgv:
+    case IrOpcode::PrintArgvUnsafe:
+      out << "        --sp; // GLSL backend ignores print side effects.\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::Jump:
       if (instruction.imm >= instructionCount) {
         error = "IrToGlslEmitter jump target out of range at instruction " + std::to_string(index);

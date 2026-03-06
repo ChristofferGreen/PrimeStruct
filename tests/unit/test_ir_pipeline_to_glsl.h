@@ -109,6 +109,39 @@ TEST_CASE("ir to glsl emitter writes pushargc opcode") {
   CHECK(glsl.find("stack[sp++] = 0; // GLSL backend has no argv") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes print opcode no-op handling") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("hello");
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back(
+      {primec::IrOpcode::PrintString, primec::encodePrintStringImm(0, primec::encodePrintFlags(true, false))});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  fn.instructions.push_back({primec::IrOpcode::PrintI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  fn.instructions.push_back({primec::IrOpcode::PrintI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  fn.instructions.push_back({primec::IrOpcode::PrintU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  fn.instructions.push_back({primec::IrOpcode::PrintStringDynamic, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  fn.instructions.push_back({primec::IrOpcode::PrintArgv, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 6});
+  fn.instructions.push_back({primec::IrOpcode::PrintArgvUnsafe, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 9});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("// GLSL backend ignores print-string side effects.") != std::string::npos);
+  CHECK(glsl.find("--sp; // GLSL backend ignores print side effects.") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter writes f32 literal push") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
