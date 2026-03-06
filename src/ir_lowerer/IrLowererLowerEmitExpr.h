@@ -8,21 +8,26 @@
           error)) {
     return false;
   }
+  ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
+  if (!ir_lowerer::runLowerExprEmitSetup(
+          {},
+          emitMovePassthroughCall,
+          error)) {
+    return false;
+  }
 
   emitExpr = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
     if (expr.isLambda) {
       error = "IR backends do not support lambdas";
       return false;
     }
-    if (!expr.isMethodCall) {
-      const auto moveResult = ir_lowerer::tryEmitUnaryPassthroughCall(
-          expr,
-          "move",
-          [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
-          error);
-      if (moveResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
-        return moveResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
-      }
+    const auto moveResult = emitMovePassthroughCall(
+        expr,
+        localsIn,
+        [&](const Expr &argExpr, const LocalMap &argLocals) { return emitExpr(argExpr, argLocals); },
+        error);
+    if (moveResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
+      return moveResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
     }
     switch (expr.kind) {
       case Expr::Kind::Literal: {

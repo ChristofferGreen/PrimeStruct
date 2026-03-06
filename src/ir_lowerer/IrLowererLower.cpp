@@ -19,6 +19,7 @@
 #include "IrLowererLowerInferenceSetup.h"
 #include "IrLowererLowerImportsStructsSetup.h"
 #include "IrLowererLowerLocalsSetup.h"
+#include "IrLowererLowerExprEmitSetup.h"
 #include "IrLowererLowerReturnCallsSetup.h"
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"
