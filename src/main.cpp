@@ -5,6 +5,7 @@
 #include "primec/GlslEmitter.h"
 #include "primec/IrBackends.h"
 #include "primec/IrInliner.h"
+#include "primec/IrToCppEmitter.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrToGlslEmitter.h"
 #include "primec/IrValidation.h"
@@ -336,6 +337,43 @@ bool emitGlslSourceFromIrModule(const primec::Program &program,
   return true;
 }
 
+bool emitCppSourceFromIrModule(const primec::Program &program,
+                               const primec::Options &options,
+                               std::string &cppSource,
+                               std::string &error) {
+  primec::IrLowerer lowerer;
+  primec::IrModule ir;
+  if (!lowerer.lower(program,
+                     options.entryPath,
+                     options.defaultEffects,
+                     options.entryDefaultEffects,
+                     ir,
+                     error)) {
+    error = "lowering failed: " + error;
+    return false;
+  }
+  if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
+    error = "ir validation failed: " + error;
+    return false;
+  }
+  if (options.inlineIrCalls) {
+    if (!primec::inlineIrModuleCalls(ir, error)) {
+      error = "ir inline failed: " + error;
+      return false;
+    }
+    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
+      error = "ir validation failed: " + error;
+      return false;
+    }
+  }
+  primec::IrToCppEmitter emitter;
+  if (!emitter.emitSource(ir, cppSource, error)) {
+    error = "ir-to-cpp failed: " + error;
+    return false;
+  }
+  return true;
+}
+
 int emitFailure(const primec::Options &options,
                 primec::DiagnosticCode code,
                 const std::string &plainPrefix,
@@ -409,7 +447,9 @@ int main(int argc, char **argv) {
       if (!argError.empty()) {
         std::cerr << "Argument error: " << argError << "\n";
       }
-      std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir] <input.prime> "
+      std::cerr
+          << "Usage: primec [--emit=cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir] "
+             "<input.prime> "
                    "[-o <output>] "
                    "[--entry /path] [--import-path <dir>] [-I <dir>] "
                    "[--wasm-profile wasi|browser] "
@@ -648,6 +688,58 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  if (options.emitKind == "cpp-ir") {
+    std::string cppSource;
+    if (!emitCppSourceFromIrModule(program, options, cppSource, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "C++ IR emit error: ",
+                         error,
+                         2,
+                         {"backend: cpp-ir"});
+    }
+    if (!writeFile(options.outputPath, cppSource)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::OutputError,
+                         "Failed to write output: ",
+                         options.outputPath,
+                         2);
+    }
+    return 0;
+  }
+
+  if (options.emitKind == "exe-ir") {
+    std::string cppSource;
+    if (!emitCppSourceFromIrModule(program, options, cppSource, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "EXE IR emit error: ",
+                         error,
+                         2,
+                         {"backend: exe-ir"});
+    }
+    std::filesystem::path outputPath(options.outputPath);
+    std::filesystem::path cppPath = outputPath;
+    cppPath.replace_extension(".cpp");
+    if (!writeFile(cppPath.string(), cppSource)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::OutputError,
+                         "Failed to write intermediate C++: ",
+                         cppPath.string(),
+                         2);
+    }
+
+    if (!primec::compileCppExecutable(processRunner, cppPath, outputPath)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "",
+                         "Failed to compile output executable",
+                         3,
+                         {"backend: exe-ir"});
+    }
+    return 0;
+  }
+
   if (options.emitKind == "glsl") {
     std::string legacySource;
     std::string legacyError;
@@ -740,7 +832,12 @@ int main(int argc, char **argv) {
   }
 
   primec::Emitter emitter;
-  std::string cppSource = emitter.emitCpp(program, options.entryPath);
+  const std::string legacyCppSource = emitter.emitCpp(program, options.entryPath);
+  std::string cppSource = legacyCppSource;
+  std::string irCppSource;
+  if (std::string irPathError; emitCppSourceFromIrModule(program, options, irCppSource, irPathError)) {
+    cppSource = std::move(irCppSource);
+  }
 
   if (options.emitKind == "cpp") {
     if (!writeFile(options.outputPath, cppSource)) {

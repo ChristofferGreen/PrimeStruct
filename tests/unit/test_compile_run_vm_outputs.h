@@ -130,6 +130,65 @@ main() {
   CHECK(std::filesystem::exists(outputPath));
 }
 
+TEST_CASE("defaults to cpp extension for emit=cpp-ir") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(4i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_default_cpp_ir.prime", source);
+  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / "primec_cpp_ir_default_out";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::string compileCmd =
+      "./primec --emit=cpp-ir " + srcPath + " --out-dir " + outDir.string() + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  std::filesystem::path outputPath = outDir / std::filesystem::path(srcPath).stem();
+  outputPath.replace_extension(".cpp");
+  CHECK(std::filesystem::exists(outputPath));
+}
+
+TEST_CASE("cpp-ir emitter writes IR-lowered cpp for integer subset") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] counter{1i32}
+  assign(counter, plus(counter, 2i32))
+  return(counter)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_i32_subset.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_cpp_ir_i32_subset.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("int32_t ps_entry_0()") != std::string::npos);
+  CHECK(output.find("switch (pc)") != std::string::npos);
+}
+
+TEST_CASE("cpp-ir emitter reports unsupported opcodes") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [f32] value{1.5f32}
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_unsupported_opcode.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ir_unsupported_opcode_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=cpp-ir " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("ir-to-cpp failed: IrToCppEmitter unsupported opcode") != std::string::npos);
+}
+
 TEST_CASE("defaults to psir extension for emit=ir") {
   const std::string source = R"(
 [return<int>]
@@ -152,6 +211,25 @@ main() {
   CHECK(std::filesystem::exists(outputPath));
 }
 
+TEST_CASE("cpp emitter falls back to legacy output when ir subset is unsupported") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [f32] scale{2.0f32}
+  value{plus(scale, 0.5f32)}
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_fallback_legacy_cpp.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_cpp_ir_fallback_legacy_cpp.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("float scale") != std::string::npos);
+  CHECK(output.find("ps_entry_0") == std::string::npos);
+}
+
 TEST_CASE("compiles and runs void main") {
   const std::string source = R"(
 [return<void>]
@@ -167,6 +245,23 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("exe-ir emitter compiles and runs i32 subset") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] counter{1i32}
+  assign(counter, plus(counter, 2i32))
+  return(counter)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_i32_subset.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_i32_subset").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("compiles and runs explicit void return") {
   const std::string source = R"(
 [return<void>]
@@ -180,6 +275,23 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("exe emitter falls back to legacy output when ir subset is unsupported") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [f32] scale{2.0f32}
+  value{plus(scale, 0.5f32)}
+  return(7i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_fallback_legacy_cpp.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_fallback_legacy_cpp").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
 }
 
 TEST_CASE("compiles and runs implicit void main") {

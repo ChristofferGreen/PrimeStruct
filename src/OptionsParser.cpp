@@ -380,7 +380,7 @@ bool applyPrimecOutputDefaults(Options &out) {
     if (stem.empty()) {
       stem = inputPath.filename().string();
     }
-    if (out.emitKind == "cpp") {
+    if (out.emitKind == "cpp" || out.emitKind == "cpp-ir") {
       out.outputPath = stem + ".cpp";
     } else if (out.emitKind == "ir") {
       out.outputPath = stem + ".psir";
@@ -417,9 +417,9 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       continue;
     }
     if (isPrimecMode &&
-        (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native" || arg == "--emit=ir" ||
-         arg == "--emit=vm" || arg == "--emit=glsl" || arg == "--emit=spirv" || arg == "--emit=wasm" ||
-         arg == "--emit=glsl-ir" || arg == "--emit=spirv-ir")) {
+        (arg == "--emit=cpp" || arg == "--emit=cpp-ir" || arg == "--emit=exe" || arg == "--emit=exe-ir" ||
+         arg == "--emit=native" || arg == "--emit=ir" || arg == "--emit=vm" || arg == "--emit=glsl" ||
+         arg == "--emit=spirv" || arg == "--emit=wasm" || arg == "--emit=glsl-ir" || arg == "--emit=spirv-ir")) {
       out.emitKind = arg.substr(std::string("--emit=").size());
     } else if (arg == "--emit-diagnostics") {
       out.emitDiagnostics = true;
