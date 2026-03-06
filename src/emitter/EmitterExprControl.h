@@ -161,21 +161,24 @@
         BindingInfo binding = bindingPrelude.binding;
         const bool hasExplicitType = bindingPrelude.hasExplicitType;
         const bool useAuto = bindingPrelude.useAuto;
-        if (useAuto) {
-          out << (binding.isMutable ? "" : "const ") << "auto " << stmt.name;
-          if (!stmt.args.empty()) {
-            out << " = " << emitExpr(stmt.args.front(),
-                                    nameMap,
-                                    paramMap,
-                                    structTypeMap,
-                                    importAliases,
-                                    blockTypes,
-                                    returnKinds,
-                                    resultInfos,
-                                    returnStructs,
-                                    allowMathBare);
-          }
-          out << "; ";
+        if (const auto autoBindingStep = emitter::runEmitterExprControlBuiltinBlockBindingAutoStep(
+                stmt,
+                binding,
+                useAuto,
+                [&](const Expr &candidate) {
+                  return emitExpr(candidate,
+                                  nameMap,
+                                  paramMap,
+                                  structTypeMap,
+                                  importAliases,
+                                  blockTypes,
+                                  returnKinds,
+                                  resultInfos,
+                                  returnStructs,
+                                  allowMathBare);
+                });
+            autoBindingStep.handled) {
+          out << autoBindingStep.emittedStatement;
           continue;
         }
         bool needsConst = !binding.isMutable;
