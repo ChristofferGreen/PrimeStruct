@@ -273,8 +273,8 @@ TEST_CASE("cpp-ir backend writes f64 conversion helpers") {
   function.instructions.push_back({primec::IrOpcode::ConvertI32ToF64, 0});
   function.instructions.push_back({primec::IrOpcode::ConvertF64ToF32, 0});
   function.instructions.push_back({primec::IrOpcode::ConvertF32ToF64, 0});
-  function.instructions.push_back({primec::IrOpcode::ConvertF64ToI64, 0});
-  function.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  function.instructions.push_back({primec::IrOpcode::ConvertF64ToI32, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(function);
 
   const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
@@ -296,7 +296,8 @@ TEST_CASE("cpp-ir backend writes f64 conversion helpers") {
   const std::string source = readTextFile(outputPath);
   CHECK(source.find("stack[sp++] = psF64ToBits(static_cast<double>(value));") != std::string::npos);
   CHECK(source.find("stack[sp++] = psF32ToBits(static_cast<float>(value));") != std::string::npos);
-  CHECK(source.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(value));") != std::string::npos);
+  CHECK(source.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));") !=
+        std::string::npos);
 }
 
 TEST_CASE("glsl-ir backend writes GLSL source") {

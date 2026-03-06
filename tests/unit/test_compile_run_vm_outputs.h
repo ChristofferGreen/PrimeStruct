@@ -245,9 +245,16 @@ main() {
 
 TEST_CASE("cpp-ir emitter reports unsupported opcodes") {
   const std::string source = R"(
-[return<int>]
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
 main() {
-  return(convert<int>(2.5f64))
+  [File<Write>] file{File<Write>("/tmp/primec_cpp_ir_unsupported.txt"utf8)?}
+  file.write("x"utf8)?
+  file.close()?
+  return(Result.ok())
+}
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_ir_unsupported_opcode.prime", source);
@@ -339,6 +346,43 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("stack[sp++] = psF64ToBits(static_cast<double>(value));") != std::string::npos);
+  CHECK(output.find("ps_entry_0") != std::string::npos);
+}
+
+TEST_CASE("cpp-ir emitter writes f64 to i32 conversion paths") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(2.5f64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_f64_to_i32_convert.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ir_f64_to_i32_convert.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));") !=
+        std::string::npos);
+}
+
+TEST_CASE("cpp emitter uses ir backend for f64 to i32 conversion") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(2.5f64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_f64_to_i32_ir_first.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_f64_to_i32_ir_first.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));") !=
+        std::string::npos);
   CHECK(output.find("ps_entry_0") != std::string::npos);
 }
 
@@ -437,11 +481,18 @@ main() {
   CHECK(std::filesystem::exists(outputPath));
 }
 
-TEST_CASE("cpp emitter falls back to legacy output when ir subset is unsupported") {
+TEST_CASE("cpp emitter falls back to legacy output when ir file io subset is unsupported") {
   const std::string source = R"(
-[return<int>]
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
 main() {
-  return(convert<int>(2.5f64))
+  [File<Write>] file{File<Write>("/tmp/primec_cpp_ir_fallback_file_io.txt"utf8)?}
+  file.write("x"utf8)?
+  file.close()?
+  return(Result.ok())
+}
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_ir_fallback_legacy_cpp.prime", source);
@@ -705,6 +756,36 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("exe-ir emitter compiles and runs f64 to i32 conversion") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(2.5f64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_f64_to_i32_convert.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_f64_to_i32_convert").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("exe emitter uses ir backend for f64 to i32 conversion") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(2.5f64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_f64_to_i32_ir_first.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_f64_to_i32_ir_first").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("cpp and exe emitters match cpp-ir and exe-ir on shared corpus") {
   struct DifferentialCase {
     const char *name;
@@ -835,19 +916,40 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("exe emitter falls back to legacy output when ir subset is unsupported") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(convert<int>(2.5f64))
-}
-)";
+TEST_CASE("exe emitter falls back to legacy output when ir file io subset is unsupported") {
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_exe_ir_fallback_legacy_cpp.txt").string();
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(outPath);
+  const std::string source =
+      "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] file{File<Write>(\"" + escapedPath + "\"utf8)?}\n"
+      "  file.write(\"x\"utf8)?\n"
+      "  file.close()?\n"
+      "  return(Result.ok())\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(\"file error\"utf8)\n"
+      "}\n";
   const std::string srcPath = writeTemp("compile_exe_ir_fallback_legacy_cpp.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_fallback_legacy_cpp").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 0);
+  CHECK(readFile(outPath) == "x");
 }
 
 TEST_CASE("compiles and runs implicit void main") {

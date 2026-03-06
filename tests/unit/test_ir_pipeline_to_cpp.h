@@ -60,6 +60,26 @@ TEST_CASE("ir to cpp emitter writes i64 arithmetic and comparisons") {
   CHECK(cpp.find("return static_cast<int64_t>(stack[--sp]);") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter writes f64 to i32 conversion") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF64ToI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("double value = psBitsToF64(stack[--sp]);") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes print and argv opcodes") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
@@ -156,8 +176,8 @@ TEST_CASE("ir to cpp emitter rejects unsupported opcodes") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushF32, 0});
-  fn.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::AddressOfLocal, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
   module.functions.push_back(fn);
 
   std::string cpp;

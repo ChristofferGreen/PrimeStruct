@@ -97,6 +97,7 @@ bool usesF64Helpers(IrOpcode opcode) {
     case IrOpcode::ConvertI32ToF64:
     case IrOpcode::ConvertI64ToF64:
     case IrOpcode::ConvertU64ToF64:
+    case IrOpcode::ConvertF64ToI32:
     case IrOpcode::ConvertF64ToI64:
     case IrOpcode::ConvertF64ToU64:
     case IrOpcode::ConvertF32ToF64:
@@ -474,6 +475,12 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::ConvertU64ToF64:
       out << "        uint64_t value = stack[--sp];\n";
       out << "        stack[sp++] = psF64ToBits(static_cast<double>(value));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertF64ToI32:
+      out << "        double value = psBitsToF64(stack[--sp]);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
