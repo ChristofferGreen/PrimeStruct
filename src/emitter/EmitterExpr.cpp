@@ -21,6 +21,7 @@
 #include "EmitterExprControlIfBlockBindingFallbackStep.h"
 #include "EmitterExprControlIfBlockBindingPreludeStep.h"
 #include "EmitterExprControlIfBlockBindingQualifiersStep.h"
+#include "EmitterExprControlIfBlockStatementStep.h"
 #include "EmitterExprControlIfBlockFinalValueStep.h"
 #include "EmitterExprControlIfBlockEarlyReturnStep.h"
 #include "EmitterExprControlIfEnvelopeStep.h"

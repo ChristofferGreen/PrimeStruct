@@ -427,18 +427,23 @@
           }
         continue;
       }
-      out << "(void)"
-          << emitExpr(stmt,
-                      nameMap,
-                      paramMap,
-                      structTypeMap,
-                      importAliases,
-                      branchTypes,
-                      returnKinds,
-                      resultInfos,
-                      returnStructs,
-                      allowMathBare)
-          << "; ";
+      if (const auto statementStep = emitter::runEmitterExprControlIfBlockStatementStep(
+              stmt,
+              [&](const Expr &candidate) {
+                return emitExpr(candidate,
+                                nameMap,
+                                paramMap,
+                                structTypeMap,
+                                importAliases,
+                                branchTypes,
+                                returnKinds,
+                                resultInfos,
+                                returnStructs,
+                                allowMathBare);
+              });
+          statementStep.handled) {
+        out << statementStep.emittedStatement;
+      }
     }
     out << "}())";
     return out.str();

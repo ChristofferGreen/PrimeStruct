@@ -3103,6 +3103,31 @@ TEST_CASE("emitter expr control if-block binding-fallback step emits inferred bi
   CHECK(missingEmit.emittedStatement == "auto item; ");
 }
 
+TEST_CASE("emitter expr control if-block statement step emits void statements") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Name;
+  stmt.name = "value";
+
+  int emitCalls = 0;
+  const auto emitted = primec::emitter::runEmitterExprControlIfBlockStatementStep(
+      stmt,
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Name);
+        CHECK(candidate.name == "value");
+        return std::string("emit_value");
+      });
+  CHECK(emitted.handled);
+  CHECK(emitCalls == 1);
+  CHECK(emitted.emittedStatement == "(void)emit_value; ");
+
+  const auto missingEmit = primec::emitter::runEmitterExprControlIfBlockStatementStep(
+      stmt,
+      {});
+  CHECK_FALSE(missingEmit.handled);
+  CHECK(missingEmit.emittedStatement.empty());
+}
+
 TEST_CASE("semantics validator expr capture split step tokenizes captures") {
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep("").empty());
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep(" \t \n").empty());
@@ -3348,6 +3373,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingQualifiersStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockStatementStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockFinalValueStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEarlyReturnStep(") !=
@@ -3393,6 +3420,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingPreludeStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingQualifiersStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockStatementStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockFinalValueStep.h\"") !=
         std::string::npos);
