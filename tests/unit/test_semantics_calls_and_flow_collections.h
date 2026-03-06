@@ -807,4 +807,51 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("user definition named count accepts named arguments") {
+  const std::string source = R"(
+[return<int>]
+count([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(count([value] 5i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("user definition named capacity accepts named arguments") {
+  const std::string source = R"(
+[return<int>]
+capacity([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(capacity([value] 7i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("capacity builtin still rejects named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(capacity([value] values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_SUITE_END();

@@ -1246,6 +1246,18 @@
       }
       if (hasNamedArguments(expr.argNames)) {
         std::string builtinName;
+        auto isLegacyCountBuiltinCall = [&]() {
+          if (expr.name != "count") {
+            return false;
+          }
+          return defMap_.find(resolved) == defMap_.end();
+        };
+        auto isLegacyCapacityBuiltinCall = [&]() {
+          if (expr.name != "capacity") {
+            return false;
+          }
+          return defMap_.find(resolved) == defMap_.end();
+        };
         auto isLegacyVectorHelperBuiltinCall = [&]() {
           if (!(isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
                 isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
@@ -1267,8 +1279,8 @@
             getBuiltinCollectionName(expr, builtinName) || getBuiltinArrayAccessName(expr, builtinName) ||
             isAssignCall(expr) || isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) ||
             isForCall(expr) ||
-            isRepeatCall(expr) || expr.name == "count" || expr.name == "File" || expr.name == "try" ||
-            expr.name == "capacity" || isLegacyVectorHelperBuiltinCall() ||
+            isRepeatCall(expr) || isLegacyCountBuiltinCall() || expr.name == "File" || expr.name == "try" ||
+            isLegacyCapacityBuiltinCall() || isLegacyVectorHelperBuiltinCall() ||
             isSimpleCallName(expr, "dispatch") || isSimpleCallName(expr, "buffer") ||
             isSimpleCallName(expr, "upload") || isSimpleCallName(expr, "readback") ||
             isSimpleCallName(expr, "buffer_load") || isSimpleCallName(expr, "buffer_store")) {
