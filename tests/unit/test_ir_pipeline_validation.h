@@ -2013,6 +2013,58 @@ TEST_CASE("emitter expr control builtin-block early-return step handles non-fina
   CHECK(invalidArity.emittedStatement == "return 0; ");
 }
 
+TEST_CASE("emitter expr control builtin-block final-value step handles final statements") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "value";
+
+  const auto nonFinal = primec::emitter::runEmitterExprControlBuiltinBlockFinalValueStep(
+      stmt,
+      false,
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &) { return "unused"; });
+  CHECK_FALSE(nonFinal.handled);
+  CHECK(nonFinal.emittedStatement.empty());
+
+  primec::Expr bindingStmt = stmt;
+  bindingStmt.isBinding = true;
+  const auto bindingFinal = primec::emitter::runEmitterExprControlBuiltinBlockFinalValueStep(
+      bindingStmt,
+      true,
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &) { return "unused"; });
+  CHECK(bindingFinal.handled);
+  CHECK(bindingFinal.emittedStatement == "return 0; ");
+
+  primec::Expr returnStmt = stmt;
+  returnStmt.name = "return";
+  returnStmt.args.push_back(primec::Expr{});
+  const auto returnFinal = primec::emitter::runEmitterExprControlBuiltinBlockFinalValueStep(
+      returnStmt,
+      true,
+      [&](const primec::Expr &) { return true; },
+      [&](const primec::Expr &) { return "emit_value"; });
+  CHECK(returnFinal.handled);
+  CHECK(returnFinal.emittedStatement == "return emit_value; ");
+
+  returnStmt.args.push_back(primec::Expr{});
+  const auto invalidReturnArity = primec::emitter::runEmitterExprControlBuiltinBlockFinalValueStep(
+      returnStmt,
+      true,
+      [&](const primec::Expr &) { return true; },
+      [&](const primec::Expr &) { return "emit_value"; });
+  CHECK(invalidReturnArity.handled);
+  CHECK(invalidReturnArity.emittedStatement == "return 0; ");
+
+  const auto noEmit = primec::emitter::runEmitterExprControlBuiltinBlockFinalValueStep(
+      stmt,
+      true,
+      [&](const primec::Expr &) { return false; },
+      {});
+  CHECK(noEmit.handled);
+  CHECK(noEmit.emittedStatement == "return 0; ");
+}
+
 TEST_CASE("emitter expr control body-wrapper step rewrites body-argument calls") {
   primec::Expr noBodyExpr;
   noBodyExpr.kind = primec::Expr::Kind::Call;
@@ -2329,6 +2381,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBoolLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockEarlyReturnStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockFinalValueStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockPreludeStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBodyWrapperStep(") != std::string::npos);
@@ -2348,6 +2402,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockEarlyReturnStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockFinalValueStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBoolLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockPreludeStep.h\"") != std::string::npos);
