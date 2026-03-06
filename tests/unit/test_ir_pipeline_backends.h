@@ -79,6 +79,20 @@ TEST_CASE("main routes cpp/exe through ir backends without legacy fallback branc
   CHECK(source.find("emitter.emitCpp(program, options.entryPath)") == std::string::npos);
 }
 
+TEST_CASE("main gates glsl and spirv fallback to emit-stage failures") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path mainPath = cwd / "src" / "main.cpp";
+  if (!std::filesystem::exists(mainPath)) {
+    mainPath = cwd.parent_path() / "src" / "main.cpp";
+  }
+  REQUIRE(std::filesystem::exists(mainPath));
+
+  const std::string source = readTextFile(mainPath);
+  CHECK(source.find("if (irFailure.stage != IrBackendRunFailureStage::Emit)") != std::string::npos);
+  CHECK(source.find("if (options.emitKind == \"glsl\")") != std::string::npos);
+  CHECK(source.find("if (options.emitKind == \"spirv\")") != std::string::npos);
+}
+
 TEST_CASE("vm ir backend executes module and returns exit code") {
   const primec::IrBackend *backend = primec::findIrBackend("vm");
   REQUIRE(backend != nullptr);

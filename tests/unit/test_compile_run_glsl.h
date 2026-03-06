@@ -120,7 +120,7 @@ main() {
   CHECK(readFile(errPath).find("ir-to-glsl failed: IrToGlslEmitter unsupported opcode") != std::string::npos);
 }
 
-TEST_CASE("glsl emitter falls back to legacy output when ir backend path fails") {
+TEST_CASE("glsl emitter falls back to legacy output on ir emit-stage failures") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -284,7 +284,7 @@ main() {
   CHECK(output.find("PrimeStructOutput") == std::string::npos);
 }
 
-TEST_CASE("spirv emitter falls back to legacy glsl when ir subset fails") {
+TEST_CASE("spirv emitter falls back to legacy glsl on ir emit-stage failures") {
   if (!hasSpirvTools()) {
     return;
   }

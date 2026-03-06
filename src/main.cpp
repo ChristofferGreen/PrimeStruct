@@ -616,6 +616,40 @@ int main(int argc, char **argv) {
       if (runIrBackend(*glslIrBackend, program, options, emitResult, irFailure)) {
         return emitResult.exitCode;
       }
+      if (irFailure.stage != IrBackendRunFailureStage::Emit) {
+        const primec::IrBackendDiagnostics &diagnostics = glslIrBackend->diagnostics();
+        if (irFailure.stage == IrBackendRunFailureStage::Lowering) {
+          return emitFailure(options,
+                             diagnostics.loweringDiagnosticCode,
+                             diagnostics.loweringErrorPrefix,
+                             irFailure.message,
+                             2,
+                             irBackendNotes(diagnostics));
+        }
+        if (irFailure.stage == IrBackendRunFailureStage::Validation) {
+          return emitFailure(options,
+                             diagnostics.validationDiagnosticCode,
+                             diagnostics.validationErrorPrefix,
+                             irFailure.message,
+                             2,
+                             irBackendNotes(diagnostics, "ir-validate"));
+        }
+        if (irFailure.stage == IrBackendRunFailureStage::Inlining) {
+          return emitFailure(options,
+                             diagnostics.inliningDiagnosticCode,
+                             diagnostics.inliningErrorPrefix,
+                             irFailure.message,
+                             2,
+                             irBackendNotes(diagnostics, "ir-inline"));
+        }
+        if (irFailure.stage == IrBackendRunFailureStage::OutputWrite) {
+          return emitFailure(options,
+                             primec::DiagnosticCode::OutputError,
+                             "Failed to write output: ",
+                             options.outputPath,
+                             2);
+        }
+      }
     }
 
     std::string legacySource;
@@ -646,6 +680,40 @@ int main(int argc, char **argv) {
       IrBackendRunFailure irFailure;
       if (runIrBackend(*spirvIrBackend, program, options, emitResult, irFailure)) {
         return emitResult.exitCode;
+      }
+      if (irFailure.stage != IrBackendRunFailureStage::Emit) {
+        const primec::IrBackendDiagnostics &diagnostics = spirvIrBackend->diagnostics();
+        if (irFailure.stage == IrBackendRunFailureStage::Lowering) {
+          return emitFailure(options,
+                             diagnostics.loweringDiagnosticCode,
+                             diagnostics.loweringErrorPrefix,
+                             irFailure.message,
+                             2,
+                             irBackendNotes(diagnostics));
+        }
+        if (irFailure.stage == IrBackendRunFailureStage::Validation) {
+          return emitFailure(options,
+                             diagnostics.validationDiagnosticCode,
+                             diagnostics.validationErrorPrefix,
+                             irFailure.message,
+                             2,
+                             irBackendNotes(diagnostics, "ir-validate"));
+        }
+        if (irFailure.stage == IrBackendRunFailureStage::Inlining) {
+          return emitFailure(options,
+                             diagnostics.inliningDiagnosticCode,
+                             diagnostics.inliningErrorPrefix,
+                             irFailure.message,
+                             2,
+                             irBackendNotes(diagnostics, "ir-inline"));
+        }
+        if (irFailure.stage == IrBackendRunFailureStage::OutputWrite) {
+          return emitFailure(options,
+                             primec::DiagnosticCode::OutputError,
+                             "Failed to write output: ",
+                             options.outputPath,
+                             2);
+        }
       }
     }
 
