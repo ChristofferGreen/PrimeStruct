@@ -2649,6 +2649,7 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     return true;
   }
 
+  const std::string resolved = resolveCalleePath(expr);
   std::string builtinName;
   if (getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
       getBuiltinClampName(expr, builtinName, true) || getBuiltinMinMaxName(expr, builtinName, true) ||
@@ -2662,7 +2663,7 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     }
     return true;
   }
-  if (getBuiltinCollectionName(expr, builtinName)) {
+  if (defMap_.find(resolved) == defMap_.end() && getBuiltinCollectionName(expr, builtinName)) {
     if (builtinName != "array") {
       return false;
     }
@@ -2674,7 +2675,6 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     return true;
   }
 
-  const std::string resolved = resolveCalleePath(expr);
   auto defIt = defMap_.find(resolved);
   if (defIt == defMap_.end() || !defIt->second) {
     return false;

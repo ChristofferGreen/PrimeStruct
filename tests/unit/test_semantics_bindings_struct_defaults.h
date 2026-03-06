@@ -54,6 +54,48 @@ main() {
   CHECK(error.find("effect-free zero-arg constructor") != std::string::npos);
 }
 
+TEST_CASE("omitted initializer accepts builtin array field initializer") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("omitted initializer rejects effectful user-defined array field initializer") {
+  const std::string source = R"(
+[effects(io_out), return<i32>]
+array<T>([T] value) {
+  print_line("side effect"utf8)
+  return(1i32)
+}
+
+[struct]
+Thing() {
+  [i32] value{array<i32>(7i32)}
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("effect-free zero-arg constructor") != std::string::npos);
+}
+
 TEST_CASE("omitted initializer accepts effect-free Create") {
   const std::string source = R"(
 [struct]
