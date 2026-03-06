@@ -262,6 +262,8 @@ See `docs/PrimeStruct.md` for detailed backend constraints and effect allowlists
 
 - Language design overview: `docs/PrimeStruct.md`
 - Syntax spec: `docs/PrimeStruct_SyntaxSpec.md`
+- Graphics API contract: `docs/Graphics_API_Design.md`
+- Coding guidelines: `docs/Coding_Guidelines.md`
 - Changelog notes: `docs/changelog.md`
 
 ------------------------------------------------------------------------

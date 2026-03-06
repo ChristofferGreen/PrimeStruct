@@ -679,3 +679,5 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - GPU builtins live under `/std/gpu/*`, starting with `/std/gpu/global_id_x()`, `/std/gpu/global_id_y()`, `/std/gpu/global_id_z()`.
 - GPU ID helpers are scalar (`i32`) per axis.
 - Storage buffers use `Buffer<T>` plus `/std/gpu/buffer_load` / `/std/gpu/buffer_store` helpers.
+- Windowed graphics API shape (`/std/gfx/*`, frame/present flow, vertex wire contracts) is specified in
+  `docs/Graphics_API_Design.md` and is separate from this compute-focused section.

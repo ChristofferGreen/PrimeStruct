@@ -1,0 +1,188 @@
+# PrimeStruct Coding Guidelines
+
+Status: Draft
+Last updated: 2026-03-06
+
+This document defines style conventions for user-facing PrimeStruct examples.
+The goal is readability-first surface syntax while preserving deterministic
+semantics after canonicalization.
+
+## Core Style
+- Prefer surface return annotations: `[T] name(...) { ... }`.
+- Prefer inferred parameters in examples when the meaning is clear:
+  `wrap_angle(angle)` instead of `wrap_angle([f32] angle)`.
+- Prefer infix operators in surface code (`a + b`, `x >= y`) over canonical
+  helper-call forms (`plus(a, b)`, `greater_equal(x, y)`).
+- Prefer snake_case function names for user code and standard APIs.
+- Prefer snake_case local binding names in surface examples.
+- Prefer omitted local envelopes when initializer inference is unambiguous
+  (`value{Type(...)}` instead of `[Type] value{Type(...)}`); use `[mut]` when
+  a local must be writable.
+  This is the default preferred local-binding style for surface examples.
+  Example: `pass{RenderPass(...)}` is preferred over
+  `[RenderPass] pass{RenderPass(...)}`.
+- Prefer object-owned methods and constructors over free-function style APIs
+  (`window.is_open()`, `pass.draw_mesh(...)`, `swapchain.present(...)`).
+- Prefer unsuffixed numeric literals in surface examples (`1280`, `0.0166667`).
+- Prefer typed enums/descriptors over stringly-typed GPU config
+  (`PresentMode.Fifo` over `"fifo"`).
+- Prefer labeled arguments on public API calls to keep call sites self-documenting.
+- Keep app asset data (for example cube vertices/indices) in app code, not in
+  generic stdlib helpers.
+- Prefer canonical graphics wire structs when available (for example
+  `/std/gfx/VertexColored`) instead of ad-hoc per-example vertex structs.
+- Top-level bindings are not allowed; represent reusable asset payloads as helper
+  definitions (for example `cube_vertices()`) or initialize them inside `main`.
+- Prefer compile-target profile deduction over source-level profile literals.
+  Example: `device{Device()}` is preferred over
+  `device{Device([profile] "...")}`.
+- Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
+  ad-hoc unwrap helpers.
+  Example: `window{Window(...) ?}` with
+  `on_error<GfxError, /log_gfx_error>`.
+- Do not use `.expect(...)` in PrimeStruct examples; model fallible flows with
+  `?` and explicit handlers.
+
+## Gold-Standard Surface Example (Pure PrimeStruct)
+
+Note: this example locks a proposed API shape for graphics/math naming. Current
+stdlib in this repo ships vector/color math only; the `/std/gfx/*` rendering
+surface shown below (including `VertexColored`) is a contract-level proposal
+that still needs full implementation/lowering coverage.
+
+```prime
+import /std/math/*
+import /std/gfx/*
+
+[f32]
+wrap_angle(angle) {
+  [mut] wrapped{angle}
+  tau{6.2831853}
+
+  while(wrapped >= tau) {
+    wrapped = wrapped - tau
+  }
+
+  while(wrapped < 0.0) {
+    wrapped = wrapped + tau
+  }
+
+  return(wrapped)
+}
+
+[Mat4]
+cube_mvp(angle, aspect) {
+  model{mat4_from_axis_angle(Vec3(0.0, 1.0, 0.0), angle)}
+  view{
+    mat4_look_at(
+      [eye] Vec3(2.4, 1.7, 2.7),
+      [target] Vec3(0.0, 0.0, 0.0),
+      [up] Vec3(0.0, 1.0, 0.0)
+    )
+  }
+  proj{mat4_perspective(0.7853982, aspect, 0.01, 100.0)}
+  return(mat4_mul(proj, mat4_mul(view, model)))
+}
+
+[array<VertexColored>]
+cube_vertices() {
+  return(array<VertexColored>{
+    VertexColored([position] Vec3(-1.0, -1.0, -1.0), [color] ColorRGBA(0.0, 0.0, 0.0, 1.0)),
+    VertexColored([position] Vec3( 1.0, -1.0, -1.0), [color] ColorRGBA(1.0, 0.0, 0.0, 1.0)),
+    VertexColored([position] Vec3( 1.0,  1.0, -1.0), [color] ColorRGBA(1.0, 1.0, 0.0, 1.0)),
+    VertexColored([position] Vec3(-1.0,  1.0, -1.0), [color] ColorRGBA(0.0, 1.0, 0.0, 1.0)),
+    VertexColored([position] Vec3(-1.0, -1.0,  1.0), [color] ColorRGBA(0.0, 0.0, 1.0, 1.0)),
+    VertexColored([position] Vec3( 1.0, -1.0,  1.0), [color] ColorRGBA(1.0, 0.0, 1.0, 1.0)),
+    VertexColored([position] Vec3( 1.0,  1.0,  1.0), [color] ColorRGBA(1.0, 1.0, 1.0, 1.0)),
+    VertexColored([position] Vec3(-1.0,  1.0,  1.0), [color] ColorRGBA(0.0, 1.0, 1.0, 1.0))
+  })
+}
+
+[array<i32>]
+cube_indices() {
+  return(array<i32>{
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4,
+    0, 4, 7, 7, 3, 0,
+    1, 5, 6, 6, 2, 1,
+    3, 2, 6, 6, 7, 3,
+    0, 1, 5, 5, 4, 0
+  })
+}
+
+[effects(io_err)]
+/log_gfx_error([GfxError] err) {
+  print_line_error(err.why())
+}
+
+[return<Result<int, GfxError>> effects(gpu_dispatch, io_err)
+ on_error<GfxError, /log_gfx_error>]
+main() {
+  window{
+    Window(
+      [title] "PrimeStruct Spinning Cube",
+      [width] 1280,
+      [height] 720
+    )?
+  }
+
+  device{Device()?}
+  queue{device.default_queue()}
+
+  swapchain{
+    device.create_swapchain(
+      [window] window,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F,
+      [present_mode] PresentMode.Fifo
+    )?
+  }
+
+  mesh{
+    device.create_mesh(
+      [vertices] cube_vertices(),
+      [indices] cube_indices()
+    )?
+  }
+
+  pipeline{
+    device.create_pipeline(
+      [shader] ShaderLibrary.CubeBasic,
+      [vertex_type] VertexColored,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F
+    )?
+  }
+
+  material{pipeline.material()?}
+
+  [mut] angle{0.0}
+  dt{0.0166667}
+
+  while(window.is_open()) {
+    window.poll_events()
+
+    frame{swapchain.frame()?}
+    aspect{window.aspect_ratio()}
+    mvp{cube_mvp(angle, aspect)}
+    material.set_mvp(mvp)
+
+    pass{
+      frame.render_pass(
+        [clear_color] ColorRGBA(0.05, 0.07, 0.10, 1.0),
+        [clear_depth] 1.0
+      )
+    }
+
+    pass.draw_mesh([mesh] mesh, [material] material)
+    pass.end()
+
+    frame.submit(queue)
+    frame.present()
+
+    angle = wrap_angle(angle + (1.1 * dt))
+  }
+
+  return(Result.ok(0))
+}
+```

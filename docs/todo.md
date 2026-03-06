@@ -182,6 +182,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Update PSIR version history in docs (serializer is at v12; docs list up to v12).
 - ✓ Add an IR validation pass immediately before backend emission to reject malformed/unsupported canonical IR earlier (`validateIrModule` now runs after IR lowering for VM/native/IR emit paths in `primec` and `primevm`, with dedicated IR pipeline validation tests).
 - ✓ Add backend support-matrix conformance tests that enforce per-backend type/effect/opcode allowlists against the spec (VM/native/GLSL effect+type matrix compile-run tests plus an IR opcode allowlist lock test).
+- ○ Add `/std/image/png/*` and `/std/image/ppm/*` read/write support with one language-level API and backend implementations for VM/native/Wasm; GLSL must emit deterministic unsupported diagnostics for image file I/O.
 
 **VM Debugger & Introspection**
 - ✓ Define VM debug session state model and stop-reason enum (`Breakpoint`, `Step`, `Pause`, `Fault`, `Exit`) shared by CLI/tooling. Testing: unit tests for state transition legality and stop-reason coverage.
@@ -227,6 +228,14 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 
 **Web + Native + Metal 3D Target (Spinning Cube)**
 - ✓ Finalize and maintain the cross-backend graphics API contract in `docs/Graphics_API_Design.md` (Core API + profile gating, no backend extension namespace in v1). Testing: doc-linked conformance cases that exercise each locked Core/API constraint.
+- ○ Implement conformance + lowering coverage for the locked v1 spinning-cube mini-spec in `docs/Graphics_API_Design.md` (resource/frame API signatures, profile-deduced device creation, `/std/gfx/VertexColored` wire layout, deterministic `GfxError` code set, and `?` + `on_error<...>` fallible flow). Testing: doc-linked constraint checks for every new `GFX-V1-*` lock plus compile-run source-lock coverage on canonical sample snippets.
+- ○ Add a base software renderer command-list contract (`draw_text`, `draw_rounded_rect`, clip/push-pop) with deterministic ordering and command serialization tests.
+- ○ Add a software color-buffer/shared-surface bridge so software-rendered output can be presented through the native presenter path (including Metal host blit/present flow).
+- ○ Add a two-pass layout engine contract (children-up measure + parents-down arrange) with deterministic layout golden tests.
+- ○ Add a basic widget layer on top of the layout contract (button/label/input/container primitives) that emits the renderer command list.
+- ○ Add a composite widget layer composed strictly from basic widgets, with conformance tests that ban direct backend draw calls in composite widgets.
+- ○ Add an HTML backend adapter that emits DOM/CSS/event wiring from the shared widget/layout model as an alternative to surface presentation.
+- ○ Add a platform input adapter contract that normalizes OS/web input events (pointer/keyboard/IME/resize/focus) into one UI event stream for widget runtime consumption.
 - ✓ Add shared spinning-cube PrimeStruct simulation source and data layout (`cube.prime`) used by all hosts. Testing: compile-time smoke tests across all target profiles.
 - ✓ Add browser host sample assets (`index.html`, `main.js`) under `examples/web/spinning_cube/`. Testing: sample-presence smoke tests plus browser build pipeline checks.
 - ✓ Define minimal browser graphics profile (`wasm-browser` + WebGPU shader path) with compile-time gating. Testing: positive/negative compile suites for browser profile rules.
