@@ -2180,6 +2180,56 @@ TEST_CASE("ir lowerer inline-call cleanup step validates dependencies") {
   CHECK(error == "native backend missing inline-call cleanup step dependency: popFileScope");
 }
 
+TEST_CASE("ir lowerer inline-call gpu-locals step copies known locals") {
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo gidX;
+  gidX.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  gidX.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  gidX.index = 3;
+  callerLocals.emplace(primec::ir_lowerer::kGpuGlobalIdXName, gidX);
+
+  primec::ir_lowerer::LocalInfo gidZ = gidX;
+  gidZ.index = 9;
+  callerLocals.emplace(primec::ir_lowerer::kGpuGlobalIdZName, gidZ);
+
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInlineCallGpuLocalsStep(
+      {
+          .callerLocals = &callerLocals,
+          .calleeLocals = &calleeLocals,
+      },
+      error));
+  CHECK(error.empty());
+  CHECK(calleeLocals.count(primec::ir_lowerer::kGpuGlobalIdXName) == 1u);
+  CHECK(calleeLocals.count(primec::ir_lowerer::kGpuGlobalIdYName) == 0u);
+  CHECK(calleeLocals.count(primec::ir_lowerer::kGpuGlobalIdZName) == 1u);
+  CHECK(calleeLocals.at(primec::ir_lowerer::kGpuGlobalIdXName).index == 3);
+  CHECK(calleeLocals.at(primec::ir_lowerer::kGpuGlobalIdZName).index == 9);
+}
+
+TEST_CASE("ir lowerer inline-call gpu-locals step validates dependencies") {
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallGpuLocalsStep(
+      {
+          .callerLocals = nullptr,
+          .calleeLocals = &calleeLocals,
+      },
+      error));
+  CHECK(error == "native backend missing inline-call gpu-locals step dependency: callerLocals");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallGpuLocalsStep(
+      {
+          .callerLocals = &callerLocals,
+          .calleeLocals = nullptr,
+      },
+      error));
+  CHECK(error == "native backend missing inline-call gpu-locals step dependency: calleeLocals");
+}
+
 TEST_CASE("ir lowerer statements entry-execution step wires context and cleanup") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";
@@ -5675,6 +5725,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsFunctionTableStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsSourceMapStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallCleanupStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallGpuLocalsStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallStatementStep.h\"") != std::string::npos);
 
   const std::filesystem::path setupHeaderPath =
@@ -5764,12 +5815,15 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   REQUIRE(std::filesystem::exists(inlineCallsHeaderPath));
   const std::string inlineCallsHeaderSource = readText(inlineCallsHeaderPath);
   CHECK(inlineCallsHeaderSource.find("runLowerInlineCallCleanupStep(") != std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("runLowerInlineCallGpuLocalsStep(") != std::string::npos);
   CHECK(inlineCallsHeaderSource.find("runLowerInlineCallStatementStep(") != std::string::npos);
   CHECK(inlineCallsHeaderSource.find("const size_t startInstructionIndex = function.instructions.size();") ==
         std::string::npos);
   CHECK(inlineCallsHeaderSource.find(
             "appendInstructionSourceRange(function.name, stmt, startInstructionIndex, function.instructions.size());") ==
         std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("auto inheritGpuLocal =") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("inheritGpuLocal(kGpuGlobalIdXName);") == std::string::npos);
   CHECK(inlineCallsHeaderSource.find("size_t cleanupIndex = function.instructions.size();") == std::string::npos);
   CHECK(inlineCallsHeaderSource.find("function.instructions[jumpIndex].imm = static_cast<int32_t>(cleanupIndex);") ==
         std::string::npos);

@@ -107,15 +107,15 @@
       return false;
     }
 
-    auto inheritGpuLocal = [&](const char *name) {
-      auto it = callerLocals.find(name);
-      if (it != callerLocals.end()) {
-        calleeLocals.emplace(name, it->second);
-      }
-    };
-    inheritGpuLocal(kGpuGlobalIdXName);
-    inheritGpuLocal(kGpuGlobalIdYName);
-    inheritGpuLocal(kGpuGlobalIdZName);
+    if (!ir_lowerer::runLowerInlineCallGpuLocalsStep(
+            {
+                .callerLocals = &callerLocals,
+                .calleeLocals = &calleeLocals,
+            },
+            error)) {
+      inlineStack.erase(callee.fullPath);
+      return false;
+    }
 
     InlineContext context;
     context.defPath = callee.fullPath;
