@@ -655,6 +655,85 @@ TEST_CASE("cpp-ir backend emits dup and pop underflow guards") {
   CHECK(source.find("IR stack underflow on pop") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir backend emits arithmetic print file return underflow guards") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("payload");
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  function.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  function.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  function.instructions.push_back({primec::IrOpcode::DivI32, 0});
+  function.instructions.push_back({primec::IrOpcode::AddI64, 0});
+  function.instructions.push_back({primec::IrOpcode::SubI64, 0});
+  function.instructions.push_back({primec::IrOpcode::MulI64, 0});
+  function.instructions.push_back({primec::IrOpcode::DivI64, 0});
+  function.instructions.push_back({primec::IrOpcode::DivU64, 0});
+  function.instructions.push_back({primec::IrOpcode::AddF32, 0});
+  function.instructions.push_back({primec::IrOpcode::SubF32, 0});
+  function.instructions.push_back({primec::IrOpcode::MulF32, 0});
+  function.instructions.push_back({primec::IrOpcode::DivF32, 0});
+  function.instructions.push_back({primec::IrOpcode::AddF64, 0});
+  function.instructions.push_back({primec::IrOpcode::SubF64, 0});
+  function.instructions.push_back({primec::IrOpcode::MulF64, 0});
+  function.instructions.push_back({primec::IrOpcode::DivF64, 0});
+  function.instructions.push_back({primec::IrOpcode::PrintI32, primec::encodePrintFlags(false, false)});
+  function.instructions.push_back({primec::IrOpcode::PrintI64, primec::encodePrintFlags(false, false)});
+  function.instructions.push_back({primec::IrOpcode::PrintU64, primec::encodePrintFlags(false, false)});
+  function.instructions.push_back({primec::IrOpcode::PrintStringDynamic, primec::encodePrintFlags(false, false)});
+  function.instructions.push_back({primec::IrOpcode::PrintArgv, primec::encodePrintFlags(false, false)});
+  function.instructions.push_back({primec::IrOpcode::PrintArgvUnsafe, primec::encodePrintFlags(false, false)});
+  function.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  function.instructions.push_back({primec::IrOpcode::FileFlush, 0});
+  function.instructions.push_back({primec::IrOpcode::FileWriteI32, 0});
+  function.instructions.push_back({primec::IrOpcode::FileWriteI64, 0});
+  function.instructions.push_back({primec::IrOpcode::FileWriteU64, 0});
+  function.instructions.push_back({primec::IrOpcode::FileWriteString, 0});
+  function.instructions.push_back({primec::IrOpcode::FileWriteByte, 0});
+  function.instructions.push_back({primec::IrOpcode::FileWriteNewline, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnF64, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_stack_underflow_guards.cpp";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "cpp_ir_backend_stack_underflow_guards.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("IR stack underflow on add") != std::string::npos);
+  CHECK(source.find("IR stack underflow on sub") != std::string::npos);
+  CHECK(source.find("IR stack underflow on mul") != std::string::npos);
+  CHECK(source.find("IR stack underflow on div") != std::string::npos);
+  CHECK(source.find("IR stack underflow on float op") != std::string::npos);
+  CHECK(source.find("IR stack underflow on print") != std::string::npos);
+  CHECK(source.find("IR stack underflow on file close") != std::string::npos);
+  CHECK(source.find("IR stack underflow on file flush") != std::string::npos);
+  CHECK(source.find("IR stack underflow on file write") != std::string::npos);
+  CHECK(source.find("IR stack underflow on return") != std::string::npos);
+  CHECK(source.find("if (sp < 2)") != std::string::npos);
+  CHECK(source.find("if (sp == 0)") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir backend writes file io paths") {
   const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
   REQUIRE(backend != nullptr);

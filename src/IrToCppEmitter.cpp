@@ -227,7 +227,18 @@ bool emitInstruction(const IrInstruction &instruction,
                      std::ostringstream &out,
                      std::string &error) {
   constexpr uint64_t MaxLocalIndex = 1023;
-  const auto emitBinaryI32 = [&](const char *op) {
+  const auto emitStackUnderflowGuard = [&](size_t required, const char *operation) {
+    if (required == 1) {
+      out << "        if (sp == 0) {\n";
+    } else {
+      out << "        if (sp < " << required << ") {\n";
+    }
+    out << "          std::cerr << \"IR stack underflow on " << operation << "\\n\";\n";
+    out << "          return 1;\n";
+    out << "        }\n";
+  };
+  const auto emitBinaryI32 = [&](const char *op, const char *underflowOperation) {
+    emitStackUnderflowGuard(2, underflowOperation);
     out << "        int32_t right = static_cast<int32_t>(stack[--sp]);\n";
     out << "        int32_t left = static_cast<int32_t>(stack[--sp]);\n";
     out << "        stack[sp++] = left " << op << " right;\n";
@@ -241,7 +252,8 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
   };
-  const auto emitBinaryI64 = [&](const char *op) {
+  const auto emitBinaryI64 = [&](const char *op, const char *underflowOperation) {
+    emitStackUnderflowGuard(2, underflowOperation);
     out << "        int64_t right = static_cast<int64_t>(stack[--sp]);\n";
     out << "        int64_t left = static_cast<int64_t>(stack[--sp]);\n";
     out << "        stack[sp++] = static_cast<uint64_t>(left " << op << " right);\n";
@@ -262,7 +274,8 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
   };
-  const auto emitBinaryF32 = [&](const char *op) {
+  const auto emitBinaryF32 = [&](const char *op, const char *underflowOperation) {
+    emitStackUnderflowGuard(2, underflowOperation);
     out << "        float right = psBitsToF32(stack[--sp]);\n";
     out << "        float left = psBitsToF32(stack[--sp]);\n";
     out << "        stack[sp++] = psF32ToBits(left " << op << " right);\n";
@@ -283,7 +296,8 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
   };
-  const auto emitBinaryF64 = [&](const char *op) {
+  const auto emitBinaryF64 = [&](const char *op, const char *underflowOperation) {
+    emitStackUnderflowGuard(2, underflowOperation);
     out << "        double right = psBitsToF64(stack[--sp]);\n";
     out << "        double left = psBitsToF64(stack[--sp]);\n";
     out << "        stack[sp++] = psF64ToBits(left " << op << " right);\n";
@@ -408,16 +422,16 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::AddI32:
-      emitBinaryI32("+");
+      emitBinaryI32("+", "add");
       return true;
     case IrOpcode::SubI32:
-      emitBinaryI32("-");
+      emitBinaryI32("-", "sub");
       return true;
     case IrOpcode::MulI32:
-      emitBinaryI32("*");
+      emitBinaryI32("*", "mul");
       return true;
     case IrOpcode::DivI32:
-      emitBinaryI32("/");
+      emitBinaryI32("/", "div");
       return true;
     case IrOpcode::NegI32:
       out << "        int32_t value = static_cast<int32_t>(stack[sp - 1]);\n";
@@ -426,18 +440,19 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::AddI64:
-      emitBinaryI64("+");
+      emitBinaryI64("+", "add");
       return true;
     case IrOpcode::SubI64:
-      emitBinaryI64("-");
+      emitBinaryI64("-", "sub");
       return true;
     case IrOpcode::MulI64:
-      emitBinaryI64("*");
+      emitBinaryI64("*", "mul");
       return true;
     case IrOpcode::DivI64:
-      emitBinaryI64("/");
+      emitBinaryI64("/", "div");
       return true;
     case IrOpcode::DivU64:
+      emitStackUnderflowGuard(2, "div");
       out << "        uint64_t right = stack[--sp];\n";
       out << "        uint64_t left = stack[--sp];\n";
       out << "        stack[sp++] = left / right;\n";
@@ -499,16 +514,16 @@ bool emitInstruction(const IrInstruction &instruction,
       emitCompareU64(">=");
       return true;
     case IrOpcode::AddF32:
-      emitBinaryF32("+");
+      emitBinaryF32("+", "float op");
       return true;
     case IrOpcode::SubF32:
-      emitBinaryF32("-");
+      emitBinaryF32("-", "float op");
       return true;
     case IrOpcode::MulF32:
-      emitBinaryF32("*");
+      emitBinaryF32("*", "float op");
       return true;
     case IrOpcode::DivF32:
-      emitBinaryF32("/");
+      emitBinaryF32("/", "float op");
       return true;
     case IrOpcode::NegF32:
       out << "        float value = psBitsToF32(stack[sp - 1]);\n";
@@ -553,16 +568,16 @@ bool emitInstruction(const IrInstruction &instruction,
       emitCompareF64(">=");
       return true;
     case IrOpcode::AddF64:
-      emitBinaryF64("+");
+      emitBinaryF64("+", "float op");
       return true;
     case IrOpcode::SubF64:
-      emitBinaryF64("-");
+      emitBinaryF64("-", "float op");
       return true;
     case IrOpcode::MulF64:
-      emitBinaryF64("*");
+      emitBinaryF64("*", "float op");
       return true;
     case IrOpcode::DivF64:
-      emitBinaryF64("/");
+      emitBinaryF64("/", "float op");
       return true;
     case IrOpcode::NegF64:
       out << "        double value = psBitsToF64(stack[sp - 1]);\n";
@@ -699,12 +714,15 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::PrintI32:
+      emitStackUnderflowGuard(1, "print");
       emitPrintValue("static_cast<int32_t>(stack[--sp])", decodePrintFlags(instruction.imm));
       return true;
     case IrOpcode::PrintI64:
+      emitStackUnderflowGuard(1, "print");
       emitPrintValue("static_cast<int64_t>(stack[--sp])", decodePrintFlags(instruction.imm));
       return true;
     case IrOpcode::PrintU64:
+      emitStackUnderflowGuard(1, "print");
       emitPrintValue("stack[--sp]", decodePrintFlags(instruction.imm));
       return true;
     case IrOpcode::PrintString: {
@@ -720,6 +738,7 @@ bool emitInstruction(const IrInstruction &instruction,
     }
     case IrOpcode::PrintStringDynamic: {
       uint64_t flags = decodePrintFlags(instruction.imm);
+      emitStackUnderflowGuard(1, "print");
       out << "        uint64_t stringIndex = stack[--sp];\n";
       out << "        if (stringIndex >= ps_string_table_count) {\n";
       out << "          std::cerr << \"invalid string index in IR\\n\";\n";
@@ -737,6 +756,7 @@ bool emitInstruction(const IrInstruction &instruction,
     }
     case IrOpcode::PrintArgv: {
       uint64_t flags = decodePrintFlags(instruction.imm);
+      emitStackUnderflowGuard(1, "print");
       out << "        int64_t indexValue = static_cast<int64_t>(stack[--sp]);\n";
       out << "        if (indexValue < 0 || indexValue >= static_cast<int64_t>(argc)) {\n";
       out << "          std::cerr << \"invalid argv index in IR\\n\";\n";
@@ -754,6 +774,7 @@ bool emitInstruction(const IrInstruction &instruction,
     }
     case IrOpcode::PrintArgvUnsafe: {
       uint64_t flags = decodePrintFlags(instruction.imm);
+      emitStackUnderflowGuard(1, "print");
       out << "        int64_t indexValue = static_cast<int64_t>(stack[--sp]);\n";
       out << "        if (indexValue >= 0 && indexValue < static_cast<int64_t>(argc)) {\n";
       const char *stream = (flags & PrintFlagStderr) != 0 ? "std::cerr" : "std::cout";
@@ -796,6 +817,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::FileClose:
+      emitStackUnderflowGuard(1, "file close");
       out << "        uint64_t closeHandle = stack[--sp];\n";
       out << "        int closeFd = static_cast<int>(closeHandle & 0xffffffffu);\n";
       out << "        int closeRc = ::close(closeFd);\n";
@@ -805,6 +827,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::FileFlush:
+      emitStackUnderflowGuard(1, "file flush");
       out << "        uint64_t flushHandle = stack[--sp];\n";
       out << "        int flushFd = static_cast<int>(flushHandle & 0xffffffffu);\n";
       out << "        int flushRc = ::fsync(flushFd);\n";
@@ -814,6 +837,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::FileWriteI32:
+      emitStackUnderflowGuard(2, "file write");
       out << "        int64_t fileI32Value = static_cast<int64_t>(static_cast<int32_t>(stack[--sp]));\n";
       out << "        uint64_t fileI32Handle = stack[--sp];\n";
       out << "        int fileI32Fd = static_cast<int>(fileI32Handle & 0xffffffffu);\n";
@@ -823,6 +847,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::FileWriteI64:
+      emitStackUnderflowGuard(2, "file write");
       out << "        int64_t fileI64Value = static_cast<int64_t>(stack[--sp]);\n";
       out << "        uint64_t fileI64Handle = stack[--sp];\n";
       out << "        int fileI64Fd = static_cast<int>(fileI64Handle & 0xffffffffu);\n";
@@ -832,6 +857,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::FileWriteU64:
+      emitStackUnderflowGuard(2, "file write");
       out << "        uint64_t fileU64Value = stack[--sp];\n";
       out << "        uint64_t fileU64Handle = stack[--sp];\n";
       out << "        int fileU64Fd = static_cast<int>(fileU64Handle & 0xffffffffu);\n";
@@ -845,6 +871,7 @@ bool emitInstruction(const IrInstruction &instruction,
         error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
         return false;
       }
+      emitStackUnderflowGuard(1, "file write");
       out << "        uint64_t fileStringHandle = stack[--sp];\n";
       out << "        int fileStringFd = static_cast<int>(fileStringHandle & 0xffffffffu);\n";
       out << "        stack[sp++] = static_cast<uint64_t>(psWriteAll(fileStringFd, ps_string_table[" << instruction.imm
@@ -853,6 +880,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::FileWriteByte:
+      emitStackUnderflowGuard(2, "file write");
       out << "        uint8_t fileByteValue = static_cast<uint8_t>(stack[--sp] & 0xffu);\n";
       out << "        uint64_t fileByteHandle = stack[--sp];\n";
       out << "        int fileByteFd = static_cast<int>(fileByteHandle & 0xffffffffu);\n";
@@ -861,6 +889,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::FileWriteNewline:
+      emitStackUnderflowGuard(1, "file write");
       out << "        uint64_t fileLineHandle = stack[--sp];\n";
       out << "        int fileLineFd = static_cast<int>(fileLineHandle & 0xffffffffu);\n";
       out << "        char fileLineValue = '\\n';\n";
@@ -886,15 +915,19 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::ReturnI32:
+      emitStackUnderflowGuard(1, "return");
       out << "        return static_cast<int64_t>(static_cast<int32_t>(stack[--sp]));\n";
       return true;
     case IrOpcode::ReturnI64:
+      emitStackUnderflowGuard(1, "return");
       out << "        return static_cast<int64_t>(stack[--sp]);\n";
       return true;
     case IrOpcode::ReturnF32:
+      emitStackUnderflowGuard(1, "return");
       out << "        return static_cast<int64_t>(static_cast<uint32_t>(stack[--sp]));\n";
       return true;
     case IrOpcode::ReturnF64:
+      emitStackUnderflowGuard(1, "return");
       out << "        return static_cast<int64_t>(stack[--sp]);\n";
       return true;
     case IrOpcode::ReturnVoid:
