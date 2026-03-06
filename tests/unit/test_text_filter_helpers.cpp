@@ -2,11 +2,14 @@
 
 #include "primec/Ast.h"
 #include "primec/TextFilterPipeline.h"
+#include "primec/TransformRegistry.h"
 #include "primec/TransformRules.h"
 
 #include "third_party/doctest.h"
 
 #include <string>
+#include <string_view>
+#include <vector>
 
 TEST_SUITE_BEGIN("primestruct.text_filters.helpers");
 
@@ -236,6 +239,64 @@ TEST_CASE("literal suffix helpers") {
   CHECK(maybeAppendUtf8("\"hi\"ascii") == "\"hi\"ascii");
   CHECK(maybeAppendUtf8("value") == "value");
   CHECK(maybeAppendUtf8("") == "");
+}
+
+TEST_CASE("transform registry registration preserves deterministic order") {
+  primec::TransformRegistry registry;
+  registry.registerTransform({"first", primec::TransformPhase::Text, "-", true, true});
+  registry.registerTransform({"second", primec::TransformPhase::Semantic, "-", true, true});
+  registry.registerTransform({"third", primec::TransformPhase::Text, "-", true, true});
+
+  std::vector<std::string_view> names;
+  for (const auto &transform : registry.list()) {
+    names.push_back(transform.name);
+  }
+
+  REQUIRE(names.size() == 3);
+  CHECK(names[0] == "first");
+  CHECK(names[1] == "second");
+  CHECK(names[2] == "third");
+}
+
+TEST_CASE("transform registry supports same name in multiple phases") {
+  primec::TransformRegistry registry;
+  registry.registerTransform({"dual", primec::TransformPhase::Text, "-", true, true});
+  registry.registerTransform({"dual", primec::TransformPhase::Semantic, "-", true, true});
+
+  CHECK(registry.contains("dual", primec::TransformPhase::Text));
+  CHECK(registry.contains("dual", primec::TransformPhase::Semantic));
+  CHECK(registry.contains("dual", primec::TransformPhase::Auto));
+}
+
+TEST_CASE("default transform lookups follow registry phase metadata") {
+  const auto transforms = primec::listTransforms();
+  auto hasPhase = [&](std::string_view name, primec::TransformPhase phase) {
+    for (const auto &transform : transforms) {
+      if (transform.name == name && transform.phase == phase) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  std::vector<std::string_view> uniqueNames;
+  for (const auto &transform : transforms) {
+    bool alreadySeen = false;
+    for (const auto &name : uniqueNames) {
+      if (name == transform.name) {
+        alreadySeen = true;
+        break;
+      }
+    }
+    if (!alreadySeen) {
+      uniqueNames.push_back(transform.name);
+    }
+  }
+
+  for (const auto &name : uniqueNames) {
+    CHECK(primec::isTextTransformName(name) == hasPhase(name, primec::TransformPhase::Text));
+    CHECK(primec::isSemanticTransformName(name) == hasPhase(name, primec::TransformPhase::Semantic));
+  }
 }
 
 TEST_CASE("rewrite unary helpers") {
