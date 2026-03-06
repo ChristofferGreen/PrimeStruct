@@ -499,21 +499,15 @@
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               error);
         }
-        const auto uploadResult = emitUploadPassthroughCall(
+        const auto uploadReadbackResult = ir_lowerer::runLowerExprEmitUploadReadbackPassthroughStep(
             expr,
             localsIn,
+            emitUploadPassthroughCall,
+            emitReadbackPassthroughCall,
             [&](const Expr &argExpr, const LocalMap &argLocals) { return emitExpr(argExpr, argLocals); },
             error);
-        if (uploadResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
-          return uploadResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
-        }
-        const auto readbackResult = emitReadbackPassthroughCall(
-            expr,
-            localsIn,
-            [&](const Expr &argExpr, const LocalMap &argLocals) { return emitExpr(argExpr, argLocals); },
-            error);
-        if (readbackResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
-          return readbackResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
+        if (uploadReadbackResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
+          return uploadReadbackResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
         }
         const auto bufferBuiltinResult = ir_lowerer::tryEmitBufferBuiltinDispatchWithLocals(
             expr,

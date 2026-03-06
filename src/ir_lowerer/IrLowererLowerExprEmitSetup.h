@@ -21,5 +21,12 @@ bool runLowerExprEmitSetup(const LowerExprEmitSetupInput &input,
                            LowerExprEmitUploadPassthroughCallFn &emitUploadPassthroughCallOut,
                            LowerExprEmitReadbackPassthroughCallFn &emitReadbackPassthroughCallOut,
                            std::string &errorOut);
+UnaryPassthroughCallResult runLowerExprEmitUploadReadbackPassthroughStep(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const LowerExprEmitUploadPassthroughCallFn &emitUploadPassthroughCall,
+    const LowerExprEmitReadbackPassthroughCallFn &emitReadbackPassthroughCall,
+    const EmitExprWithLocalsFn &emitExpr,
+    std::string &errorOut);
 
 } // namespace primec::ir_lowerer

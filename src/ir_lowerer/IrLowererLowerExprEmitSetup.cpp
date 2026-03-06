@@ -34,4 +34,30 @@ bool runLowerExprEmitSetup(const LowerExprEmitSetupInput &,
   return true;
 }
 
+UnaryPassthroughCallResult runLowerExprEmitUploadReadbackPassthroughStep(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const LowerExprEmitUploadPassthroughCallFn &emitUploadPassthroughCall,
+    const LowerExprEmitReadbackPassthroughCallFn &emitReadbackPassthroughCall,
+    const EmitExprWithLocalsFn &emitExpr,
+    std::string &errorOut) {
+  if (!emitUploadPassthroughCall) {
+    errorOut = "native backend missing expr emit setup dependency: emitUploadPassthroughCall";
+    return UnaryPassthroughCallResult::Error;
+  }
+  if (!emitReadbackPassthroughCall) {
+    errorOut = "native backend missing expr emit setup dependency: emitReadbackPassthroughCall";
+    return UnaryPassthroughCallResult::Error;
+  }
+  if (!emitExpr) {
+    errorOut = "native backend missing expr emit setup dependency: emitExpr";
+    return UnaryPassthroughCallResult::Error;
+  }
+  const auto uploadResult = emitUploadPassthroughCall(expr, localsIn, emitExpr, errorOut);
+  if (uploadResult != UnaryPassthroughCallResult::NotMatched) {
+    return uploadResult;
+  }
+  return emitReadbackPassthroughCall(expr, localsIn, emitExpr, errorOut);
+}
+
 } // namespace primec::ir_lowerer
