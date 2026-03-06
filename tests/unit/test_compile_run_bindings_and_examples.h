@@ -247,6 +247,56 @@ TEST_CASE("spinning cube rotation parity entry compiles across targets") {
   CHECK(std::filesystem::exists(wasmPath));
 }
 
+TEST_CASE("spinning cube native flat frame entrypoints compile and run deterministically") {
+  std::filesystem::path cubePath =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "cube.prime";
+  if (!std::filesystem::exists(cubePath)) {
+    cubePath = std::filesystem::current_path() / "examples" / "web" / "spinning_cube" / "cube.prime";
+  }
+  REQUIRE(std::filesystem::exists(cubePath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_flat_frame_entrypoints";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  struct NativeEntryExpectation {
+    std::string entry;
+    int exitCode;
+  };
+
+  const std::vector<NativeEntryExpectation> expected = {
+      {"/cubeNativeMeshVertexCount", 8},
+      {"/cubeNativeMeshIndexCount", 36},
+      {"/cubeNativeFrameInitTick", 0},
+      {"/cubeNativeFrameInitAngleMilli", 0},
+      {"/cubeNativeFrameInitAxisXCenti", 100},
+      {"/cubeNativeFrameInitAxisYCenti", 0},
+      {"/cubeNativeFrameStepSnapshotCode", 117},
+  };
+
+  int index = 0;
+  for (const auto &entry : expected) {
+    const std::filesystem::path nativePath = outDir / ("native_entry_" + std::to_string(index));
+    const std::string compileCmd =
+        "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativePath.string()) +
+        " --entry " + entry.entry;
+    CHECK(runCommand(compileCmd) == 0);
+    CHECK(std::filesystem::exists(nativePath));
+    CHECK(runCommand(quoteShellArg(nativePath.string())) == entry.exitCode);
+    index = index + 1;
+  }
+
+  const std::filesystem::path angularVelocityPath = outDir / "native_entry_angular_velocity";
+  const std::string compileAngularVelocityCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(angularVelocityPath.string()) +
+      " --entry /cubeNativeFrameAngularVelocityMilli";
+  CHECK(runCommand(compileAngularVelocityCmd) == 0);
+  CHECK(std::filesystem::exists(angularVelocityPath));
+}
+
 TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
   std::filesystem::path sampleDir =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
@@ -1030,6 +1080,9 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "No Linux/Windows native window host support.",
       "Native emit `/main` is currently unsupported (`native backend does not support return type on /cubeInit`).",
       "Native smoke runs through `/mainNative` and `examples/native/spinning_cube/main.cpp`.",
+      "`cubeNativeFrameInit*`, `cubeNativeFrameStep*`,",
+      "`cubeNativeMeshVertexCount`, `cubeNativeMeshIndexCount`, and",
+      "`cubeNativeFrameStepSnapshotCode`.",
       "For a visible rotating window today, use the browser path (`index.html` + `main.js`).",
       "shared-source `/main` is still unsupported for native emit until",
       "Diagnostics: prints `native host verified cube simulation output`.",

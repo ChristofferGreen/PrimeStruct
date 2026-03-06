@@ -44,6 +44,10 @@ This example is a milestone target for cross-platform backend work.
     deterministic tick-state snapshot entries used by smoke tests.
   - `cubeRotationParity120`: tolerance-based transform/rotation parity entry
     shared across backend parity suites.
+  - Native flat-frame entrypoints for host driving without struct-return ABI:
+    `cubeNativeFrameInit*`, `cubeNativeFrameStep*`,
+    `cubeNativeMeshVertexCount`, `cubeNativeMeshIndexCount`, and
+    `cubeNativeFrameStepSnapshotCode`.
   - `mainNative`: native-only split entrypoint for host smoke while native
     `/main` support remains blocked on struct-return lowering.
 

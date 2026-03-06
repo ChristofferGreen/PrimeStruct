@@ -195,8 +195,89 @@ cubeRotationParity120() {
 }
 
 [return<int>]
-mainNative() {
+cubeNativeMeshVertexCount() {
+  return(8i32)
+}
+
+[return<int>]
+cubeNativeMeshIndexCount() {
   return(36i32)
+}
+
+[return<int>]
+cubeNativeFrameInitTick() {
+  return(0i32)
+}
+
+[return<int>]
+cubeNativeFrameInitAngleMilli() {
+  return(0i32)
+}
+
+[return<int>]
+cubeNativeFrameInitAxisXCenti() {
+  return(100i32)
+}
+
+[return<int>]
+cubeNativeFrameInitAxisYCenti() {
+  return(0i32)
+}
+
+[return<int>]
+cubeNativeFrameAngularVelocityMilli() {
+  return(1047i32)
+}
+
+[return<int>]
+cubeNativeFrameStepTick([i32] tick) {
+  return(plus(tick, 1i32))
+}
+
+[return<int>]
+cubeNativeFrameStepAngleMilli([i32] angleMilli, [i32] deltaMillis, [i32] angularVelocityMilli) {
+  [f32] angle{divide(convert<f32>(angleMilli), 1000.0f32)}
+  [f32] deltaSeconds{divide(convert<f32>(deltaMillis), 1000.0f32)}
+  [f32] angularVelocity{divide(convert<f32>(angularVelocityMilli), 1000.0f32)}
+  [f32] nextAngle{wrapAngle(plus(angle, multiply(angularVelocity, deltaSeconds)))}
+  return(convert<int>(multiply(nextAngle, 1000.0f32)))
+}
+
+[return<int>]
+cubeNativeFrameStepAxisXCenti([i32] axisXCenti, [i32] axisYCenti) {
+  [f32] axisX{divide(convert<f32>(axisXCenti), 100.0f32)}
+  [f32] axisY{divide(convert<f32>(axisYCenti), 100.0f32)}
+  [f32] nextAxisX{plus(multiply(axisX, 0.9998477f32), multiply(axisY, -0.0174524f32))}
+  return(convert<int>(multiply(nextAxisX, 100.0f32)))
+}
+
+[return<int>]
+cubeNativeFrameStepAxisYCenti([i32] axisXCenti, [i32] axisYCenti) {
+  [f32] axisX{divide(convert<f32>(axisXCenti), 100.0f32)}
+  [f32] axisY{divide(convert<f32>(axisYCenti), 100.0f32)}
+  [f32] nextAxisY{plus(multiply(axisX, 0.0174524f32), multiply(axisY, 0.9998477f32))}
+  return(convert<int>(multiply(nextAxisY, 100.0f32)))
+}
+
+[return<int>]
+cubeNativeFrameStepSnapshotCode() {
+  [i32] initTick{cubeNativeFrameInitTick()}
+  [i32] initAngleMilli{cubeNativeFrameInitAngleMilli()}
+  [i32] initAxisXCenti{cubeNativeFrameInitAxisXCenti()}
+  [i32] initAxisYCenti{cubeNativeFrameInitAxisYCenti()}
+  [i32] angularVelocityMilli{cubeNativeFrameAngularVelocityMilli()}
+
+  [i32] nextTick{cubeNativeFrameStepTick(initTick)}
+  [i32] nextAngleMilli{cubeNativeFrameStepAngleMilli(initAngleMilli, 16i32, angularVelocityMilli)}
+  [i32] nextAxisXCenti{cubeNativeFrameStepAxisXCenti(initAxisXCenti, initAxisYCenti)}
+  [i32] nextAxisYCenti{cubeNativeFrameStepAxisYCenti(initAxisXCenti, initAxisYCenti)}
+
+  return(plus(plus(nextTick, nextAngleMilli), plus(nextAxisXCenti, nextAxisYCenti)))
+}
+
+[return<int>]
+mainNative() {
+  return(cubeNativeMeshIndexCount())
 }
 
 [return<int>]
