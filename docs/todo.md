@@ -40,7 +40,7 @@ Legend:
 - ✓ Decomposition wave status (March 6, 2026): accepted as complete-for-now at current split depth; remaining micro-extractions are deferred below as optional maintenance.
 
 **Deferred Maintenance (Low Priority)**
-- ○ (Low) Extract any remaining include-local micro-orchestration in `src/ir_lowerer/IrLowererLowerInlineCalls.h` (for example active-inline-context activation/restoration around statement/cleanup sequencing) only when a touching change needs that area.
+- ✓ (Low) Extract any remaining include-local micro-orchestration in `src/ir_lowerer/IrLowererLowerInlineCalls.h` (for example active-inline-context activation/restoration around statement/cleanup sequencing) only when a touching change needs that area. Completed one deferred slice by routing active-inline-context statement/cleanup sequencing through `runLowerInlineCallActiveContextStep(...)` in `src/ir_lowerer/IrLowererLowerInlineCallActiveContextStep.{h,cpp}`, with focused success/failure/dependency coverage and source-lock checks.
 
 **Pipeline & CLI**
 - ✓ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.

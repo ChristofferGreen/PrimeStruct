@@ -17,6 +17,7 @@
 #include "IrLowererLowerEffects.h"
 #include "IrLowererLowerEntrySetup.h"
 #include "IrLowererLowerInferenceSetup.h"
+#include "IrLowererLowerInlineCallActiveContextStep.h"
 #include "IrLowererLowerInlineCallCleanupStep.h"
 #include "IrLowererLowerInlineCallContextSetupStep.h"
 #include "IrLowererLowerInlineCallGpuLocalsStep.h"

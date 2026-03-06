@@ -2180,6 +2180,179 @@ TEST_CASE("ir lowerer inline-call cleanup step validates dependencies") {
   CHECK(error == "native backend missing inline-call cleanup step dependency: popFileScope");
 }
 
+TEST_CASE("ir lowerer inline-call active-context step runs statements and cleanup") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  primec::Expr firstStmt;
+  firstStmt.kind = primec::Expr::Kind::Literal;
+  firstStmt.literalValue = 1;
+  callee.statements.push_back(firstStmt);
+  primec::Expr secondStmt = firstStmt;
+  secondStmt.literalValue = 2;
+  callee.statements.push_back(secondStmt);
+
+  bool active = false;
+  int activateCalls = 0;
+  int restoreCalls = 0;
+  int emitCalls = 0;
+  int cleanupCalls = 0;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::runLowerInlineCallActiveContextStep(
+      {
+          .callee = &callee,
+          .structDefinition = false,
+          .activateInlineContext = [&]() {
+            ++activateCalls;
+            active = true;
+          },
+          .restoreInlineContext = [&]() {
+            ++restoreCalls;
+            active = false;
+          },
+          .emitInlineStatement = [&](const primec::Expr &) {
+            CHECK(active);
+            ++emitCalls;
+            return true;
+          },
+          .runInlineCleanup = [&]() {
+            CHECK(active);
+            ++cleanupCalls;
+            return true;
+          },
+      },
+      error));
+  CHECK(error.empty());
+  CHECK_FALSE(active);
+  CHECK(activateCalls == 1);
+  CHECK(restoreCalls == 1);
+  CHECK(emitCalls == 2);
+  CHECK(cleanupCalls == 1);
+
+  int structEmitCalls = 0;
+  int structCleanupCalls = 0;
+  CHECK(primec::ir_lowerer::runLowerInlineCallActiveContextStep(
+      {
+          .callee = &callee,
+          .structDefinition = true,
+          .activateInlineContext = [&]() { active = true; },
+          .restoreInlineContext = [&]() { active = false; },
+          .emitInlineStatement = [&](const primec::Expr &) {
+            ++structEmitCalls;
+            return true;
+          },
+          .runInlineCleanup = [&]() {
+            ++structCleanupCalls;
+            return true;
+          },
+      },
+      error));
+  CHECK(error.empty());
+  CHECK_FALSE(active);
+  CHECK(structEmitCalls == 0);
+  CHECK(structCleanupCalls == 1);
+}
+
+TEST_CASE("ir lowerer inline-call active-context step restores context on failure") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Literal;
+  stmt.literalValue = 1;
+  callee.statements.push_back(stmt);
+
+  bool active = false;
+  int restoreCalls = 0;
+  int cleanupCalls = 0;
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallActiveContextStep(
+      {
+          .callee = &callee,
+          .structDefinition = false,
+          .activateInlineContext = [&]() { active = true; },
+          .restoreInlineContext = [&]() {
+            ++restoreCalls;
+            active = false;
+          },
+          .emitInlineStatement = [&](const primec::Expr &) { return false; },
+          .runInlineCleanup = [&]() {
+            ++cleanupCalls;
+            return true;
+          },
+      },
+      error));
+  CHECK_FALSE(active);
+  CHECK(restoreCalls == 1);
+  CHECK(cleanupCalls == 0);
+}
+
+TEST_CASE("ir lowerer inline-call active-context step validates dependencies") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallActiveContextStep(
+      {
+          .callee = nullptr,
+          .structDefinition = false,
+          .activateInlineContext = []() {},
+          .restoreInlineContext = []() {},
+          .emitInlineStatement = [](const primec::Expr &) { return true; },
+          .runInlineCleanup = []() { return true; },
+      },
+      error));
+  CHECK(error == "native backend missing inline-call active-context step dependency: callee");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallActiveContextStep(
+      {
+          .callee = &callee,
+          .structDefinition = false,
+          .activateInlineContext = {},
+          .restoreInlineContext = []() {},
+          .emitInlineStatement = [](const primec::Expr &) { return true; },
+          .runInlineCleanup = []() { return true; },
+      },
+      error));
+  CHECK(error == "native backend missing inline-call active-context step dependency: activateInlineContext");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallActiveContextStep(
+      {
+          .callee = &callee,
+          .structDefinition = false,
+          .activateInlineContext = []() {},
+          .restoreInlineContext = {},
+          .emitInlineStatement = [](const primec::Expr &) { return true; },
+          .runInlineCleanup = []() { return true; },
+      },
+      error));
+  CHECK(error == "native backend missing inline-call active-context step dependency: restoreInlineContext");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallActiveContextStep(
+      {
+          .callee = &callee,
+          .structDefinition = false,
+          .activateInlineContext = []() {},
+          .restoreInlineContext = []() {},
+          .emitInlineStatement = {},
+          .runInlineCleanup = []() { return true; },
+      },
+      error));
+  CHECK(error == "native backend missing inline-call active-context step dependency: emitInlineStatement");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallActiveContextStep(
+      {
+          .callee = &callee,
+          .structDefinition = false,
+          .activateInlineContext = []() {},
+          .restoreInlineContext = []() {},
+          .emitInlineStatement = [](const primec::Expr &) { return true; },
+          .runInlineCleanup = {},
+      },
+      error));
+  CHECK(error == "native backend missing inline-call active-context step dependency: runInlineCleanup");
+}
+
 TEST_CASE("ir lowerer inline-call gpu-locals step copies known locals") {
   primec::ir_lowerer::LocalMap callerLocals;
   primec::ir_lowerer::LocalInfo gidX;
@@ -5904,6 +6077,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryStatementStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsFunctionTableStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsSourceMapStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallActiveContextStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallCleanupStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallContextSetupStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallGpuLocalsStep.h\"") != std::string::npos);
@@ -5996,6 +6170,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
       std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
   REQUIRE(std::filesystem::exists(inlineCallsHeaderPath));
   const std::string inlineCallsHeaderSource = readText(inlineCallsHeaderPath);
+  CHECK(inlineCallsHeaderSource.find("runLowerInlineCallActiveContextStep(") != std::string::npos);
   CHECK(inlineCallsHeaderSource.find("runLowerInlineCallCleanupStep(") != std::string::npos);
   CHECK(inlineCallsHeaderSource.find("runLowerInlineCallContextSetupStep(") != std::string::npos);
   CHECK(inlineCallsHeaderSource.find("runLowerInlineCallGpuLocalsStep(") != std::string::npos);
@@ -6022,6 +6197,8 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(inlineCallsHeaderSource.find(
             "function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});") ==
         std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("if (!structDef) {") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("for (const auto &stmt : callee.statements)") == std::string::npos);
 }
 
 TEST_CASE("emitter emit setup source delegation stays stable") {

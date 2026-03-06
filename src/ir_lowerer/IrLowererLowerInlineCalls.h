@@ -137,39 +137,42 @@
     context.returnLocal = contextSetup.returnLocal;
 
     InlineContext *prevContext = activeInlineContext;
-    activeInlineContext = &context;
-    if (!structDef) {
-      for (const auto &stmt : callee.statements) {
-        if (!ir_lowerer::runLowerInlineCallStatementStep(
-                {
-                    .function = &function,
-                    .emitStatement = [&](const Expr &inlineStmt) { return emitStatement(inlineStmt, calleeLocals); },
-                    .appendInstructionSourceRange =
-                        [&](const std::string &functionName, const Expr &inlineStmt, size_t beginIndex, size_t endIndex) {
-                          appendInstructionSourceRange(functionName, inlineStmt, beginIndex, endIndex);
-                        },
-                },
-                stmt,
-                error)) {
-          activeInlineContext = prevContext;
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-      }
-    }
-    if (!ir_lowerer::runLowerInlineCallCleanupStep(
+    if (!ir_lowerer::runLowerInlineCallActiveContextStep(
             {
-                .function = &function,
-                .returnJumps = &context.returnJumps,
-                .emitCurrentFileScopeCleanup = [&]() { emitFileScopeCleanup(fileScopeStack.back()); },
-                .popFileScope = [&]() { popFileScope(); },
+                .callee = &callee,
+                .structDefinition = structDef,
+                .activateInlineContext = [&]() { activeInlineContext = &context; },
+                .restoreInlineContext = [&]() { activeInlineContext = prevContext; },
+                .emitInlineStatement = [&](const Expr &stmt) {
+                  return ir_lowerer::runLowerInlineCallStatementStep(
+                      {
+                          .function = &function,
+                          .emitStatement = [&](const Expr &inlineStmt) { return emitStatement(inlineStmt, calleeLocals); },
+                          .appendInstructionSourceRange = [&](const std::string &functionName,
+                                                              const Expr &inlineStmt,
+                                                              size_t beginIndex,
+                                                              size_t endIndex) {
+                            appendInstructionSourceRange(functionName, inlineStmt, beginIndex, endIndex);
+                          },
+                      },
+                      stmt,
+                      error);
+                },
+                .runInlineCleanup = [&]() {
+                  return ir_lowerer::runLowerInlineCallCleanupStep(
+                      {
+                          .function = &function,
+                          .returnJumps = &context.returnJumps,
+                          .emitCurrentFileScopeCleanup = [&]() { emitFileScopeCleanup(fileScopeStack.back()); },
+                          .popFileScope = [&]() { popFileScope(); },
+                      },
+                      error);
+                },
             },
             error)) {
-      activeInlineContext = prevContext;
       inlineStack.erase(callee.fullPath);
       return false;
     }
-    activeInlineContext = prevContext;
 
     if (!ir_lowerer::runLowerInlineCallReturnValueStep(
             {

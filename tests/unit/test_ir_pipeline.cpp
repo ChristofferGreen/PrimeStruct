@@ -82,6 +82,7 @@
 #include "src/ir_lowerer/IrLowererInlineStructArgHelpers.h"
 #include "src/ir_lowerer/IrLowererLowerEffects.h"
 #include "src/ir_lowerer/IrLowererLowerEntrySetup.h"
+#include "src/ir_lowerer/IrLowererLowerInlineCallActiveContextStep.h"
 #include "src/ir_lowerer/IrLowererLowerExprEmitSetup.h"
 #include "src/ir_lowerer/IrLowererLowerInferenceSetup.h"
 #include "src/ir_lowerer/IrLowererLowerInlineCallCleanupStep.h"
