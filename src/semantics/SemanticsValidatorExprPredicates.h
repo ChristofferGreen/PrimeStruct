@@ -1222,7 +1222,39 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     };
     std::string vectorHelper;
     if (getVectorStatementHelperName(expr, vectorHelper)) {
-      const std::string resolved = resolveCalleePath(expr);
+      std::string resolved = resolveCalleePath(expr);
+      if (defMap_.find(resolved) == defMap_.end() && expr.isMethodCall && !expr.args.empty()) {
+        const Expr &receiver = expr.args.front();
+        if (receiver.kind == Expr::Kind::Name) {
+          std::string typeName;
+          if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+            typeName = paramBinding->typeName;
+          } else {
+            auto it = locals.find(receiver.name);
+            if (it != locals.end()) {
+              typeName = it->second.typeName;
+            }
+          }
+          if (!typeName.empty() && typeName != "Pointer" && typeName != "Reference") {
+            std::string resolvedType;
+            if (isPrimitiveBindingTypeName(typeName)) {
+              resolvedType = "/" + normalizeBindingTypeName(typeName);
+            } else {
+              resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+              if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
+                auto importIt = importAliases_.find(typeName);
+                if (importIt != importAliases_.end()) {
+                  resolvedType = importIt->second;
+                }
+              }
+            }
+            const std::string methodTarget = resolvedType + "/" + expr.name;
+            if (!resolvedType.empty() && defMap_.count(methodTarget) > 0) {
+              resolved = methodTarget;
+            }
+          }
+        }
+      }
       if (defMap_.find(resolved) == defMap_.end()) {
         error_ = vectorHelper + " is only supported as a statement";
         return false;

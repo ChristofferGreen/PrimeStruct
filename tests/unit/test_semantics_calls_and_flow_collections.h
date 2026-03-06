@@ -724,4 +724,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct push helper expression call is not treated as builtin vector helper") {
+  const std::string source = R"(
+Counter {
+  [i32 mut] value{0i32}
+  [return<int>]
+  push([i32] next) {
+    assign(this.value, next)
+    return(this.value)
+  }
+}
+
+[return<int>]
+main() {
+  [Counter mut] counter{Counter()}
+  return(counter.push(7i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("user definition named push can be used in expressions") {
+  const std::string source = R"(
+[return<int>]
+push([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(push(3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector method helper remains statement-only in expressions") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(values.push(2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("only supported as a statement") != std::string::npos);
+}
+
 TEST_SUITE_END();
