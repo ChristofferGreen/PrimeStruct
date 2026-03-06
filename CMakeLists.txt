@@ -65,6 +65,7 @@ add_library(primec_lib
   src/ImportResolver.cpp
   src/IrBackends.cpp
   src/IrInliner.cpp
+  src/IrToGlslEmitter.cpp
   src/ir_lowerer/IrLowererCallHelpers.cpp
   src/ir_lowerer/IrLowererBindingTransformHelpers.cpp
   src/ir_lowerer/IrLowererBindingTypeHelpers.cpp
@@ -221,6 +222,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.pipeline.conversions
     primestruct.ir.pipeline.entry_args
     primestruct.ir.pipeline.backends
+    primestruct.ir.pipeline.to_glsl
     primestruct.ir.pipeline.validation
     primestruct.vm.debug.session
     primestruct.lexer

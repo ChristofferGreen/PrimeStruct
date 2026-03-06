@@ -14,6 +14,7 @@
 #include "primec/IrInliner.h"
 #include "primec/IrBackends.h"
 #include "primec/IrSerializer.h"
+#include "primec/IrToGlslEmitter.h"
 #include "primec/IrValidation.h"
 #include "primec/IrVirtualRegisterAllocator.h"
 #include "primec/IrVirtualRegisterLiveness.h"
@@ -173,3 +174,4 @@ bool validateProgram(primec::Program &program,
 #include "test_ir_pipeline_external_tooling.h"
 #include "test_ir_pipeline_wasm.h"
 #include "test_ir_pipeline_backends.h"
+#include "test_ir_pipeline_to_glsl.h"

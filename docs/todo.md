@@ -43,8 +43,8 @@ Legend:
 - ✓ (Low) Extract any remaining include-local micro-orchestration in `src/ir_lowerer/IrLowererLowerInlineCalls.h` (for example active-inline-context activation/restoration around statement/cleanup sequencing) only when a touching change needs that area. Completed one deferred slice by routing active-inline-context statement/cleanup sequencing through `runLowerInlineCallActiveContextStep(...)` in `src/ir_lowerer/IrLowererLowerInlineCallActiveContextStep.{h,cpp}`, with focused success/failure/dependency coverage and source-lock checks.
 
 **Architecture Review Follow-Up (March 6, 2026)**
-- ◐ Add an `IrBackend` interface and route all emit modes through `IrModule`. Progress: introduced shared `IrBackend` abstraction + registry for IR-capable emit modes (`vm`, `native`, `ir`, `wasm`) and routed `primec` through one lower/validate/inline/emit IR path; remaining work is migrating `glsl`/`spirv`/`cpp`/`exe` paths to consume `IrModule` instead of direct AST emitters.
-- ○ Implement an `IrToGlslEmitter` vertical slice for a numeric/control-flow subset.
+- ◐ Add an `IrBackend` interface and route all emit modes through `IrModule`. Progress: introduced shared `IrBackend` abstraction + registry for IR-capable emit modes (`vm`, `native`, `ir`, `wasm`) and routed `primec` through one lower/validate/inline/emit IR path; added a standalone `IrToGlslEmitter` vertical slice for stack-based `i32` arithmetic/comparisons and jump control flow over `IrModule`; remaining work is wiring `glsl`/`spirv`/`cpp`/`exe` CLI emit paths to consume these IR backends end-to-end.
+- ✓ Implement an `IrToGlslEmitter` vertical slice for a numeric/control-flow subset.
 - ○ Implement an `IrToCppEmitter` vertical slice for a VM/native parity subset.
 - ○ Add differential tests comparing AST emitters vs IR emitters on a shared corpus.
 - ○ Add `IrValidationTarget::Glsl` and move GLSL legality checks from the AST emitter into IR validation.
