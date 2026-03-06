@@ -1,7 +1,5 @@
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
-#include "primec/ExternalTooling.h"
-#include "primec/GlslEmitter.h"
 #include "primec/IrBackends.h"
 #include "primec/IrInliner.h"
 #include "primec/IrLowerer.h"
@@ -12,10 +10,8 @@
 
 #include <algorithm>
 #include <cctype>
-#include <chrono>
 #include <filesystem>
 #include <functional>
-#include <fstream>
 #include <iostream>
 #include <optional>
 #include <sstream>
@@ -264,15 +260,6 @@ void printTransformList(std::ostream &out) {
   }
 }
 
-bool writeFile(const std::string &path, const std::string &contents) {
-  std::ofstream file(path);
-  if (!file) {
-    return false;
-  }
-  file << contents;
-  return file.good();
-}
-
 std::vector<std::string> irBackendNotes(const primec::IrBackendDiagnostics &diagnostics,
                                         std::string_view stage = {}) {
   std::vector<std::string> notes;
@@ -282,19 +269,6 @@ std::vector<std::string> irBackendNotes(const primec::IrBackendDiagnostics &diag
     notes.push_back("stage: " + std::string(stage));
   }
   return notes;
-}
-
-std::string injectComputeLayout(const std::string &glslSource) {
-  const std::string layoutLine = "layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;\n";
-  size_t versionPos = glslSource.find("#version");
-  if (versionPos == std::string::npos) {
-    return "#version 450\n" + layoutLine + glslSource;
-  }
-  size_t lineEnd = glslSource.find('\n', versionPos);
-  if (lineEnd == std::string::npos) {
-    return glslSource + "\n" + layoutLine;
-  }
-  return glslSource.substr(0, lineEnd + 1) + layoutLine + glslSource.substr(lineEnd + 1);
 }
 
 enum class IrBackendRunFailureStage {
@@ -464,7 +438,6 @@ int main(int argc, char **argv) {
     printTransformList(std::cout);
     return 0;
   }
-  const primec::ProcessRunner &processRunner = primec::systemProcessRunner();
   std::string error;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
@@ -546,6 +519,8 @@ int main(int argc, char **argv) {
     irBackend = primec::findIrBackend("exe-ir");
   } else if (irBackend == nullptr && options.emitKind == "glsl") {
     irBackend = primec::findIrBackend("glsl-ir");
+  } else if (irBackend == nullptr && options.emitKind == "spirv") {
+    irBackend = primec::findIrBackend("spirv-ir");
   }
 
   if (irBackend != nullptr && irBackend->requiresOutputPath() && !options.outputPath.empty()) {
@@ -609,97 +584,6 @@ int main(int argc, char **argv) {
     if (!ensureOutputDirectory(resolved, error)) {
       return emitFailure(options, primec::DiagnosticCode::OutputError, "Output error: ", error, 2);
     }
-  }
-
-  if (options.emitKind == "spirv") {
-    if (const primec::IrBackend *spirvIrBackend = primec::findIrBackend("spirv-ir"); spirvIrBackend != nullptr) {
-      primec::IrBackendEmitResult emitResult;
-      IrBackendRunFailure irFailure;
-      if (runIrBackend(*spirvIrBackend, program, options, emitResult, irFailure)) {
-        return emitResult.exitCode;
-      }
-      if (irFailure.stage != IrBackendRunFailureStage::Emit) {
-        const primec::IrBackendDiagnostics &diagnostics = spirvIrBackend->diagnostics();
-        if (irFailure.stage == IrBackendRunFailureStage::Lowering) {
-          return emitFailure(options,
-                             diagnostics.loweringDiagnosticCode,
-                             diagnostics.loweringErrorPrefix,
-                             irFailure.message,
-                             2,
-                             irBackendNotes(diagnostics));
-        }
-        if (irFailure.stage == IrBackendRunFailureStage::Validation) {
-          return emitFailure(options,
-                             diagnostics.validationDiagnosticCode,
-                             diagnostics.validationErrorPrefix,
-                             irFailure.message,
-                             2,
-                             irBackendNotes(diagnostics, "ir-validate"));
-        }
-        if (irFailure.stage == IrBackendRunFailureStage::Inlining) {
-          return emitFailure(options,
-                             diagnostics.inliningDiagnosticCode,
-                             diagnostics.inliningErrorPrefix,
-                             irFailure.message,
-                             2,
-                             irBackendNotes(diagnostics, "ir-inline"));
-        }
-        if (irFailure.stage == IrBackendRunFailureStage::OutputWrite) {
-          return emitFailure(options,
-                             primec::DiagnosticCode::OutputError,
-                             "Failed to write output: ",
-                             options.outputPath,
-                             2);
-        }
-      }
-    }
-
-    std::string legacySource;
-    std::string legacyError;
-    primec::GlslEmitter glslEmitter;
-    if (!glslEmitter.emitSource(program, options.entryPath, legacySource, legacyError)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::EmitError,
-                         "GLSL emit error: ",
-                         legacyError,
-                         2,
-                         {"backend: glsl"});
-    }
-
-    const std::string spirvSource = injectComputeLayout(legacySource);
-    std::string toolName;
-    if (!primec::findSpirvCompiler(processRunner, toolName)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::EmitError,
-                         "SPIR-V emit error: ",
-                         "glslangValidator or glslc not found",
-                         2,
-                         {"backend: spirv"});
-    }
-
-    const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
-    std::filesystem::path tempPath =
-        std::filesystem::temp_directory_path() / ("primec_spirv_" + std::to_string(timestamp) + ".comp");
-    if (!writeFile(tempPath.string(), spirvSource)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::OutputError,
-                         "Failed to write output: ",
-                         tempPath.string(),
-                         2);
-    }
-
-    bool ok = primec::compileSpirv(processRunner, toolName, tempPath, options.outputPath);
-    std::error_code ec;
-    std::filesystem::remove(tempPath, ec);
-    if (!ok) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::EmitError,
-                         "SPIR-V emit error: ",
-                         "tool invocation failed",
-                         2,
-                         {"backend: spirv"});
-    }
-    return 0;
   }
 
   return emitFailure(options,

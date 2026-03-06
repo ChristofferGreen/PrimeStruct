@@ -79,7 +79,7 @@ TEST_CASE("main routes cpp/exe through ir backends without legacy fallback branc
   CHECK(source.find("emitter.emitCpp(program, options.entryPath)") == std::string::npos);
 }
 
-TEST_CASE("main routes glsl through ir backend and gates spirv fallback to emit-stage failures") {
+TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";
   if (!std::filesystem::exists(mainPath)) {
@@ -89,9 +89,10 @@ TEST_CASE("main routes glsl through ir backend and gates spirv fallback to emit-
 
   const std::string source = readTextFile(mainPath);
   CHECK(source.find("findIrBackend(\"glsl-ir\")") != std::string::npos);
-  CHECK(source.find("if (irFailure.stage != IrBackendRunFailureStage::Emit)") != std::string::npos);
+  CHECK(source.find("findIrBackend(\"spirv-ir\")") != std::string::npos);
   CHECK(source.find("if (options.emitKind == \"glsl\")") == std::string::npos);
-  CHECK(source.find("if (options.emitKind == \"spirv\")") != std::string::npos);
+  CHECK(source.find("if (options.emitKind == \"spirv\")") == std::string::npos);
+  CHECK(source.find("if (irFailure.stage != IrBackendRunFailureStage::Emit)") == std::string::npos);
 }
 
 TEST_CASE("vm ir backend executes module and returns exit code") {

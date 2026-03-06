@@ -638,24 +638,27 @@ main() {
   CHECK(output.find("PrimeStructOutput") == std::string::npos);
 }
 
-TEST_CASE("spirv emitter falls back to legacy glsl on ir emit-stage failures") {
-  if (!hasSpirvTools()) {
-    return;
-  }
+TEST_CASE("spirv emitter surfaces ir emit-stage failures without fallback") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [f64] wide{1.5f64};
+  [i64] wide{5000000000i64}
   return();
 }
 )";
-  const std::string srcPath = writeTemp("compile_spirv_fallback_legacy_glsl.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_spirv_fallback_legacy_glsl.spv").string();
+  const std::string srcPath = writeTemp("compile_spirv_ir_backend_emit_failure.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_spirv_ir_backend_emit_failure.spv").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_spirv_ir_backend_emit_failure_err.txt").string();
+  std::error_code ec;
+  std::filesystem::remove(outPath, ec);
 
-  const std::string compileCmd = "./primec --emit=spirv " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(std::filesystem::exists(outPath));
-  CHECK(std::filesystem::file_size(outPath) > 0);
+  const std::string compileCmd = "./primec --emit=spirv " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
+                                 " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("ir-to-glsl failed: IrToGlslEmitter i64 literal out of i32 range") != std::string::npos);
+  CHECK_FALSE(std::filesystem::exists(outPath));
 }
 
 TEST_CASE("glsl emitter allows assign in expressions") {
