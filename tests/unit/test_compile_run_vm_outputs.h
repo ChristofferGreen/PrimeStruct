@@ -1295,6 +1295,46 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("exe-ir emitter truncates in-range f32/f64 to u64") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(not(equal(convert<u64>(2.9f32), 2u64)), then() { return(1i32) }, else() { })
+  if(not(equal(convert<u64>(42.9f32), 42u64)), then() { return(2i32) }, else() { })
+  if(not(equal(convert<u64>(2.9f64), 2u64)), then() { return(3i32) }, else() { })
+  if(not(equal(convert<u64>(42.9f64), 42u64)), then() { return(4i32) }, else() { })
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_f64_to_u64_convert_truncation.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_exe_ir_f64_to_u64_convert_truncation").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("exe emitter uses ir backend for in-range f32/f64 to u64 truncation") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(not(equal(convert<u64>(2.9f32), 2u64)), then() { return(1i32) }, else() { })
+  if(not(equal(convert<u64>(42.9f32), 42u64)), then() { return(2i32) }, else() { })
+  if(not(equal(convert<u64>(2.9f64), 2u64)), then() { return(3i32) }, else() { })
+  if(not(equal(convert<u64>(42.9f64), 42u64)), then() { return(4i32) }, else() { })
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_f64_to_u64_ir_first_truncation.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_exe_f64_to_u64_ir_first_truncation").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("cpp and exe emitters match cpp-ir and exe-ir on shared corpus") {
   struct DifferentialCase {
     const char *name;

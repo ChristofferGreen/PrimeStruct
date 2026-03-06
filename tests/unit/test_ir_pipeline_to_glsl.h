@@ -1,8 +1,13 @@
+#include <cstdint>
 #include <string>
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.to_glsl");
 
 namespace {
+
+constexpr uint64_t encodeSignedI32Imm(int32_t value) {
+  return static_cast<uint64_t>(static_cast<int64_t>(value));
+}
 
 primec::IrModule makeSimpleI32AddModule() {
   primec::IrModule module;
@@ -826,7 +831,7 @@ TEST_CASE("ir to glsl emitter writes file-close stub opcode") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushI32, -1});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, encodeSignedI32Imm(-1)});
   fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
@@ -846,7 +851,7 @@ TEST_CASE("ir to glsl emitter writes file-flush stub opcode") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushI32, -1});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, encodeSignedI32Imm(-1)});
   fn.instructions.push_back({primec::IrOpcode::FileFlush, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
@@ -866,7 +871,7 @@ TEST_CASE("ir to glsl emitter writes file-write-i32 stub opcode") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushI32, -1});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, encodeSignedI32Imm(-1)});
   fn.instructions.push_back({primec::IrOpcode::PushI32, 7});
   fn.instructions.push_back({primec::IrOpcode::FileWriteI32, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
@@ -888,7 +893,7 @@ TEST_CASE("ir to glsl emitter writes file-write-i64 stub opcode") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushI32, -1});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, encodeSignedI32Imm(-1)});
   fn.instructions.push_back({primec::IrOpcode::PushI64, 7});
   fn.instructions.push_back({primec::IrOpcode::FileWriteI64, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
@@ -910,7 +915,7 @@ TEST_CASE("ir to glsl emitter writes file-write-u64 stub opcode") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushI32, -1});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, encodeSignedI32Imm(-1)});
   fn.instructions.push_back({primec::IrOpcode::PushI64, 7});
   fn.instructions.push_back({primec::IrOpcode::FileWriteU64, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
@@ -933,7 +938,7 @@ TEST_CASE("ir to glsl emitter writes file-write-string stub opcode") {
   module.stringTable.push_back("hello");
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushI32, -1});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, encodeSignedI32Imm(-1)});
   fn.instructions.push_back({primec::IrOpcode::FileWriteString, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
@@ -953,7 +958,7 @@ TEST_CASE("ir to glsl emitter writes file-write-byte stub opcode") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushI32, -1});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, encodeSignedI32Imm(-1)});
   fn.instructions.push_back({primec::IrOpcode::PushI32, 65});
   fn.instructions.push_back({primec::IrOpcode::FileWriteByte, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
@@ -975,7 +980,7 @@ TEST_CASE("ir to glsl emitter writes file-write-newline stub opcode") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushI32, -1});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, encodeSignedI32Imm(-1)});
   fn.instructions.push_back({primec::IrOpcode::FileWriteNewline, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
@@ -1065,7 +1070,7 @@ TEST_CASE("ir to glsl emitter rejects file-write-string out-of-range index") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushI32, -1});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, encodeSignedI32Imm(-1)});
   fn.instructions.push_back({primec::IrOpcode::FileWriteString, 3});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
