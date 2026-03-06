@@ -261,6 +261,148 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
   return true;
 }
 
+bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
+                            LowerInferenceSetupBootstrapState &stateOut,
+                            std::string &errorOut) {
+  if (!runLowerInferenceSetupBootstrap(
+          {
+              .defMap = input.defMap,
+              .importAliases = input.importAliases,
+              .structNames = input.structNames,
+              .isArrayCountCall = input.isArrayCountCall,
+              .isVectorCapacityCall = input.isVectorCapacityCall,
+              .isEntryArgsName = input.isEntryArgsName,
+              .resolveExprPath = input.resolveExprPath,
+              .getBuiltinOperatorName = input.getBuiltinOperatorName,
+          },
+          stateOut,
+          errorOut)) {
+    return false;
+  }
+
+  if (!runLowerInferenceArrayKindSetup(
+          {
+              .defMap = input.defMap,
+              .resolveExprPath = input.resolveExprPath,
+              .resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath,
+              .isArrayCountCall = input.isArrayCountCall,
+              .isStringCountCall = input.isStringCountCall,
+          },
+          stateOut,
+          errorOut)) {
+    return false;
+  }
+  if (!runLowerInferenceExprKindCallBaseSetup(
+          {
+              .inferStructExprPath = input.inferStructExprPath,
+              .resolveStructFieldSlot = input.resolveStructFieldSlot,
+              .resolveUninitializedStorage = input.resolveUninitializedStorage,
+          },
+          stateOut,
+          errorOut)) {
+    return false;
+  }
+  if (!runLowerInferenceExprKindCallReturnSetup(
+          {
+              .defMap = input.defMap,
+              .resolveExprPath = input.resolveExprPath,
+              .isArrayCountCall = input.isArrayCountCall,
+              .isStringCountCall = input.isStringCountCall,
+          },
+          stateOut,
+          errorOut)) {
+    return false;
+  }
+  if (!runLowerInferenceExprKindCallFallbackSetup(
+          {
+              .isArrayCountCall = input.isArrayCountCall,
+              .isStringCountCall = input.isStringCountCall,
+              .isVectorCapacityCall = input.isVectorCapacityCall,
+              .isEntryArgsName = input.isEntryArgsName,
+          },
+          stateOut,
+          errorOut)) {
+    return false;
+  }
+  if (!runLowerInferenceExprKindCallOperatorFallbackSetup(
+          {
+              .hasMathImport = input.hasMathImport,
+              .combineNumericKinds = input.combineNumericKinds,
+          },
+          stateOut,
+          errorOut)) {
+    return false;
+  }
+  if (!runLowerInferenceExprKindCallControlFlowFallbackSetup(
+          {
+              .defMap = input.defMap,
+              .resolveExprPath = input.resolveExprPath,
+              .lowerMatchToIf = input.lowerMatchToIf,
+              .combineNumericKinds = input.combineNumericKinds,
+              .isBindingMutable = input.isBindingMutable,
+              .bindingKind = input.bindingKind,
+              .hasExplicitBindingTypeTransform = input.hasExplicitBindingTypeTransform,
+              .bindingValueKind = input.bindingValueKind,
+              .applyStructArrayInfo = input.applyStructArrayInfo,
+              .applyStructValueInfo = input.applyStructValueInfo,
+              .inferStructExprPath = input.inferStructExprPath,
+          },
+          stateOut,
+          errorOut)) {
+    return false;
+  }
+  if (!runLowerInferenceExprKindCallPointerFallbackSetup(
+          {},
+          stateOut,
+          errorOut)) {
+    return false;
+  }
+  if (!runLowerInferenceExprKindBaseSetup(
+          {
+              .getMathConstantName = input.getMathConstantName,
+          },
+          stateOut,
+          errorOut)) {
+    return false;
+  }
+  if (!runLowerInferenceExprKindDispatchSetup(
+          {
+              .error = &errorOut,
+          },
+          stateOut,
+          errorOut)) {
+    return false;
+  }
+
+  auto &returnInfoCache = stateOut.returnInfoCache;
+  auto &returnInferenceStack = stateOut.returnInferenceStack;
+  auto &inferExprKind = stateOut.inferExprKind;
+  auto &inferArrayElementKind = stateOut.inferArrayElementKind;
+  return runLowerInferenceGetReturnInfoSetup(
+      {
+          .defMap = input.defMap,
+          .returnInfoCache = &returnInfoCache,
+          .returnInferenceStack = &returnInferenceStack,
+          .resolveStructTypeName = input.resolveStructTypeName,
+          .resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath,
+          .isBindingMutable = input.isBindingMutable,
+          .bindingKind = input.bindingKind,
+          .hasExplicitBindingTypeTransform = input.hasExplicitBindingTypeTransform,
+          .bindingValueKind = input.bindingValueKind,
+          .inferExprKind = inferExprKind,
+          .isFileErrorBinding = input.isFileErrorBinding,
+          .applyStructArrayInfo = input.applyStructArrayInfo,
+          .applyStructValueInfo = input.applyStructValueInfo,
+          .inferStructExprPath = input.inferStructExprPath,
+          .isStringBinding = input.isStringBinding,
+          .inferArrayElementKind = inferArrayElementKind,
+          .lowerMatchToIf = input.lowerMatchToIf,
+          .error = &errorOut,
+      },
+      stateOut.getReturnInfo,
+      errorOut);
+}
+
 bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &input,
                                      LowerInferenceSetupBootstrapState &stateInOut,
                                      std::string &errorOut) {

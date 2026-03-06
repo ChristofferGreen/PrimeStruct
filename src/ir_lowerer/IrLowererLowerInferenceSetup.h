@@ -157,10 +157,44 @@ struct LowerInferenceGetReturnInfoSetupInput {
   ExpandMatchToIfFn lowerMatchToIf;
   std::string *error = nullptr;
 };
+struct LowerInferenceSetupInput {
+  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const std::unordered_map<std::string, std::string> *importAliases = nullptr;
+  const std::unordered_set<std::string> *structNames = nullptr;
+
+  IsArrayCountCallFn isArrayCountCall;
+  IsStringCountCallFn isStringCountCall;
+  IsVectorCapacityCallFn isVectorCapacityCall;
+  IsEntryArgsNameFn isEntryArgsName;
+  ResolveExprPathFn resolveExprPath;
+  GetSetupInferenceBuiltinOperatorNameFn getBuiltinOperatorName;
+  ResolveStructArrayTypeInfoFn resolveStructArrayInfoFromPath;
+  InferStructExprWithLocalsFn inferStructExprPath;
+  ResolveStructFieldSlotFn resolveStructFieldSlot;
+  std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>
+      resolveUninitializedStorage;
+  bool hasMathImport = false;
+  SetupInferenceCombineNumericKindsFn combineNumericKinds;
+  GetSetupMathConstantNameFn getMathConstantName;
+
+  ResolveStructTypeNameForReturnFn resolveStructTypeName;
+  IsBindingMutableForInferenceFn isBindingMutable;
+  BindingKindForInferenceFn bindingKind;
+  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform;
+  BindingValueKindForInferenceFn bindingValueKind;
+  IsFileErrorBindingForInferenceFn isFileErrorBinding;
+  ApplyStructInfoForInferenceFn applyStructArrayInfo;
+  ApplyStructInfoForInferenceFn applyStructValueInfo;
+  IsStringBindingForInferenceFn isStringBinding;
+  ExpandMatchToIfFn lowerMatchToIf;
+};
 
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
                                      std::string &errorOut);
+bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
+                            LowerInferenceSetupBootstrapState &stateOut,
+                            std::string &errorOut);
 bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &input,
                                      LowerInferenceSetupBootstrapState &stateInOut,
                                      std::string &errorOut);
