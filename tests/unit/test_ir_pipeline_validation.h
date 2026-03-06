@@ -2059,6 +2059,141 @@ TEST_CASE("ir lowerer statements entry-execution step validates dependencies") {
   CHECK(error == "native backend missing statements entry-execution step dependency: entryResultInfo");
 }
 
+TEST_CASE("ir lowerer statements function-table step finalizes entry function") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  program.definitions.push_back(entryDef);
+
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+
+  std::unordered_set<std::string> loweredCallTargets;
+  std::vector<std::string> defaultEffects;
+  std::vector<std::string> entryDefaultEffects;
+  int resetCalls = 0;
+  int buildContextCalls = 0;
+  int emitInlineCalls = 0;
+  int32_t nextLocal = 5;
+  std::vector<primec::IrFunction> outFunctions;
+  int32_t entryIndex = -1;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::runLowerStatementsFunctionTableStep(
+      {
+          .program = &program,
+          .entryDef = &program.definitions.front(),
+          .function = &function,
+          .loweredCallTargets = &loweredCallTargets,
+          .isStructDefinition = [](const primec::Definition &) { return false; },
+          .getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+          .defaultEffects = &defaultEffects,
+          .entryDefaultEffects = &entryDefaultEffects,
+          .isTailCallCandidate = [](const primec::Expr &) { return false; },
+          .resetDefinitionLoweringState = [&]() { ++resetCalls; },
+          .buildDefinitionCallContext =
+              [&](const primec::Definition &,
+                  int32_t &,
+                  primec::ir_lowerer::LocalMap &,
+                  primec::Expr &,
+                  std::string &) {
+                ++buildContextCalls;
+                return true;
+              },
+          .emitInlineDefinitionCall =
+              [&](const primec::Expr &,
+                  const primec::Definition &,
+                  const primec::ir_lowerer::LocalMap &,
+                  bool) {
+                ++emitInlineCalls;
+                return true;
+              },
+          .nextLocal = &nextLocal,
+          .outFunctions = &outFunctions,
+          .entryIndex = &entryIndex,
+      },
+      error));
+  CHECK(error.empty());
+  CHECK(resetCalls == 0);
+  CHECK(buildContextCalls == 0);
+  CHECK(emitInlineCalls == 0);
+  CHECK(nextLocal == 5);
+  CHECK(entryIndex == 0);
+  REQUIRE(outFunctions.size() == 1);
+  CHECK(outFunctions.front().name == "/main");
+}
+
+TEST_CASE("ir lowerer statements function-table step validates dependencies") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  program.definitions.push_back(entryDef);
+
+  primec::IrFunction function;
+  std::unordered_set<std::string> loweredCallTargets;
+  std::vector<std::string> defaultEffects;
+  std::vector<std::string> entryDefaultEffects;
+  int32_t nextLocal = 0;
+  std::vector<primec::IrFunction> outFunctions;
+  int32_t entryIndex = -1;
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerStatementsFunctionTableStep(
+      {
+          .program = nullptr,
+          .entryDef = &program.definitions.front(),
+          .function = &function,
+          .loweredCallTargets = &loweredCallTargets,
+          .isStructDefinition = [](const primec::Definition &) { return false; },
+          .getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+          .defaultEffects = &defaultEffects,
+          .entryDefaultEffects = &entryDefaultEffects,
+          .isTailCallCandidate = [](const primec::Expr &) { return false; },
+          .resetDefinitionLoweringState = []() {},
+          .buildDefinitionCallContext =
+              [](const primec::Definition &, int32_t &, primec::ir_lowerer::LocalMap &, primec::Expr &, std::string &) {
+                return true;
+              },
+          .emitInlineDefinitionCall =
+              [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+                return true;
+              },
+          .nextLocal = &nextLocal,
+          .outFunctions = &outFunctions,
+          .entryIndex = &entryIndex,
+      },
+      error));
+  CHECK(error == "native backend missing statements function-table step dependency: program");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerStatementsFunctionTableStep(
+      {
+          .program = &program,
+          .entryDef = &program.definitions.front(),
+          .function = &function,
+          .loweredCallTargets = &loweredCallTargets,
+          .isStructDefinition = [](const primec::Definition &) { return false; },
+          .getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+          .defaultEffects = &defaultEffects,
+          .entryDefaultEffects = &entryDefaultEffects,
+          .isTailCallCandidate = [](const primec::Expr &) { return false; },
+          .resetDefinitionLoweringState = []() {},
+          .buildDefinitionCallContext =
+              [](const primec::Definition &, int32_t &, primec::ir_lowerer::LocalMap &, primec::Expr &, std::string &) {
+                return true;
+              },
+          .emitInlineDefinitionCall =
+              [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+                return true;
+              },
+          .nextLocal = &nextLocal,
+          .outFunctions = nullptr,
+          .entryIndex = &entryIndex,
+      },
+      error));
+  CHECK(error == "native backend missing statements function-table step dependency: outFunctions");
+}
+
 TEST_CASE("ir lowerer expr emit setup wires unary passthrough callbacks") {
   primec::ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
   primec::ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
@@ -5165,6 +5300,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   }
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsCallsStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryExecutionStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsFunctionTableStep.h\"") != std::string::npos);
 
   const std::filesystem::path setupHeaderPath =
       std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerSetupEntryEffects.h";
@@ -5229,11 +5365,13 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   const std::string statementsCallsHeaderSource = readText(statementsCallsHeaderPath);
   CHECK(statementsCallsHeaderSource.find("runLowerStatementsCallsStep(") != std::string::npos);
   CHECK(statementsCallsHeaderSource.find("runLowerStatementsEntryExecutionStep(") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("runLowerStatementsFunctionTableStep(") != std::string::npos);
   CHECK(statementsCallsHeaderSource.find("tryEmitBufferStoreStatement(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("tryEmitDispatchStatement(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("tryEmitDirectCallStatement(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("emitAssignOrExprStatementWithPop(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("emitEntryCallableExecutionWithCleanup(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("finalizeEntryFunctionTableAndLowerCallables(") == std::string::npos);
 }
 
 TEST_CASE("emitter emit setup source delegation stays stable") {

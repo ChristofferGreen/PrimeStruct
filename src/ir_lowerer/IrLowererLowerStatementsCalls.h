@@ -65,57 +65,67 @@
     return false;
   }
 
-  const auto functionTableResult = ir_lowerer::finalizeEntryFunctionTableAndLowerCallables(
-      program,
-      *entryDef,
-      function,
-      loweredCallTargets,
-      [&](const Definition &def) { return isStructDefinition(def); },
-      [&](const std::string &definitionPath, ReturnInfo &returnInfo) { return getReturnInfo(definitionPath, returnInfo); },
-      defaultEffects,
-      entryDefaultEffects,
-      [&](const Expr &expr) { return isTailCallCandidate(expr); },
-      [&]() {
-        onErrorTempCounter = 0;
-        sawReturn = false;
-        activeInlineContext = nullptr;
-        inlineStack.clear();
-        fileScopeStack.clear();
-        currentOnError.reset();
-        currentReturnResult.reset();
-      },
-      [&](const Definition &def, int32_t &definitionNextLocal, LocalMap &definitionLocals, Expr &callExpr, std::string &callError) {
-        return ir_lowerer::buildCallableDefinitionCallContext(
-            def,
-            definitionNextLocal,
-            definitionLocals,
-            callExpr,
-            [&](const Expr &param, const LocalMap &localsForKindInference, LocalInfo &info, std::string &inferError) {
-              return ir_lowerer::inferCallParameterLocalInfo(param,
-                                                             localsForKindInference,
-                                                             isBindingMutable,
-                                                             hasExplicitBindingTypeTransform,
-                                                             bindingKind,
-                                                             bindingValueKind,
-                                                             inferExprKind,
-                                                             isFileErrorBinding,
-                                                             setReferenceArrayInfo,
-                                                             applyStructArrayInfo,
-                                                             applyStructValueInfo,
-                                                             isStringBinding,
-                                                             info,
-                                                             inferError);
-            },
-            callError);
-      },
-      [&](const Expr &callExpr, const Definition &def, const LocalMap &definitionLocals, bool expectValue) {
-        return emitInlineDefinitionCall(callExpr, def, definitionLocals, expectValue);
-      },
-      nextLocal,
-      out.functions,
-      out.entryIndex,
-      error);
-  if (functionTableResult == ir_lowerer::FunctionTableFinalizationResult::Error) {
+  if (!ir_lowerer::runLowerStatementsFunctionTableStep(
+          {
+              .program = &program,
+              .entryDef = entryDef,
+              .function = &function,
+              .loweredCallTargets = &loweredCallTargets,
+              .isStructDefinition = [&](const Definition &def) { return isStructDefinition(def); },
+              .getReturnInfo =
+                  [&](const std::string &definitionPath, ReturnInfo &returnInfo) {
+                    return getReturnInfo(definitionPath, returnInfo);
+                  },
+              .defaultEffects = &defaultEffects,
+              .entryDefaultEffects = &entryDefaultEffects,
+              .isTailCallCandidate = [&](const Expr &expr) { return isTailCallCandidate(expr); },
+              .resetDefinitionLoweringState = [&]() {
+                onErrorTempCounter = 0;
+                sawReturn = false;
+                activeInlineContext = nullptr;
+                inlineStack.clear();
+                fileScopeStack.clear();
+                currentOnError.reset();
+                currentReturnResult.reset();
+              },
+              .buildDefinitionCallContext =
+                  [&](const Definition &def,
+                      int32_t &definitionNextLocal,
+                      LocalMap &definitionLocals,
+                      Expr &callExpr,
+                      std::string &callError) {
+                    return ir_lowerer::buildCallableDefinitionCallContext(
+                        def,
+                        definitionNextLocal,
+                        definitionLocals,
+                        callExpr,
+                        [&](const Expr &param, const LocalMap &localsForKindInference, LocalInfo &info, std::string &inferError) {
+                          return ir_lowerer::inferCallParameterLocalInfo(param,
+                                                                         localsForKindInference,
+                                                                         isBindingMutable,
+                                                                         hasExplicitBindingTypeTransform,
+                                                                         bindingKind,
+                                                                         bindingValueKind,
+                                                                         inferExprKind,
+                                                                         isFileErrorBinding,
+                                                                         setReferenceArrayInfo,
+                                                                         applyStructArrayInfo,
+                                                                         applyStructValueInfo,
+                                                                         isStringBinding,
+                                                                         info,
+                                                                         inferError);
+                        },
+                        callError);
+                  },
+              .emitInlineDefinitionCall =
+                  [&](const Expr &callExpr, const Definition &def, const LocalMap &definitionLocals, bool expectValue) {
+                    return emitInlineDefinitionCall(callExpr, def, definitionLocals, expectValue);
+                  },
+              .nextLocal = &nextLocal,
+              .outFunctions = &out.functions,
+              .entryIndex = &out.entryIndex,
+          },
+          error)) {
     return false;
   }
 
