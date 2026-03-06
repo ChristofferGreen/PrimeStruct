@@ -573,6 +573,29 @@ TEST_CASE("glsl-ir backend reports emitter diagnostics") {
   CHECK(error.find("ir-to-glsl failed:") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir backend reports print string index diagnostics") {
+  const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
+  REQUIRE(backend != nullptr);
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back(
+      {primec::IrOpcode::PrintString, primec::encodePrintStringImm(3, primec::encodePrintFlags(true, false))});
+  function.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(function);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = (std::filesystem::current_path() / "primec_tests" / "unused_print_index.glsl").string();
+  options.inputPath = "glsl_ir_backend_print_string_index_error.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  CHECK_FALSE(backend->emit(module, options, result, error));
+  CHECK(error.find("ir-to-glsl failed:") != std::string::npos);
+  CHECK(error.find("string index out of range") != std::string::npos);
+}
+
 TEST_CASE("spirv-ir backend reports emitter diagnostics") {
   const primec::IrBackend *backend = primec::findIrBackend("spirv-ir");
   REQUIRE(backend != nullptr);

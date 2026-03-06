@@ -326,6 +326,23 @@ TEST_CASE("ir to glsl emitter rejects out-of-range string indices") {
   CHECK(error.find("string index out of range") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter rejects out-of-range print string indices") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back(
+      {primec::IrOpcode::PrintString, primec::encodePrintStringImm(1, primec::encodePrintFlags(true, false))});
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, glsl, error));
+  CHECK(error.find("string index out of range") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter rejects out-of-range call targets") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;

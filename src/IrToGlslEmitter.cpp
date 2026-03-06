@@ -182,11 +182,17 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
-    case IrOpcode::PrintString:
+    case IrOpcode::PrintString: {
+      const uint64_t stringIndex = decodePrintStringIndex(instruction.imm);
+      if (stringIndex >= stringTable.size()) {
+        error = "IrToGlslEmitter string index out of range at instruction " + std::to_string(index);
+        return false;
+      }
       out << "        // GLSL backend ignores print-string side effects.\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    }
     case IrOpcode::PrintI32:
     case IrOpcode::PrintI64:
     case IrOpcode::PrintU64:
