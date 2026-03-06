@@ -59,14 +59,32 @@ TEST_CASE("ir to glsl emitter writes jump and conditional jump control flow") {
   CHECK(glsl.find("pc = 5;") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes f32 literal push") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushF32, 0x3fc00000u});
+  fn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("stack[sp++] = int(uint(1069547520u));") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter rejects unsupported opcodes") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushF32, 0});
-  fn.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnF64, 0});
   module.functions.push_back(fn);
 
   std::string glsl;

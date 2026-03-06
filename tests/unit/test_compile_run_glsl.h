@@ -37,6 +37,42 @@ main() {
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir emitter writes IR-lowered shader for f32 literal subset") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [f32] scale{2.0f32}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_ir_f32_literal_subset.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_ir_f32_literal_subset.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = int(uint(") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter uses ir backend for f32 literal subset") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [f32] scale{2.0f32}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_f32_literal_ir_first.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_f32_literal_ir_first.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = int(uint(") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter matches glsl-ir on shared corpus") {
   struct DifferentialCase {
     const char *name;
@@ -78,6 +114,16 @@ main() {
 }
 )",
       },
+      {
+          "f32_literal",
+          R"(
+[return<void>]
+main() {
+  [f32] scale{2.0f32}
+  return()
+}
+)",
+      },
   };
 
   for (const auto &testCase : cases) {
@@ -106,7 +152,7 @@ TEST_CASE("glsl-ir emitter reports unsupported opcodes") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [f32] value{1.5f32}
+  [f64] value{1.5f64}
   return()
 }
 )";

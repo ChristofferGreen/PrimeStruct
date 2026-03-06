@@ -37,6 +37,13 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     }
+    case IrOpcode::PushF32: {
+      const uint32_t bits = static_cast<uint32_t>(instruction.imm);
+      out << "        stack[sp++] = int(uint(" << bits << "u));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    }
     case IrOpcode::LoadLocal:
       if (instruction.imm > MaxLocalIndex) {
         error = "IrToGlslEmitter local index out of range at instruction " + std::to_string(index);
