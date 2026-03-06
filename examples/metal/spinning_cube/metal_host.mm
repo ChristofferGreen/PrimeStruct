@@ -179,7 +179,8 @@ int main(int argc, char **argv) {
 
     NSError *error = nil;
     NSString *libraryPath = [NSString stringWithUTF8String:argv[1]];
-    id<MTLLibrary> library = [device newLibraryWithFile:libraryPath error:&error];
+    NSURL *libraryUrl = [NSURL fileURLWithPath:libraryPath];
+    id<MTLLibrary> library = [device newLibraryWithURL:libraryUrl error:&error];
     if (library == nil) {
       std::cerr << "failed to load metallib: "
                 << (error == nil ? "unknown" : error.localizedDescription.UTF8String) << "\n";

@@ -2355,11 +2355,58 @@ TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiri
   REQUIRE(std::filesystem::exists(metalHostPath));
 
   const std::string source = readFile(metalHostPath.string());
+  CHECK(source.find("newLibraryWithURL") != std::string::npos);
+  CHECK(source.find("newLibraryWithFile") == std::string::npos);
   CHECK(source.find("MTLVertexDescriptor *vertexDesc = [[MTLVertexDescriptor alloc] init];") != std::string::npos);
   CHECK(source.find("vertexDesc.attributes[0].format = MTLVertexFormatFloat3;") != std::string::npos);
   CHECK(source.find("vertexDesc.attributes[1].format = MTLVertexFormatFloat4;") != std::string::npos);
   CHECK(source.find("vertexDesc.layouts[0].stride = sizeof(Vertex);") != std::string::npos);
   CHECK(source.find("pipelineDesc.vertexDescriptor = vertexDesc;") != std::string::npos);
+}
+
+TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {
+  std::filesystem::path metalSampleDir =
+      std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
+  if (!std::filesystem::exists(metalSampleDir)) {
+    metalSampleDir = std::filesystem::current_path() / "examples" / "metal" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(metalSampleDir));
+
+  const std::filesystem::path metalHostPath = metalSampleDir / "metal_host.mm";
+  REQUIRE(std::filesystem::exists(metalHostPath));
+
+  if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun unavailable; cannot run metallib diagnostic regression");
+    return;
+  }
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_missing_metallib";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path hostBinaryPath = outDir / "metal_host";
+  const std::filesystem::path hostStdoutPath = outDir / "metal_host.stdout.txt";
+  const std::filesystem::path hostStderrPath = outDir / "metal_host.stderr.txt";
+  const std::filesystem::path missingMetallibPath = outDir / "missing.metallib";
+
+  const std::string compileHostCmd =
+      "xcrun clang++ -std=c++17 -fobjc-arc " + quoteShellArg(metalHostPath.string()) +
+      " -framework Foundation -framework Metal -o " + quoteShellArg(hostBinaryPath.string());
+  CHECK(runCommand(compileHostCmd) == 0);
+  CHECK(std::filesystem::exists(hostBinaryPath));
+
+  const std::string runHostCmd =
+      quoteShellArg(hostBinaryPath.string()) + " " + quoteShellArg(missingMetallibPath.string()) + " > " +
+      quoteShellArg(hostStdoutPath.string()) + " 2> " + quoteShellArg(hostStderrPath.string());
+  CHECK(runCommand(runHostCmd) == 71);
+
+  const std::string hostStdout = readFile(hostStdoutPath.string());
+  const std::string hostStderr = readFile(hostStderrPath.string());
+  CHECK(hostStdout.empty());
+  CHECK(hostStderr.find("failed to load metallib:") != std::string::npos);
 }
 
 TEST_CASE("spinning cube metal host pipeline creation regression stays fixed") {
