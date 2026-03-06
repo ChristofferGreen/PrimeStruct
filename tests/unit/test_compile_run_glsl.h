@@ -283,6 +283,44 @@ main() {
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir emitter writes IR-lowered shader for entry args count subset") {
+  const std::string source = R"(
+[return<void>]
+main([array<string>] args) {
+  [i32] argc{count(args)}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_ir_entry_args_count_subset.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_ir_entry_args_count_subset.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = 0; // GLSL backend has no argv") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter uses ir backend for entry args count subset") {
+  const std::string source = R"(
+[return<void>]
+main([array<string>] args) {
+  [i32] argc{count(args)}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_entry_args_count_ir_first.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_entry_args_count_ir_first.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = 0; // GLSL backend has no argv") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter matches glsl-ir on shared corpus") {
   struct DifferentialCase {
     const char *name;
@@ -378,6 +416,16 @@ helper() {
 [return<void>]
 main() {
   [i32] value{helper()}
+  return()
+}
+)",
+      },
+      {
+          "entry_args_count",
+          R"(
+[return<void>]
+main([array<string>] args) {
+  [i32] argc{count(args)}
   return()
 }
 )",

@@ -215,6 +215,11 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::PushArgc:
+      out << "        stack[sp++] = 0; // GLSL backend has no argv\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::ReturnF32:
       out << "        return stack[--sp];\n";
       return true;

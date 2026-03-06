@@ -92,6 +92,23 @@ TEST_CASE("ir to glsl emitter writes call and callvoid opcodes") {
   CHECK(glsl.find("ps_entry_2(stack, sp);") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes pushargc opcode") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushArgc, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("stack[sp++] = 0; // GLSL backend has no argv") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter writes f32 literal push") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
