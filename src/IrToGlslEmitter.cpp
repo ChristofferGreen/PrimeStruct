@@ -46,6 +46,13 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
   };
+  const auto emitCompareU64 = [&](const char *op) {
+    out << "        uint right = uint(stack[--sp]);\n";
+    out << "        uint left = uint(stack[--sp]);\n";
+    out << "        stack[sp++] = (left " << op << " right) ? 1 : 0;\n";
+    out << "        pc = " << nextIndex << ";\n";
+    out << "        break;\n";
+  };
 
   switch (instruction.op) {
     case IrOpcode::PushI32: {
@@ -189,6 +196,18 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::CmpGeI64:
       emitCompare(">=");
+      return true;
+    case IrOpcode::CmpLtU64:
+      emitCompareU64("<");
+      return true;
+    case IrOpcode::CmpLeU64:
+      emitCompareU64("<=");
+      return true;
+    case IrOpcode::CmpGtU64:
+      emitCompareU64(">");
+      return true;
+    case IrOpcode::CmpGeU64:
+      emitCompareU64(">=");
       return true;
     case IrOpcode::CmpEqF32:
       emitCompareF32("==");
