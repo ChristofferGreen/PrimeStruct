@@ -223,6 +223,19 @@ main() {
   CHECK(error.find("upload requires array input") != std::string::npos);
 }
 
+TEST_CASE("std gpu upload accepts builtin array literal input") {
+  const std::string source = R"(
+[effects(gpu_dispatch) return<int>]
+main() {
+  [Buffer<i32>] data{ /std/gpu/upload(array<i32>(1i32, 2i32)) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("std gpu readback requires buffer input") {
   const std::string source = R"(
 [effects(gpu_dispatch) return<int>]

@@ -1342,6 +1342,9 @@
       }
       if (arg.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(arg)) != defMap_.end()) {
+          return false;
+        }
         if (getBuiltinCollectionName(arg, collection) && collection == "array" && arg.templateArgs.size() == 1) {
           elemType = arg.templateArgs.front();
           return true;
