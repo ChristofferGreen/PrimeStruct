@@ -2,6 +2,7 @@
 
 #include "primec/Ir.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <sstream>
 #include <string>
@@ -272,6 +273,23 @@ bool emitInstruction(const IrInstruction &instruction,
       emitPrintValue(value.str().c_str(), decodePrintFlags(instruction.imm));
       return true;
     }
+    case IrOpcode::PrintStringDynamic: {
+      uint64_t flags = decodePrintFlags(instruction.imm);
+      out << "        uint64_t stringIndex = stack[--sp];\n";
+      out << "        if (stringIndex >= ps_string_table_count) {\n";
+      out << "          std::cerr << \"invalid string index in IR\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
+      const char *stream = (flags & PrintFlagStderr) != 0 ? "std::cerr" : "std::cout";
+      const bool newline = (flags & PrintFlagNewline) != 0;
+      out << "        " << stream << " << ps_string_table[stringIndex];\n";
+      if (newline) {
+        out << "        " << stream << " << '\\n';\n";
+      }
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    }
     case IrOpcode::PrintArgv: {
       uint64_t flags = decodePrintFlags(instruction.imm);
       out << "        int64_t indexValue = static_cast<int64_t>(stack[--sp]);\n";
@@ -347,6 +365,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     }
   }
   body << "};\n\n";
+  body << "static constexpr std::size_t ps_string_table_count = " << module.stringTable.size() << "u;\n\n";
   body << "static int64_t ps_entry_" << static_cast<size_t>(module.entryIndex) << "(int argc, char **argv) {\n";
   body << "  uint64_t stack[1024] = {};\n";
   body << "  uint64_t locals[1024] = {};\n";

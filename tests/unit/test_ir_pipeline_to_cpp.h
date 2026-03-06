@@ -70,6 +70,8 @@ TEST_CASE("ir to cpp emitter writes print and argv opcodes") {
   fn.instructions.push_back({primec::IrOpcode::PushI32, 5});
   fn.instructions.push_back({primec::IrOpcode::PrintI32, primec::PrintFlagNewline});
   fn.instructions.push_back({primec::IrOpcode::PrintString, primec::encodePrintStringImm(0, 0)});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::PrintStringDynamic, primec::PrintFlagNewline});
   fn.instructions.push_back({primec::IrOpcode::PushArgc, 0});
   fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
   fn.instructions.push_back({primec::IrOpcode::PrintArgvUnsafe, primec::PrintFlagStderr});
@@ -82,6 +84,8 @@ TEST_CASE("ir to cpp emitter writes print and argv opcodes") {
   CHECK(error.empty());
   CHECK(cpp.find("std::cout << static_cast<int32_t>(stack[--sp]);") != std::string::npos);
   CHECK(cpp.find("std::cout << ps_string_table[0];") != std::string::npos);
+  CHECK(cpp.find("if (stringIndex >= ps_string_table_count)") != std::string::npos);
+  CHECK(cpp.find("std::cout << ps_string_table[stringIndex];") != std::string::npos);
   CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(argc);") != std::string::npos);
   CHECK(cpp.find("argv[indexValue]") != std::string::npos);
   CHECK(cpp.find("std::cerr << argv[indexValue];") != std::string::npos);

@@ -191,6 +191,27 @@ main([array<string>] args) {
   CHECK(output.find("argv[indexValue]") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir emitter writes dynamic string print path") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  [string mut] msg{"left"utf8}
+  assign(msg, "right"utf8)
+  print_line(msg)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_dynamic_string_print.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ir_dynamic_string_print.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("if (stringIndex >= ps_string_table_count)") != std::string::npos);
+  CHECK(output.find("ps_string_table[stringIndex]") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir emitter reports unsupported opcodes") {
   const std::string source = R"(
 [return<int>]
@@ -316,6 +337,26 @@ main([array<string>] args) {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath + " alpha beta > " + outPath) == 3);
   CHECK(readFile(outPath) == "alpha\n");
+}
+
+TEST_CASE("exe-ir emitter compiles and runs dynamic string print") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  [string mut] msg{"left"utf8}
+  assign(msg, "right"utf8)
+  print_line(msg)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_dynamic_string_print.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_dynamic_string_print").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_exe_ir_dynamic_string_print.out").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "right\n");
 }
 
 TEST_CASE("compiles and runs explicit void return") {
