@@ -3,16 +3,13 @@
 #include "primec/Emitter.h"
 #include "primec/ExternalTooling.h"
 #include "primec/GlslEmitter.h"
+#include "primec/IrBackends.h"
 #include "primec/IrInliner.h"
 #include "primec/IrLowerer.h"
-#include "primec/IrSerializer.h"
 #include "primec/IrValidation.h"
-#include "primec/NativeEmitter.h"
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
 #include "primec/TransformRegistry.h"
-#include "primec/Vm.h"
-#include "primec/WasmEmitter.h"
 
 #include <algorithm>
 #include <cctype>
@@ -24,6 +21,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 
 namespace {
@@ -202,17 +200,6 @@ std::optional<std::string> scanSoftwareNumericTypes(const primec::Program &progr
   return std::nullopt;
 }
 
-void replaceAll(std::string &text, std::string_view from, std::string_view to) {
-  if (from.empty()) {
-    return;
-  }
-  size_t pos = 0;
-  while ((pos = text.find(from, pos)) != std::string::npos) {
-    text.replace(pos, from.size(), to);
-    pos += to.size();
-  }
-}
-
 bool hasPathPrefix(const std::filesystem::path &path, const std::filesystem::path &prefix) {
   auto pathIter = path.begin();
   auto prefixIter = prefix.begin();
@@ -287,13 +274,15 @@ bool writeFile(const std::string &path, const std::string &contents) {
   return file.good();
 }
 
-bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &contents) {
-  std::ofstream file(path, std::ios::binary);
-  if (!file) {
-    return false;
+std::vector<std::string> irBackendNotes(const primec::IrBackendDiagnostics &diagnostics,
+                                        std::string_view stage = {}) {
+  std::vector<std::string> notes;
+  notes.reserve(stage.empty() ? 1 : 2);
+  notes.push_back("backend: " + std::string(diagnostics.backendTag));
+  if (!stage.empty()) {
+    notes.push_back("stage: " + std::string(stage));
   }
-  file.write(reinterpret_cast<const char *>(contents.data()), static_cast<std::streamsize>(contents.size()));
-  return file.good();
+  return notes;
 }
 
 std::string injectComputeLayout(const std::string &glslSource) {
@@ -463,7 +452,18 @@ int main(int argc, char **argv) {
 
   primec::Program &program = pipelineOutput.program;
 
-  if (options.emitKind == "vm") {
+  const primec::IrBackend *irBackend = primec::findIrBackend(options.emitKind);
+
+  if (irBackend != nullptr && irBackend->requiresOutputPath() && !options.outputPath.empty()) {
+    std::filesystem::path resolved = resolveOutputPath(options);
+    options.outputPath = resolved.string();
+    if (!ensureOutputDirectory(resolved, error)) {
+      return emitFailure(options, primec::DiagnosticCode::OutputError, "Output error: ", error, 2);
+    }
+  }
+
+  if (irBackend != nullptr) {
+    const primec::IrBackendDiagnostics &diagnostics = irBackend->diagnostics();
     primec::IrLowerer lowerer;
     primec::IrModule ir;
     if (!lowerer.lower(program,
@@ -472,49 +472,67 @@ int main(int argc, char **argv) {
                        options.entryDefaultEffects,
                        ir,
                        error)) {
-      std::string vmError = error;
-      replaceAll(vmError, "native backend", "vm backend");
-      return emitFailure(
-          options, primec::DiagnosticCode::LoweringError, "VM lowering error: ", vmError, 2, {"backend: vm"});
-    }
-    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Vm, error)) {
+      std::string loweringError = error;
+      irBackend->normalizeLoweringError(loweringError);
       return emitFailure(options,
-                         primec::DiagnosticCode::LoweringError,
-                         "VM IR validation error: ",
+                         diagnostics.loweringDiagnosticCode,
+                         diagnostics.loweringErrorPrefix,
+                         loweringError,
+                         2,
+                         irBackendNotes(diagnostics));
+    }
+    if (!primec::validateIrModule(ir, irBackend->validationTarget(options), error)) {
+      return emitFailure(options,
+                         diagnostics.validationDiagnosticCode,
+                         diagnostics.validationErrorPrefix,
                          error,
                          2,
-                         {"backend: vm", "stage: ir-validate"});
+                         irBackendNotes(diagnostics, "ir-validate"));
     }
     if (options.inlineIrCalls) {
       if (!primec::inlineIrModuleCalls(ir, error)) {
         return emitFailure(options,
-                           primec::DiagnosticCode::LoweringError,
-                           "VM IR inlining error: ",
+                           diagnostics.inliningDiagnosticCode,
+                           diagnostics.inliningErrorPrefix,
                            error,
                            2,
-                           {"backend: vm", "stage: ir-inline"});
+                           irBackendNotes(diagnostics, "ir-inline"));
       }
-      if (!primec::validateIrModule(ir, primec::IrValidationTarget::Vm, error)) {
+      if (!primec::validateIrModule(ir, irBackend->validationTarget(options), error)) {
         return emitFailure(options,
-                           primec::DiagnosticCode::LoweringError,
-                           "VM IR validation error: ",
+                           diagnostics.validationDiagnosticCode,
+                           diagnostics.validationErrorPrefix,
                            error,
                            2,
-                           {"backend: vm", "stage: ir-validate"});
+                           irBackendNotes(diagnostics, "ir-validate"));
       }
     }
-    primec::Vm vm;
-    std::vector<std::string_view> args;
-    args.reserve(1 + options.programArgs.size());
-    args.push_back(options.inputPath);
-    for (const auto &arg : options.programArgs) {
-      args.push_back(arg);
+
+    primec::IrBackendEmitOptions emitOptions;
+    emitOptions.outputPath = options.outputPath;
+    emitOptions.inputPath = options.inputPath;
+    emitOptions.programArgs = options.programArgs;
+    primec::IrBackendEmitResult emitResult;
+    if (!irBackend->emit(ir, emitOptions, emitResult, error)) {
+      const int emitFailureCode = diagnostics.backendTag == std::string_view("vm") ? 3 : 2;
+      const bool outputWriteFailure =
+          (std::string_view(diagnostics.backendTag) == "ir" || std::string_view(diagnostics.backendTag) == "wasm") &&
+          error == options.outputPath;
+      if (outputWriteFailure) {
+        return emitFailure(options,
+                           primec::DiagnosticCode::OutputError,
+                           "Failed to write output: ",
+                           options.outputPath,
+                           2);
+      }
+      return emitFailure(options,
+                         diagnostics.emitDiagnosticCode,
+                         diagnostics.emitErrorPrefix,
+                         error,
+                         emitFailureCode,
+                         irBackendNotes(diagnostics));
     }
-    uint64_t result = 0;
-    if (!vm.execute(ir, result, error, args)) {
-      return emitFailure(options, primec::DiagnosticCode::RuntimeError, "VM error: ", error, 3, {"backend: vm"});
-    }
-    return static_cast<int>(static_cast<int32_t>(result));
+    return emitResult.exitCode;
   }
 
   if (!options.outputPath.empty()) {
@@ -523,102 +541,6 @@ int main(int argc, char **argv) {
     if (!ensureOutputDirectory(resolved, error)) {
       return emitFailure(options, primec::DiagnosticCode::OutputError, "Output error: ", error, 2);
     }
-  }
-
-  if (options.emitKind == "native") {
-    primec::IrLowerer lowerer;
-    primec::IrModule ir;
-    if (!lowerer.lower(program,
-                       options.entryPath,
-                       options.defaultEffects,
-                       options.entryDefaultEffects,
-                       ir,
-                       error)) {
-      return emitFailure(
-          options, primec::DiagnosticCode::LoweringError, "Native lowering error: ", error, 2, {"backend: native"});
-    }
-    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Native, error)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::LoweringError,
-                         "Native IR validation error: ",
-                         error,
-                         2,
-                         {"backend: native", "stage: ir-validate"});
-    }
-    if (options.inlineIrCalls) {
-      if (!primec::inlineIrModuleCalls(ir, error)) {
-        return emitFailure(options,
-                           primec::DiagnosticCode::LoweringError,
-                           "Native IR inlining error: ",
-                           error,
-                           2,
-                           {"backend: native", "stage: ir-inline"});
-      }
-      if (!primec::validateIrModule(ir, primec::IrValidationTarget::Native, error)) {
-        return emitFailure(options,
-                           primec::DiagnosticCode::LoweringError,
-                           "Native IR validation error: ",
-                           error,
-                           2,
-                           {"backend: native", "stage: ir-validate"});
-      }
-    }
-    primec::NativeEmitter nativeEmitter;
-    if (!nativeEmitter.emitExecutable(ir, options.outputPath, error)) {
-      return emitFailure(options, primec::DiagnosticCode::EmitError, "Native emit error: ", error, 2, {"backend: native"});
-    }
-    return 0;
-  }
-
-  if (options.emitKind == "ir") {
-    primec::IrLowerer lowerer;
-    primec::IrModule ir;
-    if (!lowerer.lower(program,
-                       options.entryPath,
-                       options.defaultEffects,
-                       options.entryDefaultEffects,
-                       ir,
-                       error)) {
-      return emitFailure(options, primec::DiagnosticCode::LoweringError, "IR lowering error: ", error, 2, {"backend: ir"});
-    }
-    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::IrSerializeError,
-                         "IR validation error: ",
-                         error,
-                         2,
-                         {"backend: ir", "stage: ir-validate"});
-    }
-    if (options.inlineIrCalls) {
-      if (!primec::inlineIrModuleCalls(ir, error)) {
-        return emitFailure(options,
-                           primec::DiagnosticCode::IrSerializeError,
-                           "IR inlining error: ",
-                           error,
-                           2,
-                           {"backend: ir", "stage: ir-inline"});
-      }
-      if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
-        return emitFailure(options,
-                           primec::DiagnosticCode::IrSerializeError,
-                           "IR validation error: ",
-                           error,
-                           2,
-                           {"backend: ir", "stage: ir-validate"});
-      }
-    }
-    std::vector<uint8_t> data;
-    if (!primec::serializeIr(ir, data, error)) {
-      return emitFailure(options, primec::DiagnosticCode::IrSerializeError, "IR serialize error: ", error, 2);
-    }
-    if (!writeBinaryFile(options.outputPath, data)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::OutputError,
-                         "Failed to write output: ",
-                         options.outputPath,
-                         2);
-    }
-    return 0;
   }
 
   if (options.emitKind == "glsl") {
@@ -675,61 +597,6 @@ int main(int argc, char **argv) {
                          "tool invocation failed",
                          2,
                          {"backend: spirv"});
-    }
-    return 0;
-  }
-
-  if (options.emitKind == "wasm") {
-    const primec::IrValidationTarget wasmValidationTarget =
-        options.wasmProfile == "browser" ? primec::IrValidationTarget::WasmBrowser : primec::IrValidationTarget::Wasm;
-    primec::IrLowerer lowerer;
-    primec::IrModule ir;
-    if (!lowerer.lower(program,
-                       options.entryPath,
-                       options.defaultEffects,
-                       options.entryDefaultEffects,
-                       ir,
-                       error)) {
-      return emitFailure(
-          options, primec::DiagnosticCode::LoweringError, "Wasm lowering error: ", error, 2, {"backend: wasm"});
-    }
-    if (!primec::validateIrModule(ir, wasmValidationTarget, error)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::LoweringError,
-                         "Wasm IR validation error: ",
-                         error,
-                         2,
-                         {"backend: wasm", "stage: ir-validate"});
-    }
-    if (options.inlineIrCalls) {
-      if (!primec::inlineIrModuleCalls(ir, error)) {
-        return emitFailure(options,
-                           primec::DiagnosticCode::LoweringError,
-                           "Wasm IR inlining error: ",
-                           error,
-                           2,
-                           {"backend: wasm", "stage: ir-inline"});
-      }
-      if (!primec::validateIrModule(ir, wasmValidationTarget, error)) {
-        return emitFailure(options,
-                           primec::DiagnosticCode::LoweringError,
-                           "Wasm IR validation error: ",
-                           error,
-                           2,
-                           {"backend: wasm", "stage: ir-validate"});
-      }
-    }
-    primec::WasmEmitter wasmEmitter;
-    std::vector<uint8_t> data;
-    if (!wasmEmitter.emitModule(ir, data, error)) {
-      return emitFailure(options, primec::DiagnosticCode::EmitError, "Wasm emit error: ", error, 2, {"backend: wasm"});
-    }
-    if (!writeBinaryFile(options.outputPath, data)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::OutputError,
-                         "Failed to write output: ",
-                         options.outputPath,
-                         2);
     }
     return 0;
   }

@@ -12,6 +12,7 @@
 
 #include "primec/IrLowerer.h"
 #include "primec/IrInliner.h"
+#include "primec/IrBackends.h"
 #include "primec/IrSerializer.h"
 #include "primec/IrValidation.h"
 #include "primec/IrVirtualRegisterAllocator.h"
@@ -171,3 +172,4 @@ bool validateProgram(primec::Program &program,
 #include "test_ir_pipeline_gpu.h"
 #include "test_ir_pipeline_external_tooling.h"
 #include "test_ir_pipeline_wasm.h"
+#include "test_ir_pipeline_backends.h"
