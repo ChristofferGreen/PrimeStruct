@@ -270,21 +270,9 @@
     return out.str();
   }
   if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
-    auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-        return false;
-      }
-      if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
-        return false;
-      }
-      if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
-        return false;
-      }
-      return true;
-    };
     auto emitBranchValueExpr =
         [&](const Expr &candidate, std::unordered_map<std::string, BindingInfo> branchTypes) -> std::string {
-      if (!isIfBlockEnvelope(candidate)) {
+      if (!runEmitterExprControlIfBlockEnvelopeStep(candidate)) {
         return emitExpr(candidate,
                         nameMap,
                         paramMap,

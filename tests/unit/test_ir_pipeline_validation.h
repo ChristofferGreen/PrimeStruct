@@ -1530,6 +1530,48 @@ TEST_CASE("emitter expr control float-literal step formats literals") {
   CHECK(*float32Exponent == "1e3f");
 }
 
+TEST_CASE("emitter expr control if-envelope step recognizes block envelopes") {
+  primec::Expr notCall;
+  notCall.kind = primec::Expr::Kind::Literal;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlIfBlockEnvelopeStep(notCall));
+
+  primec::Expr bindingCall;
+  bindingCall.kind = primec::Expr::Kind::Call;
+  bindingCall.isBinding = true;
+  bindingCall.hasBodyArguments = true;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlIfBlockEnvelopeStep(bindingCall));
+
+  primec::Expr methodCall = bindingCall;
+  methodCall.isBinding = false;
+  methodCall.isMethodCall = true;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlIfBlockEnvelopeStep(methodCall));
+
+  primec::Expr argsCall = bindingCall;
+  argsCall.isBinding = false;
+  argsCall.isMethodCall = false;
+  argsCall.args.push_back(notCall);
+  CHECK_FALSE(primec::emitter::runEmitterExprControlIfBlockEnvelopeStep(argsCall));
+
+  primec::Expr namedArgsCall = bindingCall;
+  namedArgsCall.isBinding = false;
+  namedArgsCall.isMethodCall = false;
+  namedArgsCall.argNames.push_back("value");
+  CHECK_FALSE(primec::emitter::runEmitterExprControlIfBlockEnvelopeStep(namedArgsCall));
+
+  primec::Expr noBodyCall = bindingCall;
+  noBodyCall.isBinding = false;
+  noBodyCall.isMethodCall = false;
+  noBodyCall.hasBodyArguments = false;
+  noBodyCall.bodyArguments.clear();
+  CHECK_FALSE(primec::emitter::runEmitterExprControlIfBlockEnvelopeStep(noBodyCall));
+
+  primec::Expr blockEnvelope = bindingCall;
+  blockEnvelope.isBinding = false;
+  blockEnvelope.isMethodCall = false;
+  blockEnvelope.hasBodyArguments = true;
+  CHECK(primec::emitter::runEmitterExprControlIfBlockEnvelopeStep(blockEnvelope));
+}
+
 TEST_CASE("semantics validator expr capture split step tokenizes captures") {
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep("").empty());
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep(" \t \n").empty());
@@ -1739,6 +1781,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprControlHeaderSource = readText(emitterExprControlHeaderPath);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEnvelopeStep(candidate)") !=
+        std::string::npos);
 
   const std::filesystem::path emitterExprPath =
       std::filesystem::path("src") / "emitter" / "EmitterExpr.cpp";
@@ -1746,6 +1790,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);
 }
 
 TEST_CASE("semantics validator expr source delegation stays stable") {
