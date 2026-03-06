@@ -147,17 +147,17 @@ Expected runtime behavior:
 
 ### Native Windowed Execution Preflight (macOS)
 ```bash
-xcrun --find metal
-xcrun --find metallib
+./scripts/preflight_native_spinning_cube_window.sh
 xcrun metal -std=metal3.0 -c examples/metal/spinning_cube/cube.metal -o /tmp/cube.air
 xcrun metallib /tmp/cube.air -o /tmp/cube.metallib
 xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework Metal -o /tmp/metal_host
 /tmp/metal_host /tmp/cube.metallib
 ```
-- This command block mirrors `run_metal_check` in
-  `scripts/run_spinning_cube_demo.sh`.
-- If `xcrun --find metal` or `xcrun --find metallib` fails, treat Metal host
-  execution as unsupported on the current machine and skip windowed launch.
+- `scripts/preflight_native_spinning_cube_window.sh` validates
+  `xcrun --find metal`, `xcrun --find metallib`, and
+  `launchctl print gui/<uid>` before host launch.
+- If preflight fails, treat Metal host execution as unsupported on the current
+  machine and skip windowed launch.
 
 ### Combined Smoke Helper
 ```bash

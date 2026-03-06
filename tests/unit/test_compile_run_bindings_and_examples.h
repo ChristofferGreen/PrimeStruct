@@ -1019,10 +1019,9 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "Metal -o /tmp/metal_host",
       "/tmp/metal_host /tmp/cube.metallib",
       "### Native Windowed Execution Preflight (macOS)",
-      "xcrun --find metal",
-      "xcrun --find metallib",
-      "This command block mirrors `run_metal_check` in",
-      "`scripts/run_spinning_cube_demo.sh`.",
+      "./scripts/preflight_native_spinning_cube_window.sh",
+      "`xcrun --find metal`, `xcrun --find metallib`, and",
+      "`launchctl print gui/<uid>` before host launch.",
       "./scripts/run_spinning_cube_demo.sh --primec ./build-debug/primec",
       "## First Supported Native Window Target (v1)",
       "Target: macOS + Metal window host (`examples/native/spinning_cube/window_host.mm`).",
@@ -2269,6 +2268,255 @@ TEST_CASE("spinning cube demo script rejects bare dashdash token") {
   CHECK(runCommand(command) == 2);
   CHECK(readFile(outPath.string()).empty());
   CHECK(readFile(errPath.string()).find("[spinning-cube-demo] ERROR: unknown arg: --") != std::string::npos);
+}
+
+TEST_CASE("native window preflight script validates required tools and GUI session") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "preflight_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "preflight_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_native_window_preflight_success";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path binDir = outDir / "bin";
+  std::filesystem::create_directories(binDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path fakeXcrunPath = binDir / "xcrun";
+  {
+    std::ofstream fakeXcrun(fakeXcrunPath);
+    fakeXcrun << "#!/usr/bin/env bash\n";
+    fakeXcrun << "set -euo pipefail\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metal\" ]]; then\n";
+    fakeXcrun << "  echo \"/fake/toolchain/metal\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metallib\" ]]; then\n";
+    fakeXcrun << "  echo \"/fake/toolchain/metallib\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "echo \"unexpected xcrun invocation\" >&2\n";
+    fakeXcrun << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeXcrunPath.string())) == 0);
+
+  const std::filesystem::path fakeLaunchctlPath = binDir / "launchctl";
+  {
+    std::ofstream fakeLaunchctl(fakeLaunchctlPath);
+    fakeLaunchctl << "#!/usr/bin/env bash\n";
+    fakeLaunchctl << "set -euo pipefail\n";
+    fakeLaunchctl << "if [[ \"${1:-}\" == \"print\" && \"${2:-}\" == gui/* ]]; then\n";
+    fakeLaunchctl << "  exit 0\n";
+    fakeLaunchctl << "fi\n";
+    fakeLaunchctl << "echo \"unexpected launchctl invocation\" >&2\n";
+    fakeLaunchctl << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeLaunchctlPath.string())) == 0);
+
+  const std::filesystem::path outPath = outDir / "script.out.txt";
+  const std::filesystem::path errPath = outDir / "script.err.txt";
+  const std::string command =
+      "PATH=" + quoteShellArg(binDir.string() + ":/usr/bin:/bin") + " " + quoteShellArg(scriptPath.string()) + " > " +
+      quoteShellArg(outPath.string()) + " 2> " + quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 0);
+
+  const std::string output = readFile(outPath.string());
+  const std::string diagnostics = readFile(errPath.string());
+  CHECK(diagnostics.empty());
+  CHECK(output.find("[native-window-preflight] xcrun metal: /fake/toolchain/metal") != std::string::npos);
+  CHECK(output.find("[native-window-preflight] xcrun metallib: /fake/toolchain/metallib") != std::string::npos);
+  CHECK(output.find("[native-window-preflight] GUI session: gui/") != std::string::npos);
+  CHECK(output.find("[native-window-preflight] PASS: prerequisites satisfied") != std::string::npos);
+}
+
+TEST_CASE("native window preflight script fails when xcrun metal is unavailable") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "preflight_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "preflight_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_native_window_preflight_missing_metal";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path binDir = outDir / "bin";
+  std::filesystem::create_directories(binDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path fakeXcrunPath = binDir / "xcrun";
+  {
+    std::ofstream fakeXcrun(fakeXcrunPath);
+    fakeXcrun << "#!/usr/bin/env bash\n";
+    fakeXcrun << "set -euo pipefail\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metal\" ]]; then\n";
+    fakeXcrun << "  exit 1\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metallib\" ]]; then\n";
+    fakeXcrun << "  echo \"/fake/toolchain/metallib\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "echo \"unexpected xcrun invocation\" >&2\n";
+    fakeXcrun << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeXcrunPath.string())) == 0);
+
+  const std::filesystem::path outPath = outDir / "script.out.txt";
+  const std::filesystem::path errPath = outDir / "script.err.txt";
+  const std::string command =
+      "PATH=" + quoteShellArg(binDir.string() + ":/usr/bin:/bin") + " " + quoteShellArg(scriptPath.string()) + " > " +
+      quoteShellArg(outPath.string()) + " 2> " + quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 2);
+  CHECK(readFile(outPath.string()).empty());
+  CHECK(readFile(errPath.string()).find(
+            "[native-window-preflight] ERROR: xcrun metal unavailable; run 'xcrun --find metal' after installing "
+            "Command Line Tools.") != std::string::npos);
+}
+
+TEST_CASE("native window preflight script fails when xcrun metallib is unavailable") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "preflight_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "preflight_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_native_window_preflight_missing_metallib";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path binDir = outDir / "bin";
+  std::filesystem::create_directories(binDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path fakeXcrunPath = binDir / "xcrun";
+  {
+    std::ofstream fakeXcrun(fakeXcrunPath);
+    fakeXcrun << "#!/usr/bin/env bash\n";
+    fakeXcrun << "set -euo pipefail\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metal\" ]]; then\n";
+    fakeXcrun << "  echo \"/fake/toolchain/metal\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metallib\" ]]; then\n";
+    fakeXcrun << "  exit 1\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "echo \"unexpected xcrun invocation\" >&2\n";
+    fakeXcrun << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeXcrunPath.string())) == 0);
+
+  const std::filesystem::path outPath = outDir / "script.out.txt";
+  const std::filesystem::path errPath = outDir / "script.err.txt";
+  const std::string command =
+      "PATH=" + quoteShellArg(binDir.string() + ":/usr/bin:/bin") + " " + quoteShellArg(scriptPath.string()) + " > " +
+      quoteShellArg(outPath.string()) + " 2> " + quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 2);
+  CHECK(readFile(outPath.string()).empty());
+  CHECK(readFile(errPath.string()).find(
+            "[native-window-preflight] ERROR: xcrun metallib unavailable; run 'xcrun --find metallib' after "
+            "installing Command Line Tools.") != std::string::npos);
+}
+
+TEST_CASE("native window preflight script fails when GUI session is unavailable") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "preflight_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "preflight_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_native_window_preflight_missing_gui";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path binDir = outDir / "bin";
+  std::filesystem::create_directories(binDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path fakeXcrunPath = binDir / "xcrun";
+  {
+    std::ofstream fakeXcrun(fakeXcrunPath);
+    fakeXcrun << "#!/usr/bin/env bash\n";
+    fakeXcrun << "set -euo pipefail\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metal\" ]]; then\n";
+    fakeXcrun << "  echo \"/fake/toolchain/metal\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metallib\" ]]; then\n";
+    fakeXcrun << "  echo \"/fake/toolchain/metallib\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "echo \"unexpected xcrun invocation\" >&2\n";
+    fakeXcrun << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeXcrunPath.string())) == 0);
+
+  const std::filesystem::path fakeLaunchctlPath = binDir / "launchctl";
+  {
+    std::ofstream fakeLaunchctl(fakeLaunchctlPath);
+    fakeLaunchctl << "#!/usr/bin/env bash\n";
+    fakeLaunchctl << "set -euo pipefail\n";
+    fakeLaunchctl << "if [[ \"${1:-}\" == \"print\" && \"${2:-}\" == gui/* ]]; then\n";
+    fakeLaunchctl << "  exit 1\n";
+    fakeLaunchctl << "fi\n";
+    fakeLaunchctl << "echo \"unexpected launchctl invocation\" >&2\n";
+    fakeLaunchctl << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeLaunchctlPath.string())) == 0);
+
+  const std::filesystem::path outPath = outDir / "script.out.txt";
+  const std::filesystem::path errPath = outDir / "script.err.txt";
+  const std::string command =
+      "PATH=" + quoteShellArg(binDir.string() + ":/usr/bin:/bin") + " " + quoteShellArg(scriptPath.string()) + " > " +
+      quoteShellArg(outPath.string()) + " 2> " + quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 2);
+  CHECK(readFile(outPath.string()).empty());
+  CHECK(readFile(errPath.string()).find(
+            "[native-window-preflight] ERROR: GUI session unavailable; log in via macOS desktop session and rerun.") !=
+        std::string::npos);
+}
+
+TEST_CASE("native window preflight script rejects unknown args") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "preflight_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "preflight_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_native_window_preflight_unknown_arg";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path outPath = outDir / "script.out.txt";
+  const std::filesystem::path errPath = outDir / "script.err.txt";
+  const std::string command =
+      quoteShellArg(scriptPath.string()) + " --bogus > " + quoteShellArg(outPath.string()) + " 2> " +
+      quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 2);
+  CHECK(readFile(outPath.string()).empty());
+  CHECK(readFile(errPath.string()).find("[native-window-preflight] ERROR: unknown arg: --bogus") != std::string::npos);
 }
 
 TEST_CASE("spinning cube metal shader path compiles and enforces profile gating") {
