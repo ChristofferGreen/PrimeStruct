@@ -53,3 +53,9 @@ Expected diagnostics include:
 Close handling diagnostics:
 - `exit_reason=window_close` when the user closes the window.
 - `exit_reason=esc_key` when ESC is pressed in the focused window.
+
+Startup failure diagnostics:
+- `startup_failure=1`
+- `startup_failure_stage=<simulation_stream_load|gpu_device_acquisition|shader_load|pipeline_setup|window_creation|first_frame_submission>`
+- `startup_failure_reason=<stable_reason_token>`
+- `startup_failure_exit_code=<stable_stage_code>`

@@ -192,6 +192,9 @@ Expected runtime behavior:
   `uniform_buffer_ready=1`, `window_created=1`,
   `swapchain_layer_created=1`, `pipeline_ready=1`, `startup_success=1`,
   `frame_rendered=1`, and `exit_reason=max_frames`.
+- Failure diagnostics: startup-stage failures print deterministic
+  `startup_failure_stage`, `startup_failure_reason`, and
+  `startup_failure_exit_code` fields before exit.
 
 ### macOS Metal
 ```bash

@@ -57,6 +57,51 @@ fragment float4 windowFragmentMain(VertexOut in [[stage_in]]) {
 constexpr int SimulationStreamFieldsPerFrame = 4;
 constexpr int SimulationFixedStepMillis = 16;
 
+enum class StartupFailureStage {
+  SimulationStreamLoad,
+  GpuDeviceAcquisition,
+  ShaderLoad,
+  PipelineSetup,
+  WindowCreation,
+  FirstFrameSubmission,
+};
+
+const char *startupStageName(StartupFailureStage stage) {
+  switch (stage) {
+    case StartupFailureStage::SimulationStreamLoad:
+      return "simulation_stream_load";
+    case StartupFailureStage::GpuDeviceAcquisition:
+      return "gpu_device_acquisition";
+    case StartupFailureStage::ShaderLoad:
+      return "shader_load";
+    case StartupFailureStage::PipelineSetup:
+      return "pipeline_setup";
+    case StartupFailureStage::WindowCreation:
+      return "window_creation";
+    case StartupFailureStage::FirstFrameSubmission:
+      return "first_frame_submission";
+  }
+  return "unknown";
+}
+
+int startupStageExitCode(StartupFailureStage stage) {
+  switch (stage) {
+    case StartupFailureStage::SimulationStreamLoad:
+      return 69;
+    case StartupFailureStage::GpuDeviceAcquisition:
+      return 70;
+    case StartupFailureStage::ShaderLoad:
+      return 71;
+    case StartupFailureStage::PipelineSetup:
+      return 72;
+    case StartupFailureStage::WindowCreation:
+      return 73;
+    case StartupFailureStage::FirstFrameSubmission:
+      return 74;
+  }
+  return 78;
+}
+
 int gExitCode = 0;
 
 struct SimulationFrameState {
@@ -266,6 +311,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 - (instancetype)initWithMaxFrames:(int)maxFrames
                 cubeSimulationPath:(const std::string &)cubeSimulationPath
                simulationSmokeMode:(bool)simulationSmokeMode;
+- (void)failStartupStage:(StartupFailureStage)stage reason:(const char *)reason details:(const char *)details;
+- (void)failRuntimeCode:(int)code reason:(const char *)reason details:(const char *)details;
 - (void)handleEscapeKey;
 - (void)renderFrame:(NSTimer *)timer;
 @end
@@ -274,7 +321,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 
 - (void)keyDown:(NSEvent *)event {
   NSString *characters = [event charactersIgnoringModifiers];
-  if (event.keyCode == 53 || [characters isEqualToString:@"\e"]) {
+  const bool isEscapeChar = (characters != nil && [characters length] == 1 && [characters characterAtIndex:0] == 27);
+  if (event.keyCode == 53 || isEscapeChar) {
     if (self.hostDelegate != nil) {
       [self.hostDelegate handleEscapeKey];
       return;
@@ -303,7 +351,7 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   bool _printedFirstFrame;
   bool _printedSimulationFrame;
   bool _simulationSmokeMode;
-  bool _startupComplete;
+  bool _firstFrameSubmitted;
   std::string _cubeSimulationPath;
   std::vector<SimulationFrameState> _simulationFrames;
   NSUInteger _indexCount;
@@ -321,7 +369,7 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     _printedFirstFrame = false;
     _printedSimulationFrame = false;
     _simulationSmokeMode = simulationSmokeMode;
-    _startupComplete = false;
+    _firstFrameSubmitted = false;
     _cubeSimulationPath = cubeSimulationPath;
     _indexCount = CubeIndices.size();
     _depthTextureSize = CGSizeMake(0.0, 0.0);
@@ -329,16 +377,25 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   return self;
 }
 
-- (void)failAndTerminate:(int)code message:(const char *)message details:(const char *)details {
-  if (_startupComplete) {
-    std::cerr << "runtime_failure=1\n";
-  } else {
-    std::cerr << "startup_failure=1\n";
+- (void)failStartupStage:(StartupFailureStage)stage reason:(const char *)reason details:(const char *)details {
+  const int exitCode = startupStageExitCode(stage);
+  std::cerr << "startup_failure=1\n";
+  std::cerr << "startup_failure_stage=" << startupStageName(stage) << "\n";
+  std::cerr << "startup_failure_reason=" << reason << "\n";
+  std::cerr << "startup_failure_exit_code=" << exitCode << "\n";
+  if (details != nullptr && details[0] != '\0') {
+    std::cerr << "startup_failure_detail=" << details << "\n";
   }
-  if (details == nullptr || details[0] == '\0') {
-    std::cerr << message << "\n";
-  } else {
-    std::cerr << message << ": " << details << "\n";
+  gExitCode = exitCode;
+  [NSApp terminate:nil];
+}
+
+- (void)failRuntimeCode:(int)code reason:(const char *)reason details:(const char *)details {
+  std::cerr << "runtime_failure=1\n";
+  std::cerr << "runtime_failure_reason=" << reason << "\n";
+  std::cerr << "runtime_failure_exit_code=" << code << "\n";
+  if (details != nullptr && details[0] != '\0') {
+    std::cerr << "runtime_failure_detail=" << details << "\n";
   }
   gExitCode = code;
   [NSApp terminate:nil];
@@ -365,7 +422,9 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 
   std::string simulationError;
   if (!loadSimulationFrames(_cubeSimulationPath, _simulationFrames, simulationError)) {
-    [self failAndTerminate:69 message:"failed to load cube simulation stream" details:simulationError.c_str()];
+    [self failStartupStage:StartupFailureStage::SimulationStreamLoad
+                    reason:"simulation_stream_load_failed"
+                   details:simulationError.c_str()];
     return;
   }
 
@@ -386,13 +445,17 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 
   _device = MTLCreateSystemDefaultDevice();
   if (_device == nil) {
-    [self failAndTerminate:70 message:"failed to create Metal device" details:""];
+    [self failStartupStage:StartupFailureStage::GpuDeviceAcquisition
+                    reason:"metal_device_creation_failed"
+                   details:"failed to create Metal device"];
     return;
   }
 
   _queue = [_device newCommandQueue];
   if (_queue == nil) {
-    [self failAndTerminate:71 message:"failed to create command queue" details:""];
+    [self failStartupStage:StartupFailureStage::GpuDeviceAcquisition
+                    reason:"command_queue_creation_failed"
+                   details:"failed to create command queue"];
     return;
   }
 
@@ -401,7 +464,9 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   id<MTLLibrary> library = [_device newLibraryWithSource:shaderSource options:nil error:&libraryError];
   if (library == nil) {
     const char *details = libraryError == nil ? "unknown" : libraryError.localizedDescription.UTF8String;
-    [self failAndTerminate:72 message:"failed to compile window host shaders" details:details];
+    [self failStartupStage:StartupFailureStage::ShaderLoad
+                    reason:"shader_library_compile_failed"
+                   details:details];
     return;
   }
   std::cout << "shader_library_ready=1\n";
@@ -409,7 +474,9 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   id<MTLFunction> vertexFn = [library newFunctionWithName:@"windowVertexMain"];
   id<MTLFunction> fragmentFn = [library newFunctionWithName:@"windowFragmentMain"];
   if (vertexFn == nil || fragmentFn == nil) {
-    [self failAndTerminate:73 message:"missing window host shader entrypoints" details:""];
+    [self failStartupStage:StartupFailureStage::ShaderLoad
+                    reason:"shader_entrypoint_missing"
+                   details:"missing window host shader entrypoints"];
     return;
   }
 
@@ -435,7 +502,9 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   _pipeline = [_device newRenderPipelineStateWithDescriptor:pipelineDesc error:&pipelineError];
   if (_pipeline == nil) {
     const char *details = pipelineError == nil ? "unknown" : pipelineError.localizedDescription.UTF8String;
-    [self failAndTerminate:74 message:"failed to create render pipeline" details:details];
+    [self failStartupStage:StartupFailureStage::PipelineSetup
+                    reason:"render_pipeline_creation_failed"
+                   details:details];
     return;
   }
 
@@ -444,7 +513,9 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   depthDescriptor.depthWriteEnabled = YES;
   _depthState = [_device newDepthStencilStateWithDescriptor:depthDescriptor];
   if (_depthState == nil) {
-    [self failAndTerminate:75 message:"failed to create depth state" details:""];
+    [self failStartupStage:StartupFailureStage::PipelineSetup
+                    reason:"depth_state_creation_failed"
+                   details:"failed to create depth state"];
     return;
   }
 
@@ -452,7 +523,9 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
                                         length:(CubeVertices.size() * sizeof(WindowVertex))
                                        options:MTLResourceStorageModeShared];
   if (_vertexBuffer == nil) {
-    [self failAndTerminate:76 message:"failed to create vertex buffer" details:""];
+    [self failStartupStage:StartupFailureStage::PipelineSetup
+                    reason:"vertex_buffer_creation_failed"
+                   details:"failed to create vertex buffer"];
     return;
   }
 
@@ -460,13 +533,17 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
                                        length:(CubeIndices.size() * sizeof(uint16_t))
                                       options:MTLResourceStorageModeShared];
   if (_indexBuffer == nil) {
-    [self failAndTerminate:77 message:"failed to create index buffer" details:""];
+    [self failStartupStage:StartupFailureStage::PipelineSetup
+                    reason:"index_buffer_creation_failed"
+                   details:"failed to create index buffer"];
     return;
   }
 
   _uniformBuffer = [_device newBufferWithLength:sizeof(WindowUniforms) options:MTLResourceStorageModeShared];
   if (_uniformBuffer == nil) {
-    [self failAndTerminate:78 message:"failed to create uniform buffer" details:""];
+    [self failStartupStage:StartupFailureStage::PipelineSetup
+                    reason:"uniform_buffer_creation_failed"
+                   details:"failed to create uniform buffer"];
     return;
   }
 
@@ -482,7 +559,9 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
                                                     backing:NSBackingStoreBuffered
                                                       defer:NO];
   if (_window == nil) {
-    [self failAndTerminate:79 message:"failed to create native window" details:""];
+    [self failStartupStage:StartupFailureStage::WindowCreation
+                    reason:"window_creation_failed"
+                   details:"failed to create native window"];
     return;
   }
   _window.hostDelegate = self;
@@ -505,8 +584,6 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   std::cout << "window_created=1\n";
   std::cout << "swapchain_layer_created=1\n";
   std::cout << "pipeline_ready=1\n";
-  std::cout << "startup_success=1\n";
-  _startupComplete = true;
 
   _frameTimer = [NSTimer scheduledTimerWithTimeInterval:(1.0 / 60.0)
                                                   target:self
@@ -535,7 +612,13 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     _metalLayer.drawableSize = drawableSize;
     [self ensureDepthTextureForSize:drawableSize];
     if (_depthTexture == nil) {
-      [self failAndTerminate:80 message:"failed to create depth texture" details:""];
+      if (!_firstFrameSubmitted) {
+        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
+                        reason:"depth_texture_creation_failed"
+                       details:"failed to create depth texture"];
+      } else {
+        [self failRuntimeCode:80 reason:"depth_texture_creation_failed" details:"failed to create depth texture"];
+      }
       return;
     }
 
@@ -583,7 +666,15 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
     id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
     if (encoder == nil) {
-      [self failAndTerminate:81 message:"failed to create render command encoder" details:""];
+      if (!_firstFrameSubmitted) {
+        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
+                        reason:"render_encoder_creation_failed"
+                       details:"failed to create render command encoder"];
+      } else {
+        [self failRuntimeCode:81
+                     reason:"render_encoder_creation_failed"
+                    details:"failed to create render command encoder"];
+      }
       return;
     }
 
@@ -600,6 +691,11 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 
     [commandBuffer presentDrawable:drawable];
     [commandBuffer commit];
+
+    if (!_firstFrameSubmitted) {
+      std::cout << "startup_success=1\n";
+      _firstFrameSubmitted = true;
+    }
 
     if (!_printedSimulationFrame) {
       std::cout << "simulation_tick=" << simulationFrame.tick << "\n";

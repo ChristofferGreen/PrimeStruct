@@ -582,6 +582,15 @@ TEST_CASE("spinning cube native window host locks indexed cube pipeline resource
   CHECK(hostSource.find("handleEscapeKey") != std::string::npos);
   CHECK(hostSource.find("startup_success=1") != std::string::npos);
   CHECK(hostSource.find("startup_failure=1") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_stage=") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_reason=") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_exit_code=") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_stage=first_frame_submission") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_stage=window_creation") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_stage=pipeline_setup") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_stage=shader_load") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_stage=gpu_device_acquisition") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_stage=simulation_stream_load") != std::string::npos);
   CHECK(hostSource.find("exit_reason=window_close") != std::string::npos);
   CHECK(hostSource.find("exit_reason=esc_key") != std::string::npos);
   CHECK(hostSource.find("exit_reason=max_frames") != std::string::npos);
@@ -619,6 +628,9 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(hostSource.find("uniform_buffer_ready=1") != std::string::npos);
   CHECK(hostSource.find("startup_success=1") != std::string::npos);
   CHECK(hostSource.find("startup_failure=1") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_stage=") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_reason=") != std::string::npos);
+  CHECK(hostSource.find("startup_failure_exit_code=") != std::string::npos);
   CHECK(hostSource.find("exit_reason=max_frames") != std::string::npos);
   CHECK(hostSource.find("exit_reason=window_close") != std::string::npos);
   CHECK(hostSource.find("exit_reason=esc_key") != std::string::npos);
@@ -701,10 +713,12 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
       quoteShellArg(badStreamOutPath.string()) + " 2> " + quoteShellArg(badStreamErrPath.string());
   CHECK(runCommand(badStreamCmd) == 69);
   CHECK(readFile(badStreamOutPath.string()).empty());
-  CHECK(readFile(badStreamErrPath.string())
-            .find("startup_failure=1") != std::string::npos);
-  CHECK(readFile(badStreamErrPath.string())
-            .find("failed to load cube simulation stream: cube simulation stream was empty") != std::string::npos);
+  const std::string badStreamErr = readFile(badStreamErrPath.string());
+  CHECK(badStreamErr.find("startup_failure=1") != std::string::npos);
+  CHECK(badStreamErr.find("startup_failure_stage=simulation_stream_load") != std::string::npos);
+  CHECK(badStreamErr.find("startup_failure_reason=simulation_stream_load_failed") != std::string::npos);
+  CHECK(badStreamErr.find("startup_failure_exit_code=69") != std::string::npos);
+  CHECK(badStreamErr.find("startup_failure_detail=cube simulation stream was empty") != std::string::npos);
 
   const std::filesystem::path frameStreamBinaryPath = outDir / "cube_native_frame_stream";
   const std::string compileFrameStreamCmd =
@@ -1357,6 +1371,9 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "`uniform_buffer_ready=1`, `window_created=1`,",
       "`swapchain_layer_created=1`, `pipeline_ready=1`, `startup_success=1`,",
       "`frame_rendered=1`, and `exit_reason=max_frames`.",
+      "Failure diagnostics: startup-stage failures print deterministic",
+      "`startup_failure_stage`, `startup_failure_reason`, and",
+      "`startup_failure_exit_code` fields before exit.",
       "For a visible rotating window today, use the browser path (`index.html` + `main.js`).",
       "shared-source `/main` is still unsupported for native emit until",
       "Diagnostics: prints `native host verified cube simulation output`.",
