@@ -1290,6 +1290,62 @@ TEST_CASE("semantics validator expr capture split step tokenizes captures") {
   CHECK(mixed[2] == "name");
 }
 
+TEST_CASE("semantics validator statement loop-count step resolves iteration bounds") {
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "count";
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(nameExpr, false).has_value());
+
+  primec::Expr boolTrue;
+  boolTrue.kind = primec::Expr::Kind::BoolLiteral;
+  boolTrue.boolValue = true;
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(boolTrue, false).has_value());
+  const auto boolTrueKnown = primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(boolTrue, true);
+  REQUIRE(boolTrueKnown.has_value());
+  CHECK(*boolTrueKnown == 1u);
+
+  primec::Expr boolFalse;
+  boolFalse.kind = primec::Expr::Kind::BoolLiteral;
+  boolFalse.boolValue = false;
+  const auto boolFalseKnown = primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(boolFalse, true);
+  REQUIRE(boolFalseKnown.has_value());
+  CHECK(*boolFalseKnown == 0u);
+
+  primec::Expr unsignedLiteral;
+  unsignedLiteral.kind = primec::Expr::Kind::Literal;
+  unsignedLiteral.isUnsigned = true;
+  unsignedLiteral.literalValue = 7;
+  const auto unsignedKnown =
+      primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(unsignedLiteral, false);
+  REQUIRE(unsignedKnown.has_value());
+  CHECK(*unsignedKnown == 7u);
+
+  primec::Expr negativeLiteral;
+  negativeLiteral.kind = primec::Expr::Kind::Literal;
+  negativeLiteral.isUnsigned = false;
+  negativeLiteral.intWidth = 32;
+  negativeLiteral.literalValue = static_cast<uint64_t>(static_cast<int32_t>(-1));
+  const auto negativeKnown =
+      primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(negativeLiteral, false);
+  REQUIRE(negativeKnown.has_value());
+  CHECK(*negativeKnown == 0u);
+
+  primec::Expr oneLiteral;
+  oneLiteral.kind = primec::Expr::Kind::Literal;
+  oneLiteral.isUnsigned = false;
+  oneLiteral.intWidth = 32;
+  oneLiteral.literalValue = 1;
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementCanIterateMoreThanOnceStep(oneLiteral, false));
+
+  primec::Expr twoLiteral = oneLiteral;
+  twoLiteral.literalValue = 2;
+  CHECK(primec::semantics::runSemanticsValidatorStatementCanIterateMoreThanOnceStep(twoLiteral, false));
+
+  CHECK(primec::semantics::runSemanticsValidatorStatementCanIterateMoreThanOnceStep(nameExpr, false));
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementCanIterateMoreThanOnceStep(boolTrue, true));
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementCanIterateMoreThanOnceStep(boolFalse, true));
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -1438,6 +1494,32 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") != std::string::npos);
+}
+
+TEST_CASE("semantics validator statement source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path semanticsStatementControlFlowHeaderPath =
+      std::filesystem::path("src") / "semantics" / "SemanticsValidatorStatementControlFlow.h";
+  REQUIRE(std::filesystem::exists(semanticsStatementControlFlowHeaderPath));
+  const std::string semanticsStatementControlFlowHeaderSource = readText(semanticsStatementControlFlowHeaderPath);
+  CHECK(semanticsStatementControlFlowHeaderSource.find(
+            "runSemanticsValidatorStatementCanIterateMoreThanOnceStep(countExpr, allowBoolCount)") !=
+        std::string::npos);
+
+  const std::filesystem::path semanticsStatementPath =
+      std::filesystem::path("src") / "semantics" / "SemanticsValidatorStatement.cpp";
+  REQUIRE(std::filesystem::exists(semanticsStatementPath));
+  const std::string semanticsStatementSource = readText(semanticsStatementPath);
+  CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementLoopCountStep.h\"") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

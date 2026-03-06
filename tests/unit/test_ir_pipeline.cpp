@@ -74,6 +74,7 @@
 #include "src/ir_lowerer/IrLowererStringCallHelpers.h"
 #include "src/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "src/semantics/SemanticsValidatorExprCaptureSplitStep.h"
+#include "src/semantics/SemanticsValidatorStatementLoopCountStep.h"
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>

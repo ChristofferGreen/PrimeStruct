@@ -54,29 +54,8 @@
     }
     return static_cast<int64_t>(expr.literalValue) < 0;
   };
-  auto knownIterationCount = [&](const Expr &countExpr, bool allowBoolCount) -> std::optional<uint64_t> {
-    if (allowBoolCount && countExpr.kind == Expr::Kind::BoolLiteral) {
-      return countExpr.boolValue ? 1u : 0u;
-    }
-    if (countExpr.kind != Expr::Kind::Literal) {
-      return std::nullopt;
-    }
-    if (countExpr.isUnsigned) {
-      return countExpr.literalValue;
-    }
-    const int64_t signedCount = countExpr.intWidth == 32 ? static_cast<int32_t>(countExpr.literalValue)
-                                                         : static_cast<int64_t>(countExpr.literalValue);
-    if (signedCount <= 0) {
-      return 0u;
-    }
-    return static_cast<uint64_t>(signedCount);
-  };
   auto canIterateMoreThanOnce = [&](const Expr &countExpr, bool allowBoolCount) -> bool {
-    std::optional<uint64_t> knownCount = knownIterationCount(countExpr, allowBoolCount);
-    if (!knownCount.has_value()) {
-      return true;
-    }
-    return *knownCount > 1u;
+    return runSemanticsValidatorStatementCanIterateMoreThanOnceStep(countExpr, allowBoolCount);
   };
   if (isLoopCall(stmt)) {
     if (hasNamedArguments(stmt.argNames)) {
