@@ -81,6 +81,11 @@ bool moduleUsesF32Helpers(const IrModule &module) {
 
 bool usesF64Helpers(IrOpcode opcode) {
   switch (opcode) {
+    case IrOpcode::AddF64:
+    case IrOpcode::SubF64:
+    case IrOpcode::MulF64:
+    case IrOpcode::DivF64:
+    case IrOpcode::NegF64:
     case IrOpcode::CmpEqF64:
     case IrOpcode::CmpNeF64:
     case IrOpcode::CmpLtF64:
@@ -169,6 +174,13 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        double right = psBitsToF64(stack[--sp]);\n";
     out << "        double left = psBitsToF64(stack[--sp]);\n";
     out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
+    out << "        pc = " << nextIndex << ";\n";
+    out << "        break;\n";
+  };
+  const auto emitBinaryF64 = [&](const char *op) {
+    out << "        double right = psBitsToF64(stack[--sp]);\n";
+    out << "        double left = psBitsToF64(stack[--sp]);\n";
+    out << "        stack[sp++] = psF64ToBits(left " << op << " right);\n";
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
   };
@@ -384,6 +396,24 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::CmpGeF64:
       emitCompareF64(">=");
       return true;
+    case IrOpcode::AddF64:
+      emitBinaryF64("+");
+      return true;
+    case IrOpcode::SubF64:
+      emitBinaryF64("-");
+      return true;
+    case IrOpcode::MulF64:
+      emitBinaryF64("*");
+      return true;
+    case IrOpcode::DivF64:
+      emitBinaryF64("/");
+      return true;
+    case IrOpcode::NegF64:
+      out << "        double value = psBitsToF64(stack[sp - 1]);\n";
+      out << "        stack[sp - 1] = psF64ToBits(-value);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::ConvertI32ToF32:
       out << "        int32_t value = static_cast<int32_t>(stack[--sp]);\n";
       out << "        stack[sp++] = psF32ToBits(static_cast<float>(value));\n";
@@ -536,6 +566,9 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::ReturnF32:
       out << "        return static_cast<int64_t>(static_cast<uint32_t>(stack[--sp]));\n";
       return true;
+    case IrOpcode::ReturnF64:
+      out << "        return static_cast<int64_t>(stack[--sp]);\n";
+      return true;
     case IrOpcode::ReturnVoid:
       out << "        return 0;\n";
       return true;
@@ -588,6 +621,11 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     body << "  double value = 0.0;\n";
     body << "  std::memcpy(&value, &raw, sizeof(value));\n";
     body << "  return value;\n";
+    body << "}\n\n";
+    body << "static uint64_t psF64ToBits(double value) {\n";
+    body << "  uint64_t bits = 0;\n";
+    body << "  std::memcpy(&bits, &value, sizeof(bits));\n";
+    body << "  return bits;\n";
     body << "}\n\n";
   }
   body << "static const char *ps_string_table[] = {\n";

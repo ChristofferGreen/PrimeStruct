@@ -247,9 +247,7 @@ TEST_CASE("cpp-ir emitter reports unsupported opcodes") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [f64 mut] value{1.5f64}
-  assign(value, plus(value, 0.5f64))
-  return(0i32)
+  return(convert<int>(2.5f64))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_ir_unsupported_opcode.prime", source);
@@ -260,6 +258,44 @@ main() {
       "./primec --emit=cpp-ir " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("ir-to-cpp failed: IrToCppEmitter unsupported opcode") != std::string::npos);
+}
+
+TEST_CASE("cpp-ir emitter writes f64 arithmetic paths") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [f64 mut] value{2.0f64}
+  assign(value, plus(value, 0.5f64))
+  if(greater_than(value, 2.4f64), then() { return(7i32) }, else() { return(3i32) })
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_f64_math_subset.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_cpp_ir_f64_math_subset.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("static uint64_t psF64ToBits(double value)") != std::string::npos);
+  CHECK(output.find("stack[sp++] = psF64ToBits(left + right);") != std::string::npos);
+}
+
+TEST_CASE("cpp emitter uses ir backend for f64 arithmetic subset") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [f64 mut] value{2.0f64}
+  assign(value, plus(value, 0.5f64))
+  if(greater_than(value, 2.4f64), then() { return(7i32) }, else() { return(3i32) })
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_f64_math_ir_first.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_cpp_f64_math_ir_first.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = psF64ToBits(left + right);") != std::string::npos);
+  CHECK(output.find("ps_entry_0") != std::string::npos);
 }
 
 TEST_CASE("cpp-ir emitter writes f64 comparison paths") {
@@ -361,9 +397,7 @@ TEST_CASE("cpp emitter falls back to legacy output when ir subset is unsupported
   const std::string source = R"(
 [return<int>]
 main() {
-  [f64] scale{2.0f64}
-  value{plus(scale, 0.5f64)}
-  return(0i32)
+  return(convert<int>(2.5f64))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_ir_fallback_legacy_cpp.prime", source);
@@ -540,6 +574,23 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("exe-ir emitter compiles and runs f64 arithmetic subset") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [f64 mut] value{2.0f64}
+  assign(value, plus(value, 0.5f64))
+  if(greater_than(value, 2.4f64), then() { return(7i32) }, else() { return(3i32) })
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_f64_math_subset.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_f64_math_subset").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("exe emitter uses ir backend for f64 comparison subset") {
   const std::string source = R"(
 [return<int>]
@@ -549,6 +600,23 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_f64_cmp_ir_first.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_f64_cmp_ir_first").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("exe emitter uses ir backend for f64 arithmetic subset") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [f64 mut] value{2.0f64}
+  assign(value, plus(value, 0.5f64))
+  if(greater_than(value, 2.4f64), then() { return(7i32) }, else() { return(3i32) })
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_f64_math_ir_first.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_f64_math_ir_first").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -689,9 +757,7 @@ TEST_CASE("exe emitter falls back to legacy output when ir subset is unsupported
   const std::string source = R"(
 [return<int>]
 main() {
-  [f64] scale{2.0f64}
-  value{plus(scale, 0.5f64)}
-  return(7i32)
+  return(convert<int>(2.5f64))
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_ir_fallback_legacy_cpp.prime", source);
@@ -699,7 +765,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("compiles and runs implicit void main") {
