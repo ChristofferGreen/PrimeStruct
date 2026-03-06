@@ -10,6 +10,7 @@ enum class IrValidationTarget {
   Any,
   Vm,
   Native,
+  Glsl,
   Wasm,
   WasmBrowser,
 };

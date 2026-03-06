@@ -454,7 +454,7 @@ main([array<string>] args) {
   }
 }
 
-TEST_CASE("glsl-ir emitter reports out-of-range i64 literals") {
+TEST_CASE("glsl-ir validation rejects out-of-range i64 literals") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -469,10 +469,12 @@ main() {
   const std::string compileCmd =
       "./primec --emit=glsl-ir " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("ir-to-glsl failed: IrToGlslEmitter i64 literal out of i32 range") != std::string::npos);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("GLSL-IR validation error: ") != std::string::npos);
+  CHECK(diagnostics.find("glsl i64 literal out of i32 range") != std::string::npos);
 }
 
-TEST_CASE("glsl emitter surfaces ir emit-stage failures without fallback") {
+TEST_CASE("glsl emitter surfaces ir validation-stage failures without fallback") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -491,7 +493,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
                                  " --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("ir-to-glsl failed: IrToGlslEmitter i64 literal out of i32 range") != std::string::npos);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("GLSL-IR validation error: ") != std::string::npos);
+  CHECK(diagnostics.find("glsl i64 literal out of i32 range") != std::string::npos);
   CHECK_FALSE(std::filesystem::exists(outPath));
 }
 
@@ -638,7 +642,7 @@ main() {
   CHECK(output.find("PrimeStructOutput") == std::string::npos);
 }
 
-TEST_CASE("spirv emitter surfaces ir emit-stage failures without fallback") {
+TEST_CASE("spirv emitter surfaces ir validation-stage failures without fallback") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -657,7 +661,9 @@ main() {
   const std::string compileCmd = "./primec --emit=spirv " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
                                  " --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("ir-to-glsl failed: IrToGlslEmitter i64 literal out of i32 range") != std::string::npos);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("SPIR-V IR validation error: ") != std::string::npos);
+  CHECK(diagnostics.find("glsl i64 literal out of i32 range") != std::string::npos);
   CHECK_FALSE(std::filesystem::exists(outPath));
 }
 

@@ -267,7 +267,7 @@ public:
   }
 
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
-    return IrValidationTarget::Any;
+    return IrValidationTarget::Glsl;
   }
 
   bool requiresOutputPath() const override {
@@ -314,7 +314,7 @@ public:
   }
 
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
-    return IrValidationTarget::Any;
+    return IrValidationTarget::Glsl;
   }
 
   bool requiresOutputPath() const override {

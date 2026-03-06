@@ -10,6 +10,7 @@ namespace {
 
 constexpr uint8_t MinOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
 constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::CallVoid);
+constexpr uint64_t MaxGlslLocalIndex = 1023;
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
                                      EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |
                                      EffectGpuDispatch | EffectPathSpaceBind | EffectPathSpaceSchedule;
@@ -20,11 +21,126 @@ bool isWasmTarget(IrValidationTarget target) {
   return target == IrValidationTarget::Wasm || target == IrValidationTarget::WasmBrowser;
 }
 
+bool isGlslTarget(IrValidationTarget target) {
+  return target == IrValidationTarget::Glsl;
+}
+
 const char *wasmTargetName(IrValidationTarget target) {
   if (target == IrValidationTarget::WasmBrowser) {
     return "wasm-browser";
   }
   return "wasm";
+}
+
+bool isGlslOpcodeAllowed(IrOpcode op) {
+  switch (op) {
+    case IrOpcode::PushI32:
+    case IrOpcode::PushI64:
+    case IrOpcode::LoadLocal:
+    case IrOpcode::StoreLocal:
+    case IrOpcode::AddressOfLocal:
+    case IrOpcode::LoadIndirect:
+    case IrOpcode::StoreIndirect:
+    case IrOpcode::Dup:
+    case IrOpcode::Pop:
+    case IrOpcode::AddI32:
+    case IrOpcode::SubI32:
+    case IrOpcode::MulI32:
+    case IrOpcode::DivI32:
+    case IrOpcode::NegI32:
+    case IrOpcode::AddI64:
+    case IrOpcode::SubI64:
+    case IrOpcode::MulI64:
+    case IrOpcode::DivI64:
+    case IrOpcode::DivU64:
+    case IrOpcode::NegI64:
+    case IrOpcode::CmpEqI32:
+    case IrOpcode::CmpNeI32:
+    case IrOpcode::CmpLtI32:
+    case IrOpcode::CmpLeI32:
+    case IrOpcode::CmpGtI32:
+    case IrOpcode::CmpGeI32:
+    case IrOpcode::CmpEqI64:
+    case IrOpcode::CmpNeI64:
+    case IrOpcode::CmpLtI64:
+    case IrOpcode::CmpLeI64:
+    case IrOpcode::CmpGtI64:
+    case IrOpcode::CmpGeI64:
+    case IrOpcode::CmpLtU64:
+    case IrOpcode::CmpLeU64:
+    case IrOpcode::CmpGtU64:
+    case IrOpcode::CmpGeU64:
+    case IrOpcode::JumpIfZero:
+    case IrOpcode::Jump:
+    case IrOpcode::ReturnVoid:
+    case IrOpcode::ReturnI32:
+    case IrOpcode::ReturnI64:
+    case IrOpcode::PrintI32:
+    case IrOpcode::PrintI64:
+    case IrOpcode::PrintU64:
+    case IrOpcode::PrintString:
+    case IrOpcode::PushArgc:
+    case IrOpcode::PrintArgv:
+    case IrOpcode::PrintArgvUnsafe:
+    case IrOpcode::LoadStringByte:
+    case IrOpcode::FileOpenRead:
+    case IrOpcode::FileOpenWrite:
+    case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileClose:
+    case IrOpcode::FileFlush:
+    case IrOpcode::FileWriteI32:
+    case IrOpcode::FileWriteI64:
+    case IrOpcode::FileWriteU64:
+    case IrOpcode::FileWriteString:
+    case IrOpcode::FileWriteByte:
+    case IrOpcode::FileWriteNewline:
+    case IrOpcode::PushF32:
+    case IrOpcode::PushF64:
+    case IrOpcode::AddF32:
+    case IrOpcode::SubF32:
+    case IrOpcode::MulF32:
+    case IrOpcode::DivF32:
+    case IrOpcode::NegF32:
+    case IrOpcode::AddF64:
+    case IrOpcode::SubF64:
+    case IrOpcode::MulF64:
+    case IrOpcode::DivF64:
+    case IrOpcode::NegF64:
+    case IrOpcode::CmpEqF32:
+    case IrOpcode::CmpNeF32:
+    case IrOpcode::CmpLtF32:
+    case IrOpcode::CmpLeF32:
+    case IrOpcode::CmpGtF32:
+    case IrOpcode::CmpGeF32:
+    case IrOpcode::CmpEqF64:
+    case IrOpcode::CmpNeF64:
+    case IrOpcode::CmpLtF64:
+    case IrOpcode::CmpLeF64:
+    case IrOpcode::CmpGtF64:
+    case IrOpcode::CmpGeF64:
+    case IrOpcode::ConvertI32ToF32:
+    case IrOpcode::ConvertI32ToF64:
+    case IrOpcode::ConvertI64ToF32:
+    case IrOpcode::ConvertI64ToF64:
+    case IrOpcode::ConvertU64ToF32:
+    case IrOpcode::ConvertU64ToF64:
+    case IrOpcode::ConvertF32ToI32:
+    case IrOpcode::ConvertF32ToI64:
+    case IrOpcode::ConvertF32ToU64:
+    case IrOpcode::ConvertF64ToI32:
+    case IrOpcode::ConvertF64ToI64:
+    case IrOpcode::ConvertF64ToU64:
+    case IrOpcode::ConvertF32ToF64:
+    case IrOpcode::ConvertF64ToF32:
+    case IrOpcode::ReturnF32:
+    case IrOpcode::ReturnF64:
+    case IrOpcode::PrintStringDynamic:
+    case IrOpcode::Call:
+    case IrOpcode::CallVoid:
+      return true;
+    default:
+      return false;
+  }
 }
 
 bool isWasmOpcodeAllowedWasi(IrOpcode op) {
@@ -259,7 +375,18 @@ bool validateFunction(const IrModule &module,
                              "unsupported opcode for " + std::string(wasmTargetName(target)) + " target",
                              error);
     }
+    if (isGlslTarget(target) && !isGlslOpcodeAllowed(inst.op)) {
+      return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode for glsl target", error);
+    }
     switch (inst.op) {
+      case IrOpcode::PushI64: {
+        const int64_t value = static_cast<int64_t>(inst.imm);
+        if (target == IrValidationTarget::Glsl &&
+            (value < std::numeric_limits<int32_t>::min() || value > std::numeric_limits<int32_t>::max())) {
+          return failInstruction(functionIndex, function.name, instructionIndex, "glsl i64 literal out of i32 range", error);
+        }
+        break;
+      }
       case IrOpcode::JumpIfZero:
       case IrOpcode::Jump:
         if (inst.imm > function.instructions.size()) {
@@ -277,6 +404,9 @@ bool validateFunction(const IrModule &module,
       case IrOpcode::AddressOfLocal:
         if (inst.imm > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
           return failInstruction(functionIndex, function.name, instructionIndex, "local index exceeds 32-bit limit", error);
+        }
+        if (target == IrValidationTarget::Glsl && inst.imm > MaxGlslLocalIndex) {
+          return failInstruction(functionIndex, function.name, instructionIndex, "local index exceeds glsl local-slot limit", error);
         }
         break;
       case IrOpcode::PrintI32:

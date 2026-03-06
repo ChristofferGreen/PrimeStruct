@@ -118,8 +118,12 @@ module {
 - `primec --emit=ir input.prime -o module.psir`
   - Emits serialized PSIR bytecode after semantic validation (no execution).
   - Output is written as `.psir` and includes a PSIR header/version tag.
+- `primec --emit=glsl input.prime -o module.glsl`
+  - Routes through canonical IR into `IrToGlslEmitter`.
+  - Runs `IrValidationTarget::Glsl` before emission to reject unsupported GLSL IR shapes.
 - `primec --emit=spirv input.prime -o module.spv`
   - Emits SPIR-V by first generating GLSL and invoking `glslangValidator` or `glslc` (compute stage).
+  - Runs `IrValidationTarget::Glsl` before GLSL generation.
   - Requires `glslangValidator` or `glslc` on `PATH`.
 - `primec --emit=wasm input.prime -o module`
   - Routes through canonical IR into `WasmEmitter`.
