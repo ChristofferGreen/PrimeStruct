@@ -28,18 +28,9 @@
   if (expr.kind == Expr::Kind::StringLiteral) {
     return "std::string_view(" + stripStringLiteralSuffix(expr.stringValue) + ")";
   }
-  if (expr.kind == Expr::Kind::Name) {
-    if (localTypes.count(expr.name) == 0 && isBuiltinMathConstantName(expr.name, allowMathBare)) {
-      std::string constantName = expr.name;
-      if (!constantName.empty() && constantName[0] == '/') {
-        constantName.erase(0, 1);
-      }
-      if (constantName.rfind("std/math/", 0) == 0) {
-        constantName.erase(0, 9);
-      }
-      return "ps_const_" + constantName;
-    }
-    return expr.name;
+  if (const auto nameExpr = emitter::runEmitterExprControlNameStep(expr, localTypes, allowMathBare);
+      nameExpr.has_value()) {
+    return *nameExpr;
   }
   if (expr.kind == Expr::Kind::Call && expr.isFieldAccess && !expr.args.empty()) {
     return emitExpr(expr.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) +

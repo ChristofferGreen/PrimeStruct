@@ -1215,6 +1215,58 @@ TEST_CASE("emitter emit setup math-import step detects supported imports") {
   CHECK_FALSE(primec::emitter::runEmitterEmitSetupMathImport(unrelatedImport));
 }
 
+TEST_CASE("emitter expr control name step resolves constants and locals") {
+  primec::Expr notNameExpr;
+  notNameExpr.kind = primec::Expr::Kind::Literal;
+  notNameExpr.literalValue = 1;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlNameStep(
+      notNameExpr,
+      {},
+      true).has_value());
+
+  primec::Expr bareConstantExpr;
+  bareConstantExpr.kind = primec::Expr::Kind::Name;
+  bareConstantExpr.name = "pi";
+  const auto bareNoMath = primec::emitter::runEmitterExprControlNameStep(
+      bareConstantExpr,
+      {},
+      false);
+  REQUIRE(bareNoMath.has_value());
+  CHECK(*bareNoMath == "pi");
+
+  const auto bareWithMath = primec::emitter::runEmitterExprControlNameStep(
+      bareConstantExpr,
+      {},
+      true);
+  REQUIRE(bareWithMath.has_value());
+  CHECK(*bareWithMath == "ps_const_pi");
+
+  primec::Expr namespacedConstantExpr;
+  namespacedConstantExpr.kind = primec::Expr::Kind::Name;
+  namespacedConstantExpr.name = "/std/math/tau";
+  const auto namespaced = primec::emitter::runEmitterExprControlNameStep(
+      namespacedConstantExpr,
+      {},
+      false);
+  REQUIRE(namespaced.has_value());
+  CHECK(*namespaced == "ps_const_tau");
+
+  primec::Emitter::BindingInfo localInfo;
+  localInfo.typeName = "f64";
+  std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes = {
+      {"e", localInfo},
+  };
+  primec::Expr localExpr;
+  localExpr.kind = primec::Expr::Kind::Name;
+  localExpr.name = "e";
+  const auto localResolved = primec::emitter::runEmitterExprControlNameStep(
+      localExpr,
+      localTypes,
+      true);
+  REQUIRE(localResolved.has_value());
+  CHECK(*localResolved == "e");
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -1316,6 +1368,29 @@ TEST_CASE("emitter emit setup source delegation stays stable") {
   REQUIRE(std::filesystem::exists(emitterEmitPath));
   const std::string emitterEmitSource = readText(emitterEmitPath);
   CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupMathImport.h\"") != std::string::npos);
+}
+
+TEST_CASE("emitter expr source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path emitterExprControlHeaderPath =
+      std::filesystem::path("src") / "emitter" / "EmitterExprControl.h";
+  REQUIRE(std::filesystem::exists(emitterExprControlHeaderPath));
+  const std::string emitterExprControlHeaderSource = readText(emitterExprControlHeaderPath);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
+
+  const std::filesystem::path emitterExprPath =
+      std::filesystem::path("src") / "emitter" / "EmitterExpr.cpp";
+  REQUIRE(std::filesystem::exists(emitterExprPath));
+  const std::string emitterExprSource = readText(emitterExprPath);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

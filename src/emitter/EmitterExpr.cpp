@@ -1,6 +1,7 @@
 #include "primec/Emitter.h"
 
 #include "EmitterHelpers.h"
+#include "EmitterExprControlNameStep.h"
 
 #include <functional>
 #include <sstream>

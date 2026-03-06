@@ -15,6 +15,7 @@ add_library(primec_lib
   src/emitter/EmitterEmit.cpp
   src/emitter/EmitterEmitSetupMathImport.cpp
   src/emitter/EmitterExpr.cpp
+  src/emitter/EmitterExprControlNameStep.cpp
   src/emitter/EmitterHelpersBuiltins.cpp
   src/emitter/EmitterHelpersTypes.cpp
   src/glsl_emitter/GlslEmitter.cpp
