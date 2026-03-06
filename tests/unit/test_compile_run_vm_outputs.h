@@ -1133,6 +1133,46 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("exe-ir emitter clamps f32/f64 to i64 conversion edges") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(not(equal(convert<i64>(divide(0.0f32, 0.0f32)), 0i64)), then() { return(1i32) }, else() { })
+  if(not(equal(convert<i64>(divide(1.0f32, 0.0f32)), 9223372036854775807i64)), then() { return(2i32) }, else() { })
+  if(not(equal(convert<i64>(divide(0.0f64, 0.0f64)), 0i64)), then() { return(3i32) }, else() { })
+  if(not(equal(convert<i64>(divide(1.0f64, 0.0f64)), 9223372036854775807i64)), then() { return(4i32) }, else() { })
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_f64_to_i64_convert_edges.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_exe_ir_f64_to_i64_convert_edges").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("exe emitter uses ir backend for f32/f64 to i64 conversion edges") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(not(equal(convert<i64>(divide(0.0f32, 0.0f32)), 0i64)), then() { return(1i32) }, else() { })
+  if(not(equal(convert<i64>(divide(1.0f32, 0.0f32)), 9223372036854775807i64)), then() { return(2i32) }, else() { })
+  if(not(equal(convert<i64>(divide(0.0f64, 0.0f64)), 0i64)), then() { return(3i32) }, else() { })
+  if(not(equal(convert<i64>(divide(1.0f64, 0.0f64)), 9223372036854775807i64)), then() { return(4i32) }, else() { })
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_f64_to_i64_ir_first_edges.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_exe_f64_to_i64_ir_first_edges").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("cpp and exe emitters match cpp-ir and exe-ir on shared corpus") {
   struct DifferentialCase {
     const char *name;
