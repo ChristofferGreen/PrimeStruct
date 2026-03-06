@@ -266,6 +266,20 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::ConvertF32ToU64:
+      out << "        float value = intBitsToFloat(stack[--sp]);\n";
+      out << "        uint converted = 0u;\n";
+      out << "        if (isnan(value) || value <= 0.0) {\n";
+      out << "          converted = 0u;\n";
+      out << "        } else if (value >= 2147483647.0) {\n";
+      out << "          converted = 2147483647u;\n";
+      out << "        } else {\n";
+      out << "          converted = uint(int(value));\n";
+      out << "        }\n";
+      out << "        stack[sp++] = int(converted);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::ConvertI32ToF32:
       out << "        stack[sp++] = floatBitsToInt(float(stack[--sp]));\n";
       out << "        pc = " << nextIndex << ";\n";

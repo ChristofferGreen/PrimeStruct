@@ -380,6 +380,26 @@ TEST_CASE("ir to glsl emitter writes f32 to i64 conversion opcode") {
   CHECK(glsl.find("stack[sp++] = converted;") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes f32 to u64 conversion opcode") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushF32, 0x41200000u});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF32ToU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("uint converted = 0u;") != std::string::npos);
+  CHECK(glsl.find("converted = uint(int(value));") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = int(converted);") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter writes i32 to f32 conversion opcode") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
