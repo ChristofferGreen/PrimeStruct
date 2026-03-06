@@ -230,6 +230,37 @@ main() {
   CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
+TEST_CASE("capacity method rejects array target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(values.capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
+}
+
+TEST_CASE("capacity method keeps user-defined array helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/array/capacity([array<i32>] values) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(values.capacity())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("push requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

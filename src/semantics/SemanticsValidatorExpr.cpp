@@ -1942,6 +1942,19 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (!resolveMethodTarget(expr.args.front(), expr.name, resolved, isBuiltinMethod)) {
         return false;
       }
+      if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && expr.name == "capacity") {
+        std::string elemType;
+        std::string mapKeyType;
+        std::string mapValueType;
+        if (resolveVectorTarget(expr.args.front(), elemType) || resolveArrayTarget(expr.args.front(), elemType) ||
+            resolveStringTarget(expr.args.front()) ||
+            resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {
+          // Route known collection capacity() calls through builtin validation so
+          // non-vector targets emit the deterministic vector-target diagnostic.
+          resolved = "/vector/capacity";
+          isBuiltinMethod = true;
+        }
+      }
       if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end()) {
         error_ = "unknown method: " + resolved;
         return false;
