@@ -85,6 +85,7 @@
 #include "src/ir_lowerer/IrLowererLowerExprEmitSetup.h"
 #include "src/ir_lowerer/IrLowererLowerInferenceSetup.h"
 #include "src/ir_lowerer/IrLowererLowerInlineCallCleanupStep.h"
+#include "src/ir_lowerer/IrLowererLowerInlineCallContextSetupStep.h"
 #include "src/ir_lowerer/IrLowererLowerInlineCallGpuLocalsStep.h"
 #include "src/ir_lowerer/IrLowererLowerInlineCallReturnValueStep.h"
 #include "src/ir_lowerer/IrLowererLowerImportsStructsSetup.h"

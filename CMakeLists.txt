@@ -70,6 +70,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererCountAccessHelpers.cpp
   src/ir_lowerer/IrLowererLowerEntrySetup.cpp
   src/ir_lowerer/IrLowererLowerInlineCallCleanupStep.cpp
+  src/ir_lowerer/IrLowererLowerInlineCallContextSetupStep.cpp
   src/ir_lowerer/IrLowererLowerInlineCallGpuLocalsStep.cpp
   src/ir_lowerer/IrLowererLowerInlineCallReturnValueStep.cpp
   src/ir_lowerer/IrLowererLowerImportsStructsSetup.cpp

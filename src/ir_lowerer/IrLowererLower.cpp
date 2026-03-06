@@ -18,6 +18,7 @@
 #include "IrLowererLowerEntrySetup.h"
 #include "IrLowererLowerInferenceSetup.h"
 #include "IrLowererLowerInlineCallCleanupStep.h"
+#include "IrLowererLowerInlineCallContextSetupStep.h"
 #include "IrLowererLowerInlineCallGpuLocalsStep.h"
 #include "IrLowererLowerInlineCallReturnValueStep.h"
 #include "IrLowererLowerImportsStructsSetup.h"

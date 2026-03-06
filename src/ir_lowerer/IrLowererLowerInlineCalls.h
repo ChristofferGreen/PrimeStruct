@@ -119,23 +119,22 @@
 
     InlineContext context;
     context.defPath = callee.fullPath;
-    context.returnsVoid = returnInfo.returnsVoid;
-    context.returnsArray = returnInfo.returnsArray;
-    context.returnKind = returnInfo.kind;
-    if (!context.returnsVoid) {
-      context.returnLocal = allocTempLocal();
-      IrOpcode zeroOp = IrOpcode::PushI32;
-      if (context.returnsArray || context.returnKind == LocalInfo::ValueKind::Int64 ||
-          context.returnKind == LocalInfo::ValueKind::UInt64 || context.returnKind == LocalInfo::ValueKind::String) {
-        zeroOp = IrOpcode::PushI64;
-      } else if (context.returnKind == LocalInfo::ValueKind::Float64) {
-        zeroOp = IrOpcode::PushF64;
-      } else if (context.returnKind == LocalInfo::ValueKind::Float32) {
-        zeroOp = IrOpcode::PushF32;
-      }
-      function.instructions.push_back({zeroOp, 0});
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
+    ir_lowerer::LowerInlineCallContextSetupStepOutput contextSetup;
+    if (!ir_lowerer::runLowerInlineCallContextSetupStep(
+            {
+                .function = &function,
+                .returnInfo = &returnInfo,
+                .allocTempLocal = [&]() { return allocTempLocal(); },
+            },
+            contextSetup,
+            error)) {
+      inlineStack.erase(callee.fullPath);
+      return false;
     }
+    context.returnsVoid = contextSetup.returnsVoid;
+    context.returnsArray = contextSetup.returnsArray;
+    context.returnKind = contextSetup.returnKind;
+    context.returnLocal = contextSetup.returnLocal;
 
     InlineContext *prevContext = activeInlineContext;
     activeInlineContext = &context;
