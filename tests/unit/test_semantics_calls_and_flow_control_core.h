@@ -873,6 +873,37 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("if rejects builtin string map access mixed with numeric branch") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
+  return(if(true, then(){ at(values, 1i32) }, else(){ 2i32 }))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if branches must return compatible types") != std::string::npos);
+}
+
+TEST_CASE("if uses user-defined at return type for branch compatibility") {
+  const std::string source = R"(
+[return<int>]
+at([map<i32, string>] values, [i32] key) {
+  return(key)
+}
+
+[return<int>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
+  return(if(true, then(){ at(values, 1i32) }, else(){ 2i32 }))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("labeled arguments accept bracket syntax") {
   const std::string source = R"(
 [return<int>]

@@ -788,7 +788,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
         std::string accessName;
-        if (!getBuiltinArrayAccessName(valueExpr, accessName) || valueExpr.args.size() != 2) {
+        if (defMap_.find(resolveCalleePath(valueExpr)) != defMap_.end() ||
+            !getBuiltinArrayAccessName(valueExpr, accessName) || valueExpr.args.size() != 2) {
           return false;
         }
         const Expr &target = valueExpr.args.front();
@@ -824,6 +825,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           if (collectionExpr.kind == Expr::Kind::Call) {
             std::string collection;
+            if (defMap_.find(resolveCalleePath(collectionExpr)) != defMap_.end()) {
+              return false;
+            }
             if (!getBuiltinCollectionName(collectionExpr, collection)) {
               return false;
             }
