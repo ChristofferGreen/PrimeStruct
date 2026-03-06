@@ -332,6 +332,32 @@ TEST_CASE("ir to cpp emitter writes file io opcodes") {
   CHECK(cpp.find("int closeRc = ::close(closeFd);") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter writes file write u64 opcode") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("/dev/null");
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::FileOpenWrite, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(42)});
+  fn.instructions.push_back({primec::IrOpcode::FileWriteU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("uint64_t fileU64Value = stack[--sp];") != std::string::npos);
+  CHECK(cpp.find("int fileU64Fd = static_cast<int>(fileU64Handle & 0xffffffffu);") != std::string::npos);
+  CHECK(cpp.find("std::string fileU64Text = std::to_string(static_cast<unsigned long long>(fileU64Value));") !=
+        std::string::npos);
+  CHECK(cpp.find("psWriteAll(fileU64Fd, fileU64Text.data(), fileU64Text.size())") != std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes file open read opcode") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
