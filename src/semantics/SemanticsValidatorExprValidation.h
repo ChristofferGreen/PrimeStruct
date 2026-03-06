@@ -10,7 +10,8 @@
       }
       if (target.kind == Expr::Kind::Call) {
         std::string builtinName;
-        if (getBuiltinArrayAccessName(target, builtinName) && target.args.size() == 2) {
+        if (defMap_.find(resolveCalleePath(target)) == defMap_.end() && getBuiltinArrayAccessName(target, builtinName) &&
+            target.args.size() == 2) {
           std::string elemType;
           if (resolveArrayTarget(target.args.front(), elemType) && elemType == "string") {
             return true;
@@ -118,7 +119,8 @@
       }
       if (arg.kind == Expr::Kind::Call) {
         std::string accessName;
-        if (getBuiltinArrayAccessName(arg, accessName) && arg.args.size() == 2) {
+        if (defMap_.find(resolveCalleePath(arg)) == defMap_.end() && getBuiltinArrayAccessName(arg, accessName) &&
+            arg.args.size() == 2) {
           std::string mapValueType;
           if (resolveMapValueType(arg.args.front(), mapValueType) && normalizeBindingTypeName(mapValueType) == "string") {
             return true;

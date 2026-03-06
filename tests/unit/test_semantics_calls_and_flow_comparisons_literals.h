@@ -24,6 +24,37 @@ main() {
   CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
 }
 
+TEST_CASE("builtin at map string comparisons reject mixed types") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
+  return(equal(at(values, 1i32), 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
+}
+
+TEST_CASE("user-defined at comparisons use resolved return type") {
+  const std::string source = R"(
+[return<int>]
+at([map<i32, string>] values, [i32] key) {
+  return(key)
+}
+
+[return<bool>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
+  return(equal(at(values, 1i32), 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("arithmetic operators reject bool operands") {
   const std::string source = R"(
 [return<int>]
