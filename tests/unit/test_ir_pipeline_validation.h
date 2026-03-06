@@ -2388,6 +2388,59 @@ TEST_CASE("emitter expr control builtin-block binding-fallback step emits inferr
   CHECK(missingEmit.emittedStatement == "auto item; ");
 }
 
+TEST_CASE("emitter expr control builtin-block binding-qualifiers step resolves const/reference flags") {
+  primec::Emitter::BindingInfo mutableBinding;
+  mutableBinding.isMutable = true;
+  mutableBinding.isCopy = false;
+  const auto mutableResult = primec::emitter::runEmitterExprControlBuiltinBlockBindingQualifiersStep(
+      mutableBinding,
+      true,
+      [&](const primec::Emitter::BindingInfo &) { return true; });
+  CHECK_FALSE(mutableResult.needsConst);
+  CHECK_FALSE(mutableResult.useRef);
+
+  primec::Emitter::BindingInfo copyBinding;
+  copyBinding.isMutable = false;
+  copyBinding.isCopy = true;
+  const auto copyResult = primec::emitter::runEmitterExprControlBuiltinBlockBindingQualifiersStep(
+      copyBinding,
+      true,
+      [&](const primec::Emitter::BindingInfo &) { return true; });
+  CHECK(copyResult.needsConst);
+  CHECK_FALSE(copyResult.useRef);
+
+  primec::Emitter::BindingInfo constBinding;
+  constBinding.isMutable = false;
+  constBinding.isCopy = false;
+  int referenceCandidateCalls = 0;
+  const auto constResult = primec::emitter::runEmitterExprControlBuiltinBlockBindingQualifiersStep(
+      constBinding,
+      true,
+      [&](const primec::Emitter::BindingInfo &candidate) {
+        ++referenceCandidateCalls;
+        CHECK_FALSE(candidate.isMutable);
+        CHECK_FALSE(candidate.isCopy);
+        return true;
+      });
+  CHECK(constResult.needsConst);
+  CHECK(constResult.useRef);
+  CHECK(referenceCandidateCalls == 1);
+
+  const auto noInitializer = primec::emitter::runEmitterExprControlBuiltinBlockBindingQualifiersStep(
+      constBinding,
+      false,
+      [&](const primec::Emitter::BindingInfo &) { return true; });
+  CHECK(noInitializer.needsConst);
+  CHECK_FALSE(noInitializer.useRef);
+
+  const auto missingCallback = primec::emitter::runEmitterExprControlBuiltinBlockBindingQualifiersStep(
+      constBinding,
+      true,
+      {});
+  CHECK(missingCallback.needsConst);
+  CHECK_FALSE(missingCallback.useRef);
+}
+
 TEST_CASE("emitter expr control body-wrapper step rewrites body-argument calls") {
   primec::Expr noBodyExpr;
   noBodyExpr.kind = primec::Expr::Kind::Call;
@@ -2710,6 +2763,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingFallbackStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingQualifiersStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingPreludeStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockFinalValueStep(") !=
@@ -2739,6 +2794,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingExplicitStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingFallbackStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingQualifiersStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingPreludeStep.h\"") !=
         std::string::npos);

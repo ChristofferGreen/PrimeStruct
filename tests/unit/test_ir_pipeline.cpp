@@ -34,6 +34,7 @@
 #include "src/emitter/EmitterExprControlBuiltinBlockBindingExplicitStep.h"
 #include "src/emitter/EmitterExprControlBuiltinBlockBindingFallbackStep.h"
 #include "src/emitter/EmitterExprControlBuiltinBlockBindingPreludeStep.h"
+#include "src/emitter/EmitterExprControlBuiltinBlockBindingQualifiersStep.h"
 #include "src/emitter/EmitterExprControlBuiltinBlockFinalValueStep.h"
 #include "src/emitter/EmitterExprControlBoolLiteralStep.h"
 #include "src/emitter/EmitterExprControlBuiltinBlockPreludeStep.h"

@@ -181,9 +181,12 @@
           out << autoBindingStep.emittedStatement;
           continue;
         }
-        bool needsConst = !binding.isMutable;
-        const bool useRef =
-            !binding.isMutable && !binding.isCopy && !stmt.args.empty() && isReferenceCandidate(binding);
+        const auto bindingQualifiers = emitter::runEmitterExprControlBuiltinBlockBindingQualifiersStep(
+            binding,
+            !stmt.args.empty(),
+            [&](const BindingInfo &candidateBinding) { return isReferenceCandidate(candidateBinding); });
+        const bool needsConst = bindingQualifiers.needsConst;
+        const bool useRef = bindingQualifiers.useRef;
         if (const auto explicitBindingStep = emitter::runEmitterExprControlBuiltinBlockBindingExplicitStep(
                 stmt,
                 binding,
