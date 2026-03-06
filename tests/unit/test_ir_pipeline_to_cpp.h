@@ -409,6 +409,53 @@ TEST_CASE("ir to cpp emitter writes file write i64 opcode") {
   CHECK(cpp.find("psWriteAll(fileI64Fd, fileI64Text.data(), fileI64Text.size())") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter writes file write byte opcode") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("/dev/null");
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::FileOpenWrite, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(0x41)});
+  fn.instructions.push_back({primec::IrOpcode::FileWriteByte, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("uint8_t fileByteValue = static_cast<uint8_t>(stack[--sp] & 0xffu);") != std::string::npos);
+  CHECK(cpp.find("int fileByteFd = static_cast<int>(fileByteHandle & 0xffffffffu);") != std::string::npos);
+  CHECK(cpp.find("psWriteAll(fileByteFd, &fileByteValue, 1)") != std::string::npos);
+}
+
+TEST_CASE("ir to cpp emitter writes file write newline opcode") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("/dev/null");
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::FileOpenWrite, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileWriteNewline, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("int fileLineFd = static_cast<int>(fileLineHandle & 0xffffffffu);") != std::string::npos);
+  CHECK(cpp.find("char fileLineValue = '\\n';") != std::string::npos);
+  CHECK(cpp.find("psWriteAll(fileLineFd, &fileLineValue, 1)") != std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes file open read opcode") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
