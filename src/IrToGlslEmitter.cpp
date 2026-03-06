@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace primec {
 namespace {
@@ -12,6 +13,7 @@ bool emitInstruction(const IrInstruction &instruction,
                      size_t nextIndex,
                      size_t instructionCount,
                      size_t functionCount,
+                     const std::vector<std::string> &stringTable,
                      std::ostringstream &out,
                      std::string &error) {
   constexpr uint64_t MaxLocalIndex = 1023;
@@ -195,6 +197,25 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::LoadStringByte:
+      if (instruction.imm >= stringTable.size()) {
+        error = "IrToGlslEmitter string index out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      out << "        uint stringByteIndex = uint(stack[--sp]);\n";
+      out << "        int stringByte = 0;\n";
+      out << "        switch (stringByteIndex) {\n";
+      for (size_t byteIndex = 0; byteIndex < stringTable[static_cast<size_t>(instruction.imm)].size(); ++byteIndex) {
+        const uint32_t byteValue =
+            static_cast<uint32_t>(static_cast<unsigned char>(stringTable[static_cast<size_t>(instruction.imm)][byteIndex]));
+        out << "          case " << byteIndex << "u: stringByte = " << byteValue << "; break;\n";
+      }
+      out << "          default: stringByte = 0; break;\n";
+      out << "        }\n";
+      out << "        stack[sp++] = stringByte;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::Jump:
       if (instruction.imm >= instructionCount) {
         error = "IrToGlslEmitter jump target out of range at instruction " + std::to_string(index);
@@ -254,6 +275,7 @@ bool emitInstruction(const IrInstruction &instruction,
 bool emitFunction(const IrFunction &function,
                   size_t functionIndex,
                   size_t functionCount,
+                  const std::vector<std::string> &stringTable,
                   std::ostringstream &out,
                   std::string &error) {
   if (function.instructions.empty()) {
@@ -274,7 +296,8 @@ bool emitFunction(const IrFunction &function,
   for (size_t i = 0; i < instructionCount; ++i) {
     const size_t next = i + 1;
     out << "      case " << i << ": {\n";
-    if (!emitInstruction(function.instructions[i], i, next, instructionCount, functionCount, out, error)) {
+    if (!emitInstruction(function.instructions[i], i, next, instructionCount, functionCount, stringTable, out,
+                         error)) {
       return false;
     }
     out << "      }\n";
@@ -314,7 +337,7 @@ bool IrToGlslEmitter::emitSource(const IrModule &module, std::string &out, std::
     body << "int ps_entry_" << i << "(inout int stack[1024], inout int sp);\n";
   }
   for (size_t i = 0; i < module.functions.size(); ++i) {
-    if (!emitFunction(module.functions[i], i, module.functions.size(), body, error)) {
+    if (!emitFunction(module.functions[i], i, module.functions.size(), module.stringTable, body, error)) {
       return false;
     }
   }

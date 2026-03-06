@@ -142,6 +142,28 @@ TEST_CASE("ir to glsl emitter writes print opcode no-op handling") {
   CHECK(glsl.find("--sp; // GLSL backend ignores print side effects.") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes loadstringbyte opcode") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("Az");
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::LoadStringByte, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("switch (stringByteIndex)") != std::string::npos);
+  CHECK(glsl.find("case 0u: stringByte = 65; break;") != std::string::npos);
+  CHECK(glsl.find("case 1u: stringByte = 122; break;") != std::string::npos);
+  CHECK(glsl.find("default: stringByte = 0; break;") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter writes f32 literal push") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
@@ -285,6 +307,23 @@ TEST_CASE("ir to glsl emitter rejects out-of-range local indices") {
   std::string error;
   CHECK_FALSE(emitter.emitSource(module, glsl, error));
   CHECK(error.find("local index out of range") != std::string::npos);
+}
+
+TEST_CASE("ir to glsl emitter rejects out-of-range string indices") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::LoadStringByte, 1});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, glsl, error));
+  CHECK(error.find("string index out of range") != std::string::npos);
 }
 
 TEST_CASE("ir to glsl emitter rejects out-of-range call targets") {
