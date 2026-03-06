@@ -255,6 +255,16 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::ConvertI64ToF32:
+      out << "        stack[sp++] = floatBitsToInt(float(stack[--sp]));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertU64ToF32:
+      out << "        stack[sp++] = floatBitsToInt(float(uint(stack[--sp])));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::PrintString: {
       const uint64_t stringIndex = decodePrintStringIndex(instruction.imm);
       if (stringIndex >= stringTable.size()) {

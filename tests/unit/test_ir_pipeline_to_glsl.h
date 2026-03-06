@@ -273,6 +273,28 @@ TEST_CASE("ir to glsl emitter writes u64 division opcode") {
   CHECK(glsl.find("stack[sp++] = int(left / right);") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes i64/u64 to f32 conversion opcodes") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(6))});
+  fn.instructions.push_back({primec::IrOpcode::ConvertI64ToF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(7))});
+  fn.instructions.push_back({primec::IrOpcode::ConvertU64ToF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("stack[sp++] = floatBitsToInt(float(stack[--sp]));") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = floatBitsToInt(float(uint(stack[--sp])));") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter writes f32 literal push") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
