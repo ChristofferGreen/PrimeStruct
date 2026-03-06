@@ -295,6 +295,16 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::ConvertF32ToF64:
+      out << "        // Narrowed GLSL path keeps f32/f64 conversion as bit-preserving passthrough.\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertF64ToF32:
+      out << "        // Narrowed GLSL path keeps f64/f32 conversion as bit-preserving passthrough.\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::PrintString: {
       const uint64_t stringIndex = decodePrintStringIndex(instruction.imm);
       if (stringIndex >= stringTable.size()) {
