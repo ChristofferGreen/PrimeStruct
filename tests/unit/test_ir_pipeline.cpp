@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
@@ -38,6 +39,7 @@
 #include "src/ir_lowerer/IrLowererInlineParamHelpers.h"
 #include "src/ir_lowerer/IrLowererInlineStructArgHelpers.h"
 #include "src/ir_lowerer/IrLowererLowerEffects.h"
+#include "src/ir_lowerer/IrLowererLowerEntrySetup.h"
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArithmeticHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.h"

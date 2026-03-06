@@ -26,7 +26,12 @@ Legend:
 - ✓ Extend intra-definition/execution body recovery to aggregate resolved-call argument-shape errors (duplicate/unknown named arguments and argument-count mismatches) with deterministic ordering.
 - ✓ Extend intra-definition/execution body recovery to aggregate call argument type-mismatch diagnostics for resolved targets while preserving deterministic diagnostics.
 - ✓ Extend intra-definition/execution body recovery to aggregate flow/effect diagnostics (for example capability/effect subset failures) while preserving deterministic diagnostics.
-- ○ Decompose include-composed mega units (`IrLowererLower.cpp`, `EmitterEmit.cpp`, `EmitterExpr.cpp`, `SemanticsValidatorExpr.cpp`, `SemanticsValidatorStatement.cpp`) into explicit `.h/.cpp` step functions plus a thin orchestrator that calls setup/lower/finalize stages in order, with snapshot tests to lock diagnostic + IR parity.
+- ◐ Decompose include-composed mega units (`IrLowererLower.cpp`, `EmitterEmit.cpp`, `EmitterExpr.cpp`, `SemanticsValidatorExpr.cpp`, `SemanticsValidatorStatement.cpp`) into explicit `.h/.cpp` step functions plus a thin orchestrator that calls setup/lower/finalize stages in order, with snapshot tests to lock diagnostic + IR parity. Started with an `IrLowererLower` vertical slice: extracted entry/effects setup into explicit step unit `src/ir_lowerer/IrLowererLowerEntrySetup.{h,cpp}`, wired `IrLowerer::lower` setup orchestration through that step, and added lowerer stage-order + entry-setup parity tests.
+- ○ Continue `IrLowererLower.cpp` decomposition by moving remaining setup/lower/finalize include fragments into explicit step units called by the thin orchestrator, while preserving diagnostic + IR snapshots.
+- ○ Decompose `EmitterEmit.cpp` include fragments into explicit step units and retain emitted C++ snapshot parity.
+- ○ Decompose `EmitterExpr.cpp` include fragments into explicit step units and retain emitted C++ snapshot parity.
+- ○ Decompose `SemanticsValidatorExpr.cpp` include fragments into explicit step units and retain diagnostics snapshot parity.
+- ○ Decompose `SemanticsValidatorStatement.cpp` include fragments into explicit step units and retain diagnostics snapshot parity.
 
 **Pipeline & CLI**
 - ✓ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.

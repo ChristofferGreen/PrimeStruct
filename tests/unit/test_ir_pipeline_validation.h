@@ -149,6 +149,100 @@ TEST_CASE("ir lowerer effects unit resolves entry metadata masks") {
   CHECK(entryCapabilityMask == (primec::EffectIoOut | primec::EffectHeapAlloc));
 }
 
+TEST_CASE("ir lowerer entry setup step resolves entry metadata") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  program.definitions.push_back(entryDef);
+
+  const primec::Definition *resolvedEntry = nullptr;
+  uint64_t entryEffectMask = 0;
+  uint64_t entryCapabilityMask = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerEntrySetup(program,
+                                               "/main",
+                                               {"io_out"},
+                                               {"io_err"},
+                                               resolvedEntry,
+                                               entryEffectMask,
+                                               entryCapabilityMask,
+                                               error));
+  CHECK(error.empty());
+  REQUIRE(resolvedEntry != nullptr);
+  CHECK(resolvedEntry->fullPath == "/main");
+  CHECK(entryEffectMask == primec::EffectIoErr);
+  CHECK(entryCapabilityMask == primec::EffectIoErr);
+}
+
+TEST_CASE("ir lowerer entry setup step rejects missing entry") {
+  primec::Program program;
+  primec::Definition helperDef;
+  helperDef.fullPath = "/helper";
+  program.definitions.push_back(helperDef);
+
+  const primec::Definition *resolvedEntry = nullptr;
+  uint64_t entryEffectMask = 123;
+  uint64_t entryCapabilityMask = 456;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerEntrySetup(program,
+                                                     "/main",
+                                                     {"io_out"},
+                                                     {"io_err"},
+                                                     resolvedEntry,
+                                                     entryEffectMask,
+                                                     entryCapabilityMask,
+                                                     error));
+  CHECK(error == "native backend requires entry definition /main");
+  CHECK(resolvedEntry == nullptr);
+  CHECK(entryEffectMask == 0);
+  CHECK(entryCapabilityMask == 0);
+}
+
+TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path lowererPath = std::filesystem::path("src") / "ir_lowerer" / "IrLowererLower.cpp";
+  REQUIRE(std::filesystem::exists(lowererPath));
+  const std::string lowererSource = readText(lowererPath);
+
+  const std::vector<std::string> stageIncludes = {
+      "#include \"IrLowererLowerSetupEntryEffects.h\"",
+      "#include \"IrLowererLowerSetupImportsStructs.h\"",
+      "#include \"IrLowererLowerSetupLocals.h\"",
+      "#include \"IrLowererLowerSetupInference.h\"",
+      "#include \"IrLowererLowerReturnAndCalls.h\"",
+      "#include \"IrLowererLowerOperators.h\"",
+      "#include \"IrLowererLowerStatementsExpr.h\"",
+      "#include \"IrLowererLowerStatementsBindings.h\"",
+      "#include \"IrLowererLowerStatementsLoops.h\"",
+      "#include \"IrLowererLowerStatementsCalls.h\"",
+  };
+
+  size_t cursor = 0;
+  for (const auto &stageInclude : stageIncludes) {
+    const size_t pos = lowererSource.find(stageInclude);
+    CAPTURE(stageInclude);
+    CHECK(pos != std::string::npos);
+    CHECK(pos >= cursor);
+    if (pos != std::string::npos) {
+      cursor = pos;
+    }
+  }
+
+  const std::filesystem::path setupHeaderPath =
+      std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerSetupEntryEffects.h";
+  REQUIRE(std::filesystem::exists(setupHeaderPath));
+  const std::string setupHeaderSource = readText(setupHeaderPath);
+  CHECK(setupHeaderSource.find("runLowerEntrySetup(") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";

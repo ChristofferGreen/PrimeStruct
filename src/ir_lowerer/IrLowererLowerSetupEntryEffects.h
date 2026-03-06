@@ -7,25 +7,15 @@ bool IrLowerer::lower(const Program &program,
   out = IrModule{};
 
   const Definition *entryDef = nullptr;
-  if (!findEntryDefinition(program, entryPath, entryDef, error)) {
-    return false;
-  }
-
-  if (!validateNoSoftwareNumericTypes(program, error)) {
-    return false;
-  }
-
   uint64_t entryEffectMask = 0;
   uint64_t entryCapabilityMask = 0;
-  if (!ir_lowerer::validateProgramEffects(program, entryPath, defaultEffects, entryDefaultEffects, error)) {
-    return false;
-  }
-  if (!ir_lowerer::resolveEntryMetadataMasks(*entryDef,
-                                             entryPath,
-                                             defaultEffects,
-                                             entryDefaultEffects,
-                                             entryEffectMask,
-                                             entryCapabilityMask,
-                                             error)) {
+  if (!ir_lowerer::runLowerEntrySetup(program,
+                                      entryPath,
+                                      defaultEffects,
+                                      entryDefaultEffects,
+                                      entryDef,
+                                      entryEffectMask,
+                                      entryCapabilityMask,
+                                      error)) {
     return false;
   }
