@@ -764,4 +764,22 @@ TEST_CASE("ir to cpp emitter rejects out-of-range string byte load indices") {
   CHECK(error.find("string index out of range") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter rejects out-of-range file write string indices") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("/dev/null");
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::FileOpenWrite, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileWriteString, 5});
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, cpp, error));
+  CHECK(error.find("string index out of range") != std::string::npos);
+}
+
 TEST_SUITE_END();

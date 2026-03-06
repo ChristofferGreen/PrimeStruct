@@ -243,6 +243,33 @@ TEST_CASE("cpp-ir backend rejects empty non-entry function bodies") {
   CHECK(error == "ir-to-cpp failed: IrToCppEmitter function has no instructions at index 1");
 }
 
+TEST_CASE("cpp-ir backend reports file write string index diagnostics") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("/dev/null");
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::FileOpenWrite, 0});
+  function.instructions.push_back({primec::IrOpcode::FileWriteString, 5});
+  function.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path outputPath =
+      std::filesystem::current_path() / "primec_tests" / "unused_file_write_string_index.cpp";
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "cpp_ir_backend_file_write_string_index_error.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  CHECK_FALSE(backend->emit(module, options, result, error));
+  CHECK(error.find("ir-to-cpp failed:") != std::string::npos);
+  CHECK(error.find("string index out of range") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir backend writes f32 opcode helpers") {
   const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
   REQUIRE(backend != nullptr);
