@@ -1898,6 +1898,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     std::string resolved = resolveCalleePath(expr);
     bool resolvedMethod = false;
     bool usedMethodTarget = false;
+    auto promoteCapacityToBuiltinValidation = [&](const Expr &targetExpr,
+                                                  std::string &resolvedOut,
+                                                  bool &isBuiltinMethodOut) {
+      std::string elemType;
+      std::string mapKeyType;
+      std::string mapValueType;
+      if (resolveVectorTarget(targetExpr, elemType) || resolveArrayTarget(targetExpr, elemType) ||
+          resolveStringTarget(targetExpr) || resolveMapTarget(targetExpr, mapKeyType, mapValueType)) {
+        // Route known collection capacity() calls through builtin validation so
+        // non-vector targets emit the deterministic vector-target diagnostic.
+        resolvedOut = "/vector/capacity";
+        isBuiltinMethodOut = true;
+      }
+    };
     if (expr.isFieldAccess) {
       if (expr.args.size() != 1) {
         error_ = "field access requires a receiver";
@@ -1938,17 +1952,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && expr.name == "capacity") {
-        std::string elemType;
-        std::string mapKeyType;
-        std::string mapValueType;
-        if (resolveVectorTarget(expr.args.front(), elemType) || resolveArrayTarget(expr.args.front(), elemType) ||
-            resolveStringTarget(expr.args.front()) ||
-            resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {
-          // Route known collection capacity() calls through builtin validation so
-          // non-vector targets emit the deterministic vector-target diagnostic.
-          resolved = "/vector/capacity";
-          isBuiltinMethod = true;
-        }
+        promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod);
       }
       if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end()) {
         error_ = "unknown method: " + resolved;
@@ -1961,6 +1965,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string methodResolved;
       if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
         return false;
+      }
+      if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+        error_ = "unknown method: " + methodResolved;
+        return false;
+      }
+      resolved = methodResolved;
+      resolvedMethod = isBuiltinMethod;
+    } else if (expr.name == "capacity" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
+      usedMethodTarget = true;
+      bool isBuiltinMethod = false;
+      std::string methodResolved;
+      if (!resolveMethodTarget(expr.args.front(), "capacity", methodResolved, isBuiltinMethod)) {
+        return false;
+      }
+      if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+        promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved, isBuiltinMethod);
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
         error_ = "unknown method: " + methodResolved;

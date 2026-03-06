@@ -582,17 +582,32 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
                 LocalInfo::ValueKind &candidateKindOut,
                 bool &matchedOut) {
               bool countMethodResolved = false;
-              const bool resolved = resolveCountMethodCallReturnKind(candidate,
-                                                                    candidateLocals,
-                                                                    isArrayCountCall,
-                                                                    isStringCountCall,
-                                                                    stateInOut.resolveMethodCallDefinition,
-                                                                    stateInOut.getReturnInfo,
-                                                                    false,
-                                                                    candidateKindOut,
-                                                                    &countMethodResolved);
-              matchedOut = countMethodResolved;
-              return resolved;
+              if (resolveCountMethodCallReturnKind(candidate,
+                                                   candidateLocals,
+                                                   isArrayCountCall,
+                                                   isStringCountCall,
+                                                   stateInOut.resolveMethodCallDefinition,
+                                                   stateInOut.getReturnInfo,
+                                                   false,
+                                                   candidateKindOut,
+                                                   &countMethodResolved)) {
+                matchedOut = countMethodResolved;
+                return true;
+              }
+              if (countMethodResolved) {
+                matchedOut = true;
+                return false;
+              }
+              bool capacityMethodResolved = false;
+              const bool capacityResolved = resolveCapacityMethodCallReturnKind(candidate,
+                                                                                candidateLocals,
+                                                                                stateInOut.resolveMethodCallDefinition,
+                                                                                stateInOut.getReturnInfo,
+                                                                                false,
+                                                                                candidateKindOut,
+                                                                                &capacityMethodResolved);
+              matchedOut = capacityMethodResolved;
+              return capacityResolved;
             },
             [&](const Expr &candidate,
                 const LocalMap &candidateLocals,

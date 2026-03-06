@@ -355,6 +355,50 @@ main() {
   CHECK(runCommand(exePath) == 77);
 }
 
+TEST_CASE("compiles and runs native user vector capacity call shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(capacity(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_vector_capacity_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_vector_capacity_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 77);
+}
+
+TEST_CASE("compiles and runs native user array capacity call shadow") {
+  const std::string source = R"(
+[return<int>]
+/array/capacity([array<i32>] values) {
+  return(66i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(capacity(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_array_capacity_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_array_capacity_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 66);
+}
+
 TEST_CASE("compiles and runs native vector push helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

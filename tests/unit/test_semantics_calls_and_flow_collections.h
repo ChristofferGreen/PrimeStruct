@@ -261,6 +261,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("capacity call keeps user-defined array helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/array/capacity([array<i32>] values) {
+  return(plus(count(values), 33i32))
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(capacity(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("count method keeps user-defined array helper precedence") {
   const std::string source = R"(
 [return<int>]
@@ -290,6 +308,24 @@ TEST_CASE("capacity method keeps user-defined vector helper precedence") {
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(values.capacity())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("capacity call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(plus(count(values), 20i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(capacity(values))
 }
 )";
   std::string error;

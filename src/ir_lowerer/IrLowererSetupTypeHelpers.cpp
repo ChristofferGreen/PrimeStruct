@@ -381,6 +381,36 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
                                      methodResolvedOut);
 }
 
+bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
+                                         const LocalMap &localsIn,
+                                         const ResolveMethodCallDefinitionFn &resolveMethodCallDefinition,
+                                         const GetReturnInfoForPathFn &getReturnInfo,
+                                         bool requireArrayReturn,
+                                         LocalInfo::ValueKind &kindOut,
+                                         bool *methodResolvedOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (methodResolvedOut != nullptr) {
+    *methodResolvedOut = false;
+  }
+
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+    return false;
+  }
+  if (!isSimpleCallName(callExpr, "capacity") || callExpr.args.size() != 1) {
+    return false;
+  }
+
+  Expr methodExpr = callExpr;
+  methodExpr.isMethodCall = true;
+  return resolveMethodCallReturnKind(methodExpr,
+                                     localsIn,
+                                     resolveMethodCallDefinition,
+                                     getReturnInfo,
+                                     requireArrayReturn,
+                                     kindOut,
+                                     methodResolvedOut);
+}
+
 const Definition *resolveMethodCallDefinitionFromExpr(
     const Expr &callExpr,
     const LocalMap &localsIn,

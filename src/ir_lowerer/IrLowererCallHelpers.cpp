@@ -1219,17 +1219,23 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error) {
-  if (expr.isMethodCall || !isSimpleCallName(expr, "count") || expr.args.size() != 1 ||
-      isArrayCountCall(expr) || isStringCountCall(expr)) {
+  const bool isCountCall = isSimpleCallName(expr, "count");
+  const bool isCapacityCall = isSimpleCallName(expr, "capacity");
+  if (expr.isMethodCall || (!isCountCall && !isCapacityCall) || expr.args.size() != 1) {
+    return CountMethodFallbackResult::NotHandled;
+  }
+  if (isCountCall && (isArrayCountCall(expr) || isStringCountCall(expr))) {
     return CountMethodFallbackResult::NotHandled;
   }
 
   Expr methodExpr = expr;
   methodExpr.isMethodCall = true;
+  const std::string priorError = error;
   const Definition *callee = resolveMethodCallDefinition(methodExpr);
   const auto emitResult = emitResolvedInlineDefinitionCall(
       methodExpr, callee, emitInlineDefinitionCall, error);
   if (emitResult == ResolvedInlineCallResult::NoCallee) {
+    error = priorError;
     return CountMethodFallbackResult::NoCallee;
   }
   if (emitResult == ResolvedInlineCallResult::Error) {

@@ -11170,6 +11170,35 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(resolveCalls == 1);
   CHECK(emitCalls == 1);
 
+  primec::Expr capacityCall;
+  capacityCall.kind = primec::Expr::Kind::Call;
+  capacityCall.name = "capacity";
+  capacityCall.args.push_back(targetArg);
+
+  int capacityResolveCalls = 0;
+  int capacityEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            capacityCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++capacityResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "capacity");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++capacityEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "capacity");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(capacityResolveCalls == 1);
+  CHECK(capacityEmitCalls == 1);
+
   CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
             countCall,
             [](const primec::Expr &) { return true; },
@@ -11194,6 +11223,19 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               return false;
             },
             error) == Result::NoCallee);
+
+  error = "preserve";
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            capacityCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NoCallee);
+  CHECK(error == "preserve");
 
   primec::Expr bodyArgExpr;
   bodyArgExpr.kind = primec::Expr::Kind::Literal;
@@ -13032,6 +13074,100 @@ TEST_CASE("ir lowerer setup type helper skips non-eligible count call method res
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return nullptr; },
+      {},
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer setup type helper resolves capacity call method return kinds") {
+  primec::Definition methodDef;
+  methodDef.fullPath = "/vector/capacity";
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo scalarInfo;
+  scalarInfo.returnsVoid = false;
+  scalarInfo.returnsArray = false;
+  scalarInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  infoByPath.emplace("/vector/capacity", scalarInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr capacityCall;
+  capacityCall.kind = primec::Expr::Kind::Call;
+  capacityCall.name = "capacity";
+  capacityCall.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  bool methodResolved = false;
+  CHECK(primec::ir_lowerer::resolveCapacityMethodCallReturnKind(
+      capacityCall,
+      {},
+      [&methodDef](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return &methodDef; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  methodResolved = false;
+  CHECK_FALSE(primec::ir_lowerer::resolveCapacityMethodCallReturnKind(
+      capacityCall,
+      {},
+      [&methodDef](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return &methodDef; },
+      getReturnInfo,
+      true,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer setup type helper skips non-eligible capacity call method resolution") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr capacityCall;
+  capacityCall.kind = primec::Expr::Kind::Call;
+  capacityCall.name = "capacity";
+  capacityCall.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  bool methodResolved = true;
+  CHECK_FALSE(primec::ir_lowerer::resolveCapacityMethodCallReturnKind(
+      capacityCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return nullptr; },
+      {},
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  capacityCall.isMethodCall = true;
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  methodResolved = true;
+  CHECK_FALSE(primec::ir_lowerer::resolveCapacityMethodCallReturnKind(
+      capacityCall,
+      {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return nullptr; },
       {},
       false,

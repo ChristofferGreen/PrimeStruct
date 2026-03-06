@@ -869,6 +869,19 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (!expr.isMethodCall && expr.name == "capacity" && expr.args.size() == 1 &&
         defMap_.find(resolved) == defMap_.end()) {
+      std::string methodResolved;
+      if (resolveMethodCallPath(methodResolved)) {
+        auto methodIt = defMap_.find(methodResolved);
+        if (methodIt != defMap_.end()) {
+          if (!inferDefinitionReturnKind(*methodIt->second)) {
+            return ReturnKind::Unknown;
+          }
+          auto kindIt = returnKinds_.find(methodResolved);
+          if (kindIt != returnKinds_.end()) {
+            return kindIt->second;
+          }
+        }
+      }
       std::string elemType;
       if (resolveVectorTarget(expr.args.front(), elemType)) {
         return ReturnKind::Int;
