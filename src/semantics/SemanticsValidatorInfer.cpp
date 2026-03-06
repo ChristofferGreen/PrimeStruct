@@ -309,7 +309,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
     }
     std::string collection;
-    if (getBuiltinCollectionName(expr, collection) && collection == "array" && expr.templateArgs.size() == 1) {
+    if (defMap_.find(resolveCalleePath(expr)) == defMap_.end() && getBuiltinCollectionName(expr, collection) &&
+        collection == "array" && expr.templateArgs.size() == 1) {
       return ReturnKind::Array;
     }
     if (isMatchCall(expr)) {
@@ -478,6 +479,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+          return false;
+        }
         if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
             target.templateArgs.size() == 1) {
           elemType = target.templateArgs.front();
@@ -507,6 +511,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+          return false;
+        }
         if (getBuiltinCollectionName(target, collection) && collection == "vector" && target.templateArgs.size() == 1) {
           elemType = target.templateArgs.front();
           return true;
@@ -555,7 +562,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (target.kind == Expr::Kind::Call) {
         std::string builtinName;
-        if (getBuiltinArrayAccessName(target, builtinName) && target.args.size() == 2) {
+        if (defMap_.find(resolveCalleePath(target)) == defMap_.end() && getBuiltinArrayAccessName(target, builtinName) &&
+            target.args.size() == 2) {
           std::string elemType;
           if (resolveArrayTarget(target.args.front(), elemType) && elemType == "string") {
             return true;
@@ -594,6 +602,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+          return false;
+        }
         if (!getBuiltinCollectionName(target, collection) || collection != "map" || target.templateArgs.size() != 2) {
           return false;
         }
@@ -840,7 +851,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
     }
     std::string builtinName;
-    if (getBuiltinArrayAccessName(expr, builtinName) && expr.args.size() == 2) {
+    if (defMap_.find(resolved) == defMap_.end() && getBuiltinArrayAccessName(expr, builtinName) &&
+        expr.args.size() == 2) {
       std::string elemType;
       if (resolveStringTarget(expr.args.front())) {
         return ReturnKind::Int;

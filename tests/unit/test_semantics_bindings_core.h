@@ -96,6 +96,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding inference prefers user definition named array") {
+  const std::string source = R"(
+[return<int>]
+array([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  value{array(5i32)}
+  return(plus(value, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("binding inference keeps builtin array collection type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  value{array<i32>(5i32)}
+  return(count(value))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("local binding type must be supported") {
   const std::string source = R"(
 [return<int>]
