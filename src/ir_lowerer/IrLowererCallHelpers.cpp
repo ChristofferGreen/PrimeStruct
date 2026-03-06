@@ -1224,9 +1224,8 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   if (expr.isMethodCall || (!isCountCall && !isCapacityCall) || expr.args.size() != 1) {
     return CountMethodFallbackResult::NotHandled;
   }
-  if (isCountCall && (isArrayCountCall(expr) || isStringCountCall(expr))) {
-    return CountMethodFallbackResult::NotHandled;
-  }
+  (void)isArrayCountCall;
+  (void)isStringCountCall;
 
   Expr methodExpr = expr;
   methodExpr.isMethodCall = true;

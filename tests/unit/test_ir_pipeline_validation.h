@@ -11199,19 +11199,21 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(capacityResolveCalls == 1);
   CHECK(capacityEmitCalls == 1);
 
+  int builtinLikeResolveCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
             countCall,
             [](const primec::Expr &) { return true; },
             [](const primec::Expr &) { return false; },
             [&](const primec::Expr &) -> const primec::Definition * {
-              CHECK(false);
+              ++builtinLikeResolveCalls;
               return nullptr;
             },
             [&](const primec::Expr &, const primec::Definition &) {
               CHECK(false);
               return false;
             },
-            error) == Result::NotHandled);
+            error) == Result::NoCallee);
+  CHECK(builtinLikeResolveCalls == 1);
 
   CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
             countCall,
@@ -13024,6 +13026,51 @@ TEST_CASE("ir lowerer setup type helper resolves count call method return kinds"
       &methodResolved));
   CHECK(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer setup type helper resolves builtin-like count call methods") {
+  primec::Definition methodDef;
+  methodDef.fullPath = "/array/count";
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo scalarInfo;
+  scalarInfo.returnsVoid = false;
+  scalarInfo.returnsArray = false;
+  scalarInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  infoByPath.emplace("/array/count", scalarInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.name = "count";
+  countCall.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  bool methodResolved = false;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      countCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&methodDef](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return &methodDef; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
 TEST_CASE("ir lowerer setup type helper skips non-eligible count call method resolution") {

@@ -333,6 +333,28 @@ main() {
   CHECK(runCommand(exePath) == 99);
 }
 
+TEST_CASE("compiles and runs native user array count call shadow") {
+  const std::string source = R"(
+[return<int>]
+/array/count([array<i32>] values) {
+  return(98i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_array_count_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_array_count_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 98);
+}
+
 TEST_CASE("compiles and runs native user vector capacity method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -353,6 +375,28 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 77);
+}
+
+TEST_CASE("compiles and runs native user vector count call shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values) {
+  return(97i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_vector_count_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_vector_count_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 97);
 }
 
 TEST_CASE("compiles and runs native user vector capacity call shadow") {

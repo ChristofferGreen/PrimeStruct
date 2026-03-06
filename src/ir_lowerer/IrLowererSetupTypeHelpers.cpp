@@ -363,12 +363,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   if (!isSimpleCallName(callExpr, "count") || callExpr.args.size() != 1) {
     return false;
   }
-  if (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) {
-    return false;
-  }
-  if (isStringCountCall && isStringCountCall(callExpr, localsIn)) {
-    return false;
-  }
+  (void)isArrayCountCall;
+  (void)isStringCountCall;
 
   Expr methodExpr = callExpr;
   methodExpr.isMethodCall = true;
