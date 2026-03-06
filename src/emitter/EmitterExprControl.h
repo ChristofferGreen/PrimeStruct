@@ -103,23 +103,24 @@
     for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
       const Expr &stmt = expr.bodyArguments[i];
       const bool isLast = (i + 1 == expr.bodyArguments.size());
-      if (!isLast && isReturnCall(stmt)) {
-        if (stmt.args.size() == 1) {
-          out << "return "
-              << emitExpr(stmt.args.front(),
-                          nameMap,
-                          paramMap,
-                          structTypeMap,
-                          importAliases,
-                          blockTypes,
-                          returnKinds,
-                          resultInfos,
-                          returnStructs,
-                          allowMathBare)
-              << "; ";
-        } else {
-          out << "return 0; ";
-        }
+      if (const auto earlyReturnStep = emitter::runEmitterExprControlBuiltinBlockEarlyReturnStep(
+              stmt,
+              isLast,
+              [&](const Expr &candidate) { return isReturnCall(candidate); },
+              [&](const Expr &candidate) {
+                return emitExpr(candidate,
+                                nameMap,
+                                paramMap,
+                                structTypeMap,
+                                importAliases,
+                                blockTypes,
+                                returnKinds,
+                                resultInfos,
+                                returnStructs,
+                                allowMathBare);
+              });
+          earlyReturnStep.handled) {
+        out << earlyReturnStep.emittedStatement;
         break;
       }
       if (isLast) {

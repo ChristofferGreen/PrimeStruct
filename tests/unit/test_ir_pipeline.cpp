@@ -29,6 +29,7 @@
 #include "primec/WasmEmitter.h"
 #include "src/emitter/EmitterEmitSetupLifecycleHelperStep.h"
 #include "src/emitter/EmitterEmitSetupMathImport.h"
+#include "src/emitter/EmitterExprControlBuiltinBlockEarlyReturnStep.h"
 #include "src/emitter/EmitterExprControlBoolLiteralStep.h"
 #include "src/emitter/EmitterExprControlBuiltinBlockPreludeStep.h"
 #include "src/emitter/EmitterExprControlBodyWrapperStep.h"

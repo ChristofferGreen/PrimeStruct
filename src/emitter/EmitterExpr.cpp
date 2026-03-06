@@ -1,6 +1,7 @@
 #include "primec/Emitter.h"
 
 #include "EmitterHelpers.h"
+#include "EmitterExprControlBuiltinBlockEarlyReturnStep.h"
 #include "EmitterExprControlBoolLiteralStep.h"
 #include "EmitterExprControlBuiltinBlockPreludeStep.h"
 #include "EmitterExprControlBodyWrapperStep.h"
