@@ -21,6 +21,7 @@ add_library(primec_lib
   src/emitter/EmitterExprControlFloatLiteralStep.cpp
   src/emitter/EmitterExprControlIfEnvelopeStep.cpp
   src/emitter/EmitterExprControlIntegerLiteralStep.cpp
+  src/emitter/EmitterExprControlMethodPathStep.cpp
   src/emitter/EmitterExprControlStringLiteralStep.cpp
   src/emitter/EmitterExprControlNameStep.cpp
   src/emitter/EmitterHelpersBuiltins.cpp

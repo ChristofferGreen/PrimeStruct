@@ -1637,6 +1637,58 @@ TEST_CASE("emitter expr control field-access step formats receiver access") {
   CHECK_FALSE(primec::emitter::runEmitterExprControlFieldAccessStep(fieldAccessExpr, {}).has_value());
 }
 
+TEST_CASE("emitter expr control method-path step rewrites eligible method calls") {
+  primec::Expr nonMethodExpr;
+  nonMethodExpr.kind = primec::Expr::Kind::Call;
+  nonMethodExpr.name = "value";
+  nonMethodExpr.isMethodCall = false;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlMethodPathStep(
+      nonMethodExpr,
+      {},
+      {},
+      {},
+      {},
+      [&](std::string &) { return true; }).has_value());
+
+  primec::Expr methodExpr = nonMethodExpr;
+  methodExpr.isMethodCall = true;
+  bool resolverCalled = false;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlMethodPathStep(
+      methodExpr,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, primec::Emitter::BindingInfo> &) { return true; },
+      {},
+      {},
+      [&](std::string &) {
+        resolverCalled = true;
+        return true;
+      }).has_value());
+  CHECK_FALSE(resolverCalled);
+
+  auto resolvedPath = primec::emitter::runEmitterExprControlMethodPathStep(
+      methodExpr,
+      {},
+      {},
+      {},
+      {},
+      [&](std::string &pathOut) {
+        pathOut = "/Vec3/count";
+        return true;
+      });
+  REQUIRE(resolvedPath.has_value());
+  CHECK(*resolvedPath == "/Vec3/count");
+
+  CHECK_FALSE(primec::emitter::runEmitterExprControlMethodPathStep(
+      methodExpr,
+      {},
+      {},
+      {},
+      {},
+      [&](std::string &) { return false; }).has_value());
+
+  CHECK_FALSE(primec::emitter::runEmitterExprControlMethodPathStep(methodExpr, {}, {}, {}, {}, {}).has_value());
+}
+
 TEST_CASE("emitter expr control if-envelope step recognizes block envelopes") {
   primec::Expr notCall;
   notCall.kind = primec::Expr::Kind::Literal;
@@ -1892,6 +1944,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIntegerLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlStringLiteralStep(expr)") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlMethodPathStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEnvelopeStep(candidate)") !=
         std::string::npos);
 
@@ -1904,6 +1957,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFieldAccessStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIntegerLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlMethodPathStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlStringLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);
 }

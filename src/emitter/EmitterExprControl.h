@@ -32,12 +32,29 @@
     return *fieldAccessExpr;
   }
   std::string full = resolveExprPath(expr);
-  if (expr.isMethodCall && !isArrayCountCall(expr, localTypes) && !isMapCountCall(expr, localTypes) &&
-      !isStringCountCall(expr, localTypes)) {
-    std::string methodPath;
-    if (resolveMethodCallPath(expr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
-      full = methodPath;
-    }
+  if (const auto methodPath = emitter::runEmitterExprControlMethodPathStep(
+          expr,
+          localTypes,
+          [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
+            return isArrayCountCall(candidate, candidateLocalTypes);
+          },
+          [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
+            return isMapCountCall(candidate, candidateLocalTypes);
+          },
+          [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
+            return isStringCountCall(candidate, candidateLocalTypes);
+          },
+          [&](std::string &methodPathOut) {
+            return resolveMethodCallPath(expr,
+                                         localTypes,
+                                         importAliases,
+                                         structTypeMap,
+                                         returnKinds,
+                                         returnStructs,
+                                         methodPathOut);
+          });
+      methodPath.has_value()) {
+    full = *methodPath;
   }
   if (!expr.isMethodCall && !expr.name.empty() && expr.name[0] != '/' && expr.name.find('/') == std::string::npos) {
     if (nameMap.count(full) == 0) {
