@@ -40,7 +40,12 @@ std::string escapeCppStringLiteral(const std::string &text) {
 
 struct EmitContext {
   size_t stringCount = 0;
+  size_t functionCount = 0;
 };
+
+std::string irFunctionSymbol(size_t functionIndex) {
+  return "ps_fn_" + std::to_string(functionIndex);
+}
 
 bool emitInstruction(const IrInstruction &instruction,
                      size_t index,
@@ -248,6 +253,22 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = (cond == 0) ? " << instruction.imm << " : " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::Call:
+    case IrOpcode::CallVoid:
+      if (instruction.imm >= context.functionCount) {
+        error = "IrToCppEmitter call target out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      if (instruction.op == IrOpcode::Call) {
+        out << "        int64_t callValue = " << irFunctionSymbol(static_cast<size_t>(instruction.imm))
+            << "(stack, sp, argc, argv);\n";
+        out << "        stack[sp++] = static_cast<uint64_t>(callValue);\n";
+      } else {
+        out << "        " << irFunctionSymbol(static_cast<size_t>(instruction.imm)) << "(stack, sp, argc, argv);\n";
+      }
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::PushArgc:
       out << "        stack[sp++] = static_cast<uint64_t>(argc);\n";
       out << "        pc = " << nextIndex << ";\n";
@@ -366,29 +387,47 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   }
   body << "};\n\n";
   body << "static constexpr std::size_t ps_string_table_count = " << module.stringTable.size() << "u;\n\n";
-  body << "static int64_t ps_entry_" << static_cast<size_t>(module.entryIndex) << "(int argc, char **argv) {\n";
-  body << "  uint64_t stack[1024] = {};\n";
-  body << "  uint64_t locals[1024] = {};\n";
-  body << "  std::size_t sp = 0;\n";
-  body << "  std::size_t pc = 0;\n";
-  body << "  while (true) {\n";
-  body << "    switch (pc) {\n";
 
-  const size_t instructionCount = entry.instructions.size();
-  const EmitContext context{module.stringTable.size()};
-  for (size_t i = 0; i < instructionCount; ++i) {
-    const size_t next = i + 1;
-    body << "      case " << i << ": {\n";
-    if (!emitInstruction(entry.instructions[i], i, next, instructionCount, context, body, error)) {
-      return false;
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+    body << "static int64_t " << irFunctionSymbol(functionIndex)
+         << "(uint64_t *stack, std::size_t &sp, int argc, char **argv);\n";
+  }
+  body << "\n";
+
+  const EmitContext context{
+      .stringCount = module.stringTable.size(),
+      .functionCount = module.functions.size(),
+  };
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+    const IrFunction &function = module.functions[functionIndex];
+    body << "static int64_t " << irFunctionSymbol(functionIndex)
+         << "(uint64_t *stack, std::size_t &sp, int argc, char **argv) {\n";
+    body << "  uint64_t locals[1024] = {};\n";
+    body << "  std::size_t pc = 0;\n";
+    body << "  while (true) {\n";
+    body << "    switch (pc) {\n";
+
+    const size_t instructionCount = function.instructions.size();
+    for (size_t i = 0; i < instructionCount; ++i) {
+      const size_t next = i + 1;
+      body << "      case " << i << ": {\n";
+      if (!emitInstruction(function.instructions[i], i, next, instructionCount, context, body, error)) {
+        return false;
+      }
+      body << "      }\n";
     }
-    body << "      }\n";
+
+    body << "      default:\n";
+    body << "        return 0;\n";
+    body << "    }\n";
+    body << "  }\n";
+    body << "}\n\n";
   }
 
-  body << "      default:\n";
-  body << "        return 0;\n";
-  body << "    }\n";
-  body << "  }\n";
+  body << "static int64_t ps_entry_" << static_cast<size_t>(module.entryIndex) << "(int argc, char **argv) {\n";
+  body << "  uint64_t stack[1024] = {};\n";
+  body << "  std::size_t sp = 0;\n";
+  body << "  return " << irFunctionSymbol(static_cast<size_t>(module.entryIndex)) << "(stack, sp, argc, argv);\n";
   body << "}\n\n";
   body << "int main(int argc, char **argv) {\n";
   body << "  return static_cast<int>(ps_entry_" << static_cast<size_t>(module.entryIndex) << "(argc, argv));\n";

@@ -212,6 +212,37 @@ main() {
   CHECK(output.find("ps_string_table[stringIndex]") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir emitter writes callable dispatch paths") {
+  const std::string source = R"(
+[return<void> effects(io_out)]
+logCall() {
+  print_line("log"utf8)
+}
+
+[return<int>]
+value() {
+  return(41i32)
+}
+
+[return<int> effects(io_out)]
+main() {
+  logCall()
+  return(plus(value(), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_calls.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_cpp_ir_calls.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("static int64_t ps_fn_0(uint64_t *stack, std::size_t &sp, int argc, char **argv);") !=
+        std::string::npos);
+  CHECK(output.find("static int64_t ps_fn_1(uint64_t *stack, std::size_t &sp, int argc, char **argv);") !=
+        std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, argc, argv);") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir emitter reports unsupported opcodes") {
   const std::string source = R"(
 [return<int>]
@@ -357,6 +388,34 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath + " > " + outPath) == 0);
   CHECK(readFile(outPath) == "right\n");
+}
+
+TEST_CASE("exe-ir emitter compiles and runs call and callvoid paths") {
+  const std::string source = R"(
+[return<void> effects(io_out)]
+logCall() {
+  print_line("log"utf8)
+}
+
+[return<int>]
+value() {
+  return(41i32)
+}
+
+[return<int> effects(io_out)]
+main() {
+  logCall()
+  return(plus(value(), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_calls.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_calls").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_exe_ir_calls.out").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 42);
+  CHECK(readFile(outPath) == "log\n");
 }
 
 TEST_CASE("cpp and exe emitters match cpp-ir and exe-ir on shared corpus") {

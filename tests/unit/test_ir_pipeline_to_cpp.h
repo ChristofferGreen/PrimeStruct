@@ -113,6 +113,43 @@ TEST_CASE("ir to cpp emitter writes jump and conditional jump control flow") {
   CHECK(cpp.find("pc = 5;") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter writes call and callvoid dispatch") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(mainFn);
+
+  primec::IrFunction voidFn;
+  voidFn.name = "/log";
+  voidFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  voidFn.instructions.push_back({primec::IrOpcode::PrintI32, primec::PrintFlagNewline});
+  voidFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(voidFn);
+
+  primec::IrFunction valueFn;
+  valueFn.name = "/value";
+  valueFn.instructions.push_back({primec::IrOpcode::PushI32, 42});
+  valueFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(valueFn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("static int64_t ps_fn_0(uint64_t *stack, std::size_t &sp, int argc, char **argv);") !=
+        std::string::npos);
+  CHECK(cpp.find("ps_fn_1(stack, sp, argc, argv);") != std::string::npos);
+  CHECK(cpp.find("int64_t callValue = ps_fn_2(stack, sp, argc, argv);") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(callValue);") != std::string::npos);
+  CHECK(cpp.find("return ps_fn_0(stack, sp, argc, argv);") != std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter rejects unsupported opcodes") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
@@ -156,6 +193,22 @@ TEST_CASE("ir to cpp emitter rejects out-of-range local indices") {
   std::string error;
   CHECK_FALSE(emitter.emitSource(module, cpp, error));
   CHECK(error.find("local index out of range") != std::string::npos);
+}
+
+TEST_CASE("ir to cpp emitter rejects out-of-range call targets") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::Call, 2});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, cpp, error));
+  CHECK(error.find("call target out of range") != std::string::npos);
 }
 
 TEST_CASE("ir to cpp emitter rejects out-of-range jump targets") {

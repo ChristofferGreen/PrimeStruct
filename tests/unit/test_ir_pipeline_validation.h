@@ -1333,7 +1333,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {
     if (expr.name == "unsupported") {
       return primec::ir_lowerer::CallExpressionReturnKindResolution::MatchedButUnsupported;
     }
-    return primec::ir_lowerer::CallExpressionReturnKindResolution::NotMatched;
+    return primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved;
   };
   state.inferCallExprCountAccessGpuFallbackKind = [](const primec::Expr &expr,
                                                      const primec::ir_lowerer::LocalMap &,
