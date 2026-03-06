@@ -13,6 +13,7 @@ add_library(primec_lib
   src/Diagnostics.cpp
   src/ExternalTooling.cpp
   src/emitter/EmitterEmit.cpp
+  src/emitter/EmitterEmitSetupMathImport.cpp
   src/emitter/EmitterExpr.cpp
   src/emitter/EmitterHelpersBuiltins.cpp
   src/emitter/EmitterHelpersTypes.cpp

@@ -1197,6 +1197,24 @@ TEST_CASE("ir lowerer expr emit setup validates unary callback dependencies") {
   CHECK(error == "native backend missing expr emit setup dependency: emitExpr");
 }
 
+TEST_CASE("emitter emit setup math-import step detects supported imports") {
+  primec::Program noImports;
+  CHECK_FALSE(primec::emitter::runEmitterEmitSetupMathImport(noImports));
+
+  primec::Program wildcardImport;
+  wildcardImport.imports.push_back("/std/math/*");
+  CHECK(primec::emitter::runEmitterEmitSetupMathImport(wildcardImport));
+
+  primec::Program namespacedImport;
+  namespacedImport.imports.push_back("/std/math/trig");
+  CHECK(primec::emitter::runEmitterEmitSetupMathImport(namespacedImport));
+
+  primec::Program unrelatedImport;
+  unrelatedImport.imports.push_back("/std/io/*");
+  unrelatedImport.imports.push_back("/std/math/");
+  CHECK_FALSE(primec::emitter::runEmitterEmitSetupMathImport(unrelatedImport));
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -1275,6 +1293,29 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(emitExprHeaderSource.find("runLowerExprEmitSetup(") != std::string::npos);
   CHECK(emitExprHeaderSource.find("emitUploadPassthroughCall(") != std::string::npos);
   CHECK(emitExprHeaderSource.find("emitReadbackPassthroughCall(") != std::string::npos);
+}
+
+TEST_CASE("emitter emit setup source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path emitterSetupHeaderPath =
+      std::filesystem::path("src") / "emitter" / "EmitterEmitSetup.h";
+  REQUIRE(std::filesystem::exists(emitterSetupHeaderPath));
+  const std::string emitterSetupHeaderSource = readText(emitterSetupHeaderPath);
+  CHECK(emitterSetupHeaderSource.find("runEmitterEmitSetupMathImport(program)") != std::string::npos);
+
+  const std::filesystem::path emitterEmitPath =
+      std::filesystem::path("src") / "emitter" / "EmitterEmit.cpp";
+  REQUIRE(std::filesystem::exists(emitterEmitPath));
+  const std::string emitterEmitSource = readText(emitterEmitPath);
+  CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupMathImport.h\"") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

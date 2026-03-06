@@ -12,19 +12,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     std::vector<Expr> boundArgs;
   };
   std::unordered_map<std::string, std::optional<OnErrorHandler>> onErrorByDef;
-  bool hasMathImport = false;
-  auto isMathImport = [](const std::string &path) -> bool {
-    if (path == "/std/math/*") {
-      return true;
-    }
-    return path.rfind("/std/math/", 0) == 0 && path.size() > 10;
-  };
-  for (const auto &importPath : program.imports) {
-    if (isMathImport(importPath)) {
-      hasMathImport = true;
-      break;
-    }
-  }
+  bool hasMathImport = emitter::runEmitterEmitSetupMathImport(program);
   auto isStructTransformName = [](const std::string &name) {
     return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
            name == "platform_independent_padding";
