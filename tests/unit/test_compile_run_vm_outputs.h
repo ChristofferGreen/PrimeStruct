@@ -461,7 +461,8 @@ main() {
   const std::string output = readFile(outPath);
   CHECK(output.find("stack[sp++] = psF64ToBits(static_cast<double>(value));") != std::string::npos);
   CHECK(output.find("stack[sp++] = psF32ToBits(static_cast<float>(value));") != std::string::npos);
-  CHECK(output.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(value));") != std::string::npos);
+  CHECK(output.find("static int64_t psConvertF64ToI64(double value)") != std::string::npos);
+  CHECK(output.find("int64_t converted = psConvertF64ToI64(value);") != std::string::npos);
 }
 
 TEST_CASE("cpp emitter uses ir backend for f64 conversion subset") {
