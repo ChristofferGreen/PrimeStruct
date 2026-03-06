@@ -18,6 +18,7 @@
 #include "IrLowererLowerEntrySetup.h"
 #include "IrLowererLowerInferenceSetup.h"
 #include "IrLowererLowerImportsStructsSetup.h"
+#include "IrLowererLowerInlineCallStatementStep.h"
 #include "IrLowererLowerLocalsSetup.h"
 #include "IrLowererLowerExprEmitSetup.h"
 #include "IrLowererLowerReturnCallsSetup.h"

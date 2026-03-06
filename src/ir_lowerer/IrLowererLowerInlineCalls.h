@@ -141,13 +141,21 @@
     activeInlineContext = &context;
     if (!structDef) {
       for (const auto &stmt : callee.statements) {
-        const size_t startInstructionIndex = function.instructions.size();
-        if (!emitStatement(stmt, calleeLocals)) {
+        if (!ir_lowerer::runLowerInlineCallStatementStep(
+                {
+                    .function = &function,
+                    .emitStatement = [&](const Expr &inlineStmt) { return emitStatement(inlineStmt, calleeLocals); },
+                    .appendInstructionSourceRange =
+                        [&](const std::string &functionName, const Expr &inlineStmt, size_t beginIndex, size_t endIndex) {
+                          appendInstructionSourceRange(functionName, inlineStmt, beginIndex, endIndex);
+                        },
+                },
+                stmt,
+                error)) {
           activeInlineContext = prevContext;
           inlineStack.erase(callee.fullPath);
           return false;
         }
-        appendInstructionSourceRange(function.name, stmt, startInstructionIndex, function.instructions.size());
       }
     }
     size_t cleanupIndex = function.instructions.size();

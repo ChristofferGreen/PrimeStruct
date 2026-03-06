@@ -2021,6 +2021,87 @@ TEST_CASE("ir lowerer statements entry-statement step validates dependencies") {
   CHECK(error == "native backend missing statements entry-statement step dependency: appendInstructionSourceRange");
 }
 
+TEST_CASE("ir lowerer inline-call statement step appends source ranges") {
+  primec::IrFunction function;
+  function.name = "/inline";
+  function.instructions.push_back({primec::IrOpcode::PushI32, 1});
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Literal;
+  stmt.literalValue = 9;
+  stmt.sourceLine = 30;
+  stmt.sourceColumn = 6;
+
+  int emitCalls = 0;
+  int appendCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInlineCallStatementStep(
+      {
+          .function = &function,
+          .emitStatement = [&](const primec::Expr &inlineStmt) {
+            ++emitCalls;
+            CHECK(inlineStmt.literalValue == 9);
+            function.instructions.push_back({primec::IrOpcode::PushI32, 9});
+            return true;
+          },
+          .appendInstructionSourceRange =
+              [&](const std::string &functionName, const primec::Expr &inlineStmt, size_t beginIndex, size_t endIndex) {
+                ++appendCalls;
+                CHECK(functionName == "/inline");
+                CHECK(inlineStmt.sourceLine == 30);
+                CHECK(inlineStmt.sourceColumn == 6);
+                CHECK(beginIndex == 1u);
+                CHECK(endIndex == 2u);
+              },
+      },
+      stmt,
+      error));
+  CHECK(error.empty());
+  CHECK(emitCalls == 1);
+  CHECK(appendCalls == 1);
+  REQUIRE(function.instructions.size() == 2);
+  CHECK(function.instructions.back().op == primec::IrOpcode::PushI32);
+  CHECK(function.instructions.back().imm == 9);
+}
+
+TEST_CASE("ir lowerer inline-call statement step validates dependencies") {
+  primec::IrFunction function;
+  primec::Expr stmt;
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallStatementStep(
+      {
+          .function = nullptr,
+          .emitStatement = [](const primec::Expr &) { return true; },
+          .appendInstructionSourceRange =
+              [](const std::string &, const primec::Expr &, size_t, size_t) {},
+      },
+      stmt,
+      error));
+  CHECK(error == "native backend missing inline-call statement step dependency: function");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallStatementStep(
+      {
+          .function = &function,
+          .emitStatement = {},
+          .appendInstructionSourceRange =
+              [](const std::string &, const primec::Expr &, size_t, size_t) {},
+      },
+      stmt,
+      error));
+  CHECK(error == "native backend missing inline-call statement step dependency: emitStatement");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallStatementStep(
+      {
+          .function = &function,
+          .emitStatement = [](const primec::Expr &) { return true; },
+          .appendInstructionSourceRange = {},
+      },
+      stmt,
+      error));
+  CHECK(error == "native backend missing inline-call statement step dependency: appendInstructionSourceRange");
+}
+
 TEST_CASE("ir lowerer statements entry-execution step wires context and cleanup") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";
@@ -5515,6 +5596,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryStatementStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsFunctionTableStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsSourceMapStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallStatementStep.h\"") != std::string::npos);
 
   const std::filesystem::path setupHeaderPath =
       std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerSetupEntryEffects.h";
@@ -5597,6 +5679,17 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
         std::string::npos);
   CHECK(statementsCallsHeaderSource.find("out.instructionSourceMap.push_back(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("out.stringTable = std::move(stringTable);") == std::string::npos);
+
+  const std::filesystem::path inlineCallsHeaderPath =
+      std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
+  REQUIRE(std::filesystem::exists(inlineCallsHeaderPath));
+  const std::string inlineCallsHeaderSource = readText(inlineCallsHeaderPath);
+  CHECK(inlineCallsHeaderSource.find("runLowerInlineCallStatementStep(") != std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("const size_t startInstructionIndex = function.instructions.size();") ==
+        std::string::npos);
+  CHECK(inlineCallsHeaderSource.find(
+            "appendInstructionSourceRange(function.name, stmt, startInstructionIndex, function.instructions.size());") ==
+        std::string::npos);
 }
 
 TEST_CASE("emitter emit setup source delegation stays stable") {
