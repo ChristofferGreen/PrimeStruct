@@ -3103,6 +3103,65 @@ TEST_CASE("emitter expr control if-block binding-fallback step emits inferred bi
   CHECK(missingEmit.emittedStatement == "auto item; ");
 }
 
+TEST_CASE("emitter expr control if branch prelude step handles envelope entry cases") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Name;
+  stmt.name = "value";
+
+  int envelopeCalls = 0;
+  int emitCalls = 0;
+  const auto nonEnvelope = primec::emitter::runEmitterExprControlIfBranchPreludeStep(
+      stmt,
+      [&](const primec::Expr &candidate) {
+        ++envelopeCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Name);
+        return false;
+      },
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        CHECK(candidate.name == "value");
+        return std::string("emit_value");
+      });
+  CHECK(nonEnvelope.handled);
+  CHECK(envelopeCalls == 1);
+  CHECK(emitCalls == 1);
+  CHECK(nonEnvelope.emittedExpr == "emit_value");
+
+  primec::Expr emptyEnvelope;
+  emptyEnvelope.kind = primec::Expr::Kind::Call;
+  emptyEnvelope.hasBodyArguments = true;
+  const auto emptyBody = primec::emitter::runEmitterExprControlIfBranchPreludeStep(
+      emptyEnvelope,
+      [&](const primec::Expr &) { return true; },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return std::string("unused");
+      });
+  CHECK(emptyBody.handled);
+  CHECK(emptyBody.emittedExpr == "0");
+
+  primec::Expr nonEmptyEnvelope;
+  nonEmptyEnvelope.kind = primec::Expr::Kind::Call;
+  nonEmptyEnvelope.hasBodyArguments = true;
+  nonEmptyEnvelope.bodyArguments.push_back(stmt);
+  const auto nonEmptyBody = primec::emitter::runEmitterExprControlIfBranchPreludeStep(
+      nonEmptyEnvelope,
+      [&](const primec::Expr &) { return true; },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return std::string("unused");
+      });
+  CHECK_FALSE(nonEmptyBody.handled);
+  CHECK(nonEmptyBody.emittedExpr.empty());
+
+  const auto missingCallbacks = primec::emitter::runEmitterExprControlIfBranchPreludeStep(
+      stmt,
+      {},
+      {});
+  CHECK_FALSE(missingCallbacks.handled);
+  CHECK(missingCallbacks.emittedExpr.empty());
+}
+
 TEST_CASE("emitter expr control if-block statement step emits void statements") {
   primec::Expr stmt;
   stmt.kind = primec::Expr::Kind::Name;
@@ -3414,6 +3473,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingFallbackStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchPreludeStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingPreludeStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingQualifiersStep(") !=
@@ -3463,6 +3524,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingExplicitStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingFallbackStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchPreludeStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingPreludeStep.h\"") !=
         std::string::npos);

@@ -47,6 +47,7 @@
 #include "src/emitter/EmitterExprControlIfBlockBindingAutoStep.h"
 #include "src/emitter/EmitterExprControlIfBlockBindingExplicitStep.h"
 #include "src/emitter/EmitterExprControlIfBlockBindingFallbackStep.h"
+#include "src/emitter/EmitterExprControlIfBranchPreludeStep.h"
 #include "src/emitter/EmitterExprControlIfBlockBindingPreludeStep.h"
 #include "src/emitter/EmitterExprControlIfBlockBindingQualifiersStep.h"
 #include "src/emitter/EmitterExprControlIfBlockStatementStep.h"

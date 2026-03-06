@@ -277,20 +277,23 @@
   if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
     auto emitBranchValueExpr =
         [&](const Expr &candidate, std::unordered_map<std::string, BindingInfo> branchTypes) -> std::string {
-      if (!runEmitterExprControlIfBlockEnvelopeStep(candidate)) {
-        return emitExpr(candidate,
-                        nameMap,
-                        paramMap,
-                        structTypeMap,
-                        importAliases,
-                        branchTypes,
-                        returnKinds,
-                        resultInfos,
-                        returnStructs,
-                        allowMathBare);
-      }
-      if (candidate.bodyArguments.empty()) {
-        return "0";
+      if (const auto branchPreludeStep = emitter::runEmitterExprControlIfBranchPreludeStep(
+              candidate,
+              [&](const Expr &candidateExpr) { return runEmitterExprControlIfBlockEnvelopeStep(candidateExpr); },
+              [&](const Expr &candidateExpr) {
+                return emitExpr(candidateExpr,
+                                nameMap,
+                                paramMap,
+                                structTypeMap,
+                                importAliases,
+                                branchTypes,
+                                returnKinds,
+                                resultInfos,
+                                returnStructs,
+                                allowMathBare);
+              });
+          branchPreludeStep.handled) {
+        return branchPreludeStep.emittedExpr;
       }
       std::ostringstream out;
       out << "([&]() { ";
