@@ -5,9 +5,7 @@
 #include "primec/GlslEmitter.h"
 #include "primec/IrBackends.h"
 #include "primec/IrInliner.h"
-#include "primec/IrToCppEmitter.h"
 #include "primec/IrLowerer.h"
-#include "primec/IrToGlslEmitter.h"
 #include "primec/IrValidation.h"
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
@@ -300,47 +298,29 @@ std::string injectComputeLayout(const std::string &glslSource) {
   return glslSource.substr(0, lineEnd + 1) + layoutLine + glslSource.substr(lineEnd + 1);
 }
 
-bool emitGlslSourceFromIrModule(const primec::Program &program,
-                                const primec::Options &options,
-                                std::string &glslSource,
-                                std::string &error) {
-  primec::IrLowerer lowerer;
-  primec::IrModule ir;
-  if (!lowerer.lower(program,
-                     options.entryPath,
-                     options.defaultEffects,
-                     options.entryDefaultEffects,
-                     ir,
-                     error)) {
-    error = "lowering failed: " + error;
-    return false;
-  }
-  if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
-    error = "ir validation failed: " + error;
-    return false;
-  }
-  if (options.inlineIrCalls) {
-    if (!primec::inlineIrModuleCalls(ir, error)) {
-      error = "ir inline failed: " + error;
-      return false;
-    }
-    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
-      error = "ir validation failed: " + error;
-      return false;
-    }
-  }
-  primec::IrToGlslEmitter emitter;
-  if (!emitter.emitSource(ir, glslSource, error)) {
-    error = "ir-to-glsl failed: " + error;
-    return false;
-  }
-  return true;
-}
+enum class IrBackendRunFailureStage {
+  None,
+  Lowering,
+  Validation,
+  Inlining,
+  Emit,
+  OutputWrite,
+};
 
-bool emitCppSourceFromIrModule(const primec::Program &program,
-                               const primec::Options &options,
-                               std::string &cppSource,
-                               std::string &error) {
+struct IrBackendRunFailure {
+  IrBackendRunFailureStage stage = IrBackendRunFailureStage::None;
+  std::string message;
+};
+
+bool runIrBackend(const primec::IrBackend &backend,
+                  primec::Program &program,
+                  const primec::Options &options,
+                  primec::IrBackendEmitResult &result,
+                  IrBackendRunFailure &failure) {
+  failure = {};
+  const primec::IrBackendDiagnostics &diagnostics = backend.diagnostics();
+
+  std::string error;
   primec::IrLowerer lowerer;
   primec::IrModule ir;
   if (!lowerer.lower(program,
@@ -349,28 +329,46 @@ bool emitCppSourceFromIrModule(const primec::Program &program,
                      options.entryDefaultEffects,
                      ir,
                      error)) {
-    error = "lowering failed: " + error;
+    backend.normalizeLoweringError(error);
+    failure.stage = IrBackendRunFailureStage::Lowering;
+    failure.message = std::move(error);
     return false;
   }
-  if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
-    error = "ir validation failed: " + error;
+
+  const primec::IrValidationTarget validationTarget = backend.validationTarget(options);
+  if (!primec::validateIrModule(ir, validationTarget, error)) {
+    failure.stage = IrBackendRunFailureStage::Validation;
+    failure.message = std::move(error);
     return false;
   }
+
   if (options.inlineIrCalls) {
     if (!primec::inlineIrModuleCalls(ir, error)) {
-      error = "ir inline failed: " + error;
+      failure.stage = IrBackendRunFailureStage::Inlining;
+      failure.message = std::move(error);
       return false;
     }
-    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
-      error = "ir validation failed: " + error;
+    if (!primec::validateIrModule(ir, validationTarget, error)) {
+      failure.stage = IrBackendRunFailureStage::Validation;
+      failure.message = std::move(error);
       return false;
     }
   }
-  primec::IrToCppEmitter emitter;
-  if (!emitter.emitSource(ir, cppSource, error)) {
-    error = "ir-to-cpp failed: " + error;
+
+  primec::IrBackendEmitOptions emitOptions;
+  emitOptions.outputPath = options.outputPath;
+  emitOptions.inputPath = options.inputPath;
+  emitOptions.programArgs = options.programArgs;
+  if (!backend.emit(ir, emitOptions, result, error)) {
+    const std::string_view backendTag = diagnostics.backendTag;
+    const bool outputWriteFailure =
+        (backendTag == "ir" || backendTag == "wasm" || backendTag == "cpp-ir" || backendTag == "glsl-ir") &&
+        error == options.outputPath;
+    failure.stage = outputWriteFailure ? IrBackendRunFailureStage::OutputWrite : IrBackendRunFailureStage::Emit;
+    failure.message = std::move(error);
     return false;
   }
+
   return true;
 }
 
@@ -543,73 +541,45 @@ int main(int argc, char **argv) {
 
   if (irBackend != nullptr) {
     const primec::IrBackendDiagnostics &diagnostics = irBackend->diagnostics();
-    primec::IrLowerer lowerer;
-    primec::IrModule ir;
-    if (!lowerer.lower(program,
-                       options.entryPath,
-                       options.defaultEffects,
-                       options.entryDefaultEffects,
-                       ir,
-                       error)) {
-      std::string loweringError = error;
-      irBackend->normalizeLoweringError(loweringError);
-      return emitFailure(options,
-                         diagnostics.loweringDiagnosticCode,
-                         diagnostics.loweringErrorPrefix,
-                         loweringError,
-                         2,
-                         irBackendNotes(diagnostics));
-    }
-    if (!primec::validateIrModule(ir, irBackend->validationTarget(options), error)) {
-      return emitFailure(options,
-                         diagnostics.validationDiagnosticCode,
-                         diagnostics.validationErrorPrefix,
-                         error,
-                         2,
-                         irBackendNotes(diagnostics, "ir-validate"));
-    }
-    if (options.inlineIrCalls) {
-      if (!primec::inlineIrModuleCalls(ir, error)) {
+    primec::IrBackendEmitResult emitResult;
+    IrBackendRunFailure failure;
+    if (!runIrBackend(*irBackend, program, options, emitResult, failure)) {
+      if (failure.stage == IrBackendRunFailureStage::Lowering) {
         return emitFailure(options,
-                           diagnostics.inliningDiagnosticCode,
-                           diagnostics.inliningErrorPrefix,
-                           error,
+                           diagnostics.loweringDiagnosticCode,
+                           diagnostics.loweringErrorPrefix,
+                           failure.message,
                            2,
-                           irBackendNotes(diagnostics, "ir-inline"));
+                           irBackendNotes(diagnostics));
       }
-      if (!primec::validateIrModule(ir, irBackend->validationTarget(options), error)) {
+      if (failure.stage == IrBackendRunFailureStage::Validation) {
         return emitFailure(options,
                            diagnostics.validationDiagnosticCode,
                            diagnostics.validationErrorPrefix,
-                           error,
+                           failure.message,
                            2,
                            irBackendNotes(diagnostics, "ir-validate"));
       }
-    }
-
-    primec::IrBackendEmitOptions emitOptions;
-    emitOptions.outputPath = options.outputPath;
-    emitOptions.inputPath = options.inputPath;
-    emitOptions.programArgs = options.programArgs;
-    primec::IrBackendEmitResult emitResult;
-    if (!irBackend->emit(ir, emitOptions, emitResult, error)) {
-      const int emitFailureCode = diagnostics.backendTag == std::string_view("vm") ? 3 : 2;
-      const bool outputWriteFailure =
-          (std::string_view(diagnostics.backendTag) == "ir" || std::string_view(diagnostics.backendTag) == "wasm" ||
-           std::string_view(diagnostics.backendTag) == "cpp-ir" ||
-           std::string_view(diagnostics.backendTag) == "glsl-ir") &&
-          error == options.outputPath;
-      if (outputWriteFailure) {
+      if (failure.stage == IrBackendRunFailureStage::Inlining) {
+        return emitFailure(options,
+                           diagnostics.inliningDiagnosticCode,
+                           diagnostics.inliningErrorPrefix,
+                           failure.message,
+                           2,
+                           irBackendNotes(diagnostics, "ir-inline"));
+      }
+      if (failure.stage == IrBackendRunFailureStage::OutputWrite) {
         return emitFailure(options,
                            primec::DiagnosticCode::OutputError,
                            "Failed to write output: ",
                            options.outputPath,
                            2);
       }
+      const int emitFailureCode = diagnostics.backendTag == std::string_view("vm") ? 3 : 2;
       return emitFailure(options,
                          diagnostics.emitDiagnosticCode,
                          diagnostics.emitErrorPrefix,
-                         error,
+                         failure.message,
                          emitFailureCode,
                          irBackendNotes(diagnostics));
     }
@@ -625,6 +595,14 @@ int main(int argc, char **argv) {
   }
 
   if (options.emitKind == "glsl") {
+    if (const primec::IrBackend *glslIrBackend = primec::findIrBackend("glsl-ir"); glslIrBackend != nullptr) {
+      primec::IrBackendEmitResult emitResult;
+      IrBackendRunFailure irFailure;
+      if (runIrBackend(*glslIrBackend, program, options, emitResult, irFailure)) {
+        return emitResult.exitCode;
+      }
+    }
+
     std::string legacySource;
     std::string legacyError;
     primec::GlslEmitter glslEmitter;
@@ -637,12 +615,7 @@ int main(int argc, char **argv) {
                          {"backend: glsl"});
     }
 
-    std::string glslSource = legacySource;
-    std::string irSource;
-    if (std::string irPathError; emitGlslSourceFromIrModule(program, options, irSource, irPathError)) {
-      glslSource = std::move(irSource);
-    }
-    if (!writeFile(options.outputPath, glslSource)) {
+    if (!writeFile(options.outputPath, legacySource)) {
       return emitFailure(options,
                          primec::DiagnosticCode::OutputError,
                          "Failed to write output: ",
@@ -653,6 +626,14 @@ int main(int argc, char **argv) {
   }
 
   if (options.emitKind == "spirv") {
+    if (const primec::IrBackend *spirvIrBackend = primec::findIrBackend("spirv-ir"); spirvIrBackend != nullptr) {
+      primec::IrBackendEmitResult emitResult;
+      IrBackendRunFailure irFailure;
+      if (runIrBackend(*spirvIrBackend, program, options, emitResult, irFailure)) {
+        return emitResult.exitCode;
+      }
+    }
+
     std::string legacySource;
     std::string legacyError;
     primec::GlslEmitter glslEmitter;
@@ -665,12 +646,7 @@ int main(int argc, char **argv) {
                          {"backend: glsl"});
     }
 
-    std::string glslSource = legacySource;
-    std::string irSource;
-    if (std::string irPathError; emitGlslSourceFromIrModule(program, options, irSource, irPathError)) {
-      glslSource = std::move(irSource);
-    }
-    std::string spirvSource = injectComputeLayout(glslSource);
+    const std::string spirvSource = injectComputeLayout(legacySource);
     std::string toolName;
     if (!primec::findSpirvCompiler(processRunner, toolName)) {
       return emitFailure(options,
@@ -715,13 +691,17 @@ int main(int argc, char **argv) {
                        {"backend: cpp"});
   }
 
-  primec::Emitter emitter;
-  const std::string legacyCppSource = emitter.emitCpp(program, options.entryPath);
-  std::string cppSource = legacyCppSource;
-  std::string irCppSource;
-  if (std::string irPathError; emitCppSourceFromIrModule(program, options, irCppSource, irPathError)) {
-    cppSource = std::move(irCppSource);
+  const char *irFallbackKind = options.emitKind == "cpp" ? "cpp-ir" : "exe-ir";
+  if (const primec::IrBackend *cppIrBackend = primec::findIrBackend(irFallbackKind); cppIrBackend != nullptr) {
+    primec::IrBackendEmitResult emitResult;
+    IrBackendRunFailure irFailure;
+    if (runIrBackend(*cppIrBackend, program, options, emitResult, irFailure)) {
+      return emitResult.exitCode;
+    }
   }
+
+  primec::Emitter emitter;
+  const std::string cppSource = emitter.emitCpp(program, options.entryPath);
 
   if (options.emitKind == "cpp") {
     if (!writeFile(options.outputPath, cppSource)) {

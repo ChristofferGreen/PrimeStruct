@@ -120,6 +120,27 @@ main() {
   CHECK(readFile(errPath).find("ir-to-glsl failed: IrToGlslEmitter unsupported opcode") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter falls back to legacy output when ir backend path fails") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [f32] scale{2.0f32}
+  result{plus(scale, 0.5f32)}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_ir_backend_fallback_legacy.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_ir_backend_fallback_legacy.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
+                                 " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("float scale") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") == std::string::npos);
+}
+
 TEST_CASE("defaults to glsl extension for emit=glsl") {
   const std::string source = R"(
 [return<void>]
