@@ -3333,6 +3333,130 @@ TEST_CASE("emitter expr control if branch body return step dispatches returns") 
   CHECK_FALSE(missingCallbacks.emitted.shouldBreak);
 }
 
+TEST_CASE("emitter expr control if branch body binding step dispatches bindings") {
+  primec::Expr nonBinding;
+  nonBinding.kind = primec::Expr::Kind::Name;
+  nonBinding.name = "value";
+
+  std::unordered_map<std::string, primec::Emitter::BindingInfo> branchTypes;
+  const std::unordered_map<std::string, primec::Emitter::ReturnKind> returnKinds;
+  const std::unordered_map<std::string, std::string> importAliases;
+  const std::unordered_map<std::string, std::string> structTypeMap;
+
+  const auto nonBindingResult = primec::emitter::runEmitterExprControlIfBranchBodyBindingStep(
+      nonBinding,
+      branchTypes,
+      returnKinds,
+      false,
+      importAliases,
+      structTypeMap,
+      [&](const primec::Expr &) { return primec::Emitter::BindingInfo{}; },
+      [&](const primec::Expr &) { return false; },
+      {},
+      {},
+      [&](const primec::Emitter::BindingInfo &) { return false; },
+      [&](const primec::Expr &) { return std::string("unused"); });
+  CHECK_FALSE(nonBindingResult.handled);
+  CHECK_FALSE(nonBindingResult.emitted.handled);
+  CHECK(branchTypes.empty());
+
+  primec::Expr lambdaExpr;
+  lambdaExpr.kind = primec::Expr::Kind::Call;
+  lambdaExpr.isLambda = true;
+
+  primec::Expr lambdaBinding;
+  lambdaBinding.kind = primec::Expr::Kind::Call;
+  lambdaBinding.isBinding = true;
+  lambdaBinding.name = "item";
+  lambdaBinding.args = {lambdaExpr};
+
+  int autoEmitCalls = 0;
+  primec::Emitter::BindingInfo autoBindingInfo;
+  autoBindingInfo.typeName = "auto";
+  autoBindingInfo.isMutable = false;
+  branchTypes.clear();
+  const auto autoBindingResult = primec::emitter::runEmitterExprControlIfBranchBodyBindingStep(
+      lambdaBinding,
+      branchTypes,
+      returnKinds,
+      true,
+      importAliases,
+      structTypeMap,
+      [&](const primec::Expr &candidate) {
+        CHECK(candidate.name == "item");
+        return autoBindingInfo;
+      },
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &, const auto &, const auto &, bool) {
+        CHECK_FALSE(true);
+        return primec::Emitter::ReturnKind::Unknown;
+      },
+      [&](primec::Emitter::ReturnKind) {
+        CHECK_FALSE(true);
+        return std::string{};
+      },
+      [&](const primec::Emitter::BindingInfo &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &candidate) {
+        ++autoEmitCalls;
+        CHECK(candidate.isLambda);
+        return std::string("emit_lambda");
+      });
+  CHECK(autoBindingResult.handled);
+  CHECK(autoBindingResult.emitted.handled);
+  CHECK(autoBindingResult.emitted.emittedStatement == "const auto item = emit_lambda; ");
+  CHECK_FALSE(autoBindingResult.emitted.shouldBreak);
+  CHECK(autoEmitCalls == 1);
+  REQUIRE(branchTypes.count("item") == 1);
+
+  primec::Expr initExpr;
+  initExpr.kind = primec::Expr::Kind::Literal;
+  initExpr.literalValue = 9;
+
+  primec::Expr fallbackBinding = lambdaBinding;
+  fallbackBinding.args = {initExpr};
+  branchTypes.clear();
+
+  int inferCalls = 0;
+  int fallbackEmitCalls = 0;
+  const auto fallbackResult = primec::emitter::runEmitterExprControlIfBranchBodyBindingStep(
+      fallbackBinding,
+      branchTypes,
+      returnKinds,
+      true,
+      importAliases,
+      structTypeMap,
+      [&](const primec::Expr &) { return autoBindingInfo; },
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &candidate, const auto &, const auto &, bool candidateAllowMathBare) {
+        ++inferCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Literal);
+        CHECK(candidate.literalValue == 9);
+        CHECK(candidateAllowMathBare);
+        return primec::Emitter::ReturnKind::Unknown;
+      },
+      [&](primec::Emitter::ReturnKind kind) {
+        CHECK(kind == primec::Emitter::ReturnKind::Unknown);
+        return std::string{};
+      },
+      [&](const primec::Emitter::BindingInfo &) { return false; },
+      [&](const primec::Expr &candidate) {
+        ++fallbackEmitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Literal);
+        CHECK(candidate.literalValue == 9);
+        return std::string("emit_value");
+      });
+  CHECK(fallbackResult.handled);
+  CHECK(fallbackResult.emitted.handled);
+  CHECK(fallbackResult.emitted.emittedStatement == "const auto item = emit_value; ");
+  CHECK_FALSE(fallbackResult.emitted.shouldBreak);
+  CHECK(inferCalls == 1);
+  CHECK(fallbackEmitCalls == 1);
+  REQUIRE(branchTypes.count("item") == 1);
+}
+
 TEST_CASE("emitter expr control if branch body statement step dispatches statements") {
   primec::Expr stmt;
   stmt.kind = primec::Expr::Kind::Name;
@@ -3679,6 +3803,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyReturnStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyBindingStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyStatementStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchWrapperStep(") !=
@@ -3738,6 +3864,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyReturnStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyBindingStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyStatementStep.h\"") !=
         std::string::npos);
