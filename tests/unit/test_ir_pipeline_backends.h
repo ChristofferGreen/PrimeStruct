@@ -1173,6 +1173,41 @@ TEST_CASE("glsl-ir backend writes narrowed f64 div source") {
   CHECK(source.find("stack[sp++] = floatBitsToInt(left / right);") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir backend writes narrowed f64 neg source") {
+  const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushF64, 0x3ff8000000000000ull});
+  function.instructions.push_back({primec::IrOpcode::NegF64, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnF64, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_neg_f64.glsl";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "glsl_ir_backend_neg_f64.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("// Narrowed GLSL path lowers f64 neg through f32 payloads.") != std::string::npos);
+  CHECK(source.find("stack[sp - 1] = floatBitsToInt(-value);") != std::string::npos);
+}
+
 TEST_CASE("glsl-ir backend reports emitter diagnostics") {
   const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
   REQUIRE(backend != nullptr);
