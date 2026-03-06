@@ -118,50 +118,28 @@
     return false;
   }
 
+  const ir_lowerer::LowerInferenceReturnInfoSetupInput returnInfoSetupInput = {
+      .resolveStructTypeName = resolveStructTypeName,
+      .resolveStructArrayInfoFromPath = resolveStructArrayInfoFromPath,
+      .isBindingMutable = isBindingMutable,
+      .bindingKind = bindingKind,
+      .hasExplicitBindingTypeTransform = hasExplicitBindingTypeTransform,
+      .bindingValueKind = bindingValueKind,
+      .inferExprKind = inferExprKind,
+      .isFileErrorBinding = isFileErrorBinding,
+      .applyStructArrayInfo = applyStructArrayInfo,
+      .applyStructValueInfo = applyStructValueInfo,
+      .inferStructExprPath = inferStructExprPath,
+      .isStringBinding = isStringBinding,
+      .inferArrayElementKind = inferArrayElementKind,
+      .lowerMatchToIf = lowerMatchToIf,
+  };
+  const ir_lowerer::LowerInferenceGetReturnInfoStepInput getReturnInfoStepInput = {
+      .defMap = &defMap,
+      .returnInfoCache = &returnInfoCache,
+      .returnInferenceStack = &returnInferenceStack,
+      .returnInfoSetupInput = &returnInfoSetupInput,
+  };
   getReturnInfo = [&](const std::string &path, ReturnInfo &outInfo) -> bool {
-    auto cached = returnInfoCache.find(path);
-    if (cached != returnInfoCache.end()) {
-      outInfo = cached->second;
-      return true;
-    }
-    auto defIt = defMap.find(path);
-    if (defIt == defMap.end() || !defIt->second) {
-      error = "native backend cannot resolve definition: " + path;
-      return false;
-    }
-    if (!returnInferenceStack.insert(path).second) {
-      error = "native backend return type inference requires explicit annotation on " + path;
-      return false;
-    }
-
-    const Definition &def = *defIt->second;
-    ReturnInfo info;
-    if (!ir_lowerer::runLowerInferenceReturnInfoSetup(
-            {
-                .resolveStructTypeName = resolveStructTypeName,
-                .resolveStructArrayInfoFromPath = resolveStructArrayInfoFromPath,
-                .isBindingMutable = isBindingMutable,
-                .bindingKind = bindingKind,
-                .hasExplicitBindingTypeTransform = hasExplicitBindingTypeTransform,
-                .bindingValueKind = bindingValueKind,
-                .inferExprKind = inferExprKind,
-                .isFileErrorBinding = isFileErrorBinding,
-                .applyStructArrayInfo = applyStructArrayInfo,
-                .applyStructValueInfo = applyStructValueInfo,
-                .inferStructExprPath = inferStructExprPath,
-                .isStringBinding = isStringBinding,
-                .inferArrayElementKind = inferArrayElementKind,
-                .lowerMatchToIf = lowerMatchToIf,
-            },
-            def,
-            info,
-            error)) {
-      returnInferenceStack.erase(path);
-      return false;
-    }
-
-    returnInferenceStack.erase(path);
-    returnInfoCache.emplace(path, info);
-    outInfo = info;
-    return true;
+    return ir_lowerer::runLowerInferenceGetReturnInfoStep(getReturnInfoStepInput, path, outInfo, error);
   };

@@ -124,6 +124,12 @@ struct LowerInferenceReturnInfoSetupInput {
   InferValueKindFromLocalsFn inferArrayElementKind;
   ExpandMatchToIfFn lowerMatchToIf;
 };
+struct LowerInferenceGetReturnInfoStepInput {
+  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
+  std::unordered_set<std::string> *returnInferenceStack = nullptr;
+  const LowerInferenceReturnInfoSetupInput *returnInfoSetupInput = nullptr;
+};
 
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
@@ -162,5 +168,9 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
                                       const Definition &definition,
                                       ReturnInfo &infoInOut,
                                       std::string &errorOut);
+bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInput &input,
+                                        const std::string &path,
+                                        ReturnInfo &outInfo,
+                                        std::string &errorOut);
 
 } // namespace primec::ir_lowerer

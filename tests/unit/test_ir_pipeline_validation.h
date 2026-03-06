@@ -872,6 +872,156 @@ TEST_CASE("ir lowerer inference return-info setup validates dependencies") {
   CHECK(error == "native backend missing inference return-info setup dependency: resolveStructTypeName");
 }
 
+TEST_CASE("ir lowerer inference get-return-info step resolves and caches returns") {
+  primec::Definition definition;
+  definition.fullPath = "/callee";
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {"i64"};
+  definition.transforms.push_back(returnTransform);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/callee", &definition},
+  };
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> returnInfoCache;
+  std::unordered_set<std::string> returnInferenceStack;
+  const primec::ir_lowerer::LowerInferenceReturnInfoSetupInput returnInfoSetupInput = {
+      .resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; },
+      .resolveStructArrayInfoFromPath = [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
+      .isBindingMutable = [](const primec::Expr &) { return false; },
+      .bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      .hasExplicitBindingTypeTransform = [](const primec::Expr &) { return true; },
+      .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .isFileErrorBinding = [](const primec::Expr &) { return false; },
+      .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+      .isStringBinding = [](const primec::Expr &) { return false; },
+      .inferArrayElementKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .lowerMatchToIf = [](const primec::Expr &, primec::Expr &, std::string &) { return true; },
+  };
+
+  const primec::ir_lowerer::LowerInferenceGetReturnInfoStepInput input = {
+      .defMap = &defMap,
+      .returnInfoCache = &returnInfoCache,
+      .returnInferenceStack = &returnInferenceStack,
+      .returnInfoSetupInput = &returnInfoSetupInput,
+  };
+
+  primec::ir_lowerer::ReturnInfo outInfo;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceGetReturnInfoStep(input, "/callee", outInfo, error));
+  CHECK(error.empty());
+  CHECK(outInfo.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(returnInfoCache.count("/callee") == 1);
+  CHECK(returnInferenceStack.empty());
+
+  defMap.clear();
+  outInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::runLowerInferenceGetReturnInfoStep(input, "/callee", outInfo, error));
+  CHECK(error.empty());
+  CHECK(outInfo.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer inference get-return-info step reports missing definitions") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> returnInfoCache;
+  std::unordered_set<std::string> returnInferenceStack;
+  const primec::ir_lowerer::LowerInferenceReturnInfoSetupInput returnInfoSetupInput = {
+      .resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; },
+      .resolveStructArrayInfoFromPath = [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
+      .isBindingMutable = [](const primec::Expr &) { return false; },
+      .bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      .hasExplicitBindingTypeTransform = [](const primec::Expr &) { return true; },
+      .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .isFileErrorBinding = [](const primec::Expr &) { return false; },
+      .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+      .isStringBinding = [](const primec::Expr &) { return false; },
+      .inferArrayElementKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .lowerMatchToIf = [](const primec::Expr &, primec::Expr &, std::string &) { return true; },
+  };
+  const primec::ir_lowerer::LowerInferenceGetReturnInfoStepInput input = {
+      .defMap = &defMap,
+      .returnInfoCache = &returnInfoCache,
+      .returnInferenceStack = &returnInferenceStack,
+      .returnInfoSetupInput = &returnInfoSetupInput,
+  };
+
+  primec::ir_lowerer::ReturnInfo outInfo;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceGetReturnInfoStep(input, "/missing", outInfo, error));
+  CHECK(error == "native backend cannot resolve definition: /missing");
+}
+
+TEST_CASE("ir lowerer inference get-return-info step rejects recursive lookup") {
+  primec::Definition definition;
+  definition.fullPath = "/callee";
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/callee", &definition},
+  };
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> returnInfoCache;
+  std::unordered_set<std::string> returnInferenceStack = {
+      "/callee",
+  };
+  const primec::ir_lowerer::LowerInferenceReturnInfoSetupInput returnInfoSetupInput = {
+      .resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; },
+      .resolveStructArrayInfoFromPath = [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
+      .isBindingMutable = [](const primec::Expr &) { return false; },
+      .bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      .hasExplicitBindingTypeTransform = [](const primec::Expr &) { return true; },
+      .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .isFileErrorBinding = [](const primec::Expr &) { return false; },
+      .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+      .isStringBinding = [](const primec::Expr &) { return false; },
+      .inferArrayElementKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .lowerMatchToIf = [](const primec::Expr &, primec::Expr &, std::string &) { return true; },
+  };
+  const primec::ir_lowerer::LowerInferenceGetReturnInfoStepInput input = {
+      .defMap = &defMap,
+      .returnInfoCache = &returnInfoCache,
+      .returnInferenceStack = &returnInferenceStack,
+      .returnInfoSetupInput = &returnInfoSetupInput,
+  };
+
+  primec::ir_lowerer::ReturnInfo outInfo;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceGetReturnInfoStep(input, "/callee", outInfo, error));
+  CHECK(error == "native backend return type inference requires explicit annotation on /callee");
+}
+
+TEST_CASE("ir lowerer inference get-return-info step validates dependencies") {
+  primec::ir_lowerer::LowerInferenceGetReturnInfoStepInput input;
+  primec::ir_lowerer::ReturnInfo outInfo;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceGetReturnInfoStep(input, "/callee", outInfo, error));
+  CHECK(error == "native backend missing inference get-return-info step dependency: defMap");
+}
+
 TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   state.inferLiteralOrNameExprKind = [](const primec::Expr &expr,
@@ -4525,8 +4675,10 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallPointerFallbackSetup(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindDispatchSetup(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceReturnInfoSetup(") != std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceGetReturnInfoStep(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("inferCallExprControlFlowFallbackKind(expr, localsIn, error, controlFlowKind)") ==
         std::string::npos);
+  CHECK(inferenceHeaderSource.find("returnInfoCache.find(path)") == std::string::npos);
 
   const std::filesystem::path returnInfoHeaderPath =
       std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerReturnInfo.h";

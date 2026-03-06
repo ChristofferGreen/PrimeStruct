@@ -638,6 +638,58 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
   return true;
 }
 
+bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInput &input,
+                                        const std::string &path,
+                                        ReturnInfo &outInfo,
+                                        std::string &errorOut) {
+  if (input.defMap == nullptr) {
+    errorOut = "native backend missing inference get-return-info step dependency: defMap";
+    return false;
+  }
+  if (input.returnInfoCache == nullptr) {
+    errorOut = "native backend missing inference get-return-info step dependency: returnInfoCache";
+    return false;
+  }
+  if (input.returnInferenceStack == nullptr) {
+    errorOut = "native backend missing inference get-return-info step dependency: returnInferenceStack";
+    return false;
+  }
+  if (input.returnInfoSetupInput == nullptr) {
+    errorOut = "native backend missing inference get-return-info step dependency: returnInfoSetupInput";
+    return false;
+  }
+
+  auto &returnInfoCache = *input.returnInfoCache;
+  auto &returnInferenceStack = *input.returnInferenceStack;
+
+  auto cached = returnInfoCache.find(path);
+  if (cached != returnInfoCache.end()) {
+    outInfo = cached->second;
+    return true;
+  }
+
+  auto defIt = input.defMap->find(path);
+  if (defIt == input.defMap->end() || !defIt->second) {
+    errorOut = "native backend cannot resolve definition: " + path;
+    return false;
+  }
+  if (!returnInferenceStack.insert(path).second) {
+    errorOut = "native backend return type inference requires explicit annotation on " + path;
+    return false;
+  }
+
+  ReturnInfo info;
+  if (!runLowerInferenceReturnInfoSetup(*input.returnInfoSetupInput, *defIt->second, info, errorOut)) {
+    returnInferenceStack.erase(path);
+    return false;
+  }
+
+  returnInferenceStack.erase(path);
+  returnInfoCache.emplace(path, info);
+  outInfo = info;
+  return true;
+}
+
 bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCallFallbackSetupInput &input,
                                                 LowerInferenceSetupBootstrapState &stateInOut,
                                                 std::string &errorOut) {
