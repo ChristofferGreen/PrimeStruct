@@ -10,6 +10,7 @@ MAX_FRAMES=""
 SIMULATION_SMOKE=0
 SKIP_PREFLIGHT=0
 VISUAL_SMOKE=0
+AUTO_MAX_FRAMES=0
 
 fail() {
   echo "${PREFIX} ERROR: $1" >&2
@@ -73,6 +74,11 @@ fi
 
 if (( VISUAL_SMOKE == 1 )) && [[ -z "$MAX_FRAMES" ]]; then
   MAX_FRAMES="600"
+fi
+
+if [[ -z "$MAX_FRAMES" ]] && (( SIMULATION_SMOKE == 0 )); then
+  MAX_FRAMES="600"
+  AUTO_MAX_FRAMES=1
 fi
 
 if (( VISUAL_SMOKE == 1 )); then
@@ -164,6 +170,9 @@ if (( SIMULATION_SMOKE == 1 )); then
 fi
 
 echo "${PREFIX} Launching native window host"
+if (( AUTO_MAX_FRAMES == 1 )); then
+  echo "${PREFIX} Defaulting to --max-frames ${MAX_FRAMES} (~10s at 60fps)"
+fi
 hostExit=0
 hostLogPath="$OUT_DIR/native_window_host.log"
 if (( VISUAL_SMOKE == 1 )); then

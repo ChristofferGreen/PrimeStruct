@@ -203,6 +203,8 @@ Expected runtime behavior:
 ```
 - Builds both the cube simulation stream binary and the native window host into
   `build-debug/spinning-cube-native-window`, then launches the host.
+- Defaults to `--max-frames 600` for normal windowed runs (about 10 seconds at
+  60 fps), satisfying the native done-condition smoke target.
 - Runs `scripts/preflight_native_spinning_cube_window.sh` first unless
   `--skip-preflight` is provided.
 - Optional launcher flags: `--out-dir`, `--max-frames`,
