@@ -102,6 +102,30 @@ TEST_CASE("ir to cpp emitter writes f32 to i32 conversion clamp helper") {
   CHECK(cpp.find("int32_t converted = psConvertF32ToI32(value);") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter writes u64 float conversion clamp helpers") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF32ToU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF64ToU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("static uint64_t psConvertF32ToU64(float value)") != std::string::npos);
+  CHECK(cpp.find("static uint64_t psConvertF64ToU64(double value)") != std::string::npos);
+  CHECK(cpp.find("uint64_t converted = psConvertF32ToU64(value);") != std::string::npos);
+  CHECK(cpp.find("uint64_t converted = psConvertF64ToU64(value);") != std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes print and argv opcodes") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;

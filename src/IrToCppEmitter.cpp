@@ -143,6 +143,27 @@ bool moduleUsesClampI32ConvertHelpers(const IrModule &module) {
   return false;
 }
 
+bool usesClampU64ConvertHelpers(IrOpcode opcode) {
+  switch (opcode) {
+    case IrOpcode::ConvertF32ToU64:
+    case IrOpcode::ConvertF64ToU64:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool moduleUsesClampU64ConvertHelpers(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (usesClampU64ConvertHelpers(instruction.op)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool usesFileIoHelpers(IrOpcode opcode) {
   switch (opcode) {
     case IrOpcode::FileOpenRead:
@@ -553,7 +574,8 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::ConvertF32ToU64:
       out << "        float value = psBitsToF32(stack[--sp]);\n";
-      out << "        stack[sp++] = static_cast<uint64_t>(value);\n";
+      out << "        uint64_t converted = psConvertF32ToU64(value);\n";
+      out << "        stack[sp++] = converted;\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
@@ -590,7 +612,8 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::ConvertF64ToU64:
       out << "        double value = psBitsToF64(stack[--sp]);\n";
-      out << "        stack[sp++] = static_cast<uint64_t>(value);\n";
+      out << "        uint64_t converted = psConvertF64ToU64(value);\n";
+      out << "        stack[sp++] = converted;\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
@@ -877,11 +900,12 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   const bool needsF32Helpers = moduleUsesF32Helpers(module);
   const bool needsF64Helpers = moduleUsesF64Helpers(module);
   const bool needsClampI32ConvertHelpers = moduleUsesClampI32ConvertHelpers(module);
+  const bool needsClampU64ConvertHelpers = moduleUsesClampU64ConvertHelpers(module);
   const bool needsFileIoHelpers = moduleUsesFileIoHelpers(module);
   body << "#include <cstddef>\n";
   body << "#include <cstdint>\n";
   body << "#include <string>\n";
-  if (needsClampI32ConvertHelpers) {
+  if (needsClampI32ConvertHelpers || needsClampU64ConvertHelpers) {
     body << "#include <cmath>\n";
     body << "#include <limits>\n";
   }
@@ -944,6 +968,26 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     body << "    return std::numeric_limits<int32_t>::max();\n";
     body << "  }\n";
     body << "  return static_cast<int32_t>(value);\n";
+    body << "}\n\n";
+  }
+  if (needsClampU64ConvertHelpers) {
+    body << "static uint64_t psConvertF32ToU64(float value) {\n";
+    body << "  if (std::isnan(value) || value <= 0.0f) {\n";
+    body << "    return 0u;\n";
+    body << "  }\n";
+    body << "  if (value >= static_cast<float>(std::numeric_limits<uint64_t>::max())) {\n";
+    body << "    return std::numeric_limits<uint64_t>::max();\n";
+    body << "  }\n";
+    body << "  return static_cast<uint64_t>(value);\n";
+    body << "}\n\n";
+    body << "static uint64_t psConvertF64ToU64(double value) {\n";
+    body << "  if (std::isnan(value) || value <= 0.0) {\n";
+    body << "    return 0u;\n";
+    body << "  }\n";
+    body << "  if (value >= static_cast<double>(std::numeric_limits<uint64_t>::max())) {\n";
+    body << "    return std::numeric_limits<uint64_t>::max();\n";
+    body << "  }\n";
+    body << "  return static_cast<uint64_t>(value);\n";
     body << "}\n\n";
   }
   if (needsFileIoHelpers) {
