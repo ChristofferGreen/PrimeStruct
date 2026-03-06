@@ -137,6 +137,26 @@ struct LowerInferenceGetReturnInfoCallbackSetupInput {
   const LowerInferenceReturnInfoSetupInput *returnInfoSetupInput = nullptr;
   std::string *error = nullptr;
 };
+struct LowerInferenceGetReturnInfoSetupInput {
+  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
+  std::unordered_set<std::string> *returnInferenceStack = nullptr;
+  ResolveStructTypeNameForReturnFn resolveStructTypeName;
+  ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath;
+  IsBindingMutableForInferenceFn isBindingMutable;
+  BindingKindForInferenceFn bindingKind;
+  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform;
+  BindingValueKindForInferenceFn bindingValueKind;
+  InferValueKindFromLocalsFn inferExprKind;
+  IsFileErrorBindingForInferenceFn isFileErrorBinding;
+  ApplyStructInfoForInferenceFn applyStructArrayInfo;
+  ApplyStructInfoForInferenceFn applyStructValueInfo;
+  InferStructExprPathFromLocalsFn inferStructExprPath;
+  IsStringBindingForInferenceFn isStringBinding;
+  InferValueKindFromLocalsFn inferArrayElementKind;
+  ExpandMatchToIfFn lowerMatchToIf;
+  std::string *error = nullptr;
+};
 
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
@@ -182,5 +202,8 @@ bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInp
 bool runLowerInferenceGetReturnInfoCallbackSetup(const LowerInferenceGetReturnInfoCallbackSetupInput &input,
                                                  std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfoOut,
                                                  std::string &errorOut);
+bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupInput &input,
+                                         std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfoOut,
+                                         std::string &errorOut);
 
 } // namespace primec::ir_lowerer

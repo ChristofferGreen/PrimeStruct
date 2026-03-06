@@ -118,34 +118,25 @@
     return false;
   }
 
-  const ir_lowerer::LowerInferenceReturnInfoSetupInput returnInfoSetupInput = {
-      .resolveStructTypeName = resolveStructTypeName,
-      .resolveStructArrayInfoFromPath = resolveStructArrayInfoFromPath,
-      .isBindingMutable = isBindingMutable,
-      .bindingKind = bindingKind,
-      .hasExplicitBindingTypeTransform = hasExplicitBindingTypeTransform,
-      .bindingValueKind = bindingValueKind,
-      .inferExprKind = inferExprKind,
-      .isFileErrorBinding = isFileErrorBinding,
-      .applyStructArrayInfo = applyStructArrayInfo,
-      .applyStructValueInfo = applyStructValueInfo,
-      .inferStructExprPath = inferStructExprPath,
-      .isStringBinding = isStringBinding,
-      .inferArrayElementKind = inferArrayElementKind,
-      .lowerMatchToIf = lowerMatchToIf,
-  };
-  const ir_lowerer::LowerInferenceGetReturnInfoStepInput getReturnInfoStepInput = {
-      .defMap = &defMap,
-      .returnInfoCache = &returnInfoCache,
-      .returnInferenceStack = &returnInferenceStack,
-      .returnInfoSetupInput = &returnInfoSetupInput,
-  };
-  if (!ir_lowerer::runLowerInferenceGetReturnInfoCallbackSetup(
+  if (!ir_lowerer::runLowerInferenceGetReturnInfoSetup(
           {
-              .defMap = getReturnInfoStepInput.defMap,
-              .returnInfoCache = getReturnInfoStepInput.returnInfoCache,
-              .returnInferenceStack = getReturnInfoStepInput.returnInferenceStack,
-              .returnInfoSetupInput = getReturnInfoStepInput.returnInfoSetupInput,
+              .defMap = &defMap,
+              .returnInfoCache = &returnInfoCache,
+              .returnInferenceStack = &returnInferenceStack,
+              .resolveStructTypeName = resolveStructTypeName,
+              .resolveStructArrayInfoFromPath = resolveStructArrayInfoFromPath,
+              .isBindingMutable = isBindingMutable,
+              .bindingKind = bindingKind,
+              .hasExplicitBindingTypeTransform = hasExplicitBindingTypeTransform,
+              .bindingValueKind = bindingValueKind,
+              .inferExprKind = inferExprKind,
+              .isFileErrorBinding = isFileErrorBinding,
+              .applyStructArrayInfo = applyStructArrayInfo,
+              .applyStructValueInfo = applyStructValueInfo,
+              .inferStructExprPath = inferStructExprPath,
+              .isStringBinding = isStringBinding,
+              .inferArrayElementKind = inferArrayElementKind,
+              .lowerMatchToIf = lowerMatchToIf,
               .error = &error,
           },
           getReturnInfo,

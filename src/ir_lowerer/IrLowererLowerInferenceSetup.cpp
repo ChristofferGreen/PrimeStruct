@@ -728,6 +728,65 @@ bool runLowerInferenceGetReturnInfoCallbackSetup(const LowerInferenceGetReturnIn
   return true;
 }
 
+bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupInput &input,
+                                         std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfoOut,
+                                         std::string &errorOut) {
+  getReturnInfoOut = {};
+  if (input.defMap == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: defMap";
+    return false;
+  }
+  if (input.returnInfoCache == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: returnInfoCache";
+    return false;
+  }
+  if (input.returnInferenceStack == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: returnInferenceStack";
+    return false;
+  }
+  if (input.error == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: error";
+    return false;
+  }
+
+  const auto *defMap = input.defMap;
+  auto *returnInfoCache = input.returnInfoCache;
+  auto *returnInferenceStack = input.returnInferenceStack;
+  std::string *const inferenceError = input.error;
+
+  const LowerInferenceReturnInfoSetupInput returnInfoSetupInput = {
+      .resolveStructTypeName = input.resolveStructTypeName,
+      .resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath,
+      .isBindingMutable = input.isBindingMutable,
+      .bindingKind = input.bindingKind,
+      .hasExplicitBindingTypeTransform = input.hasExplicitBindingTypeTransform,
+      .bindingValueKind = input.bindingValueKind,
+      .inferExprKind = input.inferExprKind,
+      .isFileErrorBinding = input.isFileErrorBinding,
+      .applyStructArrayInfo = input.applyStructArrayInfo,
+      .applyStructValueInfo = input.applyStructValueInfo,
+      .inferStructExprPath = input.inferStructExprPath,
+      .isStringBinding = input.isStringBinding,
+      .inferArrayElementKind = input.inferArrayElementKind,
+      .lowerMatchToIf = input.lowerMatchToIf,
+  };
+  getReturnInfoOut = [defMap, returnInfoCache, returnInferenceStack, returnInfoSetupInput, inferenceError](
+                         const std::string &path, ReturnInfo &outInfo) -> bool {
+    return runLowerInferenceGetReturnInfoStep(
+        {
+            .defMap = defMap,
+            .returnInfoCache = returnInfoCache,
+            .returnInferenceStack = returnInferenceStack,
+            .returnInfoSetupInput = &returnInfoSetupInput,
+        },
+        path,
+        outInfo,
+        *inferenceError);
+  };
+  errorOut.clear();
+  return true;
+}
+
 bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCallFallbackSetupInput &input,
                                                 LowerInferenceSetupBootstrapState &stateInOut,
                                                 std::string &errorOut) {
