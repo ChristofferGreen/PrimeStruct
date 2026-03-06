@@ -556,4 +556,81 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
   return true;
 }
 
+bool runLowerInferenceExprKindCallOperatorFallbackSetup(
+    const LowerInferenceExprKindCallOperatorFallbackSetupInput &input,
+    LowerInferenceSetupBootstrapState &stateInOut,
+    std::string &errorOut) {
+  if (!input.combineNumericKinds) {
+    errorOut = "native backend missing inference expr-kind call-operator fallback setup dependency: combineNumericKinds";
+    return false;
+  }
+  if (!stateInOut.inferPointerTargetKind) {
+    errorOut = "native backend missing inference expr-kind call-operator fallback setup state: inferPointerTargetKind";
+    return false;
+  }
+
+  const bool hasMathImport = input.hasMathImport;
+  const auto combineNumericKinds = input.combineNumericKinds;
+
+  stateInOut.inferCallExprOperatorFallbackKind = [hasMathImport, combineNumericKinds, &stateInOut](
+                                                     const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
+    kindOut = LocalInfo::ValueKind::Unknown;
+    const auto inferExprKindOrUnknown = [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+      if (!stateInOut.inferExprKind) {
+        return LocalInfo::ValueKind::Unknown;
+      }
+      return stateInOut.inferExprKind(candidateExpr, candidateLocals);
+    };
+
+    LocalInfo::ValueKind comparisonOperatorKind = LocalInfo::ValueKind::Unknown;
+    if (inferComparisonOperatorCallReturnKind(
+            expr,
+            localsIn,
+            [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+              return inferExprKindOrUnknown(candidateExpr, candidateLocals);
+            },
+            [&](LocalInfo::ValueKind left, LocalInfo::ValueKind right) {
+              return combineNumericKinds(left, right);
+            },
+            comparisonOperatorKind) == ComparisonOperatorCallReturnKindResolution::Resolved) {
+      kindOut = comparisonOperatorKind;
+      return true;
+    }
+
+    LocalInfo::ValueKind mathBuiltinKind = LocalInfo::ValueKind::Unknown;
+    if (inferMathBuiltinReturnKind(
+            expr,
+            localsIn,
+            hasMathImport,
+            [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+              return inferExprKindOrUnknown(candidateExpr, candidateLocals);
+            },
+            [&](LocalInfo::ValueKind left, LocalInfo::ValueKind right) {
+              return combineNumericKinds(left, right);
+            },
+            mathBuiltinKind) == MathBuiltinReturnKindResolution::Resolved) {
+      kindOut = mathBuiltinKind;
+      return true;
+    }
+
+    LocalInfo::ValueKind nonMathScalarKind = LocalInfo::ValueKind::Unknown;
+    if (inferNonMathScalarCallReturnKind(
+            expr,
+            localsIn,
+            [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+              return inferExprKindOrUnknown(candidateExpr, candidateLocals);
+            },
+            [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+              return stateInOut.inferPointerTargetKind(candidateExpr, candidateLocals);
+            },
+            nonMathScalarKind) == NonMathScalarCallReturnKindResolution::Resolved) {
+      kindOut = nonMathScalarKind;
+      return true;
+    }
+
+    return false;
+  };
+  return true;
+}
+
 } // namespace primec::ir_lowerer

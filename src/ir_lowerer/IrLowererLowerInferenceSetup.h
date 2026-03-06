@@ -32,6 +32,7 @@ struct LowerInferenceSetupBootstrapState {
       inferCallExprDirectReturnKind;
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)>
       inferCallExprCountAccessGpuFallbackKind;
+  std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferCallExprOperatorFallbackKind;
 
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
@@ -81,6 +82,10 @@ struct LowerInferenceExprKindCallFallbackSetupInput {
   IsVectorCapacityCallFn isVectorCapacityCall;
   IsEntryArgsNameFn isEntryArgsName;
 };
+struct LowerInferenceExprKindCallOperatorFallbackSetupInput {
+  bool hasMathImport = false;
+  SetupInferenceCombineNumericKindsFn combineNumericKinds;
+};
 
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
@@ -100,5 +105,9 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
 bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCallFallbackSetupInput &input,
                                                 LowerInferenceSetupBootstrapState &stateInOut,
                                                 std::string &errorOut);
+bool runLowerInferenceExprKindCallOperatorFallbackSetup(
+    const LowerInferenceExprKindCallOperatorFallbackSetupInput &input,
+    LowerInferenceSetupBootstrapState &stateInOut,
+    std::string &errorOut);
 
 } // namespace primec::ir_lowerer

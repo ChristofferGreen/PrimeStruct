@@ -25,6 +25,7 @@
   auto &inferCallExprBaseKind = inferenceSetupBootstrap.inferCallExprBaseKind;
   auto &inferCallExprDirectReturnKind = inferenceSetupBootstrap.inferCallExprDirectReturnKind;
   auto &inferCallExprCountAccessGpuFallbackKind = inferenceSetupBootstrap.inferCallExprCountAccessGpuFallbackKind;
+  auto &inferCallExprOperatorFallbackKind = inferenceSetupBootstrap.inferCallExprOperatorFallbackKind;
   auto &resolveMethodCallDefinition = inferenceSetupBootstrap.resolveMethodCallDefinition;
   auto &inferPointerTargetKind = inferenceSetupBootstrap.inferPointerTargetKind;
 
@@ -72,6 +73,15 @@
           error)) {
     return false;
   }
+  if (!ir_lowerer::runLowerInferenceExprKindCallOperatorFallbackSetup(
+          {
+              .hasMathImport = hasMathImport,
+              .combineNumericKinds = combineNumericKinds,
+          },
+          inferenceSetupBootstrap,
+          error)) {
+    return false;
+  }
   if (!ir_lowerer::runLowerInferenceExprKindBaseSetup(
           {
               .getMathConstantName = getMathConstantName,
@@ -104,45 +114,9 @@
         if (inferCallExprCountAccessGpuFallbackKind(expr, localsIn, callFallbackKind)) {
           return callFallbackKind;
         }
-        LocalInfo::ValueKind comparisonOperatorKind = LocalInfo::ValueKind::Unknown;
-        if (inferComparisonOperatorCallReturnKind(
-                expr,
-                localsIn,
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return inferExprKind(candidateExpr, candidateLocals);
-                },
-                [&](LocalInfo::ValueKind left, LocalInfo::ValueKind right) {
-                  return combineNumericKinds(left, right);
-                },
-                comparisonOperatorKind) == ComparisonOperatorCallReturnKindResolution::Resolved) {
-          return comparisonOperatorKind;
-        }
-        LocalInfo::ValueKind mathBuiltinKind = LocalInfo::ValueKind::Unknown;
-        if (inferMathBuiltinReturnKind(
-                expr,
-                localsIn,
-                hasMathImport,
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return inferExprKind(candidateExpr, candidateLocals);
-                },
-                [&](LocalInfo::ValueKind left, LocalInfo::ValueKind right) {
-                  return combineNumericKinds(left, right);
-                },
-                mathBuiltinKind) == MathBuiltinReturnKindResolution::Resolved) {
-          return mathBuiltinKind;
-        }
-        LocalInfo::ValueKind nonMathScalarKind = LocalInfo::ValueKind::Unknown;
-        if (inferNonMathScalarCallReturnKind(
-                expr,
-                localsIn,
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return inferExprKind(candidateExpr, candidateLocals);
-                },
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return inferPointerTargetKind(candidateExpr, candidateLocals);
-                },
-                nonMathScalarKind) == NonMathScalarCallReturnKindResolution::Resolved) {
-          return nonMathScalarKind;
+        LocalInfo::ValueKind operatorFallbackKind = LocalInfo::ValueKind::Unknown;
+        if (inferCallExprOperatorFallbackKind(expr, localsIn, operatorFallbackKind)) {
+          return operatorFallbackKind;
         }
         LocalInfo::ValueKind controlFlowKind = LocalInfo::ValueKind::Unknown;
         if (inferControlFlowCallReturnKind(
