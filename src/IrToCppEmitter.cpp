@@ -258,7 +258,7 @@ bool emitInstruction(const IrInstruction &instruction,
   const auto emitCompareU64 = [&](const char *op) {
     out << "        uint64_t right = stack[--sp];\n";
     out << "        uint64_t left = stack[--sp];\n";
-    out << "        stack[sp++] = (left " << op << " right) ? 1 : 0;\n";
+    out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
   };

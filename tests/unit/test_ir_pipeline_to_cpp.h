@@ -60,6 +60,42 @@ TEST_CASE("ir to cpp emitter writes i64 arithmetic and comparisons") {
   CHECK(cpp.find("return static_cast<int64_t>(stack[--sp]);") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter writes u64 comparisons with canonical bool literals") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(5)});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(7)});
+  fn.instructions.push_back({primec::IrOpcode::CmpLtU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(5)});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(7)});
+  fn.instructions.push_back({primec::IrOpcode::CmpLeU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(9)});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(7)});
+  fn.instructions.push_back({primec::IrOpcode::CmpGtU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(9)});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(7)});
+  fn.instructions.push_back({primec::IrOpcode::CmpGeU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("uint64_t right = stack[--sp];") != std::string::npos);
+  CHECK(cpp.find("uint64_t left = stack[--sp];") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = (left < right) ? 1u : 0u;") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = (left <= right) ? 1u : 0u;") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = (left > right) ? 1u : 0u;") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = (left >= right) ? 1u : 0u;") != std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes f64 to i32 conversion") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;

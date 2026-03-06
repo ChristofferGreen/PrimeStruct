@@ -181,6 +181,43 @@ TEST_CASE("cpp-ir backend writes C++ source") {
   CHECK(source.find("return static_cast<int>(ps_entry_0(argc, argv));") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir backend writes u64 compare source with canonical bool literals") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(9)});
+  function.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(7)});
+  function.instructions.push_back({primec::IrOpcode::CmpGeU64, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_cmp_u64.cpp";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "cpp_ir_backend_cmp_u64.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("uint64_t right = stack[--sp];") != std::string::npos);
+  CHECK(source.find("uint64_t left = stack[--sp];") != std::string::npos);
+  CHECK(source.find("stack[sp++] = (left >= right) ? 1u : 0u;") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir backend rejects empty non-entry function bodies") {
   const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
   REQUIRE(backend != nullptr);
