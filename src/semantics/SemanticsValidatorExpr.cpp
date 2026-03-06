@@ -1738,7 +1738,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (arg.kind == Expr::Kind::Call) {
         std::string collection;
-        if (getBuiltinCollectionName(arg, collection)) {
+        if (defMap_.find(resolveCalleePath(arg)) == defMap_.end() &&
+            getBuiltinCollectionName(arg, collection)) {
           return false;
         }
       }

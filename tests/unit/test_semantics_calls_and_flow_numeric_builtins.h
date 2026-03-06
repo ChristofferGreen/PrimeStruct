@@ -120,6 +120,35 @@ main() {
   CHECK(error.find("convert requires numeric or bool operand") != std::string::npos);
 }
 
+TEST_CASE("convert accepts user-defined vector-named operand call") {
+  const std::string source = R"(
+[return<i32>]
+vector<T>([T] value) {
+  return(value)
+}
+
+[return<i32>]
+main() {
+  return(convert<i32>(vector<i32>(7i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("convert still rejects builtin vector literal operand") {
+  const std::string source = R"(
+[effects(heap_alloc), return<i32>]
+main() {
+  return(convert<i32>(vector<i32>(7i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("convert requires numeric or bool operand") != std::string::npos);
+}
+
 TEST_CASE("convert resolves struct helper") {
   const std::string source = R"(
 [struct]
