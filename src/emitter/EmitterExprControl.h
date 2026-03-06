@@ -295,74 +295,15 @@
           branchPreludeStep.handled) {
         return branchPreludeStep.emittedExpr;
       }
-      std::ostringstream out;
-      out << "([&]() { ";
-      for (size_t i = 0; i < candidate.bodyArguments.size(); ++i) {
-        const Expr &stmt = candidate.bodyArguments[i];
-        const bool isLast = (i + 1 == candidate.bodyArguments.size());
-        if (const auto earlyReturnStep = emitter::runEmitterExprControlIfBlockEarlyReturnStep(
-                stmt,
-                isLast,
-                [&](const Expr &candidate) { return isReturnCall(candidate); },
-                [&](const Expr &candidate) {
-                  return emitExpr(candidate,
-                                  nameMap,
-                                  paramMap,
-                                  structTypeMap,
-                                  importAliases,
-                                  branchTypes,
-                                  returnKinds,
-                                  resultInfos,
-                                  returnStructs,
-                                  allowMathBare);
-                });
-            earlyReturnStep.handled) {
-          out << earlyReturnStep.emittedStatement;
-          break;
-        }
-        if (const auto finalValueStep = emitter::runEmitterExprControlIfBlockFinalValueStep(
-                stmt,
-                isLast,
-                [&](const Expr &candidate) { return isReturnCall(candidate); },
-                [&](const Expr &candidate) {
-                  return emitExpr(candidate,
-                                  nameMap,
-                                  paramMap,
-                                  structTypeMap,
-                                  importAliases,
-                                  branchTypes,
-                                  returnKinds,
-                                  resultInfos,
-                                  returnStructs,
-                                  allowMathBare);
-                });
-            finalValueStep.handled) {
-          out << finalValueStep.emittedStatement;
-          break;
-        }
-        if (const auto bindingPrelude = emitter::runEmitterExprControlIfBlockBindingPreludeStep(
-                stmt,
-                branchTypes,
-                returnKinds,
-                allowMathBare,
-                [&](const Expr &candidate) { return getBindingInfo(candidate); },
-                [&](const Expr &candidate) { return hasExplicitBindingTypeTransform(candidate); },
-                [&](const Expr &candidate,
-                    const std::unordered_map<std::string, BindingInfo> &candidateBranchTypes,
-                    const std::unordered_map<std::string, ReturnKind> &candidateReturnKinds,
-                    bool candidateAllowMathBare) {
-                  return inferPrimitiveReturnKind(
-                      candidate, candidateBranchTypes, candidateReturnKinds, candidateAllowMathBare);
-                },
-                [&](ReturnKind candidateKind) { return typeNameForReturnKind(candidateKind); });
-            bindingPrelude.handled) {
-          BindingInfo binding = bindingPrelude.binding;
-          const bool hasExplicitType = bindingPrelude.hasExplicitType;
-          const bool useAuto = bindingPrelude.useAuto;
-          if (const auto autoBindingStep = emitter::runEmitterExprControlIfBlockBindingAutoStep(
+      const std::string emittedBranchBody = [&]() {
+        std::ostringstream out;
+        for (size_t i = 0; i < candidate.bodyArguments.size(); ++i) {
+          const Expr &stmt = candidate.bodyArguments[i];
+          const bool isLast = (i + 1 == candidate.bodyArguments.size());
+          if (const auto earlyReturnStep = emitter::runEmitterExprControlIfBlockEarlyReturnStep(
                   stmt,
-                  binding,
-                  useAuto,
+                  isLast,
+                  [&](const Expr &candidate) { return isReturnCall(candidate); },
                   [&](const Expr &candidate) {
                     return emitExpr(candidate,
                                     nameMap,
@@ -375,25 +316,123 @@
                                     returnStructs,
                                     allowMathBare);
                   });
-              autoBindingStep.handled) {
-            out << autoBindingStep.emittedStatement;
+              earlyReturnStep.handled) {
+            out << earlyReturnStep.emittedStatement;
+            break;
+          }
+          if (const auto finalValueStep = emitter::runEmitterExprControlIfBlockFinalValueStep(
+                  stmt,
+                  isLast,
+                  [&](const Expr &candidate) { return isReturnCall(candidate); },
+                  [&](const Expr &candidate) {
+                    return emitExpr(candidate,
+                                    nameMap,
+                                    paramMap,
+                                    structTypeMap,
+                                    importAliases,
+                                    branchTypes,
+                                    returnKinds,
+                                    resultInfos,
+                                    returnStructs,
+                                    allowMathBare);
+                  });
+              finalValueStep.handled) {
+            out << finalValueStep.emittedStatement;
+            break;
+          }
+          if (const auto bindingPrelude = emitter::runEmitterExprControlIfBlockBindingPreludeStep(
+                  stmt,
+                  branchTypes,
+                  returnKinds,
+                  allowMathBare,
+                  [&](const Expr &candidate) { return getBindingInfo(candidate); },
+                  [&](const Expr &candidate) { return hasExplicitBindingTypeTransform(candidate); },
+                  [&](const Expr &candidate,
+                      const std::unordered_map<std::string, BindingInfo> &candidateBranchTypes,
+                      const std::unordered_map<std::string, ReturnKind> &candidateReturnKinds,
+                      bool candidateAllowMathBare) {
+                    return inferPrimitiveReturnKind(
+                        candidate, candidateBranchTypes, candidateReturnKinds, candidateAllowMathBare);
+                  },
+                  [&](ReturnKind candidateKind) { return typeNameForReturnKind(candidateKind); });
+              bindingPrelude.handled) {
+            BindingInfo binding = bindingPrelude.binding;
+            const bool hasExplicitType = bindingPrelude.hasExplicitType;
+            const bool useAuto = bindingPrelude.useAuto;
+            if (const auto autoBindingStep = emitter::runEmitterExprControlIfBlockBindingAutoStep(
+                    stmt,
+                    binding,
+                    useAuto,
+                    [&](const Expr &candidate) {
+                      return emitExpr(candidate,
+                                      nameMap,
+                                      paramMap,
+                                      structTypeMap,
+                                      importAliases,
+                                      branchTypes,
+                                      returnKinds,
+                                      resultInfos,
+                                      returnStructs,
+                                      allowMathBare);
+                    });
+                autoBindingStep.handled) {
+              out << autoBindingStep.emittedStatement;
+              continue;
+            }
+            const auto bindingQualifiers = emitter::runEmitterExprControlIfBlockBindingQualifiersStep(
+                binding,
+                !stmt.args.empty(),
+                [&](const BindingInfo &candidateBinding) { return isReferenceCandidate(candidateBinding); });
+            const bool needsConst = bindingQualifiers.needsConst;
+            const bool useRef = bindingQualifiers.useRef;
+            if (const auto explicitBindingStep = emitter::runEmitterExprControlIfBlockBindingExplicitStep(
+                    stmt,
+                    binding,
+                    hasExplicitType,
+                    needsConst,
+                    useRef,
+                    stmt.namespacePrefix,
+                    importAliases,
+                    structTypeMap,
+                    [&](const Expr &candidate) {
+                      return emitExpr(candidate,
+                                      nameMap,
+                                      paramMap,
+                                      structTypeMap,
+                                      importAliases,
+                                      branchTypes,
+                                      returnKinds,
+                                      resultInfos,
+                                      returnStructs,
+                                      allowMathBare);
+                    });
+                explicitBindingStep.handled) {
+              out << explicitBindingStep.emittedStatement;
+            } else if (const auto fallbackBindingStep =
+                           emitter::runEmitterExprControlIfBlockBindingFallbackStep(
+                               stmt,
+                               hasExplicitType,
+                               needsConst,
+                               useRef,
+                               [&](const Expr &candidate) {
+                                 return emitExpr(candidate,
+                                                 nameMap,
+                                                 paramMap,
+                                                 structTypeMap,
+                                                 importAliases,
+                                                 branchTypes,
+                                                 returnKinds,
+                                                 resultInfos,
+                                                 returnStructs,
+                                                 allowMathBare);
+                               });
+                       fallbackBindingStep.handled) {
+              out << fallbackBindingStep.emittedStatement;
+            }
             continue;
           }
-          const auto bindingQualifiers = emitter::runEmitterExprControlIfBlockBindingQualifiersStep(
-              binding,
-              !stmt.args.empty(),
-              [&](const BindingInfo &candidateBinding) { return isReferenceCandidate(candidateBinding); });
-          const bool needsConst = bindingQualifiers.needsConst;
-          const bool useRef = bindingQualifiers.useRef;
-          if (const auto explicitBindingStep = emitter::runEmitterExprControlIfBlockBindingExplicitStep(
+          if (const auto statementStep = emitter::runEmitterExprControlIfBlockStatementStep(
                   stmt,
-                  binding,
-                  hasExplicitType,
-                  needsConst,
-                  useRef,
-                  stmt.namespacePrefix,
-                  importAliases,
-                  structTypeMap,
                   [&](const Expr &candidate) {
                     return emitExpr(candidate,
                                     nameMap,
@@ -406,50 +445,18 @@
                                     returnStructs,
                                     allowMathBare);
                   });
-              explicitBindingStep.handled) {
-            out << explicitBindingStep.emittedStatement;
-          } else if (const auto fallbackBindingStep = emitter::runEmitterExprControlIfBlockBindingFallbackStep(
-                         stmt,
-                         hasExplicitType,
-                         needsConst,
-                         useRef,
-                         [&](const Expr &candidate) {
-                           return emitExpr(candidate,
-                                           nameMap,
-                                           paramMap,
-                                           structTypeMap,
-                                           importAliases,
-                                           branchTypes,
-                                           returnKinds,
-                                           resultInfos,
-                                           returnStructs,
-                                           allowMathBare);
-                         });
-                     fallbackBindingStep.handled) {
-            out << fallbackBindingStep.emittedStatement;
+              statementStep.handled) {
+            out << statementStep.emittedStatement;
           }
-        continue;
+        }
+        return out.str();
+      }();
+      if (const auto branchWrapperStep = emitter::runEmitterExprControlIfBranchWrapperStep(
+              [&]() { return emittedBranchBody; });
+          branchWrapperStep.handled) {
+        return branchWrapperStep.emittedExpr;
       }
-      if (const auto statementStep = emitter::runEmitterExprControlIfBlockStatementStep(
-              stmt,
-              [&](const Expr &candidate) {
-                return emitExpr(candidate,
-                                nameMap,
-                                paramMap,
-                                structTypeMap,
-                                importAliases,
-                                branchTypes,
-                                returnKinds,
-                                resultInfos,
-                                returnStructs,
-                                allowMathBare);
-              });
-          statementStep.handled) {
-        out << statementStep.emittedStatement;
-      }
-    }
-    out << "}())";
-    return out.str();
+      return "([&]() { " + emittedBranchBody + "}())";
   };
   if (const auto ternaryStep = emitter::runEmitterExprControlIfTernaryStep(
           [&]() {

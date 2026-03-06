@@ -35,6 +35,7 @@ add_library(primec_lib
   src/emitter/EmitterExprControlIfBlockBindingExplicitStep.cpp
   src/emitter/EmitterExprControlIfBlockBindingFallbackStep.cpp
   src/emitter/EmitterExprControlIfBranchPreludeStep.cpp
+  src/emitter/EmitterExprControlIfBranchWrapperStep.cpp
   src/emitter/EmitterExprControlIfBlockBindingPreludeStep.cpp
   src/emitter/EmitterExprControlIfBlockBindingQualifiersStep.cpp
   src/emitter/EmitterExprControlIfBlockStatementStep.cpp
