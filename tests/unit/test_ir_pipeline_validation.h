@@ -2883,6 +2883,59 @@ TEST_CASE("emitter expr control if-block binding-auto step emits auto bindings")
   CHECK(missingEmit.emittedStatement == "auto item; ");
 }
 
+TEST_CASE("emitter expr control if-block binding-qualifiers step resolves const/reference flags") {
+  primec::Emitter::BindingInfo mutableBinding;
+  mutableBinding.isMutable = true;
+  mutableBinding.isCopy = false;
+  const auto mutableResult = primec::emitter::runEmitterExprControlIfBlockBindingQualifiersStep(
+      mutableBinding,
+      true,
+      [&](const primec::Emitter::BindingInfo &) { return true; });
+  CHECK_FALSE(mutableResult.needsConst);
+  CHECK_FALSE(mutableResult.useRef);
+
+  primec::Emitter::BindingInfo copyBinding;
+  copyBinding.isMutable = false;
+  copyBinding.isCopy = true;
+  const auto copyResult = primec::emitter::runEmitterExprControlIfBlockBindingQualifiersStep(
+      copyBinding,
+      true,
+      [&](const primec::Emitter::BindingInfo &) { return true; });
+  CHECK(copyResult.needsConst);
+  CHECK_FALSE(copyResult.useRef);
+
+  primec::Emitter::BindingInfo constBinding;
+  constBinding.isMutable = false;
+  constBinding.isCopy = false;
+  int referenceCandidateCalls = 0;
+  const auto constResult = primec::emitter::runEmitterExprControlIfBlockBindingQualifiersStep(
+      constBinding,
+      true,
+      [&](const primec::Emitter::BindingInfo &candidate) {
+        ++referenceCandidateCalls;
+        CHECK_FALSE(candidate.isMutable);
+        CHECK_FALSE(candidate.isCopy);
+        return true;
+      });
+  CHECK(constResult.needsConst);
+  CHECK(constResult.useRef);
+  CHECK(referenceCandidateCalls == 1);
+
+  const auto noInitializer = primec::emitter::runEmitterExprControlIfBlockBindingQualifiersStep(
+      constBinding,
+      false,
+      [&](const primec::Emitter::BindingInfo &) { return true; });
+  CHECK(noInitializer.needsConst);
+  CHECK_FALSE(noInitializer.useRef);
+
+  const auto missingCallback = primec::emitter::runEmitterExprControlIfBlockBindingQualifiersStep(
+      constBinding,
+      true,
+      {});
+  CHECK(missingCallback.needsConst);
+  CHECK_FALSE(missingCallback.useRef);
+}
+
 TEST_CASE("semantics validator expr capture split step tokenizes captures") {
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep("").empty());
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep(" \t \n").empty());
@@ -3122,6 +3175,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingPreludeStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingQualifiersStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockFinalValueStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEarlyReturnStep(") !=
@@ -3161,6 +3216,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingAutoStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingPreludeStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingQualifiersStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockFinalValueStep.h\"") !=
         std::string::npos);

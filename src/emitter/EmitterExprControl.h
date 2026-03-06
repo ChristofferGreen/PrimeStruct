@@ -376,9 +376,12 @@
             out << autoBindingStep.emittedStatement;
             continue;
           }
-          bool needsConst = !binding.isMutable;
-          const bool useRef =
-              !binding.isMutable && !binding.isCopy && !stmt.args.empty() && isReferenceCandidate(binding);
+          const auto bindingQualifiers = emitter::runEmitterExprControlIfBlockBindingQualifiersStep(
+              binding,
+              !stmt.args.empty(),
+              [&](const BindingInfo &candidateBinding) { return isReferenceCandidate(candidateBinding); });
+          const bool needsConst = bindingQualifiers.needsConst;
+          const bool useRef = bindingQualifiers.useRef;
           if (hasExplicitType) {
             std::string type = bindingTypeToCpp(binding, stmt.namespacePrefix, importAliases, structTypeMap);
             bool isReference = binding.typeName == "Reference";

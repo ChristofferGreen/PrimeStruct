@@ -46,6 +46,7 @@
 #include "src/emitter/EmitterExprControlFloatLiteralStep.h"
 #include "src/emitter/EmitterExprControlIfBlockBindingAutoStep.h"
 #include "src/emitter/EmitterExprControlIfBlockBindingPreludeStep.h"
+#include "src/emitter/EmitterExprControlIfBlockBindingQualifiersStep.h"
 #include "src/emitter/EmitterExprControlIfBlockFinalValueStep.h"
 #include "src/emitter/EmitterExprControlIfBlockEarlyReturnStep.h"
 #include "src/emitter/EmitterExprControlIfEnvelopeStep.h"
