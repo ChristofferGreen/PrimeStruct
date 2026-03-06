@@ -140,6 +140,15 @@
       .returnInferenceStack = &returnInferenceStack,
       .returnInfoSetupInput = &returnInfoSetupInput,
   };
-  getReturnInfo = [&](const std::string &path, ReturnInfo &outInfo) -> bool {
-    return ir_lowerer::runLowerInferenceGetReturnInfoStep(getReturnInfoStepInput, path, outInfo, error);
-  };
+  if (!ir_lowerer::runLowerInferenceGetReturnInfoCallbackSetup(
+          {
+              .defMap = getReturnInfoStepInput.defMap,
+              .returnInfoCache = getReturnInfoStepInput.returnInfoCache,
+              .returnInferenceStack = getReturnInfoStepInput.returnInferenceStack,
+              .returnInfoSetupInput = getReturnInfoStepInput.returnInfoSetupInput,
+              .error = &error,
+          },
+          getReturnInfo,
+          error)) {
+    return false;
+  }

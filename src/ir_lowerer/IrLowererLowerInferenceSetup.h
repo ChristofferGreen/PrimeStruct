@@ -130,6 +130,13 @@ struct LowerInferenceGetReturnInfoStepInput {
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
   const LowerInferenceReturnInfoSetupInput *returnInfoSetupInput = nullptr;
 };
+struct LowerInferenceGetReturnInfoCallbackSetupInput {
+  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
+  std::unordered_set<std::string> *returnInferenceStack = nullptr;
+  const LowerInferenceReturnInfoSetupInput *returnInfoSetupInput = nullptr;
+  std::string *error = nullptr;
+};
 
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
@@ -172,5 +179,8 @@ bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInp
                                         const std::string &path,
                                         ReturnInfo &outInfo,
                                         std::string &errorOut);
+bool runLowerInferenceGetReturnInfoCallbackSetup(const LowerInferenceGetReturnInfoCallbackSetupInput &input,
+                                                 std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfoOut,
+                                                 std::string &errorOut);
 
 } // namespace primec::ir_lowerer

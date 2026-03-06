@@ -690,6 +690,44 @@ bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInp
   return true;
 }
 
+bool runLowerInferenceGetReturnInfoCallbackSetup(const LowerInferenceGetReturnInfoCallbackSetupInput &input,
+                                                 std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfoOut,
+                                                 std::string &errorOut) {
+  getReturnInfoOut = {};
+  if (input.defMap == nullptr) {
+    errorOut = "native backend missing inference get-return-info callback setup dependency: defMap";
+    return false;
+  }
+  if (input.returnInfoCache == nullptr) {
+    errorOut = "native backend missing inference get-return-info callback setup dependency: returnInfoCache";
+    return false;
+  }
+  if (input.returnInferenceStack == nullptr) {
+    errorOut = "native backend missing inference get-return-info callback setup dependency: returnInferenceStack";
+    return false;
+  }
+  if (input.returnInfoSetupInput == nullptr) {
+    errorOut = "native backend missing inference get-return-info callback setup dependency: returnInfoSetupInput";
+    return false;
+  }
+  if (input.error == nullptr) {
+    errorOut = "native backend missing inference get-return-info callback setup dependency: error";
+    return false;
+  }
+
+  const LowerInferenceGetReturnInfoStepInput stepInput = {
+      .defMap = input.defMap,
+      .returnInfoCache = input.returnInfoCache,
+      .returnInferenceStack = input.returnInferenceStack,
+      .returnInfoSetupInput = input.returnInfoSetupInput,
+  };
+  std::string *const inferenceError = input.error;
+  getReturnInfoOut = [stepInput, inferenceError](const std::string &path, ReturnInfo &outInfo) -> bool {
+    return runLowerInferenceGetReturnInfoStep(stepInput, path, outInfo, *inferenceError);
+  };
+  return true;
+}
+
 bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCallFallbackSetupInput &input,
                                                 LowerInferenceSetupBootstrapState &stateInOut,
                                                 std::string &errorOut) {
