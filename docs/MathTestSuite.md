@@ -144,6 +144,17 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] Spot checks where math builtins are used inside vector ops (no ABI surprises).
 - [x] Ensure math ops on indexed array values behave identically across backends.
 
+## Matrix/Quaternion Interaction Contract (Draft)
+- [ ] Add parser/semantic tests for matrix/quaternion operator allowlist and disallowlist:
+  `+`, `-`, `*`, `/` combinations by shape/type.
+- [ ] Add shape-mismatch diagnostics for `Mat * Vec` and `Mat * Mat` dimension errors.
+- [ ] Add deterministic tests that reject implicit scalar/vector/matrix/quaternion conversions.
+- [ ] Add quaternion Hamilton-product correctness tests (`q1 * q2`) against reference values.
+- [ ] Add quaternion-vector rotation tests (`Quat * Vec3`) including identity and 90-degree axis rotations.
+- [ ] Add matrix/vector convention tests to lock column-vector semantics (`Mat * Vec`) and composition order.
+- [ ] Add exact-equality vs tolerance-helper behavior tests for float-backed matrix/quaternion values.
+- [ ] Add backend-gating tests verifying unsupported backends emit stable diagnostics for matrix/quaternion ops until support lands.
+
 ## Cross-Backend Compliance
 - [x] Each category above has a C++/exe baseline test.
 - [x] VM and native outputs match baseline within tolerance.

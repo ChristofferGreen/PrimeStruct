@@ -12,6 +12,10 @@
   basic/composite widgets, HTML adapter, and platform input adapter).
 - Updated cross-doc references in README/design/spec/coding-guidelines/TODO to
   align with the new graphics mini-spec and roadmap direction.
+- Added draft matrix/quaternion type contracts across `docs/PrimeStruct.md`,
+  `docs/PrimeStruct_SyntaxSpec.md`, `docs/Coding_Guidelines.md`,
+  `docs/MathTestSuite.md`, and `docs/todo.md`, including explicit math-family
+  interaction rules and implementation test/TODO tracking.
 
 ## 2026-03-02
 

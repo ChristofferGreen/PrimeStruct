@@ -188,6 +188,11 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add `auto` inference tests: omitted parameter envelopes, `return<auto>`, and multi-call-site conflict cases.
 - ✓ Add stdlib vector types (`Vec2`, `Vec3`, `Vec4`) with member methods (`length`, `normalize`, `toNormalized`, etc.).
 - ✓ Add stdlib color types (`ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`) as distinct types with color-space helpers and per-channel ops.
+- ○ Add stdlib matrix/quaternion types (`Mat2`, `Mat3`, `Mat4`, `Quat`) with constructors, component accessors, and normalization helpers.
+- ○ Implement matrix/quaternion operator compatibility validation (`plus`/`minus` shape checks, `multiply` allowlist, `divide` composite-by-scalar only) with deterministic diagnostics.
+- ○ Implement explicit conversion helpers between quaternion and matrix forms (`quat_to_mat3`, `quat_to_mat4`, `mat3_to_quat`) and reject implicit family conversions.
+- ○ Add backend support-matrix conformance tests for matrix/quaternion behavior (accept/reject + diagnostics) across VM/native/GLSL/Wasm/C++ profiles.
+- ○ Extend math conformance suite with matrix/quaternion reference tests (Hamilton product, quaternion-vector rotation, matrix/vector composition order, and tolerance policy).
 - ✓ Implement `Result<Error>` / `Result<T, Error>` plus postfix `?` propagation and `on_error<ErrorType, Handler>(args...)` semantics (local-scope-only handlers, compile error if missing).
 - ✓ Implement `Result` helper surface (`Result.error`/`Result.why`/`Result.map`/`Result.and_then`/`Result.map2`) and add tests.
 - ✓ Add VM/native lowering for `Result.map`/`Result.and_then`/`Result.map2`.

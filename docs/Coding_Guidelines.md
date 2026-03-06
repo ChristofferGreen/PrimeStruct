@@ -28,6 +28,10 @@ semantics after canonicalization.
   Use free-function helper spellings (`push(value, x)`, `at(value, i)`) only when
   demonstrating canonical post-transform forms.
 - Prefer unsuffixed numeric literals in surface examples (`1280`, `0.0166667`).
+- Prefer explicit math-family conversions; never rely on implicit scalar/vector/matrix/quaternion coercions.
+- Prefer `mat * vec` ordering (column-vector convention) and keep transform-composition order explicit at call sites.
+- Normalize quaternions before repeated composition or vector rotation (`q.toNormalized()` or `q.normalize()`).
+- Prefer exact `==`/`!=` only for invariants and integer-like checks; use explicit tolerance helpers for float/vector/matrix/quaternion comparisons.
 - Prefer typed enums/descriptors over stringly-typed GPU config
   (`PresentMode.Fifo` over `"fifo"`).
 - Prefer labeled arguments on public API calls to keep call sites self-documenting,
@@ -54,9 +58,10 @@ semantics after canonicalization.
 ## Gold-Standard Surface Example (Pure PrimeStruct)
 
 Note: this example locks a proposed API shape for graphics/math naming. Current
-stdlib in this repo ships vector/color math only; the `/std/gfx/*` rendering
-surface shown below (including `VertexColored`) is a contract-level proposal
-that still needs full implementation/lowering coverage.
+stdlib in this repo ships vector/color math only; matrix/quaternion contracts
+are now documented but still pending backend/runtime support. The `/std/gfx/*`
+rendering surface shown below (including `VertexColored`) is a contract-level
+proposal that still needs full implementation/lowering coverage.
 
 ```prime
 import /std/math/*

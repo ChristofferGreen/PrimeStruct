@@ -202,6 +202,7 @@ module {
   - `array<T>`, `vector<T>`, `map<K, V>`
   - `Pointer<T>`, `Reference<T>`
   - User-defined struct types (including `[struct]`-tagged definitions)
+  - Draft math extension types (`Vec2`, `Vec3`, `Vec4`, `Mat2`, `Mat3`, `Mat4`, `Quat`) are currently backend-specific and are not part of this portable core set.
   Backends may accept additional types, but any type outside this core set is backend-specific and must be rejected by backends that do not explicitly support it. For collections, element/key/value types must themselves be in the core set unless a backend explicitly documents wider support.
 - **Aliases:** none for numeric widths; use explicit `i32`, `i64`, `u64`, `f32`, `f64`.
 - **`auto` (implicit templates + local inference):** `auto` may appear on binding envelopes, parameters, or return transforms. In parameter/return positions it introduces an implicit template parameter (equivalent to adding a fresh type parameter) and is inferred per call site; omitted parameter envelopes are treated as `auto`. In bindings, `auto` requests local inference from the initializer and must resolve to a concrete envelope; unresolved or conflicting local inference is a diagnostic. Return `auto` is constrained by return statements; if all constraints resolve to a concrete envelope the definition becomes monomorphic.
@@ -251,6 +252,7 @@ module {
 - **GLSL:** numeric/bool scalar locals only (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`); string literals and non-scalar bindings are rejected, and entry definitions must return `void`. `convert<T>` targets match the numeric/bool list above.
 - **GLSL emitter restrictions (current):** at most one `return()` statement; static bindings are rejected; assign/increment/decrement require local mutable targets; control flow must use canonical forms (`if(cond, then() { ... }, else() { ... })`, `loop(count, body() { ... })`, `while(cond, body() { ... })`, `for(init, cond, step, body() { ... })`); builtins require positional args with no template/block arguments, and unsupported builtins fail.
 - **GLSL type support (current):** scalar `bool`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64` only. Using `i64`/`u64` or `f64` emits `GL_ARB_gpu_shader_int64`/`GL_ARB_gpu_shader_fp64` requirements. Arrays, strings, structs, pointers/references, maps, and vectors are rejected.
+- **Matrix/quaternion status (draft):** `Mat*` and `Quat` operator/helper contracts are specified below, but VM/native, GLSL, and Wasm backends currently reject matrix/quaternion lowering until backend support lands.
 - **GLSL effects/capabilities (current):** `io_out`, `io_err`, and `pathspace_*` metadata entries are accepted; other effects/capabilities are rejected. `print*` calls are accepted but emitted as no-op expressions.
 - **GLSL determinism (current):** only local scalar bindings are allowed; no static storage or heap/placement transforms. GPU backends are treated as deterministic with no external I/O.
 - **GPU compute (draft):**
@@ -476,9 +478,18 @@ The lists above reflect the built-in transforms recognized by the compiler today
   - **Float utils:** `/std/math/fma`, `/std/math/hypot`, `/std/math/copysign`.
   - **Predicates:** `/std/math/is_nan`, `/std/math/is_inf`, `/std/math/is_finite`.
   - **Backend limits (current):** VM/native math uses fast approximations and is validated against the C++/exe baseline within tolerances. Large-magnitude trig/log/exp inputs are only required to stay finite and within basic range bounds (e.g., `|sin(x)| <= 1`), and may diverge from the C++/exe baseline. Conformance tests use tolerance or range checks for these cases.
-  - **Vector & color types (draft):** stdlib ships `.prime` definitions for `Vec2`, `Vec3`, `Vec4`, `ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`. These are distinct types (colors are not aliases of vectors) with their own method surfaces.
+  - **Vector, color, matrix, quaternion types (draft):** stdlib ships `.prime` definitions for `Vec2`, `Vec3`, `Vec4`, `ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`, plus planned `Mat2`, `Mat3`, `Mat4`, and `Quat`. These are distinct nominal types; colors are not aliases of vectors, and quaternions are not aliases of `Vec4`.
     - **Vectors:** constructors, component accessors, and member methods like `length()`, `normalize()` (in-place), and `toNormalized()` (returns a new value).
     - **Colors:** constructors plus color-space helpers (e.g., sRGB/linear conversions) and per-channel ops. sRGB types remain distinct from linear `ColorRGB`/`ColorRGBA`.
+    - **Matrices/quaternions:** float-domain rotation/transform helpers with explicit conversion helpers (`Quat <-> Mat3/Mat4`) only.
+  - **Matrix/quaternion interaction contract (draft):**
+    - No implicit conversion between scalar/vector/matrix/quaternion families; use explicit constructor/helper calls.
+    - `plus`/`minus` require identical operand envelopes (`VecN` with same `N`, `MatRxC` with same shape, or `Quat` with `Quat`).
+    - `multiply` is allowed for: scalar scaling (`S * VecN`, `VecN * S`, `S * Mat`, `Mat * S`, `S * Quat`, `Quat * S`), matrix-vector (`Mat * VecN` with compatible inner dimension), matrix-matrix (`MatRxC * MatCxK`), quaternion-quaternion (Hamilton product), and quaternion-vector rotation (`Quat * Vec3`).
+    - `divide` is allowed only as composite-by-scalar (`VecN / S`, `Mat / S`, `Quat / S`); scalar/composite and composite/composite division are diagnostics unless explicitly documented.
+    - Matrix/vector multiplication uses a column-vector convention (`result = Mat * Vec`), and transform composition order follows canonical call nesting (`MatA * (MatB * Vec)`).
+    - Equality is component-wise exact (`equal`, `not_equal`); tolerance-based comparison is explicit helper API, not operator sugar.
+    - Scalar `/std/math/*` builtins remain scalar-only unless a specific builtin documents vector/matrix/quaternion overloads.
 - **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time. The call evaluates to `value`, so it can be nested or returned.
 - **`increment(target)` / `decrement(target)`:** canonical mutation helpers used by `++`/`--` desugaring. Only valid on mutable numeric bindings; they evaluate to the updated value.
 - **`count(value)` / `value.count()` / `at(value, index)` / `value.at(index)` / `value[index]` / `at_unsafe(value, index)` / `value.at_unsafe(index)`:** collection helpers. Method-call and index forms are preferred surface syntax; helper-call forms are canonical equivalents. `at` performs bounds checking; `at_unsafe` does not. In VM/native backends, an out-of-bounds `at` aborts execution (prints a diagnostic to stderr and returns exit code `3`).
@@ -757,7 +768,7 @@ sum_two_files([string] a, [string] b) {
 
 ### Type Grammar (canonical)
 - **Atomic:** `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `void`, `Self`.
-- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`, and draft `soa_vector<T>`.
+- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`, draft `soa_vector<T>`, and draft math value types (`Mat2`, `Mat3`, `Mat4`, `Quat`).
 - **User types:** struct definitions and named aliases.
 - **Template applications:** `Name<T1, T2, ...>`.
 
@@ -765,6 +776,7 @@ sum_two_files([string] a, [string] b) {
 - `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`.
 - `array<T>`, `vector<T>`, `map<K, V>` where parameters are core types.
 - Draft extension: `soa_vector<T>` for explicit structure-of-arrays storage of SoA-safe struct `T` (not yet implemented).
+- Draft extension: `Mat2`, `Mat3`, `Mat4`, and `Quat` with explicit conversion-only interaction rules (not yet portable across backends).
 - `Pointer<T>`, `Reference<T>` where `T` is primitive or a struct type.
 - User-defined structs with layout manifests.
 - Types outside this set are backend-specific and must be rejected by backends that do not support them.
@@ -786,6 +798,7 @@ sum_two_files([string] a, [string] b) {
 - **Constructors:** struct constructors follow call rules; all fields must be provided or defaulted.
 - **`convert<T>` and `T{...}`:** explicit conversions; `T` must be a supported conversion target.
 - **`assign(target, value)`:** allowed only when `target` is mutable and `value` has the exact same type.
+- **Matrix/quaternion operators (draft):** matrix and quaternion arithmetic is explicit and shape-checked; no implicit widening or family conversion is allowed.
 - **Control flow:** `if`, `while`, and `for` conditions must be `bool`. `loop(count)` requires an integer type.
 - **Pointers/references:** targets are restricted as described in pointer rules; no implicit conversions.
 

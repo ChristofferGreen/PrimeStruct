@@ -4,7 +4,7 @@ This document defines the surface syntax and immediate semantics of PrimeStruct 
 `docs/PrimeStruct.md` by focusing on grammar, parsing rules, and the canonical core produced after text
 transforms and desugaring.
 
-Status: Stable as of February 22, 2026. Changes require synchronized updates to the design doc and conformance
+Status: Stable as of March 6, 2026. Changes require synchronized updates to the design doc and conformance
 tests.
 
 ## 1. Overview
@@ -381,6 +381,9 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - Arithmetic operators (`plus`, `minus`, `multiply`, `divide`, `negate`, `increment`, `decrement`) require numeric
     operands (`i32`, `i64`, `u64`, `f32`, `f64`). `negate` rejects unsigned operands. Mixed signed/unsigned operands
     are rejected, as are mixed integer/float operands.
+  - Draft matrix/quaternion operators follow an explicit compatibility matrix with no implicit conversions:
+    `plus`/`minus` require matching envelopes, `multiply` allows scalar scale + matrix/vector + matrix/matrix +
+    quaternion/quaternion + quaternion/`Vec3`, and `divide` allows only composite-by-scalar.
   - Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset on the
     right (`i32`, `i64`, `u64`). Pointer + pointer is rejected, and a pointer on the right is rejected.
   - Comparisons (`greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`) accept
@@ -398,6 +401,7 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands but reject mixed signed/unsigned or mixed integer/float operands.
   - Integer `pow` requires a non-negative exponent; VM/native backends abort on negative exponents (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
   - All remaining `/std/math/*` builtins require float operands. `atan2`, `hypot`, and `copysign` take two float operands, while `fma` takes three float operands.
+  - Scalar math builtins remain scalar-only unless a builtin explicitly documents vector/matrix/quaternion overloads.
 - Method calls:
   - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form
     `/<envelope>/method(value, args...)`, where `<envelope>` is the envelope name associated with `value`.
@@ -595,6 +599,24 @@ Draft constraints:
 - AoS/SoA conversions are explicit helpers only (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`).
 - Reallocation invalidates SoA field views/proxies.
 
+### 8.5 Matrix and Quaternion Types (Draft)
+
+`Mat2`, `Mat3`, `Mat4`, and `Quat` are planned nominal math types with explicit interaction rules.
+They are not aliases of `array`, `vector`, or `Vec4`.
+
+Draft constraints:
+- No implicit scalar/vector/matrix/quaternion conversion; use explicit constructors/helpers.
+- `plus`/`minus` require matching envelopes and dimensions.
+- `multiply` supports:
+  - Scalar scaling (`S * VecN`, `VecN * S`, `S * Mat`, `Mat * S`, `S * Quat`, `Quat * S`)
+  - Matrix-vector (`Mat * VecN`) when inner dimensions match
+  - Matrix-matrix (`MatRxC * MatCxK`) when inner dimensions match
+  - Quaternion-quaternion Hamilton product
+  - Quaternion-vector rotation (`Quat * Vec3`)
+- `divide` supports only composite-by-scalar (`VecN / S`, `Mat / S`, `Quat / S`).
+- Matrix/vector multiplication follows column-vector semantics (`result = Mat * Vec`); no implicit transpose.
+- Equality operators remain exact component-wise comparisons; tolerance checks use explicit helpers.
+
 ## 9. Effects
 
 - Effects are declared via `[effects(...)]` on definitions or executions.
@@ -620,6 +642,9 @@ Draft constraints:
   - Scalar values: numeric/bool only (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`).
   - Non-scalar bindings and string literals are rejected; entry definitions must return `void`.
   - `convert<T>` targets match the numeric/bool list above.
+- Matrix/quaternion status:
+  - Matrix/quaternion rules are specified as draft language contracts, but VM/native and GLSL currently reject
+    matrix/quaternion lowering until backend/runtime support is implemented.
 
 ## 10. Error Handling (Draft)
 
