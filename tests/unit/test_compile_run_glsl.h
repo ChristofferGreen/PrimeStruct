@@ -129,7 +129,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("stack[sp++] = int(intBitsToFloat(stack[--sp]));") != std::string::npos);
+  CHECK(output.find("float value = intBitsToFloat(stack[--sp]);") != std::string::npos);
+  CHECK(output.find("if (isnan(value))") != std::string::npos);
+  CHECK(output.find("stack[sp++] = converted;") != std::string::npos);
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
@@ -149,7 +151,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("stack[sp++] = int(intBitsToFloat(stack[--sp]));") != std::string::npos);
+  CHECK(output.find("float value = intBitsToFloat(stack[--sp]);") != std::string::npos);
+  CHECK(output.find("if (isnan(value))") != std::string::npos);
+  CHECK(output.find("stack[sp++] = converted;") != std::string::npos);
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 

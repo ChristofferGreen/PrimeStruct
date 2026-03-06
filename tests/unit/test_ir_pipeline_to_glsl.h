@@ -117,7 +117,11 @@ TEST_CASE("ir to glsl emitter writes f32 to i32 conversion opcode") {
   std::string error;
   REQUIRE(emitter.emitSource(module, glsl, error));
   CHECK(error.empty());
-  CHECK(glsl.find("stack[sp++] = int(intBitsToFloat(stack[--sp]));") != std::string::npos);
+  CHECK(glsl.find("float value = intBitsToFloat(stack[--sp]);") != std::string::npos);
+  CHECK(glsl.find("if (isnan(value))") != std::string::npos);
+  CHECK(glsl.find("converted = 2147483647;") != std::string::npos);
+  CHECK(glsl.find("converted = -2147483647 - 1;") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = converted;") != std::string::npos);
 }
 
 TEST_CASE("ir to glsl emitter writes i32 to f32 conversion opcode") {

@@ -159,7 +159,18 @@ bool emitInstruction(const IrInstruction &instruction,
       emitCompareF32(">=");
       return true;
     case IrOpcode::ConvertF32ToI32:
-      out << "        stack[sp++] = int(intBitsToFloat(stack[--sp]));\n";
+      out << "        float value = intBitsToFloat(stack[--sp]);\n";
+      out << "        int converted = 0;\n";
+      out << "        if (isnan(value)) {\n";
+      out << "          converted = 0;\n";
+      out << "        } else if (value >= 2147483647.0) {\n";
+      out << "          converted = 2147483647;\n";
+      out << "        } else if (value <= -2147483648.0) {\n";
+      out << "          converted = -2147483647 - 1;\n";
+      out << "        } else {\n";
+      out << "          converted = int(value);\n";
+      out << "        }\n";
+      out << "        stack[sp++] = converted;\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
