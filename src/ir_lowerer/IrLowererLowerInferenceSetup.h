@@ -33,6 +33,8 @@ struct LowerInferenceSetupBootstrapState {
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)>
       inferCallExprCountAccessGpuFallbackKind;
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferCallExprOperatorFallbackKind;
+  std::function<bool(const Expr &, const LocalMap &, std::string &, LocalInfo::ValueKind &)>
+      inferCallExprControlFlowFallbackKind;
 
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
@@ -86,6 +88,19 @@ struct LowerInferenceExprKindCallOperatorFallbackSetupInput {
   bool hasMathImport = false;
   SetupInferenceCombineNumericKindsFn combineNumericKinds;
 };
+struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
+  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  ResolveSetupInferenceExprPathFn resolveExprPath;
+  LowerSetupInferenceMatchToIfFn lowerMatchToIf;
+  SetupInferenceCombineNumericKindsFn combineNumericKinds;
+  IsSetupInferenceBindingMutableFn isBindingMutable;
+  SetupInferenceBindingKindFn bindingKind;
+  HasSetupInferenceExplicitBindingTypeTransformFn hasExplicitBindingTypeTransform;
+  SetupInferenceBindingValueKindFn bindingValueKind;
+  ApplySetupInferenceStructInfoFn applyStructArrayInfo;
+  ApplySetupInferenceStructInfoFn applyStructValueInfo;
+  InferSetupInferenceStructExprPathFn inferStructExprPath;
+};
 
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
@@ -107,6 +122,10 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                                                 std::string &errorOut);
 bool runLowerInferenceExprKindCallOperatorFallbackSetup(
     const LowerInferenceExprKindCallOperatorFallbackSetupInput &input,
+    LowerInferenceSetupBootstrapState &stateInOut,
+    std::string &errorOut);
+bool runLowerInferenceExprKindCallControlFlowFallbackSetup(
+    const LowerInferenceExprKindCallControlFlowFallbackSetupInput &input,
     LowerInferenceSetupBootstrapState &stateInOut,
     std::string &errorOut);
 

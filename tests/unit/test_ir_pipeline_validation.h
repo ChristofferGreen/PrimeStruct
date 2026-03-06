@@ -900,6 +900,110 @@ TEST_CASE("ir lowerer inference expr-kind call-operator fallback setup validates
   CHECK(error == "native backend missing inference expr-kind call-operator fallback setup state: inferPointerTargetKind");
 }
 
+TEST_CASE("ir lowerer inference expr-kind call-control-flow fallback setup wires callback") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+    if (expr.kind == primec::Expr::Kind::BoolLiteral) {
+      return primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+    }
+    if (expr.kind == primec::Expr::Kind::Literal) {
+      return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallControlFlowFallbackSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
+          .lowerMatchToIf = [](const primec::Expr &, primec::Expr &, std::string &) { return true; },
+          .combineNumericKinds =
+              [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind right) {
+                return (left == primec::ir_lowerer::LocalInfo::ValueKind::Float64 ||
+                        right == primec::ir_lowerer::LocalInfo::ValueKind::Float64)
+                           ? primec::ir_lowerer::LocalInfo::ValueKind::Float64
+                           : primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+              },
+          .isBindingMutable = [](const primec::Expr &) { return false; },
+          .bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+          .hasExplicitBindingTypeTransform = [](const primec::Expr &) { return false; },
+          .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return std::string();
+          },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(state.inferCallExprControlFlowFallbackKind));
+
+  primec::Expr conditionExpr;
+  conditionExpr.kind = primec::Expr::Kind::BoolLiteral;
+  conditionExpr.boolValue = true;
+
+  primec::Expr thenExpr;
+  thenExpr.kind = primec::Expr::Kind::Literal;
+
+  primec::Expr elseExpr;
+  elseExpr.kind = primec::Expr::Kind::Literal;
+
+  primec::Expr ifExpr;
+  ifExpr.kind = primec::Expr::Kind::Call;
+  ifExpr.name = "if";
+  ifExpr.args.push_back(conditionExpr);
+  ifExpr.args.push_back(thenExpr);
+  ifExpr.args.push_back(elseExpr);
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprControlFlowFallbackKind(ifExpr, primec::ir_lowerer::LocalMap{}, error, kindOut));
+  CHECK(error.empty());
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Expr unknownExpr;
+  unknownExpr.kind = primec::Expr::Kind::Call;
+  unknownExpr.name = "noop";
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  CHECK_FALSE(state.inferCallExprControlFlowFallbackKind(unknownExpr, primec::ir_lowerer::LocalMap{}, error, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer inference expr-kind call-control-flow fallback setup validates dependencies") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceExprKindCallControlFlowFallbackSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = {},
+          .lowerMatchToIf = [](const primec::Expr &, primec::Expr &, std::string &) { return true; },
+          .combineNumericKinds =
+              [](primec::ir_lowerer::LocalInfo::ValueKind, primec::ir_lowerer::LocalInfo::ValueKind) {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+              },
+          .isBindingMutable = [](const primec::Expr &) { return false; },
+          .bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+          .hasExplicitBindingTypeTransform = [](const primec::Expr &) { return false; },
+          .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return std::string();
+          },
+      },
+      state,
+      error));
+  CHECK(error == "native backend missing inference expr-kind call-control-flow fallback setup dependency: resolveExprPath");
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -967,6 +1071,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallReturnSetup(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallFallbackSetup(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallOperatorFallbackSetup(") != std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallControlFlowFallbackSetup(") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

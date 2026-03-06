@@ -633,4 +633,130 @@ bool runLowerInferenceExprKindCallOperatorFallbackSetup(
   return true;
 }
 
+bool runLowerInferenceExprKindCallControlFlowFallbackSetup(
+    const LowerInferenceExprKindCallControlFlowFallbackSetupInput &input,
+    LowerInferenceSetupBootstrapState &stateInOut,
+    std::string &errorOut) {
+  if (input.defMap == nullptr) {
+    errorOut = "native backend missing inference expr-kind call-control-flow fallback setup dependency: defMap";
+    return false;
+  }
+  if (!input.resolveExprPath) {
+    errorOut = "native backend missing inference expr-kind call-control-flow fallback setup dependency: resolveExprPath";
+    return false;
+  }
+  if (!input.lowerMatchToIf) {
+    errorOut = "native backend missing inference expr-kind call-control-flow fallback setup dependency: lowerMatchToIf";
+    return false;
+  }
+  if (!input.combineNumericKinds) {
+    errorOut = "native backend missing inference expr-kind call-control-flow fallback setup dependency: combineNumericKinds";
+    return false;
+  }
+  if (!input.isBindingMutable) {
+    errorOut = "native backend missing inference expr-kind call-control-flow fallback setup dependency: isBindingMutable";
+    return false;
+  }
+  if (!input.bindingKind) {
+    errorOut = "native backend missing inference expr-kind call-control-flow fallback setup dependency: bindingKind";
+    return false;
+  }
+  if (!input.hasExplicitBindingTypeTransform) {
+    errorOut =
+        "native backend missing inference expr-kind call-control-flow fallback setup dependency: hasExplicitBindingTypeTransform";
+    return false;
+  }
+  if (!input.bindingValueKind) {
+    errorOut = "native backend missing inference expr-kind call-control-flow fallback setup dependency: bindingValueKind";
+    return false;
+  }
+  if (!input.applyStructArrayInfo) {
+    errorOut = "native backend missing inference expr-kind call-control-flow fallback setup dependency: applyStructArrayInfo";
+    return false;
+  }
+  if (!input.applyStructValueInfo) {
+    errorOut = "native backend missing inference expr-kind call-control-flow fallback setup dependency: applyStructValueInfo";
+    return false;
+  }
+  if (!input.inferStructExprPath) {
+    errorOut = "native backend missing inference expr-kind call-control-flow fallback setup dependency: inferStructExprPath";
+    return false;
+  }
+
+  const auto *defMap = input.defMap;
+  const auto resolveExprPath = input.resolveExprPath;
+  const auto lowerMatchToIf = input.lowerMatchToIf;
+  const auto combineNumericKinds = input.combineNumericKinds;
+  const auto isBindingMutable = input.isBindingMutable;
+  const auto bindingKind = input.bindingKind;
+  const auto hasExplicitBindingTypeTransform = input.hasExplicitBindingTypeTransform;
+  const auto bindingValueKind = input.bindingValueKind;
+  const auto applyStructArrayInfo = input.applyStructArrayInfo;
+  const auto applyStructValueInfo = input.applyStructValueInfo;
+  const auto inferStructExprPath = input.inferStructExprPath;
+
+  stateInOut.inferCallExprControlFlowFallbackKind = [defMap,
+                                                     resolveExprPath,
+                                                     lowerMatchToIf,
+                                                     combineNumericKinds,
+                                                     isBindingMutable,
+                                                     bindingKind,
+                                                     hasExplicitBindingTypeTransform,
+                                                     bindingValueKind,
+                                                     applyStructArrayInfo,
+                                                     applyStructValueInfo,
+                                                     inferStructExprPath,
+                                                     &stateInOut](const Expr &expr,
+                                                                  const LocalMap &localsIn,
+                                                                  std::string &errorInOut,
+                                                                  LocalInfo::ValueKind &kindOut) {
+    kindOut = LocalInfo::ValueKind::Unknown;
+    const auto inferExprKindOrUnknown = [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+      if (!stateInOut.inferExprKind) {
+        return LocalInfo::ValueKind::Unknown;
+      }
+      return stateInOut.inferExprKind(candidateExpr, candidateLocals);
+    };
+
+    const auto resolution = inferControlFlowCallReturnKind(
+        expr,
+        localsIn,
+        [&](const Expr &candidateExpr) { return resolveExprPath(candidateExpr); },
+        [&](const Expr &candidateExpr, Expr &expandedExpr, std::string &candidateErrorOut) {
+          return lowerMatchToIf(candidateExpr, expandedExpr, candidateErrorOut);
+        },
+        [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+          return inferExprKindOrUnknown(candidateExpr, candidateLocals);
+        },
+        [&](LocalInfo::ValueKind left, LocalInfo::ValueKind right) {
+          return combineNumericKinds(left, right);
+        },
+        [&](const std::vector<Expr> &bodyExpressions, const LocalMap &localsBase) {
+          return inferBodyValueKindWithLocalsScaffolding(
+              bodyExpressions,
+              localsBase,
+              [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                return inferExprKindOrUnknown(candidateExpr, candidateLocals);
+              },
+              [&](const Expr &candidateExpr) { return isBindingMutable(candidateExpr); },
+              [&](const Expr &candidateExpr) { return bindingKind(candidateExpr); },
+              [&](const Expr &candidateExpr) { return hasExplicitBindingTypeTransform(candidateExpr); },
+              [&](const Expr &candidateExpr, LocalInfo::Kind kind) {
+                return bindingValueKind(candidateExpr, kind);
+              },
+              [&](const Expr &candidateExpr, LocalInfo &info) { applyStructArrayInfo(candidateExpr, info); },
+              [&](const Expr &candidateExpr, LocalInfo &info) { applyStructValueInfo(candidateExpr, info); },
+              [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                return inferStructExprPath(candidateExpr, candidateLocals);
+              });
+        },
+        [&](const std::string &path) { return defMap->find(path) != defMap->end(); },
+        errorInOut,
+        kindOut);
+    return resolution == ControlFlowCallReturnKindResolution::Resolved;
+  };
+
+  return true;
+}
+
 } // namespace primec::ir_lowerer

@@ -26,6 +26,7 @@
   auto &inferCallExprDirectReturnKind = inferenceSetupBootstrap.inferCallExprDirectReturnKind;
   auto &inferCallExprCountAccessGpuFallbackKind = inferenceSetupBootstrap.inferCallExprCountAccessGpuFallbackKind;
   auto &inferCallExprOperatorFallbackKind = inferenceSetupBootstrap.inferCallExprOperatorFallbackKind;
+  auto &inferCallExprControlFlowFallbackKind = inferenceSetupBootstrap.inferCallExprControlFlowFallbackKind;
   auto &resolveMethodCallDefinition = inferenceSetupBootstrap.resolveMethodCallDefinition;
   auto &inferPointerTargetKind = inferenceSetupBootstrap.inferPointerTargetKind;
 
@@ -82,6 +83,24 @@
           error)) {
     return false;
   }
+  if (!ir_lowerer::runLowerInferenceExprKindCallControlFlowFallbackSetup(
+          {
+              .defMap = &defMap,
+              .resolveExprPath = resolveExprPath,
+              .lowerMatchToIf = lowerMatchToIf,
+              .combineNumericKinds = combineNumericKinds,
+              .isBindingMutable = isBindingMutable,
+              .bindingKind = bindingKind,
+              .hasExplicitBindingTypeTransform = hasExplicitBindingTypeTransform,
+              .bindingValueKind = bindingValueKind,
+              .applyStructArrayInfo = applyStructArrayInfo,
+              .applyStructValueInfo = applyStructValueInfo,
+              .inferStructExprPath = inferStructExprPath,
+          },
+          inferenceSetupBootstrap,
+          error)) {
+    return false;
+  }
   if (!ir_lowerer::runLowerInferenceExprKindBaseSetup(
           {
               .getMathConstantName = getMathConstantName,
@@ -119,41 +138,7 @@
           return operatorFallbackKind;
         }
         LocalInfo::ValueKind controlFlowKind = LocalInfo::ValueKind::Unknown;
-        if (inferControlFlowCallReturnKind(
-                expr,
-                localsIn,
-                [&](const Expr &candidateExpr) { return resolveExprPath(candidateExpr); },
-                [&](const Expr &candidateExpr, Expr &expandedExpr, std::string &errorOut) {
-                  return lowerMatchToIf(candidateExpr, expandedExpr, errorOut);
-                },
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return inferExprKind(candidateExpr, candidateLocals);
-                },
-                [&](LocalInfo::ValueKind left, LocalInfo::ValueKind right) {
-                  return combineNumericKinds(left, right);
-                },
-                [&](const std::vector<Expr> &bodyExpressions, const LocalMap &localsBase) {
-                  return inferBodyValueKindWithLocalsScaffolding(
-                      bodyExpressions,
-                      localsBase,
-                      [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                        return inferExprKind(candidateExpr, candidateLocals);
-                      },
-                      [&](const Expr &candidateExpr) { return isBindingMutable(candidateExpr); },
-                      [&](const Expr &candidateExpr) { return bindingKind(candidateExpr); },
-                      [&](const Expr &candidateExpr) { return hasExplicitBindingTypeTransform(candidateExpr); },
-                      [&](const Expr &candidateExpr, LocalInfo::Kind kind) {
-                        return bindingValueKind(candidateExpr, kind);
-                      },
-                      [&](const Expr &candidateExpr, LocalInfo &info) { applyStructArrayInfo(candidateExpr, info); },
-                      [&](const Expr &candidateExpr, LocalInfo &info) { applyStructValueInfo(candidateExpr, info); },
-                      [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                        return inferStructExprPath(candidateExpr, candidateLocals);
-                      });
-                },
-                [&](const std::string &path) { return defMap.find(path) != defMap.end(); },
-                error,
-                controlFlowKind) == ControlFlowCallReturnKindResolution::Resolved) {
+        if (inferCallExprControlFlowFallbackKind(expr, localsIn, error, controlFlowKind)) {
           return controlFlowKind;
         }
         LocalInfo::ValueKind pointerBuiltinKind = LocalInfo::ValueKind::Unknown;
