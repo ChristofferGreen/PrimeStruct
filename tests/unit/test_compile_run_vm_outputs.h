@@ -359,6 +359,121 @@ main() {
   CHECK(readFile(outPath) == "right\n");
 }
 
+TEST_CASE("cpp and exe emitters match cpp-ir and exe-ir on shared corpus") {
+  struct DifferentialCase {
+    const char *name;
+    const char *source;
+    const char *runtimeArgs;
+    int expectedExitCode;
+    const char *expectedStdout;
+    const char *expectedStderr;
+  };
+
+  const std::vector<DifferentialCase> cases = {
+      {
+          "i32_arithmetic",
+          R"(
+[return<int>]
+main() {
+  [i32 mut] counter{1i32}
+  assign(counter, plus(counter, 2i32))
+  return(counter)
+}
+)",
+          "",
+          3,
+          "",
+          "",
+      },
+      {
+          "argv_and_io",
+          R"(
+[return<int> effects(io_out, io_err)]
+main([array<string>] args) {
+  print_line(args[1i32])
+  print_error("!"utf8)
+  return(args.count())
+}
+)",
+          " alpha beta",
+          3,
+          "alpha\n",
+          "!",
+      },
+      {
+          "dynamic_string",
+          R"(
+[return<int> effects(io_out)]
+main() {
+  [string mut] msg{"left"utf8}
+  assign(msg, "right"utf8)
+  print_line(msg)
+  return(0i32)
+}
+)",
+          "",
+          0,
+          "right\n",
+          "",
+      },
+  };
+
+  for (const auto &testCase : cases) {
+    CAPTURE(testCase.name);
+    const std::string srcPath = writeTemp(std::string("compile_cpp_ir_differential_") + testCase.name + ".prime",
+                                          testCase.source);
+    const std::string astCppPath =
+        (std::filesystem::temp_directory_path() / (std::string("primec_cpp_differential_") + testCase.name + ".cpp"))
+            .string();
+    const std::string irCppPath =
+        (std::filesystem::temp_directory_path() / (std::string("primec_cpp_ir_differential_") + testCase.name + ".cpp"))
+            .string();
+    const std::string astExePath =
+        (std::filesystem::temp_directory_path() / (std::string("primec_exe_differential_") + testCase.name)).string();
+    const std::string irExePath =
+        (std::filesystem::temp_directory_path() / (std::string("primec_exe_ir_differential_") + testCase.name)).string();
+
+    const std::string compileAstCppCmd = "./primec --emit=cpp " + quoteShellArg(srcPath) + " -o " +
+                                         quoteShellArg(astCppPath) + " --entry /main";
+    const std::string compileIrCppCmd = "./primec --emit=cpp-ir " + quoteShellArg(srcPath) + " -o " +
+                                        quoteShellArg(irCppPath) + " --entry /main";
+    CHECK(runCommand(compileAstCppCmd) == 0);
+    CHECK(runCommand(compileIrCppCmd) == 0);
+    CHECK(readFile(astCppPath) == readFile(irCppPath));
+
+    const std::string compileAstExeCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
+                                         quoteShellArg(astExePath) + " --entry /main";
+    const std::string compileIrExeCmd = "./primec --emit=exe-ir " + quoteShellArg(srcPath) + " -o " +
+                                        quoteShellArg(irExePath) + " --entry /main";
+    CHECK(runCommand(compileAstExeCmd) == 0);
+    CHECK(runCommand(compileIrExeCmd) == 0);
+
+    const std::string astOutPath = (std::filesystem::temp_directory_path() /
+                                    (std::string("primec_exe_differential_") + testCase.name + ".out"))
+                                       .string();
+    const std::string astErrPath = (std::filesystem::temp_directory_path() /
+                                    (std::string("primec_exe_differential_") + testCase.name + ".err"))
+                                       .string();
+    const std::string irOutPath = (std::filesystem::temp_directory_path() /
+                                   (std::string("primec_exe_ir_differential_") + testCase.name + ".out"))
+                                      .string();
+    const std::string irErrPath = (std::filesystem::temp_directory_path() /
+                                   (std::string("primec_exe_ir_differential_") + testCase.name + ".err"))
+                                      .string();
+
+    const std::string runAstCmd = quoteShellArg(astExePath) + testCase.runtimeArgs + " > " + quoteShellArg(astOutPath) +
+                                  " 2> " + quoteShellArg(astErrPath);
+    const std::string runIrCmd = quoteShellArg(irExePath) + testCase.runtimeArgs + " > " + quoteShellArg(irOutPath) +
+                                 " 2> " + quoteShellArg(irErrPath);
+    CHECK(runCommand(runAstCmd) == testCase.expectedExitCode);
+    CHECK(runCommand(runIrCmd) == testCase.expectedExitCode);
+    CHECK(readFile(astOutPath) == testCase.expectedStdout);
+    CHECK(readFile(astErrPath) == testCase.expectedStderr);
+    CHECK(readFile(irOutPath) == testCase.expectedStdout);
+    CHECK(readFile(irErrPath) == testCase.expectedStderr);
+  }
+}
+
 TEST_CASE("compiles and runs explicit void return") {
   const std::string source = R"(
 [return<void>]

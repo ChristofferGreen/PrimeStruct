@@ -37,6 +37,71 @@ main() {
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter matches glsl-ir on shared corpus") {
+  struct DifferentialCase {
+    const char *name;
+    const char *source;
+  };
+
+  const std::vector<DifferentialCase> cases = {
+      {
+          "minimal_void",
+          R"(
+[return<void>]
+main() {
+}
+)",
+      },
+      {
+          "i32_arithmetic",
+          R"(
+[return<void>]
+main() {
+  [i32 mut] counter{1i32}
+  assign(counter, plus(counter, 2i32))
+  return()
+}
+)",
+      },
+      {
+          "if_else_flow",
+          R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  if(equals(value, 1i32)) {
+    assign(value, plus(value, 2i32))
+  } else {
+    assign(value, 0i32)
+  }
+  return()
+}
+)",
+      },
+  };
+
+  for (const auto &testCase : cases) {
+    CAPTURE(testCase.name);
+    const std::string srcPath =
+        writeTemp(std::string("compile_glsl_differential_") + testCase.name + ".prime", testCase.source);
+    const std::string glslPath =
+        (std::filesystem::temp_directory_path() / (std::string("primec_glsl_differential_") + testCase.name + ".glsl"))
+            .string();
+    const std::string glslIrPath =
+        (std::filesystem::temp_directory_path() /
+         (std::string("primec_glsl_ir_differential_") + testCase.name + ".glsl"))
+            .string();
+
+    const std::string compileGlslCmd =
+        "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(glslPath) + " --entry /main";
+    const std::string compileGlslIrCmd =
+        "./primec --emit=glsl-ir " + quoteShellArg(srcPath) + " -o " + quoteShellArg(glslIrPath) + " --entry /main";
+    CHECK(runCommand(compileGlslCmd) == 0);
+    CHECK(runCommand(compileGlslIrCmd) == 0);
+    CHECK(readFile(glslPath) == readFile(glslIrPath));
+  }
+}
+
 TEST_CASE("glsl-ir emitter reports unsupported opcodes") {
   const std::string source = R"(
 [return<void>]
