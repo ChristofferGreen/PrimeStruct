@@ -1309,6 +1309,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+          return false;
+        }
         if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
             target.templateArgs.size() == 1) {
           elemType = target.templateArgs.front();
@@ -1338,6 +1341,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+          return false;
+        }
         if (getBuiltinCollectionName(target, collection) && collection == "vector" && target.templateArgs.size() == 1) {
           elemType = target.templateArgs.front();
           return true;

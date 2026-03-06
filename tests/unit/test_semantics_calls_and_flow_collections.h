@@ -964,4 +964,50 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("builtin at validates on array literal call target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at(array<i32>(4i32, 5i32), 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("user definition named vector call is not treated as builtin collection target") {
+  const std::string source = R"(
+[return<int>]
+vector<T>([T] value) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(at(vector<i32>(9i32), 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires array, vector, map, or string target") != std::string::npos);
+}
+
+TEST_CASE("user definition named map call is not treated as builtin collection target") {
+  const std::string source = R"(
+[return<int>]
+map<K, V>([K] key, [V] value) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(at(map<i32, i32>(7i32, 8i32), 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires array, vector, map, or string target") != std::string::npos);
+}
+
 TEST_SUITE_END();

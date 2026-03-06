@@ -29,6 +29,9 @@
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+          return false;
+        }
         return getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2;
       }
       return false;
@@ -60,6 +63,9 @@
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+          return false;
+        }
         if (!getBuiltinCollectionName(target, collection) || collection != "map" || target.templateArgs.size() != 2) {
           return false;
         }
@@ -95,6 +101,9 @@
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+          return false;
+        }
         if (!getBuiltinCollectionName(target, collection) || collection != "map" || target.templateArgs.size() != 2) {
           return false;
         }
