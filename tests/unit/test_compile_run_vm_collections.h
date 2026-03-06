@@ -235,6 +235,24 @@ main() {
   CHECK(runCommand(runCmd) == 96);
 }
 
+TEST_CASE("runs vm with user string count call shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(94i32)
+}
+
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  return(count(text))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_string_count_call_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 94);
+}
+
 TEST_CASE("runs vm with user vector capacity method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

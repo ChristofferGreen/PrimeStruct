@@ -13031,6 +13031,8 @@ TEST_CASE("ir lowerer setup type helper resolves count call method return kinds"
 TEST_CASE("ir lowerer setup type helper resolves builtin-like count call methods") {
   primec::Definition methodDef;
   methodDef.fullPath = "/array/count";
+  primec::Definition stringMethodDef;
+  stringMethodDef.fullPath = "/string/count";
 
   std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
   primec::ir_lowerer::ReturnInfo scalarInfo;
@@ -13038,6 +13040,7 @@ TEST_CASE("ir lowerer setup type helper resolves builtin-like count call methods
   scalarInfo.returnsArray = false;
   scalarInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   infoByPath.emplace("/array/count", scalarInfo);
+  infoByPath.emplace("/string/count", scalarInfo);
 
   auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
     auto it = infoByPath.find(path);
@@ -13065,6 +13068,23 @@ TEST_CASE("ir lowerer setup type helper resolves builtin-like count call methods
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       [&methodDef](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return &methodDef; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  methodResolved = false;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      countCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [&stringMethodDef](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return &stringMethodDef;
+      },
       getReturnInfo,
       false,
       kindOut,

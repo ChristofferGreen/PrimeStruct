@@ -333,6 +333,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("count call keeps user-defined string helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(94i32)
+}
+
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  return(count(text))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("capacity method keeps user-defined vector helper precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
