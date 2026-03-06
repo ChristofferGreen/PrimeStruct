@@ -120,10 +120,30 @@ TEST_CASE("ir to cpp emitter writes i64 float conversion clamp helpers") {
   std::string error;
   REQUIRE(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
+  CHECK(cpp.find("#include <cmath>") != std::string::npos);
+  CHECK(cpp.find("#include <limits>") != std::string::npos);
   CHECK(cpp.find("static int64_t psConvertF32ToI64(float value)") != std::string::npos);
   CHECK(cpp.find("static int64_t psConvertF64ToI64(double value)") != std::string::npos);
   CHECK(cpp.find("int64_t converted = psConvertF32ToI64(value);") != std::string::npos);
   CHECK(cpp.find("int64_t converted = psConvertF64ToI64(value);") != std::string::npos);
+}
+
+TEST_CASE("ir to cpp emitter omits i64 float conversion clamp helpers when unused") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("static int64_t psConvertF32ToI64(float value)") == std::string::npos);
+  CHECK(cpp.find("static int64_t psConvertF64ToI64(double value)") == std::string::npos);
 }
 
 TEST_CASE("ir to cpp emitter writes u64 float conversion clamp helpers") {
