@@ -23,6 +23,7 @@
   auto &inferArrayElementKind = inferenceSetupBootstrap.inferArrayElementKind;
   auto &inferBufferElementKind = inferenceSetupBootstrap.inferBufferElementKind;
   auto &inferLiteralOrNameExprKind = inferenceSetupBootstrap.inferLiteralOrNameExprKind;
+  auto &inferCallExprBaseKind = inferenceSetupBootstrap.inferCallExprBaseKind;
   auto &resolveMethodCallDefinition = inferenceSetupBootstrap.resolveMethodCallDefinition;
   auto &inferPointerTargetKind = inferenceSetupBootstrap.inferPointerTargetKind;
 
@@ -33,6 +34,16 @@
               .resolveStructArrayInfoFromPath = resolveStructArrayInfoFromPath,
               .isArrayCountCall = isArrayCountCall,
               .isStringCountCall = isStringCountCall,
+          },
+          inferenceSetupBootstrap,
+          error)) {
+    return false;
+  }
+  if (!ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+          {
+              .inferStructExprPath = inferStructExprPath,
+              .resolveStructFieldSlot = resolveStructFieldSlot,
+              .resolveUninitializedStorage = resolveUninitializedStorage,
           },
           inferenceSetupBootstrap,
           error)) {
@@ -54,99 +65,9 @@
     }
     switch (expr.kind) {
       case Expr::Kind::Call: {
-        if (expr.isFieldAccess) {
-          if (expr.args.size() != 1) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          const Expr &receiver = expr.args.front();
-          std::string structPath = inferStructExprPath(receiver, localsIn);
-          if (structPath.empty()) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          StructSlotFieldInfo fieldInfo;
-          if (!resolveStructFieldSlot(structPath, expr.name, fieldInfo)) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          return fieldInfo.structPath.empty() ? fieldInfo.valueKind : LocalInfo::ValueKind::Unknown;
-        }
-        if (!expr.isMethodCall &&
-            (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
-            expr.args.size() == 1) {
-          UninitializedStorageAccess access;
-          bool resolved = false;
-          if (!resolveUninitializedStorage(expr.args.front(), localsIn, access, resolved)) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          if (resolved) {
-            if (access.typeInfo.kind == LocalInfo::Kind::Value &&
-                access.typeInfo.structPath.empty() &&
-                access.typeInfo.valueKind != LocalInfo::ValueKind::Unknown) {
-              return access.typeInfo.valueKind;
-            }
-            return LocalInfo::ValueKind::Unknown;
-          }
-        }
-        if (expr.isMethodCall) {
-          if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
-              expr.args.front().name == "Result") {
-            if (expr.name == "ok") {
-              return expr.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
-            }
-            if (expr.name == "why") {
-              return LocalInfo::ValueKind::String;
-            }
-          }
-          if (!expr.args.empty() && expr.name == "why") {
-            const Expr &receiver = expr.args.front();
-            if (receiver.kind == Expr::Kind::Name) {
-              if (receiver.name == "FileError") {
-                return LocalInfo::ValueKind::String;
-              }
-              auto it = localsIn.find(receiver.name);
-              if (it != localsIn.end() && it->second.isFileError) {
-                return LocalInfo::ValueKind::String;
-              }
-            }
-          }
-          if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
-            auto it = localsIn.find(expr.args.front().name);
-            if (it != localsIn.end() && it->second.isFileHandle) {
-              if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" ||
-                  expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
-                return LocalInfo::ValueKind::Int32;
-              }
-            }
-          }
-        } else {
-          if (isSimpleCallName(expr, "File")) {
-            return LocalInfo::ValueKind::Int64;
-          }
-          if (isSimpleCallName(expr, "try") && expr.args.size() == 1) {
-            const Expr &arg = expr.args.front();
-            if (arg.kind == Expr::Kind::Name) {
-              auto it = localsIn.find(arg.name);
-              if (it != localsIn.end() && it->second.isResult) {
-                return it->second.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
-              }
-            }
-            if (arg.kind == Expr::Kind::Call) {
-              if (!arg.isMethodCall && isSimpleCallName(arg, "File")) {
-                return LocalInfo::ValueKind::Int64;
-              }
-              if (arg.isMethodCall && !arg.args.empty() && arg.args.front().kind == Expr::Kind::Name) {
-                auto it = localsIn.find(arg.args.front().name);
-                if (it != localsIn.end() && it->second.isFileHandle) {
-                  if (arg.name == "write" || arg.name == "write_line" || arg.name == "write_byte" ||
-                      arg.name == "write_bytes" || arg.name == "flush" || arg.name == "close") {
-                    return LocalInfo::ValueKind::Int32;
-                  }
-                }
-                if (arg.args.front().name == "Result" && arg.name == "ok") {
-                  return arg.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
-                }
-              }
-            }
-          }
+        LocalInfo::ValueKind callBaseKind = LocalInfo::ValueKind::Unknown;
+        if (inferCallExprBaseKind(expr, localsIn, callBaseKind)) {
+          return callBaseKind;
         }
         LocalInfo::ValueKind callReturnKind = LocalInfo::ValueKind::Unknown;
         const auto callReturnResolution = resolveCallExpressionReturnKind(

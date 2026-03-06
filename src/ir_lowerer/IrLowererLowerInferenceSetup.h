@@ -16,6 +16,8 @@
 
 namespace primec::ir_lowerer {
 
+struct UninitializedStorageAccessInfo;
+
 struct LowerInferenceSetupBootstrapState {
   std::unordered_map<std::string, ReturnInfo> returnInfoCache;
   std::unordered_set<std::string> returnInferenceStack;
@@ -25,6 +27,7 @@ struct LowerInferenceSetupBootstrapState {
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferArrayElementKind;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferBufferElementKind;
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferLiteralOrNameExprKind;
+  std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferCallExprBaseKind;
 
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
@@ -55,6 +58,13 @@ struct LowerInferenceExprKindBaseSetupInput {
   GetSetupMathConstantNameFn getMathConstantName;
 };
 
+struct LowerInferenceExprKindCallBaseSetupInput {
+  InferStructExprWithLocalsFn inferStructExprPath;
+  ResolveStructFieldSlotFn resolveStructFieldSlot;
+  std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>
+      resolveUninitializedStorage;
+};
+
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
                                      std::string &errorOut);
@@ -64,5 +74,8 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
 bool runLowerInferenceExprKindBaseSetup(const LowerInferenceExprKindBaseSetupInput &input,
                                         LowerInferenceSetupBootstrapState &stateInOut,
                                         std::string &errorOut);
+bool runLowerInferenceExprKindCallBaseSetup(const LowerInferenceExprKindCallBaseSetupInput &input,
+                                            LowerInferenceSetupBootstrapState &stateInOut,
+                                            std::string &errorOut);
 
 } // namespace primec::ir_lowerer

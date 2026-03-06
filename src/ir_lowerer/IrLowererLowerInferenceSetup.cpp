@@ -1,6 +1,8 @@
 #include "IrLowererLowerInferenceSetup.h"
 
+#include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererUninitializedTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -53,6 +55,125 @@ bool inferLiteralOrNameExprKindImpl(const Expr &expr,
     default:
       return false;
   }
+}
+
+bool inferCallExprBaseKindImpl(const Expr &expr,
+                               const LocalMap &localsIn,
+                               const InferStructExprWithLocalsFn &inferStructExprPath,
+                               const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+                               const std::function<bool(const Expr &,
+                                                        const LocalMap &,
+                                                        UninitializedStorageAccessInfo &,
+                                                        bool &)> &resolveUninitializedStorage,
+                               LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+  if (expr.isFieldAccess) {
+    if (expr.args.size() != 1) {
+      return true;
+    }
+    const Expr &receiver = expr.args.front();
+    std::string structPath = inferStructExprPath(receiver, localsIn);
+    if (structPath.empty()) {
+      return true;
+    }
+    StructSlotFieldInfo fieldInfo;
+    if (!resolveStructFieldSlot(structPath, expr.name, fieldInfo)) {
+      return true;
+    }
+    kindOut = fieldInfo.structPath.empty() ? fieldInfo.valueKind : LocalInfo::ValueKind::Unknown;
+    return true;
+  }
+  if (!expr.isMethodCall && (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
+      expr.args.size() == 1) {
+    UninitializedStorageAccessInfo access;
+    bool resolved = false;
+    if (!resolveUninitializedStorage(expr.args.front(), localsIn, access, resolved)) {
+      return true;
+    }
+    if (!resolved) {
+      return false;
+    }
+    if (access.typeInfo.kind == LocalInfo::Kind::Value && access.typeInfo.structPath.empty() &&
+        access.typeInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+      kindOut = access.typeInfo.valueKind;
+    }
+    return true;
+  }
+  if (expr.isMethodCall) {
+    if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result") {
+      if (expr.name == "ok") {
+        kindOut = expr.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+        return true;
+      }
+      if (expr.name == "why") {
+        kindOut = LocalInfo::ValueKind::String;
+        return true;
+      }
+    }
+    if (!expr.args.empty() && expr.name == "why") {
+      const Expr &receiver = expr.args.front();
+      if (receiver.kind == Expr::Kind::Name) {
+        if (receiver.name == "FileError") {
+          kindOut = LocalInfo::ValueKind::String;
+          return true;
+        }
+        auto it = localsIn.find(receiver.name);
+        if (it != localsIn.end() && it->second.isFileError) {
+          kindOut = LocalInfo::ValueKind::String;
+          return true;
+        }
+      }
+    }
+    if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.args.front().name);
+      if (it != localsIn.end() && it->second.isFileHandle) {
+        if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" ||
+            expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+          kindOut = LocalInfo::ValueKind::Int32;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  if (isSimpleCallName(expr, "File")) {
+    kindOut = LocalInfo::ValueKind::Int64;
+    return true;
+  }
+  if (isSimpleCallName(expr, "try") && expr.args.size() == 1) {
+    const Expr &arg = expr.args.front();
+    if (arg.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(arg.name);
+      if (it != localsIn.end() && it->second.isResult) {
+        kindOut = it->second.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+        return true;
+      }
+    }
+    if (arg.kind == Expr::Kind::Call) {
+      if (!arg.isMethodCall && isSimpleCallName(arg, "File")) {
+        kindOut = LocalInfo::ValueKind::Int64;
+        return true;
+      }
+      if (arg.isMethodCall && !arg.args.empty() && arg.args.front().kind == Expr::Kind::Name) {
+        auto it = localsIn.find(arg.args.front().name);
+        if (it != localsIn.end() && it->second.isFileHandle) {
+          if (arg.name == "write" || arg.name == "write_line" || arg.name == "write_byte" ||
+              arg.name == "write_bytes" || arg.name == "flush" || arg.name == "close") {
+            kindOut = LocalInfo::ValueKind::Int32;
+            return true;
+          }
+        }
+        if (arg.args.front().name == "Result" && arg.name == "ok") {
+          kindOut = arg.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 } // namespace
@@ -240,6 +361,34 @@ bool runLowerInferenceExprKindBaseSetup(const LowerInferenceExprKindBaseSetupInp
   stateInOut.inferLiteralOrNameExprKind =
       [getMathConstantName](const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         return inferLiteralOrNameExprKindImpl(expr, localsIn, getMathConstantName, kindOut);
+      };
+  return true;
+}
+
+bool runLowerInferenceExprKindCallBaseSetup(const LowerInferenceExprKindCallBaseSetupInput &input,
+                                            LowerInferenceSetupBootstrapState &stateInOut,
+                                            std::string &errorOut) {
+  if (!input.inferStructExprPath) {
+    errorOut = "native backend missing inference expr-kind call-base setup dependency: inferStructExprPath";
+    return false;
+  }
+  if (!input.resolveStructFieldSlot) {
+    errorOut = "native backend missing inference expr-kind call-base setup dependency: resolveStructFieldSlot";
+    return false;
+  }
+  if (!input.resolveUninitializedStorage) {
+    errorOut = "native backend missing inference expr-kind call-base setup dependency: resolveUninitializedStorage";
+    return false;
+  }
+
+  const auto inferStructExprPath = input.inferStructExprPath;
+  const auto resolveStructFieldSlot = input.resolveStructFieldSlot;
+  const auto resolveUninitializedStorage = input.resolveUninitializedStorage;
+  stateInOut.inferCallExprBaseKind =
+      [inferStructExprPath, resolveStructFieldSlot, resolveUninitializedStorage](
+          const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
+        return inferCallExprBaseKindImpl(
+            expr, localsIn, inferStructExprPath, resolveStructFieldSlot, resolveUninitializedStorage, kindOut);
       };
   return true;
 }

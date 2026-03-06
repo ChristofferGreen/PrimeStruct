@@ -562,6 +562,97 @@ TEST_CASE("ir lowerer inference expr-kind base setup validates dependencies") {
   CHECK(error == "native backend missing inference expr-kind base setup dependency: getMathConstantName");
 }
 
+TEST_CASE("ir lowerer inference expr-kind call-base setup wires callback") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+            return expr.name == "receiver" ? std::string("/Struct") : std::string();
+          },
+          .resolveStructFieldSlot =
+              [](const std::string &structPath, const std::string &fieldName, primec::ir_lowerer::StructSlotFieldInfo &out) {
+                if (structPath == "/Struct" && fieldName == "value") {
+                  out.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+                  out.structPath.clear();
+                  return true;
+                }
+                return false;
+              },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &storageExpr,
+                 const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &out,
+                 bool &resolved) {
+                resolved = (storageExpr.kind == primec::Expr::Kind::Name && storageExpr.name == "slot");
+                if (resolved) {
+                  out.typeInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+                  out.typeInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+                  out.typeInfo.structPath.clear();
+                }
+                return true;
+              },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(state.inferCallExprBaseKind));
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo fileHandle;
+  fileHandle.isFileHandle = true;
+  locals.emplace("fh", fileHandle);
+
+  primec::Expr fieldReceiver;
+  fieldReceiver.kind = primec::Expr::Kind::Name;
+  fieldReceiver.name = "receiver";
+  primec::Expr fieldAccess;
+  fieldAccess.kind = primec::Expr::Kind::Call;
+  fieldAccess.isFieldAccess = true;
+  fieldAccess.name = "value";
+  fieldAccess.args.push_back(fieldReceiver);
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(fieldAccess, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Name;
+  storageExpr.name = "slot";
+  primec::Expr takeExpr;
+  takeExpr.kind = primec::Expr::Kind::Call;
+  takeExpr.name = "take";
+  takeExpr.args.push_back(storageExpr);
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(takeExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr fileCall;
+  fileCall.kind = primec::Expr::Kind::Call;
+  fileCall.name = "File";
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(fileCall, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer inference expr-kind call-base setup validates dependencies") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath = {},
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &,
+                 const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                 bool &) { return true; },
+      },
+      state,
+      error));
+  CHECK(error == "native backend missing inference expr-kind call-base setup dependency: inferStructExprPath");
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -625,6 +716,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(inferenceHeaderSource.find("runLowerInferenceSetupBootstrap(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceArrayKindSetup(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindBaseSetup(") != std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallBaseSetup(") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {
