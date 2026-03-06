@@ -18,6 +18,7 @@ add_library(primec_lib
   src/emitter/EmitterExpr.cpp
   src/emitter/EmitterExprControlBuiltinBlockEarlyReturnStep.cpp
   src/emitter/EmitterExprControlBuiltinBlockBindingAutoStep.cpp
+  src/emitter/EmitterExprControlBuiltinBlockBindingExplicitStep.cpp
   src/emitter/EmitterExprControlBuiltinBlockBindingPreludeStep.cpp
   src/emitter/EmitterExprControlBuiltinBlockFinalValueStep.cpp
   src/emitter/EmitterExprControlBoolLiteralStep.cpp

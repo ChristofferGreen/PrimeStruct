@@ -184,45 +184,29 @@
         bool needsConst = !binding.isMutable;
         const bool useRef =
             !binding.isMutable && !binding.isCopy && !stmt.args.empty() && isReferenceCandidate(binding);
-        if (hasExplicitType) {
-          std::string type = bindingTypeToCpp(binding, stmt.namespacePrefix, importAliases, structTypeMap);
-          bool isReference = binding.typeName == "Reference";
-          if (useRef) {
-            if (type.rfind("const ", 0) != 0) {
-              out << "const " << type << " & " << stmt.name;
-            } else {
-              out << type << " & " << stmt.name;
-            }
-          } else {
-            out << (needsConst ? "const " : "") << type << " " << stmt.name;
-          }
-          if (!stmt.args.empty()) {
-            if (isReference) {
-              out << " = *(" << emitExpr(stmt.args.front(),
-                                         nameMap,
-                                         paramMap,
-                                         structTypeMap,
-                                         importAliases,
-                                         blockTypes,
-                                         returnKinds,
-                                         resultInfos,
-                                         returnStructs,
-                                         allowMathBare)
-                  << ")";
-            } else {
-              out << " = " << emitExpr(stmt.args.front(),
-                                      nameMap,
-                                      paramMap,
-                                      structTypeMap,
-                                      importAliases,
-                                      blockTypes,
-                                      returnKinds,
-                                      resultInfos,
-                                      returnStructs,
-                                      allowMathBare);
-            }
-          }
-          out << "; ";
+        if (const auto explicitBindingStep = emitter::runEmitterExprControlBuiltinBlockBindingExplicitStep(
+                stmt,
+                binding,
+                hasExplicitType,
+                needsConst,
+                useRef,
+                stmt.namespacePrefix,
+                importAliases,
+                structTypeMap,
+                [&](const Expr &candidate) {
+                  return emitExpr(candidate,
+                                  nameMap,
+                                  paramMap,
+                                  structTypeMap,
+                                  importAliases,
+                                  blockTypes,
+                                  returnKinds,
+                                  resultInfos,
+                                  returnStructs,
+                                  allowMathBare);
+                });
+            explicitBindingStep.handled) {
+          out << explicitBindingStep.emittedStatement;
         } else {
           if (useRef) {
             out << "const auto & " << stmt.name;

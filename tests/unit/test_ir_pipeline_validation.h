@@ -2221,6 +2221,110 @@ TEST_CASE("emitter expr control builtin-block binding-auto step emits auto bindi
   CHECK(missingEmit.emittedStatement == "auto item; ");
 }
 
+TEST_CASE("emitter expr control builtin-block binding-explicit step emits typed bindings") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "item";
+
+  primec::Emitter::BindingInfo bindingInfo;
+  bindingInfo.typeName = "i32";
+  bindingInfo.isMutable = false;
+
+  const auto nonExplicit = primec::emitter::runEmitterExprControlBuiltinBlockBindingExplicitStep(
+      stmt,
+      bindingInfo,
+      false,
+      true,
+      false,
+      "",
+      {},
+      {},
+      [&](const primec::Expr &) { return "unused"; });
+  CHECK_FALSE(nonExplicit.handled);
+  CHECK(nonExplicit.emittedStatement.empty());
+
+  const auto constTyped = primec::emitter::runEmitterExprControlBuiltinBlockBindingExplicitStep(
+      stmt,
+      bindingInfo,
+      true,
+      true,
+      false,
+      "",
+      {},
+      {},
+      [&](const primec::Expr &) { return "unused"; });
+  CHECK(constTyped.handled);
+  CHECK(constTyped.emittedStatement == "const int item; ");
+
+  primec::Expr initExpr;
+  initExpr.kind = primec::Expr::Kind::Literal;
+  initExpr.literalValue = 7;
+  stmt.args.push_back(initExpr);
+
+  int emitCalls = 0;
+  const auto mutableTyped = primec::emitter::runEmitterExprControlBuiltinBlockBindingExplicitStep(
+      stmt,
+      bindingInfo,
+      true,
+      false,
+      false,
+      "",
+      {},
+      {},
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Literal);
+        CHECK(candidate.literalValue == 7);
+        return std::string("emit_init");
+      });
+  CHECK(mutableTyped.handled);
+  CHECK(emitCalls == 1);
+  CHECK(mutableTyped.emittedStatement == "int item = emit_init; ");
+
+  const auto constRefTyped = primec::emitter::runEmitterExprControlBuiltinBlockBindingExplicitStep(
+      stmt,
+      bindingInfo,
+      true,
+      true,
+      true,
+      "",
+      {},
+      {},
+      [&](const primec::Expr &) { return "emit_ref"; });
+  CHECK(constRefTyped.handled);
+  CHECK(constRefTyped.emittedStatement == "const int & item = emit_ref; ");
+
+  primec::Emitter::BindingInfo referenceBinding;
+  referenceBinding.typeName = "Reference";
+  referenceBinding.typeTemplateArg = "i32";
+
+  const auto referenceTyped = primec::emitter::runEmitterExprControlBuiltinBlockBindingExplicitStep(
+      stmt,
+      referenceBinding,
+      true,
+      false,
+      false,
+      "",
+      {},
+      {},
+      [&](const primec::Expr &) { return "emit_ref_target"; });
+  CHECK(referenceTyped.handled);
+  CHECK(referenceTyped.emittedStatement == "int & item = *(emit_ref_target); ");
+
+  const auto missingEmit = primec::emitter::runEmitterExprControlBuiltinBlockBindingExplicitStep(
+      stmt,
+      referenceBinding,
+      true,
+      false,
+      false,
+      "",
+      {},
+      {},
+      {});
+  CHECK(missingEmit.handled);
+  CHECK(missingEmit.emittedStatement == "int & item; ");
+}
+
 TEST_CASE("emitter expr control body-wrapper step rewrites body-argument calls") {
   primec::Expr noBodyExpr;
   noBodyExpr.kind = primec::Expr::Kind::Call;
@@ -2539,6 +2643,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingAutoStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingExplicitStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingPreludeStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockFinalValueStep(") !=
@@ -2564,6 +2670,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockEarlyReturnStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingAutoStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingExplicitStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingPreludeStep.h\"") !=
         std::string::npos);

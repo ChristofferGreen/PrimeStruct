@@ -31,6 +31,7 @@
 #include "src/emitter/EmitterEmitSetupMathImport.h"
 #include "src/emitter/EmitterExprControlBuiltinBlockEarlyReturnStep.h"
 #include "src/emitter/EmitterExprControlBuiltinBlockBindingAutoStep.h"
+#include "src/emitter/EmitterExprControlBuiltinBlockBindingExplicitStep.h"
 #include "src/emitter/EmitterExprControlBuiltinBlockBindingPreludeStep.h"
 #include "src/emitter/EmitterExprControlBuiltinBlockFinalValueStep.h"
 #include "src/emitter/EmitterExprControlBoolLiteralStep.h"

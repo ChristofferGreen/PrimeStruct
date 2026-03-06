@@ -3,6 +3,7 @@
 #include "EmitterHelpers.h"
 #include "EmitterExprControlBuiltinBlockEarlyReturnStep.h"
 #include "EmitterExprControlBuiltinBlockBindingAutoStep.h"
+#include "EmitterExprControlBuiltinBlockBindingExplicitStep.h"
 #include "EmitterExprControlBuiltinBlockBindingPreludeStep.h"
 #include "EmitterExprControlBuiltinBlockFinalValueStep.h"
 #include "EmitterExprControlBoolLiteralStep.h"
