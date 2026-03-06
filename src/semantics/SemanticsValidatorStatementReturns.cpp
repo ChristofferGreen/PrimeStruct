@@ -1,3 +1,7 @@
+#include "SemanticsValidator.h"
+
+namespace primec::semantics {
+
 bool SemanticsValidator::statementAlwaysReturns(const Expr &stmt) {
   auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
@@ -46,3 +50,5 @@ bool SemanticsValidator::blockAlwaysReturns(const std::vector<Expr> &statements)
   }
   return false;
 }
+
+} // namespace primec::semantics

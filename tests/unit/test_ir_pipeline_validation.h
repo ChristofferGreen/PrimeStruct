@@ -6419,6 +6419,16 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   const std::string semanticsStatementSource = readText(semanticsStatementPath);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementLoopCountStep.h\"") !=
         std::string::npos);
+  CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementReturns.h\"") == std::string::npos);
+
+  const std::filesystem::path semanticsStatementReturnsPath =
+      std::filesystem::path("src") / "semantics" / "SemanticsValidatorStatementReturns.cpp";
+  REQUIRE(std::filesystem::exists(semanticsStatementReturnsPath));
+  const std::string semanticsStatementReturnsSource = readText(semanticsStatementReturnsPath);
+  CHECK(semanticsStatementReturnsSource.find("bool SemanticsValidator::statementAlwaysReturns") !=
+        std::string::npos);
+  CHECK(semanticsStatementReturnsSource.find("bool SemanticsValidator::blockAlwaysReturns") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

@@ -49,7 +49,7 @@ Legend:
 - ✓ Add differential tests comparing AST emitters vs IR emitters on a shared corpus. Added compile-run differential corpus coverage that locks `cpp`/`exe` parity against `cpp-ir`/`exe-ir` (source equality + runtime exit/stdout/stderr parity) and `glsl` parity against `glsl-ir` on shared IR-supported snippets.
 - ✓ Add `IrValidationTarget::Glsl` and move GLSL legality checks from the AST emitter into IR validation. Added explicit GLSL target validation in `validateIrModule(...)`, routed `glsl-ir`/`spirv-ir` backends through that target, and added validation + compile-run regressions for GLSL i64 literal range and local-slot limits with validation-stage diagnostics.
 - ○ Refactor `SemanticsValidator` into immutable shared analysis state plus per-definition validation contexts.
-- ○ Replace include-composed `SemanticsValidatorExpr.cpp`/`SemanticsValidatorStatement.cpp` fragments with explicit compile units.
+- ◐ Replace include-composed `SemanticsValidatorExpr.cpp`/`SemanticsValidatorStatement.cpp` fragments with explicit compile units. Progress: extracted `SemanticsValidatorStatementReturns.h` include fragment into explicit compile unit `src/semantics/SemanticsValidatorStatementReturns.cpp`, removed include-composed wiring from `SemanticsValidatorStatement.cpp`, and added source-delegation + return-flow regression coverage.
 - ○ Replace `ProcessRunner` string shell commands with argv-based process execution APIs.
 - ○ Convert the transform registry from static arrays to a registration API with phase metadata.
 - ○ Add an ADR documenting backend boundary policy: all codegen consumes IR only.

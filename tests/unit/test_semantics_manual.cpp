@@ -1997,6 +1997,35 @@ TEST_CASE("if rejects named arguments") {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("if branches returning satisfy missing return checks") {
+  primec::Program program;
+  primec::Expr thenBlock = makeCall("then", {}, {}, {makeCall("/return", {makeLiteral(1)})});
+  thenBlock.hasBodyArguments = true;
+  primec::Expr elseBlock = makeCall("else", {}, {}, {makeCall("/return", {makeLiteral(2)})});
+  elseBlock.hasBodyArguments = true;
+  primec::Expr ifCall = makeCall("if", {makeBool(true), thenBlock, elseBlock});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("if missing else return fails missing return checks") {
+  primec::Program program;
+  primec::Expr thenBlock = makeCall("then", {}, {}, {makeCall("/return", {makeLiteral(1)})});
+  thenBlock.hasBodyArguments = true;
+  primec::Expr fallbackBinding = makeBinding("fallback", {makeTransform("i32")}, {makeLiteral(2)});
+  primec::Expr elseBlock = makeCall("else", {}, {}, {fallbackBinding});
+  elseBlock.hasBodyArguments = true;
+  primec::Expr ifCall = makeCall("if", {makeBool(true), thenBlock, elseBlock});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("missing return statement") != std::string::npos);
+}
+
 TEST_CASE("missing return statement fails") {
   primec::Program program;
   primec::Expr binding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});

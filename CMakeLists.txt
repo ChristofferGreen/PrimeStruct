@@ -155,6 +155,7 @@ add_library(primec_lib
   src/semantics/SemanticsValidatorInfer.cpp
   src/semantics/SemanticsValidatorPasses.cpp
   src/semantics/SemanticsValidatorStatementLoopCountStep.cpp
+  src/semantics/SemanticsValidatorStatementReturns.cpp
   src/semantics/SemanticsValidatorStatement.cpp
   src/semantics/SemanticsValidatorTraits.cpp
   src/text_filter/TextFilterHelpers.cpp
