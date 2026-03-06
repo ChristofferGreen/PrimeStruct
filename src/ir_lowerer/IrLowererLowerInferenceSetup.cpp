@@ -472,6 +472,172 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
   return true;
 }
 
+bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &input,
+                                      const Definition &definition,
+                                      ReturnInfo &infoInOut,
+                                      std::string &errorOut) {
+  if (!input.resolveStructTypeName) {
+    errorOut = "native backend missing inference return-info setup dependency: resolveStructTypeName";
+    return false;
+  }
+  if (!input.resolveStructArrayInfoFromPath) {
+    errorOut = "native backend missing inference return-info setup dependency: resolveStructArrayInfoFromPath";
+    return false;
+  }
+  if (!input.isBindingMutable) {
+    errorOut = "native backend missing inference return-info setup dependency: isBindingMutable";
+    return false;
+  }
+  if (!input.bindingKind) {
+    errorOut = "native backend missing inference return-info setup dependency: bindingKind";
+    return false;
+  }
+  if (!input.hasExplicitBindingTypeTransform) {
+    errorOut = "native backend missing inference return-info setup dependency: hasExplicitBindingTypeTransform";
+    return false;
+  }
+  if (!input.bindingValueKind) {
+    errorOut = "native backend missing inference return-info setup dependency: bindingValueKind";
+    return false;
+  }
+  if (!input.inferExprKind) {
+    errorOut = "native backend missing inference return-info setup dependency: inferExprKind";
+    return false;
+  }
+  if (!input.isFileErrorBinding) {
+    errorOut = "native backend missing inference return-info setup dependency: isFileErrorBinding";
+    return false;
+  }
+  if (!input.applyStructArrayInfo) {
+    errorOut = "native backend missing inference return-info setup dependency: applyStructArrayInfo";
+    return false;
+  }
+  if (!input.applyStructValueInfo) {
+    errorOut = "native backend missing inference return-info setup dependency: applyStructValueInfo";
+    return false;
+  }
+  if (!input.inferStructExprPath) {
+    errorOut = "native backend missing inference return-info setup dependency: inferStructExprPath";
+    return false;
+  }
+  if (!input.isStringBinding) {
+    errorOut = "native backend missing inference return-info setup dependency: isStringBinding";
+    return false;
+  }
+  if (!input.inferArrayElementKind) {
+    errorOut = "native backend missing inference return-info setup dependency: inferArrayElementKind";
+    return false;
+  }
+  if (!input.lowerMatchToIf) {
+    errorOut = "native backend missing inference return-info setup dependency: lowerMatchToIf";
+    return false;
+  }
+
+  const auto resolveStructTypeName = input.resolveStructTypeName;
+  const auto resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath;
+  const auto isBindingMutable = input.isBindingMutable;
+  const auto bindingKind = input.bindingKind;
+  const auto hasExplicitBindingTypeTransform = input.hasExplicitBindingTypeTransform;
+  const auto bindingValueKind = input.bindingValueKind;
+  const auto inferExprKind = input.inferExprKind;
+  const auto isFileErrorBinding = input.isFileErrorBinding;
+  const auto applyStructArrayInfo = input.applyStructArrayInfo;
+  const auto applyStructValueInfo = input.applyStructValueInfo;
+  const auto inferStructExprPath = input.inferStructExprPath;
+  const auto isStringBinding = input.isStringBinding;
+  const auto inferArrayElementKind = input.inferArrayElementKind;
+  const auto lowerMatchToIf = input.lowerMatchToIf;
+
+  bool hasReturnTransformLocal = false;
+  bool hasReturnAuto = false;
+  ir_lowerer::analyzeDeclaredReturnTransforms(definition,
+                                              [&](const std::string &typeName,
+                                                  const std::string &namespacePrefix,
+                                                  std::string &structPathOut) {
+                                                return resolveStructTypeName(typeName, namespacePrefix, structPathOut);
+                                              },
+                                              [&](const std::string &structPath, StructArrayTypeInfo &structInfoOut) {
+                                                return resolveStructArrayInfoFromPath(structPath, structInfoOut);
+                                              },
+                                              infoInOut,
+                                              hasReturnTransformLocal,
+                                              hasReturnAuto);
+
+  auto inferBindingIntoLocals = [&](const Expr &bindingExpr,
+                                    bool isParameter,
+                                    LocalMap &activeLocals,
+                                    std::string &inferError) -> bool {
+    return ir_lowerer::inferReturnInferenceBindingIntoLocals(bindingExpr,
+                                                             isParameter,
+                                                             definition.fullPath,
+                                                             activeLocals,
+                                                             isBindingMutable,
+                                                             bindingKind,
+                                                             hasExplicitBindingTypeTransform,
+                                                             bindingValueKind,
+                                                             inferExprKind,
+                                                             isFileErrorBinding,
+                                                             applyStructArrayInfo,
+                                                             applyStructValueInfo,
+                                                             inferStructExprPath,
+                                                             isStringBinding,
+                                                             inferError);
+  };
+
+  if (hasReturnTransformLocal) {
+    if (hasReturnAuto) {
+      ReturnInferenceOptions options;
+      options.missingReturnBehavior = MissingReturnBehavior::Error;
+      options.includeDefinitionReturnExpr = true;
+      if (!ir_lowerer::inferDefinitionReturnType(
+              definition,
+              LocalMap{},
+              inferBindingIntoLocals,
+              [&](const Expr &expr, const LocalMap &localsIn) { return inferExprKind(expr, localsIn); },
+              [&](const Expr &expr, const LocalMap &localsIn) { return inferArrayElementKind(expr, localsIn); },
+              [&](const Expr &expr, Expr &expanded, std::string &inferError) {
+                return lowerMatchToIf(expr, expanded, inferError);
+              },
+              options,
+              infoInOut,
+              errorOut)) {
+        return false;
+      }
+    } else if (!infoInOut.returnsVoid) {
+      if (infoInOut.kind == LocalInfo::ValueKind::Unknown) {
+        errorOut = "native backend does not support return type on " + definition.fullPath;
+        return false;
+      }
+      if (infoInOut.returnsArray && infoInOut.kind == LocalInfo::ValueKind::String) {
+        errorOut = "native backend does not support string array return types on " + definition.fullPath;
+        return false;
+      }
+    }
+  } else if (!definition.hasReturnStatement) {
+    infoInOut.returnsVoid = true;
+  } else {
+    ReturnInferenceOptions options;
+    options.missingReturnBehavior = MissingReturnBehavior::Void;
+    options.includeDefinitionReturnExpr = false;
+    if (!ir_lowerer::inferDefinitionReturnType(
+            definition,
+            LocalMap{},
+            inferBindingIntoLocals,
+            [&](const Expr &expr, const LocalMap &localsIn) { return inferExprKind(expr, localsIn); },
+            [&](const Expr &expr, const LocalMap &localsIn) { return inferArrayElementKind(expr, localsIn); },
+            [&](const Expr &expr, Expr &expanded, std::string &inferError) {
+              return lowerMatchToIf(expr, expanded, inferError);
+            },
+            options,
+            infoInOut,
+            errorOut)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCallFallbackSetupInput &input,
                                                 LowerInferenceSetupBootstrapState &stateInOut,
                                                 std::string &errorOut) {

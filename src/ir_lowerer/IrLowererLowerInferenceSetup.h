@@ -9,6 +9,7 @@
 
 #include "IrLowererCallHelpers.h"
 #include "IrLowererCountAccessHelpers.h"
+#include "IrLowererReturnInferenceHelpers.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererSetupInferenceHelpers.h"
 #include "IrLowererSharedTypes.h"
@@ -104,6 +105,23 @@ struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
 };
 struct LowerInferenceExprKindCallPointerFallbackSetupInput {};
 
+struct LowerInferenceReturnInfoSetupInput {
+  ResolveStructTypeNameForReturnFn resolveStructTypeName;
+  ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath;
+  IsBindingMutableForInferenceFn isBindingMutable;
+  BindingKindForInferenceFn bindingKind;
+  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform;
+  BindingValueKindForInferenceFn bindingValueKind;
+  InferValueKindFromLocalsFn inferExprKind;
+  IsFileErrorBindingForInferenceFn isFileErrorBinding;
+  ApplyStructInfoForInferenceFn applyStructArrayInfo;
+  ApplyStructInfoForInferenceFn applyStructValueInfo;
+  InferStructExprPathFromLocalsFn inferStructExprPath;
+  IsStringBindingForInferenceFn isStringBinding;
+  InferValueKindFromLocalsFn inferArrayElementKind;
+  ExpandMatchToIfFn lowerMatchToIf;
+};
+
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
                                      std::string &errorOut);
@@ -134,5 +152,9 @@ bool runLowerInferenceExprKindCallPointerFallbackSetup(
     const LowerInferenceExprKindCallPointerFallbackSetupInput &input,
     LowerInferenceSetupBootstrapState &stateInOut,
     std::string &errorOut);
+bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &input,
+                                      const Definition &definition,
+                                      ReturnInfo &infoInOut,
+                                      std::string &errorOut);
 
 } // namespace primec::ir_lowerer

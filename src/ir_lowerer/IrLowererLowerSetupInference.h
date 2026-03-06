@@ -176,3 +176,32 @@
 
     const Definition &def = *defIt->second;
     ReturnInfo info;
+    if (!ir_lowerer::runLowerInferenceReturnInfoSetup(
+            {
+                .resolveStructTypeName = resolveStructTypeName,
+                .resolveStructArrayInfoFromPath = resolveStructArrayInfoFromPath,
+                .isBindingMutable = isBindingMutable,
+                .bindingKind = bindingKind,
+                .hasExplicitBindingTypeTransform = hasExplicitBindingTypeTransform,
+                .bindingValueKind = bindingValueKind,
+                .inferExprKind = inferExprKind,
+                .isFileErrorBinding = isFileErrorBinding,
+                .applyStructArrayInfo = applyStructArrayInfo,
+                .applyStructValueInfo = applyStructValueInfo,
+                .inferStructExprPath = inferStructExprPath,
+                .isStringBinding = isStringBinding,
+                .inferArrayElementKind = inferArrayElementKind,
+                .lowerMatchToIf = lowerMatchToIf,
+            },
+            def,
+            info,
+            error)) {
+      returnInferenceStack.erase(path);
+      return false;
+    }
+
+    returnInferenceStack.erase(path);
+    returnInfoCache.emplace(path, info);
+    outInfo = info;
+    return true;
+  };
