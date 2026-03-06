@@ -1,13 +1,18 @@
 #include "primec/IrBackends.h"
 
+#include "primec/ExternalTooling.h"
 #include "primec/IrSerializer.h"
+#include "primec/IrToCppEmitter.h"
 #include "primec/NativeEmitter.h"
+#include "primec/ProcessRunner.h"
 #include "primec/Vm.h"
 #include "primec/WasmEmitter.h"
 
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -31,6 +36,15 @@ bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &data) 
     return false;
   }
   out.write(reinterpret_cast<const char *>(data.data()), static_cast<std::streamsize>(data.size()));
+  return static_cast<bool>(out);
+}
+
+bool writeTextFile(const std::string &path, const std::string &data) {
+  std::ofstream out(path);
+  if (!out.is_open()) {
+    return false;
+  }
+  out << data;
   return static_cast<bool>(out);
 }
 
@@ -216,16 +230,124 @@ public:
   }
 };
 
-const std::array<const IrBackend *, 4> &registeredBackends() {
+class CppIrBackend final : public IrBackend {
+public:
+  std::string_view emitKind() const override {
+    return "cpp-ir";
+  }
+
+  const IrBackendDiagnostics &diagnostics() const override {
+    static constexpr IrBackendDiagnostics Diagnostics = {
+        .loweringDiagnosticCode = DiagnosticCode::LoweringError,
+        .validationDiagnosticCode = DiagnosticCode::LoweringError,
+        .inliningDiagnosticCode = DiagnosticCode::LoweringError,
+        .emitDiagnosticCode = DiagnosticCode::EmitError,
+        .loweringErrorPrefix = "C++ IR lowering error: ",
+        .validationErrorPrefix = "C++ IR validation error: ",
+        .inliningErrorPrefix = "C++ IR inlining error: ",
+        .emitErrorPrefix = "C++ IR emit error: ",
+        .backendTag = "cpp-ir",
+    };
+    return Diagnostics;
+  }
+
+  IrValidationTarget validationTarget(const Options & /*options*/) const override {
+    return IrValidationTarget::Any;
+  }
+
+  bool requiresOutputPath() const override {
+    return true;
+  }
+
+  bool emit(const IrModule &module,
+            const IrBackendEmitOptions &options,
+            IrBackendEmitResult & /*result*/,
+            std::string &error) const override {
+    IrToCppEmitter emitter;
+    std::string cppSource;
+    if (!emitter.emitSource(module, cppSource, error)) {
+      error = "ir-to-cpp failed: " + error;
+      return false;
+    }
+    if (!writeTextFile(options.outputPath, cppSource)) {
+      error = options.outputPath;
+      return false;
+    }
+    return true;
+  }
+};
+
+class ExeIrBackend final : public IrBackend {
+public:
+  std::string_view emitKind() const override {
+    return "exe-ir";
+  }
+
+  const IrBackendDiagnostics &diagnostics() const override {
+    static constexpr IrBackendDiagnostics Diagnostics = {
+        .loweringDiagnosticCode = DiagnosticCode::LoweringError,
+        .validationDiagnosticCode = DiagnosticCode::LoweringError,
+        .inliningDiagnosticCode = DiagnosticCode::LoweringError,
+        .emitDiagnosticCode = DiagnosticCode::EmitError,
+        .loweringErrorPrefix = "EXE IR lowering error: ",
+        .validationErrorPrefix = "EXE IR validation error: ",
+        .inliningErrorPrefix = "EXE IR inlining error: ",
+        .emitErrorPrefix = "EXE IR emit error: ",
+        .backendTag = "exe-ir",
+    };
+    return Diagnostics;
+  }
+
+  IrValidationTarget validationTarget(const Options & /*options*/) const override {
+    return IrValidationTarget::Any;
+  }
+
+  bool requiresOutputPath() const override {
+    return true;
+  }
+
+  bool emit(const IrModule &module,
+            const IrBackendEmitOptions &options,
+            IrBackendEmitResult & /*result*/,
+            std::string &error) const override {
+    IrToCppEmitter emitter;
+    std::string cppSource;
+    if (!emitter.emitSource(module, cppSource, error)) {
+      error = "ir-to-cpp failed: " + error;
+      return false;
+    }
+
+    const std::filesystem::path outputPath(options.outputPath);
+    std::filesystem::path cppPath = outputPath;
+    cppPath.replace_extension(".cpp");
+    if (!writeTextFile(cppPath.string(), cppSource)) {
+      error = cppPath.string();
+      return false;
+    }
+
+    const ProcessRunner &processRunner = systemProcessRunner();
+    if (!compileCppExecutable(processRunner, cppPath, outputPath)) {
+      error = "Failed to compile output executable";
+      return false;
+    }
+    return true;
+  }
+};
+
+const std::array<const IrBackend *, 6> &registeredBackends() {
   static const VmIrBackend VmBackend;
   static const NativeIrBackend NativeBackend;
   static const SerializeIrBackend IrBackendImpl;
   static const WasmIrBackend WasmBackend;
-  static const std::array<const IrBackend *, 4> Backends = {
+  static const CppIrBackend CppBackend;
+  static const ExeIrBackend ExeBackend;
+  static const std::array<const IrBackend *, 6> Backends = {
       &VmBackend,
       &NativeBackend,
       &IrBackendImpl,
       &WasmBackend,
+      &CppBackend,
+      &ExeBackend,
   };
   return Backends;
 }

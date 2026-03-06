@@ -595,7 +595,8 @@ int main(int argc, char **argv) {
     if (!irBackend->emit(ir, emitOptions, emitResult, error)) {
       const int emitFailureCode = diagnostics.backendTag == std::string_view("vm") ? 3 : 2;
       const bool outputWriteFailure =
-          (std::string_view(diagnostics.backendTag) == "ir" || std::string_view(diagnostics.backendTag) == "wasm") &&
+          (std::string_view(diagnostics.backendTag) == "ir" || std::string_view(diagnostics.backendTag) == "wasm" ||
+           std::string_view(diagnostics.backendTag) == "cpp-ir") &&
           error == options.outputPath;
       if (outputWriteFailure) {
         return emitFailure(options,
@@ -684,58 +685,6 @@ int main(int argc, char **argv) {
                          "tool invocation failed",
                          2,
                          {"backend: spirv-ir"});
-    }
-    return 0;
-  }
-
-  if (options.emitKind == "cpp-ir") {
-    std::string cppSource;
-    if (!emitCppSourceFromIrModule(program, options, cppSource, error)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::EmitError,
-                         "C++ IR emit error: ",
-                         error,
-                         2,
-                         {"backend: cpp-ir"});
-    }
-    if (!writeFile(options.outputPath, cppSource)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::OutputError,
-                         "Failed to write output: ",
-                         options.outputPath,
-                         2);
-    }
-    return 0;
-  }
-
-  if (options.emitKind == "exe-ir") {
-    std::string cppSource;
-    if (!emitCppSourceFromIrModule(program, options, cppSource, error)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::EmitError,
-                         "EXE IR emit error: ",
-                         error,
-                         2,
-                         {"backend: exe-ir"});
-    }
-    std::filesystem::path outputPath(options.outputPath);
-    std::filesystem::path cppPath = outputPath;
-    cppPath.replace_extension(".cpp");
-    if (!writeFile(cppPath.string(), cppSource)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::OutputError,
-                         "Failed to write intermediate C++: ",
-                         cppPath.string(),
-                         2);
-    }
-
-    if (!primec::compileCppExecutable(processRunner, cppPath, outputPath)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::EmitError,
-                         "",
-                         "Failed to compile output executable",
-                         3,
-                         {"backend: exe-ir"});
     }
     return 0;
   }

@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -27,10 +28,15 @@ std::vector<uint8_t> readBinaryFile(const std::filesystem::path &path) {
   return std::vector<uint8_t>(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
 }
 
+std::string readTextFile(const std::filesystem::path &path) {
+  std::ifstream input(path);
+  return std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+}
+
 } // namespace
 
 TEST_CASE("ir backend registry reports deterministic order and lookup") {
-  const std::vector<std::string_view> expectedKinds = {"vm", "native", "ir", "wasm"};
+  const std::vector<std::string_view> expectedKinds = {"vm", "native", "ir", "wasm", "cpp-ir", "exe-ir"};
   CHECK(primec::listIrBackendKinds() == expectedKinds);
 
   for (std::string_view kind : expectedKinds) {
@@ -101,6 +107,33 @@ TEST_CASE("ir serializer backend writes psir magic header") {
   const uint32_t magic = static_cast<uint32_t>(bytes[0]) | (static_cast<uint32_t>(bytes[1]) << 8) |
                          (static_cast<uint32_t>(bytes[2]) << 16) | (static_cast<uint32_t>(bytes[3]) << 24);
   CHECK(magic == 0x50534952u);
+}
+
+TEST_CASE("cpp-ir backend writes C++ source") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  const primec::IrModule module = makeReturnI32Module(13);
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_test.cpp";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "cpp_ir_backend_test.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("static int64_t ps_fn_0") != std::string::npos);
+  CHECK(source.find("return static_cast<int>(ps_entry_0(argc, argv));") != std::string::npos);
 }
 
 TEST_SUITE_END();
