@@ -952,6 +952,48 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("user definition named vector accepts block arguments") {
+  const std::string source = R"(
+[return<int>]
+vector([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [i32 mut] result{0i32}
+  vector(9i32) {
+    assign(result, 4i32)
+  }
+  return(result)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("user definition named array accepts block arguments") {
+  const std::string source = R"(
+[return<int>]
+array<T>([T] value) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [i32 mut] result{0i32}
+  array<i32>(2i32) {
+    assign(result, 5i32)
+  }
+  return(result)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("collection builtin still rejects named arguments") {
   const std::string source = R"(
 [return<int>]

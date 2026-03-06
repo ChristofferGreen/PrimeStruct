@@ -759,7 +759,7 @@
 
   if ((stmt.hasBodyArguments || !stmt.bodyArguments.empty()) && !isBuiltinBlockCall(stmt) && !stmt.isLambda) {
     std::string collectionName;
-    if (getBuiltinCollectionName(stmt, collectionName)) {
+    if (defMap_.find(resolveCalleePath(stmt)) == defMap_.end() && getBuiltinCollectionName(stmt, collectionName)) {
       error_ = collectionName + " literal does not accept block arguments";
       return false;
     }
