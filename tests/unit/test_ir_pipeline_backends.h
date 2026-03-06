@@ -260,6 +260,45 @@ TEST_CASE("cpp-ir backend writes f64 arithmetic helpers") {
   CHECK(source.find("stack[sp++] = psF64ToBits(left + right);") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir backend writes f64 conversion helpers") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(7)});
+  function.instructions.push_back({primec::IrOpcode::ConvertI32ToF64, 0});
+  function.instructions.push_back({primec::IrOpcode::ConvertF64ToF32, 0});
+  function.instructions.push_back({primec::IrOpcode::ConvertF32ToF64, 0});
+  function.instructions.push_back({primec::IrOpcode::ConvertF64ToI64, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_f64_convert.cpp";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "cpp_ir_backend_f64_convert.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("stack[sp++] = psF64ToBits(static_cast<double>(value));") != std::string::npos);
+  CHECK(source.find("stack[sp++] = psF32ToBits(static_cast<float>(value));") != std::string::npos);
+  CHECK(source.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(value));") != std::string::npos);
+}
+
 TEST_CASE("glsl-ir backend writes GLSL source") {
   const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
   REQUIRE(backend != nullptr);

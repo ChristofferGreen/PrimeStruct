@@ -62,6 +62,8 @@ bool usesF32Helpers(IrOpcode opcode) {
     case IrOpcode::ConvertF32ToI32:
     case IrOpcode::ConvertF32ToI64:
     case IrOpcode::ConvertF32ToU64:
+    case IrOpcode::ConvertF32ToF64:
+    case IrOpcode::ConvertF64ToF32:
       return true;
     default:
       return false;
@@ -92,6 +94,13 @@ bool usesF64Helpers(IrOpcode opcode) {
     case IrOpcode::CmpLeF64:
     case IrOpcode::CmpGtF64:
     case IrOpcode::CmpGeF64:
+    case IrOpcode::ConvertI32ToF64:
+    case IrOpcode::ConvertI64ToF64:
+    case IrOpcode::ConvertU64ToF64:
+    case IrOpcode::ConvertF64ToI64:
+    case IrOpcode::ConvertF64ToU64:
+    case IrOpcode::ConvertF32ToF64:
+    case IrOpcode::ConvertF64ToF32:
       return true;
     default:
       return false;
@@ -447,6 +456,48 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::ConvertF32ToU64:
       out << "        float value = psBitsToF32(stack[--sp]);\n";
       out << "        stack[sp++] = static_cast<uint64_t>(value);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertI32ToF64:
+      out << "        int32_t value = static_cast<int32_t>(stack[--sp]);\n";
+      out << "        stack[sp++] = psF64ToBits(static_cast<double>(value));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertI64ToF64:
+      out << "        int64_t value = static_cast<int64_t>(stack[--sp]);\n";
+      out << "        stack[sp++] = psF64ToBits(static_cast<double>(value));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertU64ToF64:
+      out << "        uint64_t value = stack[--sp];\n";
+      out << "        stack[sp++] = psF64ToBits(static_cast<double>(value));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertF64ToI64:
+      out << "        double value = psBitsToF64(stack[--sp]);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(value));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertF64ToU64:
+      out << "        double value = psBitsToF64(stack[--sp]);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(value);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertF32ToF64:
+      out << "        float value = psBitsToF32(stack[--sp]);\n";
+      out << "        stack[sp++] = psF64ToBits(static_cast<double>(value));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertF64ToF32:
+      out << "        double value = psBitsToF64(stack[--sp]);\n";
+      out << "        stack[sp++] = psF32ToBits(static_cast<float>(value));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;

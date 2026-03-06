@@ -298,6 +298,50 @@ main() {
   CHECK(output.find("ps_entry_0") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir emitter writes f64 conversion paths") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  [i32] base{7i32}
+  [f64] widened{convert<f64>(base)}
+  [f32] narrowed{convert<f32>(widened)}
+  [f64] roundTrip{convert<f64>(narrowed)}
+  return(convert<i64>(roundTrip))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_f64_convert_subset.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ir_f64_convert_subset.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = psF64ToBits(static_cast<double>(value));") != std::string::npos);
+  CHECK(output.find("stack[sp++] = psF32ToBits(static_cast<float>(value));") != std::string::npos);
+  CHECK(output.find("stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(value));") != std::string::npos);
+}
+
+TEST_CASE("cpp emitter uses ir backend for f64 conversion subset") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  [i32] base{7i32}
+  [f64] widened{convert<f64>(base)}
+  [f32] narrowed{convert<f32>(widened)}
+  [f64] roundTrip{convert<f64>(narrowed)}
+  return(convert<i64>(roundTrip))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_f64_convert_ir_first.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_cpp_f64_convert_ir_first.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("stack[sp++] = psF64ToBits(static_cast<double>(value));") != std::string::npos);
+  CHECK(output.find("ps_entry_0") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir emitter writes f64 comparison paths") {
   const std::string source = R"(
 [return<int>]
@@ -617,6 +661,44 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_f64_math_ir_first.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_f64_math_ir_first").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("exe-ir emitter compiles and runs f64 conversion subset") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  [i32] base{7i32}
+  [f64] widened{convert<f64>(base)}
+  [f32] narrowed{convert<f32>(widened)}
+  [f64] roundTrip{convert<f64>(narrowed)}
+  return(convert<i64>(roundTrip))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_f64_convert_subset.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_f64_convert_subset").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("exe emitter uses ir backend for f64 conversion subset") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  [i32] base{7i32}
+  [f64] widened{convert<f64>(base)}
+  [f32] narrowed{convert<f32>(widened)}
+  [f64] roundTrip{convert<f64>(narrowed)}
+  return(convert<i64>(roundTrip))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_f64_convert_ir_first.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_f64_convert_ir_first").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
