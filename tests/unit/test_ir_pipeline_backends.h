@@ -64,6 +64,21 @@ TEST_CASE("ir backend registry reports deterministic order and lookup") {
   CHECK(primec::findIrBackend("glsl") == nullptr);
 }
 
+TEST_CASE("main routes cpp/exe through ir backends without legacy fallback branch") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path mainPath = cwd / "src" / "main.cpp";
+  if (!std::filesystem::exists(mainPath)) {
+    mainPath = cwd.parent_path() / "src" / "main.cpp";
+  }
+  REQUIRE(std::filesystem::exists(mainPath));
+
+  const std::string source = readTextFile(mainPath);
+  CHECK(source.find("findIrBackend(\"cpp-ir\")") != std::string::npos);
+  CHECK(source.find("findIrBackend(\"exe-ir\")") != std::string::npos);
+  CHECK(source.find("const char *irFallbackKind") == std::string::npos);
+  CHECK(source.find("emitter.emitCpp(program, options.entryPath)") == std::string::npos);
+}
+
 TEST_CASE("vm ir backend executes module and returns exit code") {
   const primec::IrBackend *backend = primec::findIrBackend("vm");
   REQUIRE(backend != nullptr);

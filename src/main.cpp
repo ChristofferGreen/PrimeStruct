@@ -1,6 +1,5 @@
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
-#include "primec/Emitter.h"
 #include "primec/ExternalTooling.h"
 #include "primec/GlslEmitter.h"
 #include "primec/IrBackends.h"
@@ -529,7 +528,23 @@ int main(int argc, char **argv) {
 
   primec::Program &program = pipelineOutput.program;
 
+  if ((options.emitKind == "cpp" || options.emitKind == "exe")) {
+    if (auto softwareType = scanSoftwareNumericTypes(program)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "C++ emit error: ",
+                         "software numeric types are not supported: " + *softwareType,
+                         2,
+                         {"backend: cpp"});
+    }
+  }
+
   const primec::IrBackend *irBackend = primec::findIrBackend(options.emitKind);
+  if (irBackend == nullptr && options.emitKind == "cpp") {
+    irBackend = primec::findIrBackend("cpp-ir");
+  } else if (irBackend == nullptr && options.emitKind == "exe") {
+    irBackend = primec::findIrBackend("exe-ir");
+  }
 
   if (irBackend != nullptr && irBackend->requiresOutputPath() && !options.outputPath.empty()) {
     std::filesystem::path resolved = resolveOutputPath(options);
@@ -682,57 +697,9 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  if (auto softwareType = scanSoftwareNumericTypes(program)) {
-    return emitFailure(options,
-                       primec::DiagnosticCode::EmitError,
-                       "C++ emit error: ",
-                       "software numeric types are not supported: " + *softwareType,
-                       2,
-                       {"backend: cpp"});
-  }
-
-  const char *irFallbackKind = options.emitKind == "cpp" ? "cpp-ir" : "exe-ir";
-  if (const primec::IrBackend *cppIrBackend = primec::findIrBackend(irFallbackKind); cppIrBackend != nullptr) {
-    primec::IrBackendEmitResult emitResult;
-    IrBackendRunFailure irFailure;
-    if (runIrBackend(*cppIrBackend, program, options, emitResult, irFailure)) {
-      return emitResult.exitCode;
-    }
-  }
-
-  primec::Emitter emitter;
-  const std::string cppSource = emitter.emitCpp(program, options.entryPath);
-
-  if (options.emitKind == "cpp") {
-    if (!writeFile(options.outputPath, cppSource)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::OutputError,
-                         "Failed to write output: ",
-                         options.outputPath,
-                         2);
-    }
-    return 0;
-  }
-
-  std::filesystem::path outputPath(options.outputPath);
-  std::filesystem::path cppPath = outputPath;
-  cppPath.replace_extension(".cpp");
-  if (!writeFile(cppPath.string(), cppSource)) {
-    return emitFailure(options,
-                       primec::DiagnosticCode::OutputError,
-                       "Failed to write intermediate C++: ",
-                       cppPath.string(),
-                       2);
-  }
-
-  if (!primec::compileCppExecutable(processRunner, cppPath, outputPath)) {
-    return emitFailure(options,
-                       primec::DiagnosticCode::EmitError,
-                       "",
-                       "Failed to compile output executable",
-                       3,
-                       {"backend: cpp"});
-  }
-
-  return 0;
+  return emitFailure(options,
+                     primec::DiagnosticCode::EmitError,
+                     "Emit error: ",
+                     "no backend available for emit kind " + options.emitKind,
+                     2);
 }
