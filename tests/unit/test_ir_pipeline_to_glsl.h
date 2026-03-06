@@ -442,6 +442,28 @@ TEST_CASE("ir to glsl emitter writes i32/f64 narrowed conversion opcodes") {
   CHECK(glsl.find("// Narrowed GLSL path lowers f64/i32 conversion through f32 payloads.") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes i64/u64 to f64 narrowed conversion opcodes") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(8))});
+  fn.instructions.push_back({primec::IrOpcode::ConvertI64ToF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(9))});
+  fn.instructions.push_back({primec::IrOpcode::ConvertU64ToF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("// Narrowed GLSL path lowers i64/f64 conversion through f32 payloads.") != std::string::npos);
+  CHECK(glsl.find("// Narrowed GLSL path lowers u64/f64 conversion through f32 payloads.") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter writes i32 to f32 conversion opcode") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
