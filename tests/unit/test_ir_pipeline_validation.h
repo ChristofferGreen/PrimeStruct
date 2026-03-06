@@ -1197,6 +1197,94 @@ TEST_CASE("ir lowerer expr emit setup validates unary callback dependencies") {
   CHECK(error == "native backend missing expr emit setup dependency: emitExpr");
 }
 
+TEST_CASE("ir lowerer expr emit setup dispatches move passthrough step") {
+  primec::ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
+  primec::ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
+  primec::ir_lowerer::LowerExprEmitReadbackPassthroughCallFn emitReadbackPassthroughCall;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::runLowerExprEmitSetup(
+      {},
+      emitMovePassthroughCall,
+      emitUploadPassthroughCall,
+      emitReadbackPassthroughCall,
+      error));
+  REQUIRE(error.empty());
+
+  primec::Expr literalExpr;
+  literalExpr.kind = primec::Expr::Kind::Literal;
+  literalExpr.literalValue = 4;
+
+  int emitExprCalls = 0;
+  auto emitExpr = [&](const primec::Expr &argExpr, const primec::ir_lowerer::LocalMap &) {
+    ++emitExprCalls;
+    return argExpr.kind == primec::Expr::Kind::Literal;
+  };
+
+  primec::Expr moveExpr;
+  moveExpr.kind = primec::Expr::Kind::Call;
+  moveExpr.name = "move";
+  moveExpr.args.push_back(literalExpr);
+  CHECK(primec::ir_lowerer::runLowerExprEmitMovePassthroughStep(
+            moveExpr,
+            primec::ir_lowerer::LocalMap{},
+            emitMovePassthroughCall,
+            emitExpr,
+            error) == primec::ir_lowerer::UnaryPassthroughCallResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+
+  primec::Expr unknownExpr = moveExpr;
+  unknownExpr.name = "unknown";
+  emitExprCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::runLowerExprEmitMovePassthroughStep(
+            unknownExpr,
+            primec::ir_lowerer::LocalMap{},
+            emitMovePassthroughCall,
+            emitExpr,
+            error) == primec::ir_lowerer::UnaryPassthroughCallResult::NotMatched);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 0);
+}
+
+TEST_CASE("ir lowerer expr emit setup validates move dispatch dependencies") {
+  primec::ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
+  primec::ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
+  primec::ir_lowerer::LowerExprEmitReadbackPassthroughCallFn emitReadbackPassthroughCall;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::runLowerExprEmitSetup(
+      {},
+      emitMovePassthroughCall,
+      emitUploadPassthroughCall,
+      emitReadbackPassthroughCall,
+      error));
+  REQUIRE(error.empty());
+
+  primec::Expr moveExpr;
+  moveExpr.kind = primec::Expr::Kind::Call;
+  moveExpr.name = "move";
+  primec::Expr literalExpr;
+  literalExpr.kind = primec::Expr::Kind::Literal;
+  literalExpr.literalValue = 1;
+  moveExpr.args.push_back(literalExpr);
+
+  CHECK(primec::ir_lowerer::runLowerExprEmitMovePassthroughStep(
+            moveExpr,
+            primec::ir_lowerer::LocalMap{},
+            {},
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            error) == primec::ir_lowerer::UnaryPassthroughCallResult::Error);
+  CHECK(error == "native backend missing expr emit setup dependency: emitMovePassthroughCall");
+
+  CHECK(primec::ir_lowerer::runLowerExprEmitMovePassthroughStep(
+            moveExpr,
+            primec::ir_lowerer::LocalMap{},
+            emitMovePassthroughCall,
+            {},
+            error) == primec::ir_lowerer::UnaryPassthroughCallResult::Error);
+  CHECK(error == "native backend missing expr emit setup dependency: emitExpr");
+}
+
 TEST_CASE("ir lowerer expr emit setup dispatches upload/readback passthrough step") {
   primec::ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
   primec::ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
@@ -1545,6 +1633,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   const std::string emitExprHeaderSource = readText(emitExprHeaderPath);
   CHECK(emitExprHeaderSource.find("runLowerReturnCallsSetup(") != std::string::npos);
   CHECK(emitExprHeaderSource.find("runLowerExprEmitSetup(") != std::string::npos);
+  CHECK(emitExprHeaderSource.find("runLowerExprEmitMovePassthroughStep(") != std::string::npos);
   CHECK(emitExprHeaderSource.find("runLowerExprEmitUploadReadbackPassthroughStep(") != std::string::npos);
 }
 

@@ -25,9 +25,10 @@
       error = "IR backends do not support lambdas";
       return false;
     }
-    const auto moveResult = emitMovePassthroughCall(
+    const auto moveResult = ir_lowerer::runLowerExprEmitMovePassthroughStep(
         expr,
         localsIn,
+        emitMovePassthroughCall,
         [&](const Expr &argExpr, const LocalMap &argLocals) { return emitExpr(argExpr, argLocals); },
         error);
     if (moveResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {

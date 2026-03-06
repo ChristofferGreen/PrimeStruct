@@ -34,6 +34,23 @@ bool runLowerExprEmitSetup(const LowerExprEmitSetupInput &,
   return true;
 }
 
+UnaryPassthroughCallResult runLowerExprEmitMovePassthroughStep(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const LowerExprEmitMovePassthroughCallFn &emitMovePassthroughCall,
+    const EmitExprWithLocalsFn &emitExpr,
+    std::string &errorOut) {
+  if (!emitMovePassthroughCall) {
+    errorOut = "native backend missing expr emit setup dependency: emitMovePassthroughCall";
+    return UnaryPassthroughCallResult::Error;
+  }
+  if (!emitExpr) {
+    errorOut = "native backend missing expr emit setup dependency: emitExpr";
+    return UnaryPassthroughCallResult::Error;
+  }
+  return emitMovePassthroughCall(expr, localsIn, emitExpr, errorOut);
+}
+
 UnaryPassthroughCallResult runLowerExprEmitUploadReadbackPassthroughStep(
     const Expr &expr,
     const LocalMap &localsIn,

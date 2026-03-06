@@ -21,6 +21,12 @@ bool runLowerExprEmitSetup(const LowerExprEmitSetupInput &input,
                            LowerExprEmitUploadPassthroughCallFn &emitUploadPassthroughCallOut,
                            LowerExprEmitReadbackPassthroughCallFn &emitReadbackPassthroughCallOut,
                            std::string &errorOut);
+UnaryPassthroughCallResult runLowerExprEmitMovePassthroughStep(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const LowerExprEmitMovePassthroughCallFn &emitMovePassthroughCall,
+    const EmitExprWithLocalsFn &emitExpr,
+    std::string &errorOut);
 UnaryPassthroughCallResult runLowerExprEmitUploadReadbackPassthroughStep(
     const Expr &expr,
     const LocalMap &localsIn,
