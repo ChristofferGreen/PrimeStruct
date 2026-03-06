@@ -1358,6 +1358,30 @@ main() {
   CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
 }
 
+TEST_CASE("definition validation context isolates on_error handlers") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+warmup() {
+  [File<Write>] file{ File<Write>("warmup.txt"utf8)? }
+  return(Result.ok())
+}
+
+[return<Result<FileError>> effects(file_write)]
+main() {
+  [File<Write>] file{ File<Write>("main.txt"utf8)? }
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("missing on_error for ? usage") != std::string::npos);
+}
+
 TEST_CASE("File constructor requires file_write effect") {
   const std::string source = R"(
 [return<Result<FileError>> on_error<FileError, /log_file_error>]
