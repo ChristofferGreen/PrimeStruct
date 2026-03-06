@@ -592,6 +592,8 @@ TEST_CASE("cpp-ir backend writes i64 float conversion clamp helpers") {
   CHECK(result.exitCode == 0);
 
   const std::string source = readTextFile(outputPath);
+  CHECK(source.find("#include <cmath>") != std::string::npos);
+  CHECK(source.find("#include <limits>") != std::string::npos);
   CHECK(source.find("static int64_t psConvertF32ToI64(float value)") != std::string::npos);
   CHECK(source.find("static int64_t psConvertF64ToI64(double value)") != std::string::npos);
   CHECK(source.find("int64_t converted = psConvertF32ToI64(value);") != std::string::npos);
@@ -628,6 +630,8 @@ TEST_CASE("cpp-ir backend omits i64 float conversion clamp helpers when unused")
   CHECK(result.exitCode == 0);
 
   const std::string source = readTextFile(outputPath);
+  CHECK(source.find("#include <cmath>") == std::string::npos);
+  CHECK(source.find("#include <limits>") == std::string::npos);
   CHECK(source.find("static int64_t psConvertF32ToI64(float value)") == std::string::npos);
   CHECK(source.find("static int64_t psConvertF64ToI64(double value)") == std::string::npos);
 }
