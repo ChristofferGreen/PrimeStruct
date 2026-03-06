@@ -2642,6 +2642,73 @@ TEST_CASE("emitter expr control if-block early-return step emits non-final retur
   CHECK(missingEmit.emittedStatement == "return 0; ");
 }
 
+TEST_CASE("emitter expr control if-block final-value step emits final returns") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "value";
+
+  const auto nonFinal = primec::emitter::runEmitterExprControlIfBlockFinalValueStep(
+      stmt,
+      false,
+      [&](const primec::Expr &) { return true; },
+      [&](const primec::Expr &) { return "unused"; });
+  CHECK_FALSE(nonFinal.handled);
+  CHECK(nonFinal.emittedStatement.empty());
+
+  primec::Expr bindingStmt = stmt;
+  bindingStmt.isBinding = true;
+  const auto bindingFinal = primec::emitter::runEmitterExprControlIfBlockFinalValueStep(
+      bindingStmt,
+      true,
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &) { return "unused"; });
+  CHECK(bindingFinal.handled);
+  CHECK(bindingFinal.emittedStatement == "return 0; ");
+
+  primec::Expr returnStmt;
+  returnStmt.kind = primec::Expr::Kind::Call;
+  returnStmt.name = "return";
+  primec::Expr returnValue;
+  returnValue.kind = primec::Expr::Kind::Literal;
+  returnValue.literalValue = 3;
+  returnStmt.args = {returnValue};
+
+  int emitCalls = 0;
+  const auto validReturn = primec::emitter::runEmitterExprControlIfBlockFinalValueStep(
+      returnStmt,
+      true,
+      [&](const primec::Expr &candidate) {
+        CHECK(candidate.name == "return");
+        return true;
+      },
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Literal);
+        CHECK(candidate.literalValue == 3);
+        return std::string("emit_final");
+      });
+  CHECK(validReturn.handled);
+  CHECK(emitCalls == 1);
+  CHECK(validReturn.emittedStatement == "return emit_final; ");
+
+  returnStmt.args.clear();
+  const auto invalidArity = primec::emitter::runEmitterExprControlIfBlockFinalValueStep(
+      returnStmt,
+      true,
+      [&](const primec::Expr &) { return true; },
+      [&](const primec::Expr &) { return "unused"; });
+  CHECK(invalidArity.handled);
+  CHECK(invalidArity.emittedStatement == "return 0; ");
+
+  const auto missingEmit = primec::emitter::runEmitterExprControlIfBlockFinalValueStep(
+      stmt,
+      true,
+      [&](const primec::Expr &) { return false; },
+      {});
+  CHECK(missingEmit.handled);
+  CHECK(missingEmit.emittedStatement == "return 0; ");
+}
+
 TEST_CASE("semantics validator expr capture split step tokenizes captures") {
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep("").empty());
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep(" \t \n").empty());
@@ -2877,6 +2944,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlStringLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlMethodPathStep(") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockFinalValueStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEarlyReturnStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEnvelopeStep(candidate)") !=
@@ -2911,6 +2980,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFieldAccessStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIntegerLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockFinalValueStep.h\"") !=
+        std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockEarlyReturnStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlMethodPathStep.h\"") != std::string::npos);

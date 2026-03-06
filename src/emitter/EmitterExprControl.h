@@ -317,32 +317,24 @@
           out << earlyReturnStep.emittedStatement;
           break;
         }
-        if (isLast) {
-          if (stmt.isBinding) {
-            out << "return 0; ";
-            break;
-          }
-          const Expr *valueExpr = &stmt;
-          if (isReturnCall(stmt)) {
-            if (stmt.args.size() == 1) {
-              valueExpr = &stmt.args.front();
-            } else {
-              out << "return 0; ";
-              break;
-            }
-          }
-          out << "return "
-              << emitExpr(*valueExpr,
-                          nameMap,
-                          paramMap,
-                          structTypeMap,
-                          importAliases,
-                          branchTypes,
-                          returnKinds,
-                          resultInfos,
-                          returnStructs,
-                          allowMathBare)
-              << "; ";
+        if (const auto finalValueStep = emitter::runEmitterExprControlIfBlockFinalValueStep(
+                stmt,
+                isLast,
+                [&](const Expr &candidate) { return isReturnCall(candidate); },
+                [&](const Expr &candidate) {
+                  return emitExpr(candidate,
+                                  nameMap,
+                                  paramMap,
+                                  structTypeMap,
+                                  importAliases,
+                                  branchTypes,
+                                  returnKinds,
+                                  resultInfos,
+                                  returnStructs,
+                                  allowMathBare);
+                });
+            finalValueStep.handled) {
+          out << finalValueStep.emittedStatement;
           break;
         }
         if (stmt.isBinding) {
