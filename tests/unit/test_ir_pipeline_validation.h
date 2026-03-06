@@ -281,6 +281,90 @@ TEST_CASE("ir lowerer imports structs setup step rejects unknown field envelopes
   CHECK_FALSE(error.empty());
 }
 
+TEST_CASE("ir lowerer locals setup step resolves orchestration adapters") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  program.definitions.push_back(entryDef);
+
+  primec::IrModule module;
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_set<std::string> structNames;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::vector<primec::ir_lowerer::LayoutFieldBinding>> structFieldInfoByName;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::runLowerImportsStructsSetup(
+      program, module, defMap, structNames, importAliases, structFieldInfoByName, error));
+  REQUIRE(error.empty());
+
+  primec::IrFunction function;
+  function.name = "/main";
+  std::vector<std::string> stringTable;
+  primec::ir_lowerer::SetupLocalsOrchestration setupLocalsOrchestration;
+  CHECK(primec::ir_lowerer::runLowerLocalsSetup(stringTable,
+                                                function,
+                                                program,
+                                                program.definitions.front(),
+                                                "/main",
+                                                defMap,
+                                                importAliases,
+                                                structNames,
+                                                structFieldInfoByName,
+                                                setupLocalsOrchestration,
+                                                error));
+  CHECK(error.empty());
+  CHECK(setupLocalsOrchestration.entryReturnConfig.returnsVoid);
+  CHECK(static_cast<bool>(
+      setupLocalsOrchestration.runtimeErrorAndStringLiteralSetup.stringLiteralHelpers.internString));
+  CHECK(static_cast<bool>(setupLocalsOrchestration.entryCountAccessSetup.classifiers.isEntryArgsName));
+  CHECK(static_cast<bool>(setupLocalsOrchestration.entryCallOnErrorSetup.callResolutionAdapters.resolveExprPath));
+  CHECK(static_cast<bool>(setupLocalsOrchestration.setupMathResolvers.getMathBuiltinName));
+  CHECK(static_cast<bool>(setupLocalsOrchestration.bindingTypeAdapters.bindingKind));
+  CHECK(static_cast<bool>(setupLocalsOrchestration.setupTypeAndStructTypeAdapters.combineNumericKinds));
+  CHECK(static_cast<bool>(setupLocalsOrchestration.applyStructValueInfo));
+}
+
+TEST_CASE("ir lowerer locals setup step rejects unsupported string array return") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back("array<string>");
+  entryDef.transforms.push_back(returnTransform);
+  program.definitions.push_back(entryDef);
+
+  primec::IrModule module;
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_set<std::string> structNames;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::vector<primec::ir_lowerer::LayoutFieldBinding>> structFieldInfoByName;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::runLowerImportsStructsSetup(
+      program, module, defMap, structNames, importAliases, structFieldInfoByName, error));
+  REQUIRE(error.empty());
+
+  primec::IrFunction function;
+  function.name = "/main";
+  std::vector<std::string> stringTable;
+  primec::ir_lowerer::SetupLocalsOrchestration setupLocalsOrchestration;
+  CHECK_FALSE(primec::ir_lowerer::runLowerLocalsSetup(stringTable,
+                                                      function,
+                                                      program,
+                                                      program.definitions.front(),
+                                                      "/main",
+                                                      defMap,
+                                                      importAliases,
+                                                      structNames,
+                                                      structFieldInfoByName,
+                                                      setupLocalsOrchestration,
+                                                      error));
+  CHECK(error == "native backend does not support string array return types on /main");
+  CHECK_FALSE(setupLocalsOrchestration.entryReturnConfig.hasReturnTransform);
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -330,6 +414,12 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   REQUIRE(std::filesystem::exists(importsHeaderPath));
   const std::string importsHeaderSource = readText(importsHeaderPath);
   CHECK(importsHeaderSource.find("runLowerImportsStructsSetup(") != std::string::npos);
+
+  const std::filesystem::path localsHeaderPath =
+      std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerSetupLocals.h";
+  REQUIRE(std::filesystem::exists(localsHeaderPath));
+  const std::string localsHeaderSource = readText(localsHeaderPath);
+  CHECK(localsHeaderSource.find("runLowerLocalsSetup(") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

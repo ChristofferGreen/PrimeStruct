@@ -41,28 +41,20 @@
   std::optional<ResultReturnInfo> currentReturnResult;
   const bool hasMathImport = ir_lowerer::hasProgramMathImport(program.imports);
 
-  ir_lowerer::EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
-      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;
-  if (!ir_lowerer::buildProgramEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
-      stringTable,
-      function,
-      program,
-      *entryDef,
-      entryPath,
-      defMap,
-      importAliases,
-      structNames,
-      structFieldInfoByName.size(),
-      [&](const ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
-        ir_lowerer::appendStructLayoutFieldsFromFieldBindings(
-            structFieldInfoByName, defMap, appendStructLayoutField);
-      },
-      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup,
-      error)) {
+  ir_lowerer::SetupLocalsOrchestration setupLocalsOrchestration;
+  if (!ir_lowerer::runLowerLocalsSetup(stringTable,
+                                       function,
+                                       program,
+                                       *entryDef,
+                                       entryPath,
+                                       defMap,
+                                       importAliases,
+                                       structNames,
+                                       structFieldInfoByName,
+                                       setupLocalsOrchestration,
+                                       error)) {
     return false;
   }
-  const auto setupLocalsOrchestration = ir_lowerer::unpackSetupLocalsOrchestration(
-      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup);
 
   const auto &entryReturnConfig = setupLocalsOrchestration.entryReturnConfig;
   bool returnsVoid = entryReturnConfig.returnsVoid;

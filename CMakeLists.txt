@@ -28,6 +28,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererCountAccessHelpers.cpp
   src/ir_lowerer/IrLowererLowerEntrySetup.cpp
   src/ir_lowerer/IrLowererLowerImportsStructsSetup.cpp
+  src/ir_lowerer/IrLowererLowerLocalsSetup.cpp
   src/ir_lowerer/IrLowererFileWriteHelpers.cpp
   src/ir_lowerer/IrLowererFlowHelpers.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
