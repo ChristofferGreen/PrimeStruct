@@ -3734,6 +3734,82 @@ TEST_CASE("emitter expr control if branch body handlers step composes handlers")
   CHECK_FALSE(missingCallbacks.emitted.shouldBreak);
 }
 
+TEST_CASE("emitter expr control if branch value step composes prelude body and wrapper") {
+  primec::Expr nonEnvelope;
+  nonEnvelope.kind = primec::Expr::Kind::Name;
+  nonEnvelope.name = "direct";
+
+  int nonEnvelopeEmitCalls = 0;
+  const auto directResult = primec::emitter::runEmitterExprControlIfBranchValueStep(
+      nonEnvelope,
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &candidate) {
+        ++nonEnvelopeEmitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Name);
+        CHECK(candidate.name == "direct");
+        return std::string("emit_direct");
+      },
+      [&](const primec::Expr &, bool) {
+        CHECK_FALSE(true);
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      });
+  CHECK(directResult.handled);
+  CHECK(nonEnvelopeEmitCalls == 1);
+  CHECK(directResult.emittedExpr == "emit_direct");
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Name;
+  stmt.name = "value";
+
+  primec::Expr envelope;
+  envelope.kind = primec::Expr::Kind::Call;
+  envelope.bodyArguments = {stmt};
+
+  int statementCalls = 0;
+  const auto wrapped = primec::emitter::runEmitterExprControlIfBranchValueStep(
+      envelope,
+      [&](const primec::Expr &) { return true; },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return std::string{};
+      },
+      [&](const primec::Expr &candidate, bool isLast) {
+        ++statementCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Name);
+        CHECK(candidate.name == "value");
+        CHECK(isLast);
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{
+            true, "return 7; ", true};
+      });
+  CHECK(wrapped.handled);
+  CHECK(statementCalls == 1);
+  CHECK(wrapped.emittedExpr == "([&]() { return 7; }())");
+
+  primec::Expr emptyEnvelope;
+  emptyEnvelope.kind = primec::Expr::Kind::Call;
+  const auto emptyResult = primec::emitter::runEmitterExprControlIfBranchValueStep(
+      emptyEnvelope,
+      [&](const primec::Expr &) { return true; },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return std::string{};
+      },
+      [&](const primec::Expr &, bool) {
+        CHECK_FALSE(true);
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      });
+  CHECK(emptyResult.handled);
+  CHECK(emptyResult.emittedExpr == "0");
+
+  const auto missingCallbacks = primec::emitter::runEmitterExprControlIfBranchValueStep(
+      nonEnvelope,
+      {},
+      {},
+      {});
+  CHECK_FALSE(missingCallbacks.handled);
+  CHECK(missingCallbacks.emittedExpr.empty());
+}
+
 TEST_CASE("emitter expr control if branch body statement step dispatches statements") {
   primec::Expr stmt;
   stmt.kind = primec::Expr::Kind::Name;
@@ -4074,19 +4150,9 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingFallbackStep(") !=
         std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchPreludeStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyReturnStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyBindingStep(") !=
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchValueStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyHandlersStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyStatementStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchWrapperStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingPreludeStep(") !=
         std::string::npos);
@@ -4147,6 +4213,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyBindingStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyHandlersStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchValueStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyStatementStep.h\"") !=
         std::string::npos);
