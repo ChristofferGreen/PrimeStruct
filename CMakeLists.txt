@@ -76,6 +76,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererLowerReturnCallsSetup.cpp
   src/ir_lowerer/IrLowererLowerStatementsCallsStep.cpp
   src/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.cpp
+  src/ir_lowerer/IrLowererLowerStatementsEntryStatementStep.cpp
   src/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.cpp
   src/ir_lowerer/IrLowererLowerStatementsSourceMapStep.cpp
   src/ir_lowerer/IrLowererFileWriteHelpers.cpp

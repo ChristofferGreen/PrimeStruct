@@ -89,6 +89,7 @@
 #include "src/ir_lowerer/IrLowererLowerReturnCallsSetup.h"
 #include "src/ir_lowerer/IrLowererLowerStatementsCallsStep.h"
 #include "src/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.h"
+#include "src/ir_lowerer/IrLowererLowerStatementsEntryStatementStep.h"
 #include "src/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.h"
 #include "src/ir_lowerer/IrLowererLowerStatementsSourceMapStep.h"
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"

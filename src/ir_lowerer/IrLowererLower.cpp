@@ -23,6 +23,7 @@
 #include "IrLowererLowerReturnCallsSetup.h"
 #include "IrLowererLowerStatementsCallsStep.h"
 #include "IrLowererLowerStatementsEntryExecutionStep.h"
+#include "IrLowererLowerStatementsEntryStatementStep.h"
 #include "IrLowererLowerStatementsFunctionTableStep.h"
 #include "IrLowererLowerStatementsSourceMapStep.h"
 #include "IrLowererOnErrorHelpers.h"

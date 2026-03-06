@@ -38,12 +38,17 @@
   };
 
   auto emitEntryStatement = [&](const Expr &stmt) -> bool {
-    const size_t startInstructionIndex = function.instructions.size();
-    if (!emitStatement(stmt, locals)) {
-      return false;
-    }
-    appendInstructionSourceRange(function.name, stmt, startInstructionIndex, function.instructions.size());
-    return true;
+    return ir_lowerer::runLowerStatementsEntryStatementStep(
+        {
+            .function = &function,
+            .emitStatement = [&](const Expr &entryStmt) { return emitStatement(entryStmt, locals); },
+            .appendInstructionSourceRange =
+                [&](const std::string &functionName, const Expr &entryStmt, size_t beginIndex, size_t endIndex) {
+                  appendInstructionSourceRange(functionName, entryStmt, beginIndex, endIndex);
+                },
+        },
+        stmt,
+        error);
   };
   if (!ir_lowerer::runLowerStatementsEntryExecutionStep(
           {
