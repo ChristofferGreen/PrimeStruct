@@ -127,6 +127,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding inference prefers user definition named vector template call") {
+  const std::string source = R"(
+[return<i32>]
+vector<T>([T] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  value{vector<i32>(1i32)}
+  return(plus(value, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("binding inference keeps builtin vector literal type") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  value{vector<i32>(1i32)}
+  return(capacity(value))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("local binding type must be supported") {
   const std::string source = R"(
 [return<int>]

@@ -1356,6 +1356,26 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     const std::unordered_map<std::string, BindingInfo> &locals,
     BindingInfo &bindingOut) {
   if (tryInferBindingTypeFromInitializer(initializer, params, locals, bindingOut, hasAnyMathImport())) {
+    if (initializer.kind == Expr::Kind::Call &&
+        defMap_.find(resolveCalleePath(initializer)) != defMap_.end()) {
+      ReturnKind resolvedKind = inferExprReturnKind(initializer, params, locals);
+      if (resolvedKind != ReturnKind::Unknown && resolvedKind != ReturnKind::Void) {
+        if (resolvedKind == ReturnKind::Array) {
+          std::string inferredStruct = inferStructReturnPath(initializer, params, locals);
+          if (!inferredStruct.empty()) {
+            bindingOut.typeName = inferredStruct;
+            bindingOut.typeTemplateArg.clear();
+            return true;
+          }
+        }
+        std::string inferredType = typeNameForReturnKind(resolvedKind);
+        if (!inferredType.empty()) {
+          bindingOut.typeName = inferredType;
+          bindingOut.typeTemplateArg.clear();
+          return true;
+        }
+      }
+    }
     return true;
   }
   ReturnKind kind = inferExprReturnKind(initializer, params, locals);
