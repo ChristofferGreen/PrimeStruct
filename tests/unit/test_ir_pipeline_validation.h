@@ -1940,6 +1940,125 @@ TEST_CASE("ir lowerer statements/calls step validates dependencies") {
   CHECK(error == "native backend missing statements/calls step dependency: instructions");
 }
 
+TEST_CASE("ir lowerer statements entry-execution step wires context and cleanup") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  primec::Expr statementExpr;
+  statementExpr.kind = primec::Expr::Kind::Literal;
+  statementExpr.literalValue = 1;
+  entryDef.statements.push_back(statementExpr);
+
+  bool sawReturn = false;
+  std::unordered_map<std::string, std::optional<primec::ir_lowerer::OnErrorHandler>> onErrorByDef;
+  primec::ir_lowerer::OnErrorHandler entryOnError;
+  entryOnError.handlerPath = "/handler";
+  onErrorByDef.emplace("/main", entryOnError);
+
+  std::optional<primec::ir_lowerer::OnErrorHandler> currentOnError;
+  primec::ir_lowerer::OnErrorHandler previousOnError;
+  previousOnError.handlerPath = "/previous";
+  currentOnError = previousOnError;
+
+  std::optional<primec::ir_lowerer::ResultReturnInfo> currentReturnResult;
+  currentReturnResult = primec::ir_lowerer::ResultReturnInfo{.isResult = false, .hasValue = false};
+  const primec::ir_lowerer::ResultReturnInfo entryResultInfo{.isResult = true, .hasValue = true};
+
+  int emitStatementCalls = 0;
+  int pushScopeCalls = 0;
+  int cleanupCalls = 0;
+  int popScopeCalls = 0;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerStatementsEntryExecutionStep(
+      {
+          .entryDef = &entryDef,
+          .returnsVoid = true,
+          .sawReturn = &sawReturn,
+          .onErrorByDef = &onErrorByDef,
+          .currentOnError = &currentOnError,
+          .currentReturnResult = &currentReturnResult,
+          .entryHasResultInfo = true,
+          .entryResultInfo = &entryResultInfo,
+          .emitEntryStatement = [&](const primec::Expr &) {
+            ++emitStatementCalls;
+            REQUIRE(currentOnError.has_value());
+            CHECK(currentOnError->handlerPath == "/handler");
+            REQUIRE(currentReturnResult.has_value());
+            CHECK(currentReturnResult->isResult);
+            CHECK(currentReturnResult->hasValue);
+            return true;
+          },
+          .pushFileScope = [&]() { ++pushScopeCalls; },
+          .emitCurrentFileScopeCleanup = [&]() { ++cleanupCalls; },
+          .popFileScope = [&]() { ++popScopeCalls; },
+          .instructions = &instructions,
+      },
+      error));
+  CHECK(error.empty());
+  CHECK_FALSE(sawReturn);
+  CHECK(emitStatementCalls == 1);
+  CHECK(pushScopeCalls == 1);
+  CHECK(cleanupCalls == 1);
+  CHECK(popScopeCalls == 1);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions.front().op == primec::IrOpcode::ReturnVoid);
+  REQUIRE(currentOnError.has_value());
+  CHECK(currentOnError->handlerPath == "/previous");
+  REQUIRE(currentReturnResult.has_value());
+  CHECK_FALSE(currentReturnResult->isResult);
+  CHECK_FALSE(currentReturnResult->hasValue);
+}
+
+TEST_CASE("ir lowerer statements entry-execution step validates dependencies") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  bool sawReturn = false;
+  std::unordered_map<std::string, std::optional<primec::ir_lowerer::OnErrorHandler>> onErrorByDef;
+  std::optional<primec::ir_lowerer::OnErrorHandler> currentOnError;
+  std::optional<primec::ir_lowerer::ResultReturnInfo> currentReturnResult;
+  std::vector<primec::IrInstruction> instructions;
+  const primec::ir_lowerer::ResultReturnInfo entryResultInfo{.isResult = true, .hasValue = true};
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerStatementsEntryExecutionStep(
+      {
+          .entryDef = nullptr,
+          .returnsVoid = true,
+          .sawReturn = &sawReturn,
+          .onErrorByDef = &onErrorByDef,
+          .currentOnError = &currentOnError,
+          .currentReturnResult = &currentReturnResult,
+          .entryHasResultInfo = false,
+          .entryResultInfo = &entryResultInfo,
+          .emitEntryStatement = [](const primec::Expr &) { return true; },
+          .pushFileScope = []() {},
+          .emitCurrentFileScopeCleanup = []() {},
+          .popFileScope = []() {},
+          .instructions = &instructions,
+      },
+      error));
+  CHECK(error == "native backend missing statements entry-execution step dependency: entryDef");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerStatementsEntryExecutionStep(
+      {
+          .entryDef = &entryDef,
+          .returnsVoid = true,
+          .sawReturn = &sawReturn,
+          .onErrorByDef = &onErrorByDef,
+          .currentOnError = &currentOnError,
+          .currentReturnResult = &currentReturnResult,
+          .entryHasResultInfo = true,
+          .entryResultInfo = nullptr,
+          .emitEntryStatement = [](const primec::Expr &) { return true; },
+          .pushFileScope = []() {},
+          .emitCurrentFileScopeCleanup = []() {},
+          .popFileScope = []() {},
+          .instructions = &instructions,
+      },
+      error));
+  CHECK(error == "native backend missing statements entry-execution step dependency: entryResultInfo");
+}
+
 TEST_CASE("ir lowerer expr emit setup wires unary passthrough callbacks") {
   primec::ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
   primec::ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
@@ -5045,6 +5164,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
     }
   }
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsCallsStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryExecutionStep.h\"") != std::string::npos);
 
   const std::filesystem::path setupHeaderPath =
       std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerSetupEntryEffects.h";
@@ -5108,10 +5228,12 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   REQUIRE(std::filesystem::exists(statementsCallsHeaderPath));
   const std::string statementsCallsHeaderSource = readText(statementsCallsHeaderPath);
   CHECK(statementsCallsHeaderSource.find("runLowerStatementsCallsStep(") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("runLowerStatementsEntryExecutionStep(") != std::string::npos);
   CHECK(statementsCallsHeaderSource.find("tryEmitBufferStoreStatement(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("tryEmitDispatchStatement(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("tryEmitDirectCallStatement(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("emitAssignOrExprStatementWithPop(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("emitEntryCallableExecutionWithCleanup(") == std::string::npos);
 }
 
 TEST_CASE("emitter emit setup source delegation stays stable") {

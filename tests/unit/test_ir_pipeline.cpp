@@ -88,6 +88,7 @@
 #include "src/ir_lowerer/IrLowererLowerLocalsSetup.h"
 #include "src/ir_lowerer/IrLowererLowerReturnCallsSetup.h"
 #include "src/ir_lowerer/IrLowererLowerStatementsCallsStep.h"
+#include "src/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.h"
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArithmeticHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.h"

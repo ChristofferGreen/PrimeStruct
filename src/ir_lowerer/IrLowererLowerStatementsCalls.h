@@ -37,15 +37,6 @@
         error);
   };
 
-  std::optional<OnErrorHandler> entryOnError;
-  auto entryOnErrorIt = onErrorByDef.find(entryDef->fullPath);
-  if (entryOnErrorIt != onErrorByDef.end()) {
-    entryOnError = entryOnErrorIt->second;
-  }
-  std::optional<ResultReturnInfo> entryResult;
-  if (entryHasResultInfo) {
-    entryResult = entryResultInfo;
-  }
   auto emitEntryStatement = [&](const Expr &stmt) -> bool {
     const size_t startInstructionIndex = function.instructions.size();
     if (!emitStatement(stmt, locals)) {
@@ -54,21 +45,23 @@
     appendInstructionSourceRange(function.name, stmt, startInstructionIndex, function.instructions.size());
     return true;
   };
-  const auto entryExecutionResult = ir_lowerer::emitEntryCallableExecutionWithCleanup(
-      *entryDef,
-      returnsVoid,
-      sawReturn,
-      currentOnError,
-      entryOnError,
-      currentReturnResult,
-      entryResult,
-      emitEntryStatement,
-      [&]() { pushFileScope(); },
-      [&]() { emitFileScopeCleanup(fileScopeStack.back()); },
-      [&]() { popFileScope(); },
-      function.instructions,
-      error);
-  if (entryExecutionResult == ir_lowerer::EntryCallableExecutionResult::Error) {
+  if (!ir_lowerer::runLowerStatementsEntryExecutionStep(
+          {
+              .entryDef = entryDef,
+              .returnsVoid = returnsVoid,
+              .sawReturn = &sawReturn,
+              .onErrorByDef = &onErrorByDef,
+              .currentOnError = &currentOnError,
+              .currentReturnResult = &currentReturnResult,
+              .entryHasResultInfo = entryHasResultInfo,
+              .entryResultInfo = &entryResultInfo,
+              .emitEntryStatement = emitEntryStatement,
+              .pushFileScope = [&]() { pushFileScope(); },
+              .emitCurrentFileScopeCleanup = [&]() { emitFileScopeCleanup(fileScopeStack.back()); },
+              .popFileScope = [&]() { popFileScope(); },
+              .instructions = &function.instructions,
+          },
+          error)) {
     return false;
   }
 
