@@ -1246,6 +1246,14 @@
       }
       if (hasNamedArguments(expr.argNames)) {
         std::string builtinName;
+        auto isLegacyVectorHelperBuiltinCall = [&]() {
+          if (!(isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
+                isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
+                isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap"))) {
+            return false;
+          }
+          return defMap_.find(resolved) == defMap_.end();
+        };
         bool isBuiltin = false;
         if (getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
             getBuiltinMutationName(expr, builtinName) ||
@@ -1260,9 +1268,7 @@
             isAssignCall(expr) || isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) ||
             isForCall(expr) ||
             isRepeatCall(expr) || expr.name == "count" || expr.name == "File" || expr.name == "try" ||
-            expr.name == "capacity" || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
-            isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
-            isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
+            expr.name == "capacity" || isLegacyVectorHelperBuiltinCall() ||
             isSimpleCallName(expr, "dispatch") || isSimpleCallName(expr, "buffer") ||
             isSimpleCallName(expr, "upload") || isSimpleCallName(expr, "readback") ||
             isSimpleCallName(expr, "buffer_load") || isSimpleCallName(expr, "buffer_store")) {

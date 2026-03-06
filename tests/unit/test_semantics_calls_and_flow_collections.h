@@ -763,6 +763,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("user definition named push accepts named arguments") {
+  const std::string source = R"(
+[return<int>]
+push([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(push([value] 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector method helper remains statement-only in expressions") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -774,6 +791,20 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("only supported as a statement") != std::string::npos);
+}
+
+TEST_CASE("vector helper builtin still rejects named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  clear([values] values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_SUITE_END();
