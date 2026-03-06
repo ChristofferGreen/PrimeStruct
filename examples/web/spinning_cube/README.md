@@ -38,6 +38,8 @@ This example is a milestone target for cross-platform backend work.
     deterministic tick-state snapshot entries used by smoke tests.
   - `cubeRotationParity120`: tolerance-based transform/rotation parity entry
     shared across backend parity suites.
+  - `mainNative`: native-only split entrypoint for host smoke while native
+    `/main` support remains blocked on struct-return lowering.
 
 ## Current Browser Host Assets
 - `index.html` provides the canvas shell and module bootstrap.
@@ -116,13 +118,15 @@ Expected runtime behavior:
 
 ### Native
 ```bash
-./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native --entry /main
+./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native --entry /mainNative
 c++ -std=c++17 examples/native/spinning_cube/main.cpp -o /tmp/spinning_cube_host
 /tmp/spinning_cube_host /tmp/cube_native
 ```
 Expected runtime behavior:
 - Startup: host process returns 0 after running one simulation validation pass.
 - Diagnostics: prints `native host verified cube simulation output`.
+- Note: shared-source `/main` is still unsupported for native emit until
+  struct-return lowering parity is restored.
 
 ### macOS Metal
 ```bash

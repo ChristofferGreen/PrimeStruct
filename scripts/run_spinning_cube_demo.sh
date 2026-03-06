@@ -208,7 +208,7 @@ run_native_check() {
   rm -rf "$native_dir"
   mkdir -p "$native_dir"
 
-  if ! "$PRIMEC_BIN" --emit=native "$web_sample_dir/cube.prime" -o "$cube_native" --entry /main 2>"$native_compile_err"; then
+  if ! "$PRIMEC_BIN" --emit=native "$web_sample_dir/cube.prime" -o "$cube_native" --entry /mainNative 2>"$native_compile_err"; then
     if grep -Fq "backend does not support return type" "$native_compile_err"; then
       set_result native SKIP "native backend limitation: backend does not support return type"
       return

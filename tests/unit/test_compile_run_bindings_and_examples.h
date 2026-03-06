@@ -191,13 +191,22 @@ TEST_CASE("spinning cube shared source compiles across profile targets") {
 
   const std::string nativePath =
       (std::filesystem::temp_directory_path() / "primec_spinning_cube_native_smoke").string();
+  const std::string nativeMainErrPath =
+      (std::filesystem::temp_directory_path() / "primec_spinning_cube_native_main_reject.err.txt").string();
   const std::string wasmPath =
       (std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_smoke.wasm").string();
   const std::string metalErrPath =
       (std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_smoke.err.txt").string();
 
+  const std::string nativeMainCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
+                                    quoteShellArg(nativePath) + " --entry /main 2> " +
+                                    quoteShellArg(nativeMainErrPath);
+  CHECK(runCommand(nativeMainCmd) == 2);
+  CHECK(readFile(nativeMainErrPath).find("native backend does not support return type on /cubeInit") !=
+        std::string::npos);
+
   const std::string nativeCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
-                                quoteShellArg(nativePath) + " --entry /main";
+                                quoteShellArg(nativePath) + " --entry /mainNative";
   CHECK(runCommand(nativeCmd) == 0);
   CHECK(std::filesystem::exists(nativePath));
 
@@ -387,7 +396,7 @@ TEST_CASE("spinning cube native host runtime smoke emits success marker") {
       std::filesystem::temp_directory_path() / "primec_spinning_cube_native_target_sample";
   const std::string compileCubeCmd =
       "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(cubeNativePath.string()) +
-      " --entry /main";
+      " --entry /mainNative";
   CHECK(runCommand(compileCubeCmd) == 0);
   CHECK(std::filesystem::exists(cubeNativePath));
   CHECK(runCommand(quoteShellArg(cubeNativePath.string())) == 36);
@@ -602,7 +611,7 @@ TEST_CASE("spinning cube integration artifact matrix stays valid") {
 
   const std::string compileNativeCmd =
       "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativePath.string()) +
-      " --entry /main";
+      " --entry /mainNative";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(std::filesystem::exists(nativePath));
   CHECK(std::filesystem::file_size(nativePath) > 0);
@@ -764,7 +773,7 @@ TEST_CASE("spinning cube optional startup visual smoke checks") {
         std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_native";
     const std::string compileNativeCmd =
         "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativeExePath.string()) +
-        " --entry /main";
+        " --entry /mainNative";
     CHECK(runCommand(compileNativeCmd) == 0);
     CHECK(std::filesystem::exists(nativeExePath));
 
@@ -1002,7 +1011,7 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "./primec --emit=wasm --wasm-profile browser examples/web/spinning_cube/cube.prime -o "
       "examples/web/spinning_cube/cube.wasm --entry /main",
       "python3 -m http.server 8080 --bind 127.0.0.1 --directory examples/web/spinning_cube",
-      "./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native --entry /main",
+      "./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native --entry /mainNative",
       "c++ -std=c++17 examples/native/spinning_cube/main.cpp -o /tmp/spinning_cube_host",
       "xcrun metal -std=metal3.0 -c examples/metal/spinning_cube/cube.metal -o /tmp/cube.air",
       "xcrun metallib /tmp/cube.air -o /tmp/cube.metallib",
@@ -1015,6 +1024,7 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "Required frameworks: `Foundation`, `Metal`, `AppKit`, and `QuartzCore`.",
       "Minimum OS: macOS 14.0 (Sonoma).",
       "No Linux/Windows native window host support.",
+      "shared-source `/main` is still unsupported for native emit until",
       "Diagnostics: prints `native host verified cube simulation output`.",
       "Diagnostics: prints `frame_rendered=1`.",
       "FPS/diagnostic overlay: status text under the canvas is the current",
@@ -1099,7 +1109,7 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
   const std::filesystem::path nativePath = outDir / "cube_native";
   const std::string compileNativeCmd =
       "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativePath.string()) +
-      " --entry /main";
+      " --entry /mainNative";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(std::filesystem::exists(nativePath));
 

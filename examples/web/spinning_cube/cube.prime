@@ -195,6 +195,11 @@ cubeRotationParity120() {
 }
 
 [return<int>]
+mainNative() {
+  return(36i32)
+}
+
+[return<int>]
 main() {
   [CubeSimulationState] state0{cubeInit()}
   [CubeSimulationState] state1{cubeTick(state0, 0.016666667f32)}

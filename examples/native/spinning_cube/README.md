@@ -9,10 +9,12 @@ This sample hosts the shared spinning-cube simulation source from
 
 ## Local Build Steps
 1. Build the shared cube sample to a native binary:
-   - `./primec --emit=native ../../web/spinning_cube/cube.prime -o ./cube_native --entry /main`
+   - `./primec --emit=native ../../web/spinning_cube/cube.prime -o ./cube_native --entry /mainNative`
 2. Build the native host glue:
    - `c++ -std=c++17 main.cpp -o spinning_cube_host`
 3. Run host + sample:
    - `./spinning_cube_host ./cube_native`
 
 The host should print `native host verified cube simulation output` and exit 0.
+Shared-source `/main` remains unsupported for native emit until struct-return
+lowering parity is restored.
