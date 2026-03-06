@@ -141,12 +141,12 @@ constexpr std::array<uint16_t, 36> CubeIndices = {{
 }};
 
 simd_float4x4 makeIdentityMatrix() {
-  return (simd_float4x4){
-      {1.0f, 0.0f, 0.0f, 0.0f},
-      {0.0f, 1.0f, 0.0f, 0.0f},
-      {0.0f, 0.0f, 1.0f, 0.0f},
-      {0.0f, 0.0f, 0.0f, 1.0f},
-  };
+  simd_float4x4 matrix{};
+  matrix.columns[0] = {1.0f, 0.0f, 0.0f, 0.0f};
+  matrix.columns[1] = {0.0f, 1.0f, 0.0f, 0.0f};
+  matrix.columns[2] = {0.0f, 0.0f, 1.0f, 0.0f};
+  matrix.columns[3] = {0.0f, 0.0f, 0.0f, 1.0f};
+  return matrix;
 }
 
 simd_float4x4 makeTranslationMatrix(float x, float y, float z) {
@@ -164,12 +164,12 @@ simd_float4x4 makeRotationMatrix(float angleRadians, simd_float3 axis) {
   const float s = std::sin(angleRadians);
   const float oneMinusC = 1.0f - c;
 
-  return (simd_float4x4){
-      {c + (x * x * oneMinusC), (x * y * oneMinusC) + (z * s), (x * z * oneMinusC) - (y * s), 0.0f},
-      {(y * x * oneMinusC) - (z * s), c + (y * y * oneMinusC), (y * z * oneMinusC) + (x * s), 0.0f},
-      {(z * x * oneMinusC) + (y * s), (z * y * oneMinusC) - (x * s), c + (z * z * oneMinusC), 0.0f},
-      {0.0f, 0.0f, 0.0f, 1.0f},
-  };
+  simd_float4x4 matrix{};
+  matrix.columns[0] = {c + (x * x * oneMinusC), (x * y * oneMinusC) + (z * s), (x * z * oneMinusC) - (y * s), 0.0f};
+  matrix.columns[1] = {(y * x * oneMinusC) - (z * s), c + (y * y * oneMinusC), (y * z * oneMinusC) + (x * s), 0.0f};
+  matrix.columns[2] = {(z * x * oneMinusC) + (y * s), (z * y * oneMinusC) - (x * s), c + (z * z * oneMinusC), 0.0f};
+  matrix.columns[3] = {0.0f, 0.0f, 0.0f, 1.0f};
+  return matrix;
 }
 
 simd_float4x4 makePerspectiveMatrix(float fovYRadians, float aspect, float nearPlane, float farPlane) {
@@ -177,12 +177,12 @@ simd_float4x4 makePerspectiveMatrix(float fovYRadians, float aspect, float nearP
   const float xScale = yScale / aspect;
   const float zRange = farPlane - nearPlane;
 
-  return (simd_float4x4){
-      {xScale, 0.0f, 0.0f, 0.0f},
-      {0.0f, yScale, 0.0f, 0.0f},
-      {0.0f, 0.0f, -(farPlane + nearPlane) / zRange, -1.0f},
-      {0.0f, 0.0f, -(2.0f * farPlane * nearPlane) / zRange, 0.0f},
-  };
+  simd_float4x4 matrix{};
+  matrix.columns[0] = {xScale, 0.0f, 0.0f, 0.0f};
+  matrix.columns[1] = {0.0f, yScale, 0.0f, 0.0f};
+  matrix.columns[2] = {0.0f, 0.0f, -(farPlane + nearPlane) / zRange, -1.0f};
+  matrix.columns[3] = {0.0f, 0.0f, -(2.0f * farPlane * nearPlane) / zRange, 0.0f};
+  return matrix;
 }
 
 bool parsePositiveInt(const char *text, int &valueOut) {
@@ -300,6 +300,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 
   return true;
 }
+
+} // namespace
 
 @class PrimeStructWindowHostDelegate;
 
@@ -745,8 +747,6 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 }
 
 @end
-
-} // namespace
 
 int main(int argc, char **argv) {
   int maxFrames = 0;
