@@ -102,6 +102,26 @@ TEST_CASE("ir to cpp emitter writes f32 to i32 conversion clamp helper") {
   CHECK(cpp.find("int32_t converted = psConvertF32ToI32(value);") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter omits i32 float conversion clamp helpers when unused") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("#include <cmath>") == std::string::npos);
+  CHECK(cpp.find("#include <limits>") == std::string::npos);
+  CHECK(cpp.find("static int32_t psConvertF32ToI32(float value)") == std::string::npos);
+  CHECK(cpp.find("static int32_t psConvertF64ToI32(double value)") == std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes i64 float conversion clamp helpers") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
