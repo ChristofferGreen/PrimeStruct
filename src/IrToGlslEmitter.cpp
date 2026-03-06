@@ -295,6 +295,29 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::ConvertI32ToF64:
+      out << "        // Narrowed GLSL path lowers i32/f64 conversion through f32 payloads.\n";
+      out << "        stack[sp++] = floatBitsToInt(float(stack[--sp]));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertF64ToI32:
+      out << "        // Narrowed GLSL path lowers f64/i32 conversion through f32 payloads.\n";
+      out << "        float value = intBitsToFloat(stack[--sp]);\n";
+      out << "        int converted = 0;\n";
+      out << "        if (isnan(value)) {\n";
+      out << "          converted = 0;\n";
+      out << "        } else if (value >= 2147483647.0) {\n";
+      out << "          converted = 2147483647;\n";
+      out << "        } else if (value <= -2147483648.0) {\n";
+      out << "          converted = -2147483647 - 1;\n";
+      out << "        } else {\n";
+      out << "          converted = int(value);\n";
+      out << "        }\n";
+      out << "        stack[sp++] = converted;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::ConvertF32ToF64:
       out << "        // Narrowed GLSL path keeps f32/f64 conversion as bit-preserving passthrough.\n";
       out << "        pc = " << nextIndex << ";\n";
