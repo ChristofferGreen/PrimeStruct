@@ -298,7 +298,8 @@
       const auto branchBodyStep = emitter::runEmitterExprControlIfBranchBodyStep(
           candidate,
           [&](const Expr &stmt, bool isLast) {
-            if (const auto earlyReturnStep = emitter::runEmitterExprControlIfBlockEarlyReturnStep(
+            if (const auto returnStep =
+                    emitter::runEmitterExprControlIfBranchBodyReturnStep(
                     stmt,
                     isLast,
                     [&](const Expr &candidate) { return isReturnCall(candidate); },
@@ -314,29 +315,8 @@
                                       returnStructs,
                                       allowMathBare);
                     });
-                earlyReturnStep.handled) {
-              return emitter::EmitterExprControlIfBranchBodyEmitResult{
-                  true, earlyReturnStep.emittedStatement, true};
-            }
-            if (const auto finalValueStep = emitter::runEmitterExprControlIfBlockFinalValueStep(
-                    stmt,
-                    isLast,
-                    [&](const Expr &candidate) { return isReturnCall(candidate); },
-                    [&](const Expr &candidate) {
-                      return emitExpr(candidate,
-                                      nameMap,
-                                      paramMap,
-                                      structTypeMap,
-                                      importAliases,
-                                      branchTypes,
-                                      returnKinds,
-                                      resultInfos,
-                                      returnStructs,
-                                      allowMathBare);
-                    });
-                finalValueStep.handled) {
-              return emitter::EmitterExprControlIfBranchBodyEmitResult{
-                  true, finalValueStep.emittedStatement, true};
+                returnStep.handled) {
+              return returnStep.emitted;
             }
             if (const auto bindingPrelude = emitter::runEmitterExprControlIfBlockBindingPreludeStep(
                     stmt,
