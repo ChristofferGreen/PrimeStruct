@@ -23,6 +23,10 @@ semantics after canonicalization.
   `[RenderPass] pass{RenderPass(...)}`.
 - Prefer object-owned methods and constructors over free-function style APIs
   (`window.is_open()`, `pass.draw_mesh(...)`, `swapchain.present(...)`).
+- For collection examples, prefer C++-style member/index syntax:
+  `value.push(x)`, `value.at(i)`, `value[i]`, `value.count()`.
+  Use free-function helper spellings (`push(value, x)`, `at(value, i)`) only when
+  demonstrating canonical post-transform forms.
 - Prefer unsuffixed numeric literals in surface examples (`1280`, `0.0166667`).
 - Prefer typed enums/descriptors over stringly-typed GPU config
   (`PresentMode.Fifo` over `"fifo"`).

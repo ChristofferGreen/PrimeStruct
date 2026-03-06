@@ -43,7 +43,7 @@ auto-deduced by name; ambiguous names are errors. Text transforms may append add
 node, which run after the current transform.
 
 The parser accepts convenient surface forms (operator/infix sugar, `if(...) { ... } else { ... }`,
-indexing `value[index]`), then rewrites them into a small canonical core before semantic analysis
+indexing `value[index]`, collection method forms like `value.push(x)`), then rewrites them into a small canonical core before semantic analysis
 and IR lowering.
 Canonical/bottom-level syntax requires explicit return transforms and literal suffixes; surface syntax may omit
 them and rely on inference/transforms to insert the canonical forms. `auto` is permitted in signatures; in
@@ -404,7 +404,9 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
     Parentheses are required after the method name.
   - Method calls may include template arguments: `value.method<T>(args...)`.
 - Indexing:
-  - `value[index]` -> `at(value, index)`
+  - `value[index]` -> `at(value, index)` (safe indexing)
+  - `value.at(index)` is equivalent to `value[index]` and rewrites to `at(value, index)`.
+  - `value.at_unsafe(index)` rewrites to `at_unsafe(value, index)`.
 
 The canonical core is what semantic validation and IR lowering consume.
 
@@ -525,10 +527,11 @@ array<i32>{1i32, 2i32}   // surface form
 array<i32>[1i32, 2i32]   // surface form
 ```
 
+Arrays are fixed-size contiguous value sequences once constructed (C++ `std::array`-like behavior).
 Helpers:
-- `count(value)` / `value.count()`
-- `at(value, index)`
-- `at_unsafe(value, index)`
+- `value.count()` (canonical equivalent: `count(value)`)
+- `value.at(index)` / `value[index]` (canonical equivalent: `at(value, index)`)
+- `value.at_unsafe(index)` (canonical equivalent: `at_unsafe(value, index)`)
 
 ### 8.2 Vectors
 
@@ -538,16 +541,20 @@ vector<i32>{1i32 2i32}
 vector<i32>[1i32 2i32]
 ```
 
-Vectors are resizable sequences. Construction is variadic; zero or more arguments are accepted.
+Vectors are C++-style dynamic contiguous sequences. Construction is variadic; zero or more arguments are accepted.
+Growth operations (`push`, `reserve`) may reallocate and invalidate references/pointers into vector storage.
 Helpers:
-- `count(value)` / `value.count()`
-- `at(value, index)` / `at_unsafe(value, index)`
-- `push(value, item)` / `pop(value)`
-- `reserve(value, capacity)` / `capacity(value)`
-- `clear(value)` / `remove_at(value, index)` / `remove_swap(value, index)`
+- `value.count()` (canonical equivalent: `count(value)`)
+- `value.at(index)` / `value[index]` / `value.at_unsafe(index)` (canonical equivalents: `at(value, index)`, `at_unsafe(value, index)`)
+- `value.push(item)` / `value.pop()` (canonical equivalents: `push(value, item)`, `pop(value)`)
+- `value.reserve(capacity)` / `value.capacity()` (canonical equivalents: `reserve(value, capacity)`, `capacity(value)`)
+- `value.clear()` / `value.remove_at(index)` / `value.remove_swap(index)` (canonical equivalents: `clear(value)`, `remove_at(value, index)`, `remove_swap(value, index)`)
 
 Mutation helpers (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) are statement-only
 (not valid in expression contexts).
+
+Implementation status note: VM/native currently still implement vectors as fixed-capacity locals; full dynamic
+vector runtime parity is tracked in `docs/todo.md`.
 
 ### 8.3 Maps
 
@@ -560,9 +567,9 @@ map<i32, i32>[1i32 2i32]
 Map literals supply alternating key/value forms; an odd number of entries is a diagnostic.
 
 Helpers:
-- `count(value)` / `value.count()`
-- `at(value, key)`
-- `at_unsafe(value, key)`
+- `value.count()` (canonical equivalent: `count(value)`)
+- `value.at(key)` (canonical equivalent: `at(value, key)`)
+- `value.at_unsafe(key)` (canonical equivalent: `at_unsafe(value, key)`)
 
 Map IR lowering is currently limited in VM/native backends: numeric/bool values only, with string keys allowed when they come from string literals or bindings backed by literals.
 
@@ -624,8 +631,9 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
   - If a parameter is present, it must be exactly one `array<string>` parameter. An omitted envelope or `auto`
     on the entry parameter resolves to `array<string>`.
   - The entry parameter does not allow a default value.
-- `args.count()` and `count(args)` are supported; indexing `args[index]` is bounds-checked unless
-  `at_unsafe` is used.
+- `args.count()` and `count(args)` are supported; checked indexing is available via
+  `args[index]` or `args.at(index)`; unchecked indexing uses `at_unsafe(args, index)` or
+  `args.at_unsafe(index)`.
 
 ## 13. Backend Notes (Syntax-Relevant)
 
