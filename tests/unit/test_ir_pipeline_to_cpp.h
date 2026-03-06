@@ -111,6 +111,26 @@ TEST_CASE("ir to cpp emitter writes print and argv opcodes") {
   CHECK(cpp.find("std::cerr << argv[indexValue];") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter writes string byte load opcode") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("abc");
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  fn.instructions.push_back({primec::IrOpcode::LoadStringByte, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("if (stringByteIndex >= 3ull)") != std::string::npos);
+  CHECK(cpp.find("ps_string_table[0][stringByteIndex]") != std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes jump and conditional jump control flow") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
@@ -255,6 +275,23 @@ TEST_CASE("ir to cpp emitter rejects out-of-range string indices") {
   fn.name = "/main";
   fn.instructions.push_back({primec::IrOpcode::PrintString, primec::encodePrintStringImm(3, 0)});
   fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, cpp, error));
+  CHECK(error.find("string index out of range") != std::string::npos);
+}
+
+TEST_CASE("ir to cpp emitter rejects out-of-range string byte load indices") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::LoadStringByte, 2});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
 
   std::string cpp;

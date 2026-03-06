@@ -212,6 +212,49 @@ main() {
   CHECK(output.find("ps_string_table[stringIndex]") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir emitter writes string indexing paths") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  [i32] a{at(text, 0i32)}
+  [i32] b{at_unsafe(text, 1i32)}
+  [i32] len{count(text)}
+  return(plus(plus(a, b), len))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_string_indexing.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_cpp_ir_string_indexing.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("if (stringByteIndex >= 3ull)") != std::string::npos);
+  CHECK(output.find("ps_string_table[0][stringByteIndex]") != std::string::npos);
+}
+
+TEST_CASE("cpp emitter uses ir backend for string indexing") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  [i32] a{at(text, 0i32)}
+  [i32] b{at_unsafe(text, 1i32)}
+  [i32] len{count(text)}
+  return(plus(plus(a, b), len))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_string_indexing_ir_first.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_string_indexing_ir_first.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_string_table[0][stringByteIndex]") != std::string::npos);
+  CHECK(output.find("ps_entry_0") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir emitter writes callable dispatch paths") {
   const std::string source = R"(
 [return<void> effects(io_out)]
@@ -592,6 +635,25 @@ main() {
   CHECK(readFile(outPath) == "right\n");
 }
 
+TEST_CASE("exe-ir emitter compiles and runs string indexing") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  [i32] a{at(text, 0i32)}
+  [i32] b{at_unsafe(text, 1i32)}
+  [i32] len{count(text)}
+  return(plus(plus(a, b), len))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_string_indexing.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_string_indexing").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == (97 + 98 + 3));
+}
+
 TEST_CASE("exe-ir emitter compiles and runs call and callvoid paths") {
   const std::string source = R"(
 [return<void> effects(io_out)]
@@ -667,6 +729,25 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("exe emitter uses ir backend for string indexing") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  [i32] a{at(text, 0i32)}
+  [i32] b{at_unsafe(text, 1i32)}
+  [i32] len{count(text)}
+  return(plus(plus(a, b), len))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_string_indexing_ir_first.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_string_indexing_ir_first").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == (97 + 98 + 3));
 }
 
 TEST_CASE("exe-ir emitter compiles and runs f64 arithmetic subset") {

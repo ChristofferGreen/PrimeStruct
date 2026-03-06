@@ -188,6 +188,42 @@ TEST_CASE("cpp-ir backend writes f32 opcode helpers") {
   CHECK(source.find("float right = psBitsToF32(stack[--sp]);") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir backend writes string byte load paths") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("abc");
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(1)});
+  function.instructions.push_back({primec::IrOpcode::LoadStringByte, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_string_byte.cpp";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "cpp_ir_backend_string_byte.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("if (stringByteIndex >= 3ull)") != std::string::npos);
+  CHECK(source.find("ps_string_table[0][stringByteIndex]") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir backend writes f64 compare helpers") {
   const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
   REQUIRE(backend != nullptr);

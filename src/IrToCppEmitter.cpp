@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <sstream>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace primec {
 namespace {
@@ -41,6 +43,7 @@ std::string escapeCppStringLiteral(const std::string &text) {
 struct EmitContext {
   size_t stringCount = 0;
   size_t functionCount = 0;
+  std::vector<size_t> stringLengths;
 };
 
 bool usesF32Helpers(IrOpcode opcode) {
@@ -615,6 +618,23 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     }
+    case IrOpcode::LoadStringByte:
+      if (instruction.imm >= context.stringCount) {
+        error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      out << "        uint64_t stringByteIndex = stack[--sp];\n";
+      out << "        if (stringByteIndex >= "
+          << context.stringLengths[static_cast<size_t>(instruction.imm)] << "ull) {\n";
+      out << "          std::cerr << \"string index out of bounds in IR\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
+      out << "        uint8_t byte = static_cast<uint8_t>(ps_string_table[" << instruction.imm
+          << "][stringByteIndex]);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(byte)));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::ReturnI32:
       out << "        return static_cast<int64_t>(static_cast<int32_t>(stack[--sp]));\n";
       return true;
@@ -703,9 +723,15 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   }
   body << "\n";
 
+  std::vector<size_t> stringLengths;
+  stringLengths.reserve(module.stringTable.size());
+  for (const std::string &text : module.stringTable) {
+    stringLengths.push_back(text.size());
+  }
   const EmitContext context{
       .stringCount = module.stringTable.size(),
       .functionCount = module.functions.size(),
+      .stringLengths = std::move(stringLengths),
   };
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     const IrFunction &function = module.functions[functionIndex];
