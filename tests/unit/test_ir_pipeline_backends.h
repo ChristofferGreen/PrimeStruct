@@ -95,6 +95,26 @@ TEST_CASE("main routes glsl and spirv through ir backends without legacy fallbac
   CHECK(source.find("if (irFailure.stage != IrBackendRunFailureStage::Emit)") == std::string::npos);
 }
 
+TEST_CASE("backend boundary ADR is present and referenced from design doc") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path adrPath = cwd / "docs" / "adr" / "0001-backend-ir-boundary.md";
+  std::filesystem::path designPath = cwd / "docs" / "PrimeStruct.md";
+  if (!std::filesystem::exists(adrPath)) {
+    adrPath = cwd.parent_path() / "docs" / "adr" / "0001-backend-ir-boundary.md";
+    designPath = cwd.parent_path() / "docs" / "PrimeStruct.md";
+  }
+
+  REQUIRE(std::filesystem::exists(adrPath));
+  REQUIRE(std::filesystem::exists(designPath));
+
+  const std::string adr = readTextFile(adrPath);
+  CHECK(adr.find("All code generation backends must consume canonical `IrModule` only.") != std::string::npos);
+  CHECK(adr.find("AST-direct backend emission paths are not allowed") != std::string::npos);
+
+  const std::string design = readTextFile(designPath);
+  CHECK(design.find("docs/adr/0001-backend-ir-boundary.md") != std::string::npos);
+}
+
 TEST_CASE("glsl and spirv ir backends use glsl ir validation target") {
   primec::Options options;
 

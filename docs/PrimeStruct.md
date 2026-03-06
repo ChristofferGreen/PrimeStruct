@@ -22,6 +22,7 @@ PrimeStruct is organized into four language levels. Each higher level desugars i
 - **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution runs over that full unit; implicit-template inference may use call sites anywhere in the expanded source. The v1 toolchain prioritises fast full rebuilds over incremental compilation.
 - **Envelope stream boundary:** high-level features are lowered into the canonical envelope form, and backends consume this stable envelope stream. Emission can stream envelopes directly into IR/bytecode or native codegen without reintroducing surface syntax.
 - **Deterministic emission:** canonicalization happens once, before backend selection, so all emitters see the same fully-resolved envelopes and produce consistent results.
+- **Backend boundary policy:** all codegen modes consume canonical IR via `IrBackend` (`docs/adr/0001-backend-ir-boundary.md`).
 
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.

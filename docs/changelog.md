@@ -3,6 +3,9 @@
 ## 2026-03-06
 
 ### Docs
+- Added ADR `docs/adr/0001-backend-ir-boundary.md` to lock backend boundary
+  policy: all production codegen modes must consume canonical IR through
+  `IrBackend` (no AST-direct backend emission paths).
 - Expanded `docs/Graphics_API_Design.md` with a locked v1 spinning-cube mini-spec:
   concrete `/std/gfx/*` resource/frame API signatures, compile-target profile
   deduction, locked `/std/gfx/VertexColored` wire layout, deterministic
