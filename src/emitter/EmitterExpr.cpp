@@ -24,6 +24,7 @@
 #include "EmitterExprControlIfBranchBodyStep.h"
 #include "EmitterExprControlIfBranchBodyReturnStep.h"
 #include "EmitterExprControlIfBranchBodyStatementStep.h"
+#include "EmitterExprControlIfBranchEmitStep.h"
 #include "EmitterExprControlIfBranchValueStep.h"
 #include "EmitterExprControlIfBranchPreludeStep.h"
 #include "EmitterExprControlIfBranchWrapperStep.h"

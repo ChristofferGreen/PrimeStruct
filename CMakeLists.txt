@@ -40,6 +40,7 @@ add_library(primec_lib
   src/emitter/EmitterExprControlIfBranchBodyStep.cpp
   src/emitter/EmitterExprControlIfBranchBodyReturnStep.cpp
   src/emitter/EmitterExprControlIfBranchBodyStatementStep.cpp
+  src/emitter/EmitterExprControlIfBranchEmitStep.cpp
   src/emitter/EmitterExprControlIfBranchValueStep.cpp
   src/emitter/EmitterExprControlIfBranchPreludeStep.cpp
   src/emitter/EmitterExprControlIfBranchWrapperStep.cpp

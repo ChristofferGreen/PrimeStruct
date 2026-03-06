@@ -53,6 +53,7 @@
 #include "src/emitter/EmitterExprControlIfBranchBodyStep.h"
 #include "src/emitter/EmitterExprControlIfBranchBodyReturnStep.h"
 #include "src/emitter/EmitterExprControlIfBranchBodyStatementStep.h"
+#include "src/emitter/EmitterExprControlIfBranchEmitStep.h"
 #include "src/emitter/EmitterExprControlIfBranchValueStep.h"
 #include "src/emitter/EmitterExprControlIfBranchPreludeStep.h"
 #include "src/emitter/EmitterExprControlIfBranchWrapperStep.h"

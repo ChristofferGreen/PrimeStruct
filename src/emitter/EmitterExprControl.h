@@ -277,11 +277,26 @@
   if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
     auto emitBranchValueExpr =
         [&](const Expr &candidate, std::unordered_map<std::string, BindingInfo> branchTypes) -> std::string {
-      if (const auto branchValueStep = emitter::runEmitterExprControlIfBranchValueStep(
+      if (const auto branchEmitStep = emitter::runEmitterExprControlIfBranchEmitStep(
               candidate,
-              [&](const Expr &candidateExpr) {
-                return runEmitterExprControlIfBlockEnvelopeStep(candidateExpr);
+              branchTypes,
+              returnKinds,
+              allowMathBare,
+              importAliases,
+              structTypeMap,
+              [&](const Expr &candidateExpr) { return runEmitterExprControlIfBlockEnvelopeStep(candidateExpr); },
+              [&](const Expr &candidateExpr) { return isReturnCall(candidateExpr); },
+              [&](const Expr &candidateExpr) { return getBindingInfo(candidateExpr); },
+              [&](const Expr &candidateExpr) { return hasExplicitBindingTypeTransform(candidateExpr); },
+              [&](const Expr &candidateExpr,
+                  const std::unordered_map<std::string, BindingInfo> &candidateBranchTypes,
+                  const std::unordered_map<std::string, ReturnKind> &candidateReturnKinds,
+                  bool candidateAllowMathBare) {
+                return inferPrimitiveReturnKind(
+                    candidateExpr, candidateBranchTypes, candidateReturnKinds, candidateAllowMathBare);
               },
+              [&](ReturnKind candidateKind) { return typeNameForReturnKind(candidateKind); },
+              [&](const BindingInfo &candidateBinding) { return isReferenceCandidate(candidateBinding); },
               [&](const Expr &candidateExpr) {
                 return emitExpr(candidateExpr,
                                 nameMap,
@@ -293,47 +308,9 @@
                                 resultInfos,
                                 returnStructs,
                                 allowMathBare);
-              },
-              [&](const Expr &stmt, bool isLast) {
-                if (const auto handlersStep = emitter::runEmitterExprControlIfBranchBodyHandlersStep(
-                        stmt,
-                        isLast,
-                        branchTypes,
-                        returnKinds,
-                        allowMathBare,
-                        importAliases,
-                        structTypeMap,
-                        [&](const Expr &candidate) { return isReturnCall(candidate); },
-                        [&](const Expr &candidate) { return getBindingInfo(candidate); },
-                        [&](const Expr &candidate) { return hasExplicitBindingTypeTransform(candidate); },
-                        [&](const Expr &candidate,
-                            const std::unordered_map<std::string, BindingInfo> &candidateBranchTypes,
-                            const std::unordered_map<std::string, ReturnKind> &candidateReturnKinds,
-                            bool candidateAllowMathBare) {
-                          return inferPrimitiveReturnKind(
-                              candidate, candidateBranchTypes, candidateReturnKinds, candidateAllowMathBare);
-                        },
-                        [&](ReturnKind candidateKind) { return typeNameForReturnKind(candidateKind); },
-                        [&](const BindingInfo &candidateBinding) { return isReferenceCandidate(candidateBinding); },
-                        [&](const Expr &candidate) {
-                          return emitExpr(candidate,
-                                          nameMap,
-                                          paramMap,
-                                          structTypeMap,
-                                          importAliases,
-                                          branchTypes,
-                                          returnKinds,
-                                          resultInfos,
-                                          returnStructs,
-                                          allowMathBare);
-                        });
-                    handlersStep.handled) {
-                  return handlersStep.emitted;
-                }
-                return emitter::EmitterExprControlIfBranchBodyEmitResult{};
               });
-          branchValueStep.handled) {
-        return branchValueStep.emittedExpr;
+          branchEmitStep.handled) {
+        return branchEmitStep.emittedExpr;
       }
       return std::string{};
     };

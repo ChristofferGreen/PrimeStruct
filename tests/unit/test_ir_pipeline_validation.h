@@ -3810,6 +3810,135 @@ TEST_CASE("emitter expr control if branch value step composes prelude body and w
   CHECK(missingCallbacks.emittedExpr.empty());
 }
 
+TEST_CASE("emitter expr control if branch emit step composes value and handlers") {
+  primec::Expr nonEnvelope;
+  nonEnvelope.kind = primec::Expr::Kind::Name;
+  nonEnvelope.name = "direct";
+
+  std::unordered_map<std::string, primec::Emitter::BindingInfo> branchTypes;
+  std::unordered_map<std::string, primec::Emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+
+  int directEmitCalls = 0;
+  const auto directResult = primec::emitter::runEmitterExprControlIfBranchEmitStep(
+      nonEnvelope,
+      branchTypes,
+      returnKinds,
+      false,
+      importAliases,
+      structTypeMap,
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return primec::Emitter::BindingInfo{};
+      },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &, const auto &, const auto &, bool) {
+        CHECK_FALSE(true);
+        return primec::Emitter::ReturnKind::Unknown;
+      },
+      [&](primec::Emitter::ReturnKind) {
+        CHECK_FALSE(true);
+        return std::string{};
+      },
+      [&](const primec::Emitter::BindingInfo &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &candidate) {
+        ++directEmitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Name);
+        CHECK(candidate.name == "direct");
+        return std::string("emit_direct");
+      });
+  CHECK(directResult.handled);
+  CHECK(directResult.emittedExpr == "emit_direct");
+  CHECK(directEmitCalls == 1);
+
+  primec::Expr returnArg;
+  returnArg.kind = primec::Expr::Kind::Name;
+  returnArg.name = "value";
+
+  primec::Expr returnStmt;
+  returnStmt.kind = primec::Expr::Kind::Call;
+  returnStmt.name = "return";
+  returnStmt.args = {returnArg};
+
+  primec::Expr envelope;
+  envelope.kind = primec::Expr::Kind::Call;
+  envelope.bodyArguments = {returnStmt};
+
+  int returnValueEmitCalls = 0;
+  const auto wrapped = primec::emitter::runEmitterExprControlIfBranchEmitStep(
+      envelope,
+      branchTypes,
+      returnKinds,
+      false,
+      importAliases,
+      structTypeMap,
+      [&](const primec::Expr &) { return true; },
+      [&](const primec::Expr &candidate) {
+        return candidate.kind == primec::Expr::Kind::Call && candidate.name == "return";
+      },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return primec::Emitter::BindingInfo{};
+      },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &, const auto &, const auto &, bool) {
+        CHECK_FALSE(true);
+        return primec::Emitter::ReturnKind::Unknown;
+      },
+      [&](primec::Emitter::ReturnKind) {
+        CHECK_FALSE(true);
+        return std::string{};
+      },
+      [&](const primec::Emitter::BindingInfo &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &candidate) {
+        ++returnValueEmitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Name);
+        CHECK(candidate.name == "value");
+        return std::string("emit_value");
+      });
+  CHECK(wrapped.handled);
+  CHECK(wrapped.emittedExpr == "([&]() { return emit_value; }())");
+  CHECK(returnValueEmitCalls == 1);
+
+  const auto missingEmit = primec::emitter::runEmitterExprControlIfBranchEmitStep(
+      nonEnvelope,
+      branchTypes,
+      returnKinds,
+      false,
+      importAliases,
+      structTypeMap,
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &) { return primec::Emitter::BindingInfo{}; },
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &, const auto &, const auto &, bool) {
+        return primec::Emitter::ReturnKind::Unknown;
+      },
+      [&](primec::Emitter::ReturnKind) { return std::string{}; },
+      [&](const primec::Emitter::BindingInfo &) { return false; },
+      {});
+  CHECK_FALSE(missingEmit.handled);
+  CHECK(missingEmit.emittedExpr.empty());
+}
+
 TEST_CASE("emitter expr control if branch body statement step dispatches statements") {
   primec::Expr stmt;
   stmt.kind = primec::Expr::Kind::Name;
@@ -4197,7 +4326,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchValueStep(") !=
         std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyHandlersStep(") !=
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchEmitStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingPreludeStep(") !=
         std::string::npos);
@@ -4260,6 +4389,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyBindingStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyHandlersStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchEmitStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchValueStep.h\"") !=
         std::string::npos);
