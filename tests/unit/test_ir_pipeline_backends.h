@@ -552,6 +552,39 @@ TEST_CASE("glsl-ir backend writes loadstringbyte source") {
   CHECK(source.find("case 1u: stringByte = 66; break;") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir backend writes pushi64 source for i32-range literals") {
+  const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(31))});
+  function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_push_i64.glsl";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "glsl_ir_backend_push_i64.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("stack[sp++] = 31;") != std::string::npos);
+}
+
 TEST_CASE("glsl-ir backend reports emitter diagnostics") {
   const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
   REQUIRE(backend != nullptr);

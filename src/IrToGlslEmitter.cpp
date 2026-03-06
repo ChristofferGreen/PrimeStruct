@@ -1,6 +1,7 @@
 #include "primec/IrToGlslEmitter.h"
 
 #include <cstdint>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -50,6 +51,17 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::PushI32: {
       const int32_t value = static_cast<int32_t>(instruction.imm);
       out << "        stack[sp++] = " << value << ";\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    }
+    case IrOpcode::PushI64: {
+      const int64_t value = static_cast<int64_t>(instruction.imm);
+      if (value < std::numeric_limits<int32_t>::min() || value > std::numeric_limits<int32_t>::max()) {
+        error = "IrToGlslEmitter i64 literal out of i32 range at instruction " + std::to_string(index);
+        return false;
+      }
+      out << "        stack[sp++] = " << static_cast<int32_t>(value) << ";\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;

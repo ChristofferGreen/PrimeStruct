@@ -164,6 +164,23 @@ TEST_CASE("ir to glsl emitter writes loadstringbyte opcode") {
   CHECK(glsl.find("default: stringByte = 0; break;") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes pushi64 opcode when value fits i32") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(42))});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("stack[sp++] = 42;") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter writes f32 literal push") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
@@ -341,6 +358,22 @@ TEST_CASE("ir to glsl emitter rejects out-of-range print string indices") {
   std::string error;
   CHECK_FALSE(emitter.emitSource(module, glsl, error));
   CHECK(error.find("string index out of range") != std::string::npos);
+}
+
+TEST_CASE("ir to glsl emitter rejects pushi64 literals outside i32 range") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI64, 3000000000ull});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, glsl, error));
+  CHECK(error.find("i64 literal out of i32 range") != std::string::npos);
 }
 
 TEST_CASE("ir to glsl emitter rejects out-of-range call targets") {
