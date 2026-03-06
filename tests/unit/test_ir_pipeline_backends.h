@@ -397,6 +397,32 @@ TEST_CASE("cpp-ir backend reports print string index diagnostics") {
   CHECK(error.find("string index out of range") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir backend reports string byte load index diagnostics") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  function.instructions.push_back({primec::IrOpcode::LoadStringByte, 3});
+  function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path outputPath =
+      std::filesystem::current_path() / "primec_tests" / "unused_string_byte_index.cpp";
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "cpp_ir_backend_string_byte_index_error.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  CHECK_FALSE(backend->emit(module, options, result, error));
+  CHECK(error.find("ir-to-cpp failed:") != std::string::npos);
+  CHECK(error.find("string index out of range") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir backend writes f32 opcode helpers") {
   const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
   REQUIRE(backend != nullptr);
