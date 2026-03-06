@@ -4,6 +4,7 @@
 #include "EmitterExprControlFloatLiteralStep.h"
 #include "EmitterExprControlIfEnvelopeStep.h"
 #include "EmitterExprControlIntegerLiteralStep.h"
+#include "EmitterExprControlStringLiteralStep.h"
 #include "EmitterExprControlNameStep.h"
 
 #include <functional>

@@ -32,6 +32,7 @@
 #include "src/emitter/EmitterExprControlFloatLiteralStep.h"
 #include "src/emitter/EmitterExprControlIfEnvelopeStep.h"
 #include "src/emitter/EmitterExprControlIntegerLiteralStep.h"
+#include "src/emitter/EmitterExprControlStringLiteralStep.h"
 #include "src/emitter/EmitterExprControlNameStep.h"
 #include "src/ir_lowerer/IrLowererCallHelpers.h"
 #include "src/ir_lowerer/IrLowererBindingTransformHelpers.h"

@@ -1560,6 +1560,26 @@ TEST_CASE("emitter expr control integer-literal step formats literals") {
   CHECK(*signed64Value == "static_cast<int64_t>(11)");
 }
 
+TEST_CASE("emitter expr control string-literal step formats literals") {
+  primec::Expr notStringExpr;
+  notStringExpr.kind = primec::Expr::Kind::Literal;
+  notStringExpr.literalValue = 1;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlStringLiteralStep(notStringExpr).has_value());
+
+  primec::Expr stringExpr;
+  stringExpr.kind = primec::Expr::Kind::StringLiteral;
+  stringExpr.stringValue = "\"hello\"utf8";
+  const auto stringValue = primec::emitter::runEmitterExprControlStringLiteralStep(stringExpr);
+  REQUIRE(stringValue.has_value());
+  CHECK(*stringValue == "std::string_view(\"hello\")");
+
+  primec::Expr singleQuotedExpr = stringExpr;
+  singleQuotedExpr.stringValue = "'ok'utf8";
+  const auto singleQuotedValue = primec::emitter::runEmitterExprControlStringLiteralStep(singleQuotedExpr);
+  REQUIRE(singleQuotedValue.has_value());
+  CHECK(*singleQuotedValue == "std::string_view(\"ok\")");
+}
+
 TEST_CASE("emitter expr control if-envelope step recognizes block envelopes") {
   primec::Expr notCall;
   notCall.kind = primec::Expr::Kind::Literal;
@@ -1812,6 +1832,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIntegerLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlStringLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEnvelopeStep(candidate)") !=
         std::string::npos);
 
@@ -1822,6 +1843,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIntegerLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlStringLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);
 }
 

@@ -7,8 +7,8 @@
   if (const auto floatExpr = emitter::runEmitterExprControlFloatLiteralStep(expr); floatExpr.has_value()) {
     return *floatExpr;
   }
-  if (expr.kind == Expr::Kind::StringLiteral) {
-    return "std::string_view(" + stripStringLiteralSuffix(expr.stringValue) + ")";
+  if (const auto stringExpr = emitter::runEmitterExprControlStringLiteralStep(expr); stringExpr.has_value()) {
+    return *stringExpr;
   }
   if (const auto nameExpr = emitter::runEmitterExprControlNameStep(expr, localTypes, allowMathBare);
       nameExpr.has_value()) {
