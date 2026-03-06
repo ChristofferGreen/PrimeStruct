@@ -365,6 +365,69 @@ TEST_CASE("ir lowerer locals setup step rejects unsupported string array return"
   CHECK_FALSE(setupLocalsOrchestration.entryReturnConfig.hasReturnTransform);
 }
 
+TEST_CASE("ir lowerer inference setup bootstrap wires callbacks") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_set<std::string> structNames;
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceSetupBootstrap(
+      {
+          .defMap = &defMap,
+          .importAliases = &importAliases,
+          .structNames = &structNames,
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
+          .getBuiltinOperatorName = [](const primec::Expr &, std::string &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(state.returnInfoCache.empty());
+  CHECK(state.returnInferenceStack.empty());
+  CHECK_FALSE(static_cast<bool>(state.getReturnInfo));
+  CHECK(static_cast<bool>(state.resolveMethodCallDefinition));
+  CHECK(static_cast<bool>(state.inferPointerTargetKind));
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("ptr", pointerInfo);
+
+  primec::Expr pointerExpr;
+  pointerExpr.kind = primec::Expr::Kind::Name;
+  pointerExpr.name = "ptr";
+  CHECK(state.inferPointerTargetKind(pointerExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer inference setup bootstrap validates dependencies") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_set<std::string> structNames;
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceSetupBootstrap(
+      {
+          .defMap = &defMap,
+          .importAliases = &importAliases,
+          .structNames = &structNames,
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveExprPath = {},
+          .getBuiltinOperatorName = [](const primec::Expr &, std::string &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error == "native backend missing inference setup bootstrap dependency: resolveExprPath");
+  CHECK_FALSE(static_cast<bool>(state.resolveMethodCallDefinition));
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -420,6 +483,12 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   REQUIRE(std::filesystem::exists(localsHeaderPath));
   const std::string localsHeaderSource = readText(localsHeaderPath);
   CHECK(localsHeaderSource.find("runLowerLocalsSetup(") != std::string::npos);
+
+  const std::filesystem::path inferenceHeaderPath =
+      std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerSetupInference.h";
+  REQUIRE(std::filesystem::exists(inferenceHeaderPath));
+  const std::string inferenceHeaderSource = readText(inferenceHeaderPath);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceSetupBootstrap(") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

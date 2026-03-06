@@ -1,36 +1,29 @@
 
-  std::unordered_map<std::string, ReturnInfo> returnInfoCache;
-  std::unordered_set<std::string> returnInferenceStack;
-  std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
+  ir_lowerer::LowerInferenceSetupBootstrapState inferenceSetupBootstrap;
+  if (!ir_lowerer::runLowerInferenceSetupBootstrap(
+          {
+              .defMap = &defMap,
+              .importAliases = &importAliases,
+              .structNames = &structNames,
+              .isArrayCountCall = isArrayCountCall,
+              .isVectorCapacityCall = isVectorCapacityCall,
+              .isEntryArgsName = isEntryArgsName,
+              .resolveExprPath = resolveExprPath,
+              .getBuiltinOperatorName = getBuiltinOperatorName,
+          },
+          inferenceSetupBootstrap,
+          error)) {
+    return false;
+  }
 
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferArrayElementKind;
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferBufferElementKind;
-
-  std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
-  resolveMethodCallDefinition = [&](const Expr &callExpr, const LocalMap &localsIn) -> const Definition * {
-    return resolveMethodCallDefinitionFromExpr(callExpr,
-                                               localsIn,
-                                               isArrayCountCall,
-                                               isVectorCapacityCall,
-                                               isEntryArgsName,
-                                               importAliases,
-                                               structNames,
-                                               inferExprKind,
-                                               resolveExprPath,
-                                               defMap,
-                                               error);
-  };
-
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
-  inferPointerTargetKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
-    return inferPointerTargetValueKind(
-        expr,
-        localsIn,
-        [&](const Expr &candidate, std::string &builtinName) {
-          return getBuiltinOperatorName(candidate, builtinName);
-        });
-  };
+  auto &returnInfoCache = inferenceSetupBootstrap.returnInfoCache;
+  auto &returnInferenceStack = inferenceSetupBootstrap.returnInferenceStack;
+  auto &getReturnInfo = inferenceSetupBootstrap.getReturnInfo;
+  auto &inferExprKind = inferenceSetupBootstrap.inferExprKind;
+  auto &inferArrayElementKind = inferenceSetupBootstrap.inferArrayElementKind;
+  auto &inferBufferElementKind = inferenceSetupBootstrap.inferBufferElementKind;
+  auto &resolveMethodCallDefinition = inferenceSetupBootstrap.resolveMethodCallDefinition;
+  auto &inferPointerTargetKind = inferenceSetupBootstrap.inferPointerTargetKind;
 
   inferBufferElementKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     return inferBufferElementValueKind(

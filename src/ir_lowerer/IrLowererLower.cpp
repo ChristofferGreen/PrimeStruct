@@ -16,6 +16,7 @@
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererLowerEntrySetup.h"
+#include "IrLowererLowerInferenceSetup.h"
 #include "IrLowererLowerImportsStructsSetup.h"
 #include "IrLowererLowerLocalsSetup.h"
 #include "IrLowererOnErrorHelpers.h"
