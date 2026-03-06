@@ -843,6 +843,12 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     error = "IrToCppEmitter entry function has no instructions";
     return false;
   }
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+    if (module.functions[functionIndex].instructions.empty()) {
+      error = "IrToCppEmitter function has no instructions at index " + std::to_string(functionIndex);
+      return false;
+    }
+  }
 
   std::ostringstream body;
   const bool needsF32Helpers = moduleUsesF32Helpers(module);

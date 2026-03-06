@@ -181,6 +181,31 @@ TEST_CASE("cpp-ir backend writes C++ source") {
   CHECK(source.find("return static_cast<int>(ps_entry_0(argc, argv));") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir backend rejects empty non-entry function bodies") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction entry;
+  entry.name = "/main";
+  entry.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(entry);
+
+  primec::IrFunction helper;
+  helper.name = "/helper";
+  module.functions.push_back(helper);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = (std::filesystem::current_path() / "primec_tests" / "unused_empty_helper.cpp").string();
+  options.inputPath = "cpp_ir_backend_empty_helper.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  CHECK_FALSE(backend->emit(module, options, result, error));
+  CHECK(error == "ir-to-cpp failed: IrToCppEmitter function has no instructions at index 1");
+}
+
 TEST_CASE("cpp-ir backend writes f32 opcode helpers") {
   const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
   REQUIRE(backend != nullptr);

@@ -293,6 +293,26 @@ TEST_CASE("ir to cpp emitter rejects invalid entry index") {
   CHECK(error == "IrToCppEmitter invalid IR entry index");
 }
 
+TEST_CASE("ir to cpp emitter rejects empty non-entry function bodies") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction entry;
+  entry.name = "/main";
+  entry.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(entry);
+
+  primec::IrFunction helper;
+  helper.name = "/helper";
+  module.functions.push_back(helper);
+
+  std::string cpp;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, cpp, error));
+  CHECK(error == "IrToCppEmitter function has no instructions at index 1");
+}
+
 TEST_CASE("ir to cpp emitter rejects out-of-range local indices") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
