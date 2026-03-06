@@ -2065,6 +2065,109 @@ TEST_CASE("emitter expr control builtin-block final-value step handles final sta
   CHECK(noEmit.emittedStatement == "return 0; ");
 }
 
+TEST_CASE("emitter expr control builtin-block binding-prelude step prepares binding state") {
+  primec::Expr nonBinding;
+  nonBinding.kind = primec::Expr::Kind::Call;
+  nonBinding.name = "value";
+  std::unordered_map<std::string, primec::Emitter::BindingInfo> blockTypes;
+  const auto nonBindingResult = primec::emitter::runEmitterExprControlBuiltinBlockBindingPreludeStep(
+      nonBinding,
+      blockTypes,
+      {},
+      false,
+      [&](const primec::Expr &) { return primec::Emitter::BindingInfo{}; },
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &,
+          const std::unordered_map<std::string, primec::Emitter::BindingInfo> &,
+          const std::unordered_map<std::string, primec::Emitter::ReturnKind> &,
+          bool) { return primec::Emitter::ReturnKind::Unknown; },
+      [&](primec::Emitter::ReturnKind) { return std::string("unused"); });
+  CHECK_FALSE(nonBindingResult.handled);
+  CHECK(blockTypes.empty());
+
+  primec::Expr bindingExpr = nonBinding;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "item";
+  primec::Expr argExpr;
+  argExpr.kind = primec::Expr::Kind::Literal;
+  bindingExpr.args = {argExpr};
+
+  int inferCalls = 0;
+  const auto inferredResult = primec::emitter::runEmitterExprControlBuiltinBlockBindingPreludeStep(
+      bindingExpr,
+      blockTypes,
+      {},
+      true,
+      [&](const primec::Expr &) {
+        primec::Emitter::BindingInfo info;
+        info.typeName = "Original";
+        info.typeTemplateArg = "T";
+        return info;
+      },
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &,
+          const std::unordered_map<std::string, primec::Emitter::BindingInfo> &,
+          const std::unordered_map<std::string, primec::Emitter::ReturnKind> &,
+          bool) {
+        ++inferCalls;
+        return primec::Emitter::ReturnKind::Int64;
+      },
+      [&](primec::Emitter::ReturnKind kind) {
+        CHECK(kind == primec::Emitter::ReturnKind::Int64);
+        return std::string("InferredType");
+      });
+  CHECK(inferredResult.handled);
+  CHECK_FALSE(inferredResult.hasExplicitType);
+  CHECK_FALSE(inferredResult.lambdaInit);
+  CHECK_FALSE(inferredResult.useAuto);
+  CHECK(inferCalls == 1);
+  CHECK(inferredResult.binding.typeName == "InferredType");
+  CHECK(inferredResult.binding.typeTemplateArg.empty());
+  REQUIRE(blockTypes.count("item") == 1);
+  CHECK(blockTypes.at("item").typeName == "InferredType");
+
+  blockTypes.clear();
+  bindingExpr.args.front().isLambda = true;
+  inferCalls = 0;
+  const auto lambdaResult = primec::emitter::runEmitterExprControlBuiltinBlockBindingPreludeStep(
+      bindingExpr,
+      blockTypes,
+      {},
+      true,
+      [&](const primec::Expr &) {
+        primec::Emitter::BindingInfo info;
+        info.typeName = "LambdaType";
+        return info;
+      },
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &,
+          const std::unordered_map<std::string, primec::Emitter::BindingInfo> &,
+          const std::unordered_map<std::string, primec::Emitter::ReturnKind> &,
+          bool) {
+        ++inferCalls;
+        return primec::Emitter::ReturnKind::Unknown;
+      },
+      [&](primec::Emitter::ReturnKind) { return std::string("unused"); });
+  CHECK(lambdaResult.handled);
+  CHECK_FALSE(lambdaResult.hasExplicitType);
+  CHECK(lambdaResult.lambdaInit);
+  CHECK(lambdaResult.useAuto);
+  CHECK(inferCalls == 0);
+  REQUIRE(blockTypes.count("item") == 1);
+  CHECK(blockTypes.at("item").typeName == "LambdaType");
+
+  const auto missingCallbacks = primec::emitter::runEmitterExprControlBuiltinBlockBindingPreludeStep(
+      bindingExpr,
+      blockTypes,
+      {},
+      true,
+      {},
+      {},
+      {},
+      {});
+  CHECK_FALSE(missingCallbacks.handled);
+}
+
 TEST_CASE("emitter expr control body-wrapper step rewrites body-argument calls") {
   primec::Expr noBodyExpr;
   noBodyExpr.kind = primec::Expr::Kind::Call;
@@ -2381,6 +2484,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBoolLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockEarlyReturnStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingPreludeStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockFinalValueStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockPreludeStep(") !=
@@ -2402,6 +2507,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockEarlyReturnStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingPreludeStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockFinalValueStep.h\"") !=
         std::string::npos);

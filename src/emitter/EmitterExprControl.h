@@ -143,20 +143,24 @@
         out << finalValueStep.emittedStatement;
         break;
       }
-      if (stmt.isBinding) {
-        BindingInfo binding = getBindingInfo(stmt);
-        const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
-        const bool lambdaInit = stmt.args.size() == 1 && stmt.args.front().isLambda;
-        if (!hasExplicitType && stmt.args.size() == 1 && !lambdaInit) {
-          ReturnKind initKind = inferPrimitiveReturnKind(stmt.args.front(), blockTypes, returnKinds, allowMathBare);
-          std::string inferred = typeNameForReturnKind(initKind);
-          if (!inferred.empty()) {
-            binding.typeName = inferred;
-            binding.typeTemplateArg.clear();
-          }
-        }
-        blockTypes[stmt.name] = binding;
-        const bool useAuto = !hasExplicitType && lambdaInit;
+      if (const auto bindingPrelude = emitter::runEmitterExprControlBuiltinBlockBindingPreludeStep(
+              stmt,
+              blockTypes,
+              returnKinds,
+              allowMathBare,
+              [&](const Expr &candidate) { return getBindingInfo(candidate); },
+              [&](const Expr &candidate) { return hasExplicitBindingTypeTransform(candidate); },
+              [&](const Expr &candidate,
+                  const std::unordered_map<std::string, BindingInfo> &candidateBlockTypes,
+                  const std::unordered_map<std::string, ReturnKind> &candidateReturnKinds,
+                  bool candidateAllowMathBare) {
+                return inferPrimitiveReturnKind(candidate, candidateBlockTypes, candidateReturnKinds, candidateAllowMathBare);
+              },
+              [&](ReturnKind candidateKind) { return typeNameForReturnKind(candidateKind); });
+          bindingPrelude.handled) {
+        BindingInfo binding = bindingPrelude.binding;
+        const bool hasExplicitType = bindingPrelude.hasExplicitType;
+        const bool useAuto = bindingPrelude.useAuto;
         if (useAuto) {
           out << (binding.isMutable ? "" : "const ") << "auto " << stmt.name;
           if (!stmt.args.empty()) {
