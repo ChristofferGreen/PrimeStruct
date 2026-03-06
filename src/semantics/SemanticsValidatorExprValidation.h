@@ -1246,6 +1246,13 @@
       }
       if (hasNamedArguments(expr.argNames)) {
         std::string builtinName;
+        auto isLegacyCollectionBuiltinCall = [&]() {
+          std::string collectionName;
+          if (!getBuiltinCollectionName(expr, collectionName)) {
+            return false;
+          }
+          return defMap_.find(resolved) == defMap_.end();
+        };
         auto isLegacyArrayAccessBuiltinCall = [&]() {
           std::string arrayAccessName;
           if (!getBuiltinArrayAccessName(expr, arrayAccessName)) {
@@ -1283,7 +1290,7 @@
             getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
             getBuiltinGpuName(expr, builtinName) ||
             getBuiltinPointerName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
-            getBuiltinCollectionName(expr, builtinName) || isLegacyArrayAccessBuiltinCall() ||
+            isLegacyCollectionBuiltinCall() || isLegacyArrayAccessBuiltinCall() ||
             isAssignCall(expr) || isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) ||
             isForCall(expr) ||
             isRepeatCall(expr) || isLegacyCountBuiltinCall() || expr.name == "File" || expr.name == "try" ||

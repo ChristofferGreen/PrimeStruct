@@ -901,4 +901,67 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("user definition named vector accepts named arguments") {
+  const std::string source = R"(
+[return<int>]
+vector([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(vector([value] 9i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("user definition named map accepts named arguments") {
+  const std::string source = R"(
+[return<int>]
+map([i32] key, [i32] value) {
+  return(plus(key, value))
+}
+
+[return<int>]
+main() {
+  return(map([key] 4i32, [value] 6i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("user definition named array accepts named arguments") {
+  const std::string source = R"(
+[return<int>]
+array([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(array([value] 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("collection builtin still rejects named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(vector([value] 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_SUITE_END();
