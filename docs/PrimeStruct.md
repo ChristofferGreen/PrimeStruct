@@ -757,13 +757,14 @@ sum_two_files([string] a, [string] b) {
 
 ### Type Grammar (canonical)
 - **Atomic:** `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `void`, `Self`.
-- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`.
+- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`, and draft `soa_vector<T>`.
 - **User types:** struct definitions and named aliases.
 - **Template applications:** `Name<T1, T2, ...>`.
 
 ### Core Type Set (portable)
 - `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`.
 - `array<T>`, `vector<T>`, `map<K, V>` where parameters are core types.
+- Draft extension: `soa_vector<T>` for explicit structure-of-arrays storage of SoA-safe struct `T` (not yet implemented).
 - `Pointer<T>`, `Reference<T>` where `T` is primitive or a struct type.
 - User-defined structs with layout manifests.
 - Types outside this set are backend-specific and must be rejected by backends that do not support them.
@@ -1089,6 +1090,18 @@ bad_use_after_take() {
   - Array helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)` (canonical equivalents: `count(value)`, `at(value, index)`, `at_unsafe(value, index)`).
   - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic constructors (0..N). Growth operations require `effects(heap_alloc)` (or the active default effects set), and `push`/`reserve` may reallocate and invalidate references/pointers into vector storage.
   - Vector helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)`, `value.push(item)`, `value.pop()`, `value.reserve(capacity)`, `value.capacity()`, `value.clear()`, `value.remove_at(index)`, `value.remove_swap(index)` (canonical helper equivalents remain `count(value)`, `at(value, index)`, `push(value, item)`, etc.).
+  - Vector binding forms:
+    - `[vector<T> mut] v{vector<T>()}` and `[mut] v{vector<T>()}` are both valid.
+    - `[vector<T> mut] v{}` is shorthand for zero-arg construction and rewrites to `[vector<T> mut] v{vector<T>()}`.
+  - `soa_vector<T>` is an explicit structure-of-arrays container (SoA). It is separate from `vector<T>`; the compiler must not silently rewrite AoS (`vector`) to SoA (`soa_vector`).
+  - Intended usage: data-oriented loops and ECS-style component storage where field-wise contiguous iteration is preferred.
+  - Proposed `soa_vector<T>` surface:
+    - Construction/growth mirrors vector (`soa_vector<T>()`, `push`, `reserve`, `count`) and allocation still requires `effects(heap_alloc)`.
+    - Indexing/access is explicit and SoA-aware (`value.field()[i]`, `value.get(i)`, and optionally `value.ref(i)` proxy access).
+    - Reallocation invalidates SoA field views/proxies the same way vector growth invalidates pointers/references.
+  - SoA eligibility (v1 draft): `T` must be a struct with SoA-safe fields (fixed-size, non-pointer/reference/string/template envelopes unless explicitly allowed by backend policy).
+  - AoS/SoA conversions are explicit only (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`); no implicit interop.
+  - **Current implementation status:** `soa_vector<T>` is specified as a design target and is not implemented yet.
   - **Current implementation status:** VM/native still use fixed-capacity vector locals; `push`/`reserve` past capacity currently report runtime errors. This is an implementation gap from the language contract.
   - Mutation helpers (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) are statement-only.
   - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).

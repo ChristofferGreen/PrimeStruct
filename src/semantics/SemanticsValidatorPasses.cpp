@@ -1912,6 +1912,15 @@ bool SemanticsValidator::validateOmittedBindingInitializer(const Expr &binding,
     error_ = "omitted initializer requires explicit struct type: " + binding.name;
     return false;
   }
+  const std::string normalizedType = normalizeBindingTypeName(info.typeName);
+  if (normalizedType == "vector") {
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(info.typeTemplateArg, args) || args.size() != 1) {
+      error_ = "vector requires exactly one template argument";
+      return false;
+    }
+    return true;
+  }
   if (!info.typeTemplateArg.empty()) {
     error_ = "omitted initializer requires struct type: " + info.typeName;
     return false;

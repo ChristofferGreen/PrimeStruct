@@ -543,6 +543,10 @@ vector<i32>[1i32 2i32]
 
 Vectors are C++-style dynamic contiguous sequences. Construction is variadic; zero or more arguments are accepted.
 Growth operations (`push`, `reserve`) may reallocate and invalidate references/pointers into vector storage.
+Binding forms:
+- `[vector<T> mut] v{vector<T>()}`
+- `[mut] v{vector<T>()}`
+- `[vector<T> mut] v{}` (rewrites to `[vector<T> mut] v{vector<T>()}`)
 Helpers:
 - `value.count()` (canonical equivalent: `count(value)`)
 - `value.at(index)` / `value[index]` / `value.at_unsafe(index)` (canonical equivalents: `at(value, index)`, `at_unsafe(value, index)`)
@@ -572,6 +576,24 @@ Helpers:
 - `value.at_unsafe(key)` (canonical equivalent: `at_unsafe(value, key)`)
 
 Map IR lowering is currently limited in VM/native backends: numeric/bool values only, with string keys allowed when they come from string literals or bindings backed by literals.
+
+### 8.4 SoA Vectors (Draft)
+
+`soa_vector<T>` is a distinct structure-of-arrays container and is not interchangeable with
+`vector<T>`. The language must not perform implicit AoS/SoA rewriting.
+
+Draft surface shape:
+- `soa_vector<T>()`
+- `value.count()`
+- `value.push(item)` / `value.reserve(capacity)` (requires `effects(heap_alloc)`)
+- Field-wise access for struct fields: `value.field_name()[index]`
+- Whole-element access helpers: `value.get(index)` and optional proxy `value.ref(index)`
+
+Draft constraints:
+- `T` must be a SoA-safe struct type under backend policy (initially fixed-size fields; no
+  pointer/reference/string/template fields unless explicitly allowed).
+- AoS/SoA conversions are explicit helpers only (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`).
+- Reallocation invalidates SoA field views/proxies.
 
 ## 9. Effects
 

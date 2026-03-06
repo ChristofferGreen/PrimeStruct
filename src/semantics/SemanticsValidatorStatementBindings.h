@@ -46,6 +46,29 @@
       return false;
     }
     const Expr &initializer = stmt.args.front();
+    auto isEmptyBuiltinBlockInitializer = [&](const Expr &candidate) -> bool {
+      if (!candidate.hasBodyArguments || !candidate.bodyArguments.empty()) {
+        return false;
+      }
+      if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+        return false;
+      }
+      return isBuiltinBlockCall(candidate);
+    };
+    if (normalizeBindingTypeName(info.typeName) == "vector" && isEmptyBuiltinBlockInitializer(initializer)) {
+      if (!validateOmittedBindingInitializer(stmt, info, namespacePrefix)) {
+        return false;
+      }
+      if (restrictType.has_value()) {
+        const bool hasTemplate = !info.typeTemplateArg.empty();
+        if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
+          error_ = "restrict type does not match binding type";
+          return false;
+        }
+      }
+      locals.emplace(stmt.name, info);
+      return true;
+    }
     const bool entryArgInit = isEntryArgsAccess(initializer);
     const bool entryArgStringInit = isEntryArgStringBinding(locals, initializer);
     std::optional<EntryArgStringScope> entryArgScope;

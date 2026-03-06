@@ -1476,7 +1476,20 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
         return false;
       }
     }
-    if (!expr.isBinding || !expr.args.empty()) {
+    auto isEmptyBuiltinBlockInitializer = [&](const Expr &initializer) -> bool {
+      if (!initializer.hasBodyArguments || !initializer.bodyArguments.empty()) {
+        return false;
+      }
+      if (!initializer.args.empty() || !initializer.templateArgs.empty() ||
+          semantics::hasNamedArguments(initializer.argNames)) {
+        return false;
+      }
+      return initializer.kind == Expr::Kind::Call && !initializer.isBinding &&
+             initializer.name == "block" && initializer.namespacePrefix.empty();
+    };
+    const bool omittedInitializer = expr.args.empty() ||
+                                    (expr.args.size() == 1 && isEmptyBuiltinBlockInitializer(expr.args.front()));
+    if (!expr.isBinding || !omittedInitializer) {
       return true;
     }
     semantics::BindingInfo info;
@@ -1486,14 +1499,34 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
       error = parseError;
       return false;
     }
+    const std::string normalizedType = semantics::normalizeBindingTypeName(info.typeName);
     if (!info.typeTemplateArg.empty()) {
-      error = "omitted initializer requires struct type: " + info.typeName;
-      return false;
+      if (normalizedType != "vector") {
+        error = "omitted initializer requires struct type: " + info.typeName;
+        return false;
+      }
+      std::vector<std::string> templateArgs;
+      if (!semantics::splitTopLevelTemplateArgs(info.typeTemplateArg, templateArgs) || templateArgs.size() != 1) {
+        error = "vector requires exactly one template argument";
+        return false;
+      }
+      Expr call;
+      call.kind = Expr::Kind::Call;
+      call.name = info.typeName;
+      call.namespacePrefix = expr.namespacePrefix;
+      call.templateArgs = std::move(templateArgs);
+      expr.args.clear();
+      expr.argNames.clear();
+      expr.args.push_back(std::move(call));
+      expr.argNames.push_back(std::nullopt);
+      return true;
     }
     Expr call;
     call.kind = Expr::Kind::Call;
     call.name = info.typeName;
     call.namespacePrefix = expr.namespacePrefix;
+    expr.args.clear();
+    expr.argNames.clear();
     expr.args.push_back(std::move(call));
     expr.argNames.push_back(std::nullopt);
     return true;

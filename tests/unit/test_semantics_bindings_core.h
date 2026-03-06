@@ -158,6 +158,60 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector binding accepts explicit mut type with constructor call") {
+  const std::string source = R"(
+[struct]
+Particle {
+  [i32] id{0i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle> mut] v{vector<Particle>()}
+  return(v.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector binding infers mut type from constructor call") {
+  const std::string source = R"(
+[struct]
+Particle {
+  [i32] id{0i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [mut] v{vector<Particle>()}
+  return(v.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector binding accepts omitted explicit initializer") {
+  const std::string source = R"(
+[struct]
+Particle {
+  [i32] id{0i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle> mut] v{}
+  return(v.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("local binding type must be supported") {
   const std::string source = R"(
 [return<int>]
