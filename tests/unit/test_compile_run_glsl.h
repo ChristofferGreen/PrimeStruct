@@ -14,6 +14,7 @@ main() {
   const std::string output = readFile(outPath);
   CHECK(output.find("#version 450") != std::string::npos);
   CHECK(output.find("void main()") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
 TEST_CASE("glsl-ir emitter writes IR-lowered shader for integer subset") {
@@ -194,6 +195,28 @@ main() {
   CHECK(output.find("float scale") != std::string::npos);
   CHECK(output.find("counter = (counter + 2)") != std::string::npos);
   CHECK(output.find("float result") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") == std::string::npos);
+}
+
+TEST_CASE("spirv emitter falls back to legacy glsl when ir subset fails") {
+  if (!hasSpirvTools()) {
+    return;
+  }
+  const std::string source = R"(
+[return<void>]
+main() {
+  [f32] scale{2.0f32};
+  result{plus(scale, 0.5f32)};
+  return();
+}
+)";
+  const std::string srcPath = writeTemp("compile_spirv_fallback_legacy_glsl.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_spirv_fallback_legacy_glsl.spv").string();
+
+  const std::string compileCmd = "./primec --emit=spirv " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(std::filesystem::exists(outPath));
+  CHECK(std::filesystem::file_size(outPath) > 0);
 }
 
 TEST_CASE("glsl emitter allows assign in expressions") {

@@ -409,7 +409,8 @@ int main(int argc, char **argv) {
       if (!argError.empty()) {
         std::cerr << "Argument error: " << argError << "\n";
       }
-      std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl|spirv|wasm] <input.prime> [-o <output>] "
+      std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir] <input.prime> "
+                   "[-o <output>] "
                    "[--entry /path] [--import-path <dir>] [-I <dir>] "
                    "[--wasm-profile wasi|browser] "
                    "[--text-transforms <list>] [--text-transform-rules <rules>] "
@@ -648,10 +649,22 @@ int main(int argc, char **argv) {
   }
 
   if (options.emitKind == "glsl") {
+    std::string legacySource;
+    std::string legacyError;
     primec::GlslEmitter glslEmitter;
-    std::string glslSource;
-    if (!glslEmitter.emitSource(program, options.entryPath, glslSource, error)) {
-      return emitFailure(options, primec::DiagnosticCode::EmitError, "GLSL emit error: ", error, 2, {"backend: glsl"});
+    if (!glslEmitter.emitSource(program, options.entryPath, legacySource, legacyError)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "GLSL emit error: ",
+                         legacyError,
+                         2,
+                         {"backend: glsl"});
+    }
+
+    std::string glslSource = legacySource;
+    std::string irSource;
+    if (std::string irPathError; emitGlslSourceFromIrModule(program, options, irSource, irPathError)) {
+      glslSource = std::move(irSource);
     }
     if (!writeFile(options.outputPath, glslSource)) {
       return emitFailure(options,
@@ -664,10 +677,22 @@ int main(int argc, char **argv) {
   }
 
   if (options.emitKind == "spirv") {
+    std::string legacySource;
+    std::string legacyError;
     primec::GlslEmitter glslEmitter;
-    std::string glslSource;
-    if (!glslEmitter.emitSource(program, options.entryPath, glslSource, error)) {
-      return emitFailure(options, primec::DiagnosticCode::EmitError, "GLSL emit error: ", error, 2, {"backend: glsl"});
+    if (!glslEmitter.emitSource(program, options.entryPath, legacySource, legacyError)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "GLSL emit error: ",
+                         legacyError,
+                         2,
+                         {"backend: glsl"});
+    }
+
+    std::string glslSource = legacySource;
+    std::string irSource;
+    if (std::string irPathError; emitGlslSourceFromIrModule(program, options, irSource, irPathError)) {
+      glslSource = std::move(irSource);
     }
     std::string spirvSource = injectComputeLayout(glslSource);
     std::string toolName;
