@@ -1560,6 +1560,25 @@ TEST_CASE("emitter expr control integer-literal step formats literals") {
   CHECK(*signed64Value == "static_cast<int64_t>(11)");
 }
 
+TEST_CASE("emitter expr control bool-literal step formats literals") {
+  primec::Expr notBoolExpr;
+  notBoolExpr.kind = primec::Expr::Kind::Literal;
+  notBoolExpr.literalValue = 1;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlBoolLiteralStep(notBoolExpr).has_value());
+
+  primec::Expr boolExpr;
+  boolExpr.kind = primec::Expr::Kind::BoolLiteral;
+  boolExpr.boolValue = true;
+  const auto trueValue = primec::emitter::runEmitterExprControlBoolLiteralStep(boolExpr);
+  REQUIRE(trueValue.has_value());
+  CHECK(*trueValue == "true");
+
+  boolExpr.boolValue = false;
+  const auto falseValue = primec::emitter::runEmitterExprControlBoolLiteralStep(boolExpr);
+  REQUIRE(falseValue.has_value());
+  CHECK(*falseValue == "false");
+}
+
 TEST_CASE("emitter expr control string-literal step formats literals") {
   primec::Expr notStringExpr;
   notStringExpr.kind = primec::Expr::Kind::Literal;
@@ -1830,6 +1849,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(emitterExprControlHeaderPath));
   const std::string emitterExprControlHeaderSource = readText(emitterExprControlHeaderPath);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBoolLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIntegerLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlStringLiteralStep(expr)") != std::string::npos);
@@ -1841,6 +1861,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(emitterExprPath));
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlBoolLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIntegerLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlStringLiteralStep.h\"") != std::string::npos);

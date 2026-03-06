@@ -1,8 +1,8 @@
   if (const auto integerExpr = emitter::runEmitterExprControlIntegerLiteralStep(expr); integerExpr.has_value()) {
     return *integerExpr;
   }
-  if (expr.kind == Expr::Kind::BoolLiteral) {
-    return expr.boolValue ? "true" : "false";
+  if (const auto boolExpr = emitter::runEmitterExprControlBoolLiteralStep(expr); boolExpr.has_value()) {
+    return *boolExpr;
   }
   if (const auto floatExpr = emitter::runEmitterExprControlFloatLiteralStep(expr); floatExpr.has_value()) {
     return *floatExpr;
