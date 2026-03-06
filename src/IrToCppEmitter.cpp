@@ -43,6 +43,42 @@ struct EmitContext {
   size_t functionCount = 0;
 };
 
+bool usesF32Helpers(IrOpcode opcode) {
+  switch (opcode) {
+    case IrOpcode::AddF32:
+    case IrOpcode::SubF32:
+    case IrOpcode::MulF32:
+    case IrOpcode::DivF32:
+    case IrOpcode::NegF32:
+    case IrOpcode::CmpEqF32:
+    case IrOpcode::CmpNeF32:
+    case IrOpcode::CmpLtF32:
+    case IrOpcode::CmpLeF32:
+    case IrOpcode::CmpGtF32:
+    case IrOpcode::CmpGeF32:
+    case IrOpcode::ConvertI32ToF32:
+    case IrOpcode::ConvertI64ToF32:
+    case IrOpcode::ConvertU64ToF32:
+    case IrOpcode::ConvertF32ToI32:
+    case IrOpcode::ConvertF32ToI64:
+    case IrOpcode::ConvertF32ToU64:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool moduleUsesF32Helpers(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (usesF32Helpers(instruction.op)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 std::string irFunctionSymbol(size_t functionIndex) {
   return "ps_fn_" + std::to_string(functionIndex);
 }
@@ -90,6 +126,20 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
   };
+  const auto emitBinaryF32 = [&](const char *op) {
+    out << "        float right = psBitsToF32(stack[--sp]);\n";
+    out << "        float left = psBitsToF32(stack[--sp]);\n";
+    out << "        stack[sp++] = psF32ToBits(left " << op << " right);\n";
+    out << "        pc = " << nextIndex << ";\n";
+    out << "        break;\n";
+  };
+  const auto emitCompareF32 = [&](const char *op) {
+    out << "        float right = psBitsToF32(stack[--sp]);\n";
+    out << "        float left = psBitsToF32(stack[--sp]);\n";
+    out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
+    out << "        pc = " << nextIndex << ";\n";
+    out << "        break;\n";
+  };
   const auto emitPrintValue = [&](const char *valueExpr, uint64_t flags) {
     const char *stream = (flags & PrintFlagStderr) != 0 ? "std::cerr" : "std::cout";
     const bool newline = (flags & PrintFlagNewline) != 0;
@@ -112,6 +162,13 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::PushI64: {
       const int64_t value = static_cast<int64_t>(instruction.imm);
       out << "        stack[sp++] = static_cast<uint64_t>(" << value << "ll);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    }
+    case IrOpcode::PushF32: {
+      const uint32_t bits = static_cast<uint32_t>(instruction.imm);
+      out << "        stack[sp++] = static_cast<uint64_t>(" << bits << "u);\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
@@ -236,6 +293,78 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::CmpGeU64:
       emitCompareU64(">=");
       return true;
+    case IrOpcode::AddF32:
+      emitBinaryF32("+");
+      return true;
+    case IrOpcode::SubF32:
+      emitBinaryF32("-");
+      return true;
+    case IrOpcode::MulF32:
+      emitBinaryF32("*");
+      return true;
+    case IrOpcode::DivF32:
+      emitBinaryF32("/");
+      return true;
+    case IrOpcode::NegF32:
+      out << "        float value = psBitsToF32(stack[sp - 1]);\n";
+      out << "        stack[sp - 1] = psF32ToBits(-value);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::CmpEqF32:
+      emitCompareF32("==");
+      return true;
+    case IrOpcode::CmpNeF32:
+      emitCompareF32("!=");
+      return true;
+    case IrOpcode::CmpLtF32:
+      emitCompareF32("<");
+      return true;
+    case IrOpcode::CmpLeF32:
+      emitCompareF32("<=");
+      return true;
+    case IrOpcode::CmpGtF32:
+      emitCompareF32(">");
+      return true;
+    case IrOpcode::CmpGeF32:
+      emitCompareF32(">=");
+      return true;
+    case IrOpcode::ConvertI32ToF32:
+      out << "        int32_t value = static_cast<int32_t>(stack[--sp]);\n";
+      out << "        stack[sp++] = psF32ToBits(static_cast<float>(value));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertI64ToF32:
+      out << "        int64_t value = static_cast<int64_t>(stack[--sp]);\n";
+      out << "        stack[sp++] = psF32ToBits(static_cast<float>(value));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertU64ToF32:
+      out << "        uint64_t value = stack[--sp];\n";
+      out << "        stack[sp++] = psF32ToBits(static_cast<float>(value));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertF32ToI32:
+      out << "        float value = psBitsToF32(stack[--sp]);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertF32ToI64:
+      out << "        float value = psBitsToF32(stack[--sp]);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(value));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::ConvertF32ToU64:
+      out << "        float value = psBitsToF32(stack[--sp]);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(value);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::Jump:
       if (instruction.imm >= instructionCount) {
         error = "IrToCppEmitter jump target out of range at instruction " + std::to_string(index);
@@ -349,6 +478,9 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::ReturnI64:
       out << "        return static_cast<int64_t>(stack[--sp]);\n";
       return true;
+    case IrOpcode::ReturnF32:
+      out << "        return static_cast<int64_t>(static_cast<uint32_t>(stack[--sp]));\n";
+      return true;
     case IrOpcode::ReturnVoid:
       out << "        return 0;\n";
       return true;
@@ -374,9 +506,27 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   }
 
   std::ostringstream body;
+  const bool needsF32Helpers = moduleUsesF32Helpers(module);
   body << "#include <cstddef>\n";
-  body << "#include <cstdint>\n\n";
+  body << "#include <cstdint>\n";
+  if (needsF32Helpers) {
+    body << "#include <cstring>\n";
+  }
+  body << "\n";
   body << "#include <iostream>\n\n";
+  if (needsF32Helpers) {
+    body << "static float psBitsToF32(uint64_t raw) {\n";
+    body << "  uint32_t bits = static_cast<uint32_t>(raw);\n";
+    body << "  float value = 0.0f;\n";
+    body << "  std::memcpy(&value, &bits, sizeof(value));\n";
+    body << "  return value;\n";
+    body << "}\n\n";
+    body << "static uint64_t psF32ToBits(float value) {\n";
+    body << "  uint32_t bits = 0;\n";
+    body << "  std::memcpy(&bits, &value, sizeof(bits));\n";
+    body << "  return static_cast<uint64_t>(bits);\n";
+    body << "}\n\n";
+  }
   body << "static const char *ps_string_table[] = {\n";
   if (module.stringTable.empty()) {
     body << "  \"\",\n";

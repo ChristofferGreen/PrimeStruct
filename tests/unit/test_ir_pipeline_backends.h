@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -21,6 +22,12 @@ primec::IrModule makeReturnI32Module(int32_t value) {
   function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(function);
   return module;
+}
+
+uint64_t f32ToBits(float value) {
+  uint32_t bits = 0;
+  std::memcpy(&bits, &value, sizeof(bits));
+  return static_cast<uint64_t>(bits);
 }
 
 std::vector<uint8_t> readBinaryFile(const std::filesystem::path &path) {
@@ -135,6 +142,44 @@ TEST_CASE("cpp-ir backend writes C++ source") {
   const std::string source = readTextFile(outputPath);
   CHECK(source.find("static int64_t ps_fn_0") != std::string::npos);
   CHECK(source.find("return static_cast<int>(ps_entry_0(argc, argv));") != std::string::npos);
+}
+
+TEST_CASE("cpp-ir backend writes f32 opcode helpers") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushF32, f32ToBits(2.0f)});
+  function.instructions.push_back({primec::IrOpcode::PushF32, f32ToBits(0.5f)});
+  function.instructions.push_back({primec::IrOpcode::AddF32, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_f32.cpp";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "cpp_ir_backend_f32.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("#include <cstring>") != std::string::npos);
+  CHECK(source.find("static float psBitsToF32(uint64_t raw)") != std::string::npos);
+  CHECK(source.find("static uint64_t psF32ToBits(float value)") != std::string::npos);
+  CHECK(source.find("float right = psBitsToF32(stack[--sp]);") != std::string::npos);
 }
 
 TEST_CASE("glsl-ir backend writes GLSL source") {
