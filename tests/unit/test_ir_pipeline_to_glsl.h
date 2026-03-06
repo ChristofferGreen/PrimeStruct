@@ -77,6 +77,31 @@ TEST_CASE("ir to glsl emitter writes f32 literal push") {
   CHECK(glsl.find("stack[sp++] = int(uint(1069547520u));") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes f32 arithmetic and compare opcodes") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushF32, 0x40000000u});
+  fn.instructions.push_back({primec::IrOpcode::PushF32, 0x3f800000u});
+  fn.instructions.push_back({primec::IrOpcode::SubF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::NegF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushF32, 0u});
+  fn.instructions.push_back({primec::IrOpcode::CmpLtF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("float right = intBitsToFloat(stack[--sp]);") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = floatBitsToInt(left - right);") != std::string::npos);
+  CHECK(glsl.find("stack[sp - 1] = floatBitsToInt(-value);") != std::string::npos);
+  CHECK(glsl.find("stack[sp++] = (left < right) ? 1 : 0;") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter rejects unsupported opcodes") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;

@@ -28,6 +28,20 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
   };
+  const auto emitBinaryF32 = [&](const char *op) {
+    out << "        float right = intBitsToFloat(stack[--sp]);\n";
+    out << "        float left = intBitsToFloat(stack[--sp]);\n";
+    out << "        stack[sp++] = floatBitsToInt(left " << op << " right);\n";
+    out << "        pc = " << nextIndex << ";\n";
+    out << "        break;\n";
+  };
+  const auto emitCompareF32 = [&](const char *op) {
+    out << "        float right = intBitsToFloat(stack[--sp]);\n";
+    out << "        float left = intBitsToFloat(stack[--sp]);\n";
+    out << "        stack[sp++] = (left " << op << " right) ? 1 : 0;\n";
+    out << "        pc = " << nextIndex << ";\n";
+    out << "        break;\n";
+  };
 
   switch (instruction.op) {
     case IrOpcode::PushI32: {
@@ -90,6 +104,24 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::AddF32:
+      emitBinaryF32("+");
+      return true;
+    case IrOpcode::SubF32:
+      emitBinaryF32("-");
+      return true;
+    case IrOpcode::MulF32:
+      emitBinaryF32("*");
+      return true;
+    case IrOpcode::DivF32:
+      emitBinaryF32("/");
+      return true;
+    case IrOpcode::NegF32:
+      out << "        float value = intBitsToFloat(stack[sp - 1]);\n";
+      out << "        stack[sp - 1] = floatBitsToInt(-value);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::CmpEqI32:
       emitCompare("==");
       return true;
@@ -107,6 +139,24 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::CmpGeI32:
       emitCompare(">=");
+      return true;
+    case IrOpcode::CmpEqF32:
+      emitCompareF32("==");
+      return true;
+    case IrOpcode::CmpNeF32:
+      emitCompareF32("!=");
+      return true;
+    case IrOpcode::CmpLtF32:
+      emitCompareF32("<");
+      return true;
+    case IrOpcode::CmpLeF32:
+      emitCompareF32("<=");
+      return true;
+    case IrOpcode::CmpGtF32:
+      emitCompareF32(">");
+      return true;
+    case IrOpcode::CmpGeF32:
+      emitCompareF32(">=");
       return true;
     case IrOpcode::Jump:
       if (instruction.imm >= instructionCount) {
