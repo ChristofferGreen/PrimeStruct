@@ -11,6 +11,7 @@
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererSetupInferenceHelpers.h"
 #include "IrLowererSharedTypes.h"
+#include "IrLowererStructTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -39,8 +40,20 @@ struct LowerInferenceSetupBootstrapInput {
   GetSetupInferenceBuiltinOperatorNameFn getBuiltinOperatorName;
 };
 
+struct LowerInferenceArrayKindSetupInput {
+  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+
+  ResolveExprPathFn resolveExprPath;
+  ResolveStructArrayTypeInfoFn resolveStructArrayInfoFromPath;
+  IsArrayCountCallFn isArrayCountCall;
+  IsStringCountCallFn isStringCountCall;
+};
+
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
+                                     std::string &errorOut);
+bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &input,
+                                     LowerInferenceSetupBootstrapState &stateInOut,
                                      std::string &errorOut);
 
 } // namespace primec::ir_lowerer

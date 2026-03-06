@@ -25,49 +25,18 @@
   auto &resolveMethodCallDefinition = inferenceSetupBootstrap.resolveMethodCallDefinition;
   auto &inferPointerTargetKind = inferenceSetupBootstrap.inferPointerTargetKind;
 
-  inferBufferElementKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
-    return inferBufferElementValueKind(
-        expr,
-        localsIn,
-        [&](const Expr &candidate, const LocalMap &candidateLocals) {
-          return inferArrayElementKind(candidate, candidateLocals);
-        });
-  };
-
-  inferArrayElementKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
-    return inferArrayElementValueKind(
-        expr,
-        localsIn,
-        [&](const Expr &candidate, const LocalMap &candidateLocals) {
-          return inferBufferElementKind(candidate, candidateLocals);
-        },
-        [&](const Expr &candidate) { return resolveExprPath(candidate); },
-        [&](const std::string &structPath, LocalInfo::ValueKind &kindOut) {
-          StructArrayInfo structInfo;
-          if (!resolveStructArrayInfoFromPath(structPath, structInfo)) {
-            return false;
-          }
-          kindOut = structInfo.elementKind;
-          return true;
-        },
-        [&](const Expr &candidate, const LocalMap &, LocalInfo::ValueKind &kindOut) {
-          return resolveDefinitionCallReturnKind(candidate, defMap, resolveExprPath, getReturnInfo, true, kindOut);
-        },
-        [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
-          return resolveCountMethodCallReturnKind(candidate,
-                                                  candidateLocals,
-                                                  isArrayCountCall,
-                                                  isStringCountCall,
-                                                  resolveMethodCallDefinition,
-                                                  getReturnInfo,
-                                                  true,
-                                                  kindOut);
-        },
-        [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
-          return resolveMethodCallReturnKind(
-              candidate, candidateLocals, resolveMethodCallDefinition, getReturnInfo, true, kindOut);
-        });
-  };
+  if (!ir_lowerer::runLowerInferenceArrayKindSetup(
+          {
+              .defMap = &defMap,
+              .resolveExprPath = resolveExprPath,
+              .resolveStructArrayInfoFromPath = resolveStructArrayInfoFromPath,
+              .isArrayCountCall = isArrayCountCall,
+              .isStringCountCall = isStringCountCall,
+          },
+          inferenceSetupBootstrap,
+          error)) {
+    return false;
+  }
 
   inferExprKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     switch (expr.kind) {

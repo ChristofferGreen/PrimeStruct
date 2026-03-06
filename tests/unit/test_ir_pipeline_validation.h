@@ -428,6 +428,81 @@ TEST_CASE("ir lowerer inference setup bootstrap validates dependencies") {
   CHECK_FALSE(static_cast<bool>(state.resolveMethodCallDefinition));
 }
 
+TEST_CASE("ir lowerer inference array-kind setup wires callbacks") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_set<std::string> structNames;
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::runLowerInferenceSetupBootstrap(
+      {
+          .defMap = &defMap,
+          .importAliases = &importAliases,
+          .structNames = &structNames,
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
+          .getBuiltinOperatorName = [](const primec::Expr &, std::string &) { return false; },
+      },
+      state,
+      error));
+  REQUIRE(error.empty());
+
+  CHECK(primec::ir_lowerer::runLowerInferenceArrayKindSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
+          .resolveStructArrayInfoFromPath =
+              [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(state.inferBufferElementKind));
+  CHECK(static_cast<bool>(state.inferArrayElementKind));
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo bufferInfo;
+  bufferInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Buffer;
+  bufferInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+  locals.emplace("buf", bufferInfo);
+  primec::Expr bufferExpr;
+  bufferExpr.kind = primec::Expr::Kind::Name;
+  bufferExpr.name = "buf";
+  CHECK(state.inferBufferElementKind(bufferExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
+  primec::ir_lowerer::LocalInfo arrayInfo;
+  arrayInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  arrayInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("arr", arrayInfo);
+  primec::Expr arrayExpr;
+  arrayExpr.kind = primec::Expr::Kind::Name;
+  arrayExpr.name = "arr";
+  CHECK(state.inferArrayElementKind(arrayExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer inference array-kind setup validates dependencies") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceArrayKindSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
+          .resolveStructArrayInfoFromPath = {},
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error == "native backend missing inference array-kind setup dependency: resolveStructArrayInfoFromPath");
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -489,6 +564,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   REQUIRE(std::filesystem::exists(inferenceHeaderPath));
   const std::string inferenceHeaderSource = readText(inferenceHeaderPath);
   CHECK(inferenceHeaderSource.find("runLowerInferenceSetupBootstrap(") != std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceArrayKindSetup(") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

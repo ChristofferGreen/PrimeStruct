@@ -87,4 +87,92 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
   return true;
 }
 
+bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &input,
+                                     LowerInferenceSetupBootstrapState &stateInOut,
+                                     std::string &errorOut) {
+  if (input.defMap == nullptr) {
+    errorOut = "native backend missing inference array-kind setup dependency: defMap";
+    return false;
+  }
+  if (!input.resolveExprPath) {
+    errorOut = "native backend missing inference array-kind setup dependency: resolveExprPath";
+    return false;
+  }
+  if (!input.resolveStructArrayInfoFromPath) {
+    errorOut = "native backend missing inference array-kind setup dependency: resolveStructArrayInfoFromPath";
+    return false;
+  }
+  if (!input.isArrayCountCall) {
+    errorOut = "native backend missing inference array-kind setup dependency: isArrayCountCall";
+    return false;
+  }
+  if (!input.isStringCountCall) {
+    errorOut = "native backend missing inference array-kind setup dependency: isStringCountCall";
+    return false;
+  }
+  if (!stateInOut.resolveMethodCallDefinition) {
+    errorOut = "native backend missing inference array-kind setup state: resolveMethodCallDefinition";
+    return false;
+  }
+
+  const auto *defMap = input.defMap;
+  const auto resolveExprPath = input.resolveExprPath;
+  const auto resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath;
+  const auto isArrayCountCall = input.isArrayCountCall;
+  const auto isStringCountCall = input.isStringCountCall;
+
+  stateInOut.inferBufferElementKind = [&stateInOut](const Expr &expr,
+                                                     const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    return inferBufferElementValueKind(
+        expr,
+        localsIn,
+        [&](const Expr &candidate, const LocalMap &candidateLocals) {
+          return stateInOut.inferArrayElementKind(candidate, candidateLocals);
+        });
+  };
+
+  stateInOut.inferArrayElementKind = [defMap,
+                                      resolveExprPath,
+                                      resolveStructArrayInfoFromPath,
+                                      isArrayCountCall,
+                                      isStringCountCall,
+                                      &stateInOut](const Expr &expr,
+                                                   const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    return inferArrayElementValueKind(
+        expr,
+        localsIn,
+        [&](const Expr &candidate, const LocalMap &candidateLocals) {
+          return stateInOut.inferBufferElementKind(candidate, candidateLocals);
+        },
+        [&](const Expr &candidate) { return resolveExprPath(candidate); },
+        [&](const std::string &structPath, LocalInfo::ValueKind &kindOut) {
+          StructArrayTypeInfo structInfo;
+          if (!resolveStructArrayInfoFromPath(structPath, structInfo)) {
+            return false;
+          }
+          kindOut = structInfo.elementKind;
+          return true;
+        },
+        [&](const Expr &candidate, const LocalMap &, LocalInfo::ValueKind &kindOut) {
+          return resolveDefinitionCallReturnKind(
+              candidate, *defMap, resolveExprPath, stateInOut.getReturnInfo, true, kindOut);
+        },
+        [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
+          return resolveCountMethodCallReturnKind(candidate,
+                                                  candidateLocals,
+                                                  isArrayCountCall,
+                                                  isStringCountCall,
+                                                  stateInOut.resolveMethodCallDefinition,
+                                                  stateInOut.getReturnInfo,
+                                                  true,
+                                                  kindOut);
+        },
+        [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
+          return resolveMethodCallReturnKind(
+              candidate, candidateLocals, stateInOut.resolveMethodCallDefinition, stateInOut.getReturnInfo, true, kindOut);
+        });
+  };
+  return true;
+}
+
 } // namespace primec::ir_lowerer
