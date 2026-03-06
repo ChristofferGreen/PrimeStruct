@@ -72,6 +72,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+          return false;
+        }
         if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
             target.templateArgs.size() == 1) {
           elemTypeOut = target.templateArgs.front();
@@ -107,6 +110,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+          return false;
+        }
         if (!getBuiltinCollectionName(target, collection) || collection != "map" || target.templateArgs.size() != 2) {
           return false;
         }
@@ -127,7 +133,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     if (arg.kind == Expr::Kind::Call) {
       std::string accessName;
-      if (getBuiltinArrayAccessName(arg, accessName) && arg.args.size() == 2) {
+      if (defMap_.find(resolveCalleePath(arg)) == defMap_.end() && getBuiltinArrayAccessName(arg, accessName) &&
+          arg.args.size() == 2) {
         std::string elemType;
         if (resolveArrayTarget(arg.args.front(), elemType) && normalizeBindingTypeName(elemType) == "string") {
           return true;
@@ -175,7 +182,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     if (arg.kind == Expr::Kind::Call) {
       std::string builtinName;
-      if (getBuiltinCollectionName(arg, builtinName)) {
+      if (defMap_.find(resolveCalleePath(arg)) == defMap_.end() && getBuiltinCollectionName(arg, builtinName)) {
         return false;
       }
     }

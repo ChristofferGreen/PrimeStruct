@@ -314,6 +314,9 @@
     }
     if (arg.kind == Expr::Kind::Call) {
       std::string collection;
+      if (defMap_.find(resolveCalleePath(arg)) != defMap_.end()) {
+        return false;
+      }
       if (getBuiltinCollectionName(arg, collection) && collection == "array" && arg.templateArgs.size() == 1) {
         elemType = arg.templateArgs.front();
         return true;
@@ -522,6 +525,9 @@
         }
         if (target.kind == Expr::Kind::Call) {
           std::string collection;
+          if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+            return false;
+          }
           if (!getBuiltinCollectionName(target, collection)) {
             return false;
           }
@@ -543,7 +549,8 @@
       }
       if (candidate.kind == Expr::Kind::Call) {
         std::string accessName;
-        if (getBuiltinArrayAccessName(candidate, accessName) && candidate.args.size() == 2) {
+        if (defMap_.find(resolveCalleePath(candidate)) == defMap_.end() &&
+            getBuiltinArrayAccessName(candidate, accessName) && candidate.args.size() == 2) {
           return isStringCollectionTarget(candidate.args.front());
         }
       }

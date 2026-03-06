@@ -205,6 +205,24 @@ main() {
   CHECK(error.find("upload requires array input") != std::string::npos);
 }
 
+TEST_CASE("std gpu upload rejects user definition named array call target") {
+  const std::string source = R"(
+[return<i32>]
+array<T>([T] value) {
+  return(0i32)
+}
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  [Buffer<i32>] data{ /std/gpu/upload(array<i32>(1i32)) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("upload requires array input") != std::string::npos);
+}
+
 TEST_CASE("std gpu readback requires buffer input") {
   const std::string source = R"(
 [effects(gpu_dispatch) return<int>]
@@ -556,6 +574,29 @@ TEST_CASE("notify rejects non-string path argument") {
 [effects(pathspace_notify)]
 main() {
   notify(1i32, 2i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("requires string path argument") != std::string::npos);
+}
+
+TEST_CASE("notify rejects user-defined at on user-defined vector target") {
+  const std::string source = R"(
+[return<i32>]
+vector<T>([T] value) {
+  return(0i32)
+}
+
+[return<i32>]
+at([i32] value, [i32] index) {
+  return(plus(value, index))
+}
+
+[effects(pathspace_notify) return<int>]
+main() {
+  notify(at(vector<string>("/events/test"utf8), 0i32), 1i32)
+  return(0i32)
 }
 )";
   std::string error;
@@ -1080,6 +1121,46 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("print accepts string vector literal access") {
+  const std::string source = R"(
+[effects(io_out), effects(heap_alloc), return<int>]
+main() {
+  print_line(at(vector<string>("hi"utf8), 0i32))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("print rejects user-defined at on user-defined vector target") {
+  const std::string source = R"(
+Thing() {
+  [i32] value{1i32}
+}
+
+[return<i32>]
+vector<T>([T] value) {
+  return(0i32)
+}
+
+[return<Thing>]
+at([i32] value, [i32] index) {
+  return(Thing())
+}
+
+[effects(io_out) return<int>]
+main() {
+  print_line(at(vector<string>("hi"utf8), 0i32))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("requires an integer/bool or string literal/binding argument") != std::string::npos);
 }
 
 TEST_CASE("print rejects struct block value") {
