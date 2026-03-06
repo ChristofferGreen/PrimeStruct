@@ -26,6 +26,7 @@ Legend:
 - ✓ Extend intra-definition/execution body recovery to aggregate resolved-call argument-shape errors (duplicate/unknown named arguments and argument-count mismatches) with deterministic ordering.
 - ✓ Extend intra-definition/execution body recovery to aggregate call argument type-mismatch diagnostics for resolved targets while preserving deterministic diagnostics.
 - ✓ Extend intra-definition/execution body recovery to aggregate flow/effect diagnostics (for example capability/effect subset failures) while preserving deterministic diagnostics.
+- ○ Decompose include-composed mega units (`IrLowererLower.cpp`, `EmitterEmit.cpp`, `EmitterExpr.cpp`, `SemanticsValidatorExpr.cpp`, `SemanticsValidatorStatement.cpp`) into explicit `.h/.cpp` step functions plus a thin orchestrator that calls setup/lower/finalize stages in order, with snapshot tests to lock diagnostic + IR parity.
 
 **Pipeline & CLI**
 - ✓ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.
@@ -126,6 +127,17 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add user-defined convert constructors (resolve `convert<T>(u)` to `T.Convert(u)` for non-numeric targets) and tests.
 - ✓ Formalize and implement convert-constructor resolution rules (builtin fast-path + signature/ambiguity done; visibility pending definition-level public/private support).
 - ✓ Enforce the core type set in semantic validation and backend filters (software numeric rejection now enforced in semantics; still need a full per-backend allowlist for other non-core envelopes).
+- ○ Keep `array` as a language-core collection, but migrate `vector` and `map` to stdlib `.prime` implementations so users can build equivalent containers.
+- ○ Add a minimal, stable `/std/intrinsics/memory/*` surface (`alloc/realloc/free` or equivalent) callable from `.prime`, gated by `effects(heap_alloc)`.
+- ○ Add first-class pointer element access intrinsics (safe + unsafe) so `.prime` containers can implement indexing, growth, and relocation without compiler special-cases.
+- ○ Define explicit ownership/drop semantics for container element lifecycles (resize/remove/reallocation) for non-trivial element types.
+- ○ Define map key constraints as trait contracts (`Hash + Eq` for hash maps and/or `Comparable` for ordered maps) and enforce them in semantics.
+- ○ Define a standard container error contract (`Result`/`Maybe` and/or panic primitive) to replace compiler-injected vector/map runtime abort paths.
+- ○ Migration sequence for vector/map de-builtinization:
+  1) Land memory intrinsics and trait contracts.
+  2) Implement `std::vector` and `std::map` in `.prime`.
+  3) Keep current builtin spellings as compatibility aliases that forward to stdlib.
+  4) Remove semantics/lowering/emitter special-cases after parity and conformance tests pass.
 - ✓ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
 - ✓ Implement implicit-template `auto` in signatures (per-call-site inference + monomorphisation; omitted parameter envelopes are covered).
 - ✓ Enforce that templates/`auto` do not reach the base-level tree before lowering (IR lowerer now treats `return<auto>` as inferred returns; templated definitions/executions are rejected and `auto` bindings fail during IR lowering; semantics also rejects templated executions).
