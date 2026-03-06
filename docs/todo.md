@@ -252,7 +252,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a regression test that locks deterministic web-skip behavior when browser commands exist but are unavailable in `scripts/run_spinning_cube_demo.sh` (`WEB: SKIP (headless browser unavailable)` with overall PASS under stubbed native/metal skip paths).
 
 **Native Windowed Spinning Cube (Roadmap)**
-- ○ Define the first supported target for native window bring-up (`macOS + Metal window host`) and document explicit prerequisites/tools (`xcrun`, frameworks, minimum macOS version) plus non-goals for v1.
+- ✓ Define the first supported target for native window bring-up (`macOS + Metal window host`) and document explicit prerequisites/tools (`xcrun`, frameworks, minimum macOS version) plus non-goals for v1. Testing: spinning-cube docs command snippet lock (`spinning cube docs command snippets stay executable`) now asserts the target/prerequisite/non-goal lines.
 - ○ Reopen native compile parity for the shared sample: make `./build-debug/primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native --entry /main` succeed again (currently fails with `native backend does not support return type on /cubeInit`) or intentionally split a native-specific entrypoint and document that split.
 - ○ Reconcile spinning-cube docs/status language with reality until parity is restored (mark current native `/main` compile status as unsupported where relevant, and point readers to supported windowed paths).
 - ○ Add native-backend-compatible cube entrypoints in `cube.prime` for per-frame host driving (avoid unsupported struct-return lowering paths by exposing scalar/flat outputs the native backend can consume today).

@@ -8,6 +8,16 @@ This example is a milestone target for cross-platform backend work.
 - Render the same spinning cube through a macOS Metal-targeted graphics path.
 - Keep simulation deterministic so animation state matches VM/native/Wasm reference runs.
 
+## First Supported Native Window Target (v1)
+- Target: macOS + Metal window host (`examples/native/spinning_cube/window_host.mm`).
+- Required tools: Xcode Command Line Tools with accepted license, plus `xcrun`, `metal`, `metallib`, and `clang++`.
+- Required frameworks: `Foundation`, `Metal`, `AppKit`, and `QuartzCore`.
+- Minimum OS: macOS 14.0 (Sonoma).
+- Non-goals for v1:
+  - No Linux/Windows native window host support.
+  - No OpenGL/Vulkan/DirectX host backends.
+  - No promise that shared-source `/main` native compile parity is restored in this milestone.
+
 ## Planned Artifacts
 - `cube.prime`: PrimeStruct source for cube transform/update logic.
 - `index.html`: minimal host page and canvas bootstrap.
