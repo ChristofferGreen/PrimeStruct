@@ -48,52 +48,13 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       structPaths.insert(def.fullPath);
     }
   }
-  enum class HelperKind { Create, Destroy, Copy, Move };
-  struct HelperSuffixInfo {
-    std::string_view suffix;
-    HelperKind kind;
-    std::string_view placement;
-  };
-  auto matchLifecycleHelper =
-      [](const std::string &fullPath, std::string &parentOut, HelperKind &kindOut, std::string &placementOut) -> bool {
-    static const std::array<HelperSuffixInfo, 10> suffixes = {{
-        {"Create", HelperKind::Create, ""},
-        {"Destroy", HelperKind::Destroy, ""},
-        {"Copy", HelperKind::Copy, ""},
-        {"Move", HelperKind::Move, ""},
-        {"CreateStack", HelperKind::Create, "stack"},
-        {"DestroyStack", HelperKind::Destroy, "stack"},
-        {"CreateHeap", HelperKind::Create, "heap"},
-        {"DestroyHeap", HelperKind::Destroy, "heap"},
-        {"CreateBuffer", HelperKind::Create, "buffer"},
-        {"DestroyBuffer", HelperKind::Destroy, "buffer"},
-    }};
-    for (const auto &info : suffixes) {
-      const std::string_view suffix = info.suffix;
-      if (fullPath.size() < suffix.size() + 1) {
-        continue;
-      }
-      const size_t suffixStart = fullPath.size() - suffix.size();
-      if (fullPath[suffixStart - 1] != '/') {
-        continue;
-      }
-      if (fullPath.compare(suffixStart, suffix.size(), suffix.data(), suffix.size()) != 0) {
-        continue;
-      }
-      parentOut = fullPath.substr(0, suffixStart - 1);
-      kindOut = info.kind;
-      placementOut = std::string(info.placement);
-      return true;
-    }
-    return false;
-  };
   auto isLifecycleHelper = [&](const Definition &def, std::string &parentOut) {
-    HelperKind kind = HelperKind::Create;
-    std::string placement;
-    if (!matchLifecycleHelper(def.fullPath, parentOut, kind, placement)) {
+    const auto lifecycleMatch = runEmitterEmitSetupLifecycleHelperMatchStep(def.fullPath);
+    if (!lifecycleMatch.has_value()) {
       parentOut.clear();
       return false;
     }
+    parentOut = lifecycleMatch->parentPath;
     return true;
   };
   auto isStructHelper = [&](const Definition &def, std::string &parentOut) {
@@ -143,22 +104,21 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     if (isStructDefinition(def)) {
       structTypeMap[def.fullPath] = toCppName(def.fullPath);
     }
-    std::string parentPath;
-    HelperKind kind = HelperKind::Create;
-    std::string placement;
-    if (matchLifecycleHelper(def.fullPath, parentPath, kind, placement)) {
-      if (kind == HelperKind::Copy || kind == HelperKind::Move) {
+    const auto lifecycleMatch = runEmitterEmitSetupLifecycleHelperMatchStep(def.fullPath);
+    if (lifecycleMatch.has_value()) {
+      if (lifecycleMatch->kind == EmitterLifecycleHelperKind::Copy ||
+          lifecycleMatch->kind == EmitterLifecycleHelperKind::Move) {
         continue;
       }
-      auto &helpers = helpersByStruct[parentPath];
-      if (placement == "stack") {
-        if (kind == HelperKind::Create) {
+      auto &helpers = helpersByStruct[lifecycleMatch->parentPath];
+      if (lifecycleMatch->placement == "stack") {
+        if (lifecycleMatch->kind == EmitterLifecycleHelperKind::Create) {
           helpers.createStack = &def;
         } else {
           helpers.destroyStack = &def;
         }
-      } else if (placement.empty()) {
-        if (kind == HelperKind::Create) {
+      } else if (lifecycleMatch->placement.empty()) {
+        if (lifecycleMatch->kind == EmitterLifecycleHelperKind::Create) {
           helpers.create = &def;
         } else {
           helpers.destroy = &def;

@@ -1418,6 +1418,32 @@ TEST_CASE("emitter emit setup math-import step detects supported imports") {
   CHECK_FALSE(primec::emitter::runEmitterEmitSetupMathImport(unrelatedImport));
 }
 
+TEST_CASE("emitter emit setup lifecycle helper step matches helper suffixes") {
+  const auto createMatch = primec::emitter::runEmitterEmitSetupLifecycleHelperMatchStep("/Foo/Create");
+  REQUIRE(createMatch.has_value());
+  CHECK(createMatch->parentPath == "/Foo");
+  CHECK(createMatch->kind == primec::emitter::EmitterLifecycleHelperKind::Create);
+  CHECK(createMatch->placement.empty());
+
+  const auto destroyStackMatch = primec::emitter::runEmitterEmitSetupLifecycleHelperMatchStep("/Foo/DestroyStack");
+  REQUIRE(destroyStackMatch.has_value());
+  CHECK(destroyStackMatch->parentPath == "/Foo");
+  CHECK(destroyStackMatch->kind == primec::emitter::EmitterLifecycleHelperKind::Destroy);
+  CHECK(destroyStackMatch->placement == "stack");
+
+  const auto copyMatch = primec::emitter::runEmitterEmitSetupLifecycleHelperMatchStep("/Foo/Copy");
+  REQUIRE(copyMatch.has_value());
+  CHECK(copyMatch->kind == primec::emitter::EmitterLifecycleHelperKind::Copy);
+
+  const auto moveMatch = primec::emitter::runEmitterEmitSetupLifecycleHelperMatchStep("/Foo/Move");
+  REQUIRE(moveMatch.has_value());
+  CHECK(moveMatch->kind == primec::emitter::EmitterLifecycleHelperKind::Move);
+
+  CHECK_FALSE(primec::emitter::runEmitterEmitSetupLifecycleHelperMatchStep("/Foo"));
+  CHECK_FALSE(primec::emitter::runEmitterEmitSetupLifecycleHelperMatchStep("/Foo/CreateExtra"));
+  CHECK_FALSE(primec::emitter::runEmitterEmitSetupLifecycleHelperMatchStep("/FooCreate"));
+}
+
 TEST_CASE("emitter expr control name step resolves constants and locals") {
   primec::Expr notNameExpr;
   notNameExpr.kind = primec::Expr::Kind::Literal;
@@ -1652,12 +1678,15 @@ TEST_CASE("emitter emit setup source delegation stays stable") {
   REQUIRE(std::filesystem::exists(emitterSetupHeaderPath));
   const std::string emitterSetupHeaderSource = readText(emitterSetupHeaderPath);
   CHECK(emitterSetupHeaderSource.find("runEmitterEmitSetupMathImport(program)") != std::string::npos);
+  CHECK(emitterSetupHeaderSource.find("runEmitterEmitSetupLifecycleHelperMatchStep(def.fullPath)") !=
+        std::string::npos);
 
   const std::filesystem::path emitterEmitPath =
       std::filesystem::path("src") / "emitter" / "EmitterEmit.cpp";
   REQUIRE(std::filesystem::exists(emitterEmitPath));
   const std::string emitterEmitSource = readText(emitterEmitPath);
   CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupMathImport.h\"") != std::string::npos);
+  CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupLifecycleHelperStep.h\"") != std::string::npos);
 }
 
 TEST_CASE("emitter expr source delegation stays stable") {

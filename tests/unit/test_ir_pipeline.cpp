@@ -27,6 +27,7 @@
 #include "primec/Vm.h"
 #include "primec/VmDebugAdapter.h"
 #include "primec/WasmEmitter.h"
+#include "src/emitter/EmitterEmitSetupLifecycleHelperStep.h"
 #include "src/emitter/EmitterEmitSetupMathImport.h"
 #include "src/emitter/EmitterExprControlNameStep.h"
 #include "src/ir_lowerer/IrLowererCallHelpers.h"

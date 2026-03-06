@@ -3,6 +3,7 @@
 #include "primec/Parser.h"
 
 #include "EmitterHelpers.h"
+#include "EmitterEmitSetupLifecycleHelperStep.h"
 #include "EmitterEmitSetupMathImport.h"
 
 #include <algorithm>
