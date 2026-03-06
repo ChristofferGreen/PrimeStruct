@@ -21,10 +21,10 @@
   auto &getReturnInfo = inferenceSetupBootstrap.getReturnInfo;
   auto &inferExprKind = inferenceSetupBootstrap.inferExprKind;
   auto &inferArrayElementKind = inferenceSetupBootstrap.inferArrayElementKind;
-  auto &inferBufferElementKind = inferenceSetupBootstrap.inferBufferElementKind;
   auto &inferLiteralOrNameExprKind = inferenceSetupBootstrap.inferLiteralOrNameExprKind;
   auto &inferCallExprBaseKind = inferenceSetupBootstrap.inferCallExprBaseKind;
   auto &inferCallExprDirectReturnKind = inferenceSetupBootstrap.inferCallExprDirectReturnKind;
+  auto &inferCallExprCountAccessGpuFallbackKind = inferenceSetupBootstrap.inferCallExprCountAccessGpuFallbackKind;
   auto &resolveMethodCallDefinition = inferenceSetupBootstrap.resolveMethodCallDefinition;
   auto &inferPointerTargetKind = inferenceSetupBootstrap.inferPointerTargetKind;
 
@@ -61,6 +61,17 @@
           error)) {
     return false;
   }
+  if (!ir_lowerer::runLowerInferenceExprKindCallFallbackSetup(
+          {
+              .isArrayCountCall = isArrayCountCall,
+              .isStringCountCall = isStringCountCall,
+              .isVectorCapacityCall = isVectorCapacityCall,
+              .isEntryArgsName = isEntryArgsName,
+          },
+          inferenceSetupBootstrap,
+          error)) {
+    return false;
+  }
   if (!ir_lowerer::runLowerInferenceExprKindBaseSetup(
           {
               .getMathConstantName = getMathConstantName,
@@ -89,41 +100,9 @@
         if (callReturnResolution == CallExpressionReturnKindResolution::MatchedButUnsupported) {
           return LocalInfo::ValueKind::Unknown;
         }
-        LocalInfo::ValueKind countCapacityKind = LocalInfo::ValueKind::Unknown;
-        if (inferCountCapacityCallReturnKind(
-                expr,
-                localsIn,
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return isArrayCountCall(candidateExpr, candidateLocals);
-                },
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return isStringCountCall(candidateExpr, candidateLocals);
-                },
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return isVectorCapacityCall(candidateExpr, candidateLocals);
-                },
-                countCapacityKind) == CountCapacityCallReturnKindResolution::Resolved) {
-          return countCapacityKind;
-        }
-        LocalInfo::ValueKind accessElementKind = LocalInfo::ValueKind::Unknown;
-        if (resolveArrayMapAccessElementKind(
-                expr,
-                localsIn,
-                [&](const Expr &candidate, const LocalMap &candidateLocals) {
-                  return isEntryArgsName(candidate, candidateLocals);
-                },
-                accessElementKind) == ArrayMapAccessElementKindResolution::Resolved) {
-          return accessElementKind;
-        }
-        LocalInfo::ValueKind gpuBufferKind = LocalInfo::ValueKind::Unknown;
-        if (inferGpuBufferCallReturnKind(
-                expr,
-                localsIn,
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return inferBufferElementKind(candidateExpr, candidateLocals);
-                },
-                gpuBufferKind) == GpuBufferCallReturnKindResolution::Resolved) {
-          return gpuBufferKind;
+        LocalInfo::ValueKind callFallbackKind = LocalInfo::ValueKind::Unknown;
+        if (inferCallExprCountAccessGpuFallbackKind(expr, localsIn, callFallbackKind)) {
+          return callFallbackKind;
         }
         LocalInfo::ValueKind comparisonOperatorKind = LocalInfo::ValueKind::Unknown;
         if (inferComparisonOperatorCallReturnKind(

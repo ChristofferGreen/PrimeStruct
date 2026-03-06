@@ -715,6 +715,93 @@ TEST_CASE("ir lowerer inference expr-kind call-return setup validates dependenci
   CHECK(error == "native backend missing inference expr-kind call-return setup dependency: resolveExprPath");
 }
 
+TEST_CASE("ir lowerer inference expr-kind call-fallback setup wires callback") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.inferBufferElementKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+    if (expr.kind == primec::Expr::Kind::Name && expr.name == "buf") {
+      return primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallFallbackSetup(
+      {
+          .isArrayCountCall = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+            return expr.kind == primec::Expr::Kind::Call && expr.name == "count";
+          },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(state.inferCallExprCountAccessGpuFallbackKind));
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo arrayInfo;
+  arrayInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  arrayInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("arr", arrayInfo);
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  primec::Expr countExpr;
+  countExpr.kind = primec::Expr::Kind::Call;
+  countExpr.name = "count";
+  CHECK(state.inferCallExprCountAccessGpuFallbackKind(countExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Expr arrayNameExpr;
+  arrayNameExpr.kind = primec::Expr::Kind::Name;
+  arrayNameExpr.name = "arr";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.args.push_back(arrayNameExpr);
+  accessExpr.args.push_back(indexExpr);
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprCountAccessGpuFallbackKind(accessExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr bufferNameExpr;
+  bufferNameExpr.kind = primec::Expr::Kind::Name;
+  bufferNameExpr.name = "buf";
+  primec::Expr bufferLoadExpr;
+  bufferLoadExpr.kind = primec::Expr::Kind::Call;
+  bufferLoadExpr.name = "buffer_load";
+  bufferLoadExpr.args.push_back(bufferNameExpr);
+  bufferLoadExpr.args.push_back(indexExpr);
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprCountAccessGpuFallbackKind(bufferLoadExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+
+  primec::Expr unknownExpr;
+  unknownExpr.kind = primec::Expr::Kind::Call;
+  unknownExpr.name = "noop";
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  CHECK_FALSE(state.inferCallExprCountAccessGpuFallbackKind(unknownExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer inference expr-kind call-fallback setup validates dependencies") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceExprKindCallFallbackSetup(
+      {
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error == "native backend missing inference expr-kind call-fallback setup state: inferBufferElementKind");
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -780,6 +867,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindBaseSetup(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallBaseSetup(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallReturnSetup(") != std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallFallbackSetup(") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

@@ -476,4 +476,84 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
   return true;
 }
 
+bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCallFallbackSetupInput &input,
+                                                LowerInferenceSetupBootstrapState &stateInOut,
+                                                std::string &errorOut) {
+  if (!input.isArrayCountCall) {
+    errorOut = "native backend missing inference expr-kind call-fallback setup dependency: isArrayCountCall";
+    return false;
+  }
+  if (!input.isStringCountCall) {
+    errorOut = "native backend missing inference expr-kind call-fallback setup dependency: isStringCountCall";
+    return false;
+  }
+  if (!input.isVectorCapacityCall) {
+    errorOut = "native backend missing inference expr-kind call-fallback setup dependency: isVectorCapacityCall";
+    return false;
+  }
+  if (!input.isEntryArgsName) {
+    errorOut = "native backend missing inference expr-kind call-fallback setup dependency: isEntryArgsName";
+    return false;
+  }
+  if (!stateInOut.inferBufferElementKind) {
+    errorOut = "native backend missing inference expr-kind call-fallback setup state: inferBufferElementKind";
+    return false;
+  }
+
+  const auto isArrayCountCall = input.isArrayCountCall;
+  const auto isStringCountCall = input.isStringCountCall;
+  const auto isVectorCapacityCall = input.isVectorCapacityCall;
+  const auto isEntryArgsName = input.isEntryArgsName;
+
+  stateInOut.inferCallExprCountAccessGpuFallbackKind =
+      [isArrayCountCall, isStringCountCall, isVectorCapacityCall, isEntryArgsName, &stateInOut](
+          const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
+        kindOut = LocalInfo::ValueKind::Unknown;
+
+        LocalInfo::ValueKind countCapacityKind = LocalInfo::ValueKind::Unknown;
+        if (inferCountCapacityCallReturnKind(
+                expr,
+                localsIn,
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return isArrayCountCall(candidateExpr, candidateLocals);
+                },
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return isStringCountCall(candidateExpr, candidateLocals);
+                },
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return isVectorCapacityCall(candidateExpr, candidateLocals);
+                },
+                countCapacityKind) == CountCapacityCallReturnKindResolution::Resolved) {
+          kindOut = countCapacityKind;
+          return true;
+        }
+
+        LocalInfo::ValueKind accessElementKind = LocalInfo::ValueKind::Unknown;
+        if (resolveArrayMapAccessElementKind(
+                expr,
+                localsIn,
+                [&](const Expr &candidate, const LocalMap &candidateLocals) {
+                  return isEntryArgsName(candidate, candidateLocals);
+                },
+                accessElementKind) == ArrayMapAccessElementKindResolution::Resolved) {
+          kindOut = accessElementKind;
+          return true;
+        }
+
+        LocalInfo::ValueKind gpuBufferKind = LocalInfo::ValueKind::Unknown;
+        if (inferGpuBufferCallReturnKind(
+                expr,
+                localsIn,
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return stateInOut.inferBufferElementKind(candidateExpr, candidateLocals);
+                },
+                gpuBufferKind) == GpuBufferCallReturnKindResolution::Resolved) {
+          kindOut = gpuBufferKind;
+          return true;
+        }
+        return false;
+      };
+  return true;
+}
+
 } // namespace primec::ir_lowerer
