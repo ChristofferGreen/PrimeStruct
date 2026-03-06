@@ -440,6 +440,43 @@ TEST_CASE("cpp-ir backend writes file read path") {
   CHECK(source.find("int closeRc = ::close(closeFd);") != std::string::npos);
 }
 
+TEST_CASE("cpp-ir backend writes file append path") {
+  const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("/dev/null");
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::FileOpenAppend, 0});
+  function.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_file_append.cpp";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "cpp_ir_backend_file_append.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("int fileOpenFlags = O_WRONLY | O_CREAT | O_APPEND;") != std::string::npos);
+  CHECK(source.find("int fileFd = ::open(ps_string_table[0], fileOpenFlags, 0644);") != std::string::npos);
+  CHECK(source.find("int closeRc = ::close(closeFd);") != std::string::npos);
+}
+
 TEST_CASE("cpp-ir backend omits file io helpers when unused") {
   const primec::IrBackend *backend = primec::findIrBackend("cpp-ir");
   REQUIRE(backend != nullptr);
