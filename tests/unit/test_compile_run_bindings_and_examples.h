@@ -297,6 +297,51 @@ TEST_CASE("spinning cube native flat frame entrypoints compile and run determini
   CHECK(std::filesystem::exists(angularVelocityPath));
 }
 
+TEST_CASE("spinning cube native window ABI contract conformance stays deterministic") {
+  std::filesystem::path cubePath =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "cube.prime";
+  if (!std::filesystem::exists(cubePath)) {
+    cubePath = std::filesystem::current_path() / "examples" / "web" / "spinning_cube" / "cube.prime";
+  }
+  REQUIRE(std::filesystem::exists(cubePath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_window_abi_conformance";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  struct NativeEntryExpectation {
+    std::string entry;
+    int exitCode;
+  };
+
+  const std::vector<NativeEntryExpectation> expected = {
+      {"/cubeNativeAbiVersion", 1},
+      {"/cubeNativeAbiFixedStepMillis", 16},
+      {"/cubeNativeAbiStatusOk", 0},
+      {"/cubeNativeAbiStatusInvalidDeltaMillis", 201},
+      {"/cubeNativeAbiConformanceInitSnapshotCode", 144},
+      {"/cubeNativeAbiConformanceTickStatusOkCode", 0},
+      {"/cubeNativeAbiConformanceTickStatusInvalidDeltaCode", 201},
+      {"/cubeNativeAbiConformanceTickSnapshotCode", 117},
+      {"/cubeNativeAbiConformanceTransformUniformSnapshotCode", 152},
+  };
+
+  int index = 0;
+  for (const auto &entry : expected) {
+    const std::filesystem::path nativePath = outDir / ("native_abi_entry_" + std::to_string(index));
+    const std::string compileCmd =
+        "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativePath.string()) +
+        " --entry " + entry.entry;
+    CHECK(runCommand(compileCmd) == 0);
+    CHECK(std::filesystem::exists(nativePath));
+    CHECK(runCommand(quoteShellArg(nativePath.string())) == entry.exitCode);
+    index = index + 1;
+  }
+}
+
 TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
   std::filesystem::path sampleDir =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
@@ -1083,6 +1128,13 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "`cubeNativeFrameInit*`, `cubeNativeFrameStep*`,",
       "`cubeNativeMeshVertexCount`, `cubeNativeMeshIndexCount`, and",
       "`cubeNativeFrameStepSnapshotCode`.",
+      "## Native Window Host ABI Contract (v1)",
+      "`cubeNativeAbiVersion` returns `1`.",
+      "`cubeNativeAbiFixedStepMillis` returns `16` (host step size in milliseconds).",
+      "`cubeNativeAbiTickStatus(deltaMillis)` validates step input.",
+      "`cubeNativeAbiUniformMeshIndexCount`",
+      "`201` (`cubeNativeAbiStatusInvalidDeltaMillis`) means invalid tick delta.",
+      "Conformance wrappers (`cubeNativeAbiConformance*`) lock deterministic ABI",
       "For a visible rotating window today, use the browser path (`index.html` + `main.js`).",
       "shared-source `/main` is still unsupported for native emit until",
       "Diagnostics: prints `native host verified cube simulation output`.",

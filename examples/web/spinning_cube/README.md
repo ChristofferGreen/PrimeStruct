@@ -48,8 +48,38 @@ This example is a milestone target for cross-platform backend work.
     `cubeNativeFrameInit*`, `cubeNativeFrameStep*`,
     `cubeNativeMeshVertexCount`, `cubeNativeMeshIndexCount`, and
     `cubeNativeFrameStepSnapshotCode`.
+  - Native window host ABI v1 entrypoints:
+    `cubeNativeAbiVersion`, `cubeNativeAbiInit*`, `cubeNativeAbiTick*`,
+    `cubeNativeAbiUniform*`, and `cubeNativeAbiConformance*`.
   - `mainNative`: native-only split entrypoint for host smoke while native
     `/main` support remains blocked on struct-return lowering.
+
+## Native Window Host ABI Contract (v1)
+- Versioning:
+  - `cubeNativeAbiVersion` returns `1`.
+- Init surface (scalar fixed-point outputs):
+  - `cubeNativeAbiInitTick`
+  - `cubeNativeAbiInitAngleMilli`
+  - `cubeNativeAbiInitAxisXCenti`
+  - `cubeNativeAbiInitAxisYCenti`
+  - `cubeNativeAbiInitMeshVertexCount`
+  - `cubeNativeAbiInitMeshIndexCount`
+- Fixed-step tick surface:
+  - `cubeNativeAbiFixedStepMillis` returns `16` (host step size in milliseconds).
+  - `cubeNativeAbiTickStatus(deltaMillis)` validates step input.
+  - `cubeNativeAbiTickNextTick`, `cubeNativeAbiTickNextAngleMilli`,
+    `cubeNativeAbiTickNextAxisXCenti`, and `cubeNativeAbiTickNextAxisYCenti`
+    produce next-frame scalar outputs.
+- Transform/uniform scalar outputs:
+  - `cubeNativeAbiUniformAngleMilli`
+  - `cubeNativeAbiUniformAxisXCenti`
+  - `cubeNativeAbiUniformAxisYCenti`
+  - `cubeNativeAbiUniformMeshIndexCount`
+- Error/return conventions:
+  - `0` (`cubeNativeAbiStatusOk`) means success.
+  - `201` (`cubeNativeAbiStatusInvalidDeltaMillis`) means invalid tick delta.
+  - Conformance wrappers (`cubeNativeAbiConformance*`) lock deterministic ABI
+    behavior in compile-run tests.
 
 ## Current Browser Host Assets
 - `index.html` provides the canvas shell and module bootstrap.

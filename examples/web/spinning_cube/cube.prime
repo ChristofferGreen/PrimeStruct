@@ -276,6 +276,146 @@ cubeNativeFrameStepSnapshotCode() {
 }
 
 [return<int>]
+cubeNativeAbiVersion() {
+  return(1i32)
+}
+
+[return<int>]
+cubeNativeAbiFixedStepMillis() {
+  return(16i32)
+}
+
+[return<int>]
+cubeNativeAbiStatusOk() {
+  return(0i32)
+}
+
+[return<int>]
+cubeNativeAbiStatusInvalidDeltaMillis() {
+  return(201i32)
+}
+
+[return<int>]
+cubeNativeAbiInitTick() {
+  return(cubeNativeFrameInitTick())
+}
+
+[return<int>]
+cubeNativeAbiInitAngleMilli() {
+  return(cubeNativeFrameInitAngleMilli())
+}
+
+[return<int>]
+cubeNativeAbiInitAxisXCenti() {
+  return(cubeNativeFrameInitAxisXCenti())
+}
+
+[return<int>]
+cubeNativeAbiInitAxisYCenti() {
+  return(cubeNativeFrameInitAxisYCenti())
+}
+
+[return<int>]
+cubeNativeAbiInitMeshVertexCount() {
+  return(cubeNativeMeshVertexCount())
+}
+
+[return<int>]
+cubeNativeAbiInitMeshIndexCount() {
+  return(cubeNativeMeshIndexCount())
+}
+
+[return<int>]
+cubeNativeAbiTickStatus([i32] deltaMillis) {
+  if(less_equal(deltaMillis, 0i32)) {
+    return(cubeNativeAbiStatusInvalidDeltaMillis())
+  }
+  return(cubeNativeAbiStatusOk())
+}
+
+[return<int>]
+cubeNativeAbiTickNextTick([i32] tick) {
+  return(cubeNativeFrameStepTick(tick))
+}
+
+[return<int>]
+cubeNativeAbiTickNextAngleMilli([i32] angleMilli, [i32] deltaMillis) {
+  return(cubeNativeFrameStepAngleMilli(angleMilli, deltaMillis, cubeNativeFrameAngularVelocityMilli()))
+}
+
+[return<int>]
+cubeNativeAbiTickNextAxisXCenti([i32] axisXCenti, [i32] axisYCenti) {
+  return(cubeNativeFrameStepAxisXCenti(axisXCenti, axisYCenti))
+}
+
+[return<int>]
+cubeNativeAbiTickNextAxisYCenti([i32] axisXCenti, [i32] axisYCenti) {
+  return(cubeNativeFrameStepAxisYCenti(axisXCenti, axisYCenti))
+}
+
+[return<int>]
+cubeNativeAbiUniformAngleMilli([i32] angleMilli) {
+  return(angleMilli)
+}
+
+[return<int>]
+cubeNativeAbiUniformAxisXCenti([i32] axisXCenti) {
+  return(axisXCenti)
+}
+
+[return<int>]
+cubeNativeAbiUniformAxisYCenti([i32] axisYCenti) {
+  return(axisYCenti)
+}
+
+[return<int>]
+cubeNativeAbiUniformMeshIndexCount([i32] meshIndexCount) {
+  return(meshIndexCount)
+}
+
+[return<int>]
+cubeNativeAbiConformanceInitSnapshotCode() {
+  [i32] initTick{cubeNativeAbiInitTick()}
+  [i32] initAngleMilli{cubeNativeAbiInitAngleMilli()}
+  [i32] initAxisXCenti{cubeNativeAbiInitAxisXCenti()}
+  [i32] initAxisYCenti{cubeNativeAbiInitAxisYCenti()}
+  [i32] meshVertexCount{cubeNativeAbiInitMeshVertexCount()}
+  [i32] meshIndexCount{cubeNativeAbiInitMeshIndexCount()}
+  return(plus(plus(initTick, initAngleMilli), plus(initAxisXCenti, plus(initAxisYCenti, plus(meshVertexCount, meshIndexCount)))))
+}
+
+[return<int>]
+cubeNativeAbiConformanceTickStatusOkCode() {
+  return(cubeNativeAbiTickStatus(cubeNativeAbiFixedStepMillis()))
+}
+
+[return<int>]
+cubeNativeAbiConformanceTickStatusInvalidDeltaCode() {
+  return(cubeNativeAbiTickStatus(0i32))
+}
+
+[return<int>]
+cubeNativeAbiConformanceTickSnapshotCode() {
+  [i32] nextTick{cubeNativeAbiTickNextTick(cubeNativeAbiInitTick())}
+  [i32] nextAngleMilli{cubeNativeAbiTickNextAngleMilli(cubeNativeAbiInitAngleMilli(), cubeNativeAbiFixedStepMillis())}
+  [i32] nextAxisXCenti{cubeNativeAbiTickNextAxisXCenti(cubeNativeAbiInitAxisXCenti(), cubeNativeAbiInitAxisYCenti())}
+  [i32] nextAxisYCenti{cubeNativeAbiTickNextAxisYCenti(cubeNativeAbiInitAxisXCenti(), cubeNativeAbiInitAxisYCenti())}
+  return(plus(plus(nextTick, nextAngleMilli), plus(nextAxisXCenti, nextAxisYCenti)))
+}
+
+[return<int>]
+cubeNativeAbiConformanceTransformUniformSnapshotCode() {
+  [i32] nextAngleMilli{cubeNativeAbiTickNextAngleMilli(cubeNativeAbiInitAngleMilli(), cubeNativeAbiFixedStepMillis())}
+  [i32] nextAxisXCenti{cubeNativeAbiTickNextAxisXCenti(cubeNativeAbiInitAxisXCenti(), cubeNativeAbiInitAxisYCenti())}
+  [i32] nextAxisYCenti{cubeNativeAbiTickNextAxisYCenti(cubeNativeAbiInitAxisXCenti(), cubeNativeAbiInitAxisYCenti())}
+  [i32] uniformAngle{cubeNativeAbiUniformAngleMilli(nextAngleMilli)}
+  [i32] uniformAxisX{cubeNativeAbiUniformAxisXCenti(nextAxisXCenti)}
+  [i32] uniformAxisY{cubeNativeAbiUniformAxisYCenti(nextAxisYCenti)}
+  [i32] uniformMeshIndexCount{cubeNativeAbiUniformMeshIndexCount(cubeNativeAbiInitMeshIndexCount())}
+  return(plus(plus(uniformAngle, uniformAxisX), plus(uniformAxisY, uniformMeshIndexCount)))
+}
+
+[return<int>]
 mainNative() {
   return(cubeNativeMeshIndexCount())
 }
