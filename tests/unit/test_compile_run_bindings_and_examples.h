@@ -1335,6 +1335,12 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "/tmp/spinning_cube_window_host --cube-sim /tmp/cube_native_frame_stream --max-frames 120",
       "### Native Window Launcher (macOS)",
       "./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec",
+      "./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec --visual-smoke",
+      "`window_shown`: `window_created=1` and `startup_success=1`.",
+      "`render_loop_alive`: `frame_rendered=1` and `exit_reason=max_frames`.",
+      "`rotation_changes_over_time`: first two `angleMilli` values from",
+      "CI skip rules for `--visual-smoke`: exits `0` with a `VISUAL-SMOKE: SKIP`",
+      "marker on non-macOS runners or when `launchctl print gui/<uid>` fails.",
       "xcrun metal -std=metal3.0 -c examples/metal/spinning_cube/cube.metal -o /tmp/cube.air",
       "xcrun metallib /tmp/cube.air -o /tmp/cube.metallib",
       "xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework "
@@ -2816,6 +2822,365 @@ TEST_CASE("native window launcher script rejects unknown args") {
   CHECK(runCommand(command) == 2);
   CHECK(readFile(outPath.string()).empty());
   CHECK(readFile(errPath.string()).find("[native-window-launcher] ERROR: unknown arg: --bogus") != std::string::npos);
+}
+
+TEST_CASE("native window launcher script rejects incompatible smoke flags") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "run_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_native_window_launcher_incompatible_smoke_flags";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path outPath = outDir / "script.out.txt";
+  const std::filesystem::path errPath = outDir / "script.err.txt";
+  const std::string command =
+      quoteShellArg(scriptPath.string()) + " --simulation-smoke --visual-smoke > " + quoteShellArg(outPath.string()) +
+      " 2> " + quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 2);
+  CHECK(readFile(outPath.string()).empty());
+  CHECK(readFile(errPath.string()).find(
+            "[native-window-launcher] ERROR: --simulation-smoke and --visual-smoke cannot be combined") !=
+        std::string::npos);
+}
+
+TEST_CASE("native window launcher visual smoke skips on non-macOS runners") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "run_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_native_window_visual_smoke_skip_non_macos";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path binDir = outDir / "bin";
+  std::filesystem::create_directories(binDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path fakeUnamePath = binDir / "uname";
+  {
+    std::ofstream fakeUname(fakeUnamePath);
+    fakeUname << "#!/usr/bin/env bash\n";
+    fakeUname << "echo Linux\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeUnamePath.string())) == 0);
+
+  const std::filesystem::path outPath = outDir / "script.out.txt";
+  const std::filesystem::path errPath = outDir / "script.err.txt";
+  const std::string command = "PATH=" + quoteShellArg(binDir.string() + ":/usr/bin:/bin") + " " +
+                              quoteShellArg(scriptPath.string()) + " --visual-smoke > " +
+                              quoteShellArg(outPath.string()) + " 2> " + quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 0);
+  CHECK(readFile(errPath.string()).empty());
+  CHECK(readFile(outPath.string()).find("[native-window-launcher] VISUAL-SMOKE: SKIP non-macOS runner") !=
+        std::string::npos);
+}
+
+TEST_CASE("native window launcher visual smoke skips without GUI session") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "run_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_native_window_visual_smoke_skip_no_gui";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path binDir = outDir / "bin";
+  std::filesystem::create_directories(binDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path fakeUnamePath = binDir / "uname";
+  {
+    std::ofstream fakeUname(fakeUnamePath);
+    fakeUname << "#!/usr/bin/env bash\n";
+    fakeUname << "echo Darwin\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeUnamePath.string())) == 0);
+
+  const std::filesystem::path fakeLaunchctlPath = binDir / "launchctl";
+  {
+    std::ofstream fakeLaunchctl(fakeLaunchctlPath);
+    fakeLaunchctl << "#!/usr/bin/env bash\n";
+    fakeLaunchctl << "set -euo pipefail\n";
+    fakeLaunchctl << "if [[ \"${1:-}\" == \"print\" && \"${2:-}\" == gui/* ]]; then\n";
+    fakeLaunchctl << "  exit 1\n";
+    fakeLaunchctl << "fi\n";
+    fakeLaunchctl << "echo \"unexpected launchctl invocation\" >&2\n";
+    fakeLaunchctl << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeLaunchctlPath.string())) == 0);
+
+  const std::filesystem::path outPath = outDir / "script.out.txt";
+  const std::filesystem::path errPath = outDir / "script.err.txt";
+  const std::string command = "PATH=" + quoteShellArg(binDir.string() + ":/usr/bin:/bin") + " " +
+                              quoteShellArg(scriptPath.string()) + " --visual-smoke > " +
+                              quoteShellArg(outPath.string()) + " 2> " + quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 0);
+  CHECK(readFile(errPath.string()).empty());
+  CHECK(readFile(outPath.string()).find("[native-window-launcher] VISUAL-SMOKE: SKIP GUI session unavailable") !=
+        std::string::npos);
+}
+
+TEST_CASE("native window launcher visual smoke validates criteria") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "run_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path tempRoot =
+      std::filesystem::temp_directory_path() / "primec_native_window_visual_smoke_success";
+  std::error_code ec;
+  std::filesystem::remove_all(tempRoot, ec);
+  std::filesystem::create_directories(tempRoot, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path binDir = tempRoot / "bin";
+  std::filesystem::create_directories(binDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path fakeUnamePath = binDir / "uname";
+  {
+    std::ofstream fakeUname(fakeUnamePath);
+    fakeUname << "#!/usr/bin/env bash\n";
+    fakeUname << "echo Darwin\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeUnamePath.string())) == 0);
+
+  const std::filesystem::path fakePrimecPath = binDir / "primec";
+  {
+    std::ofstream fakePrimec(fakePrimecPath);
+    fakePrimec << "#!/usr/bin/env bash\n";
+    fakePrimec << "set -euo pipefail\n";
+    fakePrimec << "out=\"\"\n";
+    fakePrimec << "while [[ $# -gt 0 ]]; do\n";
+    fakePrimec << "  if [[ \"$1\" == \"-o\" ]]; then\n";
+    fakePrimec << "    out=\"$2\"\n";
+    fakePrimec << "    shift 2\n";
+    fakePrimec << "    continue\n";
+    fakePrimec << "  fi\n";
+    fakePrimec << "  shift\n";
+    fakePrimec << "done\n";
+    fakePrimec << "cat > \"$out\" <<'EOS'\n";
+    fakePrimec << "#!/usr/bin/env bash\n";
+    fakePrimec << "cat <<'EOD'\n";
+    fakePrimec << "0\n0\n100\n0\n1\n16\n99\n1\n";
+    fakePrimec << "EOD\n";
+    fakePrimec << "EOS\n";
+    fakePrimec << "chmod +x \"$out\"\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakePrimecPath.string())) == 0);
+
+  const std::filesystem::path fakeXcrunPath = binDir / "xcrun";
+  {
+    std::ofstream fakeXcrun(fakeXcrunPath);
+    fakeXcrun << "#!/usr/bin/env bash\n";
+    fakeXcrun << "set -euo pipefail\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metal\" ]]; then\n";
+    fakeXcrun << "  echo \"/fake/toolchain/metal\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metallib\" ]]; then\n";
+    fakeXcrun << "  echo \"/fake/toolchain/metallib\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"clang++\" ]]; then\n";
+    fakeXcrun << "  shift\n";
+    fakeXcrun << "  out=\"\"\n";
+    fakeXcrun << "  while [[ $# -gt 0 ]]; do\n";
+    fakeXcrun << "    if [[ \"$1\" == \"-o\" ]]; then\n";
+    fakeXcrun << "      out=\"$2\"\n";
+    fakeXcrun << "      shift 2\n";
+    fakeXcrun << "      continue\n";
+    fakeXcrun << "    fi\n";
+    fakeXcrun << "    shift\n";
+    fakeXcrun << "  done\n";
+    fakeXcrun << "  cat > \"$out\" <<'EOS'\n";
+    fakeXcrun << "#!/usr/bin/env bash\n";
+    fakeXcrun << "set -euo pipefail\n";
+    fakeXcrun << "echo \"window_created=1\"\n";
+    fakeXcrun << "echo \"startup_success=1\"\n";
+    fakeXcrun << "echo \"frame_rendered=1\"\n";
+    fakeXcrun << "echo \"exit_reason=max_frames\"\n";
+    fakeXcrun << "exit 0\n";
+    fakeXcrun << "EOS\n";
+    fakeXcrun << "  chmod +x \"$out\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "echo \"unexpected xcrun invocation\" >&2\n";
+    fakeXcrun << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeXcrunPath.string())) == 0);
+
+  const std::filesystem::path fakeLaunchctlPath = binDir / "launchctl";
+  {
+    std::ofstream fakeLaunchctl(fakeLaunchctlPath);
+    fakeLaunchctl << "#!/usr/bin/env bash\n";
+    fakeLaunchctl << "set -euo pipefail\n";
+    fakeLaunchctl << "if [[ \"${1:-}\" == \"print\" && \"${2:-}\" == gui/* ]]; then\n";
+    fakeLaunchctl << "  exit 0\n";
+    fakeLaunchctl << "fi\n";
+    fakeLaunchctl << "echo \"unexpected launchctl invocation\" >&2\n";
+    fakeLaunchctl << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeLaunchctlPath.string())) == 0);
+
+  const std::filesystem::path outPath = tempRoot / "script.out.txt";
+  const std::filesystem::path errPath = tempRoot / "script.err.txt";
+  const std::filesystem::path buildDir = tempRoot / "build-output";
+  const std::string command =
+      "PATH=" + quoteShellArg(binDir.string() + ":/usr/bin:/bin") + " " + quoteShellArg(scriptPath.string()) +
+      " --primec " + quoteShellArg(fakePrimecPath.string()) + " --out-dir " + quoteShellArg(buildDir.string()) +
+      " --visual-smoke --max-frames 4 > " + quoteShellArg(outPath.string()) + " 2> " +
+      quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 0);
+
+  const std::string output = readFile(outPath.string());
+  const std::string diagnostics = readFile(errPath.string());
+  CHECK(diagnostics.empty());
+  CHECK(output.find("[native-window-launcher] VISUAL-SMOKE: window_shown=PASS") != std::string::npos);
+  CHECK(output.find("[native-window-launcher] VISUAL-SMOKE: render_loop_alive=PASS") != std::string::npos);
+  CHECK(output.find("[native-window-launcher] VISUAL-SMOKE: rotation_changes_over_time=PASS") != std::string::npos);
+  CHECK(output.find("[native-window-launcher] VISUAL-SMOKE: PASS") != std::string::npos);
+}
+
+TEST_CASE("native window launcher visual smoke fails when rotation does not change") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "run_native_spinning_cube_window.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_native_spinning_cube_window.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path tempRoot =
+      std::filesystem::temp_directory_path() / "primec_native_window_visual_smoke_rotation_fail";
+  std::error_code ec;
+  std::filesystem::remove_all(tempRoot, ec);
+  std::filesystem::create_directories(tempRoot, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path binDir = tempRoot / "bin";
+  std::filesystem::create_directories(binDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path fakeUnamePath = binDir / "uname";
+  {
+    std::ofstream fakeUname(fakeUnamePath);
+    fakeUname << "#!/usr/bin/env bash\n";
+    fakeUname << "echo Darwin\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeUnamePath.string())) == 0);
+
+  const std::filesystem::path fakePrimecPath = binDir / "primec";
+  {
+    std::ofstream fakePrimec(fakePrimecPath);
+    fakePrimec << "#!/usr/bin/env bash\n";
+    fakePrimec << "set -euo pipefail\n";
+    fakePrimec << "out=\"\"\n";
+    fakePrimec << "while [[ $# -gt 0 ]]; do\n";
+    fakePrimec << "  if [[ \"$1\" == \"-o\" ]]; then\n";
+    fakePrimec << "    out=\"$2\"\n";
+    fakePrimec << "    shift 2\n";
+    fakePrimec << "    continue\n";
+    fakePrimec << "  fi\n";
+    fakePrimec << "  shift\n";
+    fakePrimec << "done\n";
+    fakePrimec << "cat > \"$out\" <<'EOS'\n";
+    fakePrimec << "#!/usr/bin/env bash\n";
+    fakePrimec << "cat <<'EOD'\n";
+    fakePrimec << "0\n0\n100\n0\n1\n0\n99\n1\n";
+    fakePrimec << "EOD\n";
+    fakePrimec << "EOS\n";
+    fakePrimec << "chmod +x \"$out\"\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakePrimecPath.string())) == 0);
+
+  const std::filesystem::path fakeXcrunPath = binDir / "xcrun";
+  {
+    std::ofstream fakeXcrun(fakeXcrunPath);
+    fakeXcrun << "#!/usr/bin/env bash\n";
+    fakeXcrun << "set -euo pipefail\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metal\" ]]; then\n";
+    fakeXcrun << "  echo \"/fake/toolchain/metal\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"--find\" && \"${2:-}\" == \"metallib\" ]]; then\n";
+    fakeXcrun << "  echo \"/fake/toolchain/metallib\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "if [[ \"${1:-}\" == \"clang++\" ]]; then\n";
+    fakeXcrun << "  shift\n";
+    fakeXcrun << "  out=\"\"\n";
+    fakeXcrun << "  while [[ $# -gt 0 ]]; do\n";
+    fakeXcrun << "    if [[ \"$1\" == \"-o\" ]]; then\n";
+    fakeXcrun << "      out=\"$2\"\n";
+    fakeXcrun << "      shift 2\n";
+    fakeXcrun << "      continue\n";
+    fakeXcrun << "    fi\n";
+    fakeXcrun << "    shift\n";
+    fakeXcrun << "  done\n";
+    fakeXcrun << "  cat > \"$out\" <<'EOS'\n";
+    fakeXcrun << "#!/usr/bin/env bash\n";
+    fakeXcrun << "set -euo pipefail\n";
+    fakeXcrun << "echo \"window_created=1\"\n";
+    fakeXcrun << "echo \"startup_success=1\"\n";
+    fakeXcrun << "echo \"frame_rendered=1\"\n";
+    fakeXcrun << "echo \"exit_reason=max_frames\"\n";
+    fakeXcrun << "exit 0\n";
+    fakeXcrun << "EOS\n";
+    fakeXcrun << "  chmod +x \"$out\"\n";
+    fakeXcrun << "  exit 0\n";
+    fakeXcrun << "fi\n";
+    fakeXcrun << "echo \"unexpected xcrun invocation\" >&2\n";
+    fakeXcrun << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeXcrunPath.string())) == 0);
+
+  const std::filesystem::path fakeLaunchctlPath = binDir / "launchctl";
+  {
+    std::ofstream fakeLaunchctl(fakeLaunchctlPath);
+    fakeLaunchctl << "#!/usr/bin/env bash\n";
+    fakeLaunchctl << "set -euo pipefail\n";
+    fakeLaunchctl << "if [[ \"${1:-}\" == \"print\" && \"${2:-}\" == gui/* ]]; then\n";
+    fakeLaunchctl << "  exit 0\n";
+    fakeLaunchctl << "fi\n";
+    fakeLaunchctl << "echo \"unexpected launchctl invocation\" >&2\n";
+    fakeLaunchctl << "exit 99\n";
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakeLaunchctlPath.string())) == 0);
+
+  const std::filesystem::path outPath = tempRoot / "script.out.txt";
+  const std::filesystem::path errPath = tempRoot / "script.err.txt";
+  const std::filesystem::path buildDir = tempRoot / "build-output";
+  const std::string command =
+      "PATH=" + quoteShellArg(binDir.string() + ":/usr/bin:/bin") + " " + quoteShellArg(scriptPath.string()) +
+      " --primec " + quoteShellArg(fakePrimecPath.string()) + " --out-dir " + quoteShellArg(buildDir.string()) +
+      " --visual-smoke --max-frames 4 > " + quoteShellArg(outPath.string()) + " 2> " +
+      quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 2);
+  CHECK(readFile(errPath.string()).find(
+            "[native-window-launcher] ERROR: visual smoke criterion failed: rotation_changes_over_time") !=
+        std::string::npos);
 }
 
 TEST_CASE("native window preflight script validates required tools and GUI session") {

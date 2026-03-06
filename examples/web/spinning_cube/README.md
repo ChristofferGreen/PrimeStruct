@@ -199,13 +199,21 @@ Expected runtime behavior:
 ### Native Window Launcher (macOS)
 ```bash
 ./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec
+./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec --visual-smoke
 ```
 - Builds both the cube simulation stream binary and the native window host into
   `build-debug/spinning-cube-native-window`, then launches the host.
 - Runs `scripts/preflight_native_spinning_cube_window.sh` first unless
   `--skip-preflight` is provided.
-- Optional launcher flags: `--out-dir`, `--max-frames`, and
-  `--simulation-smoke`.
+- Optional launcher flags: `--out-dir`, `--max-frames`,
+  `--simulation-smoke`, and `--visual-smoke`.
+- Visual smoke criteria:
+  - `window_shown`: `window_created=1` and `startup_success=1`.
+  - `render_loop_alive`: `frame_rendered=1` and `exit_reason=max_frames`.
+  - `rotation_changes_over_time`: first two `angleMilli` values from
+    `cube_native_frame_stream` differ.
+- CI skip rules for `--visual-smoke`: exits `0` with a `VISUAL-SMOKE: SKIP`
+  marker on non-macOS runners or when `launchctl print gui/<uid>` fails.
 
 ### macOS Metal
 ```bash

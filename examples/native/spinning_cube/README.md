@@ -24,6 +24,9 @@ lowering parity is restored.
 ## Window Host Build (macOS)
 From the repo root, a one-command launcher can build and run the window host:
 - `./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec`
+- `./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec --visual-smoke`
+  (checks `window_shown`, `render_loop_alive`, and `rotation_changes_over_time`;
+  emits `VISUAL-SMOKE: SKIP ...` and exits `0` on non-macOS/non-GUI CI runners)
 
 Or run the manual steps:
 1. Build the deterministic simulation stream binary:
