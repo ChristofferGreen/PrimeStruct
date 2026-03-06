@@ -252,8 +252,8 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a regression test that locks deterministic web-skip behavior when browser commands exist but are unavailable in `scripts/run_spinning_cube_demo.sh` (`WEB: SKIP (headless browser unavailable)` with overall PASS under stubbed native/metal skip paths).
 
 **Native Windowed Spinning Cube (Roadmap)**
-- Current blocker observed on 2026-03-06: `examples/metal/spinning_cube/metal_host.mm` fails pipeline creation on current SDKs with `Vertex function has input attributes but no vertex descriptor was set.`
-- ○ Fix immediate Metal host pipeline bring-up on current SDKs (set `MTLVertexDescriptor` to match shader vertex inputs, or align shader inputs to buffer layout) so host reaches `frame_rendered=1` reliably.
+- Resolved blocker (2026-03-06): `examples/metal/spinning_cube/metal_host.mm` now sets `MTLVertexDescriptor` to match shader vertex inputs, fixing the `Vertex function has input attributes but no vertex descriptor was set.` pipeline-creation failure on current SDKs.
+- ✓ Fix immediate Metal host pipeline bring-up on current SDKs (set `MTLVertexDescriptor` to match shader vertex inputs, or align shader inputs to buffer layout) so host reaches `frame_rendered=1` reliably. Testing: added source-lock regression coverage for `metal_host.mm` vertex-descriptor wiring in `spinning cube metal host pipeline config locks vertex descriptor wiring`.
 - ○ Add a dedicated regression that locks the pipeline creation path for the Metal host on supported macOS runners and prevents reintroducing the missing-vertex-descriptor failure.
 - ○ Replace deprecated library-loading API usage in `metal_host.mm` (`newLibraryWithFile`) with the supported API and lock diagnostics parity (`failed to load metallib`) so startup errors stay deterministic.
 - ○ Add an explicit native-window execution block in `examples/web/spinning_cube/README.md` (toolchain verify -> shader compile -> host compile -> run) and keep it synchronized with scripted smoke checks.

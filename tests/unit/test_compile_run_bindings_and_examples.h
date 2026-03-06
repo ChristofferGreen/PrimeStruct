@@ -2343,6 +2343,25 @@ main() {
   CHECK(std::filesystem::file_size(metallibPath) > 0);
 }
 
+TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiring") {
+  std::filesystem::path metalSampleDir =
+      std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
+  if (!std::filesystem::exists(metalSampleDir)) {
+    metalSampleDir = std::filesystem::current_path() / "examples" / "metal" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(metalSampleDir));
+
+  const std::filesystem::path metalHostPath = metalSampleDir / "metal_host.mm";
+  REQUIRE(std::filesystem::exists(metalHostPath));
+
+  const std::string source = readFile(metalHostPath.string());
+  CHECK(source.find("MTLVertexDescriptor *vertexDesc = [[MTLVertexDescriptor alloc] init];") != std::string::npos);
+  CHECK(source.find("vertexDesc.attributes[0].format = MTLVertexFormatFloat3;") != std::string::npos);
+  CHECK(source.find("vertexDesc.attributes[1].format = MTLVertexFormatFloat4;") != std::string::npos);
+  CHECK(source.find("vertexDesc.layouts[0].stride = sizeof(Vertex);") != std::string::npos);
+  CHECK(source.find("pipelineDesc.vertexDescriptor = vertexDesc;") != std::string::npos);
+}
+
 TEST_CASE("spinning cube metal full-path smoke renders frame") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";

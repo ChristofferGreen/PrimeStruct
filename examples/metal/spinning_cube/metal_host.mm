@@ -2,6 +2,7 @@
 #import <Metal/Metal.h>
 #include <simd/simd.h>
 
+#include <cstddef>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -196,6 +197,17 @@ int main(int argc, char **argv) {
     pipelineDesc.vertexFunction = vertexFn;
     pipelineDesc.fragmentFunction = fragmentFn;
     pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+    MTLVertexDescriptor *vertexDesc = [[MTLVertexDescriptor alloc] init];
+    vertexDesc.attributes[0].format = MTLVertexFormatFloat3;
+    vertexDesc.attributes[0].offset = offsetof(Vertex, position);
+    vertexDesc.attributes[0].bufferIndex = 0;
+    vertexDesc.attributes[1].format = MTLVertexFormatFloat4;
+    vertexDesc.attributes[1].offset = offsetof(Vertex, color);
+    vertexDesc.attributes[1].bufferIndex = 0;
+    vertexDesc.layouts[0].stride = sizeof(Vertex);
+    vertexDesc.layouts[0].stepRate = 1;
+    vertexDesc.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+    pipelineDesc.vertexDescriptor = vertexDesc;
 
     id<MTLRenderPipelineState> pipeline =
         [device newRenderPipelineStateWithDescriptor:pipelineDesc error:&error];
