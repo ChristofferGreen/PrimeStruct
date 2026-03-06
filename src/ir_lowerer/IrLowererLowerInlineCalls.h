@@ -158,11 +158,17 @@
         }
       }
     }
-    size_t cleanupIndex = function.instructions.size();
-    emitFileScopeCleanup(fileScopeStack.back());
-    popFileScope();
-    for (size_t jumpIndex : context.returnJumps) {
-      function.instructions[jumpIndex].imm = static_cast<int32_t>(cleanupIndex);
+    if (!ir_lowerer::runLowerInlineCallCleanupStep(
+            {
+                .function = &function,
+                .returnJumps = &context.returnJumps,
+                .emitCurrentFileScopeCleanup = [&]() { emitFileScopeCleanup(fileScopeStack.back()); },
+                .popFileScope = [&]() { popFileScope(); },
+            },
+            error)) {
+      activeInlineContext = prevContext;
+      inlineStack.erase(callee.fullPath);
+      return false;
     }
     activeInlineContext = prevContext;
 

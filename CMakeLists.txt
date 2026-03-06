@@ -69,6 +69,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererBindingTypeHelpers.cpp
   src/ir_lowerer/IrLowererCountAccessHelpers.cpp
   src/ir_lowerer/IrLowererLowerEntrySetup.cpp
+  src/ir_lowerer/IrLowererLowerInlineCallCleanupStep.cpp
   src/ir_lowerer/IrLowererLowerImportsStructsSetup.cpp
   src/ir_lowerer/IrLowererLowerInlineCallStatementStep.cpp
   src/ir_lowerer/IrLowererLowerLocalsSetup.cpp
