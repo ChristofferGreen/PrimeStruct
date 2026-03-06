@@ -21,13 +21,6 @@
   auto &getReturnInfo = inferenceSetupBootstrap.getReturnInfo;
   auto &inferExprKind = inferenceSetupBootstrap.inferExprKind;
   auto &inferArrayElementKind = inferenceSetupBootstrap.inferArrayElementKind;
-  auto &inferLiteralOrNameExprKind = inferenceSetupBootstrap.inferLiteralOrNameExprKind;
-  auto &inferCallExprBaseKind = inferenceSetupBootstrap.inferCallExprBaseKind;
-  auto &inferCallExprDirectReturnKind = inferenceSetupBootstrap.inferCallExprDirectReturnKind;
-  auto &inferCallExprCountAccessGpuFallbackKind = inferenceSetupBootstrap.inferCallExprCountAccessGpuFallbackKind;
-  auto &inferCallExprOperatorFallbackKind = inferenceSetupBootstrap.inferCallExprOperatorFallbackKind;
-  auto &inferCallExprControlFlowFallbackKind = inferenceSetupBootstrap.inferCallExprControlFlowFallbackKind;
-  auto &inferCallExprPointerFallbackKind = inferenceSetupBootstrap.inferCallExprPointerFallbackKind;
   auto &resolveMethodCallDefinition = inferenceSetupBootstrap.resolveMethodCallDefinition;
 
   if (!ir_lowerer::runLowerInferenceArrayKindSetup(
@@ -116,47 +109,14 @@
     return false;
   }
 
-  inferExprKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
-    LocalInfo::ValueKind literalOrNameKind = LocalInfo::ValueKind::Unknown;
-    if (inferLiteralOrNameExprKind(expr, localsIn, literalOrNameKind)) {
-      return literalOrNameKind;
-    }
-    switch (expr.kind) {
-      case Expr::Kind::Call: {
-        LocalInfo::ValueKind callBaseKind = LocalInfo::ValueKind::Unknown;
-        if (inferCallExprBaseKind(expr, localsIn, callBaseKind)) {
-          return callBaseKind;
-        }
-        LocalInfo::ValueKind callReturnKind = LocalInfo::ValueKind::Unknown;
-        const auto callReturnResolution = inferCallExprDirectReturnKind(expr, localsIn, callReturnKind);
-        if (callReturnResolution == CallExpressionReturnKindResolution::Resolved) {
-          return callReturnKind;
-        }
-        if (callReturnResolution == CallExpressionReturnKindResolution::MatchedButUnsupported) {
-          return LocalInfo::ValueKind::Unknown;
-        }
-        LocalInfo::ValueKind callFallbackKind = LocalInfo::ValueKind::Unknown;
-        if (inferCallExprCountAccessGpuFallbackKind(expr, localsIn, callFallbackKind)) {
-          return callFallbackKind;
-        }
-        LocalInfo::ValueKind operatorFallbackKind = LocalInfo::ValueKind::Unknown;
-        if (inferCallExprOperatorFallbackKind(expr, localsIn, operatorFallbackKind)) {
-          return operatorFallbackKind;
-        }
-        LocalInfo::ValueKind controlFlowKind = LocalInfo::ValueKind::Unknown;
-        if (inferCallExprControlFlowFallbackKind(expr, localsIn, error, controlFlowKind)) {
-          return controlFlowKind;
-        }
-        LocalInfo::ValueKind pointerFallbackKind = LocalInfo::ValueKind::Unknown;
-        if (inferCallExprPointerFallbackKind(expr, localsIn, pointerFallbackKind)) {
-          return pointerFallbackKind;
-        }
-        return LocalInfo::ValueKind::Unknown;
-      }
-      default:
-        return LocalInfo::ValueKind::Unknown;
-    }
-  };
+  if (!ir_lowerer::runLowerInferenceExprKindDispatchSetup(
+          {
+              .error = &error,
+          },
+          inferenceSetupBootstrap,
+          error)) {
+    return false;
+  }
 
   getReturnInfo = [&](const std::string &path, ReturnInfo &outInfo) -> bool {
     auto cached = returnInfoCache.find(path);

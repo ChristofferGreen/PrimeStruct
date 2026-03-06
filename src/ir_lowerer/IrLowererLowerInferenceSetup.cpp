@@ -951,4 +951,86 @@ bool runLowerInferenceExprKindCallPointerFallbackSetup(
   return true;
 }
 
+bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatchSetupInput &input,
+                                            LowerInferenceSetupBootstrapState &stateInOut,
+                                            std::string &errorOut) {
+  if (input.error == nullptr) {
+    errorOut = "native backend missing inference expr-kind dispatch setup dependency: error";
+    return false;
+  }
+  if (!stateInOut.inferLiteralOrNameExprKind) {
+    errorOut = "native backend missing inference expr-kind dispatch setup state: inferLiteralOrNameExprKind";
+    return false;
+  }
+  if (!stateInOut.inferCallExprBaseKind) {
+    errorOut = "native backend missing inference expr-kind dispatch setup state: inferCallExprBaseKind";
+    return false;
+  }
+  if (!stateInOut.inferCallExprDirectReturnKind) {
+    errorOut = "native backend missing inference expr-kind dispatch setup state: inferCallExprDirectReturnKind";
+    return false;
+  }
+  if (!stateInOut.inferCallExprCountAccessGpuFallbackKind) {
+    errorOut = "native backend missing inference expr-kind dispatch setup state: inferCallExprCountAccessGpuFallbackKind";
+    return false;
+  }
+  if (!stateInOut.inferCallExprOperatorFallbackKind) {
+    errorOut = "native backend missing inference expr-kind dispatch setup state: inferCallExprOperatorFallbackKind";
+    return false;
+  }
+  if (!stateInOut.inferCallExprControlFlowFallbackKind) {
+    errorOut = "native backend missing inference expr-kind dispatch setup state: inferCallExprControlFlowFallbackKind";
+    return false;
+  }
+  if (!stateInOut.inferCallExprPointerFallbackKind) {
+    errorOut = "native backend missing inference expr-kind dispatch setup state: inferCallExprPointerFallbackKind";
+    return false;
+  }
+
+  std::string *const inferenceError = input.error;
+  stateInOut.inferExprKind = [inferenceError, &stateInOut](const Expr &expr,
+                                                            const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    LocalInfo::ValueKind literalOrNameKind = LocalInfo::ValueKind::Unknown;
+    if (stateInOut.inferLiteralOrNameExprKind(expr, localsIn, literalOrNameKind)) {
+      return literalOrNameKind;
+    }
+    switch (expr.kind) {
+      case Expr::Kind::Call: {
+        LocalInfo::ValueKind callBaseKind = LocalInfo::ValueKind::Unknown;
+        if (stateInOut.inferCallExprBaseKind(expr, localsIn, callBaseKind)) {
+          return callBaseKind;
+        }
+        LocalInfo::ValueKind callReturnKind = LocalInfo::ValueKind::Unknown;
+        const auto callReturnResolution = stateInOut.inferCallExprDirectReturnKind(expr, localsIn, callReturnKind);
+        if (callReturnResolution == CallExpressionReturnKindResolution::Resolved) {
+          return callReturnKind;
+        }
+        if (callReturnResolution == CallExpressionReturnKindResolution::MatchedButUnsupported) {
+          return LocalInfo::ValueKind::Unknown;
+        }
+        LocalInfo::ValueKind callFallbackKind = LocalInfo::ValueKind::Unknown;
+        if (stateInOut.inferCallExprCountAccessGpuFallbackKind(expr, localsIn, callFallbackKind)) {
+          return callFallbackKind;
+        }
+        LocalInfo::ValueKind operatorFallbackKind = LocalInfo::ValueKind::Unknown;
+        if (stateInOut.inferCallExprOperatorFallbackKind(expr, localsIn, operatorFallbackKind)) {
+          return operatorFallbackKind;
+        }
+        LocalInfo::ValueKind controlFlowKind = LocalInfo::ValueKind::Unknown;
+        if (stateInOut.inferCallExprControlFlowFallbackKind(expr, localsIn, *inferenceError, controlFlowKind)) {
+          return controlFlowKind;
+        }
+        LocalInfo::ValueKind pointerFallbackKind = LocalInfo::ValueKind::Unknown;
+        if (stateInOut.inferCallExprPointerFallbackKind(expr, localsIn, pointerFallbackKind)) {
+          return pointerFallbackKind;
+        }
+        return LocalInfo::ValueKind::Unknown;
+      }
+      default:
+        return LocalInfo::ValueKind::Unknown;
+    }
+  };
+  return true;
+}
+
 } // namespace primec::ir_lowerer

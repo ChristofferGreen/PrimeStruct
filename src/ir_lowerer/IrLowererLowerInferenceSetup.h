@@ -104,6 +104,9 @@ struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
   InferSetupInferenceStructExprPathFn inferStructExprPath;
 };
 struct LowerInferenceExprKindCallPointerFallbackSetupInput {};
+struct LowerInferenceExprKindDispatchSetupInput {
+  std::string *error = nullptr;
+};
 
 struct LowerInferenceReturnInfoSetupInput {
   ResolveStructTypeNameForReturnFn resolveStructTypeName;
@@ -152,6 +155,9 @@ bool runLowerInferenceExprKindCallPointerFallbackSetup(
     const LowerInferenceExprKindCallPointerFallbackSetupInput &input,
     LowerInferenceSetupBootstrapState &stateInOut,
     std::string &errorOut);
+bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatchSetupInput &input,
+                                            LowerInferenceSetupBootstrapState &stateInOut,
+                                            std::string &errorOut);
 bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &input,
                                       const Definition &definition,
                                       ReturnInfo &infoInOut,
