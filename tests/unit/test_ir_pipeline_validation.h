@@ -1599,6 +1599,44 @@ TEST_CASE("emitter expr control string-literal step formats literals") {
   CHECK(*singleQuotedValue == "std::string_view(\"ok\")");
 }
 
+TEST_CASE("emitter expr control field-access step formats receiver access") {
+  primec::Expr notCallExpr;
+  notCallExpr.kind = primec::Expr::Kind::Name;
+  notCallExpr.name = "value";
+  CHECK_FALSE(primec::emitter::runEmitterExprControlFieldAccessStep(
+      notCallExpr,
+      [&](const primec::Expr &) { return "unused"; }).has_value());
+
+  primec::Expr fieldAccessNoReceiver;
+  fieldAccessNoReceiver.kind = primec::Expr::Kind::Call;
+  fieldAccessNoReceiver.isFieldAccess = true;
+  fieldAccessNoReceiver.name = "count";
+  CHECK_FALSE(primec::emitter::runEmitterExprControlFieldAccessStep(
+      fieldAccessNoReceiver,
+      [&](const primec::Expr &) { return "unused"; }).has_value());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "buffer";
+
+  primec::Expr fieldAccessExpr = fieldAccessNoReceiver;
+  fieldAccessExpr.args.push_back(receiverExpr);
+  int receiverCalls = 0;
+  const auto fieldAccessValue = primec::emitter::runEmitterExprControlFieldAccessStep(
+      fieldAccessExpr,
+      [&](const primec::Expr &receiver) {
+        ++receiverCalls;
+        CHECK(receiver.kind == primec::Expr::Kind::Name);
+        CHECK(receiver.name == "buffer");
+        return "buffer";
+      });
+  REQUIRE(fieldAccessValue.has_value());
+  CHECK(*fieldAccessValue == "buffer.count");
+  CHECK(receiverCalls == 1);
+
+  CHECK_FALSE(primec::emitter::runEmitterExprControlFieldAccessStep(fieldAccessExpr, {}).has_value());
+}
+
 TEST_CASE("emitter expr control if-envelope step recognizes block envelopes") {
   primec::Expr notCall;
   notCall.kind = primec::Expr::Kind::Literal;
@@ -1850,6 +1888,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprControlHeaderSource = readText(emitterExprControlHeaderPath);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBoolLiteralStep(expr)") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFieldAccessStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIntegerLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlStringLiteralStep(expr)") != std::string::npos);
@@ -1862,6 +1901,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBoolLiteralStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlFieldAccessStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIntegerLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlStringLiteralStep.h\"") != std::string::npos);

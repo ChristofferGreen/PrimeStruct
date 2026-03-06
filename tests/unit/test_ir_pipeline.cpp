@@ -30,6 +30,7 @@
 #include "src/emitter/EmitterEmitSetupLifecycleHelperStep.h"
 #include "src/emitter/EmitterEmitSetupMathImport.h"
 #include "src/emitter/EmitterExprControlBoolLiteralStep.h"
+#include "src/emitter/EmitterExprControlFieldAccessStep.h"
 #include "src/emitter/EmitterExprControlFloatLiteralStep.h"
 #include "src/emitter/EmitterExprControlIfEnvelopeStep.h"
 #include "src/emitter/EmitterExprControlIntegerLiteralStep.h"

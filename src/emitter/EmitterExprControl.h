@@ -14,9 +14,22 @@
       nameExpr.has_value()) {
     return *nameExpr;
   }
-  if (expr.kind == Expr::Kind::Call && expr.isFieldAccess && !expr.args.empty()) {
-    return emitExpr(expr.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) +
-           "." + expr.name;
+  if (const auto fieldAccessExpr = emitter::runEmitterExprControlFieldAccessStep(
+          expr,
+          [&](const Expr &receiverExpr) {
+            return emitExpr(receiverExpr,
+                            nameMap,
+                            paramMap,
+                            structTypeMap,
+                            importAliases,
+                            localTypes,
+                            returnKinds,
+                            resultInfos,
+                            returnStructs,
+                            allowMathBare);
+          });
+      fieldAccessExpr.has_value()) {
+    return *fieldAccessExpr;
   }
   std::string full = resolveExprPath(expr);
   if (expr.isMethodCall && !isArrayCountCall(expr, localTypes) && !isMapCountCall(expr, localTypes) &&
