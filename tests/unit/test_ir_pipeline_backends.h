@@ -36,7 +36,7 @@ std::string readTextFile(const std::filesystem::path &path) {
 } // namespace
 
 TEST_CASE("ir backend registry reports deterministic order and lookup") {
-  const std::vector<std::string_view> expectedKinds = {"vm", "native", "ir", "wasm", "cpp-ir", "exe-ir"};
+  const std::vector<std::string_view> expectedKinds = {"vm", "native", "ir", "wasm", "glsl-ir", "cpp-ir", "exe-ir"};
   CHECK(primec::listIrBackendKinds() == expectedKinds);
 
   for (std::string_view kind : expectedKinds) {
@@ -134,6 +134,54 @@ TEST_CASE("cpp-ir backend writes C++ source") {
   const std::string source = readTextFile(outputPath);
   CHECK(source.find("static int64_t ps_fn_0") != std::string::npos);
   CHECK(source.find("return static_cast<int>(ps_entry_0(argc, argv));") != std::string::npos);
+}
+
+TEST_CASE("glsl-ir backend writes GLSL source") {
+  const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  const primec::IrModule module = makeReturnI32Module(17);
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_test.glsl";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "glsl_ir_backend_test.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("#version 450") != std::string::npos);
+  CHECK(source.find("ps_output.value = ps_entry_0();") != std::string::npos);
+}
+
+TEST_CASE("glsl-ir backend reports emitter diagnostics") {
+  const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
+  REQUIRE(backend != nullptr);
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushF32, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+  module.functions.push_back(function);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = (std::filesystem::current_path() / "primec_tests" / "unused.glsl").string();
+  options.inputPath = "glsl_ir_backend_error.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  CHECK_FALSE(backend->emit(module, options, result, error));
+  CHECK(error.find("ir-to-glsl failed:") != std::string::npos);
 }
 
 TEST_SUITE_END();

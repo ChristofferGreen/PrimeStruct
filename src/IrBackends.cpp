@@ -3,6 +3,7 @@
 #include "primec/ExternalTooling.h"
 #include "primec/IrSerializer.h"
 #include "primec/IrToCppEmitter.h"
+#include "primec/IrToGlslEmitter.h"
 #include "primec/NativeEmitter.h"
 #include "primec/ProcessRunner.h"
 #include "primec/Vm.h"
@@ -230,6 +231,53 @@ public:
   }
 };
 
+class GlslIrBackend final : public IrBackend {
+public:
+  std::string_view emitKind() const override {
+    return "glsl-ir";
+  }
+
+  const IrBackendDiagnostics &diagnostics() const override {
+    static constexpr IrBackendDiagnostics Diagnostics = {
+        .loweringDiagnosticCode = DiagnosticCode::LoweringError,
+        .validationDiagnosticCode = DiagnosticCode::LoweringError,
+        .inliningDiagnosticCode = DiagnosticCode::LoweringError,
+        .emitDiagnosticCode = DiagnosticCode::EmitError,
+        .loweringErrorPrefix = "GLSL-IR lowering error: ",
+        .validationErrorPrefix = "GLSL-IR validation error: ",
+        .inliningErrorPrefix = "GLSL-IR inlining error: ",
+        .emitErrorPrefix = "GLSL-IR emit error: ",
+        .backendTag = "glsl-ir",
+    };
+    return Diagnostics;
+  }
+
+  IrValidationTarget validationTarget(const Options & /*options*/) const override {
+    return IrValidationTarget::Any;
+  }
+
+  bool requiresOutputPath() const override {
+    return true;
+  }
+
+  bool emit(const IrModule &module,
+            const IrBackendEmitOptions &options,
+            IrBackendEmitResult & /*result*/,
+            std::string &error) const override {
+    IrToGlslEmitter emitter;
+    std::string glslSource;
+    if (!emitter.emitSource(module, glslSource, error)) {
+      error = "ir-to-glsl failed: " + error;
+      return false;
+    }
+    if (!writeTextFile(options.outputPath, glslSource)) {
+      error = options.outputPath;
+      return false;
+    }
+    return true;
+  }
+};
+
 class CppIrBackend final : public IrBackend {
 public:
   std::string_view emitKind() const override {
@@ -334,18 +382,20 @@ public:
   }
 };
 
-const std::array<const IrBackend *, 6> &registeredBackends() {
+const std::array<const IrBackend *, 7> &registeredBackends() {
   static const VmIrBackend VmBackend;
   static const NativeIrBackend NativeBackend;
   static const SerializeIrBackend IrBackendImpl;
   static const WasmIrBackend WasmBackend;
+  static const GlslIrBackend GlslBackend;
   static const CppIrBackend CppBackend;
   static const ExeIrBackend ExeBackend;
-  static const std::array<const IrBackend *, 6> Backends = {
+  static const std::array<const IrBackend *, 7> Backends = {
       &VmBackend,
       &NativeBackend,
       &IrBackendImpl,
       &WasmBackend,
+      &GlslBackend,
       &CppBackend,
       &ExeBackend,
   };

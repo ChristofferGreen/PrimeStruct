@@ -596,7 +596,8 @@ int main(int argc, char **argv) {
       const int emitFailureCode = diagnostics.backendTag == std::string_view("vm") ? 3 : 2;
       const bool outputWriteFailure =
           (std::string_view(diagnostics.backendTag) == "ir" || std::string_view(diagnostics.backendTag) == "wasm" ||
-           std::string_view(diagnostics.backendTag) == "cpp-ir") &&
+           std::string_view(diagnostics.backendTag) == "cpp-ir" ||
+           std::string_view(diagnostics.backendTag) == "glsl-ir") &&
           error == options.outputPath;
       if (outputWriteFailure) {
         return emitFailure(options,
@@ -621,26 +622,6 @@ int main(int argc, char **argv) {
     if (!ensureOutputDirectory(resolved, error)) {
       return emitFailure(options, primec::DiagnosticCode::OutputError, "Output error: ", error, 2);
     }
-  }
-
-  if (options.emitKind == "glsl-ir") {
-    std::string glslSource;
-    if (!emitGlslSourceFromIrModule(program, options, glslSource, error)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::EmitError,
-                         "GLSL-IR emit error: ",
-                         error,
-                         2,
-                         {"backend: glsl-ir"});
-    }
-    if (!writeFile(options.outputPath, glslSource)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::OutputError,
-                         "Failed to write output: ",
-                         options.outputPath,
-                         2);
-    }
-    return 0;
   }
 
   if (options.emitKind == "spirv-ir") {
