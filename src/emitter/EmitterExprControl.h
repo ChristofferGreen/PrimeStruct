@@ -56,25 +56,9 @@
       methodPath.has_value()) {
     full = *methodPath;
   }
-  if (!expr.isMethodCall && !expr.name.empty() && expr.name[0] != '/' && expr.name.find('/') == std::string::npos) {
-    if (nameMap.count(full) == 0) {
-      if (!expr.namespacePrefix.empty()) {
-        auto importIt = importAliases.find(expr.name);
-        if (importIt != importAliases.end()) {
-          full = importIt->second;
-        }
-      } else {
-        const std::string root = "/" + expr.name;
-        if (nameMap.count(root) > 0) {
-          full = root;
-        } else {
-          auto importIt = importAliases.find(expr.name);
-          if (importIt != importAliases.end()) {
-            full = importIt->second;
-          }
-        }
-      }
-    }
+  if (const auto callPath = emitter::runEmitterExprControlCallPathStep(expr, full, nameMap, importAliases);
+      callPath.has_value()) {
+    full = *callPath;
   }
   if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 && nameMap.count(full) == 0 &&
       !isArrayCountCall(expr, localTypes) && !isMapCountCall(expr, localTypes) && !isStringCountCall(expr, localTypes)) {

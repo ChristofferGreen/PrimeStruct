@@ -1637,6 +1637,89 @@ TEST_CASE("emitter expr control field-access step formats receiver access") {
   CHECK_FALSE(primec::emitter::runEmitterExprControlFieldAccessStep(fieldAccessExpr, {}).has_value());
 }
 
+TEST_CASE("emitter expr control call-path step rewrites non-method call names") {
+  primec::Expr methodExpr;
+  methodExpr.kind = primec::Expr::Kind::Call;
+  methodExpr.name = "count";
+  methodExpr.isMethodCall = true;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCallPathStep(
+      methodExpr,
+      "count",
+      {},
+      {}).has_value());
+
+  primec::Expr emptyNameExpr = methodExpr;
+  emptyNameExpr.isMethodCall = false;
+  emptyNameExpr.name.clear();
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCallPathStep(
+      emptyNameExpr,
+      "",
+      {},
+      {}).has_value());
+
+  primec::Expr absoluteNameExpr = emptyNameExpr;
+  absoluteNameExpr.name = "/count";
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCallPathStep(
+      absoluteNameExpr,
+      "/count",
+      {},
+      {}).has_value());
+
+  primec::Expr nestedNameExpr = emptyNameExpr;
+  nestedNameExpr.name = "a/b";
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCallPathStep(
+      nestedNameExpr,
+      "a/b",
+      {},
+      {}).has_value());
+
+  primec::Expr namespacedExpr = emptyNameExpr;
+  namespacedExpr.name = "Vec3";
+  namespacedExpr.namespacePrefix = "pkg";
+  const auto namespacedAlias = primec::emitter::runEmitterExprControlCallPathStep(
+      namespacedExpr,
+      "Vec3",
+      {},
+      {{"Vec3", "/pkg/Vec3"}});
+  REQUIRE(namespacedAlias.has_value());
+  CHECK(*namespacedAlias == "/pkg/Vec3");
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCallPathStep(
+      namespacedExpr,
+      "Vec3",
+      {},
+      {}).has_value());
+
+  primec::Expr bareExpr = emptyNameExpr;
+  bareExpr.name = "Vec3";
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCallPathStep(
+      bareExpr,
+      "Vec3",
+      {{"Vec3", "/already/resolved"}},
+      {{"Vec3", "/pkg/Vec3"}}).has_value());
+
+  const auto rootPath = primec::emitter::runEmitterExprControlCallPathStep(
+      bareExpr,
+      "Vec3",
+      {{"/Vec3", "/Vec3"}},
+      {{"Vec3", "/pkg/Vec3"}});
+  REQUIRE(rootPath.has_value());
+  CHECK(*rootPath == "/Vec3");
+
+  const auto aliasPath = primec::emitter::runEmitterExprControlCallPathStep(
+      bareExpr,
+      "Vec3",
+      {},
+      {{"Vec3", "/pkg/Vec3"}});
+  REQUIRE(aliasPath.has_value());
+  CHECK(*aliasPath == "/pkg/Vec3");
+
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCallPathStep(
+      bareExpr,
+      "Vec3",
+      {},
+      {}).has_value());
+}
+
 TEST_CASE("emitter expr control method-path step rewrites eligible method calls") {
   primec::Expr nonMethodExpr;
   nonMethodExpr.kind = primec::Expr::Kind::Call;
@@ -1941,6 +2024,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBoolLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFieldAccessStep(") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlCallPathStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIntegerLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlStringLiteralStep(expr)") != std::string::npos);
@@ -1954,6 +2038,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBoolLiteralStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlCallPathStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFieldAccessStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIntegerLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
