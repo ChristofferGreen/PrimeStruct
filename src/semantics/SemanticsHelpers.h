@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -145,6 +146,7 @@ bool validateNamedArguments(const std::vector<Expr> &args,
                             std::string &error);
 bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames);
 bool isDefaultExprAllowed(const Expr &expr);
+bool isDefaultExprAllowed(const Expr &expr, const std::function<bool(const Expr &)> &resolvesToDefinition);
 std::string inferPrimitiveBindingTypeFromInitializer(const Expr &expr);
 bool tryInferBindingTypeFromInitializer(const Expr &initializer,
                                         const std::vector<ParameterInfo> &params,

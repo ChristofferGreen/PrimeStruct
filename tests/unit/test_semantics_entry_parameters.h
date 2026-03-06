@@ -210,6 +210,45 @@ add([i32] left, [i32] right{helper()}) {
   CHECK(error.find("parameter default must be a literal or pure expression") != std::string::npos);
 }
 
+TEST_CASE("parameter default expression rejects user-defined array call") {
+  const std::string source = R"(
+[return<i32>]
+array([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+add([i32] left, [i32] right{array(1i32)}) {
+  return(plus(left, right))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("parameter default must be a literal or pure expression") != std::string::npos);
+}
+
+TEST_CASE("parameter default expression allows builtin array literal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+take_first([array<i32>] values{array<i32>(4i32, 5i32)}) {
+  return(at(values, 0i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("parameter default expression rejects block arguments") {
   const std::string source = R"(
 [return<int>]

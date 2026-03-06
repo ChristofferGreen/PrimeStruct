@@ -117,6 +117,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     BorrowEndScope borrowScope(*this, {});
     std::unordered_set<std::string> seen;
     std::vector<ParameterInfo> lambdaParams;
+    auto defaultResolvesToDefinition = [&](const Expr &candidate) -> bool {
+      return candidate.kind == Expr::Kind::Call && defMap_.find(resolveCalleePath(candidate)) != defMap_.end();
+    };
     lambdaParams.reserve(expr.args.size());
     for (const auto &param : expr.args) {
       if (!param.isBinding) {
@@ -144,7 +147,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = "lambda parameter defaults accept at most one argument: " + param.name;
         return false;
       }
-      if (param.args.size() == 1 && !isDefaultExprAllowed(param.args.front())) {
+      if (param.args.size() == 1 && !isDefaultExprAllowed(param.args.front(), defaultResolvesToDefinition)) {
         if (param.args.front().kind == Expr::Kind::Call && hasNamedArguments(param.args.front().argNames)) {
           error_ = "lambda parameter default does not accept named arguments: " + param.name;
         } else {

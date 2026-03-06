@@ -1018,6 +1018,9 @@ bool SemanticsValidator::buildParameters() {
     std::unordered_set<std::string> seen;
     std::vector<ParameterInfo> params;
     params.reserve(def.parameters.size());
+    auto defaultResolvesToDefinition = [&](const Expr &candidate) -> bool {
+      return candidate.kind == Expr::Kind::Call && defMap_.find(resolveCalleePath(candidate)) != defMap_.end();
+    };
     for (const auto &param : def.parameters) {
       if (!param.isBinding) {
         error_ = "parameters must use binding syntax: " + def.fullPath;
@@ -1044,7 +1047,7 @@ bool SemanticsValidator::buildParameters() {
         error_ = "parameter defaults accept at most one argument: " + param.name;
         return false;
       }
-      if (param.args.size() == 1 && !isDefaultExprAllowed(param.args.front())) {
+      if (param.args.size() == 1 && !isDefaultExprAllowed(param.args.front(), defaultResolvesToDefinition)) {
         if (param.args.front().kind == Expr::Kind::Call && hasNamedArguments(param.args.front().argNames)) {
           error_ = "parameter default does not accept named arguments: " + param.name;
         } else {

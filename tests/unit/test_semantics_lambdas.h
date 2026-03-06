@@ -73,6 +73,34 @@ main() {
   CHECK(error.find("invalid lambda capture") != std::string::npos);
 }
 
+TEST_CASE("lambda parameter default rejects user-defined array call") {
+  const std::string source = R"(
+[return<i32>]
+array([i32] value) {
+  return(value)
+}
+
+[return<void>]
+main() {
+  []([i32] value{array(1i32)}) { return(value) }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("lambda parameter default must be a literal or pure expression") != std::string::npos);
+}
+
+TEST_CASE("lambda parameter default allows builtin array literal") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  []([array<i32>] value{array<i32>(1i32, 2i32)}) { return(at(value, 0i32)) }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+}
+
 TEST_CASE("lambda rejects conflicting capture-all tokens") {
   const std::string source = R"(
 [return<void>]

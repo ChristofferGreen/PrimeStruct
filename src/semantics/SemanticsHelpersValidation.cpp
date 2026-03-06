@@ -170,7 +170,7 @@ bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) 
   return false;
 }
 
-bool isDefaultExprAllowed(const Expr &expr) {
+bool isDefaultExprAllowed(const Expr &expr, const std::function<bool(const Expr &)> &resolvesToDefinition) {
   if (expr.isBinding) {
     return false;
   }
@@ -184,6 +184,9 @@ bool isDefaultExprAllowed(const Expr &expr) {
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return false;
     }
+    if (resolvesToDefinition(expr)) {
+      return false;
+    }
     std::string builtinName;
     if (!(getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
           getBuiltinClampName(expr, builtinName, true) || getBuiltinMinMaxName(expr, builtinName, true) ||
@@ -194,13 +197,18 @@ bool isDefaultExprAllowed(const Expr &expr) {
       return false;
     }
     for (const auto &arg : expr.args) {
-      if (!isDefaultExprAllowed(arg)) {
+      if (!isDefaultExprAllowed(arg, resolvesToDefinition)) {
         return false;
       }
     }
     return true;
   }
   return true;
+}
+
+bool isDefaultExprAllowed(const Expr &expr) {
+  const std::function<bool(const Expr &)> noResolvedDefinition = [](const Expr &) { return false; };
+  return isDefaultExprAllowed(expr, noResolvedDefinition);
 }
 
 std::string inferPrimitiveBindingTypeFromInitializer(const Expr &expr) {
