@@ -1640,6 +1640,44 @@ TEST_CASE("glsl-ir backend writes file-write-i32 stub source") {
   CHECK(source.find("stack[sp++] = 0;") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir backend writes file-write-i64 stub source") {
+  const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(-1)});
+  function.instructions.push_back({primec::IrOpcode::PushI64, 7});
+  function.instructions.push_back({primec::IrOpcode::FileWriteI64, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_file_write_i64.glsl";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "glsl_ir_backend_file_write_i64.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("// GLSL backend cannot write files; consume value/handle and push deterministic success code.") !=
+        std::string::npos);
+  CHECK(source.find("sp -= 2;") != std::string::npos);
+  CHECK(source.find("stack[sp++] = 0;") != std::string::npos);
+}
+
 TEST_CASE("glsl-ir backend reports emitter diagnostics") {
   const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
   REQUIRE(backend != nullptr);
@@ -1648,7 +1686,7 @@ TEST_CASE("glsl-ir backend reports emitter diagnostics") {
   module.entryIndex = 0;
   primec::IrFunction function;
   function.name = "/main";
-  function.instructions.push_back({primec::IrOpcode::FileWriteI64, 0});
+  function.instructions.push_back({primec::IrOpcode::FileWriteU64, 0});
   function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(function);
 
@@ -1693,7 +1731,7 @@ TEST_CASE("spirv-ir backend reports emitter diagnostics") {
   module.entryIndex = 0;
   primec::IrFunction function;
   function.name = "/main";
-  function.instructions.push_back({primec::IrOpcode::FileWriteI64, 0});
+  function.instructions.push_back({primec::IrOpcode::FileWriteU64, 0});
   function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(function);
 
