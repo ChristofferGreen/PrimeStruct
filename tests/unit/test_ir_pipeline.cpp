@@ -48,6 +48,7 @@
 #include "src/emitter/EmitterExprControlIfBlockBindingExplicitStep.h"
 #include "src/emitter/EmitterExprControlIfBlockBindingFallbackStep.h"
 #include "src/emitter/EmitterExprControlIfBranchBodyBindingStep.h"
+#include "src/emitter/EmitterExprControlIfBranchBodyDispatchStep.h"
 #include "src/emitter/EmitterExprControlIfBranchBodyStep.h"
 #include "src/emitter/EmitterExprControlIfBranchBodyReturnStep.h"
 #include "src/emitter/EmitterExprControlIfBranchBodyStatementStep.h"

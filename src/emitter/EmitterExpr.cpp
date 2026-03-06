@@ -20,6 +20,7 @@
 #include "EmitterExprControlIfBlockBindingExplicitStep.h"
 #include "EmitterExprControlIfBlockBindingFallbackStep.h"
 #include "EmitterExprControlIfBranchBodyBindingStep.h"
+#include "EmitterExprControlIfBranchBodyDispatchStep.h"
 #include "EmitterExprControlIfBranchBodyStep.h"
 #include "EmitterExprControlIfBranchBodyReturnStep.h"
 #include "EmitterExprControlIfBranchBodyStatementStep.h"

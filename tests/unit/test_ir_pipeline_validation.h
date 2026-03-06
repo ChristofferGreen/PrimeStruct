@@ -3457,6 +3457,126 @@ TEST_CASE("emitter expr control if branch body binding step dispatches bindings"
   REQUIRE(branchTypes.count("item") == 1);
 }
 
+TEST_CASE("emitter expr control if branch body dispatch step routes handlers") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Name;
+  stmt.name = "value";
+
+  int returnCalls = 0;
+  int bindingCalls = 0;
+  int statementCalls = 0;
+  const auto returnFirst = primec::emitter::runEmitterExprControlIfBranchBodyDispatchStep(
+      stmt,
+      false,
+      [&](const primec::Expr &candidate, bool isLast) {
+        ++returnCalls;
+        CHECK(candidate.name == "value");
+        CHECK_FALSE(isLast);
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{
+            true, "return_stmt; ", true};
+      },
+      [&](const primec::Expr &) {
+        ++bindingCalls;
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      },
+      [&](const primec::Expr &) {
+        ++statementCalls;
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      });
+  CHECK(returnFirst.handled);
+  CHECK(returnFirst.emitted.handled);
+  CHECK(returnFirst.emitted.emittedStatement == "return_stmt; ");
+  CHECK(returnFirst.emitted.shouldBreak);
+  CHECK(returnCalls == 1);
+  CHECK(bindingCalls == 0);
+  CHECK(statementCalls == 0);
+
+  returnCalls = 0;
+  bindingCalls = 0;
+  statementCalls = 0;
+  const auto bindingFallback = primec::emitter::runEmitterExprControlIfBranchBodyDispatchStep(
+      stmt,
+      true,
+      [&](const primec::Expr &, bool isLast) {
+        ++returnCalls;
+        CHECK(isLast);
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      },
+      [&](const primec::Expr &candidate) {
+        ++bindingCalls;
+        CHECK(candidate.name == "value");
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{
+            true, "binding_stmt; ", false};
+      },
+      [&](const primec::Expr &) {
+        ++statementCalls;
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      });
+  CHECK(bindingFallback.handled);
+  CHECK(bindingFallback.emitted.handled);
+  CHECK(bindingFallback.emitted.emittedStatement == "binding_stmt; ");
+  CHECK_FALSE(bindingFallback.emitted.shouldBreak);
+  CHECK(returnCalls == 1);
+  CHECK(bindingCalls == 1);
+  CHECK(statementCalls == 0);
+
+  returnCalls = 0;
+  bindingCalls = 0;
+  statementCalls = 0;
+  const auto statementFallback = primec::emitter::runEmitterExprControlIfBranchBodyDispatchStep(
+      stmt,
+      false,
+      [&](const primec::Expr &, bool) {
+        ++returnCalls;
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      },
+      [&](const primec::Expr &) {
+        ++bindingCalls;
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      },
+      [&](const primec::Expr &candidate) {
+        ++statementCalls;
+        CHECK(candidate.name == "value");
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{
+            true, "statement_stmt; ", false};
+      });
+  CHECK(statementFallback.handled);
+  CHECK(statementFallback.emitted.handled);
+  CHECK(statementFallback.emitted.emittedStatement == "statement_stmt; ");
+  CHECK_FALSE(statementFallback.emitted.shouldBreak);
+  CHECK(returnCalls == 1);
+  CHECK(bindingCalls == 1);
+  CHECK(statementCalls == 1);
+
+  const auto noneHandled = primec::emitter::runEmitterExprControlIfBranchBodyDispatchStep(
+      stmt,
+      false,
+      [&](const primec::Expr &, bool) {
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      },
+      [&](const primec::Expr &) {
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      },
+      [&](const primec::Expr &) {
+        return primec::emitter::EmitterExprControlIfBranchBodyEmitResult{};
+      });
+  CHECK_FALSE(noneHandled.handled);
+  CHECK_FALSE(noneHandled.emitted.handled);
+  CHECK(noneHandled.emitted.emittedStatement.empty());
+  CHECK_FALSE(noneHandled.emitted.shouldBreak);
+
+  const auto missingCallbacks = primec::emitter::runEmitterExprControlIfBranchBodyDispatchStep(
+      stmt,
+      false,
+      {},
+      {},
+      {});
+  CHECK_FALSE(missingCallbacks.handled);
+  CHECK_FALSE(missingCallbacks.emitted.handled);
+  CHECK(missingCallbacks.emitted.emittedStatement.empty());
+  CHECK_FALSE(missingCallbacks.emitted.shouldBreak);
+}
+
 TEST_CASE("emitter expr control if branch body statement step dispatches statements") {
   primec::Expr stmt;
   stmt.kind = primec::Expr::Kind::Name;
@@ -3805,6 +3925,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyBindingStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyDispatchStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchBodyStatementStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchWrapperStep(") !=
@@ -3866,6 +3988,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyReturnStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyBindingStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyDispatchStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyStatementStep.h\"") !=
         std::string::npos);
