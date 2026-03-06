@@ -186,6 +186,26 @@ TEST_CASE("ir to cpp emitter writes file io opcodes") {
   CHECK(cpp.find("int closeRc = ::close(closeFd);") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter writes file open read opcode") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("/dev/null");
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::FileOpenRead, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("int fileOpenFlags = O_RDONLY;") != std::string::npos);
+  CHECK(cpp.find("int fileFd = ::open(ps_string_table[0], fileOpenFlags, 0644);") != std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes jump and conditional jump control flow") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
@@ -251,7 +271,7 @@ TEST_CASE("ir to cpp emitter rejects unsupported opcodes") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::FileOpenRead, 0});
+  fn.instructions.push_back({static_cast<primec::IrOpcode>(0), 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(fn);
 

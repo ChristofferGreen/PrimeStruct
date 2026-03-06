@@ -124,6 +124,7 @@ bool moduleUsesF64Helpers(const IrModule &module) {
 
 bool usesFileIoHelpers(IrOpcode opcode) {
   switch (opcode) {
+    case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
     case IrOpcode::FileClose:
@@ -689,17 +690,20 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     }
+    case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
       if (instruction.imm >= context.stringCount) {
         error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
         return false;
       }
-      out << "        int fileOpenFlags = O_WRONLY | O_CREAT";
+      out << "        int fileOpenFlags = ";
       if (instruction.op == IrOpcode::FileOpenWrite) {
-        out << " | O_TRUNC";
+        out << "O_WRONLY | O_CREAT | O_TRUNC";
+      } else if (instruction.op == IrOpcode::FileOpenAppend) {
+        out << "O_WRONLY | O_CREAT | O_APPEND";
       } else {
-        out << " | O_APPEND";
+        out << "O_RDONLY";
       }
       out << ";\n";
       out << "        int fileFd = ::open(ps_string_table[" << instruction.imm << "], fileOpenFlags, 0644);\n";
