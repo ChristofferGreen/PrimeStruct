@@ -503,6 +503,65 @@ TEST_CASE("ir lowerer inference array-kind setup validates dependencies") {
   CHECK(error == "native backend missing inference array-kind setup dependency: resolveStructArrayInfoFromPath");
 }
 
+TEST_CASE("ir lowerer inference expr-kind base setup wires callback") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindBaseSetup(
+      {
+          .getMathConstantName = [](const std::string &name, std::string &out) {
+            if (name == "PI") {
+              out = "PI";
+              return true;
+            }
+            return false;
+          },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(state.inferLiteralOrNameExprKind));
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo refArrayInfo;
+  refArrayInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  refArrayInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  refArrayInfo.referenceToArray = true;
+  locals.emplace("refArray", refArrayInfo);
+
+  primec::Expr piNameExpr;
+  piNameExpr.kind = primec::Expr::Kind::Name;
+  piNameExpr.name = "PI";
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferLiteralOrNameExprKind(piNameExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
+  primec::Expr refArrayNameExpr;
+  refArrayNameExpr.kind = primec::Expr::Kind::Name;
+  refArrayNameExpr.name = "refArray";
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferLiteralOrNameExprKind(refArrayNameExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr literalExpr;
+  literalExpr.kind = primec::Expr::Kind::Literal;
+  literalExpr.isUnsigned = true;
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferLiteralOrNameExprKind(literalExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+}
+
+TEST_CASE("ir lowerer inference expr-kind base setup validates dependencies") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceExprKindBaseSetup(
+      {
+          .getMathConstantName = {},
+      },
+      state,
+      error));
+  CHECK(error == "native backend missing inference expr-kind base setup dependency: getMathConstantName");
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -565,6 +624,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   const std::string inferenceHeaderSource = readText(inferenceHeaderPath);
   CHECK(inferenceHeaderSource.find("runLowerInferenceSetupBootstrap(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceArrayKindSetup(") != std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindBaseSetup(") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {

@@ -9,6 +9,7 @@
 
 #include "IrLowererCallHelpers.h"
 #include "IrLowererCountAccessHelpers.h"
+#include "IrLowererSetupMathHelpers.h"
 #include "IrLowererSetupInferenceHelpers.h"
 #include "IrLowererSharedTypes.h"
 #include "IrLowererStructTypeHelpers.h"
@@ -23,6 +24,7 @@ struct LowerInferenceSetupBootstrapState {
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferArrayElementKind;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferBufferElementKind;
+  std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferLiteralOrNameExprKind;
 
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
@@ -49,11 +51,18 @@ struct LowerInferenceArrayKindSetupInput {
   IsStringCountCallFn isStringCountCall;
 };
 
+struct LowerInferenceExprKindBaseSetupInput {
+  GetSetupMathConstantNameFn getMathConstantName;
+};
+
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
                                      std::string &errorOut);
 bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &input,
                                      LowerInferenceSetupBootstrapState &stateInOut,
                                      std::string &errorOut);
+bool runLowerInferenceExprKindBaseSetup(const LowerInferenceExprKindBaseSetupInput &input,
+                                        LowerInferenceSetupBootstrapState &stateInOut,
+                                        std::string &errorOut);
 
 } // namespace primec::ir_lowerer

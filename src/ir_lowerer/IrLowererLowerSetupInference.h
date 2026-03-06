@@ -22,6 +22,7 @@
   auto &inferExprKind = inferenceSetupBootstrap.inferExprKind;
   auto &inferArrayElementKind = inferenceSetupBootstrap.inferArrayElementKind;
   auto &inferBufferElementKind = inferenceSetupBootstrap.inferBufferElementKind;
+  auto &inferLiteralOrNameExprKind = inferenceSetupBootstrap.inferLiteralOrNameExprKind;
   auto &resolveMethodCallDefinition = inferenceSetupBootstrap.resolveMethodCallDefinition;
   auto &inferPointerTargetKind = inferenceSetupBootstrap.inferPointerTargetKind;
 
@@ -37,43 +38,21 @@
           error)) {
     return false;
   }
+  if (!ir_lowerer::runLowerInferenceExprKindBaseSetup(
+          {
+              .getMathConstantName = getMathConstantName,
+          },
+          inferenceSetupBootstrap,
+          error)) {
+    return false;
+  }
 
   inferExprKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    LocalInfo::ValueKind literalOrNameKind = LocalInfo::ValueKind::Unknown;
+    if (inferLiteralOrNameExprKind(expr, localsIn, literalOrNameKind)) {
+      return literalOrNameKind;
+    }
     switch (expr.kind) {
-      case Expr::Kind::Literal:
-        if (expr.isUnsigned) {
-          return LocalInfo::ValueKind::UInt64;
-        }
-        if (expr.intWidth == 64) {
-          return LocalInfo::ValueKind::Int64;
-        }
-        return LocalInfo::ValueKind::Int32;
-      case Expr::Kind::FloatLiteral:
-        return (expr.floatWidth == 64) ? LocalInfo::ValueKind::Float64 : LocalInfo::ValueKind::Float32;
-      case Expr::Kind::BoolLiteral:
-        return LocalInfo::ValueKind::Bool;
-      case Expr::Kind::StringLiteral:
-        return LocalInfo::ValueKind::String;
-      case Expr::Kind::Name: {
-        auto it = localsIn.find(expr.name);
-        if (it == localsIn.end()) {
-          std::string mathConst;
-          if (getMathConstantName(expr.name, mathConst)) {
-            return LocalInfo::ValueKind::Float64;
-          }
-          return LocalInfo::ValueKind::Unknown;
-        }
-        if (it->second.kind == LocalInfo::Kind::Value) {
-          return it->second.valueKind;
-        }
-        if (it->second.kind == LocalInfo::Kind::Reference) {
-          if (it->second.referenceToArray) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          return it->second.valueKind;
-        }
-        return LocalInfo::ValueKind::Unknown;
-      }
       case Expr::Kind::Call: {
         if (expr.isFieldAccess) {
           if (expr.args.size() != 1) {

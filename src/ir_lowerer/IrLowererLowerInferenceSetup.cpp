@@ -4,6 +4,59 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool inferLiteralOrNameExprKindImpl(const Expr &expr,
+                                    const LocalMap &localsIn,
+                                    const GetSetupMathConstantNameFn &getMathConstantName,
+                                    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  switch (expr.kind) {
+    case Expr::Kind::Literal:
+      if (expr.isUnsigned) {
+        kindOut = LocalInfo::ValueKind::UInt64;
+      } else if (expr.intWidth == 64) {
+        kindOut = LocalInfo::ValueKind::Int64;
+      } else {
+        kindOut = LocalInfo::ValueKind::Int32;
+      }
+      return true;
+    case Expr::Kind::FloatLiteral:
+      kindOut = (expr.floatWidth == 64) ? LocalInfo::ValueKind::Float64 : LocalInfo::ValueKind::Float32;
+      return true;
+    case Expr::Kind::BoolLiteral:
+      kindOut = LocalInfo::ValueKind::Bool;
+      return true;
+    case Expr::Kind::StringLiteral:
+      kindOut = LocalInfo::ValueKind::String;
+      return true;
+    case Expr::Kind::Name: {
+      auto it = localsIn.find(expr.name);
+      if (it == localsIn.end()) {
+        std::string mathConstant;
+        if (getMathConstantName(expr.name, mathConstant)) {
+          kindOut = LocalInfo::ValueKind::Float64;
+        }
+        return true;
+      }
+      if (it->second.kind == LocalInfo::Kind::Value) {
+        kindOut = it->second.valueKind;
+        return true;
+      }
+      if (it->second.kind == LocalInfo::Kind::Reference) {
+        kindOut = it->second.referenceToArray ? LocalInfo::ValueKind::Unknown : it->second.valueKind;
+        return true;
+      }
+      kindOut = LocalInfo::ValueKind::Unknown;
+      return true;
+    }
+    default:
+      return false;
+  }
+}
+
+} // namespace
+
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
                                      std::string &errorOut) {
@@ -172,6 +225,22 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
               candidate, candidateLocals, stateInOut.resolveMethodCallDefinition, stateInOut.getReturnInfo, true, kindOut);
         });
   };
+  return true;
+}
+
+bool runLowerInferenceExprKindBaseSetup(const LowerInferenceExprKindBaseSetupInput &input,
+                                        LowerInferenceSetupBootstrapState &stateInOut,
+                                        std::string &errorOut) {
+  if (!input.getMathConstantName) {
+    errorOut = "native backend missing inference expr-kind base setup dependency: getMathConstantName";
+    return false;
+  }
+
+  const auto getMathConstantName = input.getMathConstantName;
+  stateInOut.inferLiteralOrNameExprKind =
+      [getMathConstantName](const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
+        return inferLiteralOrNameExprKindImpl(expr, localsIn, getMathConstantName, kindOut);
+      };
   return true;
 }
 
