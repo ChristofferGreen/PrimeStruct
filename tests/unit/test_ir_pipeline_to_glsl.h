@@ -989,6 +989,25 @@ TEST_CASE("ir to glsl emitter writes file-write-newline stub opcode") {
   CHECK(glsl.find("stack[sp - 1] = 0;") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter writes address-of-local opcode") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::AddressOfLocal, 7});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, glsl, error));
+  CHECK(error.empty());
+  CHECK(glsl.find("// GLSL backend lowers local addresses to deterministic slot-byte offsets.") !=
+        std::string::npos);
+  CHECK(glsl.find("stack[sp++] = 56;") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter rejects file-write-string out-of-range index") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
@@ -1006,13 +1025,29 @@ TEST_CASE("ir to glsl emitter rejects file-write-string out-of-range index") {
   CHECK(error.find("string index out of range") != std::string::npos);
 }
 
+TEST_CASE("ir to glsl emitter rejects address-of-local out-of-range index") {
+  primec::IrToGlslEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::AddressOfLocal, 2048});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string glsl;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, glsl, error));
+  CHECK(error.find("local index out of range") != std::string::npos);
+}
+
 TEST_CASE("ir to glsl emitter rejects unsupported opcodes") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::AddressOfLocal, 0});
+  fn.instructions.push_back({primec::IrOpcode::LoadIndirect, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
 

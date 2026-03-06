@@ -109,6 +109,16 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::AddressOfLocal:
+      if (instruction.imm > MaxLocalIndex) {
+        error = "IrToGlslEmitter local index out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      out << "        // GLSL backend lowers local addresses to deterministic slot-byte offsets.\n";
+      out << "        stack[sp++] = " << (instruction.imm * 8) << ";\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::Dup:
       out << "        stack[sp] = stack[sp - 1];\n";
       out << "        ++sp;\n";
