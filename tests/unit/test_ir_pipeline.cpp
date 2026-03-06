@@ -43,6 +43,7 @@
 #include "src/ir_lowerer/IrLowererLowerInferenceSetup.h"
 #include "src/ir_lowerer/IrLowererLowerImportsStructsSetup.h"
 #include "src/ir_lowerer/IrLowererLowerLocalsSetup.h"
+#include "src/ir_lowerer/IrLowererLowerReturnCallsSetup.h"
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArithmeticHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.h"

@@ -1,7 +1,13 @@
-  auto emitFileErrorWhy = [&](int32_t errorLocal) -> bool {
-    ir_lowerer::emitFileErrorWhy(function, errorLocal, internString);
-    return true;
-  };
+  ir_lowerer::LowerReturnCallsEmitFileErrorWhyFn emitFileErrorWhy;
+  if (!ir_lowerer::runLowerReturnCallsSetup(
+          {
+              .function = &function,
+              .internString = internString,
+          },
+          emitFileErrorWhy,
+          error)) {
+    return false;
+  }
 
   emitExpr = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
     if (expr.isLambda) {

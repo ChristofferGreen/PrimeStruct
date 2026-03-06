@@ -1053,6 +1053,56 @@ TEST_CASE("ir lowerer inference expr-kind call-pointer fallback setup validates 
   CHECK(error == "native backend missing inference expr-kind call-pointer fallback setup state: inferPointerTargetKind");
 }
 
+TEST_CASE("ir lowerer return/calls setup wires emitFileErrorWhy callback") {
+  primec::IrFunction function;
+  function.name = "/main";
+  primec::ir_lowerer::LowerReturnCallsEmitFileErrorWhyFn emitFileErrorWhy;
+  int32_t internedCount = 0;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::runLowerReturnCallsSetup(
+      {
+          .function = &function,
+          .internString = [&](const std::string &) {
+            return internedCount++;
+          },
+      },
+      emitFileErrorWhy,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(emitFileErrorWhy));
+
+  const size_t before = function.instructions.size();
+  CHECK(emitFileErrorWhy(7));
+  CHECK(function.instructions.size() > before);
+}
+
+TEST_CASE("ir lowerer return/calls setup validates dependencies") {
+  primec::IrFunction function;
+  primec::ir_lowerer::LowerReturnCallsEmitFileErrorWhyFn emitFileErrorWhy;
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerReturnCallsSetup(
+      {
+          .function = nullptr,
+          .internString = [&](const std::string &) { return 0; },
+      },
+      emitFileErrorWhy,
+      error));
+  CHECK(error == "native backend missing return/calls setup dependency: function");
+  CHECK_FALSE(static_cast<bool>(emitFileErrorWhy));
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerReturnCallsSetup(
+      {
+          .function = &function,
+          .internString = {},
+      },
+      emitFileErrorWhy,
+      error));
+  CHECK(error == "native backend missing return/calls setup dependency: internString");
+  CHECK_FALSE(static_cast<bool>(emitFileErrorWhy));
+}
+
 TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -1122,6 +1172,12 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallOperatorFallbackSetup(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallControlFlowFallbackSetup(") != std::string::npos);
   CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallPointerFallbackSetup(") != std::string::npos);
+
+  const std::filesystem::path emitExprHeaderPath =
+      std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerEmitExpr.h";
+  REQUIRE(std::filesystem::exists(emitExprHeaderPath));
+  const std::string emitExprHeaderSource = readText(emitExprHeaderPath);
+  CHECK(emitExprHeaderSource.find("runLowerReturnCallsSetup(") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {
