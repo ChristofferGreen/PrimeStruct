@@ -145,6 +145,20 @@ Expected runtime behavior:
 - Startup: host process returns 0 after one frame submission.
 - Diagnostics: prints `frame_rendered=1`.
 
+### Native Windowed Execution Preflight (macOS)
+```bash
+xcrun --find metal
+xcrun --find metallib
+xcrun metal -std=metal3.0 -c examples/metal/spinning_cube/cube.metal -o /tmp/cube.air
+xcrun metallib /tmp/cube.air -o /tmp/cube.metallib
+xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework Metal -o /tmp/metal_host
+/tmp/metal_host /tmp/cube.metallib
+```
+- This command block mirrors `run_metal_check` in
+  `scripts/run_spinning_cube_demo.sh`.
+- If `xcrun --find metal` or `xcrun --find metallib` fails, treat Metal host
+  execution as unsupported on the current machine and skip windowed launch.
+
 ### Combined Smoke Helper
 ```bash
 ./scripts/run_spinning_cube_demo.sh --primec ./build-debug/primec

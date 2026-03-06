@@ -1018,6 +1018,11 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework "
       "Metal -o /tmp/metal_host",
       "/tmp/metal_host /tmp/cube.metallib",
+      "### Native Windowed Execution Preflight (macOS)",
+      "xcrun --find metal",
+      "xcrun --find metallib",
+      "This command block mirrors `run_metal_check` in",
+      "`scripts/run_spinning_cube_demo.sh`.",
       "./scripts/run_spinning_cube_demo.sh --primec ./build-debug/primec",
       "## First Supported Native Window Target (v1)",
       "Target: macOS + Metal window host (`examples/native/spinning_cube/window_host.mm`).",
