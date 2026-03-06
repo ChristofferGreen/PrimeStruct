@@ -483,6 +483,8 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("stack[sp++] = psF64ToBits(static_cast<double>(value));") != std::string::npos);
+  CHECK(output.find("static int64_t psConvertF64ToI64(double value)") != std::string::npos);
+  CHECK(output.find("int64_t converted = psConvertF64ToI64(value);") != std::string::npos);
   CHECK(output.find("ps_entry_0") != std::string::npos);
 }
 
