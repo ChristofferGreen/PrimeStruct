@@ -454,11 +454,11 @@ main([array<string>] args) {
   }
 }
 
-TEST_CASE("glsl-ir emitter reports unsupported opcodes") {
+TEST_CASE("glsl-ir emitter reports out-of-range i64 literals") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [f64] value{1.5f64}
+  [i64] value{5000000000i64}
   return()
 }
 )";
@@ -469,27 +469,30 @@ main() {
   const std::string compileCmd =
       "./primec --emit=glsl-ir " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("ir-to-glsl failed: IrToGlslEmitter unsupported opcode") != std::string::npos);
+  CHECK(readFile(errPath).find("ir-to-glsl failed: IrToGlslEmitter i64 literal out of i32 range") != std::string::npos);
 }
 
-TEST_CASE("glsl emitter falls back to legacy output on ir emit-stage failures") {
+TEST_CASE("glsl emitter surfaces ir emit-stage failures without fallback") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [f64] wide{1.5f64}
+  [i64] wide{5000000000i64}
   return()
 }
 )";
-  const std::string srcPath = writeTemp("compile_glsl_ir_backend_fallback_legacy.prime", source);
+  const std::string srcPath = writeTemp("compile_glsl_ir_backend_emit_failure.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_ir_backend_fallback_legacy.glsl").string();
+      (std::filesystem::temp_directory_path() / "primec_glsl_ir_backend_emit_failure.glsl").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_ir_backend_emit_failure_err.txt").string();
+  std::error_code ec;
+  std::filesystem::remove(outPath, ec);
 
   const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
-                                 " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("double wide") != std::string::npos);
-  CHECK(output.find("PrimeStructOutput") == std::string::npos);
+                                 " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("ir-to-glsl failed: IrToGlslEmitter i64 literal out of i32 range") != std::string::npos);
+  CHECK_FALSE(std::filesystem::exists(outPath));
 }
 
 TEST_CASE("defaults to glsl extension for emit=glsl") {

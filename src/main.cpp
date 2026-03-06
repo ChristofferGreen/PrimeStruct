@@ -544,6 +544,8 @@ int main(int argc, char **argv) {
     irBackend = primec::findIrBackend("cpp-ir");
   } else if (irBackend == nullptr && options.emitKind == "exe") {
     irBackend = primec::findIrBackend("exe-ir");
+  } else if (irBackend == nullptr && options.emitKind == "glsl") {
+    irBackend = primec::findIrBackend("glsl-ir");
   }
 
   if (irBackend != nullptr && irBackend->requiresOutputPath() && !options.outputPath.empty()) {
@@ -607,71 +609,6 @@ int main(int argc, char **argv) {
     if (!ensureOutputDirectory(resolved, error)) {
       return emitFailure(options, primec::DiagnosticCode::OutputError, "Output error: ", error, 2);
     }
-  }
-
-  if (options.emitKind == "glsl") {
-    if (const primec::IrBackend *glslIrBackend = primec::findIrBackend("glsl-ir"); glslIrBackend != nullptr) {
-      primec::IrBackendEmitResult emitResult;
-      IrBackendRunFailure irFailure;
-      if (runIrBackend(*glslIrBackend, program, options, emitResult, irFailure)) {
-        return emitResult.exitCode;
-      }
-      if (irFailure.stage != IrBackendRunFailureStage::Emit) {
-        const primec::IrBackendDiagnostics &diagnostics = glslIrBackend->diagnostics();
-        if (irFailure.stage == IrBackendRunFailureStage::Lowering) {
-          return emitFailure(options,
-                             diagnostics.loweringDiagnosticCode,
-                             diagnostics.loweringErrorPrefix,
-                             irFailure.message,
-                             2,
-                             irBackendNotes(diagnostics));
-        }
-        if (irFailure.stage == IrBackendRunFailureStage::Validation) {
-          return emitFailure(options,
-                             diagnostics.validationDiagnosticCode,
-                             diagnostics.validationErrorPrefix,
-                             irFailure.message,
-                             2,
-                             irBackendNotes(diagnostics, "ir-validate"));
-        }
-        if (irFailure.stage == IrBackendRunFailureStage::Inlining) {
-          return emitFailure(options,
-                             diagnostics.inliningDiagnosticCode,
-                             diagnostics.inliningErrorPrefix,
-                             irFailure.message,
-                             2,
-                             irBackendNotes(diagnostics, "ir-inline"));
-        }
-        if (irFailure.stage == IrBackendRunFailureStage::OutputWrite) {
-          return emitFailure(options,
-                             primec::DiagnosticCode::OutputError,
-                             "Failed to write output: ",
-                             options.outputPath,
-                             2);
-        }
-      }
-    }
-
-    std::string legacySource;
-    std::string legacyError;
-    primec::GlslEmitter glslEmitter;
-    if (!glslEmitter.emitSource(program, options.entryPath, legacySource, legacyError)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::EmitError,
-                         "GLSL emit error: ",
-                         legacyError,
-                         2,
-                         {"backend: glsl"});
-    }
-
-    if (!writeFile(options.outputPath, legacySource)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::OutputError,
-                         "Failed to write output: ",
-                         options.outputPath,
-                         2);
-    }
-    return 0;
   }
 
   if (options.emitKind == "spirv") {
