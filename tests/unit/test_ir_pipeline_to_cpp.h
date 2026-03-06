@@ -26,14 +26,65 @@ TEST_CASE("ir to cpp emitter writes numeric stack program") {
   std::string error;
   REQUIRE(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
-  CHECK(cpp.find("static int32_t ps_entry_0()") != std::string::npos);
+  CHECK(cpp.find("static int64_t ps_entry_0(int argc, char **argv)") != std::string::npos);
   CHECK(cpp.find("switch (pc)") != std::string::npos);
   CHECK(cpp.find("case 0") != std::string::npos);
   CHECK(cpp.find("stack[sp++] = 2;") != std::string::npos);
   CHECK(cpp.find("stack[sp++] = 3;") != std::string::npos);
   CHECK(cpp.find("stack[sp++] = left + right;") != std::string::npos);
-  CHECK(cpp.find("return stack[--sp];") != std::string::npos);
-  CHECK(cpp.find("int main()") != std::string::npos);
+  CHECK(cpp.find("return static_cast<int64_t>(static_cast<int32_t>(stack[--sp]));") != std::string::npos);
+  CHECK(cpp.find("int main(int argc, char **argv)") != std::string::npos);
+}
+
+TEST_CASE("ir to cpp emitter writes i64 arithmetic and comparisons") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(11)});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(5)});
+  fn.instructions.push_back({primec::IrOpcode::SubI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, static_cast<uint64_t>(6)});
+  fn.instructions.push_back({primec::IrOpcode::CmpEqI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("int64_t right = static_cast<int64_t>(stack[--sp]);") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(left - right);") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = (left == right) ? 1u : 0u;") != std::string::npos);
+  CHECK(cpp.find("return static_cast<int64_t>(stack[--sp]);") != std::string::npos);
+}
+
+TEST_CASE("ir to cpp emitter writes print and argv opcodes") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("hello");
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  fn.instructions.push_back({primec::IrOpcode::PrintI32, primec::PrintFlagNewline});
+  fn.instructions.push_back({primec::IrOpcode::PrintString, primec::encodePrintStringImm(0, 0)});
+  fn.instructions.push_back({primec::IrOpcode::PushArgc, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::PrintArgvUnsafe, primec::PrintFlagStderr});
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("std::cout << static_cast<int32_t>(stack[--sp]);") != std::string::npos);
+  CHECK(cpp.find("std::cout << ps_string_table[0];") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(argc);") != std::string::npos);
+  CHECK(cpp.find("argv[indexValue]") != std::string::npos);
+  CHECK(cpp.find("std::cerr << argv[indexValue];") != std::string::npos);
 }
 
 TEST_CASE("ir to cpp emitter writes jump and conditional jump control flow") {
@@ -117,6 +168,22 @@ TEST_CASE("ir to cpp emitter rejects out-of-range jump targets") {
   std::string error;
   CHECK_FALSE(emitter.emitSource(module, cpp, error));
   CHECK(error.find("jump target out of range") != std::string::npos);
+}
+
+TEST_CASE("ir to cpp emitter rejects out-of-range string indices") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PrintString, primec::encodePrintStringImm(3, 0)});
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  CHECK_FALSE(emitter.emitSource(module, cpp, error));
+  CHECK(error.find("string index out of range") != std::string::npos);
 }
 
 TEST_SUITE_END();

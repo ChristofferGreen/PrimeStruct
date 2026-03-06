@@ -167,8 +167,28 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("int32_t ps_entry_0()") != std::string::npos);
+  CHECK(output.find("int64_t ps_entry_0(int argc, char **argv)") != std::string::npos);
   CHECK(output.find("switch (pc)") != std::string::npos);
+}
+
+TEST_CASE("cpp-ir emitter writes string and argv print paths") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line("hello"utf8)
+  print_line(args[1i32])
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_print_argv.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_cpp_ir_print_argv.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("static const char *ps_string_table[]") != std::string::npos);
+  CHECK(output.find("stack[sp++] = static_cast<uint64_t>(argc);") != std::string::npos);
+  CHECK(output.find("argv[indexValue]") != std::string::npos);
 }
 
 TEST_CASE("cpp-ir emitter reports unsupported opcodes") {
@@ -260,6 +280,42 @@ main() {
   const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("exe-ir emitter compiles and runs i64 subset") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  [i64 mut] counter{10i64}
+  assign(counter, plus(counter, 5i64))
+  assign(counter, minus(counter, 2i64))
+  return(counter)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_i64_subset.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_i64_subset").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 13);
+}
+
+TEST_CASE("exe-ir emitter compiles and runs argv prints") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(args[1i32])
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_print_argv.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_print_argv").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_exe_ir_print_argv.out").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " alpha beta > " + outPath) == 3);
+  CHECK(readFile(outPath) == "alpha\n");
 }
 
 TEST_CASE("compiles and runs explicit void return") {
