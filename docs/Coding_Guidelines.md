@@ -26,7 +26,11 @@ semantics after canonicalization.
 - Prefer unsuffixed numeric literals in surface examples (`1280`, `0.0166667`).
 - Prefer typed enums/descriptors over stringly-typed GPU config
   (`PresentMode.Fifo` over `"fifo"`).
-- Prefer labeled arguments on public API calls to keep call sites self-documenting.
+- Prefer labeled arguments on public API calls to keep call sites self-documenting,
+  but omit labels when passing a variable with the same name
+  (`draw_mesh(mesh, material)` not `draw_mesh([mesh] mesh, [material] material)`).
+- `main` must return `int` or `void`; do not declare `main` with `Result<...>`
+  return envelopes.
 - Keep app asset data (for example cube vertices/indices) in app code, not in
   generic stdlib helpers.
 - Prefer canonical graphics wire structs when available (for example
@@ -115,7 +119,7 @@ cube_indices() {
   print_line_error(err.why())
 }
 
-[return<Result<int, GfxError>> effects(gpu_dispatch, io_err)
+[return<int> effects(gpu_dispatch, io_err)
  on_error<GfxError, /log_gfx_error>]
 main() {
   window{
@@ -131,7 +135,7 @@ main() {
 
   swapchain{
     device.create_swapchain(
-      [window] window,
+      window,
       [color_format] ColorFormat.Bgra8Unorm,
       [depth_format] DepthFormat.Depth32F,
       [present_mode] PresentMode.Fifo
@@ -174,7 +178,7 @@ main() {
       )
     }
 
-    pass.draw_mesh([mesh] mesh, [material] material)
+    pass.draw_mesh(mesh, material)
     pass.end()
 
     frame.submit(queue)
@@ -183,6 +187,6 @@ main() {
     angle = wrap_angle(angle + (1.1 * dt))
   }
 
-  return(Result.ok(0))
+  return(0)
 }
 ```
