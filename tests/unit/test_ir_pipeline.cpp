@@ -44,6 +44,7 @@
 #include "src/emitter/EmitterExprControlCountRewriteStep.h"
 #include "src/emitter/EmitterExprControlFieldAccessStep.h"
 #include "src/emitter/EmitterExprControlFloatLiteralStep.h"
+#include "src/emitter/EmitterExprControlIfBlockEarlyReturnStep.h"
 #include "src/emitter/EmitterExprControlIfEnvelopeStep.h"
 #include "src/emitter/EmitterExprControlIntegerLiteralStep.h"
 #include "src/emitter/EmitterExprControlMethodPathStep.h"
