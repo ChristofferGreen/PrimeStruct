@@ -35,6 +35,7 @@ struct LowerInferenceSetupBootstrapState {
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferCallExprOperatorFallbackKind;
   std::function<bool(const Expr &, const LocalMap &, std::string &, LocalInfo::ValueKind &)>
       inferCallExprControlFlowFallbackKind;
+  std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferCallExprPointerFallbackKind;
 
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
@@ -101,6 +102,7 @@ struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
   ApplySetupInferenceStructInfoFn applyStructValueInfo;
   InferSetupInferenceStructExprPathFn inferStructExprPath;
 };
+struct LowerInferenceExprKindCallPointerFallbackSetupInput {};
 
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
@@ -126,6 +128,10 @@ bool runLowerInferenceExprKindCallOperatorFallbackSetup(
     std::string &errorOut);
 bool runLowerInferenceExprKindCallControlFlowFallbackSetup(
     const LowerInferenceExprKindCallControlFlowFallbackSetupInput &input,
+    LowerInferenceSetupBootstrapState &stateInOut,
+    std::string &errorOut);
+bool runLowerInferenceExprKindCallPointerFallbackSetup(
+    const LowerInferenceExprKindCallPointerFallbackSetupInput &input,
     LowerInferenceSetupBootstrapState &stateInOut,
     std::string &errorOut);
 

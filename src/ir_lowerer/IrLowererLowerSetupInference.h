@@ -27,8 +27,8 @@
   auto &inferCallExprCountAccessGpuFallbackKind = inferenceSetupBootstrap.inferCallExprCountAccessGpuFallbackKind;
   auto &inferCallExprOperatorFallbackKind = inferenceSetupBootstrap.inferCallExprOperatorFallbackKind;
   auto &inferCallExprControlFlowFallbackKind = inferenceSetupBootstrap.inferCallExprControlFlowFallbackKind;
+  auto &inferCallExprPointerFallbackKind = inferenceSetupBootstrap.inferCallExprPointerFallbackKind;
   auto &resolveMethodCallDefinition = inferenceSetupBootstrap.resolveMethodCallDefinition;
-  auto &inferPointerTargetKind = inferenceSetupBootstrap.inferPointerTargetKind;
 
   if (!ir_lowerer::runLowerInferenceArrayKindSetup(
           {
@@ -101,6 +101,12 @@
           error)) {
     return false;
   }
+  if (!ir_lowerer::runLowerInferenceExprKindCallPointerFallbackSetup(
+          {},
+          inferenceSetupBootstrap,
+          error)) {
+    return false;
+  }
   if (!ir_lowerer::runLowerInferenceExprKindBaseSetup(
           {
               .getMathConstantName = getMathConstantName,
@@ -141,15 +147,9 @@
         if (inferCallExprControlFlowFallbackKind(expr, localsIn, error, controlFlowKind)) {
           return controlFlowKind;
         }
-        LocalInfo::ValueKind pointerBuiltinKind = LocalInfo::ValueKind::Unknown;
-        if (inferPointerBuiltinCallReturnKind(
-                expr,
-                localsIn,
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return inferPointerTargetKind(candidateExpr, candidateLocals);
-                },
-                pointerBuiltinKind) == PointerBuiltinCallReturnKindResolution::Resolved) {
-          return pointerBuiltinKind;
+        LocalInfo::ValueKind pointerFallbackKind = LocalInfo::ValueKind::Unknown;
+        if (inferCallExprPointerFallbackKind(expr, localsIn, pointerFallbackKind)) {
+          return pointerFallbackKind;
         }
         return LocalInfo::ValueKind::Unknown;
       }

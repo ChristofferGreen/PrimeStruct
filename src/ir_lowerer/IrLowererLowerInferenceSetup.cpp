@@ -759,4 +759,34 @@ bool runLowerInferenceExprKindCallControlFlowFallbackSetup(
   return true;
 }
 
+bool runLowerInferenceExprKindCallPointerFallbackSetup(
+    const LowerInferenceExprKindCallPointerFallbackSetupInput &,
+    LowerInferenceSetupBootstrapState &stateInOut,
+    std::string &errorOut) {
+  if (!stateInOut.inferPointerTargetKind) {
+    errorOut = "native backend missing inference expr-kind call-pointer fallback setup state: inferPointerTargetKind";
+    return false;
+  }
+
+  stateInOut.inferCallExprPointerFallbackKind = [&stateInOut](const Expr &expr,
+                                                              const LocalMap &localsIn,
+                                                              LocalInfo::ValueKind &kindOut) {
+    kindOut = LocalInfo::ValueKind::Unknown;
+    LocalInfo::ValueKind pointerBuiltinKind = LocalInfo::ValueKind::Unknown;
+    if (inferPointerBuiltinCallReturnKind(
+            expr,
+            localsIn,
+            [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+              return stateInOut.inferPointerTargetKind(candidateExpr, candidateLocals);
+            },
+            pointerBuiltinKind) == PointerBuiltinCallReturnKindResolution::Resolved) {
+      kindOut = pointerBuiltinKind;
+      return true;
+    }
+    return false;
+  };
+
+  return true;
+}
+
 } // namespace primec::ir_lowerer
