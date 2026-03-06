@@ -1879,6 +1879,81 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   CHECK(*resolvedPath == "/Vec3/count");
 }
 
+TEST_CASE("emitter expr control builtin-block prelude step gates block handling") {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "block";
+  expr.hasBodyArguments = true;
+  expr.bodyArguments.push_back(primec::Expr{});
+
+  const auto noBuiltinMatch = primec::emitter::runEmitterExprControlBuiltinBlockPreludeStep(
+      expr,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, std::string> &) { return false; },
+      [&](const std::vector<std::optional<std::string>> &) { return false; });
+  CHECK_FALSE(noBuiltinMatch.matched);
+  CHECK_FALSE(noBuiltinMatch.earlyReturnExpr.has_value());
+
+  const auto noPredicate = primec::emitter::runEmitterExprControlBuiltinBlockPreludeStep(
+      expr,
+      {},
+      {},
+      [&](const std::vector<std::optional<std::string>> &) { return false; });
+  CHECK_FALSE(noPredicate.matched);
+  CHECK_FALSE(noPredicate.earlyReturnExpr.has_value());
+
+  primec::Expr noBodyFlag = expr;
+  noBodyFlag.hasBodyArguments = false;
+  const auto noBody = primec::emitter::runEmitterExprControlBuiltinBlockPreludeStep(
+      noBodyFlag,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, std::string> &) { return true; },
+      [&](const std::vector<std::optional<std::string>> &) { return false; });
+  CHECK_FALSE(noBody.matched);
+  CHECK_FALSE(noBody.earlyReturnExpr.has_value());
+
+  primec::Expr invalidArgs = expr;
+  invalidArgs.args.push_back(primec::Expr{});
+  const auto invalidArgsResult = primec::emitter::runEmitterExprControlBuiltinBlockPreludeStep(
+      invalidArgs,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, std::string> &) { return true; },
+      [&](const std::vector<std::optional<std::string>> &) { return false; });
+  REQUIRE(invalidArgsResult.matched);
+  REQUIRE(invalidArgsResult.earlyReturnExpr.has_value());
+  CHECK(*invalidArgsResult.earlyReturnExpr == "0");
+
+  primec::Expr invalidNamedArgs = expr;
+  invalidNamedArgs.argNames.push_back("value");
+  const auto invalidNamedArgsResult = primec::emitter::runEmitterExprControlBuiltinBlockPreludeStep(
+      invalidNamedArgs,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, std::string> &) { return true; },
+      [&](const std::vector<std::optional<std::string>> &) { return true; });
+  REQUIRE(invalidNamedArgsResult.matched);
+  REQUIRE(invalidNamedArgsResult.earlyReturnExpr.has_value());
+  CHECK(*invalidNamedArgsResult.earlyReturnExpr == "0");
+
+  primec::Expr emptyBody = expr;
+  emptyBody.bodyArguments.clear();
+  const auto emptyBodyResult = primec::emitter::runEmitterExprControlBuiltinBlockPreludeStep(
+      emptyBody,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, std::string> &) { return true; },
+      [&](const std::vector<std::optional<std::string>> &) { return false; });
+  REQUIRE(emptyBodyResult.matched);
+  REQUIRE(emptyBodyResult.earlyReturnExpr.has_value());
+  CHECK(*emptyBodyResult.earlyReturnExpr == "0");
+
+  const auto validResult = primec::emitter::runEmitterExprControlBuiltinBlockPreludeStep(
+      expr,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, std::string> &) { return true; },
+      [&](const std::vector<std::optional<std::string>> &) { return false; });
+  CHECK(validResult.matched);
+  CHECK_FALSE(validResult.earlyReturnExpr.has_value());
+}
+
 TEST_CASE("emitter expr control body-wrapper step rewrites body-argument calls") {
   primec::Expr noBodyExpr;
   noBodyExpr.kind = primec::Expr::Kind::Call;
@@ -2193,6 +2268,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprControlHeaderSource = readText(emitterExprControlHeaderPath);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBoolLiteralStep(expr)") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockPreludeStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBodyWrapperStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFieldAccessStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlCallPathStep(") != std::string::npos);
@@ -2210,6 +2287,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBoolLiteralStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockPreludeStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBodyWrapperStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlCallPathStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlCountRewriteStep.h\"") != std::string::npos);

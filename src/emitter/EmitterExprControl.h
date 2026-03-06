@@ -86,12 +86,16 @@
       countRewritePath.has_value()) {
     full = *countRewritePath;
   }
-  if (isBuiltinBlock(expr, nameMap) && expr.hasBodyArguments) {
-    if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
-      return "0";
-    }
-    if (expr.bodyArguments.empty()) {
-      return "0";
+  if (const auto builtinBlockPrelude = emitter::runEmitterExprControlBuiltinBlockPreludeStep(
+          expr,
+          nameMap,
+          [&](const Expr &candidate, const std::unordered_map<std::string, std::string> &candidateNameMap) {
+            return isBuiltinBlock(candidate, candidateNameMap);
+          },
+          [&](const std::vector<std::optional<std::string>> &argNames) { return hasNamedArguments(argNames); });
+      builtinBlockPrelude.matched) {
+    if (builtinBlockPrelude.earlyReturnExpr.has_value()) {
+      return *builtinBlockPrelude.earlyReturnExpr;
     }
     std::unordered_map<std::string, BindingInfo> blockTypes = localTypes;
     std::ostringstream out;

@@ -2,6 +2,7 @@
 
 #include "EmitterHelpers.h"
 #include "EmitterExprControlBoolLiteralStep.h"
+#include "EmitterExprControlBuiltinBlockPreludeStep.h"
 #include "EmitterExprControlBodyWrapperStep.h"
 #include "EmitterExprControlCallPathStep.h"
 #include "EmitterExprControlCountRewriteStep.h"
