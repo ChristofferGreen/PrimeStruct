@@ -24,6 +24,7 @@
 #include "IrLowererLowerStatementsCallsStep.h"
 #include "IrLowererLowerStatementsEntryExecutionStep.h"
 #include "IrLowererLowerStatementsFunctionTableStep.h"
+#include "IrLowererLowerStatementsSourceMapStep.h"
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"
 #include "IrLowererOperatorArcHyperbolicHelpers.h"

@@ -2194,6 +2194,137 @@ TEST_CASE("ir lowerer statements function-table step validates dependencies") {
   CHECK(error == "native backend missing statements function-table step dependency: outFunctions");
 }
 
+TEST_CASE("ir lowerer statements source-map step finalizes instruction metadata") {
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.sourceLine = 12;
+  mainDef.sourceColumn = 4;
+
+  primec::Definition helperDef;
+  helperDef.fullPath = "/helper";
+  helperDef.sourceLine = 25;
+  helperDef.sourceColumn = 3;
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  defMap.emplace(mainDef.fullPath, &mainDef);
+  defMap.emplace(helperDef.fullPath, &helperDef);
+
+  std::unordered_map<std::string, std::vector<primec::ir_lowerer::InstructionSourceRange>>
+      instructionSourceRangesByFunction;
+  instructionSourceRangesByFunction["/main"].push_back({
+      .beginIndex = 1,
+      .endIndex = 2,
+      .line = 77,
+      .column = 9,
+      .provenance = primec::IrSourceMapProvenance::SyntheticIr,
+  });
+  instructionSourceRangesByFunction["/main"].push_back({
+      .beginIndex = 0,
+      .endIndex = 2,
+      .line = 100,
+      .column = 2,
+      .provenance = primec::IrSourceMapProvenance::CanonicalAst,
+  });
+
+  primec::IrModule module;
+  primec::IrFunction mainFunction;
+  mainFunction.name = "/main";
+  mainFunction.instructions = {
+      {primec::IrOpcode::PushI32, 1},
+      {primec::IrOpcode::PushI32, 2},
+      {primec::IrOpcode::AddI32, 0},
+  };
+  module.functions.push_back(mainFunction);
+
+  primec::IrFunction helperFunction;
+  helperFunction.name = "/helper";
+  helperFunction.instructions = {
+      {primec::IrOpcode::ReturnVoid, 0},
+  };
+  module.functions.push_back(helperFunction);
+
+  primec::IrFunction missingFunction;
+  missingFunction.name = "/missing";
+  missingFunction.instructions = {
+      {primec::IrOpcode::ReturnVoid, 0},
+  };
+  module.functions.push_back(missingFunction);
+
+  std::vector<std::string> stringTable = {"alpha", "beta"};
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerStatementsSourceMapStep(
+      {
+          .defMap = &defMap,
+          .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
+          .stringTable = &stringTable,
+          .outModule = &module,
+      },
+      error));
+  CHECK(error.empty());
+
+  uint32_t expectedDebugId = 1;
+  for (const auto &function : module.functions) {
+    for (const auto &instruction : function.instructions) {
+      CHECK(instruction.debugId == expectedDebugId);
+      ++expectedDebugId;
+    }
+  }
+
+  REQUIRE(module.instructionSourceMap.size() == 5);
+  CHECK(module.instructionSourceMap[0].line == 100);
+  CHECK(module.instructionSourceMap[0].column == 2);
+  CHECK(module.instructionSourceMap[0].provenance == primec::IrSourceMapProvenance::CanonicalAst);
+
+  CHECK(module.instructionSourceMap[1].line == 77);
+  CHECK(module.instructionSourceMap[1].column == 9);
+  CHECK(module.instructionSourceMap[1].provenance == primec::IrSourceMapProvenance::SyntheticIr);
+
+  CHECK(module.instructionSourceMap[2].line == 12);
+  CHECK(module.instructionSourceMap[2].column == 4);
+  CHECK(module.instructionSourceMap[2].provenance == primec::IrSourceMapProvenance::SyntheticIr);
+
+  CHECK(module.instructionSourceMap[3].line == 25);
+  CHECK(module.instructionSourceMap[3].column == 3);
+  CHECK(module.instructionSourceMap[3].provenance == primec::IrSourceMapProvenance::SyntheticIr);
+
+  CHECK(module.instructionSourceMap[4].line == 0);
+  CHECK(module.instructionSourceMap[4].column == 0);
+  CHECK(module.instructionSourceMap[4].provenance == primec::IrSourceMapProvenance::SyntheticIr);
+
+  REQUIRE(module.stringTable.size() == 2);
+  CHECK(module.stringTable[0] == "alpha");
+  CHECK(module.stringTable[1] == "beta");
+}
+
+TEST_CASE("ir lowerer statements source-map step validates dependencies") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::vector<primec::ir_lowerer::InstructionSourceRange>>
+      instructionSourceRangesByFunction;
+  std::vector<std::string> stringTable;
+  primec::IrModule module;
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerStatementsSourceMapStep(
+      {
+          .defMap = nullptr,
+          .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
+          .stringTable = &stringTable,
+          .outModule = &module,
+      },
+      error));
+  CHECK(error == "native backend missing statements source-map step dependency: defMap");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerStatementsSourceMapStep(
+      {
+          .defMap = &defMap,
+          .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
+          .stringTable = &stringTable,
+          .outModule = nullptr,
+      },
+      error));
+  CHECK(error == "native backend missing statements source-map step dependency: outModule");
+}
+
 TEST_CASE("ir lowerer expr emit setup wires unary passthrough callbacks") {
   primec::ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
   primec::ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
@@ -5301,6 +5432,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsCallsStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryExecutionStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsFunctionTableStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsSourceMapStep.h\"") != std::string::npos);
 
   const std::filesystem::path setupHeaderPath =
       std::filesystem::path("src") / "ir_lowerer" / "IrLowererLowerSetupEntryEffects.h";
@@ -5366,12 +5498,17 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(statementsCallsHeaderSource.find("runLowerStatementsCallsStep(") != std::string::npos);
   CHECK(statementsCallsHeaderSource.find("runLowerStatementsEntryExecutionStep(") != std::string::npos);
   CHECK(statementsCallsHeaderSource.find("runLowerStatementsFunctionTableStep(") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("runLowerStatementsSourceMapStep(") != std::string::npos);
   CHECK(statementsCallsHeaderSource.find("tryEmitBufferStoreStatement(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("tryEmitDispatchStatement(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("tryEmitDirectCallStatement(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("emitAssignOrExprStatementWithPop(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("emitEntryCallableExecutionWithCleanup(") == std::string::npos);
   CHECK(statementsCallsHeaderSource.find("finalizeEntryFunctionTableAndLowerCallables(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("instruction.debugId = static_cast<uint32_t>(nextInstructionDebugId)") ==
+        std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("out.instructionSourceMap.push_back(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("out.stringTable = std::move(stringTable);") == std::string::npos);
 }
 
 TEST_CASE("emitter emit setup source delegation stays stable") {

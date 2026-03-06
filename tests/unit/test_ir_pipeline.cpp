@@ -90,6 +90,7 @@
 #include "src/ir_lowerer/IrLowererLowerStatementsCallsStep.h"
 #include "src/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.h"
 #include "src/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.h"
+#include "src/ir_lowerer/IrLowererLowerStatementsSourceMapStep.h"
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArithmeticHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.h"

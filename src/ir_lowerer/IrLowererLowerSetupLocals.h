@@ -10,13 +10,6 @@
   int32_t onErrorTempCounter = 0;
   std::vector<std::string> stringTable;
   std::unordered_set<std::string> loweredCallTargets;
-  struct InstructionSourceRange {
-    size_t beginIndex = 0;
-    size_t endIndex = 0;
-    uint32_t line = 0;
-    uint32_t column = 0;
-    IrSourceMapProvenance provenance = IrSourceMapProvenance::CanonicalAst;
-  };
   std::unordered_map<std::string, std::vector<InstructionSourceRange>> instructionSourceRangesByFunction;
   auto appendInstructionSourceRange = [&](const std::string &functionName,
                                           const Expr &expr,
