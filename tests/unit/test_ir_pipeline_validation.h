@@ -2936,6 +2936,110 @@ TEST_CASE("emitter expr control if-block binding-qualifiers step resolves const/
   CHECK_FALSE(missingCallback.useRef);
 }
 
+TEST_CASE("emitter expr control if-block binding-explicit step emits typed bindings") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "item";
+
+  primec::Emitter::BindingInfo bindingInfo;
+  bindingInfo.typeName = "i32";
+  bindingInfo.isMutable = false;
+
+  const auto nonExplicit = primec::emitter::runEmitterExprControlIfBlockBindingExplicitStep(
+      stmt,
+      bindingInfo,
+      false,
+      true,
+      false,
+      "",
+      {},
+      {},
+      [&](const primec::Expr &) { return "unused"; });
+  CHECK_FALSE(nonExplicit.handled);
+  CHECK(nonExplicit.emittedStatement.empty());
+
+  const auto constTyped = primec::emitter::runEmitterExprControlIfBlockBindingExplicitStep(
+      stmt,
+      bindingInfo,
+      true,
+      true,
+      false,
+      "",
+      {},
+      {},
+      [&](const primec::Expr &) { return "unused"; });
+  CHECK(constTyped.handled);
+  CHECK(constTyped.emittedStatement == "const int item; ");
+
+  primec::Expr initExpr;
+  initExpr.kind = primec::Expr::Kind::Literal;
+  initExpr.literalValue = 7;
+  stmt.args.push_back(initExpr);
+
+  int emitCalls = 0;
+  const auto mutableTyped = primec::emitter::runEmitterExprControlIfBlockBindingExplicitStep(
+      stmt,
+      bindingInfo,
+      true,
+      false,
+      false,
+      "",
+      {},
+      {},
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Literal);
+        CHECK(candidate.literalValue == 7);
+        return std::string("emit_init");
+      });
+  CHECK(mutableTyped.handled);
+  CHECK(emitCalls == 1);
+  CHECK(mutableTyped.emittedStatement == "int item = emit_init; ");
+
+  const auto constRefTyped = primec::emitter::runEmitterExprControlIfBlockBindingExplicitStep(
+      stmt,
+      bindingInfo,
+      true,
+      true,
+      true,
+      "",
+      {},
+      {},
+      [&](const primec::Expr &) { return "emit_ref"; });
+  CHECK(constRefTyped.handled);
+  CHECK(constRefTyped.emittedStatement == "const int & item = emit_ref; ");
+
+  primec::Emitter::BindingInfo referenceBinding;
+  referenceBinding.typeName = "Reference";
+  referenceBinding.typeTemplateArg = "i32";
+
+  const auto referenceTyped = primec::emitter::runEmitterExprControlIfBlockBindingExplicitStep(
+      stmt,
+      referenceBinding,
+      true,
+      false,
+      false,
+      "",
+      {},
+      {},
+      [&](const primec::Expr &) { return "emit_ref_target"; });
+  CHECK(referenceTyped.handled);
+  CHECK(referenceTyped.emittedStatement == "int & item = *(emit_ref_target); ");
+
+  const auto missingEmit = primec::emitter::runEmitterExprControlIfBlockBindingExplicitStep(
+      stmt,
+      referenceBinding,
+      true,
+      false,
+      false,
+      "",
+      {},
+      {},
+      {});
+  CHECK(missingEmit.handled);
+  CHECK(missingEmit.emittedStatement == "int & item; ");
+}
+
 TEST_CASE("semantics validator expr capture split step tokenizes captures") {
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep("").empty());
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep(" \t \n").empty());
@@ -3173,6 +3277,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlMethodPathStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingAutoStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingExplicitStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingPreludeStep(") !=
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingQualifiersStep(") !=
@@ -3214,6 +3320,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIntegerLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingAutoStep.h\"") !=
+        std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingExplicitStep.h\"") !=
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingPreludeStep.h\"") !=
         std::string::npos);

@@ -382,32 +382,36 @@
               [&](const BindingInfo &candidateBinding) { return isReferenceCandidate(candidateBinding); });
           const bool needsConst = bindingQualifiers.needsConst;
           const bool useRef = bindingQualifiers.useRef;
-          if (hasExplicitType) {
-            std::string type = bindingTypeToCpp(binding, stmt.namespacePrefix, importAliases, structTypeMap);
-            bool isReference = binding.typeName == "Reference";
+          if (const auto explicitBindingStep = emitter::runEmitterExprControlIfBlockBindingExplicitStep(
+                  stmt,
+                  binding,
+                  hasExplicitType,
+                  needsConst,
+                  useRef,
+                  stmt.namespacePrefix,
+                  importAliases,
+                  structTypeMap,
+                  [&](const Expr &candidate) {
+                    return emitExpr(candidate,
+                                    nameMap,
+                                    paramMap,
+                                    structTypeMap,
+                                    importAliases,
+                                    branchTypes,
+                                    returnKinds,
+                                    resultInfos,
+                                    returnStructs,
+                                    allowMathBare);
+                  });
+              explicitBindingStep.handled) {
+            out << explicitBindingStep.emittedStatement;
+          } else {
             if (useRef) {
-              if (type.rfind("const ", 0) != 0) {
-                out << "const " << type << " & " << stmt.name;
-              } else {
-                out << type << " & " << stmt.name;
-              }
+              out << "const auto & " << stmt.name;
             } else {
-              out << (needsConst ? "const " : "") << type << " " << stmt.name;
+              out << (needsConst ? "const " : "") << "auto " << stmt.name;
             }
             if (!stmt.args.empty()) {
-            if (isReference) {
-              out << " = *(" << emitExpr(stmt.args.front(),
-                                         nameMap,
-                                         paramMap,
-                                         structTypeMap,
-                                         importAliases,
-                                         branchTypes,
-                                         returnKinds,
-                                         resultInfos,
-                                         returnStructs,
-                                         allowMathBare)
-                  << ")";
-            } else {
               out << " = " << emitExpr(stmt.args.front(),
                                       nameMap,
                                       paramMap,
@@ -419,28 +423,8 @@
                                       returnStructs,
                                       allowMathBare);
             }
+            out << "; ";
           }
-          out << "; ";
-        } else {
-          if (useRef) {
-            out << "const auto & " << stmt.name;
-          } else {
-            out << (needsConst ? "const " : "") << "auto " << stmt.name;
-          }
-          if (!stmt.args.empty()) {
-            out << " = " << emitExpr(stmt.args.front(),
-                                    nameMap,
-                                    paramMap,
-                                    structTypeMap,
-                                    importAliases,
-                                    branchTypes,
-                                    returnKinds,
-                                    resultInfos,
-                                    returnStructs,
-                                    allowMathBare);
-          }
-          out << "; ";
-        }
         continue;
       }
       out << "(void)"
