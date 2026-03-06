@@ -405,25 +405,25 @@
                   });
               explicitBindingStep.handled) {
             out << explicitBindingStep.emittedStatement;
-          } else {
-            if (useRef) {
-              out << "const auto & " << stmt.name;
-            } else {
-              out << (needsConst ? "const " : "") << "auto " << stmt.name;
-            }
-            if (!stmt.args.empty()) {
-              out << " = " << emitExpr(stmt.args.front(),
-                                      nameMap,
-                                      paramMap,
-                                      structTypeMap,
-                                      importAliases,
-                                      branchTypes,
-                                      returnKinds,
-                                      resultInfos,
-                                      returnStructs,
-                                      allowMathBare);
-            }
-            out << "; ";
+          } else if (const auto fallbackBindingStep = emitter::runEmitterExprControlIfBlockBindingFallbackStep(
+                         stmt,
+                         hasExplicitType,
+                         needsConst,
+                         useRef,
+                         [&](const Expr &candidate) {
+                           return emitExpr(candidate,
+                                           nameMap,
+                                           paramMap,
+                                           structTypeMap,
+                                           importAliases,
+                                           branchTypes,
+                                           returnKinds,
+                                           resultInfos,
+                                           returnStructs,
+                                           allowMathBare);
+                         });
+                     fallbackBindingStep.handled) {
+            out << fallbackBindingStep.emittedStatement;
           }
         continue;
       }

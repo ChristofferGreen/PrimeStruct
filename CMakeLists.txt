@@ -33,6 +33,7 @@ add_library(primec_lib
   src/emitter/EmitterExprControlFloatLiteralStep.cpp
   src/emitter/EmitterExprControlIfBlockBindingAutoStep.cpp
   src/emitter/EmitterExprControlIfBlockBindingExplicitStep.cpp
+  src/emitter/EmitterExprControlIfBlockBindingFallbackStep.cpp
   src/emitter/EmitterExprControlIfBlockBindingPreludeStep.cpp
   src/emitter/EmitterExprControlIfBlockBindingQualifiersStep.cpp
   src/emitter/EmitterExprControlIfBlockFinalValueStep.cpp
