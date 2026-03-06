@@ -1388,6 +1388,43 @@ TEST_CASE("glsl-ir backend writes narrowed f64 greater-than compare source") {
   CHECK(source.find("stack[sp++] = (left > right) ? 1 : 0;") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir backend writes narrowed f64 greater-or-equal compare source") {
+  const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
+  REQUIRE(backend != nullptr);
+  CHECK(backend->requiresOutputPath());
+
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({primec::IrOpcode::PushF64, 0x4000000000000000ull});
+  function.instructions.push_back({primec::IrOpcode::PushF64, 0x4000000000000000ull});
+  function.instructions.push_back({primec::IrOpcode::CmpGeF64, 0});
+  function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(function);
+
+  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+  CHECK_FALSE(static_cast<bool>(ec));
+  const std::filesystem::path outputPath = dir / "ir_backend_registry_cmp_ge_f64.glsl";
+  std::filesystem::remove(outputPath, ec);
+
+  primec::IrBackendEmitOptions options;
+  options.outputPath = outputPath.string();
+  options.inputPath = "glsl_ir_backend_cmp_ge_f64.prime";
+  primec::IrBackendEmitResult result;
+  std::string error;
+  REQUIRE(backend->emit(module, options, result, error));
+  CHECK(error.empty());
+  CHECK(result.exitCode == 0);
+
+  const std::string source = readTextFile(outputPath);
+  CHECK(source.find("// Narrowed GLSL path lowers f64 greater-or-equal compare through f32 payloads.") !=
+        std::string::npos);
+  CHECK(source.find("stack[sp++] = (left >= right) ? 1 : 0;") != std::string::npos);
+}
+
 TEST_CASE("glsl-ir backend reports emitter diagnostics") {
   const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
   REQUIRE(backend != nullptr);
@@ -1396,11 +1433,7 @@ TEST_CASE("glsl-ir backend reports emitter diagnostics") {
   module.entryIndex = 0;
   primec::IrFunction function;
   function.name = "/main";
-  function.instructions.push_back({primec::IrOpcode::PushF32, 0x3f800000u});
-  function.instructions.push_back({primec::IrOpcode::ConvertF32ToF64, 0});
-  function.instructions.push_back({primec::IrOpcode::PushF32, 0x40000000u});
-  function.instructions.push_back({primec::IrOpcode::ConvertF32ToF64, 0});
-  function.instructions.push_back({primec::IrOpcode::CmpGeF64, 0});
+  function.instructions.push_back({primec::IrOpcode::FileOpenRead, 0});
   function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(function);
 
@@ -1445,11 +1478,7 @@ TEST_CASE("spirv-ir backend reports emitter diagnostics") {
   module.entryIndex = 0;
   primec::IrFunction function;
   function.name = "/main";
-  function.instructions.push_back({primec::IrOpcode::PushF32, 0x3f800000u});
-  function.instructions.push_back({primec::IrOpcode::ConvertF32ToF64, 0});
-  function.instructions.push_back({primec::IrOpcode::PushF32, 0x40000000u});
-  function.instructions.push_back({primec::IrOpcode::ConvertF32ToF64, 0});
-  function.instructions.push_back({primec::IrOpcode::CmpGeF64, 0});
+  function.instructions.push_back({primec::IrOpcode::FileOpenRead, 0});
   function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(function);
 
