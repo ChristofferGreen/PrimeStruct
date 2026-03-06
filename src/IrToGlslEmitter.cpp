@@ -158,6 +158,11 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::CmpGeF32:
       emitCompareF32(">=");
       return true;
+    case IrOpcode::ConvertF32ToI32:
+      out << "        stack[sp++] = int(intBitsToFloat(stack[--sp]));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::Jump:
       if (instruction.imm >= instructionCount) {
         error = "IrToGlslEmitter jump target out of range at instruction " + std::to_string(index);
