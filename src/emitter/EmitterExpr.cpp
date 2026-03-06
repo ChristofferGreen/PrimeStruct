@@ -24,6 +24,7 @@
 #include "EmitterExprControlIfBlockStatementStep.h"
 #include "EmitterExprControlIfBlockFinalValueStep.h"
 #include "EmitterExprControlIfBlockEarlyReturnStep.h"
+#include "EmitterExprControlIfTernaryStep.h"
 #include "EmitterExprControlIfEnvelopeStep.h"
 #include "EmitterExprControlIntegerLiteralStep.h"
 #include "EmitterExprControlMethodPathStep.h"

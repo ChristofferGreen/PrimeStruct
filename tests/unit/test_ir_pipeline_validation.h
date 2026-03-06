@@ -3128,6 +3128,51 @@ TEST_CASE("emitter expr control if-block statement step emits void statements") 
   CHECK(missingEmit.emittedStatement.empty());
 }
 
+TEST_CASE("emitter expr control if ternary step emits conditional expression") {
+  int conditionCalls = 0;
+  int thenCalls = 0;
+  int elseCalls = 0;
+  const auto emitted = primec::emitter::runEmitterExprControlIfTernaryStep(
+      [&]() {
+        ++conditionCalls;
+        return std::string("cond_expr");
+      },
+      [&]() {
+        ++thenCalls;
+        return std::string("then_expr");
+      },
+      [&]() {
+        ++elseCalls;
+        return std::string("else_expr");
+      });
+  CHECK(emitted.handled);
+  CHECK(conditionCalls == 1);
+  CHECK(thenCalls == 1);
+  CHECK(elseCalls == 1);
+  CHECK(emitted.emittedExpr == "(cond_expr ? then_expr : else_expr)");
+
+  const auto missingCondition =
+      primec::emitter::runEmitterExprControlIfTernaryStep({}, [] { return std::string("then"); }, [] {
+        return std::string("else");
+      });
+  CHECK_FALSE(missingCondition.handled);
+  CHECK(missingCondition.emittedExpr.empty());
+
+  const auto missingThen =
+      primec::emitter::runEmitterExprControlIfTernaryStep([] { return std::string("cond"); }, {}, [] {
+        return std::string("else");
+      });
+  CHECK_FALSE(missingThen.handled);
+  CHECK(missingThen.emittedExpr.empty());
+
+  const auto missingElse =
+      primec::emitter::runEmitterExprControlIfTernaryStep([] { return std::string("cond"); }, [] {
+        return std::string("then");
+      }, {});
+  CHECK_FALSE(missingElse.handled);
+  CHECK(missingElse.emittedExpr.empty());
+}
+
 TEST_CASE("semantics validator expr capture split step tokenizes captures") {
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep("").empty());
   CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep(" \t \n").empty());
@@ -3379,6 +3424,8 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEarlyReturnStep(") !=
         std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfTernaryStep(") !=
+        std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEnvelopeStep(candidate)") !=
         std::string::npos);
 
@@ -3427,6 +3474,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockEarlyReturnStep.h\"") !=
         std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfTernaryStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlMethodPathStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlStringLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);

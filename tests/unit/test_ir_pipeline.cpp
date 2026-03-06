@@ -52,6 +52,7 @@
 #include "src/emitter/EmitterExprControlIfBlockStatementStep.h"
 #include "src/emitter/EmitterExprControlIfBlockFinalValueStep.h"
 #include "src/emitter/EmitterExprControlIfBlockEarlyReturnStep.h"
+#include "src/emitter/EmitterExprControlIfTernaryStep.h"
 #include "src/emitter/EmitterExprControlIfEnvelopeStep.h"
 #include "src/emitter/EmitterExprControlIntegerLiteralStep.h"
 #include "src/emitter/EmitterExprControlMethodPathStep.h"
