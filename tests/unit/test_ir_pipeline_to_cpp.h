@@ -352,6 +352,26 @@ TEST_CASE("ir to cpp emitter writes file open read opcode") {
   CHECK(cpp.find("int fileFd = ::open(ps_string_table[0], fileOpenFlags, 0644);") != std::string::npos);
 }
 
+TEST_CASE("ir to cpp emitter omits file io helpers when unused") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  REQUIRE(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("#include <cerrno>") == std::string::npos);
+  CHECK(cpp.find("#include <fcntl.h>") == std::string::npos);
+  CHECK(cpp.find("#include <unistd.h>") == std::string::npos);
+  CHECK(cpp.find("static uint32_t psWriteAll(int fd, const void *data, std::size_t size)") == std::string::npos);
+}
+
 TEST_CASE("ir to cpp emitter writes jump and conditional jump control flow") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
