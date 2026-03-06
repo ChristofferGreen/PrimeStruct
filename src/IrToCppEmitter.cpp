@@ -122,6 +122,35 @@ bool moduleUsesF64Helpers(const IrModule &module) {
   return false;
 }
 
+bool usesFileIoHelpers(IrOpcode opcode) {
+  switch (opcode) {
+    case IrOpcode::FileOpenWrite:
+    case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileClose:
+    case IrOpcode::FileFlush:
+    case IrOpcode::FileWriteI32:
+    case IrOpcode::FileWriteI64:
+    case IrOpcode::FileWriteU64:
+    case IrOpcode::FileWriteString:
+    case IrOpcode::FileWriteByte:
+    case IrOpcode::FileWriteNewline:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool moduleUsesFileIoHelpers(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (usesFileIoHelpers(instruction.op)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 std::string irFunctionSymbol(size_t functionIndex) {
   return "ps_fn_" + std::to_string(functionIndex);
 }
@@ -660,6 +689,104 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     }
+    case IrOpcode::FileOpenWrite:
+    case IrOpcode::FileOpenAppend:
+      if (instruction.imm >= context.stringCount) {
+        error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      out << "        int fileOpenFlags = O_WRONLY | O_CREAT";
+      if (instruction.op == IrOpcode::FileOpenWrite) {
+        out << " | O_TRUNC";
+      } else {
+        out << " | O_APPEND";
+      }
+      out << ";\n";
+      out << "        int fileFd = ::open(ps_string_table[" << instruction.imm << "], fileOpenFlags, 0644);\n";
+      out << "        uint64_t filePacked = 0;\n";
+      out << "        if (fileFd < 0) {\n";
+      out << "          uint32_t fileErr = errno == 0 ? 1u : static_cast<uint32_t>(errno);\n";
+      out << "          filePacked = static_cast<uint64_t>(fileErr) << 32;\n";
+      out << "        } else {\n";
+      out << "          filePacked = static_cast<uint64_t>(static_cast<uint32_t>(fileFd));\n";
+      out << "        }\n";
+      out << "        stack[sp++] = filePacked;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::FileClose:
+      out << "        uint64_t closeHandle = stack[--sp];\n";
+      out << "        int closeFd = static_cast<int>(closeHandle & 0xffffffffu);\n";
+      out << "        int closeRc = ::close(closeFd);\n";
+      out << "        uint32_t closeErr = (closeRc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(closeErr);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::FileFlush:
+      out << "        uint64_t flushHandle = stack[--sp];\n";
+      out << "        int flushFd = static_cast<int>(flushHandle & 0xffffffffu);\n";
+      out << "        int flushRc = ::fsync(flushFd);\n";
+      out << "        uint32_t flushErr = (flushRc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(flushErr);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::FileWriteI32:
+      out << "        int64_t fileI32Value = static_cast<int64_t>(static_cast<int32_t>(stack[--sp]));\n";
+      out << "        uint64_t fileI32Handle = stack[--sp];\n";
+      out << "        int fileI32Fd = static_cast<int>(fileI32Handle & 0xffffffffu);\n";
+      out << "        std::string fileI32Text = std::to_string(fileI32Value);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(psWriteAll(fileI32Fd, fileI32Text.data(), fileI32Text.size()));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::FileWriteI64:
+      out << "        int64_t fileI64Value = static_cast<int64_t>(stack[--sp]);\n";
+      out << "        uint64_t fileI64Handle = stack[--sp];\n";
+      out << "        int fileI64Fd = static_cast<int>(fileI64Handle & 0xffffffffu);\n";
+      out << "        std::string fileI64Text = std::to_string(fileI64Value);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(psWriteAll(fileI64Fd, fileI64Text.data(), fileI64Text.size()));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::FileWriteU64:
+      out << "        uint64_t fileU64Value = stack[--sp];\n";
+      out << "        uint64_t fileU64Handle = stack[--sp];\n";
+      out << "        int fileU64Fd = static_cast<int>(fileU64Handle & 0xffffffffu);\n";
+      out << "        std::string fileU64Text = std::to_string(static_cast<unsigned long long>(fileU64Value));\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(psWriteAll(fileU64Fd, fileU64Text.data(), fileU64Text.size()));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::FileWriteString:
+      if (instruction.imm >= context.stringCount) {
+        error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      out << "        uint64_t fileStringHandle = stack[--sp];\n";
+      out << "        int fileStringFd = static_cast<int>(fileStringHandle & 0xffffffffu);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(psWriteAll(fileStringFd, ps_string_table[" << instruction.imm
+          << "], " << context.stringLengths[static_cast<size_t>(instruction.imm)] << "ull));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::FileWriteByte:
+      out << "        uint8_t fileByteValue = static_cast<uint8_t>(stack[--sp] & 0xffu);\n";
+      out << "        uint64_t fileByteHandle = stack[--sp];\n";
+      out << "        int fileByteFd = static_cast<int>(fileByteHandle & 0xffffffffu);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(psWriteAll(fileByteFd, &fileByteValue, 1));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::FileWriteNewline:
+      out << "        uint64_t fileLineHandle = stack[--sp];\n";
+      out << "        int fileLineFd = static_cast<int>(fileLineHandle & 0xffffffffu);\n";
+      out << "        char fileLineValue = '\\n';\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(psWriteAll(fileLineFd, &fileLineValue, 1));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::LoadStringByte:
       if (instruction.imm >= context.stringCount) {
         error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
@@ -716,10 +843,17 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   std::ostringstream body;
   const bool needsF32Helpers = moduleUsesF32Helpers(module);
   const bool needsF64Helpers = moduleUsesF64Helpers(module);
+  const bool needsFileIoHelpers = moduleUsesFileIoHelpers(module);
   body << "#include <cstddef>\n";
   body << "#include <cstdint>\n";
+  body << "#include <string>\n";
   if (needsF32Helpers || needsF64Helpers) {
     body << "#include <cstring>\n";
+  }
+  if (needsFileIoHelpers) {
+    body << "#include <cerrno>\n";
+    body << "#include <fcntl.h>\n";
+    body << "#include <unistd.h>\n";
   }
   body << "\n";
   body << "#include <iostream>\n\n";
@@ -746,6 +880,24 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     body << "  uint64_t bits = 0;\n";
     body << "  std::memcpy(&bits, &value, sizeof(bits));\n";
     body << "  return bits;\n";
+    body << "}\n\n";
+  }
+  if (needsFileIoHelpers) {
+    body << "static uint32_t psWriteAll(int fd, const void *data, std::size_t size) {\n";
+    body << "  const char *cursor = static_cast<const char *>(data);\n";
+    body << "  std::size_t remaining = size;\n";
+    body << "  while (remaining > 0) {\n";
+    body << "    ssize_t wrote = ::write(fd, cursor, remaining);\n";
+    body << "    if (wrote < 0) {\n";
+    body << "      return errno == 0 ? 1u : static_cast<uint32_t>(errno);\n";
+    body << "    }\n";
+    body << "    if (wrote == 0) {\n";
+    body << "      return 5u;\n";
+    body << "    }\n";
+    body << "    remaining -= static_cast<std::size_t>(wrote);\n";
+    body << "    cursor += wrote;\n";
+    body << "  }\n";
+    body << "  return 0u;\n";
     body << "}\n\n";
   }
   body << "static const char *ps_string_table[] = {\n";

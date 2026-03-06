@@ -333,8 +333,7 @@ TEST_CASE("cpp-ir emitter reports unsupported opcodes") {
   const std::string source = R"(
 [return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
 main() {
-  [File<Write>] file{File<Write>("/tmp/primec_cpp_ir_unsupported.txt"utf8)?}
-  file.write("x"utf8)?
+  [File<Read>] file{File<Read>("/dev/null"utf8)?}
   file.close()?
   return(Result.ok())
 }
@@ -351,6 +350,57 @@ log_file_error([FileError] err) {
       "./primec --emit=cpp-ir " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("ir-to-cpp failed: IrToCppEmitter unsupported opcode") != std::string::npos);
+}
+
+TEST_CASE("cpp-ir emitter writes file io paths") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+main() {
+  [File<Write>] file{File<Write>("/tmp/primec_cpp_ir_file_io.txt"utf8)?}
+  file.write("x"utf8)?
+  file.flush()?
+  file.close()?
+  return(Result.ok())
+}
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ir_file_io_subset.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_cpp_ir_file_io_subset.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("static uint32_t psWriteAll(int fd, const void *data, std::size_t size)") != std::string::npos);
+  CHECK(output.find("int fileFd = ::open(ps_string_table[0], fileOpenFlags, 0644);") != std::string::npos);
+  CHECK(output.find("int closeRc = ::close(closeFd);") != std::string::npos);
+}
+
+TEST_CASE("cpp emitter uses ir backend for file io subset") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+main() {
+  [File<Write>] file{File<Write>("/tmp/primec_cpp_file_io.txt"utf8)?}
+  file.write("x"utf8)?
+  file.flush()?
+  file.close()?
+  return(Result.ok())
+}
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_file_io_ir_first.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_cpp_file_io_ir_first.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("static uint32_t psWriteAll(int fd, const void *data, std::size_t size)") != std::string::npos);
+  CHECK(output.find("ps_entry_0") != std::string::npos);
 }
 
 TEST_CASE("cpp-ir emitter writes f64 arithmetic paths") {
@@ -567,12 +617,11 @@ main() {
   CHECK(std::filesystem::exists(outputPath));
 }
 
-TEST_CASE("cpp emitter falls back to legacy output when ir file io subset is unsupported") {
+TEST_CASE("cpp emitter falls back to legacy output when ir file read subset is unsupported") {
   const std::string source = R"(
 [return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
 main() {
-  [File<Write>] file{File<Write>("/tmp/primec_cpp_ir_fallback_file_io.txt"utf8)?}
-  file.write("x"utf8)?
+  [File<Read>] file{File<Read>("/dev/null"utf8)?}
   file.close()?
   return(Result.ok())
 }
@@ -715,6 +764,46 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
+TEST_CASE("exe-ir emitter compiles and runs file io subset") {
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_exe_ir_file_io_subset.txt").string();
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(outPath);
+  const std::string source =
+      "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] file{ File<Write>(\"" + escapedPath + "\"utf8)? }\n"
+      "  [array<i32>] bytes{ array<i32>(65i32, 66i32, 67i32) }\n"
+      "  file.write(\"Hello \"utf8, 123i32, \" world\"utf8)?\n"
+      "  file.write_line(\"\"utf8)?\n"
+      "  file.write_byte(10i32)?\n"
+      "  file.write_bytes(bytes)?\n"
+      "  file.flush()?\n"
+      "  file.close()?\n"
+      "  return(Result.ok())\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(\"file error\"utf8)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_exe_ir_file_io_subset.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_file_io_subset").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+  CHECK(readFile(outPath) == "Hello 123 world\n\nABC");
+}
+
 TEST_CASE("exe-ir emitter reports misaligned pointer dereference") {
   const std::string source = R"(
 [return<int>]
@@ -846,6 +935,46 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 8);
+}
+
+TEST_CASE("exe emitter uses ir backend for file io subset") {
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_exe_file_io_ir_first.txt").string();
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(outPath);
+  const std::string source =
+      "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] file{ File<Write>(\"" + escapedPath + "\"utf8)? }\n"
+      "  [array<i32>] bytes{ array<i32>(65i32, 66i32, 67i32) }\n"
+      "  file.write(\"Hello \"utf8, 123i32, \" world\"utf8)?\n"
+      "  file.write_line(\"\"utf8)?\n"
+      "  file.write_byte(10i32)?\n"
+      "  file.write_bytes(bytes)?\n"
+      "  file.flush()?\n"
+      "  file.close()?\n"
+      "  return(Result.ok())\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(\"file error\"utf8)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_exe_file_io_ir_first.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_file_io_ir_first").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+  CHECK(readFile(outPath) == "Hello 123 world\n\nABC");
 }
 
 TEST_CASE("exe-ir emitter compiles and runs f64 arithmetic subset") {
@@ -1095,40 +1224,25 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("exe emitter falls back to legacy output when ir file io subset is unsupported") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_exe_ir_fallback_legacy_cpp.txt").string();
-  auto escape = [](const std::string &text) {
-    std::string out;
-    out.reserve(text.size());
-    for (char c : text) {
-      if (c == '\\' || c == '"') {
-        out.push_back('\\');
-      }
-      out.push_back(c);
-    }
-    return out;
-  };
-  const std::string escapedPath = escape(outPath);
-  const std::string source =
-      "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
-      "main() {\n"
-      "  [File<Write>] file{File<Write>(\"" + escapedPath + "\"utf8)?}\n"
-      "  file.write(\"x\"utf8)?\n"
-      "  file.close()?\n"
-      "  return(Result.ok())\n"
-      "}\n"
-      "[effects(io_err)]\n"
-      "log_file_error([FileError] err) {\n"
-      "  print_line_error(\"file error\"utf8)\n"
-      "}\n";
+TEST_CASE("exe emitter falls back to legacy output when ir file read subset is unsupported") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+main() {
+  [File<Read>] file{File<Read>("/dev/null"utf8)?}
+  file.close()?
+  return(Result.ok())
+}
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
   const std::string srcPath = writeTemp("compile_exe_ir_fallback_legacy_cpp.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_fallback_legacy_cpp").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
-  CHECK(readFile(outPath) == "x");
 }
 
 TEST_CASE("compiles and runs implicit void main") {
