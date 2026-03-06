@@ -1609,7 +1609,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
       std::string elemType;
-      auto setCollectionMethodTarget = [&](const char *path) {
+      auto setCollectionMethodTarget = [&](const std::string &path) {
         resolvedOut = path;
         isBuiltinOut = defMap_.count(resolvedOut) == 0;
         return true;
@@ -1631,6 +1631,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (methodName == "capacity") {
         if (resolveVectorTarget(receiver, elemType)) {
           return setCollectionMethodTarget("/vector/capacity");
+        }
+      }
+      if (methodName == "at" || methodName == "at_unsafe") {
+        if (resolveVectorTarget(receiver, elemType)) {
+          return setCollectionMethodTarget("/vector/" + methodName);
+        }
+        if (resolveArrayTarget(receiver, elemType)) {
+          return setCollectionMethodTarget("/array/" + methodName);
+        }
+        if (resolveStringTarget(receiver)) {
+          return setCollectionMethodTarget("/string/" + methodName);
+        }
+        if (resolveMapTarget(receiver)) {
+          return setCollectionMethodTarget("/map/" + methodName);
         }
       }
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
@@ -1988,6 +2002,24 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
+    } else if ((expr.name == "at" || expr.name == "at_unsafe") && expr.args.size() == 2 &&
+               defMap_.find(resolved) == defMap_.end()) {
+      std::string elemType;
+      if (resolveVectorTarget(expr.args.front(), elemType) || resolveArrayTarget(expr.args.front(), elemType) ||
+          resolveStringTarget(expr.args.front()) || resolveMapTarget(expr.args.front())) {
+        usedMethodTarget = true;
+        bool isBuiltinMethod = false;
+        std::string methodResolved;
+        if (!resolveMethodTarget(expr.args.front(), expr.name, methodResolved, isBuiltinMethod)) {
+          return false;
+        }
+        if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+          error_ = "unknown method: " + methodResolved;
+          return false;
+        }
+        resolved = methodResolved;
+        resolvedMethod = isBuiltinMethod;
+      }
     }
     if (usedMethodTarget && !resolvedMethod) {
       auto defIt = defMap_.find(resolved);

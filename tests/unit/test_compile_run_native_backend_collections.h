@@ -487,6 +487,50 @@ main() {
   CHECK(runCommand(exePath) == 66);
 }
 
+TEST_CASE("compiles and runs native user array at call shadow") {
+  const std::string source = R"(
+[return<int>]
+/array/at([array<i32>] values, [i32] index) {
+  return(61i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(at(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_array_at_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_array_at_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 61);
+}
+
+TEST_CASE("compiles and runs native user map at_unsafe call shadow") {
+  const std::string source = R"(
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(62i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_map_at_unsafe_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_map_at_unsafe_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 62);
+}
+
 TEST_CASE("compiles and runs native vector push helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

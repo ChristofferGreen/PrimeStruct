@@ -11199,6 +11199,65 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(capacityResolveCalls == 1);
   CHECK(capacityEmitCalls == 1);
 
+  primec::Expr indexArg;
+  indexArg.kind = primec::Expr::Kind::Literal;
+  indexArg.intWidth = 32;
+  indexArg.literalValue = 1;
+  primec::Expr atCall;
+  atCall.kind = primec::Expr::Kind::Call;
+  atCall.name = "at";
+  atCall.args = {targetArg, indexArg};
+
+  int atResolveCalls = 0;
+  int atEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            atCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++atResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++atEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(atResolveCalls == 1);
+  CHECK(atEmitCalls == 1);
+
+  primec::Expr atUnsafeCall = atCall;
+  atUnsafeCall.name = "at_unsafe";
+  int atUnsafeResolveCalls = 0;
+  int atUnsafeEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            atUnsafeCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++atUnsafeResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at_unsafe");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++atUnsafeEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at_unsafe");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(atUnsafeResolveCalls == 1);
+  CHECK(atUnsafeEmitCalls == 1);
+
   int builtinLikeResolveCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
             countCall,
@@ -13026,6 +13085,75 @@ TEST_CASE("ir lowerer setup type helper resolves count call method return kinds"
       &methodResolved));
   CHECK(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer setup type helper resolves access call method return kinds") {
+  primec::Definition atDef;
+  atDef.fullPath = "/array/at";
+  primec::Definition atUnsafeDef;
+  atUnsafeDef.fullPath = "/array/at_unsafe";
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo scalarInfo;
+  scalarInfo.returnsVoid = false;
+  scalarInfo.returnsArray = false;
+  scalarInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  infoByPath.emplace("/array/at", scalarInfo);
+  infoByPath.emplace("/array/at_unsafe", scalarInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr atCall;
+  atCall.kind = primec::Expr::Kind::Call;
+  atCall.name = "at";
+  atCall.args = {receiverExpr, indexExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  bool methodResolved = false;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      atCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&atDef](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return &atDef; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr atUnsafeCall = atCall;
+  atUnsafeCall.name = "at_unsafe";
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  methodResolved = false;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      atUnsafeCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&atUnsafeDef](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return &atUnsafeDef; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
 TEST_CASE("ir lowerer setup type helper resolves builtin-like count call methods") {

@@ -887,6 +887,29 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Int;
       }
     }
+    if (!expr.isMethodCall && (expr.name == "at" || expr.name == "at_unsafe") && expr.args.size() == 2 &&
+        defMap_.find(resolved) == defMap_.end()) {
+      std::string elemType;
+      std::string keyType;
+      std::string valueType;
+      if (resolveVectorTarget(expr.args.front(), elemType) || resolveArrayTarget(expr.args.front(), elemType) ||
+          resolveStringTarget(expr.args.front()) || resolveMapTarget(expr.args.front(), keyType, valueType)) {
+        std::string methodResolved;
+        if (resolveMethodCallPath(methodResolved)) {
+          auto methodIt = defMap_.find(methodResolved);
+          if (methodIt != defMap_.end()) {
+            if (!inferDefinitionReturnKind(*methodIt->second)) {
+              return ReturnKind::Unknown;
+            }
+            auto kindIt = returnKinds_.find(methodResolved);
+            if (kindIt != returnKinds_.end()) {
+              return kindIt->second;
+            }
+            return ReturnKind::Unknown;
+          }
+        }
+      }
+    }
     std::string builtinName;
     if (defMap_.find(resolved) == defMap_.end() && getBuiltinArrayAccessName(expr, builtinName) &&
         expr.args.size() == 2) {

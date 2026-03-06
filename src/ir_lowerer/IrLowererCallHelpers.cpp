@@ -1221,7 +1221,9 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     std::string &error) {
   const bool isCountCall = isSimpleCallName(expr, "count");
   const bool isCapacityCall = isSimpleCallName(expr, "capacity");
-  if (expr.isMethodCall || (!isCountCall && !isCapacityCall) || expr.args.size() != 1) {
+  const bool isAccessCall = isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe");
+  const size_t expectedArgCount = isAccessCall ? 2u : 1u;
+  if (expr.isMethodCall || (!isCountCall && !isCapacityCall && !isAccessCall) || expr.args.size() != expectedArgCount) {
     return CountMethodFallbackResult::NotHandled;
   }
   (void)isArrayCountCall;

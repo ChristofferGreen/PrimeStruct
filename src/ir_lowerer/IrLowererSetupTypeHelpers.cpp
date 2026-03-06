@@ -360,7 +360,10 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
-  if (!isSimpleCallName(callExpr, "count") || callExpr.args.size() != 1) {
+  const bool isCountCall = isSimpleCallName(callExpr, "count") && callExpr.args.size() == 1;
+  const bool isAccessCall =
+      (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) && callExpr.args.size() == 2;
+  if (!isCountCall && !isAccessCall) {
     return false;
   }
   (void)isArrayCountCall;
