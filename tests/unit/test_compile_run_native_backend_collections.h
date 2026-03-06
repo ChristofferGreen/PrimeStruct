@@ -353,6 +353,28 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("compiles and runs native user push helper shadow") {
+  const std::string source = R"(
+[return<int>]
+push([i32] left, [i32] right) {
+  return(plus(left, right))
+}
+
+[return<int>]
+main() {
+  push(1i32, 2i32)
+  return(push(4i32, 3i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_push_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_push_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("rejects native vector reserve beyond capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

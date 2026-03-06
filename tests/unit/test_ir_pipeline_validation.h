@@ -25075,6 +25075,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
           }
           return true;
         },
+        [](const primec::Expr &) { return false; },
         [&]() {
           ++capacityExceededCalls;
           instructions.push_back({primec::IrOpcode::PushI32, 901});
@@ -25211,6 +25212,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [&]() { return nextTempLocal++; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
             [] {},
             [] {},
             [] {},
@@ -25230,6 +25232,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [&]() { return nextTempLocal++; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
             [] {},
             [] {},
             [] {},
@@ -25248,6 +25251,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [&]() { return nextTempLocal++; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
             [] {},
             [] {},
             [] {},
@@ -25268,6 +25272,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [&]() { return nextTempLocal++; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Float32; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
             [] {},
             [] {},
             [] {},
@@ -25275,6 +25280,55 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             error) == EmitResult::Error);
   CHECK(error == "reserve requires integer capacity");
+}
+
+TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
+  using EmitResult = primec::ir_lowerer::VectorStatementHelperEmitResult;
+  using Kind = primec::ir_lowerer::LocalInfo::Kind;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr target;
+  target.kind = primec::Expr::Kind::Name;
+  target.name = "v";
+
+  primec::Expr value;
+  value.kind = primec::Expr::Kind::Literal;
+  value.intWidth = 32;
+  value.literalValue = 9;
+
+  primec::Expr pushCall;
+  pushCall.kind = primec::Expr::Kind::Call;
+  pushCall.name = "push";
+  pushCall.args = {target, value};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = Kind::Vector;
+  vectorInfo.valueKind = ValueKind::Int32;
+  vectorInfo.isMutable = true;
+  vectorInfo.index = 2;
+  locals.emplace("v", vectorInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextTempLocal = 10;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            pushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &candidate) { return candidate.name == "push"; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer flow helpers resolve buffer init info") {

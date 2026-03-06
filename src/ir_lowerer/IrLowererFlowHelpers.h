@@ -154,6 +154,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
     const std::function<void()> &emitVectorCapacityExceeded,
     const std::function<void()> &emitVectorPopOnEmpty,
     const std::function<void()> &emitVectorIndexOutOfBounds,

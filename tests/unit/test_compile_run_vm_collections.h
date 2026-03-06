@@ -216,6 +216,24 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
+TEST_CASE("runs vm with user push helper shadow") {
+  const std::string source = R"(
+[return<int>]
+push([i32] left, [i32] right) {
+  return(plus(left, right))
+}
+
+[return<int>]
+main() {
+  push(1i32, 2i32)
+  return(push(4i32, 3i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_push_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
+}
+
 TEST_CASE("rejects vm vector reserve beyond capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

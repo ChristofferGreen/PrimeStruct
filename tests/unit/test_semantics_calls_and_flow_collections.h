@@ -794,6 +794,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("user definition named push with positional args is not treated as builtin") {
+  const std::string source = R"(
+[return<int>]
+push([i32] left, [i32] right) {
+  return(plus(left, right))
+}
+
+[return<int>]
+main() {
+  push(1i32, 2i32)
+  return(push(3i32, 4i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("user definition named push accepts named arguments") {
   const std::string source = R"(
 [return<int>]

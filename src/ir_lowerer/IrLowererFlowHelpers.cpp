@@ -429,6 +429,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
     const std::function<void()> &emitVectorCapacityExceeded,
     const std::function<void()> &emitVectorPopOnEmpty,
     const std::function<void()> &emitVectorIndexOutOfBounds,
@@ -451,6 +452,9 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   }
 
   if (vectorHelper.empty()) {
+    return VectorStatementHelperEmitResult::NotMatched;
+  }
+  if (isUserDefinedVectorHelperCall(stmt)) {
     return VectorStatementHelperEmitResult::NotMatched;
   }
   if (!stmt.templateArgs.empty()) {

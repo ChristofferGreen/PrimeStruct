@@ -317,6 +317,13 @@
           [&]() { return allocTempLocal(); },
           [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
           [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+          [&](const Expr &candidate) {
+            if (candidate.isMethodCall && !isArrayCountCall(candidate, localsIn) &&
+                !isStringCountCall(candidate, localsIn) && !isVectorCapacityCall(candidate, localsIn)) {
+              return resolveMethodCallDefinition(candidate, localsIn) != nullptr;
+            }
+            return resolveDefinitionCall(candidate) != nullptr;
+          },
           [&]() { emitVectorCapacityExceeded(); },
           [&]() { emitVectorPopOnEmpty(); },
           [&]() { emitVectorIndexOutOfBounds(); },
