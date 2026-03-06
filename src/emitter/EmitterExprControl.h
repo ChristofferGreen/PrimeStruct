@@ -248,47 +248,26 @@
     out << "}())";
     return out.str();
   }
-  if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlock(expr, nameMap)) {
-    Expr callExpr = expr;
-    callExpr.bodyArguments.clear();
-    callExpr.hasBodyArguments = false;
-    Expr blockExpr = expr;
-    blockExpr.name = "block";
-    blockExpr.args.clear();
-    blockExpr.templateArgs.clear();
-    blockExpr.argNames.clear();
-    blockExpr.isMethodCall = false;
-    blockExpr.isBinding = false;
-    blockExpr.isLambda = false;
-    blockExpr.hasBodyArguments = true;
-    std::ostringstream out;
-    out << "([&]() { ";
-    out << "auto ps_call_value = "
-        << emitExpr(callExpr,
-                    nameMap,
-                    paramMap,
-                    structTypeMap,
-                    importAliases,
-                    localTypes,
-                    returnKinds,
-                    resultInfos,
-                    returnStructs,
-                    allowMathBare)
-        << "; ";
-    out << "(void)"
-        << emitExpr(blockExpr,
-                    nameMap,
-                    paramMap,
-                    structTypeMap,
-                    importAliases,
-                    localTypes,
-                    returnKinds,
-                    resultInfos,
-                    returnStructs,
-                    allowMathBare)
-        << "; ";
-    out << "return ps_call_value; }())";
-    return out.str();
+  if (const auto wrappedBodyCall = emitter::runEmitterExprControlBodyWrapperStep(
+          expr,
+          nameMap,
+          [&](const Expr &candidate, const std::unordered_map<std::string, std::string> &candidateNameMap) {
+            return isBuiltinBlock(candidate, candidateNameMap);
+          },
+          [&](const Expr &candidate) {
+            return emitExpr(candidate,
+                            nameMap,
+                            paramMap,
+                            structTypeMap,
+                            importAliases,
+                            localTypes,
+                            returnKinds,
+                            resultInfos,
+                            returnStructs,
+                            allowMathBare);
+          });
+      wrappedBodyCall.has_value()) {
+    return *wrappedBodyCall;
   }
   if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
     auto emitBranchValueExpr =

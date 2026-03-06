@@ -17,6 +17,7 @@ add_library(primec_lib
   src/emitter/EmitterEmitSetupMathImport.cpp
   src/emitter/EmitterExpr.cpp
   src/emitter/EmitterExprControlBoolLiteralStep.cpp
+  src/emitter/EmitterExprControlBodyWrapperStep.cpp
   src/emitter/EmitterExprControlCallPathStep.cpp
   src/emitter/EmitterExprControlCountRewriteStep.cpp
   src/emitter/EmitterExprControlFieldAccessStep.cpp

@@ -1879,6 +1879,69 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   CHECK(*resolvedPath == "/Vec3/count");
 }
 
+TEST_CASE("emitter expr control body-wrapper step rewrites body-argument calls") {
+  primec::Expr noBodyExpr;
+  noBodyExpr.kind = primec::Expr::Kind::Call;
+  noBodyExpr.name = "compute";
+  CHECK_FALSE(primec::emitter::runEmitterExprControlBodyWrapperStep(
+      noBodyExpr,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, std::string> &) { return false; },
+      [&](const primec::Expr &) { return "unused"; }).has_value());
+
+  primec::Expr bodyExpr = noBodyExpr;
+  bodyExpr.hasBodyArguments = true;
+  bodyExpr.bodyArguments.push_back(primec::Expr{});
+
+  bool emitCalled = false;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlBodyWrapperStep(
+      bodyExpr,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, std::string> &) { return true; },
+      [&](const primec::Expr &) {
+        emitCalled = true;
+        return "unused";
+      }).has_value());
+  CHECK_FALSE(emitCalled);
+
+  CHECK_FALSE(primec::emitter::runEmitterExprControlBodyWrapperStep(
+      bodyExpr,
+      {},
+      {},
+      [&](const primec::Expr &) { return "unused"; }).has_value());
+  CHECK_FALSE(primec::emitter::runEmitterExprControlBodyWrapperStep(
+      bodyExpr,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, std::string> &) { return false; },
+      {}).has_value());
+
+  int emitCalls = 0;
+  auto wrapped = primec::emitter::runEmitterExprControlBodyWrapperStep(
+      bodyExpr,
+      {},
+      [&](const primec::Expr &, const std::unordered_map<std::string, std::string> &) { return false; },
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        if (candidate.hasBodyArguments) {
+          CHECK(candidate.name == "block");
+          CHECK(candidate.args.empty());
+          CHECK(candidate.templateArgs.empty());
+          CHECK(candidate.argNames.empty());
+          CHECK_FALSE(candidate.isMethodCall);
+          CHECK_FALSE(candidate.isBinding);
+          CHECK_FALSE(candidate.isLambda);
+          CHECK(candidate.bodyArguments.size() == 1);
+          return std::string("emit_block");
+        }
+        CHECK(candidate.name == "compute");
+        CHECK(candidate.bodyArguments.empty());
+        return std::string("emit_call");
+      });
+  REQUIRE(wrapped.has_value());
+  CHECK(emitCalls == 2);
+  CHECK(*wrapped == "([&]() { auto ps_call_value = emit_call; (void)emit_block; return ps_call_value; }())");
+}
+
 TEST_CASE("emitter expr control if-envelope step recognizes block envelopes") {
   primec::Expr notCall;
   notCall.kind = primec::Expr::Kind::Literal;
@@ -2130,6 +2193,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprControlHeaderSource = readText(emitterExprControlHeaderPath);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBoolLiteralStep(expr)") != std::string::npos);
+  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBodyWrapperStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFieldAccessStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlCallPathStep(") != std::string::npos);
   CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlCountRewriteStep(") != std::string::npos);
@@ -2146,6 +2210,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   const std::string emitterExprSource = readText(emitterExprPath);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlBoolLiteralStep.h\"") != std::string::npos);
+  CHECK(emitterExprSource.find("#include \"EmitterExprControlBodyWrapperStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlCallPathStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlCountRewriteStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlFieldAccessStep.h\"") != std::string::npos);
