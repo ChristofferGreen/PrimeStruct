@@ -2230,6 +2230,78 @@ TEST_CASE("ir lowerer inline-call gpu-locals step validates dependencies") {
   CHECK(error == "native backend missing inline-call gpu-locals step dependency: calleeLocals");
 }
 
+TEST_CASE("ir lowerer inline-call return-value step emits expected instructions") {
+  primec::IrFunction function;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::runLowerInlineCallReturnValueStep(
+      {
+          .function = &function,
+          .returnsVoid = false,
+          .returnLocal = 17,
+          .structDefinition = false,
+          .requireValue = true,
+      },
+      error));
+  CHECK(error.empty());
+  REQUIRE(function.instructions.size() == 1u);
+  CHECK(function.instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(function.instructions[0].imm == 17u);
+
+  CHECK(primec::ir_lowerer::runLowerInlineCallReturnValueStep(
+      {
+          .function = &function,
+          .returnsVoid = true,
+          .returnLocal = -1,
+          .structDefinition = true,
+          .requireValue = true,
+      },
+      error));
+  CHECK(error.empty());
+  REQUIRE(function.instructions.size() == 2u);
+  CHECK(function.instructions[1].op == primec::IrOpcode::PushI32);
+  CHECK(function.instructions[1].imm == 0u);
+
+  CHECK(primec::ir_lowerer::runLowerInlineCallReturnValueStep(
+      {
+          .function = &function,
+          .returnsVoid = true,
+          .returnLocal = -1,
+          .structDefinition = true,
+          .requireValue = false,
+      },
+      error));
+  CHECK(error.empty());
+  CHECK(function.instructions.size() == 2u);
+}
+
+TEST_CASE("ir lowerer inline-call return-value step validates dependencies") {
+  primec::IrFunction function;
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallReturnValueStep(
+      {
+          .function = nullptr,
+          .returnsVoid = true,
+          .returnLocal = -1,
+          .structDefinition = false,
+          .requireValue = false,
+      },
+      error));
+  CHECK(error == "native backend missing inline-call return-value step dependency: function");
+
+  CHECK_FALSE(primec::ir_lowerer::runLowerInlineCallReturnValueStep(
+      {
+          .function = &function,
+          .returnsVoid = false,
+          .returnLocal = -1,
+          .structDefinition = false,
+          .requireValue = false,
+      },
+      error));
+  CHECK(error == "native backend missing inline-call return-value step dependency: returnLocal");
+}
+
 TEST_CASE("ir lowerer statements entry-execution step wires context and cleanup") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";
@@ -5726,6 +5798,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsSourceMapStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallCleanupStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallGpuLocalsStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallReturnValueStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallStatementStep.h\"") != std::string::npos);
 
   const std::filesystem::path setupHeaderPath =
@@ -5816,6 +5889,7 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   const std::string inlineCallsHeaderSource = readText(inlineCallsHeaderPath);
   CHECK(inlineCallsHeaderSource.find("runLowerInlineCallCleanupStep(") != std::string::npos);
   CHECK(inlineCallsHeaderSource.find("runLowerInlineCallGpuLocalsStep(") != std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("runLowerInlineCallReturnValueStep(") != std::string::npos);
   CHECK(inlineCallsHeaderSource.find("runLowerInlineCallStatementStep(") != std::string::npos);
   CHECK(inlineCallsHeaderSource.find("const size_t startInstructionIndex = function.instructions.size();") ==
         std::string::npos);
@@ -5828,6 +5902,10 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(inlineCallsHeaderSource.find("function.instructions[jumpIndex].imm = static_cast<int32_t>(cleanupIndex);") ==
         std::string::npos);
   CHECK(inlineCallsHeaderSource.find("for (size_t jumpIndex : context.returnJumps)") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find(
+            "function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(context.returnLocal)});") ==
+        std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("if (structDef && requireValue && context.returnsVoid)") == std::string::npos);
 }
 
 TEST_CASE("emitter emit setup source delegation stays stable") {

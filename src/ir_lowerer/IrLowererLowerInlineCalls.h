@@ -172,12 +172,17 @@
     }
     activeInlineContext = prevContext;
 
-    if (!context.returnsVoid) {
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(context.returnLocal)});
-    }
-    if (structDef && requireValue && context.returnsVoid) {
-      // VM/native treat struct constructor calls as void; synthesize a value for expression contexts.
-      function.instructions.push_back({IrOpcode::PushI32, 0});
+    if (!ir_lowerer::runLowerInlineCallReturnValueStep(
+            {
+                .function = &function,
+                .returnsVoid = context.returnsVoid,
+                .returnLocal = context.returnLocal,
+                .structDefinition = structDef,
+                .requireValue = requireValue,
+            },
+            error)) {
+      inlineStack.erase(callee.fullPath);
+      return false;
     }
 
     inlineStack.erase(callee.fullPath);
