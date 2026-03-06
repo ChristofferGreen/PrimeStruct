@@ -501,6 +501,16 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::FileOpenWrite:
+      if (instruction.imm >= stringTable.size()) {
+        error = "IrToGlslEmitter string index out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      out << "        // GLSL backend cannot open files; push deterministic invalid file handle.\n";
+      out << "        stack[sp++] = -1;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::LoadStringByte:
       if (instruction.imm >= stringTable.size()) {
         error = "IrToGlslEmitter string index out of range at instruction " + std::to_string(index);
