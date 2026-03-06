@@ -9,9 +9,13 @@
     return false;
   }
   ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
+  ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
+  ir_lowerer::LowerExprEmitReadbackPassthroughCallFn emitReadbackPassthroughCall;
   if (!ir_lowerer::runLowerExprEmitSetup(
           {},
           emitMovePassthroughCall,
+          emitUploadPassthroughCall,
+          emitReadbackPassthroughCall,
           error)) {
     return false;
   }
@@ -495,19 +499,19 @@
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               error);
         }
-        const auto uploadResult = ir_lowerer::tryEmitUnaryPassthroughCall(
-              expr,
-              "upload",
-              [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
-              error);
+        const auto uploadResult = emitUploadPassthroughCall(
+            expr,
+            localsIn,
+            [&](const Expr &argExpr, const LocalMap &argLocals) { return emitExpr(argExpr, argLocals); },
+            error);
         if (uploadResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
           return uploadResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
         }
-        const auto readbackResult = ir_lowerer::tryEmitUnaryPassthroughCall(
-              expr,
-              "readback",
-              [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
-              error);
+        const auto readbackResult = emitReadbackPassthroughCall(
+            expr,
+            localsIn,
+            [&](const Expr &argExpr, const LocalMap &argLocals) { return emitExpr(argExpr, argLocals); },
+            error);
         if (readbackResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
           return readbackResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
         }

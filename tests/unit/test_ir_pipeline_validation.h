@@ -1103,45 +1103,72 @@ TEST_CASE("ir lowerer return/calls setup validates dependencies") {
   CHECK_FALSE(static_cast<bool>(emitFileErrorWhy));
 }
 
-TEST_CASE("ir lowerer expr emit setup wires move passthrough callback") {
+TEST_CASE("ir lowerer expr emit setup wires unary passthrough callbacks") {
   primec::ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
+  primec::ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
+  primec::ir_lowerer::LowerExprEmitReadbackPassthroughCallFn emitReadbackPassthroughCall;
   std::string error;
   CHECK(primec::ir_lowerer::runLowerExprEmitSetup(
       {},
       emitMovePassthroughCall,
+      emitUploadPassthroughCall,
+      emitReadbackPassthroughCall,
       error));
   CHECK(error.empty());
   CHECK(static_cast<bool>(emitMovePassthroughCall));
+  CHECK(static_cast<bool>(emitUploadPassthroughCall));
+  CHECK(static_cast<bool>(emitReadbackPassthroughCall));
 
   primec::Expr literalExpr;
   literalExpr.kind = primec::Expr::Kind::Literal;
   literalExpr.literalValue = 1;
 
-  primec::Expr moveExpr;
-  moveExpr.kind = primec::Expr::Kind::Call;
-  moveExpr.name = "move";
-  moveExpr.args.push_back(literalExpr);
+  auto assertUnaryPassthrough = [&](const primec::ir_lowerer::LowerExprEmitUnaryPassthroughCallFn &emitPassthrough,
+                                    const std::string &callName) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.name = callName;
+    callExpr.args.push_back(literalExpr);
 
-  int emitExprCalls = 0;
-  const auto result = emitMovePassthroughCall(
-      moveExpr,
-      primec::ir_lowerer::LocalMap{},
-      [&](const primec::Expr &argExpr, const primec::ir_lowerer::LocalMap &) {
-        ++emitExprCalls;
-        return argExpr.kind == primec::Expr::Kind::Literal;
-      },
-      error);
-  CHECK(result == primec::ir_lowerer::UnaryPassthroughCallResult::Emitted);
-  CHECK(error.empty());
-  CHECK(emitExprCalls == 1);
+    int emitExprCalls = 0;
+    std::string passError;
+    const auto result = emitPassthrough(
+        callExpr,
+        primec::ir_lowerer::LocalMap{},
+        [&](const primec::Expr &argExpr, const primec::ir_lowerer::LocalMap &) {
+          ++emitExprCalls;
+          return argExpr.kind == primec::Expr::Kind::Literal;
+        },
+        passError);
+    CHECK(result == primec::ir_lowerer::UnaryPassthroughCallResult::Emitted);
+    CHECK(passError.empty());
+    CHECK(emitExprCalls == 1);
+  };
+  assertUnaryPassthrough(emitMovePassthroughCall, "move");
+  assertUnaryPassthrough(emitUploadPassthroughCall, "upload");
+  assertUnaryPassthrough(emitReadbackPassthroughCall, "readback");
+
+  primec::Expr unknownCallExpr;
+  unknownCallExpr.kind = primec::Expr::Kind::Call;
+  unknownCallExpr.name = "unknown";
+  unknownCallExpr.args.push_back(literalExpr);
+  CHECK(emitUploadPassthroughCall(
+            unknownCallExpr,
+            primec::ir_lowerer::LocalMap{},
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            error) == primec::ir_lowerer::UnaryPassthroughCallResult::NotMatched);
 }
 
-TEST_CASE("ir lowerer expr emit setup validates move callback dependencies") {
+TEST_CASE("ir lowerer expr emit setup validates unary callback dependencies") {
   primec::ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
+  primec::ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
+  primec::ir_lowerer::LowerExprEmitReadbackPassthroughCallFn emitReadbackPassthroughCall;
   std::string error;
   REQUIRE(primec::ir_lowerer::runLowerExprEmitSetup(
       {},
       emitMovePassthroughCall,
+      emitUploadPassthroughCall,
+      emitReadbackPassthroughCall,
       error));
   REQUIRE(error.empty());
 
@@ -1155,6 +1182,18 @@ TEST_CASE("ir lowerer expr emit setup validates move callback dependencies") {
 
   const auto result = emitMovePassthroughCall(moveExpr, primec::ir_lowerer::LocalMap{}, {}, error);
   CHECK(result == primec::ir_lowerer::UnaryPassthroughCallResult::Error);
+  CHECK(error == "native backend missing expr emit setup dependency: emitExpr");
+
+  primec::Expr uploadExpr = moveExpr;
+  uploadExpr.name = "upload";
+  const auto uploadResult = emitUploadPassthroughCall(uploadExpr, primec::ir_lowerer::LocalMap{}, {}, error);
+  CHECK(uploadResult == primec::ir_lowerer::UnaryPassthroughCallResult::Error);
+  CHECK(error == "native backend missing expr emit setup dependency: emitExpr");
+
+  primec::Expr readbackExpr = moveExpr;
+  readbackExpr.name = "readback";
+  const auto readbackResult = emitReadbackPassthroughCall(readbackExpr, primec::ir_lowerer::LocalMap{}, {}, error);
+  CHECK(readbackResult == primec::ir_lowerer::UnaryPassthroughCallResult::Error);
   CHECK(error == "native backend missing expr emit setup dependency: emitExpr");
 }
 
@@ -1234,6 +1273,8 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   const std::string emitExprHeaderSource = readText(emitExprHeaderPath);
   CHECK(emitExprHeaderSource.find("runLowerReturnCallsSetup(") != std::string::npos);
   CHECK(emitExprHeaderSource.find("runLowerExprEmitSetup(") != std::string::npos);
+  CHECK(emitExprHeaderSource.find("emitUploadPassthroughCall(") != std::string::npos);
+  CHECK(emitExprHeaderSource.find("emitReadbackPassthroughCall(") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {
