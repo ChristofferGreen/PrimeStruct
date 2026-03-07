@@ -997,6 +997,42 @@ main() {
   CHECK(error.find("pop requires exactly one argument") != std::string::npos);
 }
 
+TEST_CASE("pop call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/pop([vector<i32> mut] values) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  pop(values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pop method keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/pop([vector<i32> mut] values) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.pop()
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("clear requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
