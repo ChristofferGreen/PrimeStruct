@@ -1088,6 +1088,23 @@ main() {
   CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("rejects native builtin map constructor named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(map([key] 1i32, [value] 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("native_builtin_map_constructor_named_args.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_builtin_map_constructor_named_args_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native user map constructor block shadow") {
   const std::string source = R"(
 [return<int>]
