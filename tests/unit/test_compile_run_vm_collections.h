@@ -199,6 +199,26 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with stdlib collection shim access helpers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorSingle<i32>(7i32)}
+  [map<i32, i32>] pairs{mapSingle<i32, i32>(3i32, 9i32)}
+  [i32] a{vectorAt<i32>(values, 0i32)}
+  [i32] b{vectorAtUnsafe<i32>(values, 0i32)}
+  [i32] c{mapAt<i32, i32>(pairs, 3i32)}
+  [i32] d{mapAtUnsafe<i32, i32>(pairs, 3i32)}
+  return(plus(plus(a, b), plus(c, d)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_access.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 32);
+}
+
 TEST_CASE("runs vm with vector capacity helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
