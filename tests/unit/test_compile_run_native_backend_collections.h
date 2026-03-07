@@ -1054,6 +1054,31 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
+TEST_CASE("compiles and runs native user map constructor block shadow") {
+  const std::string source = R"(
+[return<int>]
+map([i32] key, [i32] value) {
+  return(plus(key, value))
+}
+
+[return<int>]
+main() {
+  [i32 mut] result{0i32}
+  map(4i32, 6i32) {
+    assign(result, 7i32)
+  }
+  return(result)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_map_constructor_block_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_map_constructor_block_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("compiles and runs native user vector push call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
