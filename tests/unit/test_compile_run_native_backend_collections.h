@@ -376,6 +376,57 @@ main() {
   CHECK(readFile(errPath).find("unsupported return type on /wrapUnknown") != std::string::npos);
 }
 
+TEST_CASE("rejects native templated stdlib vector return envelope wrong arity") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<i32, i32>>]
+wrapVector([i32] value) {
+  return(vectorSingle<i32>(value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{wrapVector(3i32)}
+  return(vectorCount<i32>(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_templated_return_vector_arity.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shim_templated_return_vector_arity_err.txt")
+          .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("vector return type requires exactly one template argument on /wrapVector") !=
+        std::string::npos);
+}
+
+TEST_CASE("rejects native templated stdlib map return envelope wrong arity") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<string>>]
+wrapMap([string] key, [i32] value) {
+  return(mapSingle<string, i32>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] values{wrapMap("only"raw_utf8, 3i32)}
+  return(mapCount<string, i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_templated_return_map_arity.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shim_templated_return_map_arity_err.txt")
+          .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("map return type requires exactly two template arguments on /wrapMap") !=
+        std::string::npos);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim vector single") {
   const std::string source = R"(
 import /std/collections/*
