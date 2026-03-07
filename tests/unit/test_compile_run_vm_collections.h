@@ -243,6 +243,34 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("runs vm with templated stdlib return wrapper temporaries") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32] vectorTotal{wrapVector<i32>(9i32).count()}
+  [i32] mapAtTotal{wrapMap<string, i32>("only"raw_utf8, 4i32).at("only"raw_utf8)}
+  [i32] mapUnsafeTotal{wrapMap<string, i32>("only"raw_utf8, 4i32).at_unsafe("only"raw_utf8)}
+  [i32] mapCountTotal{wrapMap<string, i32>("only"raw_utf8, 4i32).count()}
+  return(plus(plus(vectorTotal, mapAtTotal), plus(mapUnsafeTotal, mapCountTotal)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_return_temporaries.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 10);
+}
+
 TEST_CASE("rejects vm templated stdlib collection return envelope unsupported arg") {
   const std::string source = R"(
 import /std/collections/*
@@ -265,6 +293,25 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("unsupported return type on /wrapUnknown") != std::string::npos);
+}
+
+TEST_CASE("rejects vm templated stdlib map wrapper temporary key mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  return(wrapMap<string, i32>("only"raw_utf8, 4i32).at(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_return_temp_key_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("rejects vm templated stdlib map return envelope unsupported key arg") {
