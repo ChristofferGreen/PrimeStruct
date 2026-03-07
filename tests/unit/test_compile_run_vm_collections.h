@@ -423,6 +423,78 @@ main() {
   CHECK(runCommand(runCmd) == 64);
 }
 
+TEST_CASE("runs vm with user vector at call shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(68i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(at(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_at_call_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 68);
+}
+
+TEST_CASE("runs vm with user vector at method shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(69i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.at(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_at_method_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 69);
+}
+
+TEST_CASE("runs vm with user string at_unsafe call shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/at_unsafe([string] values, [i32] index) {
+  return(71i32)
+}
+
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  return(at_unsafe(text, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_string_at_unsafe_call_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 71);
+}
+
+TEST_CASE("runs vm with user string at_unsafe method shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/at_unsafe([string] values, [i32] index) {
+  return(72i32)
+}
+
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  return(text.at_unsafe(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_string_at_unsafe_method_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 72);
+}
+
 TEST_CASE("runs vm with vector push helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

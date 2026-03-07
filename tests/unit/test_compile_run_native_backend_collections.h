@@ -575,6 +575,94 @@ main() {
   CHECK(runCommand(exePath) == 64);
 }
 
+TEST_CASE("compiles and runs native user vector at call shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(68i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(at(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_vector_at_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_vector_at_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 68);
+}
+
+TEST_CASE("compiles and runs native user vector at method shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(69i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.at(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_vector_at_method_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_vector_at_method_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 69);
+}
+
+TEST_CASE("compiles and runs native user string at_unsafe call shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/at_unsafe([string] values, [i32] index) {
+  return(71i32)
+}
+
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  return(at_unsafe(text, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_string_at_unsafe_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_string_at_unsafe_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 71);
+}
+
+TEST_CASE("compiles and runs native user string at_unsafe method shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/at_unsafe([string] values, [i32] index) {
+  return(72i32)
+}
+
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  return(text.at_unsafe(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_string_at_unsafe_method_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_string_at_unsafe_method_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 72);
+}
+
 TEST_CASE("compiles and runs native vector push helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
