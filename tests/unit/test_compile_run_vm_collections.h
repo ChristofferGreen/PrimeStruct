@@ -217,6 +217,37 @@ main() {
   CHECK(runCommand(runCmd) == 52);
 }
 
+TEST_CASE("runs vm with stdlib collection shim map double") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(plus(plus(mapAt<string, i32>(values, "right"raw_utf8), mapAtUnsafe<string, i32>(values, "left"raw_utf8)),
+      mapCount<string, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_double.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 27);
+}
+
+TEST_CASE("rejects vm stdlib collection shim map double type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapDouble<i32, i32>(1i32, 2i32, 3i32, false)}
+  return(mapCount<i32, i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_double_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with stdlib collection shim extended constructors") {
   const std::string source = R"(
 import /std/collections/*

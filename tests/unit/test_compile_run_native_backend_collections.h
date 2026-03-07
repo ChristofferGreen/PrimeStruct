@@ -321,6 +321,41 @@ main() {
   CHECK(runCommand(exePath) == 52);
 }
 
+TEST_CASE("compiles and runs native stdlib collection shim map double") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(plus(plus(mapAt<string, i32>(values, "right"raw_utf8), mapAtUnsafe<string, i32>(values, "left"raw_utf8)),
+      mapCount<string, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_double.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shim_map_double_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 27);
+}
+
+TEST_CASE("rejects native stdlib collection shim map double type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapDouble<i32, i32>(1i32, 2i32, 3i32, false)}
+  return(mapCount<i32, i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_double_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim extended constructors") {
   const std::string source = R"(
 import /std/collections/*
