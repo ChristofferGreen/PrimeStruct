@@ -1259,6 +1259,38 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with stdlib collection shim vector remove swap") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vectorTriple<i32>(2i32, 4i32, 6i32)}
+  vectorRemoveSwap<i32>(values, 0i32)
+  return(plus(vectorAt<i32>(values, 0i32), vectorCount<i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_remove_swap.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 8);
+}
+
+TEST_CASE("rejects vm stdlib collection shim vector remove swap type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vectorTriple<i32>(2i32, 4i32, 6i32)}
+  vectorRemoveSwap<bool>(values, 0i32)
+  return(vectorCount<i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_remove_swap_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with stdlib collection shim vector mutators") {
   const std::string source = R"(
 import /std/collections/*
