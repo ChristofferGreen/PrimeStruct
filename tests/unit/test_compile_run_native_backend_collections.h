@@ -386,6 +386,34 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
+TEST_CASE("compiles and runs native templated stdlib wrapper temporary call forms") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  [i32] a{mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
+  [i32] b{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
+  [i32] c{mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32))}
+  return(plus(plus(a, b), c))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_call_forms.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_collection_shim_templated_return_temp_call_forms_exe")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("rejects native templated stdlib collection return envelope unsupported arg") {
   const std::string source = R"(
 import /std/collections/*
@@ -426,6 +454,26 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_key_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("rejects native templated stdlib map wrapper temporary call key mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  return(mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_call_key_mismatch.prime", source);
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
