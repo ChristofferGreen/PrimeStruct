@@ -219,6 +219,22 @@ main() {
   CHECK(runCommand(runCmd) == 32);
 }
 
+TEST_CASE("runs vm with stdlib collection shim capacity helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vectorSingle<i32>(7i32)}
+  reserve(values, 4i32)
+  return(vectorCapacity<i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_capacity.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
 TEST_CASE("runs vm with vector capacity helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

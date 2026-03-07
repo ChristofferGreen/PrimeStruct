@@ -15,6 +15,11 @@ namespace std {
     return(count(values))
   }
 
+  [public return<i32>]
+  vectorCapacity<T>([vector<T>] values) {
+    return(capacity(values))
+  }
+
   [public return<T>]
   vectorAt<T>([vector<T>] values, [i32] index) {
     return(at(values, index))

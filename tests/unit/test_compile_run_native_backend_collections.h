@@ -323,6 +323,26 @@ main() {
   CHECK(runCommand(exePath) == 32);
 }
 
+TEST_CASE("compiles and runs native stdlib collection shim capacity helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vectorSingle<i32>(7i32)}
+  reserve(values, 4i32)
+  return(vectorCapacity<i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_capacity.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shim_capacity_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
 TEST_CASE("compiles and runs native vector capacity helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
