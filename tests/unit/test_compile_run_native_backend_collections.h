@@ -343,6 +343,36 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("compiles and runs native stdlib collection shim vector mutators") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vectorNew<i32>()}
+  vectorReserve<i32>(values, 4i32)
+  vectorPush<i32>(values, 11i32)
+  vectorPush<i32>(values, 22i32)
+  vectorPush<i32>(values, 33i32)
+  [i32 mut] snapshot{plus(vectorCount<i32>(values), vectorCapacity<i32>(values))}
+  vectorPop<i32>(values)
+  vectorRemoveAt<i32>(values, 0i32)
+  vectorPush<i32>(values, 44i32)
+  vectorRemoveSwap<i32>(values, 0i32)
+  assign(snapshot, plus(snapshot, vectorCount<i32>(values)))
+  vectorClear<i32>(values)
+  return(plus(snapshot, vectorCount<i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_mutators.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shim_vector_mutators_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 8);
+}
+
 TEST_CASE("compiles and runs native vector capacity helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

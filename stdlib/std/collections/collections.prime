@@ -20,6 +20,36 @@ namespace std {
     return(capacity(values))
   }
 
+  [public return<void>]
+  vectorPush<T>([vector<T> mut] values, [T] value) {
+    push(values, value)
+  }
+
+  [public return<void>]
+  vectorPop<T>([vector<T> mut] values) {
+    pop(values)
+  }
+
+  [public return<void>]
+  vectorReserve<T>([vector<T> mut] values, [i32] capacity) {
+    reserve(values, capacity)
+  }
+
+  [public return<void>]
+  vectorClear<T>([vector<T> mut] values) {
+    clear(values)
+  }
+
+  [public return<void>]
+  vectorRemoveAt<T>([vector<T> mut] values, [i32] index) {
+    remove_at(values, index)
+  }
+
+  [public return<void>]
+  vectorRemoveSwap<T>([vector<T> mut] values, [i32] index) {
+    remove_swap(values, index)
+  }
+
   [public return<T>]
   vectorAt<T>([vector<T>] values, [i32] index) {
     return(at(values, index))
