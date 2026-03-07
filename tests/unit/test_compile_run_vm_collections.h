@@ -918,6 +918,36 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with stdlib collection shim vector count") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorTriple<i32>(2i32, 4i32, 6i32)}
+  return(plus(vectorCount<i32>(values), 10i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_count.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 13);
+}
+
+TEST_CASE("rejects vm stdlib collection shim vector count type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorTriple<i32>(2i32, 4i32, 6i32)}
+  return(vectorCount<bool>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_count_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with stdlib collection shim vector mutators") {
   const std::string source = R"(
 import /std/collections/*
