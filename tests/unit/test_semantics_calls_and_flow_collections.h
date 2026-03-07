@@ -557,6 +557,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("at call keeps user-defined map helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(67i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("at method keeps user-defined map helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(65i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values.at(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("at call keeps user-defined vector helper precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
