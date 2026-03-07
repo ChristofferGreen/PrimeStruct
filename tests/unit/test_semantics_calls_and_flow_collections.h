@@ -1323,6 +1323,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("remove_swap call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/remove_swap([vector<i32> mut] values, [i32] index) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_swap(values, 1i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("remove_swap method keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/remove_swap([vector<i32> mut] values, [i32] index) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.remove_swap(1i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector helpers are statement-only in expressions") {
   struct HelperCase {
     const char *name;
