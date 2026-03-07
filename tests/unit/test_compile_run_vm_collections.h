@@ -800,6 +800,42 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with user vector reserve call shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/reserve([vector<i32> mut] values, [i32] capacity) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  reserve(values, 3i32)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_reserve_call_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("runs vm with user vector reserve method shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/reserve([vector<i32> mut] values, [i32] capacity) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.reserve(3i32)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_reserve_method_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("rejects vm vector reserve beyond capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

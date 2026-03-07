@@ -927,6 +927,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("reserve call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/reserve([vector<i32> mut] values, [i32] capacity) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  reserve(values, 3i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reserve method keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/reserve([vector<i32> mut] values, [i32] capacity) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.reserve(3i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("pop requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
