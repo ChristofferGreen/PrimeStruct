@@ -150,6 +150,16 @@ namespace std {
         fifthValue, sixthKey, sixthValue, seventhKey, seventhValue))
   }
 
+  [public return<map<K, V>>]
+  mapOct<K, V>(
+      [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
+      [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey, [V] seventhValue,
+      [K] eighthKey, [V] eighthValue) {
+    return(map(
+        firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
+        fifthValue, sixthKey, sixthValue, seventhKey, seventhValue, eighthKey, eighthValue))
+  }
+
   [public return<i32>]
   mapCount<K, V>([map<K, V>] values) {
     return(count(values))
