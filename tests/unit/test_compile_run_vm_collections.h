@@ -457,6 +457,66 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with stdlib collection shim map at") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
+  return(plus(mapAt<i32, i32>(values, 2i32), mapCount<i32, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 23);
+}
+
+TEST_CASE("rejects vm stdlib collection shim map at type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
+  return(mapAt<bool, i32>(values, true))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("runs vm with stdlib collection shim map at unsafe") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
+  return(plus(mapAtUnsafe<i32, i32>(values, 3i32), mapCount<i32, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_unsafe.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 33);
+}
+
+TEST_CASE("rejects vm stdlib collection shim map at unsafe type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
+  return(mapAtUnsafe<bool, i32>(values, true))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_unsafe_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with stdlib collection shim map double") {
   const std::string source = R"(
 import /std/collections/*

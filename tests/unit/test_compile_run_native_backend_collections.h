@@ -593,6 +593,74 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("compiles and runs native stdlib collection shim map at") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
+  return(plus(mapAt<i32, i32>(values, 2i32), mapCount<i32, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_at.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shim_map_at_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 23);
+}
+
+TEST_CASE("rejects native stdlib collection shim map at type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
+  return(mapAt<bool, i32>(values, true))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_at_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("compiles and runs native stdlib collection shim map at unsafe") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
+  return(plus(mapAtUnsafe<i32, i32>(values, 3i32), mapCount<i32, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_at_unsafe.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shim_map_at_unsafe_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 33);
+}
+
+TEST_CASE("rejects native stdlib collection shim map at unsafe type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
+  return(mapAtUnsafe<bool, i32>(values, true))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_at_unsafe_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim map double") {
   const std::string source = R"(
 import /std/collections/*
