@@ -764,6 +764,23 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
+TEST_CASE("runs vm with user vector constructor shadow") {
+  const std::string source = R"(
+[return<int>]
+vector([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(vector([value] 9i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_constructor_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
+}
+
 TEST_CASE("runs vm with user array constructor shadow") {
   const std::string source = R"(
 [return<int>]
