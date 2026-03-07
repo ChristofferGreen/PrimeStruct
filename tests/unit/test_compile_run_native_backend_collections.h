@@ -915,6 +915,22 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects native stdlib collection shim map method call parity unsafe key type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(plus(mapAtUnsafe<string, i32>(values, 1i32), values.at_unsafe(1i32)))
+}
+)";
+  const std::string srcPath = writeTemp(
+      "compile_native_stdlib_collection_shim_map_method_call_parity_unsafe_key_type_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim map single standalone string keys") {
   const std::string source = R"(
 import /std/collections/*

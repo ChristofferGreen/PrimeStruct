@@ -734,6 +734,22 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("rejects vm stdlib collection shim map method call parity unsafe key type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(plus(mapAtUnsafe<string, i32>(values, 1i32), values.at_unsafe(1i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_map_method_call_parity_unsafe_key_type_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with stdlib collection shim map single standalone string keys") {
   const std::string source = R"(
 import /std/collections/*
