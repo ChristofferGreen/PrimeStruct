@@ -321,6 +321,43 @@ main() {
   CHECK(runCommand(exePath) == 52);
 }
 
+TEST_CASE("compiles and runs native stdlib collection shim extended constructors") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorQuad<i32>(2i32, 4i32, 6i32, 8i32)}
+  [map<i32, i32>] pairs{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
+  [i32] vectorTotal{plus(vectorAt<i32>(values, 1i32), vectorAtUnsafe<i32>(values, 3i32))}
+  [i32] mapTotal{plus(mapAt<i32, i32>(pairs, 1i32), mapAtUnsafe<i32, i32>(pairs, 3i32))}
+  return(plus(plus(vectorTotal, mapTotal), plus(vectorCount<i32>(values), mapCount<i32, i32>(pairs))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_extended_ctor.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shim_extended_ctor_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 59);
+}
+
+TEST_CASE("rejects native stdlib collection shim extended constructor type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] pairs{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, true)}
+  return(mapCount<i32, i32>(pairs))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_extended_ctor_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim access helpers") {
   const std::string source = R"(
 import /std/collections/*
