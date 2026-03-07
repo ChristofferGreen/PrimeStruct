@@ -712,6 +712,44 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("compiles and runs native stdlib collection shim map single standalone string keys") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapSingle<string, i32>("only"raw_utf8, 21i32)}
+  return(plus(plus(mapAt<string, i32>(values, "only"raw_utf8), mapAtUnsafe<string, i32>(values, "only"raw_utf8)),
+      mapCount<string, i32>(values)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_map_single_standalone_string_key.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_collection_shim_map_single_standalone_string_key_exe")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 43);
+}
+
+TEST_CASE("rejects native stdlib collection shim map single standalone key type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapSingle<i32, i32>("oops"raw_utf8, 4i32)}
+  return(mapCount<i32, i32>(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_map_single_standalone_key_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim map pair standalone") {
   const std::string source = R"(
 import /std/collections/*
