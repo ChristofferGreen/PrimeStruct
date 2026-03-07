@@ -398,6 +398,35 @@ main() {
   CHECK(runCommand(runCmd) == 27);
 }
 
+TEST_CASE("runs vm with templated stdlib wrapper temporary unsafe parity") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32] vectorCall{vectorAtUnsafe<i32>(wrapVector<i32>(4i32), 0i32)}
+  [i32] vectorMethod{wrapVector<i32>(4i32).at_unsafe(0i32)}
+  [i32] mapCall{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
+  [i32] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe("only"raw_utf8)}
+  return(plus(plus(vectorCall, vectorMethod), plus(mapCall, mapMethod)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_temp_unsafe_parity.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 18);
+}
+
 TEST_CASE("rejects vm templated stdlib collection return envelope unsupported arg") {
   const std::string source = R"(
 import /std/collections/*
@@ -480,6 +509,34 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_stdlib_collection_shim_templated_return_temp_syntax_parity_key_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("rejects vm templated stdlib wrapper temporary unsafe parity mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  return(plus(
+      plus(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), 1i32),
+           wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe(1i32)),
+      plus(vectorAtUnsafe<i32>(wrapVector<i32>(4i32), true), wrapVector<i32>(4i32).at_unsafe(true))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_temp_unsafe_parity_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
