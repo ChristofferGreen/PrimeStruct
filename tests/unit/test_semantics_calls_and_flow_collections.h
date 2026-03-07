@@ -1097,6 +1097,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("clear call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/clear([vector<i32> mut] values) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  clear(values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("clear method keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/clear([vector<i32> mut] values) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.clear()
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("clear rejects template arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

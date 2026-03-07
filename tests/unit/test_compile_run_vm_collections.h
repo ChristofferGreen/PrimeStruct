@@ -836,6 +836,42 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with user vector clear call shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/clear([vector<i32> mut] values) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  clear(values)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_clear_call_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("runs vm with user vector clear method shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/clear([vector<i32> mut] values) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.clear()
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_clear_method_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("rejects vm vector reserve beyond capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
