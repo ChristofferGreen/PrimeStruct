@@ -376,6 +376,31 @@ main() {
   CHECK(readFile(errPath).find("unsupported return type on /wrapUnknown") != std::string::npos);
 }
 
+TEST_CASE("rejects native templated stdlib map return envelope unsupported key arg") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<Unknown, i32>>]
+wrapMapUnknownKey([string] key, [i32] value) {
+  return(mapSingle<string, i32>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] values{wrapMapUnknownKey("only"raw_utf8, 3i32)}
+  return(mapCount<string, i32>(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_templated_return_map_bad_key.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_collection_shim_templated_return_map_bad_key_err.txt")
+                                  .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unsupported return type on /wrapMapUnknownKey") != std::string::npos);
+}
+
 TEST_CASE("rejects native templated stdlib vector return envelope wrong arity") {
   const std::string source = R"(
 import /std/collections/*
