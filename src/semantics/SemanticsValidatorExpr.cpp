@@ -1916,10 +1916,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                                   std::string &resolvedOut,
                                                   bool &isBuiltinMethodOut) {
       std::string elemType;
-      std::string mapKeyType;
-      std::string mapValueType;
       if (resolveVectorTarget(targetExpr, elemType) || resolveArrayTarget(targetExpr, elemType) ||
-          resolveStringTarget(targetExpr) || resolveMapTarget(targetExpr, mapKeyType, mapValueType)) {
+          resolveStringTarget(targetExpr) || resolveMapTarget(targetExpr)) {
         // Route known collection capacity() calls through builtin validation so
         // non-vector targets emit the deterministic vector-target diagnostic.
         resolvedOut = "/vector/capacity";

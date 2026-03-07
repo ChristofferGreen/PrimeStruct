@@ -699,6 +699,41 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with stdlib collection shim map method call parity string keys") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] viaCall{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  [map<string, i32>] viaMethod{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(plus(
+      plus(mapAt<string, i32>(viaCall, "right"raw_utf8), viaMethod.at("right"raw_utf8)),
+      plus(mapAtUnsafe<string, i32>(viaCall, "left"raw_utf8),
+          plus(viaMethod.at_unsafe("left"raw_utf8), plus(mapCount<string, i32>(viaCall), viaMethod.count())))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_method_call_parity_string_key.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 54);
+}
+
+TEST_CASE("rejects vm stdlib collection shim map method call parity key type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(plus(mapAt<string, i32>(values, 1i32), values.at(1i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_map_method_call_parity_key_type_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with stdlib collection shim map single standalone string keys") {
   const std::string source = R"(
 import /std/collections/*

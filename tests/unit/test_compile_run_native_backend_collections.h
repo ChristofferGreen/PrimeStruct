@@ -874,6 +874,47 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("compiles and runs native stdlib collection shim map method call parity string keys") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] viaCall{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  [map<string, i32>] viaMethod{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(plus(
+      plus(mapAt<string, i32>(viaCall, "right"raw_utf8), viaMethod.at("right"raw_utf8)),
+      plus(mapAtUnsafe<string, i32>(viaCall, "left"raw_utf8),
+          plus(viaMethod.at_unsafe("left"raw_utf8), plus(mapCount<string, i32>(viaCall), viaMethod.count())))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_map_method_call_parity_string_key.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_collection_shim_map_method_call_parity_string_key_exe")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 54);
+}
+
+TEST_CASE("rejects native stdlib collection shim map method call parity key type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(plus(mapAt<string, i32>(values, 1i32), values.at(1i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_map_method_call_parity_key_type_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim map single standalone string keys") {
   const std::string source = R"(
 import /std/collections/*
