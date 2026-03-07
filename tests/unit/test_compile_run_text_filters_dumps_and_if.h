@@ -1125,6 +1125,76 @@ main() {
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
+TEST_CASE("primec collect-diagnostics keeps user array arg-shape diagnostics") {
+  const std::string source = R"(
+[return<i32>]
+array([i32] value) {
+  return(value)
+}
+[return<i32>]
+bad() {
+  array(value=1i32, value=2i32)
+  array()
+  return(0i32)
+}
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("primec_collect_diagnostics_semantic_intra_definition_array_shadow.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_collect_diagnostics_semantic_intra_definition_array_shadow_err.json")
+          .string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"duplicate named argument: value\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /array\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+}
+
+TEST_CASE("primevm collect-diagnostics keeps user array arg-shape diagnostics") {
+  const std::string source = R"(
+[return<i32>]
+array([i32] value) {
+  return(value)
+}
+[return<i32>]
+bad() {
+  array(value=1i32, value=2i32)
+  array()
+  return(0i32)
+}
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("primevm_collect_diagnostics_semantic_intra_definition_array_shadow.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primevm_collect_diagnostics_semantic_intra_definition_array_shadow_err.json")
+          .string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"duplicate named argument: value\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /array\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+}
+
 TEST_CASE("primec collect-diagnostics emits intra-definition argument-type payload") {
   const std::string source = R"(
 [return<i32>]
