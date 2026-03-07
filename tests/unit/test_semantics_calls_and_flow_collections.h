@@ -815,6 +815,48 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("collection syntax parity validates for call and method forms") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] viaCall{vector<i32>(10i32, 20i32, 30i32)}
+  [vector<i32> mut] viaMethod{vector<i32>(10i32, 20i32, 30i32)}
+  pop(viaCall)
+  viaMethod.pop()
+  reserve(viaCall, 3i32)
+  viaMethod.reserve(3i32)
+  push(viaCall, 40i32)
+  viaMethod.push(40i32)
+  return(plus(
+      plus(at(viaCall, 2i32), viaMethod.at(2i32)),
+      plus(viaCall[2i32], viaMethod[2i32])))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("collection indexing syntax parity keeps integer-index diagnostics") {
+  const auto checkInvalidIndex = [](const std::string &exprText) {
+    const std::string source =
+        "[return<int>]\n"
+        "main() {\n"
+        "  [array<i32>] values{array<i32>(1i32, 2i32)}\n"
+        "  return(" +
+        exprText +
+        ")\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("at requires integer index") != std::string::npos);
+  };
+
+  checkInvalidIndex("at(values, \"oops\"utf8)");
+  checkInvalidIndex("values.at(\"oops\"utf8)");
+  checkInvalidIndex("values[\"oops\"utf8]");
+}
+
 TEST_CASE("push rejects template arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

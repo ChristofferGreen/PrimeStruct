@@ -3000,6 +3000,32 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("compiles and runs native collection syntax parity for call and method forms") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] viaCall{vector<i32>(10i32, 20i32, 30i32)}
+  [vector<i32> mut] viaMethod{vector<i32>(10i32, 20i32, 30i32)}
+  pop(viaCall)
+  viaMethod.pop()
+  reserve(viaCall, 3i32)
+  viaMethod.reserve(3i32)
+  push(viaCall, 40i32)
+  viaMethod.push(40i32)
+  return(plus(
+      plus(at(viaCall, 2i32), viaMethod.at(2i32)),
+      plus(viaCall[2i32], plus(viaMethod[2i32], plus(count(viaCall), viaMethod.count())))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_collection_syntax_parity.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_collection_syntax_parity_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 166);
+}
+
 TEST_CASE("compiles and runs native vector literal count helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -107,6 +107,87 @@ main() {
   CHECK(expr.args[1].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("parses push method and call forms with equivalent argument wiring") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  push(values, 2i32)
+  values.push(2i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &callForm = program.definitions[0].statements[0];
+  const auto &methodForm = program.definitions[0].statements[1];
+  CHECK(callForm.kind == primec::Expr::Kind::Call);
+  CHECK(methodForm.kind == primec::Expr::Kind::Call);
+  CHECK_FALSE(callForm.isMethodCall);
+  CHECK(methodForm.isMethodCall);
+  CHECK(callForm.name == "push");
+  CHECK(methodForm.name == "push");
+  REQUIRE(callForm.args.size() == 2);
+  REQUIRE(methodForm.args.size() == 2);
+  CHECK(callForm.args[0].kind == primec::Expr::Kind::Name);
+  CHECK(methodForm.args[0].kind == primec::Expr::Kind::Name);
+  CHECK(callForm.args[0].name == "values");
+  CHECK(methodForm.args[0].name == "values");
+  CHECK(callForm.args[1].kind == primec::Expr::Kind::Literal);
+  CHECK(methodForm.args[1].kind == primec::Expr::Kind::Literal);
+  CHECK(callForm.args[1].literalValue == methodForm.args[1].literalValue);
+  CHECK(callForm.args[1].isUnsigned == methodForm.args[1].isUnsigned);
+  CHECK(callForm.args[1].intWidth == methodForm.args[1].intWidth);
+}
+
+TEST_CASE("parses index, method-at, and call-at forms with equivalent at arguments") {
+  const std::string source = R"(
+[return<int>]
+fromIndex() {
+  return(items[1i32])
+}
+
+[return<int>]
+fromMethod() {
+  return(items.at(1i32))
+}
+
+[return<int>]
+fromCall() {
+  return(at(items, 1i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 3);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  REQUIRE(program.definitions[1].returnExpr.has_value());
+  REQUIRE(program.definitions[2].returnExpr.has_value());
+  const auto &indexForm = *program.definitions[0].returnExpr;
+  const auto &methodForm = *program.definitions[1].returnExpr;
+  const auto &callForm = *program.definitions[2].returnExpr;
+
+  auto checkAtShape = [](const primec::Expr &expr) {
+    CHECK(expr.kind == primec::Expr::Kind::Call);
+    CHECK(expr.name == "at");
+    REQUIRE(expr.args.size() == 2);
+    CHECK(expr.args[0].kind == primec::Expr::Kind::Name);
+    CHECK(expr.args[0].name == "items");
+    CHECK(expr.args[1].kind == primec::Expr::Kind::Literal);
+  };
+  checkAtShape(indexForm);
+  checkAtShape(methodForm);
+  checkAtShape(callForm);
+
+  CHECK_FALSE(indexForm.isMethodCall);
+  CHECK(methodForm.isMethodCall);
+  CHECK_FALSE(callForm.isMethodCall);
+  CHECK(indexForm.args[1].literalValue == methodForm.args[1].literalValue);
+  CHECK(indexForm.args[1].literalValue == callForm.args[1].literalValue);
+  CHECK(indexForm.args[1].isUnsigned == methodForm.args[1].isUnsigned);
+  CHECK(indexForm.args[1].isUnsigned == callForm.args[1].isUnsigned);
+  CHECK(indexForm.args[1].intWidth == methodForm.args[1].intWidth);
+  CHECK(indexForm.args[1].intWidth == callForm.args[1].intWidth);
+}
+
 TEST_CASE("parses brace constructor in call arguments") {
   const std::string source = R"(
 [return<void>]

@@ -2486,6 +2486,28 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
+TEST_CASE("runs vm with collection syntax parity for call and method forms") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] viaCall{vector<i32>(10i32, 20i32, 30i32)}
+  [vector<i32> mut] viaMethod{vector<i32>(10i32, 20i32, 30i32)}
+  pop(viaCall)
+  viaMethod.pop()
+  reserve(viaCall, 3i32)
+  viaMethod.reserve(3i32)
+  push(viaCall, 40i32)
+  viaMethod.push(40i32)
+  return(plus(
+      plus(at(viaCall, 2i32), viaMethod.at(2i32)),
+      plus(viaCall[2i32], plus(viaMethod[2i32], plus(count(viaCall), viaMethod.count())))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_collection_syntax_parity.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 166);
+}
+
 TEST_CASE("runs vm with vector literal count helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
