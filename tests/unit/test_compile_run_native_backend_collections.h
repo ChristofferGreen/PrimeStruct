@@ -321,6 +321,61 @@ main() {
   CHECK(runCommand(exePath) == 52);
 }
 
+TEST_CASE("compiles and runs native templated stdlib collection return envelopes") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{wrapVector<i32>(9i32)}
+  [map<string, i32>] pairs{wrapMap<string, i32>("only"raw_utf8, 4i32)}
+  return(plus(plus(vectorCount<i32>(values), mapCount<string, i32>(pairs)), mapAt<string, i32>(pairs, "only"raw_utf8)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_templated_returns.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_collection_shim_templated_returns_exe")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("rejects native templated stdlib collection return envelope unsupported arg") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<Unknown>>]
+wrapUnknown([i32] value) {
+  return(vectorSingle<i32>(value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{wrapUnknown(3i32)}
+  return(vectorCount<i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_templated_return_bad_arg.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_collection_shim_templated_return_bad_arg_err.txt")
+                                  .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unsupported return type on /wrapUnknown") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim vector single") {
   const std::string source = R"(
 import /std/collections/*
