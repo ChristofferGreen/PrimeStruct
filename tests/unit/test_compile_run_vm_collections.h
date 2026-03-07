@@ -887,6 +887,37 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
+TEST_CASE("runs vm with stdlib collection shim vector capacity") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vectorSingle<i32>(9i32)}
+  vectorReserve<i32>(values, 5i32)
+  return(plus(vectorCapacity<i32>(values), vectorCount<i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_capacity.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
+TEST_CASE("rejects vm stdlib collection shim vector capacity type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorSingle<i32>(9i32)}
+  return(vectorCapacity<bool>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_capacity_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with stdlib collection shim vector mutators") {
   const std::string source = R"(
 import /std/collections/*
