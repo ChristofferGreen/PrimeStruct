@@ -428,7 +428,8 @@ main() {
   [i32] a{vectorAt<i32>(wrapVector<i32>(4i32), 0i32)}
   [i32] b{vectorAtUnsafe<i32>(wrapVector<i32>(5i32), 0i32)}
   [i32] c{vectorCount<i32>(wrapVector<i32>(6i32))}
-  return(plus(plus(a, b), c))
+  [i32] d{vectorCapacity<i32>(wrapVector<i32>(7i32))}
+  return(plus(plus(plus(a, b), c), d))
 }
 )";
   const std::string srcPath =
@@ -439,7 +440,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  CHECK(runCommand(exePath) == 11);
 }
 
 TEST_CASE("compiles and runs native templated stdlib vector wrapper temporary methods") {
@@ -690,6 +691,26 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_vector_temp_count_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("rejects native templated stdlib vector wrapper temporary capacity type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<int>]
+main() {
+  return(vectorCapacity<bool>(wrapVector<i32>(4i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_templated_return_vector_temp_capacity_mismatch.prime", source);
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
