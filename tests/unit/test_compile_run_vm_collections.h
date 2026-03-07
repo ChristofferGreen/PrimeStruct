@@ -331,13 +331,14 @@ main() {
   [i32] a{wrapVector<i32>(4i32).at(0i32)}
   [i32] b{wrapVector<i32>(5i32).at_unsafe(0i32)}
   [i32] c{wrapVector<i32>(6i32).count()}
-  return(plus(plus(a, b), c))
+  [i32] d{wrapVector<i32>(7i32).capacity()}
+  return(plus(plus(plus(a, b), c), d))
 }
 )";
   const std::string srcPath =
       writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_methods.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 10);
+  CHECK(runCommand(runCmd) == 11);
 }
 
 TEST_CASE("rejects vm templated stdlib collection return envelope unsupported arg") {
@@ -579,6 +580,26 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_capacity_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("rejects vm templated stdlib vector wrapper temporary capacity method arity mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<int>]
+main() {
+  return(wrapVector<i32>(4i32).capacity(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_capacity_method_arity.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
