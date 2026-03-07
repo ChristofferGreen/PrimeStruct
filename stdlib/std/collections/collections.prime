@@ -10,6 +10,16 @@ namespace std {
     return(vector(value))
   }
 
+  [public return<vector<T>>]
+  vectorPair<T>([T] first, [T] second) {
+    return(vector(first, second))
+  }
+
+  [public return<vector<T>>]
+  vectorTriple<T>([T] first, [T] second, [T] third) {
+    return(vector(first, second, third))
+  }
+
   [public return<i32>]
   vectorCount<T>([vector<T>] values) {
     return(count(values))
@@ -68,6 +78,11 @@ namespace std {
   [public return<map<K, V>>]
   mapSingle<K, V>([K] key, [V] value) {
     return(map(key, value))
+  }
+
+  [public return<map<K, V>>]
+  mapDouble<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
+    return(map(firstKey, firstValue, secondKey, secondValue))
   }
 
   [public return<i32>]
