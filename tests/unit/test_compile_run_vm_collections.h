@@ -547,6 +547,38 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with stdlib collection shim map quad standalone") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{
+    mapQuad<i32, i32>(1i32, 3i32, 2i32, 5i32, 3i32, 7i32, 4i32, 11i32)}
+  return(plus(plus(mapAt<i32, i32>(values, 4i32), mapAtUnsafe<i32, i32>(values, 1i32)), mapCount<i32, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_quad_standalone.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 18);
+}
+
+TEST_CASE("rejects vm stdlib collection shim map quad standalone type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{
+    mapQuad<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, false)}
+  return(mapCount<i32, i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_quad_standalone_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with stdlib collection shim map double") {
   const std::string source = R"(
 import /std/collections/*
