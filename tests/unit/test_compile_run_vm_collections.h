@@ -250,6 +250,38 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with stdlib collection shim map pair string keys") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapPair<string, i32>("alpha"raw_utf8, 12i32, "beta"raw_utf8, 20i32)}
+  [string] key{"beta"raw_utf8}
+  return(plus(plus(mapAt<string, i32>(values, key), mapAtUnsafe<string, i32>(values, "alpha"raw_utf8)),
+      mapCount<string, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_pair_string_key.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 34);
+}
+
+TEST_CASE("rejects vm stdlib collection shim map pair type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapPair<i32, i32>(1i32, 2i32, 3i32, true)}
+  return(mapCount<i32, i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_pair_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with stdlib collection shim access helpers") {
   const std::string source = R"(
 import /std/collections/*

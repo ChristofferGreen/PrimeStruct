@@ -91,6 +91,11 @@ namespace std {
   }
 
   [public return<map<K, V>>]
+  mapPair<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
+    return(mapDouble<K, V>(firstKey, firstValue, secondKey, secondValue))
+  }
+
+  [public return<map<K, V>>]
   mapTriple<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue) {
     return(map(firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue))
