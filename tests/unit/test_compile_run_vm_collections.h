@@ -487,6 +487,21 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
+TEST_CASE("runs vm with stdlib collection shim map count string keys") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(plus(mapCount<string, i32>(values), 9i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_count_string_key.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
+}
+
 TEST_CASE("rejects vm stdlib collection shim map count type mismatch") {
   const std::string source = R"(
 import /std/collections/*
@@ -498,6 +513,21 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_count_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("rejects vm stdlib collection shim map count string key type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(mapCount<i32, i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_count_string_key_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
