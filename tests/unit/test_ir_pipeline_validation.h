@@ -12702,6 +12702,54 @@ TEST_CASE("ir lowerer setup type helper allows count/capacity receiver probing")
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper allows access receiver fallback probing") {
+  primec::Expr entryArgsReceiver;
+  entryArgsReceiver.kind = primec::Expr::Kind::Name;
+  entryArgsReceiver.name = "argv";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "at";
+  methodCall.isMethodCall = true;
+  methodCall.args = {entryArgsReceiver, indexExpr};
+
+  const primec::Expr *receiverOut = &methodCall;
+  std::string error = "stale";
+  CHECK_FALSE(primec::ir_lowerer::resolveMethodCallReceiverExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        return expr.kind == primec::Expr::Kind::Name && expr.name == "argv";
+      },
+      receiverOut,
+      error));
+  CHECK(receiverOut == nullptr);
+  CHECK(error == "stale");
+
+  methodCall.name = "at_unsafe";
+  receiverOut = &methodCall;
+  error = "stale";
+  CHECK_FALSE(primec::ir_lowerer::resolveMethodCallReceiverExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        return expr.kind == primec::Expr::Kind::Name && expr.name == "argv";
+      },
+      receiverOut,
+      error));
+  CHECK(receiverOut == nullptr);
+  CHECK(error == "stale");
+}
+
 TEST_CASE("ir lowerer setup type helper resolves method call definitions from expressions") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
@@ -12825,6 +12873,30 @@ TEST_CASE("ir lowerer setup type helper keeps builtin count/capacity fallback wh
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return std::string(); },
+            {},
+            error) == nullptr);
+  CHECK(error == "stale");
+
+  primec::Expr entryArgsReceiver;
+  entryArgsReceiver.kind = primec::Expr::Kind::Name;
+  entryArgsReceiver.name = "argv";
+  methodCall.name = "at_unsafe";
+  methodCall.args = {entryArgsReceiver, indexArg};
+  error = "stale";
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              return expr.kind == primec::Expr::Kind::Name && expr.name == "argv";
+            },
             {},
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {

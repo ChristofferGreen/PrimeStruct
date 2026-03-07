@@ -142,9 +142,11 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
     errorOut = "method call missing receiver";
     return false;
   }
+  std::string accessName;
+  const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool allowBuiltinFallback =
       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
-      (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn));
+      (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall;
   const Expr &receiver = callExpr.args.front();
   if (isEntryArgsName && isEntryArgsName(receiver, localsIn)) {
     if (allowBuiltinFallback) {
