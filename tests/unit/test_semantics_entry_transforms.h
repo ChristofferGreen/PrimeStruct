@@ -24,6 +24,54 @@ main() {
   CHECK(error.find("array return type requires exactly one template argument") != std::string::npos);
 }
 
+TEST_CASE("template vector and map returns are allowed") {
+  const std::string source = R"(
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vector<T>(value))
+}
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(map<K, V>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{wrapVector<i32>(9i32)}
+  [map<string, i32>] pairs{wrapMap<string, i32>("only"raw_utf8, 3i32)}
+  return(plus(count(values), count(pairs)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector return rejects wrong template arity") {
+  const std::string source = R"(
+[return<vector<i32, i32>>]
+main() {
+  return(vector<i32>(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("vector return type requires exactly one template argument") != std::string::npos);
+}
+
+TEST_CASE("map return rejects wrong template arity") {
+  const std::string source = R"(
+[return<map<string>>]
+main() {
+  return(map<string, i32>("only"raw_utf8, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map return type requires exactly two template arguments") != std::string::npos);
+}
+
 TEST_CASE("reference return allows direct parameter reference") {
   const std::string source = R"(
 [return<Reference<i32>>]

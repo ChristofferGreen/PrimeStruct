@@ -378,6 +378,18 @@ ReturnKind getReturnKind(const Definition &def,
     }
     ReturnKind nextKind = returnKindForTypeName(typeName);
     if (nextKind == ReturnKind::Unknown) {
+      auto isAllowedCollectionTypeArg = [&](const std::string &typeArg) -> bool {
+        const std::string normalizedArg = normalizeBindingTypeName(typeArg);
+        if (isPrimitiveBindingTypeName(normalizedArg)) {
+          return true;
+        }
+        for (const auto &templateArg : def.templateArgs) {
+          if (templateArg == normalizedArg) {
+            return true;
+          }
+        }
+        return false;
+      };
       std::string base;
       std::string arg;
       if (splitTemplateTypeName(typeName, base, arg) && base == "Reference") {
@@ -391,6 +403,28 @@ ReturnKind getReturnKind(const Definition &def,
           error = "unsupported return type on " + def.fullPath;
           return ReturnKind::Unknown;
         }
+      } else if (splitTemplateTypeName(typeName, base, arg) && base == "vector") {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+          error = "vector return type requires exactly one template argument on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        if (!isAllowedCollectionTypeArg(args.front())) {
+          error = "unsupported return type on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        nextKind = ReturnKind::Array;
+      } else if (splitTemplateTypeName(typeName, base, arg) && base == "map") {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
+          error = "map return type requires exactly two template arguments on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        if (!isAllowedCollectionTypeArg(args.front()) || !isAllowedCollectionTypeArg(args.back())) {
+          error = "unsupported return type on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        nextKind = ReturnKind::Array;
       } else if (typeName == "array") {
         error = "array return type requires exactly one template argument on " + def.fullPath;
         return ReturnKind::Unknown;
