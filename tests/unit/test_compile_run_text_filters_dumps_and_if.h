@@ -1337,6 +1337,80 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
+TEST_CASE("primec collect-diagnostics reports builtin vector named-arg rejection in definition and execution scopes") {
+  const std::string source = R"(
+[return<i32>]
+bad() {
+  vector(value=1i32)
+  return(0i32)
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+execute_repeat(vector(value=3i32), 0i32)
+)";
+  const std::string srcPath =
+      writeTemp("primec_collect_diagnostics_builtin_vector_named_args_scopes.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_collect_diagnostics_builtin_vector_named_args_scopes_err.json")
+          .string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+}
+
+TEST_CASE("primevm collect-diagnostics reports builtin vector named-arg rejection in definition and execution scopes") {
+  const std::string source = R"(
+[return<i32>]
+bad() {
+  vector(value=1i32)
+  return(0i32)
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+execute_repeat(vector(value=3i32), 0i32)
+)";
+  const std::string srcPath =
+      writeTemp("primevm_collect_diagnostics_builtin_vector_named_args_scopes.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primevm_collect_diagnostics_builtin_vector_named_args_scopes_err.json")
+          .string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+}
+
 TEST_CASE("primec collect-diagnostics emits intra-definition argument-type payload") {
   const std::string source = R"(
 [return<i32>]
