@@ -836,6 +836,27 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
+TEST_CASE("runs vm with user vector constructor block shadow") {
+  const std::string source = R"(
+[return<int>]
+vector([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [i32 mut] result{0i32}
+  vector(9i32) {
+    assign(result, 4i32)
+  }
+  return(result)
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_constructor_block_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
 TEST_CASE("runs vm with user vector push call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
