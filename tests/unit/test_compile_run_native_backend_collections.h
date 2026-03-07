@@ -525,6 +525,22 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects native stdlib collection shim map single key type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapSingle<i32, i32>("oops"raw_utf8, 4i32)}
+  return(mapCount<i32, i32>(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_map_single_key_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim map new") {
   const std::string source = R"(
 import /std/collections/*
