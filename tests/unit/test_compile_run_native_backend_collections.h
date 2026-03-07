@@ -463,6 +463,41 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("compiles and runs native stdlib collection shim vector oct constructor") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorOct<i32>(4i32, 8i32, 12i32, 16i32, 20i32, 24i32, 28i32, 32i32)}
+  [i32] picked{plus(vectorAt<i32>(values, 7i32), vectorAtUnsafe<i32>(values, 0i32))}
+  return(plus(picked, vectorCount<i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_oct_ctor.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shim_vector_oct_ctor_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 44);
+}
+
+TEST_CASE("rejects native stdlib collection shim vector oct type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorOct<i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, false)}
+  return(vectorCount<i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_oct_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim map pair string keys") {
   const std::string source = R"(
 import /std/collections/*
