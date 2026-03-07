@@ -1123,6 +1123,50 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("compiles and runs native user vector remove_at call shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/remove_at([vector<i32> mut] values, [i32] index) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_at(values, 1i32)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_vector_remove_at_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_vector_remove_at_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("compiles and runs native user vector remove_at method shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/remove_at([vector<i32> mut] values, [i32] index) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.remove_at(1i32)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_vector_remove_at_method_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_vector_remove_at_method_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("rejects native vector reserve beyond capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
