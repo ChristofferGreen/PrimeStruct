@@ -604,6 +604,46 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("rejects vm templated stdlib vector wrapper temporary method arity mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<int>]
+main() {
+  return(wrapVector<i32>(4i32).at(0i32, 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_method_arity.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("rejects vm templated stdlib vector wrapper temporary unsafe method arity mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<int>]
+main() {
+  return(wrapVector<i32>(4i32).at_unsafe(0i32, 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_unsafe_method_arity.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("rejects vm templated stdlib vector wrapper temporary capacity type mismatch") {
   const std::string source = R"(
 import /std/collections/*
