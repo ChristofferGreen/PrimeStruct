@@ -815,6 +815,21 @@ main() {
   CHECK(runCommand(runCmd) == 10);
 }
 
+TEST_CASE("rejects vm builtin vector constructor named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(vector([value] 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_builtin_vector_constructor_named_args.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_builtin_vector_constructor_named_args_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("runs vm with user map constructor block shadow") {
   const std::string source = R"(
 [return<int>]
