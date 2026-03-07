@@ -776,6 +776,26 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects native templated stdlib map wrapper temporary method missing key argument") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  return(wrapMap<string, i32>("only"raw_utf8, 4i32).at())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_method_missing_key.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("rejects native templated stdlib map wrapper temporary unsafe method arity mismatch") {
   const std::string source = R"(
 import /std/collections/*
@@ -792,6 +812,26 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_unsafe_method_arity.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("rejects native templated stdlib map wrapper temporary unsafe method missing key argument") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  return(wrapMap<string, i32>("only"raw_utf8, 4i32).at_unsafe())
+}
+)";
+  const std::string srcPath = writeTemp(
+      "compile_native_stdlib_collection_shim_templated_return_temp_unsafe_method_missing_key.prime", source);
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
@@ -999,6 +1039,26 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects native templated stdlib vector wrapper temporary method missing index") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<int>]
+main() {
+  return(wrapVector<i32>(4i32).at())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_templated_return_vector_temp_method_missing_index.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("rejects native templated stdlib vector wrapper temporary unsafe method arity mismatch") {
   const std::string source = R"(
 import /std/collections/*
@@ -1015,6 +1075,26 @@ main() {
 )";
   const std::string srcPath = writeTemp(
       "compile_native_stdlib_collection_shim_templated_return_vector_temp_unsafe_method_arity.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("rejects native templated stdlib vector wrapper temporary unsafe method missing index") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<int>]
+main() {
+  return(wrapVector<i32>(4i32).at_unsafe())
+}
+)";
+  const std::string srcPath = writeTemp(
+      "compile_native_stdlib_collection_shim_templated_return_vector_temp_unsafe_method_missing_index.prime", source);
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
