@@ -539,6 +539,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("at_unsafe call keeps user-defined array helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/array/at_unsafe([array<i32>] values, [i32] index) {
+  return(85i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("at_unsafe method keeps user-defined array helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/array/at_unsafe([array<i32>] values, [i32] index) {
+  return(86i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(values.at_unsafe(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("at_unsafe method keeps user-defined map helper precedence") {
   const std::string source = R"(
 [return<int>]

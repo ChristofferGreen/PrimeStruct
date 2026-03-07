@@ -459,6 +459,42 @@ main() {
   CHECK(runCommand(runCmd) == 63);
 }
 
+TEST_CASE("runs vm with user array at_unsafe call shadow") {
+  const std::string source = R"(
+[return<int>]
+/array/at_unsafe([array<i32>] values, [i32] index) {
+  return(85i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_array_at_unsafe_call_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 85);
+}
+
+TEST_CASE("runs vm with user array at_unsafe method shadow") {
+  const std::string source = R"(
+[return<int>]
+/array/at_unsafe([array<i32>] values, [i32] index) {
+  return(86i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(values.at_unsafe(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_array_at_unsafe_method_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 86);
+}
+
 TEST_CASE("runs vm with user map at_unsafe call shadow") {
   const std::string source = R"(
 [return<int>]
