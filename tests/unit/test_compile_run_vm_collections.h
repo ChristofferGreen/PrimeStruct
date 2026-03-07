@@ -405,6 +405,24 @@ main() {
   CHECK(runCommand(runCmd) == 66);
 }
 
+TEST_CASE("runs vm with user array capacity method shadow") {
+  const std::string source = R"(
+[return<int>]
+/array/capacity([array<i32>] values) {
+  return(65i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(values.capacity())
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_array_capacity_method_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 65);
+}
+
 TEST_CASE("runs vm with user array at call shadow") {
   const std::string source = R"(
 [return<int>]

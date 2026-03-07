@@ -553,6 +553,28 @@ main() {
   CHECK(runCommand(exePath) == 66);
 }
 
+TEST_CASE("compiles and runs native user array capacity method shadow") {
+  const std::string source = R"(
+[return<int>]
+/array/capacity([array<i32>] values) {
+  return(65i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(values.capacity())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_array_capacity_method_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_array_capacity_method_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 65);
+}
+
 TEST_CASE("compiles and runs native user array at call shadow") {
   const std::string source = R"(
 [return<int>]
