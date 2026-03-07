@@ -427,6 +427,21 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
+TEST_CASE("runs vm with stdlib collection shim map new string key envelope") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<string, i32>] values{mapNew<string, i32>()}
+  return(plus(mapCount<string, i32>(values), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_new_string.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
 TEST_CASE("rejects vm stdlib collection shim map new type mismatch") {
   const std::string source = R"(
 import /std/collections/*
@@ -438,6 +453,21 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_new_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("rejects vm stdlib collection shim map new string key type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{mapNew<string, i32>()}
+  return(mapCount<i32, i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_new_string_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
