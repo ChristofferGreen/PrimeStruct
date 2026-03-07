@@ -232,6 +232,36 @@ main() {
   CHECK(runCommand(runCmd) == 15);
 }
 
+TEST_CASE("runs vm with stdlib collection shim vector new") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorNew<i32>()}
+  return(plus(vectorCount<i32>(values), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_new.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
+TEST_CASE("rejects vm stdlib collection shim vector new type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorNew<bool>()}
+  return(vectorCount<i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_new_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("rejects vm stdlib collection shim vector single type mismatch") {
   const std::string source = R"(
 import /std/collections/*
