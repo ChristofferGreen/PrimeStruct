@@ -250,6 +250,37 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with stdlib collection shim vector quint constructor") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorQuint<i32>(1i32, 3i32, 5i32, 7i32, 9i32)}
+  [i32] picked{plus(vectorAt<i32>(values, 4i32), vectorAtUnsafe<i32>(values, 0i32))}
+  return(plus(picked, vectorCount<i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quint_ctor.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 15);
+}
+
+TEST_CASE("rejects vm stdlib collection shim vector quint type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorQuint<i32>(1i32, 2i32, 3i32, 4i32, true)}
+  return(vectorCount<i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quint_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with stdlib collection shim map pair string keys") {
   const std::string source = R"(
 import /std/collections/*
