@@ -315,6 +315,54 @@ main() {
   CHECK(readFile(errPath).find("unsupported return type on /wrapMapUnknownValue") != std::string::npos);
 }
 
+TEST_CASE("rejects vm templated stdlib vector return envelope nested arg") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<array<i32>>>]
+wrapVectorArray([i32] value) {
+  return(vectorSingle<i32>(value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{wrapVectorArray(3i32)}
+  return(vectorCount<i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_return_vector_nested_arg.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_stdlib_collection_shim_templated_return_vector_nested_arg_err.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unsupported return type on /wrapVectorArray") != std::string::npos);
+}
+
+TEST_CASE("rejects vm templated stdlib map return envelope nested arg") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<string, array<i32>>>]
+wrapMapNestedValue([string] key, [i32] value) {
+  return(mapSingle<string, i32>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] values{wrapMapNestedValue("only"raw_utf8, 3i32)}
+  return(mapCount<string, i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_return_map_nested_arg.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_stdlib_collection_shim_templated_return_map_nested_arg_err.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unsupported return type on /wrapMapNestedValue") != std::string::npos);
+}
+
 TEST_CASE("rejects vm templated stdlib vector return envelope wrong arity") {
   const std::string source = R"(
 import /std/collections/*
