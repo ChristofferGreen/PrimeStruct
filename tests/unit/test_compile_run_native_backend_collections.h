@@ -991,6 +991,48 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs native user array constructor shadow") {
+  const std::string source = R"(
+[return<int>]
+array([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(array([value] 9i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_array_constructor_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_array_constructor_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs native user map constructor shadow") {
+  const std::string source = R"(
+[return<int>]
+map([i32] key, [i32] value) {
+  return(plus(key, value))
+}
+
+[return<int>]
+main() {
+  return(map([key] 4i32, [value] 6i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_map_constructor_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_user_map_constructor_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+}
+
 TEST_CASE("compiles and runs native user vector push call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
