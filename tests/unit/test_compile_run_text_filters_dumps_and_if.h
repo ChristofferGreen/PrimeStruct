@@ -1299,6 +1299,21 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t messageCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
+         std::string::npos) {
+    ++messageCount;
+    scan += 1;
+  }
+  CHECK(messageCount == 2);
+
+  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
+  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
+  REQUIRE(definitionLabel != std::string::npos);
+  REQUIRE(executionLabel != std::string::npos);
+  CHECK(definitionLabel < executionLabel);
 }
 
 TEST_CASE("primevm collect-diagnostics reports builtin map named-arg rejection in definition and execution scopes") {
@@ -1335,6 +1350,21 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t messageCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
+         std::string::npos) {
+    ++messageCount;
+    scan += 1;
+  }
+  CHECK(messageCount == 2);
+
+  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
+  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
+  REQUIRE(definitionLabel != std::string::npos);
+  REQUIRE(executionLabel != std::string::npos);
+  CHECK(definitionLabel < executionLabel);
 }
 
 TEST_CASE("primec collect-diagnostics reports builtin vector named-arg rejection in definition and execution scopes") {
@@ -1372,6 +1402,21 @@ execute_repeat(vector(value=3i32), 0i32)
   CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t messageCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
+         std::string::npos) {
+    ++messageCount;
+    scan += 1;
+  }
+  CHECK(messageCount == 2);
+
+  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
+  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
+  REQUIRE(definitionLabel != std::string::npos);
+  REQUIRE(executionLabel != std::string::npos);
+  CHECK(definitionLabel < executionLabel);
 }
 
 TEST_CASE("primevm collect-diagnostics reports builtin vector named-arg rejection in definition and execution scopes") {
@@ -1409,6 +1454,21 @@ execute_repeat(vector(value=3i32), 0i32)
   CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t messageCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
+         std::string::npos) {
+    ++messageCount;
+    scan += 1;
+  }
+  CHECK(messageCount == 2);
+
+  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
+  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
+  REQUIRE(definitionLabel != std::string::npos);
+  REQUIRE(executionLabel != std::string::npos);
+  CHECK(definitionLabel < executionLabel);
 }
 
 TEST_CASE("primec collect-diagnostics reports builtin array named-arg rejection in definition and execution scopes") {
@@ -1446,6 +1506,21 @@ execute_repeat(array(value=3i32), 0i32)
   CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t messageCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
+         std::string::npos) {
+    ++messageCount;
+    scan += 1;
+  }
+  CHECK(messageCount == 2);
+
+  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
+  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
+  REQUIRE(definitionLabel != std::string::npos);
+  REQUIRE(executionLabel != std::string::npos);
+  CHECK(definitionLabel < executionLabel);
 }
 
 TEST_CASE("primevm collect-diagnostics reports builtin array named-arg rejection in definition and execution scopes") {
@@ -1483,6 +1558,21 @@ execute_repeat(array(value=3i32), 0i32)
   CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t messageCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
+         std::string::npos) {
+    ++messageCount;
+    scan += 1;
+  }
+  CHECK(messageCount == 2);
+
+  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
+  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
+  REQUIRE(definitionLabel != std::string::npos);
+  REQUIRE(executionLabel != std::string::npos);
+  CHECK(definitionLabel < executionLabel);
 }
 
 TEST_CASE("primec collect-diagnostics emits intra-definition argument-type payload") {
