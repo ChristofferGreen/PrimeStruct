@@ -636,6 +636,66 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects native templated stdlib map wrapper temporary call arity mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  return(mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8, 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_call_arity_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("rejects native templated stdlib map wrapper temporary unsafe call arity mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  return(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp(
+      "compile_native_stdlib_collection_shim_templated_return_temp_unsafe_call_arity_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("rejects native templated stdlib map wrapper temporary count call arity mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  return(mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_count_call_arity_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("rejects native templated stdlib map wrapper temporary count method arity mismatch") {
   const std::string source = R"(
 import /std/collections/*
