@@ -427,6 +427,38 @@ main() {
   CHECK(runCommand(runCmd) == 18);
 }
 
+TEST_CASE("runs vm with templated stdlib wrapper temporary count capacity parity") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32] mapCall{mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32))}
+  [i32] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).count()}
+  [i32] vectorCountCall{vectorCount<i32>(wrapVector<i32>(4i32))}
+  [i32] vectorCountMethod{wrapVector<i32>(4i32).count()}
+  [i32] vectorCapacityCall{vectorCapacity<i32>(wrapVector<i32>(4i32))}
+  [i32] vectorCapacityMethod{wrapVector<i32>(4i32).capacity()}
+  return(plus(plus(plus(mapCall, mapMethod), plus(vectorCountCall, vectorCountMethod)),
+              plus(vectorCapacityCall, vectorCapacityMethod)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_temp_count_capacity_parity.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
 TEST_CASE("rejects vm templated stdlib collection return envelope unsupported arg") {
   const std::string source = R"(
 import /std/collections/*
@@ -537,6 +569,35 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_stdlib_collection_shim_templated_return_temp_unsafe_parity_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("rejects vm templated stdlib wrapper temporary count capacity parity mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  return(plus(
+      plus(mapCount<i32, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
+           wrapMap<string, i32>("only"raw_utf8, 5i32).count(1i32)),
+      plus(vectorCount<bool>(wrapVector<i32>(4i32)),
+           plus(vectorCapacity<bool>(wrapVector<i32>(4i32)), wrapVector<i32>(4i32).capacity(1i32)))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_temp_count_capacity_parity_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
