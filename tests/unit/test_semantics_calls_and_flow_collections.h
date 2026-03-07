@@ -1771,6 +1771,27 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("user definition named map accepts block arguments") {
+  const std::string source = R"(
+[return<int>]
+map([i32] key, [i32] value) {
+  return(plus(key, value))
+}
+
+[return<int>]
+main() {
+  [i32 mut] result{0i32}
+  map(4i32, 6i32) {
+    assign(result, 7i32)
+  }
+  return(result)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("collection builtin still rejects named arguments") {
   const std::string source = R"(
 [return<int>]
