@@ -843,6 +843,42 @@ main() {
   CHECK(error.find("push requires exactly two arguments") != std::string::npos);
 }
 
+TEST_CASE("push call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/push([vector<i32> mut] values, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  push(values, 3i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("push method keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/push([vector<i32> mut] values, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.push(3i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("reserve requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
