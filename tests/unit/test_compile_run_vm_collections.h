@@ -430,6 +430,22 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("rejects vm templated stdlib map wrapper temporary index value mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+main() {
+  [bool] bad{wrapMap<string, i32>("only"raw_utf8, 4i32)["only"raw_utf8]}
+  return(plus(0i32, bad))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_temp_index_value_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("rejects vm templated stdlib map wrapper temporary call key mismatch") {
   const std::string source = R"(
 import /std/collections/*
@@ -1106,6 +1122,22 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_index_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("rejects vm templated stdlib vector wrapper temporary index value mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [bool] bad{wrapVector<i32>(4i32)[0i32]}
+  return(plus(0i32, bad))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_index_value_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
