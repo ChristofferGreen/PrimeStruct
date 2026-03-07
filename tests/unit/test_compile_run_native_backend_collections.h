@@ -275,6 +275,30 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs native stdlib collection shim helpers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorSingle<i32>(7i32)}
+  [map<i32, i32>] pairs{mapSingle<i32, i32>(3i32, 9i32)}
+  [i32 mut] total{plus(vectorCount<i32>(values), mapCount<i32, i32>(pairs))}
+  [vector<i32>] emptyValues{vectorNew<i32>()}
+  [map<i32, i32>] emptyPairs{mapNew<i32, i32>()}
+  assign(total, plus(total, plus(vectorCount<i32>(emptyValues), mapCount<i32, i32>(emptyPairs))))
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shims.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shims_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("compiles and runs native vector capacity helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

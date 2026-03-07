@@ -179,6 +179,26 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with stdlib collection shim helpers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorSingle<i32>(7i32)}
+  [map<i32, i32>] pairs{mapSingle<i32, i32>(3i32, 9i32)}
+  [i32 mut] total{plus(vectorCount<i32>(values), mapCount<i32, i32>(pairs))}
+  [vector<i32>] emptyValues{vectorNew<i32>()}
+  [map<i32, i32>] emptyPairs{mapNew<i32, i32>()}
+  assign(total, plus(total, plus(vectorCount<i32>(emptyValues), mapCount<i32, i32>(emptyPairs))))
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shims.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with vector capacity helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
