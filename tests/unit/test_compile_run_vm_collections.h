@@ -504,6 +504,26 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("rejects vm templated stdlib map wrapper temporary count method arity mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  return(wrapMap<string, i32>("only"raw_utf8, 4i32).count(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_temp_count_method_arity.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("rejects vm templated stdlib vector wrapper temporary call type mismatch") {
   const std::string source = R"(
 import /std/collections/*
@@ -560,6 +580,26 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_count_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("rejects vm templated stdlib vector wrapper temporary count method arity mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<int>]
+main() {
+  return(wrapVector<i32>(4i32).count(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_count_method_arity.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
