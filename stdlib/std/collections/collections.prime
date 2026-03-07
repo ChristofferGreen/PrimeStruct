@@ -30,6 +30,11 @@ namespace std {
     return(vector(first, second, third, fourth, fifth))
   }
 
+  [public return<vector<T>>]
+  vectorSext<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth) {
+    return(vector(first, second, third, fourth, fifth, sixth))
+  }
+
   [public return<i32>]
   vectorCount<T>([vector<T>] values) {
     return(count(values))
