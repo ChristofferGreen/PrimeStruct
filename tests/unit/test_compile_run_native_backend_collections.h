@@ -1430,6 +1430,42 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("compiles and runs native stdlib collection shim vector clear") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vectorTriple<i32>(2i32, 4i32, 6i32)}
+  vectorClear<i32>(values)
+  return(plus(vectorCount<i32>(values), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_clear.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_collection_shim_vector_clear_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("rejects native stdlib collection shim vector clear type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vectorTriple<i32>(2i32, 4i32, 6i32)}
+  vectorClear<bool>(values)
+  return(vectorCount<i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_clear_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim vector mutators") {
   const std::string source = R"(
 import /std/collections/*
