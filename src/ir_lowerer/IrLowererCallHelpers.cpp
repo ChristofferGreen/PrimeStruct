@@ -164,8 +164,10 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
   }
 
   if (expr.isMethodCall) {
+    std::string accessName;
+    const bool isBuiltinAccessMethod = getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2;
     const bool isBuiltinCountLikeMethod =
-        isArrayCountCall(expr) || isStringCountCall(expr) || isVectorCapacityCall(expr);
+        isArrayCountCall(expr) || isStringCountCall(expr) || isVectorCapacityCall(expr) || isBuiltinAccessMethod;
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
       const auto emitResult = emitResolvedInlineDefinitionCall(

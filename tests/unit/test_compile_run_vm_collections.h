@@ -115,6 +115,32 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
+TEST_CASE("runs vm with map at method helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  return(values.at(3i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_at_method.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
+TEST_CASE("runs vm with map at_unsafe method helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  return(values.at_unsafe(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_at_unsafe_method.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with array count helper") {
   const std::string source = R"(
 [return<int>]
@@ -343,6 +369,24 @@ main() {
   CHECK(runCommand(runCmd) == 61);
 }
 
+TEST_CASE("runs vm with user array at method shadow") {
+  const std::string source = R"(
+[return<int>]
+/array/at([array<i32>] values, [i32] index) {
+  return(63i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(values.at(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_array_at_method_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 63);
+}
+
 TEST_CASE("runs vm with user map at_unsafe call shadow") {
   const std::string source = R"(
 [return<int>]
@@ -359,6 +403,24 @@ main() {
   const std::string srcPath = writeTemp("vm_user_map_at_unsafe_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 62);
+}
+
+TEST_CASE("runs vm with user map at_unsafe method shadow") {
+  const std::string source = R"(
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(64i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values.at_unsafe(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_map_at_unsafe_method_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 64);
 }
 
 TEST_CASE("runs vm with vector push helper") {

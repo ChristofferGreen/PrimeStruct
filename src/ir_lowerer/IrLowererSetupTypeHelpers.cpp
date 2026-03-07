@@ -422,9 +422,11 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const ResolveReceiverExprPathFn &resolveExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
+  std::string accessName;
+  const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool allowBuiltinFallback =
       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
-      (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn));
+      (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall;
 
   const std::string priorError = errorOut;
   const Expr *receiver = nullptr;

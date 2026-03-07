@@ -243,6 +243,32 @@ main() {
   CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
+TEST_CASE("at method validates on array binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(values.at(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("at_unsafe method validates on map binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values.at_unsafe(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("capacity method keeps user-defined array helper precedence") {
   const std::string source = R"(
 [return<int>]
@@ -434,6 +460,42 @@ TEST_CASE("at_unsafe call keeps user-defined map helper precedence") {
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(at_unsafe(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("at method keeps user-defined array helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/array/at([array<i32>] values, [i32] index) {
+  return(75i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(values.at(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("at_unsafe method keeps user-defined map helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(76i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values.at_unsafe(1i32))
 }
 )";
   std::string error;

@@ -8714,6 +8714,33 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             error) == Result::NotHandled);
   CHECK(error.empty());
 
+  primec::Expr indexArg;
+  indexArg.kind = primec::Expr::Kind::Literal;
+  indexArg.intWidth = 32;
+  indexArg.literalValue = 1;
+  primec::Expr methodAccessCall;
+  methodAccessCall.kind = primec::Expr::Kind::Call;
+  methodAccessCall.name = "at";
+  methodAccessCall.isMethodCall = true;
+  methodAccessCall.args = {countArg, indexArg};
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            methodAccessCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+
   primec::Expr directCall;
   directCall.kind = primec::Expr::Kind::Call;
   directCall.name = "helper";
@@ -12773,6 +12800,29 @@ TEST_CASE("ir lowerer setup type helper keeps builtin count/capacity fallback wh
             methodCall,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return std::string(); },
+            {},
+            error) == nullptr);
+  CHECK(error == "stale");
+
+  methodCall.name = "at";
+  primec::Expr indexArg;
+  indexArg.kind = primec::Expr::Kind::Literal;
+  indexArg.intWidth = 32;
+  indexArg.literalValue = 1;
+  methodCall.args.push_back(indexArg);
+  error = "stale";
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             {},
