@@ -575,6 +575,78 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("at_unsafe call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(81i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("at_unsafe method keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(82i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.at_unsafe(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("at call keeps user-defined string helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/string/at([string] values, [i32] index) {
+  return(83i32)
+}
+
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  return(at(text, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("at method keeps user-defined string helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/string/at([string] values, [i32] index) {
+  return(84i32)
+}
+
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  return(text.at(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("push requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
