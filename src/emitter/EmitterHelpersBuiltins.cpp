@@ -523,6 +523,18 @@ bool resolveMethodCallPath(const Expr &call,
     return false;
   }
   const Expr &receiver = call.args.front();
+  auto normalizeCollectionReceiverType = [](const std::string &typePath) -> std::string {
+    if (typePath == "/array" || typePath == "array") {
+      return "array";
+    }
+    if (typePath == "/vector" || typePath == "vector") {
+      return "vector";
+    }
+    if (typePath == "/map" || typePath == "map") {
+      return "map";
+    }
+    return typePath;
+  };
   std::function<std::string(const Expr &)> inferPrimitiveTypeName;
   inferPrimitiveTypeName = [&](const Expr &expr) -> std::string {
     switch (expr.kind) {
@@ -545,6 +557,15 @@ bool resolveMethodCallPath(const Expr &call,
         return "";
       }
       case Expr::Kind::Call: {
+        std::string collectionName;
+        if (getBuiltinCollectionName(expr, collectionName)) {
+          if ((collectionName == "array" || collectionName == "vector") && expr.templateArgs.size() == 1) {
+            return collectionName;
+          }
+          if (collectionName == "map" && expr.templateArgs.size() == 2) {
+            return collectionName;
+          }
+        }
         if (isArrayCountCall(expr, localTypes)) {
           return "i32";
         }
@@ -553,13 +574,14 @@ bool resolveMethodCallPath(const Expr &call,
         }
         if (!expr.isMethodCall) {
           const std::string resolved = resolveExprPath(expr);
+          auto structIt = returnStructs.find(resolved);
+          if (structIt != returnStructs.end()) {
+            return normalizeCollectionReceiverType(structIt->second);
+          }
           auto it = returnKinds.find(resolved);
           if (it != returnKinds.end()) {
             if (it->second == ReturnKind::Array) {
-              auto structIt = returnStructs.find(resolved);
-              if (structIt != returnStructs.end()) {
-                return structIt->second;
-              }
+              return "array";
             }
             return typeNameForReturnKind(it->second);
           }
@@ -567,13 +589,14 @@ bool resolveMethodCallPath(const Expr &call,
         }
         std::string methodPath;
         if (resolveMethodCallPath(expr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
+          auto structIt = returnStructs.find(methodPath);
+          if (structIt != returnStructs.end()) {
+            return normalizeCollectionReceiverType(structIt->second);
+          }
           auto it = returnKinds.find(methodPath);
           if (it != returnKinds.end()) {
             if (it->second == ReturnKind::Array) {
-              auto structIt = returnStructs.find(methodPath);
-              if (structIt != returnStructs.end()) {
-                return structIt->second;
-              }
+              return "array";
             }
             return typeNameForReturnKind(it->second);
           }

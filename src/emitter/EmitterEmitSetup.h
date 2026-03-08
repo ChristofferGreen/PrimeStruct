@@ -230,6 +230,24 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   };
 
   std::function<std::string(const std::string &, const std::string &)> resolveStructReturnPath;
+  auto resolveCollectionReturnPath = [](const std::string &typeName) -> std::string {
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(typeName, base, arg)) {
+      return "";
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(arg, args)) {
+      return "";
+    }
+    if ((base == "array" || base == "vector") && args.size() == 1) {
+      return "/" + base;
+    }
+    if (base == "map" && args.size() == 2) {
+      return "/map";
+    }
+    return "";
+  };
 
   auto returnTypeFor = [&](const Definition &def) {
     ReturnKind returnKind = returnKinds[def.fullPath];
@@ -507,6 +525,11 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (!structPath.empty()) {
         returnKinds[def.fullPath] = ReturnKind::Array;
         returnStructs[def.fullPath] = structPath;
+      } else {
+        std::string collectionPath = resolveCollectionReturnPath(typeName);
+        if (!collectionPath.empty()) {
+          returnStructs[def.fullPath] = collectionPath;
+        }
       }
       break;
     }
