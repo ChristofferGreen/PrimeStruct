@@ -306,6 +306,37 @@
     auto structIt = returnStructs.find(methodPath);
     return structIt != returnStructs.end() && isMapTypePath(structIt->second);
   };
+  auto isResolvedStringTarget = [&](const Expr &targetExpr) -> bool {
+    if (isStringValue(targetExpr, localTypes)) {
+      return true;
+    }
+    auto isStringTypePath = [](const std::string &typePath) -> bool {
+      return typePath == "/string" || typePath == "string";
+    };
+    if (targetExpr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (!targetExpr.isMethodCall) {
+      const std::string resolvedTarget = resolveExprPath(targetExpr);
+      auto structIt = returnStructs.find(resolvedTarget);
+      if (structIt != returnStructs.end() && isStringTypePath(structIt->second)) {
+        return true;
+      }
+      auto kindIt = returnKinds.find(resolvedTarget);
+      return kindIt != returnKinds.end() && kindIt->second == ReturnKind::String;
+    }
+    std::string methodPath;
+    if (!resolveMethodCallPath(
+            targetExpr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
+      return false;
+    }
+    auto structIt = returnStructs.find(methodPath);
+    if (structIt != returnStructs.end() && isStringTypePath(structIt->second)) {
+      return true;
+    }
+    auto kindIt = returnKinds.find(methodPath);
+    return kindIt != returnKinds.end() && kindIt->second == ReturnKind::String;
+  };
   auto it = nameMap.find(full);
   if (it == nameMap.end()) {
     if (isMapCountCall(expr, localTypes)) {
@@ -440,7 +471,7 @@
     if (expr.name == "at" && expr.args.size() == 2) {
       std::ostringstream out;
       const Expr &target = expr.args[0];
-      if (isStringValue(target, localTypes)) {
+      if (isResolvedStringTarget(target)) {
         out << "ps_string_at("
             << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
@@ -491,7 +522,7 @@
     if (expr.name == "at_unsafe" && expr.args.size() == 2) {
       std::ostringstream out;
       const Expr &target = expr.args[0];
-      if (isStringValue(target, localTypes)) {
+      if (isResolvedStringTarget(target)) {
         out << "ps_string_at_unsafe("
             << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "

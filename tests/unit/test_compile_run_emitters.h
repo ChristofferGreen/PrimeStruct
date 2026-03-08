@@ -887,6 +887,58 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("C++ emitter infers wrapper string access builtin fallback") {
+  const std::string source = R"(
+wrapText() {
+  [string] text{"abc"raw_utf8}
+  return(text)
+}
+
+[return<int>]
+main() {
+  return(plus(plus(at(wrapText(), 1i32), wrapText().at(2i32)),
+              plus(at_unsafe(wrapText(), 0i32), wrapText().at_unsafe(1i32))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_access_builtin_fallback.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_inferred_wrapper_string_access_builtin_fallback.cpp")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_string_at(ps_wrapText(), 1)") != std::string::npos);
+  CHECK(output.find("ps_string_at(ps_wrapText(), 2)") != std::string::npos);
+  CHECK(output.find("ps_string_at_unsafe(ps_wrapText(), 0)") != std::string::npos);
+  CHECK(output.find("ps_string_at_unsafe(ps_wrapText(), 1)") != std::string::npos);
+}
+
+TEST_CASE("rejects inferred wrapper string access index mismatch in C++ emitter") {
+  const std::string source = R"(
+wrapText() {
+  [string] text{"abc"raw_utf8}
+  return(text)
+}
+
+[return<int>]
+main() {
+  [i32] callValue{at(wrapText(), true)}
+  [i32] methodValue{wrapText().at(true)}
+  [i32] unsafeCall{at_unsafe(wrapText(), true)}
+  [i32] unsafeMethod{wrapText().at_unsafe(true)}
+  return(plus(callValue, plus(methodValue, plus(unsafeCall, unsafeMethod))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_access_index_mismatch.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_inferred_wrapper_string_access_index_mismatch_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs user wrapper temporary access shadow precedence in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
