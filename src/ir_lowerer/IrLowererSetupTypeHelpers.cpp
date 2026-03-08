@@ -431,12 +431,35 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return methodExpr;
   };
 
-  std::vector<size_t> receiverIndices{0};
-  const bool hasNamedArgsValue = hasNamedArgs();
-  if (hasNamedArgsValue && callExpr.args.size() > 1) {
-    for (size_t i = 1; i < callExpr.args.size(); ++i) {
-      receiverIndices.push_back(i);
+  std::vector<size_t> receiverIndices;
+  auto appendReceiverIndex = [&](size_t index) {
+    if (index >= callExpr.args.size()) {
+      return;
     }
+    for (size_t existing : receiverIndices) {
+      if (existing == index) {
+        return;
+      }
+    }
+    receiverIndices.push_back(index);
+  };
+  const bool hasNamedArgsValue = hasNamedArgs();
+  if (hasNamedArgsValue) {
+    bool hasValuesNamedReceiver = false;
+    for (size_t i = 0; i < callExpr.args.size(); ++i) {
+      if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value() && *callExpr.argNames[i] == "values") {
+        appendReceiverIndex(i);
+        hasValuesNamedReceiver = true;
+      }
+    }
+    if (!hasValuesNamedReceiver) {
+      appendReceiverIndex(0);
+      for (size_t i = 1; i < callExpr.args.size(); ++i) {
+        appendReceiverIndex(i);
+      }
+    }
+  } else {
+    appendReceiverIndex(0);
   }
   const bool probePositionalReorderedAccessReceiver =
       isAccessCall && !hasNamedArgsValue && callExpr.args.size() > 1 &&
@@ -446,7 +469,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         !isKnownCollectionAccessReceiverExpr(callExpr.args.front())));
   if (probePositionalReorderedAccessReceiver) {
     for (size_t i = 1; i < callExpr.args.size(); ++i) {
-      receiverIndices.push_back(i);
+      appendReceiverIndex(i);
     }
   }
 

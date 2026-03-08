@@ -14385,7 +14385,7 @@ TEST_CASE("ir lowerer setup type helper resolves reordered positional access cal
       locals,
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) {
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
         ++resolveCalls;
         if (!methodExpr.isMethodCall || methodExpr.args.empty()) {
           return static_cast<const primec::Definition *>(nullptr);
@@ -14450,7 +14450,7 @@ TEST_CASE("ir lowerer setup type helper keeps leading collection receiver for po
       locals,
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) {
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
         ++resolveCalls;
         if (!methodExpr.isMethodCall || methodExpr.args.empty()) {
           return static_cast<const primec::Definition *>(nullptr);
@@ -14516,7 +14516,7 @@ TEST_CASE("ir lowerer setup type helper resolves reordered named access call met
       locals,
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) {
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
         ++resolveCalls;
         if (!methodExpr.isMethodCall || methodExpr.args.empty()) {
           return static_cast<const primec::Definition *>(nullptr);
@@ -14532,7 +14532,79 @@ TEST_CASE("ir lowerer setup type helper resolves reordered named access call met
       &methodResolved));
   CHECK(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(resolveCalls == 2);
+  CHECK(resolveCalls == 1);
+}
+
+TEST_CASE("ir lowerer setup type helper keeps labeled named access receiver leading") {
+  primec::Definition atDef;
+  atDef.fullPath = "/map/at";
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo scalarInfo;
+  scalarInfo.returnsVoid = false;
+  scalarInfo.returnsArray = false;
+  scalarInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  infoByPath.emplace("/map/at", scalarInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+  primec::Expr fallbackExpr;
+  fallbackExpr.kind = primec::Expr::Kind::Name;
+  fallbackExpr.name = "fallback";
+
+  primec::Expr atCall;
+  atCall.kind = primec::Expr::Kind::Call;
+  atCall.name = "at";
+  atCall.args = {valuesExpr, fallbackExpr};
+  atCall.argNames = {std::string("values"), std::string("index")};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo leadingMapInfo;
+  leadingMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  leadingMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  locals.emplace("values", leadingMapInfo);
+
+  primec::ir_lowerer::LocalInfo fallbackMapInfo;
+  fallbackMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  fallbackMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("fallback", fallbackMapInfo);
+
+  int resolveCalls = 0;
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  bool methodResolved = false;
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      atCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++resolveCalls;
+        if (!methodExpr.isMethodCall || methodExpr.args.empty()) {
+          return static_cast<const primec::Definition *>(nullptr);
+        }
+        if (methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+            methodExpr.args.front().name == "fallback") {
+          return &atDef;
+        }
+        return static_cast<const primec::Definition *>(nullptr);
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(resolveCalls == 1);
 }
 
 TEST_CASE("ir lowerer setup type helper resolves soa get/ref call method return kinds") {
@@ -20639,6 +20711,42 @@ TEST_CASE("ir lowerer setup inference helper keeps leading collection receiver f
   accessExpr.kind = primec::Expr::Kind::Call;
   accessExpr.name = "at";
   accessExpr.args = {valuesExpr, fallbackExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer setup inference helper keeps labeled named receiver for access") {
+  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo leadingMapInfo;
+  leadingMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  leadingMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  locals.emplace("values", leadingMapInfo);
+
+  primec::ir_lowerer::LocalInfo fallbackMapInfo;
+  fallbackMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  fallbackMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("fallback", fallbackMapInfo);
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+  primec::Expr fallbackExpr;
+  fallbackExpr.kind = primec::Expr::Kind::Name;
+  fallbackExpr.name = "fallback";
+
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.args = {valuesExpr, fallbackExpr};
+  accessExpr.argNames = {std::string("values"), std::string("index")};
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(

@@ -228,12 +228,35 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
   };
 
-  std::vector<size_t> receiverIndices{0};
-  const bool hasNamedArgsValue = hasNamedArgs();
-  if (hasNamedArgsValue && expr.args.size() > 1) {
-    for (size_t i = 1; i < expr.args.size(); ++i) {
-      receiverIndices.push_back(i);
+  std::vector<size_t> receiverIndices;
+  auto appendReceiverIndex = [&](size_t index) {
+    if (index >= expr.args.size()) {
+      return;
     }
+    for (size_t existing : receiverIndices) {
+      if (existing == index) {
+        return;
+      }
+    }
+    receiverIndices.push_back(index);
+  };
+  const bool hasNamedArgsValue = hasNamedArgs();
+  if (hasNamedArgsValue) {
+    bool hasValuesNamedReceiver = false;
+    for (size_t i = 0; i < expr.args.size(); ++i) {
+      if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
+        appendReceiverIndex(i);
+        hasValuesNamedReceiver = true;
+      }
+    }
+    if (!hasValuesNamedReceiver) {
+      appendReceiverIndex(0);
+      for (size_t i = 1; i < expr.args.size(); ++i) {
+        appendReceiverIndex(i);
+      }
+    }
+  } else {
+    appendReceiverIndex(0);
   }
   const bool probePositionalReorderedReceiver =
       !hasNamedArgsValue && expr.args.size() > 1 &&
@@ -243,7 +266,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
         !isKnownCollectionAccessReceiverExpr(expr.args.front())));
   if (probePositionalReorderedReceiver) {
     for (size_t i = 1; i < expr.args.size(); ++i) {
-      receiverIndices.push_back(i);
+      appendReceiverIndex(i);
     }
   }
 
