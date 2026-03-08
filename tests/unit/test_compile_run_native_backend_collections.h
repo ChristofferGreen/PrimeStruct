@@ -812,6 +812,41 @@ main() {
   CHECK(runCommand(exePath) == 501);
 }
 
+TEST_CASE("rejects native user wrapper temporary syntax parity shadow mismatch") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(83i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(84i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(
+      plus(plus(at(wrapMap(), true), wrapMap().at(true)), wrapMap()[true]),
+      plus(plus(at(wrapVector(), true), wrapVector().at(true)), wrapVector()[true])))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_user_wrapper_temp_syntax_parity_shadow_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("rejects native templated stdlib collection return envelope unsupported arg") {
   const std::string source = R"(
 import /std/collections/*
