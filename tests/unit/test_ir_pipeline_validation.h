@@ -20820,6 +20820,41 @@ TEST_CASE("ir lowerer setup inference helper keeps leading collection receiver f
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper keeps leading soa receiver for positional access") {
+  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo leadingSoaInfo;
+  leadingSoaInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  leadingSoaInfo.isSoaVector = true;
+  locals.emplace("values", leadingSoaInfo);
+
+  primec::ir_lowerer::LocalInfo fallbackVectorInfo;
+  fallbackVectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  fallbackVectorInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("fallback", fallbackVectorInfo);
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+  primec::Expr fallbackExpr;
+  fallbackExpr.kind = primec::Expr::Kind::Name;
+  fallbackExpr.name = "fallback";
+
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "get";
+  accessExpr.args = {valuesExpr, fallbackExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer setup inference helper keeps labeled named receiver for access") {
   using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
 

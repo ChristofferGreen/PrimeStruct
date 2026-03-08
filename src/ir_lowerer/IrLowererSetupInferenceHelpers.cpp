@@ -224,7 +224,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     }
     const LocalInfo &info = it->second;
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
-           (info.kind == LocalInfo::Kind::Reference && info.referenceToArray) ||
+           (info.kind == LocalInfo::Kind::Reference && info.referenceToArray) || info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
   };
 
