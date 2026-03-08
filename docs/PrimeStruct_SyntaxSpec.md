@@ -604,8 +604,10 @@ Current implementation status: parser/text-transform support accepts surface `so
 and semantic validation now accepts `soa_vector` usage when constraints hold
 (`soa_vector` struct element requirement, `soa_vector` literal/return template-arity checks, and deterministic
 `soa_vector field envelope is unsupported on /Type/field/...: ...` diagnostics for disallowed direct/nested
-element-field envelopes in literal, binding, and return validation paths). Builtin `count` now validates for
-`soa_vector` targets so programs reach lowering/runtime paths. Lowering/runtime support remains
+element-field envelopes in literal, binding, and return validation paths). Builtin `count`/`get`/`ref` validation now
+routes `soa_vector` targets through deterministic semantics diagnostics, and method-form field-view names now emit
+`soa_vector field views are not implemented yet: <field>` unless a user-defined `/soa_vector/<field>` helper exists.
+Lowering/runtime support remains
 incomplete; current IR lowering emits deterministic unsupported diagnostics
 (`native backend does not support soa_vector literals`, `native backend does not support soa_vector count`,
 `native backend does not support soa_vector get`, `native backend does not support soa_vector ref`,

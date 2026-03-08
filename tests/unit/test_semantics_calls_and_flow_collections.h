@@ -243,6 +243,81 @@ TEST_CASE("soa_vector get and ref reject named arguments for builtin calls") {
   checkNamedArgs("ref([index] 0i32, [values] values)");
 }
 
+TEST_CASE("soa_vector field-view method reports unsupported diagnostic") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  values.x()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
+TEST_CASE("soa_vector field-view index syntax reports unsupported diagnostic") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(values.x()[0i32])
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
+TEST_CASE("soa_vector field-view builtin rejects named arguments") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  values.x([index] 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("soa_vector field-view method falls back to user helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/soa_vector/x([soa_vector<Particle>] values, [i32] index) {
+  return(index)
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(values.x(0i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("count rejects vector named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -1694,6 +1694,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
+      auto isStaticBinding = [&](const Expr &bindingExpr) -> bool {
+        for (const auto &transform : bindingExpr.transforms) {
+          if (transform.name == "static") {
+            return true;
+          }
+        }
+        return false;
+      };
       auto resolveStructTypePath = [&](const std::string &typeName,
                                        const std::string &namespacePrefix) -> std::string {
         if (typeName.empty()) {
@@ -1805,6 +1813,38 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (methodName == "get" || methodName == "ref") {
         if (resolveSoaVectorTarget(receiver, elemType)) {
           return setCollectionMethodTarget("/soa_vector/" + methodName);
+        }
+      }
+      if (resolveSoaVectorTarget(receiver, elemType)) {
+        const std::string normalizedElemType = normalizeBindingTypeName(elemType);
+        std::string currentNamespace;
+        if (!currentDefinitionPath_.empty()) {
+          const size_t slash = currentDefinitionPath_.find_last_of('/');
+          if (slash != std::string::npos && slash > 0) {
+            currentNamespace = currentDefinitionPath_.substr(0, slash);
+          }
+        }
+        const std::string lookupNamespace =
+            !receiver.namespacePrefix.empty() ? receiver.namespacePrefix : currentNamespace;
+        const std::string elementStructPath = resolveStructTypePath(normalizedElemType, lookupNamespace);
+        if (!elementStructPath.empty()) {
+          auto structIt = defMap_.find(elementStructPath);
+          if (structIt != defMap_.end() && structIt->second != nullptr) {
+            for (const auto &stmt : structIt->second->statements) {
+              if (!stmt.isBinding || isStaticBinding(stmt) || stmt.name != methodName) {
+                continue;
+              }
+              const std::string helperPath = "/soa_vector/" + methodName;
+              if (defMap_.count(helperPath) > 0) {
+                resolvedOut = helperPath;
+                isBuiltinOut = false;
+              } else {
+                resolvedOut = "/soa_vector/field_view/" + methodName;
+                isBuiltinOut = true;
+              }
+              return true;
+            }
+          }
         }
       }
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
@@ -3465,6 +3505,31 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         }
         return true;
+      }
+      if (resolvedMethod && resolved.rfind("/soa_vector/field_view/", 0) == 0) {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = expr.name + " does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = expr.name + " does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 1) {
+          error_ = expr.name + " does not accept arguments";
+          return false;
+        }
+        std::string elemType;
+        if (!resolveSoaVectorTarget(expr.args.front(), elemType)) {
+          error_ = "soa_vector field view requires soa_vector target";
+          return false;
+        }
+        error_ = "soa_vector field views are not implemented yet: " + expr.name;
+        return false;
       }
       if (!resolvedMethod && (expr.name == "get" || expr.name == "ref") && it == defMap_.end()) {
         const std::string helperName = expr.name;
