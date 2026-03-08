@@ -26954,6 +26954,59 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
   CHECK(instructions.empty());
   CHECK(vectorMethodProbeCalls == 1);
 
+  primec::Expr valueName;
+  valueName.kind = primec::Expr::Kind::Name;
+  valueName.name = "valueName";
+  primec::Expr positionalNameReorderedPushCall = pushCall;
+  positionalNameReorderedPushCall.args = {valueName, target};
+  positionalNameReorderedPushCall.argNames.clear();
+  vectorMethodProbeCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            positionalNameReorderedPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &candidate) {
+              if (!candidate.isMethodCall || candidate.name != "push" || candidate.args.empty() ||
+                  candidate.args.front().kind != primec::Expr::Kind::Name ||
+                  candidate.args.front().name != "v") {
+                return false;
+              }
+              ++vectorMethodProbeCalls;
+              return true;
+            },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+  CHECK(vectorMethodProbeCalls == 1);
+
+  error.clear();
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            positionalNameReorderedPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "push requires mutable vector binding");
+  CHECK(instructions.empty());
+
   primec::Expr namedPushCall = pushCall;
   namedPushCall.args = {value, target};
   namedPushCall.argNames = {std::string("value"), std::string("values")};

@@ -57,6 +57,20 @@ bool checkedSubU64(uint64_t lhs, uint64_t rhs, uint64_t &out) {
 enum class SignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 enum class UnsignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 
+bool isVectorStatementReceiverExpr(const Expr &expr, const LocalMap &localsIn) {
+  if (expr.kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto it = localsIn.find(expr.name);
+  if (it == localsIn.end()) {
+    return false;
+  }
+  if (it->second.isSoaVector) {
+    return true;
+  }
+  return it->second.kind == LocalInfo::Kind::Vector && it->second.isMutable;
+}
+
 SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(const Expr &expr, int64_t &out) {
   if (expr.kind == Expr::Kind::Literal && !expr.isUnsigned) {
     out = expr.intWidth == 32 ? static_cast<int32_t>(expr.literalValue) : static_cast<int64_t>(expr.literalValue);
@@ -607,7 +621,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
         receiverIndices.push_back(i);
       }
     }
-    if (!hasNamedArgs && stmt.args.size() > 1 && stmt.args.front().kind == Expr::Kind::Literal) {
+    if (!hasNamedArgs && stmt.args.size() > 1 && !isVectorStatementReceiverExpr(stmt.args.front(), localsIn)) {
       for (size_t i = 1; i < stmt.args.size(); ++i) {
         receiverIndices.push_back(i);
       }
