@@ -2890,6 +2890,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap"))) {
             return false;
           }
+          if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
+            bool isBuiltinMethod = false;
+            std::string methodResolved;
+            if (resolveMethodTarget(expr.args.front(), expr.name, methodResolved, isBuiltinMethod) &&
+                !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
+              return false;
+            }
+          }
           return defMap_.find(resolved) == defMap_.end();
         };
         bool isBuiltin = false;
