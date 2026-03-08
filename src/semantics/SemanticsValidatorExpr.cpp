@@ -2018,6 +2018,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       resolvedOut = "/vector/capacity";
       isBuiltinMethodOut = true;
     };
+    auto isNonCollectionStructCapacityTarget = [&](const std::string &resolvedPath) -> bool {
+      constexpr std::string_view suffix = "/capacity";
+      if (resolvedPath.size() <= suffix.size() ||
+          resolvedPath.compare(resolvedPath.size() - suffix.size(), suffix.size(), suffix) != 0) {
+        return false;
+      }
+      const std::string receiverPath = resolvedPath.substr(0, resolvedPath.size() - suffix.size());
+      if (receiverPath == "/array" || receiverPath == "/vector" || receiverPath == "/map" || receiverPath == "/string") {
+        return false;
+      }
+      return structNames_.count(receiverPath) > 0;
+    };
     if (expr.isFieldAccess) {
       if (expr.args.size() != 1) {
         error_ = "field access requires a receiver";
@@ -2092,7 +2104,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
-        promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved, isBuiltinMethod, false);
+        if (!isNonCollectionStructCapacityTarget(methodResolved)) {
+          promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved, isBuiltinMethod, false);
+        }
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
         error_ = "unknown method: " + methodResolved;
