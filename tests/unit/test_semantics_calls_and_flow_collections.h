@@ -2022,6 +2022,24 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("vector helper statement call-form user shadow accepts named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/push([vector<i32> mut] values, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  push([values] values, [value] 3i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("user definition named push with positional args is not treated as builtin") {
   const std::string source = R"(
 [return<int>]
