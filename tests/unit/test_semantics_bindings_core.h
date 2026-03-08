@@ -251,7 +251,7 @@ main() {
   CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
-TEST_CASE("soa_vector binding emits deterministic unsupported diagnostic") {
+TEST_CASE("soa_vector binding validates with soa-safe struct element type") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -264,8 +264,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector is not implemented yet") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("soa_vector binding requires struct element type") {

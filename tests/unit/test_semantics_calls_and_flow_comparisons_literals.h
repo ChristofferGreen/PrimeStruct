@@ -197,7 +197,7 @@ main() {
   CHECK(error.find("soa_vector literal requires exactly one template argument") != std::string::npos);
 }
 
-TEST_CASE("soa_vector literal emits deterministic unsupported diagnostic") {
+TEST_CASE("soa_vector literal validates when element type is soa-safe struct") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -210,8 +210,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector is not implemented yet") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("soa_vector literal requires struct element type") {
@@ -299,8 +299,25 @@ main() {
 }
 )";
   std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("soa_vector literal requires heap_alloc effect when non-empty") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  soa_vector<Particle>(Particle(2i32))
+  return(1i32)
+}
+)";
+  std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector is not implemented yet") != std::string::npos);
+  CHECK(error.find("soa_vector literal requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("array literal type mismatch fails") {

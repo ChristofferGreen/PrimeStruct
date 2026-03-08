@@ -601,12 +601,12 @@ Draft constraints:
 - Reallocation invalidates SoA field views/proxies.
 
 Current implementation status: parser/text-transform support accepts surface `soa_vector<T>{...}`/`soa_vector<T>[...]`,
-but semantic validation rejects `soa_vector` usage with deterministic diagnostics
-(`soa_vector is not implemented yet`, `soa_vector requires struct element type`,
-`soa_vector literal requires struct element type`, `soa_vector return type requires struct element type`,
-`soa_vector literal requires exactly one template argument`, `soa_vector return type requires exactly one template argument`,
-and `soa_vector field envelope is unsupported on /Type/field/...: ...` for disallowed direct or nested element-field
-envelopes in literal, binding, and return validation paths).
+and semantic validation now accepts `soa_vector` usage when constraints hold
+(`soa_vector` struct element requirement, `soa_vector` literal/return template-arity checks, and deterministic
+`soa_vector field envelope is unsupported on /Type/field/...: ...` diagnostics for disallowed direct/nested
+element-field envelopes in literal, binding, and return validation paths). Lowering/runtime support remains
+incomplete; current IR lowering emits deterministic unsupported diagnostics
+(`native backend does not support soa_vector literals`).
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 

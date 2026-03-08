@@ -85,7 +85,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("soa_vector return emits deterministic unsupported diagnostic") {
+TEST_CASE("soa_vector return type validates with soa-safe struct element type") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -97,8 +97,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector is not implemented yet on /main") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("soa_vector return requires struct element type") {

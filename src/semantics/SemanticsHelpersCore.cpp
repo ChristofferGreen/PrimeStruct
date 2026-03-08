@@ -453,8 +453,7 @@ ReturnKind getReturnKind(const Definition &def,
           error = "soa_vector return type requires struct element type on " + def.fullPath;
           return ReturnKind::Unknown;
         }
-        error = "soa_vector is not implemented yet on " + def.fullPath;
-        return ReturnKind::Unknown;
+        nextKind = ReturnKind::Array;
       } else if (typeName == "array") {
         error = "array return type requires exactly one template argument on " + def.fullPath;
         return ReturnKind::Unknown;
@@ -1294,8 +1293,10 @@ bool parseBindingInfo(const Expr &expr,
           error = "soa_vector requires struct element type";
           return false;
         }
-        error = "soa_vector is not implemented yet";
-        return false;
+        typeName = transform.name;
+        typeHasTemplate = true;
+        info.typeTemplateArg = joinTemplateArgs(transform.templateArgs);
+        continue;
       }
       if (transform.name == "uninitialized" && transform.templateArgs.size() != 1) {
         error = "uninitialized requires exactly one template argument";

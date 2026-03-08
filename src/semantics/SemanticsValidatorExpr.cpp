@@ -3848,8 +3848,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (!validateSoaVectorElementFieldEnvelopes(expr.templateArgs.front(), expr.namespacePrefix)) {
             return false;
           }
-          error_ = "soa_vector is not implemented yet";
-          return false;
+          if (!expr.args.empty() && activeEffects_.count("heap_alloc") == 0) {
+            error_ = "soa_vector literal requires heap_alloc effect";
+            return false;
+          }
         }
         if (builtinName == "vector" && !expr.args.empty()) {
           if (activeEffects_.count("heap_alloc") == 0) {
@@ -3857,7 +3859,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
         }
-        if (builtinName == "array" || builtinName == "vector") {
+        if (builtinName == "array" || builtinName == "vector" || builtinName == "soa_vector") {
           if (expr.templateArgs.size() != 1) {
             if (builtinName == "array" && expr.templateArgs.size() > 1) {
               error_ = "array<T, N> is unsupported; use array<T> (runtime-count array)";
@@ -3881,7 +3883,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
         }
-        if ((builtinName == "array" || builtinName == "vector") && !expr.templateArgs.empty()) {
+        if ((builtinName == "array" || builtinName == "vector" || builtinName == "soa_vector") &&
+            !expr.templateArgs.empty()) {
           const std::string &elemType = expr.templateArgs.front();
           for (const auto &arg : expr.args) {
             if (!validateCollectionElementType(arg, elemType, builtinName + " literal requires element type ")) {

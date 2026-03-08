@@ -100,6 +100,28 @@ TEST_CASE("ir lowerer rejects soa_vector literals with deterministic diagnostic"
   CHECK(error == "native backend does not support soa_vector literals");
 }
 
+TEST_CASE("semantics accepts soa_vector before lowerer rejection") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<soa_vector<Particle>>]
+main() {
+  return(soa_vector<Particle>())
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "native backend does not support soa_vector literals");
+}
+
 TEST_CASE("ir lowerer effects unit validates program effect traversal") {
   auto makeEffectsTransform = [](const std::vector<std::string> &effects) {
     primec::Transform transform;
