@@ -608,7 +608,18 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   }
 
   if (!stmt.isMethodCall && !stmt.args.empty()) {
-    std::vector<size_t> receiverIndices{0};
+    std::vector<size_t> receiverIndices;
+    auto appendReceiverIndex = [&](size_t index) {
+      if (index >= stmt.args.size()) {
+        return;
+      }
+      for (size_t existing : receiverIndices) {
+        if (existing == index) {
+          return;
+        }
+      }
+      receiverIndices.push_back(index);
+    };
     bool hasNamedArgs = false;
     for (const auto &argName : stmt.argNames) {
       if (argName.has_value()) {
@@ -616,10 +627,23 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
         break;
       }
     }
-    if (hasNamedArgs && stmt.args.size() > 1) {
-      for (size_t i = 1; i < stmt.args.size(); ++i) {
-        receiverIndices.push_back(i);
+    if (hasNamedArgs) {
+      bool hasValuesNamedReceiver = false;
+      for (size_t i = 0; i < stmt.args.size(); ++i) {
+        if (i < stmt.argNames.size() && stmt.argNames[i].has_value() &&
+            *stmt.argNames[i] == "values") {
+          appendReceiverIndex(i);
+          hasValuesNamedReceiver = true;
+        }
       }
+      if (!hasValuesNamedReceiver) {
+        appendReceiverIndex(0);
+        for (size_t i = 1; i < stmt.args.size(); ++i) {
+          appendReceiverIndex(i);
+        }
+      }
+    } else {
+      appendReceiverIndex(0);
     }
     const bool probePositionalReorderedReceiver =
         !hasNamedArgs && stmt.args.size() > 1 &&
@@ -629,7 +653,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
           !isVectorStatementReceiverExpr(stmt.args.front(), localsIn)));
     if (probePositionalReorderedReceiver) {
       for (size_t i = 1; i < stmt.args.size(); ++i) {
-        receiverIndices.push_back(i);
+        appendReceiverIndex(i);
       }
     }
 

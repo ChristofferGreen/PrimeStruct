@@ -27898,6 +27898,41 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
   CHECK(instructions.empty());
   CHECK(vectorMethodProbeCalls == 1);
 
+  primec::Expr labeledFallbackPushCall = pushCall;
+  labeledFallbackPushCall.args = {target, valueName};
+  labeledFallbackPushCall.argNames = {std::string("value"), std::string("values")};
+  int namedProbeCalls = 0;
+  int namedMatchedCalls = 0;
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            labeledFallbackPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &candidate) {
+              ++namedProbeCalls;
+              if (!candidate.isMethodCall || candidate.name != "push" || candidate.args.empty() ||
+                  candidate.args.front().kind != primec::Expr::Kind::Name ||
+                  candidate.args.front().name != "v") {
+                return false;
+              }
+              ++namedMatchedCalls;
+              return true;
+            },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
+  CHECK(namedProbeCalls == 1);
+  CHECK(namedMatchedCalls == 0);
+
   primec::Expr tempReceiver;
   tempReceiver.kind = primec::Expr::Kind::Call;
   tempReceiver.name = "wrapVector";
