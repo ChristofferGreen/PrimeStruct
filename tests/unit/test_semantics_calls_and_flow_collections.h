@@ -2463,6 +2463,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector helper statement prefers labeled named receiver") {
+  const std::string source = R"(
+Particle {
+  [i32] id{0i32}
+}
+
+[effects(heap_alloc), return<void>]
+/vector/push([vector<i32> mut] values, [soa_vector<Particle>] value) {
+}
+
+[effects(heap_alloc), return<void>]
+/soa_vector/push([soa_vector<Particle> mut] values, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  [soa_vector<Particle>] payload{soa_vector<Particle>()}
+  push([value] payload, [values] values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector helper statement labeled receiver does not fall back to non-receiver label") {
+  const std::string source = R"(
+Particle {
+  [i32] id{0i32}
+}
+
+[effects(heap_alloc), return<void>]
+/soa_vector/push([vector<i32> mut] values, [soa_vector<Particle>] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  [soa_vector<Particle>] payload{soa_vector<Particle>()}
+  push([value] payload, [values] values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("vector helper statement skips temp-leading positional receiver probing") {
   const std::string source = R"(
 Counter {
