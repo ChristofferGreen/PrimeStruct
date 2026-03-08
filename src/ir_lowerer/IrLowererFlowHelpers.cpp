@@ -621,7 +621,12 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
         receiverIndices.push_back(i);
       }
     }
-    if (!hasNamedArgs && stmt.args.size() > 1 && !isVectorStatementReceiverExpr(stmt.args.front(), localsIn)) {
+    const bool probePositionalReorderedReceiver =
+        !hasNamedArgs && stmt.args.size() > 1 &&
+        (stmt.args.front().kind == Expr::Kind::Literal ||
+         (stmt.args.front().kind == Expr::Kind::Name &&
+          !isVectorStatementReceiverExpr(stmt.args.front(), localsIn)));
+    if (probePositionalReorderedReceiver) {
       for (size_t i = 1; i < stmt.args.size(); ++i) {
         receiverIndices.push_back(i);
       }

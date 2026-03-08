@@ -27071,6 +27071,32 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
   CHECK(instructions.empty());
   CHECK(vectorMethodProbeCalls == 1);
 
+  primec::Expr reorderedTempPushCall = pushCall;
+  reorderedTempPushCall.args = {tempReceiver, target};
+  reorderedTempPushCall.argNames.clear();
+  error.clear();
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            reorderedTempPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &candidate) {
+              return candidate.isMethodCall && !candidate.args.empty() &&
+                     candidate.args.front().kind == primec::Expr::Kind::Name &&
+                     candidate.args.front().name == "v";
+            },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "push requires mutable vector binding");
+  CHECK(instructions.empty());
+
   primec::Expr soaTarget;
   soaTarget.kind = primec::Expr::Kind::Name;
   soaTarget.name = "soa";
