@@ -868,6 +868,16 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         return inferStructReturnPath(*valueExpr, params, locals);
       }
 
+      std::string collectionName;
+      if (getBuiltinCollectionName(expr, collectionName)) {
+        if ((collectionName == "array" || collectionName == "vector") && expr.templateArgs.size() == 1) {
+          return "/" + collectionName;
+        }
+        if (collectionName == "map" && expr.templateArgs.size() == 2) {
+          return "/map";
+        }
+      }
+
       std::string resolved = resolveExprPath(expr);
       if (structTypeMap.count(resolved) == 0) {
         auto importIt = importAliases.find(expr.name);
@@ -898,15 +908,19 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       return ReturnKind::Unknown;
     }
     bool hasExplicitReturnTransform = false;
+    bool hasAutoReturnTransform = false;
     for (const auto &transform : def.transforms) {
       if (transform.name == "return") {
         hasExplicitReturnTransform = true;
+        hasAutoReturnTransform = transform.templateArgs.size() == 1 && transform.templateArgs.front() == "auto";
         break;
       }
     }
     const auto &params = paramMap[def.fullPath];
     ReturnKind inferred = ReturnKind::Unknown;
     std::string inferredStructPath;
+    bool inferredStructConflict = false;
+    bool sawNonCollectionReturn = false;
     bool sawReturn = false;
     std::unordered_map<std::string, ReturnKind> locals;
     std::unordered_map<std::string, std::string> localStructs;
@@ -942,9 +956,22 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         std::string exprStructPath;
         if (!stmt.args.empty()) {
           exprKind = inferExprReturnKind(stmt.args.front(), params, activeLocals);
-          if (exprKind == ReturnKind::Array) {
-            exprStructPath = inferStructReturnPath(stmt.args.front(), params, activeStructs);
+          exprStructPath = inferStructReturnPath(stmt.args.front(), params, activeStructs);
+        }
+        if (stmt.args.empty() || exprStructPath.empty()) {
+          sawNonCollectionReturn = true;
+        }
+        if (exprKind != ReturnKind::Unknown && exprKind != ReturnKind::Array) {
+          sawNonCollectionReturn = true;
+        }
+        if (!exprStructPath.empty()) {
+          if (inferredStructPath.empty()) {
+            inferredStructPath = exprStructPath;
+          } else if (inferredStructPath != exprStructPath) {
+            inferredStructConflict = true;
           }
+        } else if (!inferredStructPath.empty() && !stmt.args.empty()) {
+          inferredStructConflict = true;
         }
         if (exprKind == ReturnKind::Unknown) {
           inferred = ReturnKind::Unknown;
@@ -967,9 +994,11 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
               inferredStructPath = exprStructPath;
             } else if (inferredStructPath != exprStructPath) {
               inferred = ReturnKind::Unknown;
+              inferredStructConflict = true;
             }
           } else if (!inferredStructPath.empty()) {
             inferred = ReturnKind::Unknown;
+            inferredStructConflict = true;
           }
         }
         return;
@@ -998,12 +1027,15 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (hasExplicitReturnTransform) {
         kind = ReturnKind::Unknown;
       } else {
-      kind = ReturnKind::Int;
+        kind = ReturnKind::Int;
       }
     } else {
       kind = inferred;
     }
-    if (kind == ReturnKind::Array && !inferredStructPath.empty()) {
+    const bool keepInferredStructPath =
+        (!hasExplicitReturnTransform || hasAutoReturnTransform || kind == ReturnKind::Array);
+    if (keepInferredStructPath && !inferredStructPath.empty() && !inferredStructConflict &&
+        !sawNonCollectionReturn) {
       returnStructs[def.fullPath] = inferredStructPath;
     }
     inferenceStack.erase(def.fullPath);
