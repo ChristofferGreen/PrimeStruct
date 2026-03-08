@@ -64,6 +64,42 @@ TEST_CASE("ir lowerer effects unit rejects software numeric envelopes") {
   CHECK(error == "native backend does not support software numeric types: decimal");
 }
 
+TEST_CASE("ir lowerer helper classifies soa_vector as collection builtin") {
+  primec::Expr soaVectorCall;
+  soaVectorCall.kind = primec::Expr::Kind::Call;
+  soaVectorCall.name = "soa_vector";
+
+  std::string builtin;
+  CHECK(primec::ir_lowerer::getBuiltinCollectionName(soaVectorCall, builtin));
+  CHECK(builtin == "soa_vector");
+}
+
+TEST_CASE("ir lowerer rejects soa_vector literals with deterministic diagnostic") {
+  primec::Program program;
+  primec::Definition mainDef;
+  mainDef.name = "main";
+  mainDef.fullPath = "/main";
+
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back("i32");
+  mainDef.transforms.push_back(returnTransform);
+
+  primec::Expr soaVectorLiteral;
+  soaVectorLiteral.kind = primec::Expr::Kind::Call;
+  soaVectorLiteral.name = "soa_vector";
+  soaVectorLiteral.templateArgs.push_back("i32");
+  mainDef.returnExpr = soaVectorLiteral;
+
+  program.definitions.push_back(std::move(mainDef));
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  std::string error;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "native backend does not support soa_vector literals");
+}
+
 TEST_CASE("ir lowerer effects unit validates program effect traversal") {
   auto makeEffectsTransform = [](const std::vector<std::string> &effects) {
     primec::Transform transform;
