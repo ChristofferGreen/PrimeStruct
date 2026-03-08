@@ -521,6 +521,64 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects non-vector capacity call target in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(capacity(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_capacity_call_non_vector_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_capacity_call_non_vector_reject.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+}
+
+TEST_CASE("rejects non-vector capacity method target in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text{"abc"raw_utf8}
+  return(text.capacity())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_capacity_method_non_vector_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_capacity_method_non_vector_reject.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+}
+
+TEST_CASE("compiles and runs user array capacity helper shadow in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+/array/capacity([array<i32>] values) {
+  return(plus(count(values), 5i32))
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(plus(capacity(values), values.capacity()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_user_array_capacity_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_user_array_capacity_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 14);
+}
+
 TEST_CASE("compiles and runs std math vector and color types") {
   const std::string source = R"(
 import /std/math/*
