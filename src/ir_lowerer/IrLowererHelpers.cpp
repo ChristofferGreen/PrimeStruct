@@ -2,6 +2,18 @@
 
 namespace primec::ir_lowerer {
 
+std::string vectorLocalCapacityLimitExceededMessage() {
+  return "vector local capacity limit exceeded (" + std::to_string(kVectorLocalDynamicCapacityLimit) + ")";
+}
+
+std::string vectorReserveExceedsLocalCapacityLimitMessage() {
+  return "vector reserve exceeds local capacity limit (" + std::to_string(kVectorLocalDynamicCapacityLimit) + ")";
+}
+
+std::string vectorLiteralExceedsLocalCapacityLimitMessage() {
+  return "vector literal exceeds local capacity limit (" + std::to_string(kVectorLocalDynamicCapacityLimit) + ")";
+}
+
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;

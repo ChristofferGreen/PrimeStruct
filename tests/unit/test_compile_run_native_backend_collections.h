@@ -5661,7 +5661,7 @@ TEST_CASE("rejects native vector literal above local dynamic limit") {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector literal exceeds local capacity limit") != std::string::npos);
+  CHECK(readFile(errPath).find("vector literal exceeds local capacity limit (256)") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector reserve beyond local dynamic limit") {
@@ -5683,7 +5683,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector reserve exceeds local capacity limit\n");
+  CHECK(readFile(errPath) == "vector reserve exceeds local capacity limit (256)\n");
 }
 
 TEST_CASE("rejects native vector push beyond local dynamic limit") {
@@ -5707,7 +5707,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector local capacity limit exceeded\n");
+  CHECK(readFile(errPath) == "vector local capacity limit exceeded (256)\n");
 }
 
 TEST_CASE("compiles and runs native vector shrink helpers") {

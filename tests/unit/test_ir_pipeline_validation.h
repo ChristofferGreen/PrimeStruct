@@ -18220,9 +18220,9 @@ TEST_CASE("ir lowerer runtime error helpers map each helper to expected message"
                                                      "map key not found",
                                                      "vector index out of bounds",
                                                      "vector pop on empty",
-                                                     "vector local capacity limit exceeded",
+                                                     "vector local capacity limit exceeded (256)",
                                                      "vector reserve expects non-negative capacity",
-                                                     "vector reserve exceeds local capacity limit",
+                                                     "vector reserve exceeds local capacity limit (256)",
                                                      "loop count must be non-negative",
                                                      "pow exponent must be non-negative",
                                                      "float to int conversion requires finite value"};

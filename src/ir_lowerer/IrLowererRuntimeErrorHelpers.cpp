@@ -1,5 +1,7 @@
 #include "IrLowererRuntimeErrorHelpers.h"
 
+#include "IrLowererHelpers.h"
+
 #include <cerrno>
 #include <unordered_set>
 #include <vector>
@@ -159,7 +161,7 @@ void emitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn
 }
 
 void emitVectorCapacityExceeded(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  emitRuntimeError(function, "vector local capacity limit exceeded", internString);
+  emitRuntimeError(function, vectorLocalCapacityLimitExceededMessage(), internString);
 }
 
 void emitVectorReserveNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
@@ -167,7 +169,7 @@ void emitVectorReserveNegative(IrFunction &function, const InternRuntimeErrorStr
 }
 
 void emitVectorReserveExceeded(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  emitRuntimeError(function, "vector reserve exceeds local capacity limit", internString);
+  emitRuntimeError(function, vectorReserveExceedsLocalCapacityLimitMessage(), internString);
 }
 
 void emitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
