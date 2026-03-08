@@ -1848,35 +1848,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   if (getVectorStatementHelperName(stmt, vectorHelper)) {
     std::string vectorHelperResolved = resolveCalleePath(stmt);
     if (defMap_.find(vectorHelperResolved) == defMap_.end() && stmt.isMethodCall && !stmt.args.empty()) {
-      const Expr &receiver = stmt.args.front();
-      if (receiver.kind == Expr::Kind::Name) {
-        std::string typeName;
-        if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
-          typeName = paramBinding->typeName;
-        } else {
-          auto it = locals.find(receiver.name);
-          if (it != locals.end()) {
-            typeName = it->second.typeName;
-          }
-        }
-        if (!typeName.empty() && typeName != "Pointer" && typeName != "Reference") {
-          std::string resolvedType;
-          if (isPrimitiveBindingTypeName(typeName)) {
-            resolvedType = "/" + normalizeBindingTypeName(typeName);
-          } else {
-            resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
-            if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
-              auto importIt = importAliases_.find(typeName);
-              if (importIt != importAliases_.end()) {
-                resolvedType = importIt->second;
-              }
-            }
-          }
-          const std::string methodTarget = resolvedType + "/" + stmt.name;
-          if (!resolvedType.empty() && defMap_.count(methodTarget) > 0) {
-            vectorHelperResolved = methodTarget;
-          }
-        }
+      std::string methodTarget;
+      if (resolveVectorHelperTargetPath(stmt.args.front(), stmt.name, methodTarget) && defMap_.count(methodTarget) > 0) {
+        vectorHelperResolved = methodTarget;
       }
     }
     if (defMap_.find(vectorHelperResolved) == defMap_.end()) {

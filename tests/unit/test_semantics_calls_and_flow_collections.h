@@ -1894,6 +1894,55 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct push helper wrapper temporary statement call is not treated as builtin vector helper") {
+  const std::string source = R"(
+Counter {
+  push([i32] next) {
+  }
+}
+
+[return<Counter>]
+makeCounter() {
+  [Counter] counter{Counter()}
+  return(counter)
+}
+
+[return<int>]
+main() {
+  makeCounter().push(7i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("struct push helper wrapper temporary expression call is not treated as builtin vector helper") {
+  const std::string source = R"(
+Counter {
+  [return<int>]
+  push([i32] next) {
+    return(next)
+  }
+}
+
+[return<Counter>]
+makeCounter() {
+  [Counter] counter{Counter()}
+  return(counter)
+}
+
+[return<int>]
+main() {
+  return(makeCounter().push(7i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("user definition named push can be used in expressions") {
   const std::string source = R"(
 [return<int>]
