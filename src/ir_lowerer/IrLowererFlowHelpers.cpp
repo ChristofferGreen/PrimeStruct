@@ -54,14 +54,6 @@ bool checkedSubU64(uint64_t lhs, uint64_t rhs, uint64_t &out) {
   return true;
 }
 
-bool isSoaVectorStatementReceiverExpr(const Expr &expr, const LocalMap &localsIn) {
-  if (expr.kind != Expr::Kind::Name) {
-    return false;
-  }
-  auto it = localsIn.find(expr.name);
-  return it != localsIn.end() && it->second.isSoaVector;
-}
-
 enum class SignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 enum class UnsignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 
@@ -617,8 +609,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     }
 
     for (size_t receiverIndex : receiverIndices) {
-      if (receiverIndex >= stmt.args.size() ||
-          !isSoaVectorStatementReceiverExpr(stmt.args[receiverIndex], localsIn)) {
+      if (receiverIndex >= stmt.args.size()) {
         continue;
       }
       Expr methodStmt = stmt;
