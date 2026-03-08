@@ -607,6 +607,11 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
         receiverIndices.push_back(i);
       }
     }
+    if (!hasNamedArgs && stmt.args.size() > 1 && stmt.args.front().kind == Expr::Kind::Literal) {
+      for (size_t i = 1; i < stmt.args.size(); ++i) {
+        receiverIndices.push_back(i);
+      }
+    }
 
     for (size_t receiverIndex : receiverIndices) {
       if (receiverIndex >= stmt.args.size()) {

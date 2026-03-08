@@ -26923,6 +26923,37 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
   CHECK(instructions.empty());
   CHECK(vectorMethodProbeCalls == 1);
 
+  primec::Expr positionalReorderedPushCall = pushCall;
+  positionalReorderedPushCall.args = {value, target};
+  positionalReorderedPushCall.argNames.clear();
+  vectorMethodProbeCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            positionalReorderedPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &candidate) {
+              if (!candidate.isMethodCall || candidate.name != "push" || candidate.args.empty() ||
+                  candidate.args.front().kind != primec::Expr::Kind::Name ||
+                  candidate.args.front().name != "v") {
+                return false;
+              }
+              ++vectorMethodProbeCalls;
+              return true;
+            },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+  CHECK(vectorMethodProbeCalls == 1);
+
   primec::Expr namedPushCall = pushCall;
   namedPushCall.args = {value, target};
   namedPushCall.argNames = {std::string("value"), std::string("values")};
