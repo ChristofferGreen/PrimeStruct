@@ -459,6 +459,39 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("runs vm with user wrapper temporary at_unsafe shadow precedence") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(73i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(74i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(plus(at_unsafe(wrapMap(), 1i32), wrapMap().at_unsafe(1i32)),
+              plus(at_unsafe(wrapVector(), 0i32), wrapVector().at_unsafe(0i32))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_wrapper_temp_at_unsafe_shadow_precedence.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 294);
+}
+
 TEST_CASE("rejects vm templated stdlib collection return envelope unsupported arg") {
   const std::string source = R"(
 import /std/collections/*
