@@ -52,6 +52,30 @@ bool tryEvaluateSignedLiteralIntegerExpr(const Expr &expr, int64_t &out) {
   }
   return isPlus ? checkedAddI64(lhs, rhs, out) : checkedSubI64(lhs, rhs, out);
 }
+
+bool tryEvaluateUnsignedLiteralIntegerExpr(const Expr &expr, uint64_t &out) {
+  if (expr.kind == Expr::Kind::Literal && expr.isUnsigned) {
+    out = expr.literalValue;
+    return true;
+  }
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding || !expr.templateArgs.empty() ||
+      expr.hasBodyArguments || !expr.bodyArguments.empty() || expr.args.size() != 2) {
+    return false;
+  }
+  const bool isPlus = isSimpleCallName(expr, "plus");
+  const bool isMinus = isSimpleCallName(expr, "minus");
+  if (!isPlus && !isMinus) {
+    return false;
+  }
+  uint64_t lhs = 0;
+  uint64_t rhs = 0;
+  if (!tryEvaluateUnsignedLiteralIntegerExpr(expr.args[0], lhs) ||
+      !tryEvaluateUnsignedLiteralIntegerExpr(expr.args[1], rhs)) {
+    return false;
+  }
+  out = isPlus ? (lhs + rhs) : (lhs - rhs);
+  return true;
+}
 } // namespace
 
 OnErrorScope::OnErrorScope(std::optional<OnErrorHandler> &targetIn, std::optional<OnErrorHandler> next)
@@ -575,6 +599,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     }
     const Expr &desiredExpr = stmt.args[1];
     int64_t signedDesired = 0;
+    uint64_t unsignedDesired = 0;
     if (tryEvaluateSignedLiteralIntegerExpr(desiredExpr, signedDesired)) {
       if (signedDesired < 0) {
         error = "vector reserve expects non-negative capacity";
@@ -584,8 +609,8 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
         error = vectorReserveExceedsLocalCapacityLimitMessage();
         return VectorStatementHelperEmitResult::Error;
       }
-    } else if (desiredExpr.kind == Expr::Kind::Literal && desiredExpr.isUnsigned &&
-               desiredExpr.literalValue > static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)) {
+    } else if (tryEvaluateUnsignedLiteralIntegerExpr(desiredExpr, unsignedDesired) &&
+               unsignedDesired > static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)) {
       error = vectorReserveExceedsLocalCapacityLimitMessage();
       return VectorStatementHelperEmitResult::Error;
     }
