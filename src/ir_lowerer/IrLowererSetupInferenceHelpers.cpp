@@ -206,60 +206,107 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     return ArrayMapAccessElementKindResolution::Resolved;
   }
 
-  const Expr &target = expr.args.front();
-  if (target.kind == Expr::Kind::StringLiteral) {
-    kindOut = LocalInfo::ValueKind::Int32;
-    return ArrayMapAccessElementKindResolution::Resolved;
+  auto hasNamedArgs = [&]() {
+    for (const auto &argName : expr.argNames) {
+      if (argName.has_value()) {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto isKnownCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(candidate.name);
+    if (it == localsIn.end()) {
+      return false;
+    }
+    const LocalInfo &info = it->second;
+    return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
+           (info.kind == LocalInfo::Kind::Reference && info.referenceToArray) ||
+           (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
+  };
+
+  std::vector<size_t> receiverIndices{0};
+  const bool hasNamedArgsValue = hasNamedArgs();
+  if (hasNamedArgsValue && expr.args.size() > 1) {
+    for (size_t i = 1; i < expr.args.size(); ++i) {
+      receiverIndices.push_back(i);
+    }
   }
-  if (target.kind == Expr::Kind::Name) {
-    auto it = localsIn.find(target.name);
-    if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
+  const bool probePositionalReorderedReceiver =
+      !hasNamedArgsValue && expr.args.size() > 1 &&
+      (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
+       expr.args.front().kind == Expr::Kind::FloatLiteral || expr.args.front().kind == Expr::Kind::StringLiteral ||
+       (expr.args.front().kind == Expr::Kind::Name &&
+        !isKnownCollectionAccessReceiverExpr(expr.args.front())));
+  if (probePositionalReorderedReceiver) {
+    for (size_t i = 1; i < expr.args.size(); ++i) {
+      receiverIndices.push_back(i);
+    }
+  }
+
+  for (size_t receiverIndex : receiverIndices) {
+    if (receiverIndex >= expr.args.size()) {
+      continue;
+    }
+    const Expr &target = expr.args[receiverIndex];
+    if (target.kind == Expr::Kind::StringLiteral) {
       kindOut = LocalInfo::ValueKind::Int32;
       return ArrayMapAccessElementKindResolution::Resolved;
     }
-  }
-  if (isEntryArgsName(target, localsIn)) {
-    return ArrayMapAccessElementKindResolution::Resolved;
-  }
-
-  if (target.kind == Expr::Kind::Name) {
-    auto it = localsIn.find(target.name);
-    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map &&
-        it->second.mapValueKind != LocalInfo::ValueKind::Unknown &&
-        it->second.mapValueKind != LocalInfo::ValueKind::String) {
-      kindOut = it->second.mapValueKind;
-      return ArrayMapAccessElementKindResolution::Resolved;
-    }
-  } else if (target.kind == Expr::Kind::Call) {
-    std::string collection;
-    if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
-      const LocalInfo::ValueKind valueKind = valueKindFromTypeName(target.templateArgs[1]);
-      if (valueKind != LocalInfo::ValueKind::Unknown && valueKind != LocalInfo::ValueKind::String) {
-        kindOut = valueKind;
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
+        kindOut = LocalInfo::ValueKind::Int32;
         return ArrayMapAccessElementKindResolution::Resolved;
       }
     }
-  }
+    if (isEntryArgsName(target, localsIn)) {
+      return ArrayMapAccessElementKindResolution::Resolved;
+    }
 
-  LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
-  if (target.kind == Expr::Kind::Name) {
-    auto it = localsIn.find(target.name);
-    if (it != localsIn.end()) {
-      if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector) {
-        elementKind = it->second.valueKind;
-      } else if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
-        elementKind = it->second.valueKind;
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map &&
+          it->second.mapValueKind != LocalInfo::ValueKind::Unknown &&
+          it->second.mapValueKind != LocalInfo::ValueKind::String) {
+        kindOut = it->second.mapValueKind;
+        return ArrayMapAccessElementKindResolution::Resolved;
+      }
+    } else if (target.kind == Expr::Kind::Call) {
+      std::string collection;
+      if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
+        const LocalInfo::ValueKind valueKind = valueKindFromTypeName(target.templateArgs[1]);
+        if (valueKind != LocalInfo::ValueKind::Unknown && valueKind != LocalInfo::ValueKind::String) {
+          kindOut = valueKind;
+          return ArrayMapAccessElementKindResolution::Resolved;
+        }
       }
     }
-  } else if (target.kind == Expr::Kind::Call) {
-    std::string collection;
-    if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
-        target.templateArgs.size() == 1) {
-      elementKind = valueKindFromTypeName(target.templateArgs.front());
+
+    LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      if (it != localsIn.end()) {
+        if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector) {
+          elementKind = it->second.valueKind;
+        } else if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
+          elementKind = it->second.valueKind;
+        }
+      }
+    } else if (target.kind == Expr::Kind::Call) {
+      std::string collection;
+      if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+          target.templateArgs.size() == 1) {
+        elementKind = valueKindFromTypeName(target.templateArgs.front());
+      }
     }
-  }
-  if (elementKind != LocalInfo::ValueKind::Unknown && elementKind != LocalInfo::ValueKind::String) {
-    kindOut = elementKind;
+    if (elementKind != LocalInfo::ValueKind::Unknown && elementKind != LocalInfo::ValueKind::String) {
+      kindOut = elementKind;
+      return ArrayMapAccessElementKindResolution::Resolved;
+    }
   }
   return ArrayMapAccessElementKindResolution::Resolved;
 }
