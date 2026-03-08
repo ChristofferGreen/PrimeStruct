@@ -218,6 +218,96 @@ main() {
   CHECK(error.find("unknown method: /i32/missing_tag") != std::string::npos);
 }
 
+TEST_CASE("map wrapper temporary count call validates target classification") {
+  const std::string source = R"(
+wrapMapAuto() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(count(wrapMapAuto()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map wrapper temporary access call validates map target classification") {
+  const std::string source = R"(
+wrapMapAuto() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  at(wrapMapAuto(), 1i32)
+  at_unsafe(wrapMapAuto(), 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map wrapper temporary capacity reports vector target diagnostic") {
+  const std::string source = R"(
+wrapMapAuto() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(capacity(wrapMapAuto()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
+}
+
+TEST_CASE("count preserves receiver call-target diagnostics") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(missing()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target") != std::string::npos);
+}
+
+TEST_CASE("capacity preserves receiver call-target diagnostics") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(capacity(missing()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target") != std::string::npos);
+}
+
+TEST_CASE("at preserves receiver call-target diagnostics") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  at(missing(), 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target") != std::string::npos);
+}
+
 TEST_CASE("capacity builtin validates on vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

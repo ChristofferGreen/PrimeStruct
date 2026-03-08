@@ -2062,6 +2062,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       bool isBuiltinMethod = false;
       std::string methodResolved;
       if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
+        // Preserve receiver diagnostics (for example unknown call target)
+        // when collection-target resolution fails.
+        (void)validateExpr(params, locals, expr.args.front());
         return false;
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
@@ -2075,6 +2078,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       bool isBuiltinMethod = false;
       std::string methodResolved;
       if (!resolveMethodTarget(expr.args.front(), "capacity", methodResolved, isBuiltinMethod)) {
+        // Preserve receiver diagnostics (for example unknown call target)
+        // when collection-target resolution fails.
+        (void)validateExpr(params, locals, expr.args.front());
         return false;
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
@@ -2095,6 +2101,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         bool isBuiltinMethod = false;
         std::string methodResolved;
         if (!resolveMethodTarget(expr.args.front(), expr.name, methodResolved, isBuiltinMethod)) {
+          // Preserve receiver diagnostics (for example unknown call target)
+          // when collection-target resolution fails.
+          (void)validateExpr(params, locals, expr.args.front());
           return false;
         }
         if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
@@ -3604,6 +3613,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         std::string mapKeyType;
         bool isMap = resolveMapKeyType(expr.args.front(), mapKeyType);
         if (!isArrayOrString && !isMap) {
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
           error_ = builtinName + " requires array, vector, map, or string target";
           return false;
         }
