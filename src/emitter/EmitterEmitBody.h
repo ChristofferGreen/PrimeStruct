@@ -472,6 +472,36 @@
       if (stmt.kind == Expr::Kind::Call) {
         std::string vectorHelper;
         if (getVectorMutatorName(stmt, nameMap, vectorHelper)) {
+          std::string helperPath;
+          bool hasUserVectorHelper = false;
+          if (stmt.isMethodCall) {
+            hasUserVectorHelper =
+                resolveMethodCallPath(stmt, localTypes, importAliases, structTypeMap, returnKinds, returnStructs,
+                                      helperPath) &&
+                nameMap.find(helperPath) != nameMap.end();
+          } else {
+            Expr methodCandidate = stmt;
+            methodCandidate.isMethodCall = true;
+            hasUserVectorHelper =
+                resolveMethodCallPath(methodCandidate, localTypes, importAliases, structTypeMap, returnKinds,
+                                      returnStructs, helperPath) &&
+                nameMap.find(helperPath) != nameMap.end();
+          }
+          if (hasUserVectorHelper) {
+            out << pad
+                << emitExpr(stmt,
+                            nameMap,
+                            paramMap,
+                            structTypeMap,
+                            importAliases,
+                            localTypes,
+                            returnKinds,
+                            resultInfos,
+                            returnStructs,
+                            hasMathImport)
+                << ";\n";
+            return;
+          }
           if (vectorHelper == "push") {
             out << pad << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ".push_back("
