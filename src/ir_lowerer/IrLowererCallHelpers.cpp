@@ -1237,8 +1237,23 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   const bool isCountCall = isSimpleCallName(expr, "count");
   const bool isCapacityCall = isSimpleCallName(expr, "capacity");
   const bool isAccessCall = isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe");
-  const size_t expectedArgCount = isAccessCall ? 2u : 1u;
-  if (expr.isMethodCall || (!isCountCall && !isCapacityCall && !isAccessCall) || expr.args.size() != expectedArgCount) {
+  const bool isVectorMutatorCall =
+      isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") || isSimpleCallName(expr, "reserve") ||
+      isSimpleCallName(expr, "clear") || isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap");
+  auto expectedVectorMutatorArgCount = [&]() -> size_t {
+    if (isSimpleCallName(expr, "pop") || isSimpleCallName(expr, "clear")) {
+      return 1u;
+    }
+    return 2u;
+  };
+  size_t expectedArgCount = 1u;
+  if (isAccessCall) {
+    expectedArgCount = 2u;
+  } else if (isVectorMutatorCall) {
+    expectedArgCount = expectedVectorMutatorArgCount();
+  }
+  if (expr.isMethodCall || (!isCountCall && !isCapacityCall && !isAccessCall && !isVectorMutatorCall) ||
+      expr.args.size() != expectedArgCount) {
     return CountMethodFallbackResult::NotHandled;
   }
   (void)isArrayCountCall;

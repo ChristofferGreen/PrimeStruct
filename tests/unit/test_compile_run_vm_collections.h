@@ -4692,6 +4692,24 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with user vector push call expression shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/push([vector<i32> mut] values, [i32] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  return(push(values, 3i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_push_call_expr_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
+}
+
 TEST_CASE("runs vm with user vector pop call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
