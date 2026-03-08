@@ -604,6 +604,35 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("rejects vm templated stdlib wrapper temporary unsafe parity value mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<vector<T>>]
+wrapVector<T>([T] value) {
+  return(vectorSingle<T>(value))
+}
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[return<int>]
+main() {
+  [bool] mapCall{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
+  [bool] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe("only"raw_utf8)}
+  [bool] vectorCall{vectorAtUnsafe<i32>(wrapVector<i32>(4i32), 0i32)}
+  [bool] vectorMethod{wrapVector<i32>(4i32).at_unsafe(0i32)}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_stdlib_collection_shim_templated_return_temp_unsafe_parity_value_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("rejects vm templated stdlib wrapper temporary count capacity parity mismatch") {
   const std::string source = R"(
 import /std/collections/*
