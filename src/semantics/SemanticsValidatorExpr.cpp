@@ -2001,10 +2001,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     std::string resolved = resolveCalleePath(expr);
     bool resolvedMethod = false;
     bool usedMethodTarget = false;
+    auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {
+      std::string elemType;
+      return resolveVectorTarget(targetExpr, elemType) || resolveArrayTarget(targetExpr, elemType) ||
+             resolveStringTarget(targetExpr) || resolveMapTarget(targetExpr);
+    };
     auto promoteCapacityToBuiltinValidation = [&](const Expr &targetExpr,
                                                   std::string &resolvedOut,
-                                                  bool &isBuiltinMethodOut) {
-      (void)targetExpr;
+                                                  bool &isBuiltinMethodOut,
+                                                  bool requireKnownCollection) {
+      if (requireKnownCollection && !isKnownCollectionTarget(targetExpr)) {
+        return;
+      }
       // Route unresolved capacity() calls through builtin validation so
       // non-vector targets emit deterministic vector-target diagnostics.
       resolvedOut = "/vector/capacity";
@@ -2050,7 +2058,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && expr.name == "capacity") {
-        promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod);
+        promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
       }
       if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end()) {
         error_ = "unknown method: " + resolved;
@@ -2084,7 +2092,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
-        promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved, isBuiltinMethod);
+        promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved, isBuiltinMethod, false);
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
         error_ = "unknown method: " + methodResolved;

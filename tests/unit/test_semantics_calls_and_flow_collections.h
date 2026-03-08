@@ -434,6 +434,44 @@ main() {
   CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
+TEST_CASE("capacity method keeps unknown method on non-collection receiver") {
+  const std::string source = R"(
+Counter {
+  [i32] value{0i32}
+}
+
+[return<int>]
+main() {
+  [Counter] counter{Counter()}
+  return(counter.capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/capacity") != std::string::npos);
+}
+
+TEST_CASE("capacity method keeps unknown method on non-collection wrapper temporary") {
+  const std::string source = R"(
+Counter {
+  [i32] value{0i32}
+}
+
+makeCounter() {
+  [Counter] counter{Counter()}
+  return(counter)
+}
+
+[return<int>]
+main() {
+  return(makeCounter().capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/capacity") != std::string::npos);
+}
+
 TEST_CASE("at method validates on array binding") {
   const std::string source = R"(
 [return<int>]
