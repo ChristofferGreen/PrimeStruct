@@ -1037,12 +1037,35 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (!expr.isMethodCall && (expr.name == "at" || expr.name == "at_unsafe") && expr.args.size() == 2 &&
         defMap_.find(resolved) == defMap_.end()) {
-      std::vector<size_t> receiverIndices{0};
-      const bool hasNamedArgs = hasNamedArguments(expr.argNames);
-      if (hasNamedArgs && expr.args.size() > 1) {
-        for (size_t i = 1; i < expr.args.size(); ++i) {
-          receiverIndices.push_back(i);
+      std::vector<size_t> receiverIndices;
+      auto appendReceiverIndex = [&](size_t index) {
+        if (index >= expr.args.size()) {
+          return;
         }
+        for (size_t existing : receiverIndices) {
+          if (existing == index) {
+            return;
+          }
+        }
+        receiverIndices.push_back(index);
+      };
+      const bool hasNamedArgs = hasNamedArguments(expr.argNames);
+      if (hasNamedArgs) {
+        bool hasValuesNamedReceiver = false;
+        for (size_t i = 0; i < expr.args.size(); ++i) {
+          if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
+            appendReceiverIndex(i);
+            hasValuesNamedReceiver = true;
+          }
+        }
+        if (!hasValuesNamedReceiver) {
+          appendReceiverIndex(0);
+          for (size_t i = 1; i < expr.args.size(); ++i) {
+            appendReceiverIndex(i);
+          }
+        }
+      } else {
+        appendReceiverIndex(0);
       }
       auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
         std::string elemType;
@@ -1059,7 +1082,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             !isCollectionAccessReceiverExpr(expr.args.front())));
       if (probePositionalReorderedReceiver) {
         for (size_t i = 1; i < expr.args.size(); ++i) {
-          receiverIndices.push_back(i);
+          appendReceiverIndex(i);
         }
       }
       for (size_t receiverIndex : receiverIndices) {

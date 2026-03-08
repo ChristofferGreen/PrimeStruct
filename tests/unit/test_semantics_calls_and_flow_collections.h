@@ -2507,6 +2507,49 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("at call-form helper shadow prefers labeled named receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [vector<i32>] index) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+/map/at([map<string, i32>] values, [vector<i32>] index) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  [vector<i32>] index{vector<i32>(0i32)}
+  return(at([index] index, [values] values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("at call-form labeled receiver does not fall back to non-receiver label") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [vector<i32>] index) {
+  return(92i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  [vector<i32>] index{vector<i32>(0i32)}
+  return(at([index] index, [values] values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("vector at call-form helper shadow accepts positional reordered arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
