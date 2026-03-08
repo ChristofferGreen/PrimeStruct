@@ -4855,6 +4855,31 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with auto-inferred named access helper receiver precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/get([vector<i32>] values, [string] index) {
+  return(12i32)
+}
+
+[effects(heap_alloc), return<int>]
+/string/get([string] values, [vector<i32>] index) {
+  return(98i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [string] index{"tag"raw_utf8}
+  [auto] inferred{get([index] index, [values] values)}
+  return(inferred)
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_access_expr_named_receiver_precedence_auto.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 12);
+}
+
 TEST_CASE("runs vm with user vector pop call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]

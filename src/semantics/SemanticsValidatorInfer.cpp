@@ -1222,7 +1222,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Int;
       }
     }
-    if (!expr.isMethodCall && (expr.name == "at" || expr.name == "at_unsafe") && expr.args.size() == 2 &&
+    if (!expr.isMethodCall &&
+        (expr.name == "at" || expr.name == "at_unsafe" || expr.name == "get" || expr.name == "ref") &&
+        expr.args.size() == 2 &&
         defMap_.find(resolved) == defMap_.end()) {
       std::vector<size_t> receiverIndices;
       auto appendReceiverIndex = [&](size_t index) {

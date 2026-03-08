@@ -5554,6 +5554,38 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("compiles and runs native auto-inferred named access helper receiver precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/get([vector<i32>] values, [string] index) {
+  return(12i32)
+}
+
+[effects(heap_alloc), return<int>]
+/string/get([string] values, [vector<i32>] index) {
+  return(98i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [string] index{"tag"raw_utf8}
+  [auto] inferred{get([index] index, [values] values)}
+  return(inferred)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_user_access_expr_named_receiver_precedence_auto.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_user_access_expr_named_receiver_precedence_auto_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+}
+
 TEST_CASE("compiles and runs native user vector pop call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]

@@ -2527,6 +2527,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("access helper call-form expression infers auto binding from labeled receiver helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/get([vector<i32>] values, [string] index) {
+  return(12i32)
+}
+
+[effects(heap_alloc), return<int>]
+/string/get([string] values, [vector<i32>] index) {
+  return(98i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  [string] index{"payload"raw_utf8}
+  [auto] inferred{get([index] index, [values] values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector helper call-form expression builtin rejects named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
