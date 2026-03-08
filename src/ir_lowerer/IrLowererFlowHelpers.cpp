@@ -897,7 +897,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
 
     emitReallocateVectorData(desiredLocal, emitVectorCapacityExceeded);
 
-    instructions.push_back({IrOpcode::Jump, static_cast<int32_t>(pushBodyIndex)});
+    instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(pushBodyIndex)});
 
     const size_t errorIndex = instructions.size();
     instructions[jumpOom].imm = static_cast<int32_t>(errorIndex);

@@ -3719,7 +3719,7 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   accessExpr.name = "at";
   accessExpr.args = {primec::Expr{}, primec::Expr{}};
   accessExpr.args[0].kind = primec::Expr::Kind::Literal;
-  accessExpr.args[0].intValue = 1;
+  accessExpr.args[0].literalValue = 1;
   accessExpr.args[1].kind = primec::Expr::Kind::Name;
   accessExpr.args[1].name = "values";
   accessExpr.argNames = {std::string("index"), std::string("values")};

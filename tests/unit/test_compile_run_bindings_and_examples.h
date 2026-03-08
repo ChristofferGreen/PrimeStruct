@@ -181,6 +181,120 @@ TEST_CASE("compiles examples to IR") {
   }
 }
 
+TEST_CASE("collection docs snippets stay c++ style and executable") {
+  auto resolveDocPath = [](const std::string &name) -> std::filesystem::path {
+    std::filesystem::path path = std::filesystem::path("..") / "docs" / name;
+    if (!std::filesystem::exists(path)) {
+      path = std::filesystem::current_path() / "docs" / name;
+    }
+    return path;
+  };
+
+  const std::filesystem::path primeStructPath = resolveDocPath("PrimeStruct.md");
+  const std::filesystem::path syntaxSpecPath = resolveDocPath("PrimeStruct_SyntaxSpec.md");
+  const std::filesystem::path guidelinesPath = resolveDocPath("Coding_Guidelines.md");
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(syntaxSpecPath));
+  REQUIRE(std::filesystem::exists(guidelinesPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
+  const std::string guidelinesDoc = readFile(guidelinesPath.string());
+
+  const std::vector<std::string> requiredPrimeStructSnippets = {
+      "value.push(item)", "value.at(index)", "value[index]", "value.count()",
+      "map<string, i32>{\"a\"utf8=1i32}"};
+  const std::vector<std::string> requiredSyntaxSpecSnippets = {
+      "vector<i32>{1i32, 2i32}", "vector<i32>[1i32, 2i32]",
+      "map<i32, i32>{1i32=2i32, 3i32=4i32}", "value.push(item)",
+      "value.at(index)", "value[index]"};
+  const std::vector<std::string> requiredGuidelinesSnippets = {
+      "value.push(x)", "value.at(i)", "value[i]", "value.count()",
+      "[vector<i32> mut] values{vector<i32>{1, 2}}"};
+
+  for (const std::string &snippet : requiredPrimeStructSnippets) {
+    CAPTURE(snippet);
+    CHECK(primeStructDoc.find(snippet) != std::string::npos);
+  }
+  for (const std::string &snippet : requiredSyntaxSpecSnippets) {
+    CAPTURE(snippet);
+    CHECK(syntaxSpecDoc.find(snippet) != std::string::npos);
+  }
+  for (const std::string &snippet : requiredGuidelinesSnippets) {
+    CAPTURE(snippet);
+    CHECK(guidelinesDoc.find(snippet) != std::string::npos);
+  }
+
+  struct SnippetCase {
+    std::string tempName;
+    std::string source;
+    int expectedExitCode;
+  };
+  const std::vector<SnippetCase> snippetCases = {
+      {"docs_collections_prime_struct_style.prime",
+       R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>{1i32, 2i32, 3i32}}
+  [vector<i32> mut] list{vector<i32>{4i32, 5i32}}
+  [map<i32, i32>] pairs{map<i32, i32>{7i32=8i32, 9i32=10i32}}
+  list.push(6i32)
+  list.reserve(8i32)
+  return(values[1i32] + list.at(2i32) + list.count() + pairs.at(9i32))
+}
+)",
+       21},
+      {"docs_collections_syntax_spec_style.prime",
+       R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>[1i32, 2i32]}
+  [vector<i32> mut] list{vector<i32>[3i32, 4i32]}
+  [map<i32, i32>] pairs{map<i32, i32>[5i32=6i32, 7i32=8i32]}
+  list.push(9i32)
+  return(values.at(0i32) + list[2i32] + pairs.at_unsafe(7i32))
+}
+)",
+       18},
+      {"docs_collections_guidelines_style.prime",
+       R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>{1, 2}}
+  [map<i32, i32>] pairs{map<i32, i32>{7=10}}
+  values.push(3)
+  values.reserve(8)
+  return(values[0] + values.at(2) + values.count() + pairs.at(7))
+}
+)",
+       17},
+  };
+
+  for (const auto &snippetCase : snippetCases) {
+    CAPTURE(snippetCase.tempName);
+    const std::string srcPath = writeTemp(snippetCase.tempName, snippetCase.source);
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+    CHECK(runCommand(runCmd) == snippetCase.expectedExitCode);
+  }
+}
+
+TEST_CASE("collection docs snippets keep statement-only mutator diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>{1i32}}
+  return(values.push(2i32))
+}
+)";
+  const std::string srcPath = writeTemp("docs_collections_statement_only_negative.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_docs_collections_statement_only_negative.err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("only supported as a statement") != std::string::npos);
+}
+
 TEST_CASE("spinning cube shared source compiles across profile targets") {
   std::filesystem::path cubePath =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "cube.prime";

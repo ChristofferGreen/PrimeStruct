@@ -1101,7 +1101,7 @@ bad_use_after_take() {
 - **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `vector<Type>{ … }` / `vector<Type>[ … ]`, `map<Key,Value>{ … }` / `map<Key,Value>[ … ]` rewrite to standard builder functions. The brace/bracket forms desugar to `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals supply alternating key/value forms.
   - Requires the `collections` text transform (enabled by default in `--text-transforms`).
   - Map literal entries are read left-to-right as alternating key/value forms; an odd number of entries is a diagnostic.
-  - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8 1i32}`), and nested forms inside braces are rewritten as usual.
+  - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested forms inside braces are rewritten as usual.
   - Collections can appear anywhere forms are allowed, including execution arguments.
   - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower through IR/VM/native.
   - `array<T>` is a fixed-size contiguous value sequence once constructed (C++ `std::array`-like behavior). Arrays support read/write/index helpers but no growth helpers.

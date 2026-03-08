@@ -55,6 +55,19 @@ semantics after canonicalization.
 - Do not use `.expect(...)` in PrimeStruct examples; model fallible flows with
   `?` and explicit handlers.
 
+## Collection Surface Example (Compilable)
+
+```prime
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>{1, 2}}
+  [map<i32, i32>] pairs{map<i32, i32>{7=10}}
+  values.push(3)
+  values.reserve(8)
+  return(values[0] + values.at(2) + values.count() + pairs.at(7))
+}
+```
+
 ## Gold-Standard Surface Example (Pure PrimeStruct)
 
 Note: this example locks a proposed API shape for graphics/math naming. Current

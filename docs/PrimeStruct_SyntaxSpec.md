@@ -540,10 +540,10 @@ Helpers:
 
 ### 8.2 Vectors
 
-```
+``` 
 vector<i32>(1i32, 2i32)
-vector<i32>{1i32 2i32}
-vector<i32>[1i32 2i32]
+vector<i32>{1i32, 2i32}
+vector<i32>[1i32, 2i32]
 ```
 
 Vectors are C++-style dynamic contiguous sequences. Construction is variadic; zero or more arguments are accepted.
@@ -569,8 +569,8 @@ vector runtime parity is tracked in `docs/todo.md`.
 
 ```
 map<i32, i32>(1i32, 2i32)
-map<i32, i32>{1i32 2i32}
-map<i32, i32>[1i32 2i32]
+map<i32, i32>{1i32=2i32, 3i32=4i32}
+map<i32, i32>[1i32=2i32, 3i32=4i32]
 ```
 
 Map literals supply alternating key/value forms; an odd number of entries is a diagnostic.
