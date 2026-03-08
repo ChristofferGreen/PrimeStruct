@@ -1296,7 +1296,43 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (getVectorStatementHelperName(expr, vectorHelper)) {
       std::string resolved = resolveCalleePath(expr);
       if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
-        for (const auto &receiverCandidate : expr.args) {
+        auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
+          if (candidate.kind != Expr::Kind::Name) {
+            return false;
+          }
+          std::string typeName;
+          if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+            typeName = normalizeBindingTypeName(paramBinding->typeName);
+          } else {
+            auto it = locals.find(candidate.name);
+            if (it != locals.end()) {
+              typeName = normalizeBindingTypeName(it->second.typeName);
+            }
+          }
+          return typeName == "vector" || typeName == "soa_vector";
+        };
+        std::vector<size_t> receiverIndices{0};
+        const bool hasNamedArgs = hasNamedArguments(expr.argNames);
+        if (hasNamedArgs && expr.args.size() > 1) {
+          for (size_t i = 1; i < expr.args.size(); ++i) {
+            receiverIndices.push_back(i);
+          }
+        }
+        const bool probePositionalReorderedReceiver =
+            !hasNamedArgs && expr.args.size() > 1 &&
+            (expr.args.front().kind == Expr::Kind::Literal ||
+             (expr.args.front().kind == Expr::Kind::Name &&
+              !isVectorHelperReceiverName(expr.args.front())));
+        if (probePositionalReorderedReceiver) {
+          for (size_t i = 1; i < expr.args.size(); ++i) {
+            receiverIndices.push_back(i);
+          }
+        }
+        for (size_t receiverIndex : receiverIndices) {
+          if (receiverIndex >= expr.args.size()) {
+            continue;
+          }
+          const Expr &receiverCandidate = expr.args[receiverIndex];
           std::string methodTarget;
           if (resolveVectorHelperMethodTarget(receiverCandidate, expr.name, methodTarget) &&
               defMap_.count(methodTarget) > 0) {

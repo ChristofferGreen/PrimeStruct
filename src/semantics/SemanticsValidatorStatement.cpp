@@ -1863,7 +1863,41 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   if (getVectorStatementHelperName(stmt, vectorHelper)) {
     std::string vectorHelperResolved = resolveCalleePath(stmt);
     if (defMap_.find(vectorHelperResolved) == defMap_.end() && !stmt.args.empty()) {
-      for (const auto &receiverCandidate : stmt.args) {
+      auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
+        if (candidate.kind != Expr::Kind::Name) {
+          return false;
+        }
+        const BindingInfo *binding = nullptr;
+        if (!resolveVectorBinding(candidate, binding) || binding == nullptr) {
+          return false;
+        }
+        if (binding->typeName == "soa_vector") {
+          return true;
+        }
+        return binding->typeName == "vector" && binding->isMutable;
+      };
+      std::vector<size_t> receiverIndices{0};
+      const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
+      if (hasNamedArgs && stmt.args.size() > 1) {
+        for (size_t i = 1; i < stmt.args.size(); ++i) {
+          receiverIndices.push_back(i);
+        }
+      }
+      const bool probePositionalReorderedReceiver =
+          !hasNamedArgs && stmt.args.size() > 1 &&
+          (stmt.args.front().kind == Expr::Kind::Literal ||
+           (stmt.args.front().kind == Expr::Kind::Name &&
+            !isVectorHelperReceiverName(stmt.args.front())));
+      if (probePositionalReorderedReceiver) {
+        for (size_t i = 1; i < stmt.args.size(); ++i) {
+          receiverIndices.push_back(i);
+        }
+      }
+      for (size_t receiverIndex : receiverIndices) {
+        if (receiverIndex >= stmt.args.size()) {
+          continue;
+        }
+        const Expr &receiverCandidate = stmt.args[receiverIndex];
         std::string methodTarget;
         if (resolveVectorHelperTargetPath(receiverCandidate, stmt.name, methodTarget) &&
             defMap_.count(methodTarget) > 0) {

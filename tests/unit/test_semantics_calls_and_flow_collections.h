@@ -2311,12 +2311,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector helper call-form expression user shadow accepts positional reordered arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/push([vector<i32> mut] values, [i32] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(push(3i32, values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector helper call-form expression stays statement-only without user helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   return(push(values, 3i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+}
+
+TEST_CASE("vector helper expression skips temp-leading positional receiver probing") {
+  const std::string source = R"(
+Counter {
+}
+
+[return<Counter>]
+makeCounter() {
+  return(Counter())
+}
+
+[effects(heap_alloc), return<Counter>]
+/vector/push([vector<Counter> mut] values, [Counter] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<Counter>]
+main() {
+  [vector<Counter> mut] values{vector<Counter>(Counter())}
+  return(push(makeCounter(), values))
 }
 )";
   std::string error;
@@ -2371,6 +2415,32 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("vector helper statement skips temp-leading positional receiver probing") {
+  const std::string source = R"(
+Counter {
+}
+
+[return<Counter>]
+makeCounter() {
+  return(Counter())
+}
+
+[effects(heap_alloc), return<void>]
+/vector/push([vector<Counter> mut] values, [Counter] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Counter> mut] values{vector<Counter>(Counter())}
+  push(makeCounter(), values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/push") != std::string::npos);
 }
 
 TEST_CASE("vector at call-form helper shadow accepts reordered named arguments") {
