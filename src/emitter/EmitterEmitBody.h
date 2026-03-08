@@ -488,8 +488,12 @@
                 nameMap.find(helperPath) != nameMap.end();
           }
           if (hasUserVectorHelper) {
+            Expr helperCall = stmt;
+            if (!helperCall.isMethodCall) {
+              helperCall.isMethodCall = true;
+            }
             out << pad
-                << emitExpr(stmt,
+                << emitExpr(helperCall,
                             nameMap,
                             paramMap,
                             structTypeMap,

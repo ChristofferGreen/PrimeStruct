@@ -541,7 +541,11 @@ std::string Emitter::emitExpr(const Expr &expr,
                 nameMap.find(helperPath) != nameMap.end();
           }
           if (hasUserVectorHelper) {
-            out << emitExpr(stmt,
+            Expr helperCall = stmt;
+            if (!helperCall.isMethodCall) {
+              helperCall.isMethodCall = true;
+            }
+            out << emitExpr(helperCall,
                             nameMap,
                             paramMap,
                             structTypeMap,
