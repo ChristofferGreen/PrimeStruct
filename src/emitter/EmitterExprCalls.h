@@ -283,6 +283,29 @@
     }
     return "0";
   }
+  auto isResolvedMapTarget = [&](const Expr &targetExpr) -> bool {
+    if (isMapValue(targetExpr, localTypes)) {
+      return true;
+    }
+    auto isMapTypePath = [](const std::string &typePath) -> bool {
+      return typePath == "/map" || typePath == "map";
+    };
+    if (targetExpr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (!targetExpr.isMethodCall) {
+      const std::string resolvedTarget = resolveExprPath(targetExpr);
+      auto structIt = returnStructs.find(resolvedTarget);
+      return structIt != returnStructs.end() && isMapTypePath(structIt->second);
+    }
+    std::string methodPath;
+    if (!resolveMethodCallPath(
+            targetExpr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
+      return false;
+    }
+    auto structIt = returnStructs.find(methodPath);
+    return structIt != returnStructs.end() && isMapTypePath(structIt->second);
+  };
   auto it = nameMap.find(full);
   if (it == nameMap.end()) {
     if (isMapCountCall(expr, localTypes)) {
@@ -432,7 +455,7 @@
                         returnStructs,
                         allowMathBare)
             << ")";
-      } else if (isMapValue(target, localTypes)) {
+      } else if (isResolvedMapTarget(target)) {
         out << "ps_map_at("
             << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
@@ -483,7 +506,7 @@
                         returnStructs,
                         allowMathBare)
             << ")";
-      } else if (isMapValue(target, localTypes)) {
+      } else if (isResolvedMapTarget(target)) {
         out << "ps_map_at_unsafe("
             << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "

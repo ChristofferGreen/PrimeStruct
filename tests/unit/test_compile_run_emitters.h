@@ -828,6 +828,65 @@ main() {
   CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter infers wrapper access builtin fallback") {
+  const std::string source = R"(
+wrapMap() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[effects(heap_alloc)]
+wrapVector() {
+  [vector<i32>] values{vector<i32>(3i32, 4i32)}
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(plus(plus(at(wrapMap(), 1i32), wrapMap().at(1i32)), wrapMap()[1i32]),
+              plus(plus(at_unsafe(wrapMap(), 1i32), wrapMap().at_unsafe(1i32)),
+                   plus(plus(plus(at(wrapVector(), 0i32), wrapVector().at(0i32)), wrapVector()[0i32]),
+                        plus(at_unsafe(wrapVector(), 0i32), wrapVector().at_unsafe(0i32))))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_access_builtin_fallback.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_inferred_wrapper_access_builtin_fallback.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_map_at(ps_wrapMap(), 1)") != std::string::npos);
+  CHECK(output.find("ps_map_at_unsafe(ps_wrapMap(), 1)") != std::string::npos);
+  CHECK(output.find("ps_array_at(ps_wrapVector(), 0)") != std::string::npos);
+  CHECK(output.find("ps_array_at_unsafe(ps_wrapVector(), 0)") != std::string::npos);
+}
+
+TEST_CASE("rejects inferred wrapper access key mismatch in C++ emitter") {
+  const std::string source = R"(
+wrapMap() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  [i32] callValue{at(wrapMap(), true)}
+  [i32] methodValue{wrapMap().at(true)}
+  [i32] indexValue{wrapMap()[true]}
+  [i32] unsafeCall{at_unsafe(wrapMap(), true)}
+  [i32] unsafeMethod{wrapMap().at_unsafe(true)}
+  return(plus(callValue, plus(methodValue, plus(indexValue, plus(unsafeCall, unsafeMethod)))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_access_key_mismatch.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_inferred_wrapper_access_key_mismatch_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs user wrapper temporary access shadow precedence in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
