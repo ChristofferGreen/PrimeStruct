@@ -5586,6 +5586,25 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("preserves native vector values across reserve growth") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 8i32)}
+  reserve(values, 4i32)
+  push(values, 16i32)
+  return(plus(plus(values[0i32], values[1i32]), values[2i32]))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_reserve_growth_preserves_values.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_reserve_growth_preserves_values_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 28);
+}
+
 TEST_CASE("grows native vector push beyond initial capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -5601,6 +5620,23 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 4);
+}
+
+TEST_CASE("preserves native vector values across push growth") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(5i32)}
+  push(values, 7i32)
+  return(plus(values[0i32], values[1i32]))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_push_growth_preserves_values.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_push_growth_preserves_values_exe").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
 }
 
 TEST_CASE("compiles and runs native vector literal at local dynamic limit") {

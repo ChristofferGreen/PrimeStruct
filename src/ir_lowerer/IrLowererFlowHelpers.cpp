@@ -668,6 +668,78 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
   }
 
+  auto emitReallocateVectorData = [&](int32_t desiredLocal) {
+    const int32_t oldDataPtrLocal = allocTempLocal();
+    emitLoadVectorDataPtr(oldDataPtrLocal);
+
+    const int32_t newDataPtrLocal = allocTempLocal();
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
+    instructions.push_back({IrOpcode::HeapAlloc, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(newDataPtrLocal)});
+
+    const int32_t copyIndexLocal = allocTempLocal();
+    const int32_t srcPtrLocal = allocTempLocal();
+    const int32_t destPtrLocal = allocTempLocal();
+    const int32_t copyValueLocal = allocTempLocal();
+    instructions.push_back({IrOpcode::PushI32, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(copyIndexLocal)});
+
+    const size_t copyLoopStart = instructions.size();
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(copyIndexLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::CmpLtI32, 0});
+    const size_t jumpCopyDone = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(oldDataPtrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(copyIndexLocal)});
+    instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
+    instructions.push_back({IrOpcode::MulI32, 0});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(newDataPtrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(copyIndexLocal)});
+    instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
+    instructions.push_back({IrOpcode::MulI32, 0});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
+    instructions.push_back({IrOpcode::LoadIndirect, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(copyValueLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(copyValueLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(copyIndexLocal)});
+    instructions.push_back({IrOpcode::PushI32, 1});
+    instructions.push_back({IrOpcode::AddI32, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(copyIndexLocal)});
+    instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(copyLoopStart)});
+
+    const size_t copyDoneIndex = instructions.size();
+    instructions[jumpCopyDone].imm = static_cast<int32_t>(copyDoneIndex);
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::PushI64, kVectorDataPtrOffsetBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(newDataPtrLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
+  };
+
   if (vectorHelper == "reserve") {
     LocalInfo::ValueKind capacityKind = normalizeIndexKind(inferExprKind(stmt.args[1], localsIn));
     if (!isSupportedIndexKind(capacityKind)) {
@@ -751,14 +823,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const size_t withinLimitIndex = instructions.size();
     instructions[jumpWithinLimit].imm = static_cast<int32_t>(withinLimitIndex);
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-    instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
-    instructions.push_back({IrOpcode::AddI64, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
-    instructions.push_back({IrOpcode::StoreIndirect, 0});
-    instructions.push_back({IrOpcode::Pop, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
+    emitReallocateVectorData(desiredLocal);
 
     const size_t reserveEndIndex = instructions.size();
     instructions[jumpReserveEnd].imm = static_cast<int32_t>(reserveEndIndex);
@@ -816,18 +881,13 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const size_t jumpOom = instructions.size();
     instructions.push_back({IrOpcode::JumpIfZero, 0});
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-    instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
-    instructions.push_back({IrOpcode::AddI64, 0});
+    const int32_t desiredLocal = allocTempLocal();
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
     instructions.push_back({IrOpcode::PushI32, 1});
     instructions.push_back({IrOpcode::AddI32, 0});
-    instructions.push_back({IrOpcode::StoreIndirect, 0});
-    instructions.push_back({IrOpcode::Pop, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
-    instructions.push_back({IrOpcode::PushI32, 1});
-    instructions.push_back({IrOpcode::AddI32, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(desiredLocal)});
+
+    emitReallocateVectorData(desiredLocal);
 
     instructions.push_back({IrOpcode::Jump, static_cast<int32_t>(pushBodyIndex)});
 

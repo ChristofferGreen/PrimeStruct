@@ -25711,6 +25711,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
                        int &indexOutOfBoundsCalls,
                        int &reserveNegativeCalls,
                        int &reserveExceededCalls,
+                       std::vector<primec::IrInstruction> *capturedInstructions,
                        std::string &error) {
     std::vector<primec::IrInstruction> instructions;
     int32_t nextTempLocal = 20;
@@ -25750,6 +25751,9 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
           instructions.push_back({primec::IrOpcode::PushI32, 905});
         },
         error);
+    if (capturedInstructions != nullptr) {
+      *capturedInstructions = instructions;
+    }
     return result;
   };
 
@@ -25767,6 +25771,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             indexOutOfBoundsCalls,
             reserveNegativeCalls,
             reserveExceededCalls,
+            nullptr,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(capacityExceededCalls == 0);
@@ -25782,6 +25787,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             indexOutOfBoundsCalls,
             reserveNegativeCalls,
             reserveExceededCalls,
+            nullptr,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(capacityExceededCalls == 1);
@@ -25793,10 +25799,12 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             indexOutOfBoundsCalls,
             reserveNegativeCalls,
             reserveExceededCalls,
+            nullptr,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(popOnEmptyCalls == 1);
 
+  std::vector<primec::IrInstruction> reserveInstructions;
   CHECK(runHelper(
             makeCall("reserve", {makeTarget(), makeI32Literal(12)}),
             capacityExceededCalls,
@@ -25804,10 +25812,19 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             indexOutOfBoundsCalls,
             reserveNegativeCalls,
             reserveExceededCalls,
+            &reserveInstructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(reserveNegativeCalls == 1);
   CHECK(reserveExceededCalls == 1);
+  bool reserveHasHeapAlloc = false;
+  for (const auto &inst : reserveInstructions) {
+    if (inst.op == primec::IrOpcode::HeapAlloc) {
+      reserveHasHeapAlloc = true;
+      break;
+    }
+  }
+  CHECK(reserveHasHeapAlloc);
 
   CHECK(runHelper(
             makeCall("remove_at", {makeTarget(), makeI32Literal(1)}),
@@ -25816,6 +25833,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             indexOutOfBoundsCalls,
             reserveNegativeCalls,
             reserveExceededCalls,
+            nullptr,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
 
@@ -25826,9 +25844,30 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             indexOutOfBoundsCalls,
             reserveNegativeCalls,
             reserveExceededCalls,
+            nullptr,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(indexOutOfBoundsCalls == 4);
+
+  std::vector<primec::IrInstruction> pushInstructions;
+  CHECK(runHelper(
+            makeCall("push", {makeTarget(), makeI32Literal(7)}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            &pushInstructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  bool pushHasHeapAlloc = false;
+  for (const auto &inst : pushInstructions) {
+    if (inst.op == primec::IrOpcode::HeapAlloc) {
+      pushHasHeapAlloc = true;
+      break;
+    }
+  }
+  CHECK(pushHasHeapAlloc);
 }
 
 TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics") {

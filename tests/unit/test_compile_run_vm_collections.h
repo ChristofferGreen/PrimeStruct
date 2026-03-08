@@ -4887,6 +4887,21 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("preserves vm vector values across reserve growth") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 8i32)}
+  reserve(values, 4i32)
+  push(values, 16i32)
+  return(plus(plus(values[0i32], values[1i32]), values[2i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_reserve_growth_preserves_values.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 28);
+}
+
 TEST_CASE("grows vm vector push beyond initial capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -4899,6 +4914,20 @@ main() {
   const std::string srcPath = writeTemp("vm_vector_push_grows.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 4);
+}
+
+TEST_CASE("preserves vm vector values across push growth") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(5i32)}
+  push(values, 7i32)
+  return(plus(values[0i32], values[1i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_push_growth_preserves_values.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 12);
 }
 
 TEST_CASE("runs vm vector literal at local dynamic limit") {
