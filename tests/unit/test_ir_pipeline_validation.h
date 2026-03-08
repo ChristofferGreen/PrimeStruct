@@ -3881,6 +3881,7 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   accessExpr.args[1].kind = primec::Expr::Kind::Name;
   accessExpr.args[1].name = "values";
   accessExpr.argNames = {std::string("index"), std::string("values")};
+  int accessResolveCalls = 0;
   bool sawReorderedReceiver = false;
   auto accessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
       accessExpr,
@@ -3891,6 +3892,7 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
       {},
       {},
       [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        ++accessResolveCalls;
         if (!methodCandidate.isMethodCall || methodCandidate.argNames.size() < 2 ||
             !methodCandidate.argNames[0].has_value() || !methodCandidate.argNames[1].has_value()) {
           return false;
@@ -3905,6 +3907,31 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   REQUIRE(accessResolvedPath.has_value());
   CHECK(*accessResolvedPath == "/vector/at");
   CHECK(sawReorderedReceiver);
+  CHECK(accessResolveCalls == 1);
+
+  int labeledAccessResolveCalls = 0;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
+                  accessExpr,
+                  "at",
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+                    ++labeledAccessResolveCalls;
+                    if (!methodCandidate.isMethodCall || methodCandidate.argNames.size() < 2 ||
+                        !methodCandidate.argNames[0].has_value()) {
+                      return false;
+                    }
+                    if (*methodCandidate.argNames[0] == "index") {
+                      pathOut = "/i32/at";
+                      return true;
+                    }
+                    return false;
+                  })
+                  .has_value());
+  CHECK(labeledAccessResolveCalls == 1);
 
   primec::Expr positionalAccessExpr = accessExpr;
   positionalAccessExpr.argNames.clear();
