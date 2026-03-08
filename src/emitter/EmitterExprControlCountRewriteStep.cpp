@@ -13,12 +13,11 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isMapCountCall,
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isStringCountCall,
     const EmitterExprControlCountRewriteResolveMethodPathFn &resolveMethodPath) {
+  (void)localTypes;
+  (void)isArrayCountCall;
+  (void)isMapCountCall;
+  (void)isStringCountCall;
   if (expr.isMethodCall || !isSimpleCallName(expr, "count") || expr.args.size() != 1 || nameMap.count(resolvedPath) != 0) {
-    return std::nullopt;
-  }
-  if ((isArrayCountCall && isArrayCountCall(expr, localTypes)) ||
-      (isMapCountCall && isMapCountCall(expr, localTypes)) ||
-      (isStringCountCall && isStringCountCall(expr, localTypes))) {
     return std::nullopt;
   }
   if (!resolveMethodPath) {

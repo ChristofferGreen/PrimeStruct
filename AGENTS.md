@@ -23,6 +23,9 @@ build and layout solidify.
 - If new public syntax/IR features are added, document them with a minimal runnable
   example and expected IR snippet.
 - When specs change, add a matching TODO entry unless explicitly marked as docs-only/no TODO.
+- If a TODO item becomes too large to finish and verify in one pass, split it into
+  smaller checklist entries in `docs/todo.md` and complete them incrementally across
+  separate commits.
 
 ## Struct helper notes
 - Struct constructor calls (`Type(...)`) map arguments to fields (positional/labeled); they do not forward to `Create()`.

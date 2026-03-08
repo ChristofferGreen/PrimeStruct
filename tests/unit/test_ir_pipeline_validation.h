@@ -3603,17 +3603,20 @@ TEST_CASE("emitter expr control method-path step rewrites eligible method calls"
   primec::Expr methodExpr = nonMethodExpr;
   methodExpr.isMethodCall = true;
   bool resolverCalled = false;
-  CHECK_FALSE(primec::emitter::runEmitterExprControlMethodPathStep(
+  auto countLikeResolvedPath = primec::emitter::runEmitterExprControlMethodPathStep(
       methodExpr,
       {},
       [&](const primec::Expr &, const std::unordered_map<std::string, primec::Emitter::BindingInfo> &) { return true; },
       {},
       {},
-      [&](std::string &) {
+      [&](std::string &pathOut) {
         resolverCalled = true;
+        pathOut = "/Vec3/count";
         return true;
-      }).has_value());
-  CHECK_FALSE(resolverCalled);
+      });
+  REQUIRE(countLikeResolvedPath.has_value());
+  CHECK(*countLikeResolvedPath == "/Vec3/count");
+  CHECK(resolverCalled);
 
   auto resolvedPath = primec::emitter::runEmitterExprControlMethodPathStep(
       methodExpr,
@@ -3693,7 +3696,7 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
       [&](const primec::Expr &, std::string &) { return true; }).has_value());
 
   bool resolverCalled = false;
-  CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
+  auto countLikeResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
       countExpr,
       "count",
       {},
@@ -3703,11 +3706,14 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
       },
       {},
       {},
-      [&](const primec::Expr &, std::string &) {
+      [&](const primec::Expr &, std::string &pathOut) {
         resolverCalled = true;
+        pathOut = "/Vec3/count";
         return true;
-      }).has_value());
-  CHECK_FALSE(resolverCalled);
+      });
+  REQUIRE(countLikeResolvedPath.has_value());
+  CHECK(*countLikeResolvedPath == "/Vec3/count");
+  CHECK(resolverCalled);
 
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
       countExpr,

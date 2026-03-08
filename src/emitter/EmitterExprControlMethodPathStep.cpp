@@ -9,12 +9,11 @@ std::optional<std::string> runEmitterExprControlMethodPathStep(
     const EmitterExprControlIsCountLikeCallFn &isMapCountCall,
     const EmitterExprControlIsCountLikeCallFn &isStringCountCall,
     const EmitterExprControlResolveMethodPathFn &resolveMethodPath) {
+  (void)localTypes;
+  (void)isArrayCountCall;
+  (void)isMapCountCall;
+  (void)isStringCountCall;
   if (!expr.isMethodCall) {
-    return std::nullopt;
-  }
-  if ((isArrayCountCall && isArrayCountCall(expr, localTypes)) ||
-      (isMapCountCall && isMapCountCall(expr, localTypes)) ||
-      (isStringCountCall && isStringCountCall(expr, localTypes))) {
     return std::nullopt;
   }
   if (!resolveMethodPath) {
