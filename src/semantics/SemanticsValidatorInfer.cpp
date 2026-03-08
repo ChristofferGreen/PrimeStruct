@@ -768,6 +768,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       resolvedOut = resolvedType + "/" + expr.name;
       return true;
     };
+    auto resolveBuiltinCollectionMethodReturnKind = [&](const std::string &resolvedPath,
+                                                        ReturnKind &kindOut) -> bool {
+      if (resolvedPath == "/array/count" || resolvedPath == "/vector/count" || resolvedPath == "/string/count" ||
+          resolvedPath == "/map/count" || resolvedPath == "/vector/capacity") {
+        kindOut = ReturnKind::Int;
+        return true;
+      }
+      return false;
+    };
     std::string resolved = resolveCalleePath(expr);
     bool hasResolvedPath = !expr.isMethodCall;
     if (expr.isMethodCall && expr.name == "ok" && expr.args.size() >= 1) {
@@ -828,6 +837,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (methodResolved == "/file_error/why") {
           return ReturnKind::String;
         }
+        ReturnKind builtinMethodKind = ReturnKind::Unknown;
+        if (defMap_.find(methodResolved) == defMap_.end() &&
+            resolveBuiltinCollectionMethodReturnKind(methodResolved, builtinMethodKind)) {
+          return builtinMethodKind;
+        }
         resolved = methodResolved;
         hasResolvedPath = true;
       }
@@ -846,6 +860,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
+        ReturnKind builtinMethodKind = ReturnKind::Unknown;
+        if (defMap_.find(methodResolved) == defMap_.end() &&
+            resolveBuiltinCollectionMethodReturnKind(methodResolved, builtinMethodKind)) {
+          return builtinMethodKind;
+        }
         auto methodIt = defMap_.find(methodResolved);
         if (methodIt != defMap_.end()) {
           if (!inferDefinitionReturnKind(*methodIt->second)) {
@@ -871,6 +890,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
+        ReturnKind builtinMethodKind = ReturnKind::Unknown;
+        if (defMap_.find(methodResolved) == defMap_.end() &&
+            resolveBuiltinCollectionMethodReturnKind(methodResolved, builtinMethodKind)) {
+          return builtinMethodKind;
+        }
         auto methodIt = defMap_.find(methodResolved);
         if (methodIt != defMap_.end()) {
           if (!inferDefinitionReturnKind(*methodIt->second)) {
