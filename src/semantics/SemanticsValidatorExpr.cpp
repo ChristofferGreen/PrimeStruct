@@ -1486,6 +1486,38 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    auto resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (paramBinding->typeName != "soa_vector" || paramBinding->typeTemplateArg.empty()) {
+            return false;
+          }
+          elemType = paramBinding->typeTemplateArg;
+          return true;
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          if (it->second.typeName != "soa_vector" || it->second.typeTemplateArg.empty()) {
+            return false;
+          }
+          elemType = it->second.typeTemplateArg;
+          return true;
+        }
+        return false;
+      }
+      if (target.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end() ||
+            !getBuiltinCollectionName(target, collection) || collection != "soa_vector") {
+          return false;
+        }
+        if (target.templateArgs.size() == 1) {
+          elemType = target.templateArgs.front();
+        }
+        return true;
+      }
+      return false;
+    };
     auto resolveStringTarget = [&](const Expr &target) -> bool {
       if (target.kind == Expr::Kind::StringLiteral) {
         return true;
@@ -1737,6 +1769,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (methodName == "count") {
         if (resolveVectorTarget(receiver, elemType)) {
           return setCollectionMethodTarget("/vector/count");
+        }
+        if (resolveSoaVectorTarget(receiver, elemType)) {
+          return setCollectionMethodTarget("/soa_vector/count");
         }
         if (resolveArrayTarget(receiver, elemType)) {
           return setCollectionMethodTarget("/array/count");
@@ -3266,8 +3301,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     }
-      if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" || resolved == "/string/count" ||
-                             resolved == "/map/count")) {
+      if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" || resolved == "/soa_vector/count" ||
+                             resolved == "/string/count" || resolved == "/map/count")) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;

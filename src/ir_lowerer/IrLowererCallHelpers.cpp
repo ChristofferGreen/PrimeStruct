@@ -229,6 +229,10 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCallFn,
     std::string &error) {
+  if (expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
+      isSoaVectorTarget(expr.args.front(), localsIn)) {
+    return InlineCallDispatchResult::NotHandled;
+  }
   return tryEmitInlineCallWithCountFallbacks(
       expr,
       [&](const Expr &callExpr) { return isArrayCountCallFn(callExpr, localsIn); },

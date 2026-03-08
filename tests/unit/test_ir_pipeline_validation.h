@@ -122,6 +122,28 @@ main() {
   CHECK(error == "native backend does not support soa_vector literals");
 }
 
+TEST_CASE("semantics accepts soa_vector count before lowerer rejection") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/use([soa_vector<Particle>] values) {
+  return(count(values))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
+  CHECK(error == "native backend does not support soa_vector count");
+}
+
 TEST_CASE("ir lowerer effects unit validates program effect traversal") {
   auto makeEffectsTransform = [](const std::vector<std::string> &effects) {
     primec::Transform transform;
@@ -9005,6 +9027,33 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             },
             error) == Result::NotHandled);
   CHECK(error.empty());
+
+  primec::ir_lowerer::LocalInfo soaCountInfo;
+  soaCountInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  soaCountInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  soaCountInfo.isSoaVector = true;
+  locals.emplace("soa_values", soaCountInfo);
+  methodCountCall.args.front().name = "soa_values";
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            methodCountCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
 
   primec::Expr directCall;
   directCall.kind = primec::Expr::Kind::Call;
