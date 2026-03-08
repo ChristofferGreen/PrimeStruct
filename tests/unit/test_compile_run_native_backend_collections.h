@@ -768,6 +768,50 @@ main() {
   CHECK(runCommand(exePath) == 163);
 }
 
+TEST_CASE("compiles and runs native user wrapper temporary syntax parity shadow precedence") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(83i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(84i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32] mapCall{at(wrapMap(), 1i32)}
+  [i32] mapMethod{wrapMap().at(1i32)}
+  [i32] mapIndex{wrapMap()[1i32]}
+  [i32] vectorCall{at(wrapVector(), 0i32)}
+  [i32] vectorMethod{wrapVector().at(0i32)}
+  [i32] vectorIndex{wrapVector()[0i32]}
+  return(plus(plus(plus(mapCall, mapMethod), mapIndex), plus(plus(vectorCall, vectorMethod), vectorIndex)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_user_wrapper_temp_syntax_parity_shadow_precedence.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_user_wrapper_temp_syntax_parity_shadow_precedence_exe")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 501);
+}
+
 TEST_CASE("rejects native templated stdlib collection return envelope unsupported arg") {
   const std::string source = R"(
 import /std/collections/*
