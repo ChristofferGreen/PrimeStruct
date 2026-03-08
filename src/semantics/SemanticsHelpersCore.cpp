@@ -1241,6 +1241,10 @@ bool parseBindingInfo(const Expr &expr,
       }
       if ((transform.name == "array" || transform.name == "vector" || transform.name == "Buffer") &&
           transform.templateArgs.size() != 1) {
+        if (transform.name == "array" && transform.templateArgs.size() > 1) {
+          error = "array<T, N> is unsupported; use array<T> (runtime-count array)";
+          return false;
+        }
         error = transform.name + " requires exactly one template argument";
         return false;
       }

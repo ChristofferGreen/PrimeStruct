@@ -532,6 +532,7 @@ array<i32>[1i32, 2i32]   // surface form
 ```
 
 Arrays are fixed-size contiguous value sequences once constructed (C++ `std::array`-like behavior).
+PrimeStruct keeps runtime-count `array<T>` as the long-term contract; envelope-level length forms (`array<T, N>`) are unsupported.
 Helpers:
 - `value.count()` (canonical equivalent: `count(value)`)
 - `value.at(index)` / `value[index]` (canonical equivalent: `at(value, index)`)

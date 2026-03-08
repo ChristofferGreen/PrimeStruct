@@ -1105,6 +1105,7 @@ bad_use_after_take() {
   - Collections can appear anywhere forms are allowed, including execution arguments.
   - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower through IR/VM/native.
   - `array<T>` is a fixed-size contiguous value sequence once constructed (C++ `std::array`-like behavior). Arrays support read/write/index helpers but no growth helpers.
+  - PrimeStruct keeps `array<T>` as a runtime-count contract; envelope-level length forms like `array<T, N>` are intentionally unsupported.
   - Array helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)` (canonical equivalents: `count(value)`, `at(value, index)`, `at_unsafe(value, index)`).
   - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic constructors (0..N). Growth operations require `effects(heap_alloc)` (or the active default effects set), and `push`/`reserve` may reallocate and invalidate references/pointers into vector storage.
   - Vector helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)`, `value.push(item)`, `value.pop()`, `value.reserve(capacity)`, `value.capacity()`, `value.clear()`, `value.remove_at(index)`, `value.remove_swap(index)` (canonical helper equivalents remain `count(value)`, `at(value, index)`, `push(value, item)`, etc.).

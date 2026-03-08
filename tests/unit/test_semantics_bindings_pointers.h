@@ -49,7 +49,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("array requires exactly one template argument") != std::string::npos);
+  CHECK(error.find("array<T, N> is unsupported; use array<T> (runtime-count array)") != std::string::npos);
 }
 
 TEST_CASE("binding map type requires two template arguments") {

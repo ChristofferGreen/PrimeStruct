@@ -27,6 +27,19 @@ main() {
   CHECK(error.find("array literal requires exactly one template argument") != std::string::npos);
 }
 
+TEST_CASE("array rejects envelope-level length template arg") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  array<i32, i32>(1i32, 2i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("array<T, N> is unsupported; use array<T> (runtime-count array)") != std::string::npos);
+}
+
 TEST_CASE("map requires even number of arguments") {
   const std::string source = R"(
 [return<int>]

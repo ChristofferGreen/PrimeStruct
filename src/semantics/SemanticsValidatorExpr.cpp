@@ -3635,6 +3635,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         if (builtinName == "array" || builtinName == "vector") {
           if (expr.templateArgs.size() != 1) {
+            if (builtinName == "array" && expr.templateArgs.size() > 1) {
+              error_ = "array<T, N> is unsupported; use array<T> (runtime-count array)";
+              return false;
+            }
             error_ = builtinName + " literal requires exactly one template argument";
             return false;
           }
