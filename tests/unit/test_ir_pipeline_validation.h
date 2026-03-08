@@ -12522,6 +12522,14 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
   CHECK(typeName == "map");
   CHECK(resolvedTypePath.empty());
 
+  LocalInfo soaVectorLocal;
+  soaVectorLocal.kind = LocalInfo::Kind::Value;
+  soaVectorLocal.valueKind = LocalInfo::ValueKind::Unknown;
+  soaVectorLocal.isSoaVector = true;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(soaVectorLocal, typeName, resolvedTypePath));
+  CHECK(typeName == "soa_vector");
+  CHECK(resolvedTypePath.empty());
+
   LocalInfo referenceArrayLocal;
   referenceArrayLocal.kind = LocalInfo::Kind::Reference;
   referenceArrayLocal.referenceToArray = true;
@@ -12589,6 +12597,13 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver call targets") 
   mapCall.name = "map";
   mapCall.templateArgs = {"i32", "i64"};
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(mapCall, ValueKind::Unknown) == "map");
+
+  primec::Expr soaVectorCall;
+  soaVectorCall.kind = primec::Expr::Kind::Call;
+  soaVectorCall.name = "soa_vector";
+  soaVectorCall.templateArgs = {"Particle"};
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(soaVectorCall, ValueKind::Unknown) ==
+        "soa_vector");
 }
 
 TEST_CASE("ir lowerer setup type helper falls back for method receiver call targets") {
@@ -13051,6 +13066,49 @@ TEST_CASE("ir lowerer setup type helper resolves struct receiver method definiti
       defMap,
       error);
   CHECK(resolved == &structMethodDef);
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves soa_vector receiver method definitions from expressions") {
+  primec::Definition soaPushDef;
+  soaPushDef.fullPath = "/soa_vector/push";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/soa_vector/push", &soaPushDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "push";
+  methodCall.isMethodCall = true;
+  methodCall.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  valuesLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  valuesLocal.isSoaVector = true;
+  locals.emplace("values", valuesLocal);
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      defMap,
+      error);
+  CHECK(resolved == &soaPushDef);
   CHECK(error.empty());
 }
 

@@ -182,6 +182,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     typeNameOut = "map";
     return true;
   }
+  if (localInfo.isSoaVector) {
+    typeNameOut = "soa_vector";
+    return true;
+  }
   if (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToArray) {
     if (!localInfo.structTypeName.empty()) {
       resolvedTypePathOut = localInfo.structTypeName;
@@ -210,6 +214,9 @@ std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallEx
     }
     if (collection == "map" && receiverCallExpr.templateArgs.size() == 2) {
       return "map";
+    }
+    if (collection == "soa_vector" && receiverCallExpr.templateArgs.size() == 1) {
+      return "soa_vector";
     }
   }
   return typeNameForValueKind(inferredKind);
