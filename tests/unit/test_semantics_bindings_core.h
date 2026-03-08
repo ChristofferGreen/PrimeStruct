@@ -253,6 +253,23 @@ main() {
 
 TEST_CASE("soa_vector binding emits deterministic unsupported diagnostic") {
   const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector is not implemented yet") != std::string::npos);
+}
+
+TEST_CASE("soa_vector binding requires struct element type") {
+  const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [soa_vector<i32>] values{soa_vector<i32>()}
@@ -261,7 +278,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector is not implemented yet") != std::string::npos);
+  CHECK(error.find("soa_vector requires struct element type") != std::string::npos);
 }
 
 TEST_CASE("field-only definition can be used as a type") {

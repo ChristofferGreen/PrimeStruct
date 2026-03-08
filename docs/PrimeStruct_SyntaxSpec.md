@@ -602,8 +602,9 @@ Draft constraints:
 
 Current implementation status: parser/text-transform support accepts surface `soa_vector<T>{...}`/`soa_vector<T>[...]`,
 but semantic validation rejects `soa_vector` usage with deterministic diagnostics
-(`soa_vector is not implemented yet`, `soa_vector literal requires exactly one template argument`,
-`soa_vector return type requires exactly one template argument`).
+(`soa_vector is not implemented yet`, `soa_vector requires struct element type`,
+`soa_vector literal requires struct element type`, `soa_vector return type requires struct element type`,
+`soa_vector literal requires exactly one template argument`, `soa_vector return type requires exactly one template argument`).
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 

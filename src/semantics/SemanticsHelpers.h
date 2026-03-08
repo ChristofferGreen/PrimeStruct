@@ -102,6 +102,10 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
+bool isSoaVectorStructElementType(const std::string &typeArg,
+                                  const std::string &namespacePrefix,
+                                  const std::unordered_set<std::string> &structTypes,
+                                  const std::unordered_map<std::string, std::string> &importAliases);
 bool isAssignCall(const Expr &expr);
 const BindingInfo *findBinding(const std::vector<ParameterInfo> &params,
                                const std::unordered_map<std::string, BindingInfo> &locals,

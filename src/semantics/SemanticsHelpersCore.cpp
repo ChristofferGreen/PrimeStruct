@@ -299,6 +299,24 @@ std::string resolveStructTypePath(const std::string &name,
   return {};
 }
 
+bool isSoaVectorStructElementType(const std::string &typeArg,
+                                  const std::string &namespacePrefix,
+                                  const std::unordered_set<std::string> &structTypes,
+                                  const std::unordered_map<std::string, std::string> &importAliases) {
+  if (typeArg.empty()) {
+    return false;
+  }
+  std::string normalized = normalizeBindingTypeName(typeArg);
+  if (!resolveStructTypePath(normalized, namespacePrefix, structTypes).empty()) {
+    return true;
+  }
+  auto importIt = importAliases.find(normalized);
+  if (importIt != importAliases.end() && structTypes.count(importIt->second) > 0) {
+    return true;
+  }
+  return false;
+}
+
 ReturnKind getReturnKind(const Definition &def,
                          const std::unordered_set<std::string> &structNames,
                          const std::unordered_map<std::string, std::string> &importAliases,
@@ -429,6 +447,10 @@ ReturnKind getReturnKind(const Definition &def,
         std::vector<std::string> args;
         if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
           error = "soa_vector return type requires exactly one template argument on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        if (!isSoaVectorStructElementType(args.front(), def.namespacePrefix, structNames, importAliases)) {
+          error = "soa_vector return type requires struct element type on " + def.fullPath;
           return ReturnKind::Unknown;
         }
         error = "soa_vector is not implemented yet on " + def.fullPath;
@@ -1266,6 +1288,10 @@ bool parseBindingInfo(const Expr &expr,
       if (transform.name == "soa_vector") {
         if (transform.templateArgs.size() != 1) {
           error = "soa_vector requires exactly one template argument";
+          return false;
+        }
+        if (!isSoaVectorStructElementType(transform.templateArgs.front(), namespacePrefix, structTypes, importAliases)) {
+          error = "soa_vector requires struct element type";
           return false;
         }
         error = "soa_vector is not implemented yet";

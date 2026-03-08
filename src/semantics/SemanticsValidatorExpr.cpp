@@ -3840,6 +3840,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             error_ = "soa_vector literal requires exactly one template argument";
             return false;
           }
+          if (!isSoaVectorStructElementType(expr.templateArgs.front(), expr.namespacePrefix, structNames_,
+                                            importAliases_)) {
+            error_ = "soa_vector literal requires struct element type";
+            return false;
+          }
           error_ = "soa_vector is not implemented yet";
           return false;
         }

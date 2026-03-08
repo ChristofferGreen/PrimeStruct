@@ -87,14 +87,30 @@ main() {
 
 TEST_CASE("soa_vector return emits deterministic unsupported diagnostic") {
   const std::string source = R"(
-[return<soa_vector<i32>>]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<soa_vector<Particle>>]
 main() {
-  return(soa_vector<i32>())
+  return(soa_vector<Particle>())
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("soa_vector is not implemented yet on /main") != std::string::npos);
+}
+
+TEST_CASE("soa_vector return requires struct element type") {
+  const std::string source = R"(
+[return<soa_vector<i32>>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector return type requires struct element type on /main") != std::string::npos);
 }
 
 TEST_CASE("reference return allows direct parameter reference") {
