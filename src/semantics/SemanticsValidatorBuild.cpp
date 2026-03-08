@@ -1290,14 +1290,19 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
 
 bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::string &typeArg,
                                                                 const std::string &namespacePrefix) {
-  const std::string normalizedTypeArg = normalizeBindingTypeName(typeArg);
-  std::string elementStructPath = resolveStructTypePath(normalizedTypeArg, namespacePrefix, structNames_);
-  if (elementStructPath.empty()) {
-    auto importIt = importAliases_.find(normalizedTypeArg);
-    if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
-      elementStructPath = importIt->second;
+  auto resolveStructPath = [&](const std::string &candidate, const std::string &scope) -> std::string {
+    const std::string normalized = normalizeBindingTypeName(candidate);
+    std::string resolved = resolveStructTypePath(normalized, scope, structNames_);
+    if (!resolved.empty()) {
+      return resolved;
     }
-  }
+    auto importIt = importAliases_.find(normalized);
+    if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+      return importIt->second;
+    }
+    return {};
+  };
+  std::string elementStructPath = resolveStructPath(typeArg, namespacePrefix);
   if (elementStructPath.empty()) {
     return true;
   }
@@ -1313,28 +1318,50 @@ bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::strin
     }
     return false;
   };
-  const Definition &elementStruct = *structIt->second;
-  for (const auto &fieldStmt : elementStruct.statements) {
-    if (!fieldStmt.isBinding || hasStaticTransform(fieldStmt)) {
-      continue;
+  std::unordered_set<std::string> activeStructs;
+  std::function<bool(const Definition &, const std::string &)> validateStructFields;
+  validateStructFields = [&](const Definition &structDef, const std::string &pathPrefix) -> bool {
+    if (!activeStructs.insert(structDef.fullPath).second) {
+      return true;
     }
-    BindingInfo fieldBinding;
-    if (!resolveStructFieldBinding(elementStruct, fieldStmt, fieldBinding)) {
-      return false;
-    }
-    const std::string normalizedFieldType = normalizeBindingTypeName(fieldBinding.typeName);
-    if (normalizedFieldType == "string" || fieldBinding.typeName == "Pointer" || fieldBinding.typeName == "Reference" ||
-        !fieldBinding.typeTemplateArg.empty()) {
-      std::string fieldType = fieldBinding.typeName;
-      if (!fieldBinding.typeTemplateArg.empty()) {
-        fieldType += "<" + fieldBinding.typeTemplateArg + ">";
+    for (const auto &fieldStmt : structDef.statements) {
+      if (!fieldStmt.isBinding || hasStaticTransform(fieldStmt)) {
+        continue;
       }
-      error_ =
-          "soa_vector field envelope is unsupported on " + elementStruct.fullPath + "/" + fieldStmt.name + ": " + fieldType;
-      return false;
+      BindingInfo fieldBinding;
+      if (!resolveStructFieldBinding(structDef, fieldStmt, fieldBinding)) {
+        activeStructs.erase(structDef.fullPath);
+        return false;
+      }
+      const std::string fieldPath = pathPrefix + "/" + fieldStmt.name;
+      const std::string normalizedFieldType = normalizeBindingTypeName(fieldBinding.typeName);
+      if (normalizedFieldType == "string" || fieldBinding.typeName == "Pointer" ||
+          fieldBinding.typeName == "Reference" || !fieldBinding.typeTemplateArg.empty()) {
+        std::string fieldType = fieldBinding.typeName;
+        if (!fieldBinding.typeTemplateArg.empty()) {
+          fieldType += "<" + fieldBinding.typeTemplateArg + ">";
+        }
+        error_ = "soa_vector field envelope is unsupported on " + fieldPath + ": " + fieldType;
+        activeStructs.erase(structDef.fullPath);
+        return false;
+      }
+      if (fieldBinding.typeTemplateArg.empty() && !isPrimitiveBindingTypeName(normalizedFieldType)) {
+        const std::string nestedStructPath = resolveStructPath(fieldBinding.typeName, structDef.namespacePrefix);
+        if (!nestedStructPath.empty()) {
+          auto nestedIt = defMap_.find(nestedStructPath);
+          if (nestedIt != defMap_.end()) {
+            if (!validateStructFields(*nestedIt->second, fieldPath)) {
+              activeStructs.erase(structDef.fullPath);
+              return false;
+            }
+          }
+        }
+      }
     }
-  }
-  return true;
+    activeStructs.erase(structDef.fullPath);
+    return true;
+  };
+  return validateStructFields(*structIt->second, structIt->second->fullPath);
 }
 
 bool SemanticsValidator::resolveUninitializedStorageBinding(const std::vector<ParameterInfo> &params,

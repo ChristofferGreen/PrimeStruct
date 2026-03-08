@@ -261,6 +261,48 @@ main() {
   CHECK(error.find("soa_vector field envelope is unsupported on /Particle/values: array<i32>") != std::string::npos);
 }
 
+TEST_CASE("soa_vector literal rejects nested struct disallowed envelope") {
+  const std::string source = R"(
+Label() {
+  [string] text{"tag"utf8}
+}
+
+Particle() {
+  [Label] meta{Label("default"utf8)}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  soa_vector<Particle>(Particle(Label("runtime"utf8)))
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field envelope is unsupported on /Particle/meta/text: string") != std::string::npos);
+}
+
+TEST_CASE("soa_vector literal accepts nested primitive struct fields") {
+  const std::string source = R"(
+Meta() {
+  [i32] id{1i32}
+}
+
+Particle() {
+  [Meta] meta{Meta(1i32)}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  soa_vector<Particle>(Particle(Meta(2i32)))
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector is not implemented yet") != std::string::npos);
+}
+
 TEST_CASE("array literal type mismatch fails") {
   const std::string source = R"(
 [return<int>]
