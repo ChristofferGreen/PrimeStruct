@@ -243,6 +243,52 @@ TEST_CASE("soa_vector get and ref reject named arguments for builtin calls") {
   checkNamedArgs("ref([index] 0i32, [values] values)");
 }
 
+TEST_CASE("soa_vector get helper call-form accepts labeled named receiver") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/get([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<i32>] index{vector<i32>(0i32)}
+  return(get([index] index, [values] values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("soa_vector get helper call-form does not fall back to non-receiver label") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/get([vector<i32>] values, [soa_vector<Particle>] index) {
+  return(8i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(0i32)}
+  [soa_vector<Particle>] index{soa_vector<Particle>()}
+  return(get([index] index, [values] values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("soa_vector field-view method reports unsupported diagnostic") {
   const std::string source = R"(
 Particle() {
