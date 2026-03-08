@@ -30,6 +30,14 @@ bool checkedSubI64(int64_t lhs, int64_t rhs, int64_t &out) {
   return true;
 }
 
+bool checkedNegI64(int64_t value, int64_t &out) {
+  if (value == std::numeric_limits<int64_t>::min()) {
+    return false;
+  }
+  out = -value;
+  return true;
+}
+
 enum class SignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 
 SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(const Expr &expr, int64_t &out) {
@@ -38,7 +46,21 @@ SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(const Expr &e
     return SignedLiteralIntegerEvalResult::Value;
   }
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding || !expr.templateArgs.empty() ||
-      expr.hasBodyArguments || !expr.bodyArguments.empty() || expr.args.size() != 2) {
+      expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+    return SignedLiteralIntegerEvalResult::NotFoldable;
+  }
+  if (isSimpleCallName(expr, "negate") && expr.args.size() == 1) {
+    int64_t operand = 0;
+    const SignedLiteralIntegerEvalResult operandResult = tryEvaluateSignedLiteralIntegerExpr(expr.args.front(), operand);
+    if (operandResult != SignedLiteralIntegerEvalResult::Value) {
+      return operandResult;
+    }
+    if (!checkedNegI64(operand, out)) {
+      return SignedLiteralIntegerEvalResult::Overflow;
+    }
+    return SignedLiteralIntegerEvalResult::Value;
+  }
+  if (expr.args.size() != 2) {
     return SignedLiteralIntegerEvalResult::NotFoldable;
   }
   const bool isPlus = isSimpleCallName(expr, "plus");

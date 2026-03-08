@@ -5760,6 +5760,46 @@ main() {
   CHECK(readFile(errPath).find("vector reserve literal expression overflow") != std::string::npos);
 }
 
+TEST_CASE("rejects native vector reserve folded negate negative at lowering") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, negate(1i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_negate_negative.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_vector_reserve_folded_negate_negative_err.txt")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("vector reserve expects non-negative capacity") != std::string::npos);
+}
+
+TEST_CASE("rejects native vector reserve folded negate overflow at lowering") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, negate(-9223372036854775808i64))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_negate_overflow.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_vector_reserve_folded_negate_overflow_err.txt")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("vector reserve literal expression overflow") != std::string::npos);
+}
+
 TEST_CASE("rejects native vector reserve folded unsigned expression beyond local dynamic limit") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
