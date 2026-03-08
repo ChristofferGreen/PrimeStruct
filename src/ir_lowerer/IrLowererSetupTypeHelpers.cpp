@@ -371,7 +371,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   }
   const bool isCountCall = isSimpleCallName(callExpr, "count") && callExpr.args.size() == 1;
   const bool isAccessCall =
-      (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) && callExpr.args.size() == 2;
+      (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe") ||
+       isSimpleCallName(callExpr, "get") || isSimpleCallName(callExpr, "ref")) &&
+      callExpr.args.size() == 2;
   if (!isCountCall && !isAccessCall) {
     return false;
   }
