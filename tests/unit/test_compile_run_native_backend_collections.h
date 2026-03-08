@@ -649,6 +649,40 @@ main() {
   CHECK(runCommand(exePath) == 294);
 }
 
+TEST_CASE("rejects native user wrapper temporary unsafe parity shadow mismatch") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(73i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(74i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(
+      plus(at_unsafe(wrapMap(), true), wrapMap().at_unsafe(true)),
+      plus(at_unsafe(wrapVector(), true), wrapVector().at_unsafe(true))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_user_wrapper_temp_unsafe_parity_shadow_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native user wrapper temporary at shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
