@@ -6,6 +6,8 @@
 #include "IrLowererLowerEffects.h"
 #include "IrLowererSetupTypeHelpers.h"
 
+#include <utility>
+
 namespace primec::ir_lowerer {
 
 static bool isSoaVectorTargetExpr(const Expr &expr, const LocalMap &localsIn) {
@@ -18,6 +20,92 @@ static bool isSoaVectorTargetExpr(const Expr &expr, const LocalMap &localsIn) {
     return getBuiltinCollectionName(expr, collection) && collection == "soa_vector";
   }
   return false;
+}
+
+static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::string &error) {
+  if (stmt.kind != Expr::Kind::Call || stmt.isMethodCall) {
+    return DirectCallStatementEmitResult::NotMatched;
+  }
+  const bool isVectorMutatorCall =
+      isSimpleCallName(stmt, "push") || isSimpleCallName(stmt, "pop") || isSimpleCallName(stmt, "reserve") ||
+      isSimpleCallName(stmt, "clear") || isSimpleCallName(stmt, "remove_at") || isSimpleCallName(stmt, "remove_swap");
+  if (!isVectorMutatorCall || stmt.args.empty()) {
+    return DirectCallStatementEmitResult::NotMatched;
+  }
+
+  std::vector<size_t> receiverIndices;
+  auto appendReceiverIndex = [&](size_t index) {
+    if (index >= stmt.args.size()) {
+      return;
+    }
+    for (size_t existing : receiverIndices) {
+      if (existing == index) {
+        return;
+      }
+    }
+    receiverIndices.push_back(index);
+  };
+
+  const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
+  if (hasNamedArgs) {
+    bool hasValuesNamedReceiver = false;
+    for (size_t i = 0; i < stmt.args.size(); ++i) {
+      if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
+        appendReceiverIndex(i);
+        hasValuesNamedReceiver = true;
+      }
+    }
+    if (!hasValuesNamedReceiver) {
+      appendReceiverIndex(0);
+      for (size_t i = 1; i < stmt.args.size(); ++i) {
+        appendReceiverIndex(i);
+      }
+    }
+  } else {
+    appendReceiverIndex(0);
+  }
+
+  const bool probePositionalReorderedReceiver =
+      !hasNamedArgs && stmt.args.size() > 1 &&
+      (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
+       stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
+       stmt.args.front().kind == Expr::Kind::Name);
+  if (probePositionalReorderedReceiver) {
+    for (size_t i = 1; i < stmt.args.size(); ++i) {
+      appendReceiverIndex(i);
+    }
+  }
+
+  for (size_t receiverIndex : receiverIndices) {
+    Expr methodStmt = stmt;
+    methodStmt.isMethodCall = true;
+    if (receiverIndex != 0) {
+      std::swap(methodStmt.args[0], methodStmt.args[receiverIndex]);
+      if (methodStmt.argNames.size() < methodStmt.args.size()) {
+        methodStmt.argNames.resize(methodStmt.args.size());
+      }
+      std::swap(methodStmt.argNames[0], methodStmt.argNames[receiverIndex]);
+    }
+    const Definition *callee = resolveMethodCallDefinition(methodStmt, localsIn);
+    if (!callee) {
+      continue;
+    }
+    if (methodStmt.hasBodyArguments || !methodStmt.bodyArguments.empty()) {
+      error = "native backend does not support block arguments on calls";
+      return DirectCallStatementEmitResult::Error;
+    }
+    if (!emitInlineDefinitionCall(methodStmt, *callee, localsIn, false)) {
+      return DirectCallStatementEmitResult::Error;
+    }
+    return DirectCallStatementEmitResult::Emitted;
+  }
+
+  return DirectCallStatementEmitResult::NotMatched;
 }
 
 BufferStoreStatementEmitResult tryEmitBufferStoreStatement(
@@ -302,6 +390,15 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
       return DirectCallStatementEmitResult::Emitted;
     }
     error.clear();
+  }
+
+  const auto vectorHelperCallFormResult = tryEmitVectorHelperCallFormStatement(
+      stmt, localsIn, resolveMethodCallDefinition, emitInlineDefinitionCall, error);
+  if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Error) {
+    return DirectCallStatementEmitResult::Error;
+  }
+  if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Emitted) {
+    return DirectCallStatementEmitResult::Emitted;
   }
 
   const Definition *callee = resolveDefinitionCall(stmt);

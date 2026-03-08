@@ -1930,6 +1930,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         }
       }
     }
+    if (defMap_.find(vectorHelperResolved) != defMap_.end()) {
+      Expr helperCall = stmt;
+      helperCall.name = vectorHelperResolved;
+      helperCall.isMethodCall = false;
+      return validateExpr(params, locals, helperCall, enclosingStatements, statementIndex);
+    }
     if (defMap_.find(vectorHelperResolved) == defMap_.end()) {
       if (hasNamedArguments(stmt.argNames)) {
         error_ = "named arguments not supported for builtin calls";

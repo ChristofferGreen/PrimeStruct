@@ -785,8 +785,8 @@ StructSlotResolutionAdapters makeStructSlotResolutionAdaptersWithOwnedState(
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
     std::string &error) {
-  const auto *fieldIndexPtr = &fieldIndex;
-  const auto *defMapPtr = &defMap;
+  auto fieldIndexOwned = std::make_shared<StructLayoutFieldIndex>(fieldIndex);
+  auto defMapOwned = std::make_shared<std::unordered_map<std::string, const Definition *>>(defMap);
   auto resolveStructTypeNameFn = resolveStructTypeName;
   auto valueKindFromTypeNameFn = valueKindFromTypeName;
   auto *errorPtr = &error;
@@ -794,8 +794,8 @@ StructSlotResolutionAdapters makeStructSlotResolutionAdaptersWithOwnedState(
   auto layoutStack = std::make_shared<std::unordered_set<std::string>>();
 
   StructSlotResolutionAdapters adapters;
-  adapters.resolveStructSlotLayout = [fieldIndexPtr,
-                                      defMapPtr,
+  adapters.resolveStructSlotLayout = [fieldIndexOwned,
+                                      defMapOwned,
                                       resolveStructTypeNameFn,
                                       valueKindFromTypeNameFn,
                                       errorPtr,
@@ -803,8 +803,8 @@ StructSlotResolutionAdapters makeStructSlotResolutionAdaptersWithOwnedState(
                                       layoutStack](
                                          const std::string &structPath, StructSlotLayoutInfo &out) {
     return resolveStructSlotLayoutFromDefinitionFieldIndex(structPath,
-                                                           *fieldIndexPtr,
-                                                           *defMapPtr,
+                                                           *fieldIndexOwned,
+                                                           *defMapOwned,
                                                            resolveStructTypeNameFn,
                                                            valueKindFromTypeNameFn,
                                                            *layoutCache,
@@ -812,8 +812,8 @@ StructSlotResolutionAdapters makeStructSlotResolutionAdaptersWithOwnedState(
                                                            out,
                                                            *errorPtr);
   };
-  adapters.resolveStructFieldSlot = [fieldIndexPtr,
-                                     defMapPtr,
+  adapters.resolveStructFieldSlot = [fieldIndexOwned,
+                                     defMapOwned,
                                      resolveStructTypeNameFn,
                                      valueKindFromTypeNameFn,
                                      errorPtr,
@@ -824,8 +824,8 @@ StructSlotResolutionAdapters makeStructSlotResolutionAdaptersWithOwnedState(
                                         StructSlotFieldInfo &out) {
     return resolveStructFieldSlotFromDefinitionFieldIndex(structPath,
                                                           fieldName,
-                                                          *fieldIndexPtr,
-                                                          *defMapPtr,
+                                                          *fieldIndexOwned,
+                                                          *defMapOwned,
                                                           resolveStructTypeNameFn,
                                                           valueKindFromTypeNameFn,
                                                           *layoutCache,
