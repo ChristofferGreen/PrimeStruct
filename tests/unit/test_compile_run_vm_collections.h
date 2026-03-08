@@ -4354,6 +4354,30 @@ main() {
   CHECK(runCommand(runCmd) == 68);
 }
 
+TEST_CASE("runs vm with named vector at expression receiver precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [string] index) {
+  return(86i32)
+}
+
+[effects(heap_alloc), return<int>]
+/string/at([string] values, [vector<i32>] index) {
+  return(87i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [string] index{"only"raw_utf8}
+  return(at([index] index, [values] values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_at_named_receiver_precedence.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 86);
+}
+
 TEST_CASE("runs vm with user vector at method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

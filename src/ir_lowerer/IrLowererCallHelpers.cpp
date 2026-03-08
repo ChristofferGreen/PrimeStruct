@@ -1421,7 +1421,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   const bool hasNamedArgsValue = hasNamedArgs();
   if (hasNamedArgsValue) {
     bool hasValuesNamedReceiver = false;
-    if (isVectorMutatorCall) {
+    if (isVectorMutatorCall || isAccessCall) {
       for (size_t i = 0; i < expr.args.size(); ++i) {
         if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
             *expr.argNames[i] == "values") {

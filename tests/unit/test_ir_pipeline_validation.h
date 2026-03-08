@@ -12143,6 +12143,42 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(error.empty());
   CHECK(noReorderAtNameResolveCalls == 1);
 
+  primec::Expr namedAtCall = reorderedAtNameCall;
+  namedAtCall.argNames = {std::string("index"), std::string("values")};
+  int namedAtResolveCalls = 0;
+  int namedAtEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            namedAtCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++namedAtResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+                  methodExpr.args.front().name == "items") {
+                return &callee;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++namedAtEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              REQUIRE_FALSE(methodExpr.args.empty());
+              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(methodExpr.args.front().name == "items");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error,
+            [&](const primec::Expr &receiverExpr) {
+              return receiverExpr.kind == primec::Expr::Kind::Name && receiverExpr.name == "items";
+            }) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(namedAtResolveCalls == 1);
+  CHECK(namedAtEmitCalls == 1);
+
   primec::Expr atUnsafeCall = atCall;
   atUnsafeCall.name = "at_unsafe";
   int atUnsafeResolveCalls = 0;
