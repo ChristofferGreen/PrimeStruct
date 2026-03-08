@@ -2552,6 +2552,35 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("soa access helper call-form expression infers auto binding from labeled receiver helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/get([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(13i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/vector/get([vector<i32>] values, [soa_vector<Particle>] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<i32>] index{vector<i32>(0i32)}
+  [auto] inferred{get([index] index, [values] values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector helper call-form expression builtin rejects named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

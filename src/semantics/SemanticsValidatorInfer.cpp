@@ -612,6 +612,38 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (paramBinding->typeName != "soa_vector" || paramBinding->typeTemplateArg.empty()) {
+            return false;
+          }
+          elemType = paramBinding->typeTemplateArg;
+          return true;
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          if (it->second.typeName != "soa_vector" || it->second.typeTemplateArg.empty()) {
+            return false;
+          }
+          elemType = it->second.typeTemplateArg;
+          return true;
+        }
+        return false;
+      }
+      if (target.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (defMap_.find(resolveCalleePath(target)) != defMap_.end() ||
+            !getBuiltinCollectionName(target, collection) || collection != "soa_vector") {
+          return false;
+        }
+        if (target.templateArgs.size() == 1) {
+          elemType = target.templateArgs.front();
+        }
+        return true;
+      }
+      return false;
+    };
     auto resolveBufferTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -1261,7 +1293,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         std::string keyType;
         std::string valueType;
         return resolveVectorTarget(candidate, elemType) || resolveArrayTarget(candidate, elemType) ||
-               resolveStringTarget(candidate) || resolveMapTarget(candidate, keyType, valueType);
+               resolveSoaVectorTarget(candidate, elemType) || resolveStringTarget(candidate) ||
+               resolveMapTarget(candidate, keyType, valueType);
       };
       const bool probePositionalReorderedReceiver =
           !hasNamedArgs && expr.args.size() > 1 &&
@@ -1287,6 +1320,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           methodResolved = "/vector/" + expr.name;
         } else if (resolveArrayTarget(receiverCandidate, elemType)) {
           methodResolved = "/array/" + expr.name;
+        } else if ((expr.name == "get" || expr.name == "ref") &&
+                   resolveSoaVectorTarget(receiverCandidate, elemType)) {
+          methodResolved = "/soa_vector/" + expr.name;
         } else if (resolveStringTarget(receiverCandidate)) {
           methodResolved = "/string/" + expr.name;
         } else if (resolveMapTarget(receiverCandidate, keyType, valueType)) {
