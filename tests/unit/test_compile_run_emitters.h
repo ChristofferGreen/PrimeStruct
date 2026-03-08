@@ -356,6 +356,56 @@ main() {
   CHECK(output.find("ps_vector_clear(values)") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lambda mutator positional call resolves user helper") {
+  const std::string source = R"(
+/vector/push([vector<i32> mut] values, [i32] value) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  []() {
+    [vector<i32> mut] values{vector<i32>(1i32)}
+    push(5i32, values)
+    return(values.count())
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_positional_shadow.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_positional_shadow.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_vector_push(values, 5)") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter lambda mutator rewrite keeps known vector receiver leading names") {
+  const std::string source = R"(
+/i32/push([i32] value, [vector<i32> mut] values) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  []() {
+    [vector<i32> mut] values{vector<i32>(1i32)}
+    [i32] index{8i32}
+    push(values, index)
+    return(values.count())
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_known_receiver_no_reorder.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_known_receiver_no_reorder.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_vector_push(values, index)") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter lambda mutator mismatch rejects user helper signatures") {
   const std::string source = R"(
 /vector/push([vector<i32> mut] values, [bool] value) { }
