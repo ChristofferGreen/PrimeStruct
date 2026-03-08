@@ -157,6 +157,7 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<bool(const Expr &)> &isArrayCountCall,
     const std::function<bool(const Expr &)> &isStringCountCall,
     const std::function<bool(const Expr &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &)> &isCollectionAccessReceiverExpr,
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
@@ -167,7 +168,8 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
       isStringCountCall,
       resolveMethodCallDefinition,
       emitInlineDefinitionCall,
-      error);
+      error,
+      isCollectionAccessReceiverExpr);
   if (firstCountFallbackResult == CountMethodFallbackResult::Emitted) {
     return InlineCallDispatchResult::Emitted;
   }
@@ -208,7 +210,8 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
       isStringCountCall,
       resolveMethodCallDefinition,
       emitInlineDefinitionCall,
-      error);
+      error,
+      isCollectionAccessReceiverExpr);
   if (secondCountFallbackResult == CountMethodFallbackResult::Emitted) {
     return InlineCallDispatchResult::Emitted;
   }
@@ -281,6 +284,24 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       [&](const Expr &callExpr) { return isArrayCountCallFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return isStringCountCallFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return isVectorCapacityCallFn(callExpr, localsIn); },
+      [&](const Expr &receiverExpr) {
+        if (receiverExpr.kind != Expr::Kind::Name) {
+          return false;
+        }
+        auto it = localsIn.find(receiverExpr.name);
+        if (it == localsIn.end()) {
+          return false;
+        }
+        const LocalInfo &info = it->second;
+        if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
+            info.kind == LocalInfo::Kind::Map) {
+          return true;
+        }
+        if (info.kind == LocalInfo::Kind::Reference && info.referenceToArray) {
+          return true;
+        }
+        return info.valueKind == LocalInfo::ValueKind::String;
+      },
       [&](const Expr &callExpr) { return resolveMethodCallDefinitionFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return resolveDefinitionCallFn(callExpr); },
       [&](const Expr &callExpr, const Definition &callee) {
@@ -1303,7 +1324,8 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const std::function<bool(const Expr &)> &isStringCountCall,
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
-    std::string &error) {
+    std::string &error,
+    std::function<bool(const Expr &)> isCollectionAccessReceiverExpr) {
   const bool isCountCall = isSimpleCallName(expr, "count");
   const bool isCapacityCall = isSimpleCallName(expr, "capacity");
   const bool isAccessCall =
@@ -1369,7 +1391,10 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   }
   const bool probePositionalReorderedAccessReceiver =
       isAccessCall && !hasNamedArgsValue && expr.args.size() > 1 &&
-      (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::Name);
+      (expr.args.front().kind == Expr::Kind::Literal ||
+       (expr.args.front().kind == Expr::Kind::Name &&
+        (!isCollectionAccessReceiverExpr ||
+         !isCollectionAccessReceiverExpr(expr.args.front()))));
   if (probePositionalReorderedAccessReceiver) {
     for (size_t i = 1; i < expr.args.size(); ++i) {
       receiverIndices.push_back(i);

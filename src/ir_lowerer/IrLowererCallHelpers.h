@@ -442,7 +442,8 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const std::function<bool(const Expr &)> &isStringCountCall,
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
-    std::string &error);
+    std::string &error,
+    std::function<bool(const Expr &)> isCollectionAccessReceiverExpr = {});
 
 bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,
