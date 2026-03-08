@@ -54,6 +54,14 @@ bool checkedSubU64(uint64_t lhs, uint64_t rhs, uint64_t &out) {
   return true;
 }
 
+bool isSoaVectorStatementReceiverExpr(const Expr &expr, const LocalMap &localsIn) {
+  if (expr.kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto it = localsIn.find(expr.name);
+  return it != localsIn.end() && it->second.isSoaVector;
+}
+
 enum class SignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 enum class UnsignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 
@@ -592,6 +600,42 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   if (vectorHelper.empty()) {
     return VectorStatementHelperEmitResult::NotMatched;
   }
+
+  if (!stmt.isMethodCall && !stmt.args.empty()) {
+    std::vector<size_t> receiverIndices{0};
+    bool hasNamedArgs = false;
+    for (const auto &argName : stmt.argNames) {
+      if (argName.has_value()) {
+        hasNamedArgs = true;
+        break;
+      }
+    }
+    if (hasNamedArgs && stmt.args.size() > 1) {
+      for (size_t i = 1; i < stmt.args.size(); ++i) {
+        receiverIndices.push_back(i);
+      }
+    }
+
+    for (size_t receiverIndex : receiverIndices) {
+      if (receiverIndex >= stmt.args.size() ||
+          !isSoaVectorStatementReceiverExpr(stmt.args[receiverIndex], localsIn)) {
+        continue;
+      }
+      Expr methodStmt = stmt;
+      methodStmt.isMethodCall = true;
+      if (receiverIndex != 0) {
+        std::swap(methodStmt.args[0], methodStmt.args[receiverIndex]);
+        if (methodStmt.argNames.size() < methodStmt.args.size()) {
+          methodStmt.argNames.resize(methodStmt.args.size());
+        }
+        std::swap(methodStmt.argNames[0], methodStmt.argNames[receiverIndex]);
+      }
+      if (isUserDefinedVectorHelperCall(methodStmt)) {
+        return VectorStatementHelperEmitResult::NotMatched;
+      }
+    }
+  }
+
   if (isUserDefinedVectorHelperCall(stmt)) {
     return VectorStatementHelperEmitResult::NotMatched;
   }

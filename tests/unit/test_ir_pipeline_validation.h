@@ -26912,6 +26912,80 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
             error) == EmitResult::NotMatched);
   CHECK(error.empty());
   CHECK(instructions.empty());
+
+  primec::Expr soaTarget;
+  soaTarget.kind = primec::Expr::Kind::Name;
+  soaTarget.name = "soa";
+
+  primec::Expr soaPushCall = pushCall;
+  soaPushCall.args = {soaTarget, value};
+
+  primec::ir_lowerer::LocalInfo soaInfo;
+  soaInfo.kind = Kind::Value;
+  soaInfo.valueKind = ValueKind::Unknown;
+  soaInfo.isMutable = true;
+  soaInfo.isSoaVector = true;
+  soaInfo.index = 9;
+  locals.emplace("soa", soaInfo);
+
+  int methodProbeCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            soaPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &candidate) {
+              if (!candidate.isMethodCall || candidate.name != "push" || candidate.args.empty() ||
+                  candidate.args.front().kind != primec::Expr::Kind::Name ||
+                  candidate.args.front().name != "soa") {
+                return false;
+              }
+              ++methodProbeCalls;
+              return true;
+            },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+  CHECK(methodProbeCalls == 1);
+
+  primec::Expr namedSoaPushCall = soaPushCall;
+  namedSoaPushCall.args = {value, soaTarget};
+  namedSoaPushCall.argNames = {std::string("value"), std::string("values")};
+  methodProbeCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            namedSoaPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &candidate) {
+              if (!candidate.isMethodCall || candidate.name != "push" || candidate.args.empty() ||
+                  candidate.args.front().kind != primec::Expr::Kind::Name ||
+                  candidate.args.front().name != "soa") {
+                return false;
+              }
+              ++methodProbeCalls;
+              return true;
+            },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+  CHECK(methodProbeCalls == 1);
 }
 
 TEST_CASE("ir lowerer flow helpers resolve buffer init info") {

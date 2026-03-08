@@ -609,7 +609,8 @@ routes `soa_vector` targets through deterministic semantics diagnostics, and met
 emit `soa_vector field views are not implemented yet: <field>` unless a user-defined `/soa_vector/<field>` helper
 exists (including call-form single-argument helper lowering dispatch and call-form method-fallback return-kind
 inference for both `get/ref` and single-argument field-view helper calls, plus statement direct-call probing for
-call-form single-argument SoA field helpers before expression fallback).
+call-form single-argument SoA field helpers before expression fallback, and statement mutator helper probing for
+call-form SoA receivers so user-defined `/soa_vector/push`-style helpers bypass builtin unsupported-helper fallback).
 Lowering/runtime support remains
 incomplete; current IR lowering emits deterministic unsupported diagnostics
 (`native backend does not support soa_vector literals`, `native backend does not support soa_vector count`,
