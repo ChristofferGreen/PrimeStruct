@@ -604,7 +604,8 @@ Current implementation status: parser/text-transform support accepts surface `so
 but semantic validation rejects `soa_vector` usage with deterministic diagnostics
 (`soa_vector is not implemented yet`, `soa_vector requires struct element type`,
 `soa_vector literal requires struct element type`, `soa_vector return type requires struct element type`,
-`soa_vector literal requires exactly one template argument`, `soa_vector return type requires exactly one template argument`).
+`soa_vector literal requires exactly one template argument`, `soa_vector return type requires exactly one template argument`,
+and `soa_vector field envelope is unsupported on /Type/field: ...` for disallowed literal element-field envelopes).
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 

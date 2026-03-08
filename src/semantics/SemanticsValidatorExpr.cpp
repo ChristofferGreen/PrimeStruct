@@ -3845,6 +3845,43 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             error_ = "soa_vector literal requires struct element type";
             return false;
           }
+          auto hasStaticTransform = [](const Expr &stmt) -> bool {
+            for (const auto &transform : stmt.transforms) {
+              if (transform.name == "static") {
+                return true;
+              }
+            }
+            return false;
+          };
+          const std::string elementStructPath =
+              resolveStructTypePath(normalizeBindingTypeName(expr.templateArgs.front()), expr.namespacePrefix,
+                                    structNames_);
+          auto structIt = defMap_.find(elementStructPath);
+          if (structIt == defMap_.end()) {
+            error_ = "soa_vector literal requires struct element type";
+            return false;
+          }
+          const Definition &elementStruct = *structIt->second;
+          for (const auto &fieldStmt : elementStruct.statements) {
+            if (!fieldStmt.isBinding || hasStaticTransform(fieldStmt)) {
+              continue;
+            }
+            BindingInfo fieldBinding;
+            if (!resolveStructFieldBinding(elementStruct, fieldStmt, fieldBinding)) {
+              return false;
+            }
+            const std::string normalizedFieldType = normalizeBindingTypeName(fieldBinding.typeName);
+            if (normalizedFieldType == "string" || fieldBinding.typeName == "Pointer" ||
+                fieldBinding.typeName == "Reference" || !fieldBinding.typeTemplateArg.empty()) {
+              std::string fieldType = fieldBinding.typeName;
+              if (!fieldBinding.typeTemplateArg.empty()) {
+                fieldType += "<" + fieldBinding.typeTemplateArg + ">";
+              }
+              error_ = "soa_vector field envelope is unsupported on " + elementStruct.fullPath + "/" + fieldStmt.name +
+                       ": " + fieldType;
+              return false;
+            }
+          }
           error_ = "soa_vector is not implemented yet";
           return false;
         }

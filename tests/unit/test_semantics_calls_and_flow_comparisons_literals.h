@@ -227,6 +227,40 @@ main() {
   CHECK(error.find("soa_vector literal requires struct element type") != std::string::npos);
 }
 
+TEST_CASE("soa_vector literal rejects string element field envelope") {
+  const std::string source = R"(
+Particle() {
+  [string] name{"n"utf8}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  soa_vector<Particle>(Particle("a"utf8))
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field envelope is unsupported on /Particle/name: string") != std::string::npos);
+}
+
+TEST_CASE("soa_vector literal rejects nested template element field envelope") {
+  const std::string source = R"(
+Particle() {
+  [array<i32>] values{array<i32>(1i32)}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  soa_vector<Particle>(Particle(array<i32>(2i32)))
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field envelope is unsupported on /Particle/values: array<i32>") != std::string::npos);
+}
+
 TEST_CASE("array literal type mismatch fails") {
   const std::string source = R"(
 [return<int>]
