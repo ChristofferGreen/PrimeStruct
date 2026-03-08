@@ -14,6 +14,14 @@ std::string vectorLiteralExceedsLocalCapacityLimitMessage() {
   return "vector literal exceeds local capacity limit (" + std::to_string(kVectorLocalDynamicCapacityLimit) + ")";
 }
 
+std::string vectorPushAllocationFailedMessage() {
+  return "vector push allocation failed (out of memory)";
+}
+
+std::string vectorReserveAllocationFailedMessage() {
+  return "vector reserve allocation failed (out of memory)";
+}
+
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;

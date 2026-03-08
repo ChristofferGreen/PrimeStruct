@@ -5169,7 +5169,7 @@ main([array<string>] args) {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector reserve exceeds local capacity limit (256)\n");
+  CHECK(readFile(errPath) == "vector reserve allocation failed (out of memory)\n");
 }
 
 TEST_CASE("rejects vm vector push beyond local dynamic limit") {
@@ -5187,7 +5187,7 @@ main() {
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_push_limit_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector local capacity limit exceeded (256)\n");
+  CHECK(readFile(errPath) == "vector push allocation failed (out of memory)\n");
 }
 
 TEST_CASE("runs vm with vector shrink helpers") {

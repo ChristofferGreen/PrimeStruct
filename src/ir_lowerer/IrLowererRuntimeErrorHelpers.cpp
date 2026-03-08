@@ -161,7 +161,7 @@ void emitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn
 }
 
 void emitVectorCapacityExceeded(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  emitRuntimeError(function, vectorLocalCapacityLimitExceededMessage(), internString);
+  emitRuntimeError(function, vectorPushAllocationFailedMessage(), internString);
 }
 
 void emitVectorReserveNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
@@ -169,7 +169,7 @@ void emitVectorReserveNegative(IrFunction &function, const InternRuntimeErrorStr
 }
 
 void emitVectorReserveExceeded(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  emitRuntimeError(function, vectorReserveExceedsLocalCapacityLimitMessage(), internString);
+  emitRuntimeError(function, vectorReserveAllocationFailedMessage(), internString);
 }
 
 void emitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString) {

@@ -5913,7 +5913,7 @@ main([array<string>] args) {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector reserve exceeds local capacity limit (256)\n");
+  CHECK(readFile(errPath) == "vector reserve allocation failed (out of memory)\n");
 }
 
 TEST_CASE("rejects native vector push beyond local dynamic limit") {
@@ -5937,7 +5937,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector local capacity limit exceeded (256)\n");
+  CHECK(readFile(errPath) == "vector push allocation failed (out of memory)\n");
 }
 
 TEST_CASE("compiles and runs native vector shrink helpers") {

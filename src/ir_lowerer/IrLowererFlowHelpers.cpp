@@ -668,7 +668,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
   }
 
-  auto emitReallocateVectorData = [&](int32_t desiredLocal) {
+  auto emitReallocateVectorData = [&](int32_t desiredLocal, const std::function<void()> &emitAllocationFailure) {
     const int32_t oldDataPtrLocal = allocTempLocal();
     emitLoadVectorDataPtr(oldDataPtrLocal);
 
@@ -676,6 +676,14 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
     instructions.push_back({IrOpcode::HeapAlloc, 0});
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(newDataPtrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(newDataPtrLocal)});
+    instructions.push_back({IrOpcode::PushI64, 0});
+    instructions.push_back({IrOpcode::CmpEqI64, 0});
+    const size_t jumpAllocationSucceeded = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    emitAllocationFailure();
+    const size_t allocationSucceededIndex = instructions.size();
+    instructions[jumpAllocationSucceeded].imm = static_cast<int32_t>(allocationSucceededIndex);
 
     const int32_t copyIndexLocal = allocTempLocal();
     const int32_t srcPtrLocal = allocTempLocal();
@@ -823,7 +831,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const size_t withinLimitIndex = instructions.size();
     instructions[jumpWithinLimit].imm = static_cast<int32_t>(withinLimitIndex);
 
-    emitReallocateVectorData(desiredLocal);
+    emitReallocateVectorData(desiredLocal, emitVectorReserveExceeded);
 
     const size_t reserveEndIndex = instructions.size();
     instructions[jumpReserveEnd].imm = static_cast<int32_t>(reserveEndIndex);
@@ -887,7 +895,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     instructions.push_back({IrOpcode::AddI32, 0});
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(desiredLocal)});
 
-    emitReallocateVectorData(desiredLocal);
+    emitReallocateVectorData(desiredLocal, emitVectorCapacityExceeded);
 
     instructions.push_back({IrOpcode::Jump, static_cast<int32_t>(pushBodyIndex)});
 

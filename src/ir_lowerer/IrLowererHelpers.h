@@ -16,6 +16,8 @@ constexpr int32_t kVectorLocalDynamicCapacityLimit = 256;
 std::string vectorLocalCapacityLimitExceededMessage();
 std::string vectorReserveExceedsLocalCapacityLimitMessage();
 std::string vectorLiteralExceedsLocalCapacityLimitMessage();
+std::string vectorPushAllocationFailedMessage();
+std::string vectorReserveAllocationFailedMessage();
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool isReturnCall(const Expr &expr);

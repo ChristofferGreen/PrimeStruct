@@ -18233,9 +18233,9 @@ TEST_CASE("ir lowerer runtime error helpers map each helper to expected message"
                                                      "map key not found",
                                                      "vector index out of bounds",
                                                      "vector pop on empty",
-                                                     "vector local capacity limit exceeded (256)",
+                                                     "vector push allocation failed (out of memory)",
                                                      "vector reserve expects non-negative capacity",
-                                                     "vector reserve exceeds local capacity limit (256)",
+                                                     "vector reserve allocation failed (out of memory)",
                                                      "loop count must be non-negative",
                                                      "pow exponent must be non-negative",
                                                      "float to int conversion requires finite value"};
@@ -25818,13 +25818,17 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   CHECK(reserveNegativeCalls == 1);
   CHECK(reserveExceededCalls == 1);
   bool reserveHasHeapAlloc = false;
+  bool reserveHasAllocFailureCheck = false;
   for (const auto &inst : reserveInstructions) {
     if (inst.op == primec::IrOpcode::HeapAlloc) {
       reserveHasHeapAlloc = true;
-      break;
+    }
+    if (inst.op == primec::IrOpcode::CmpEqI64) {
+      reserveHasAllocFailureCheck = true;
     }
   }
   CHECK(reserveHasHeapAlloc);
+  CHECK(reserveHasAllocFailureCheck);
 
   CHECK(runHelper(
             makeCall("remove_at", {makeTarget(), makeI32Literal(1)}),
@@ -25861,13 +25865,17 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   bool pushHasHeapAlloc = false;
+  bool pushHasAllocFailureCheck = false;
   for (const auto &inst : pushInstructions) {
     if (inst.op == primec::IrOpcode::HeapAlloc) {
       pushHasHeapAlloc = true;
-      break;
+    }
+    if (inst.op == primec::IrOpcode::CmpEqI64) {
+      pushHasAllocFailureCheck = true;
     }
   }
   CHECK(pushHasHeapAlloc);
+  CHECK(pushHasAllocFailureCheck);
 }
 
 TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics") {
