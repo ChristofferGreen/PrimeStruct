@@ -363,6 +363,23 @@
   auto isResolvedVectorTarget = [&](const Expr &targetExpr) -> bool {
     return resolvedTypePathForTarget(targetExpr) == "/vector";
   };
+  auto pickAccessReceiverIndex = [&]() -> size_t {
+    if (expr.args.size() != 2) {
+      return 0;
+    }
+    const Expr &leading = expr.args.front();
+    const bool leadingCouldBeIndex =
+        leading.kind == Expr::Kind::Literal || leading.kind == Expr::Kind::BoolLiteral ||
+        leading.kind == Expr::Kind::FloatLiteral || leading.kind == Expr::Kind::StringLiteral;
+    const bool leadingIsKnownReceiver = isResolvedArrayLikeTarget(leading) || isResolvedMapTarget(leading) ||
+                                        isResolvedStringTarget(leading);
+    const bool trailingIsKnownReceiver = isResolvedArrayLikeTarget(expr.args[1]) || isResolvedMapTarget(expr.args[1]) ||
+                                         isResolvedStringTarget(expr.args[1]);
+    if (!leadingIsKnownReceiver && trailingIsKnownReceiver && leadingCouldBeIndex) {
+      return 1;
+    }
+    return 0;
+  };
   auto it = nameMap.find(full);
   if (it == nameMap.end()) {
     if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && isResolvedMapTarget(expr.args.front())) {
@@ -496,12 +513,14 @@
     }
     if (expr.name == "at" && expr.args.size() == 2) {
       std::ostringstream out;
-      const Expr &target = expr.args[0];
+      const size_t receiverIndex = pickAccessReceiverIndex();
+      const size_t indexIndex = receiverIndex == 0 ? 1 : 0;
+      const Expr &target = expr.args[receiverIndex];
       if (isResolvedStringTarget(target)) {
         out << "ps_string_at("
             << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
-            << emitExpr(expr.args[1],
+            << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
                         structTypeMap,
@@ -516,7 +535,7 @@
         out << "ps_map_at("
             << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
-            << emitExpr(expr.args[1],
+            << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
                         structTypeMap,
@@ -531,7 +550,7 @@
         out << "ps_array_at("
             << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
-            << emitExpr(expr.args[1],
+            << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
                         structTypeMap,
@@ -547,12 +566,14 @@
     }
     if (expr.name == "at_unsafe" && expr.args.size() == 2) {
       std::ostringstream out;
-      const Expr &target = expr.args[0];
+      const size_t receiverIndex = pickAccessReceiverIndex();
+      const size_t indexIndex = receiverIndex == 0 ? 1 : 0;
+      const Expr &target = expr.args[receiverIndex];
       if (isResolvedStringTarget(target)) {
         out << "ps_string_at_unsafe("
             << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
-            << emitExpr(expr.args[1],
+            << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
                         structTypeMap,
@@ -567,7 +588,7 @@
         out << "ps_map_at_unsafe("
             << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
-            << emitExpr(expr.args[1],
+            << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
                         structTypeMap,
@@ -582,7 +603,7 @@
         out << "ps_array_at_unsafe("
             << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
-            << emitExpr(expr.args[1],
+            << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
                         structTypeMap,
@@ -776,6 +797,30 @@
           << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << " = "
           << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
       return out.str();
+    }
+    if (!expr.isMethodCall && expr.name.find('/') == std::string::npos) {
+      auto localIt = localTypes.find(expr.name);
+      if (localIt != localTypes.end() && localIt->second.typeName == "lambda") {
+        std::ostringstream out;
+        out << expr.name << "(";
+        for (size_t i = 0; i < expr.args.size(); ++i) {
+          if (i > 0) {
+            out << ", ";
+          }
+          out << emitExpr(expr.args[i],
+                          nameMap,
+                          paramMap,
+                          structTypeMap,
+                          importAliases,
+                          localTypes,
+                          returnKinds,
+                          resultInfos,
+                          returnStructs,
+                          allowMathBare);
+        }
+        out << ")";
+        return out.str();
+      }
     }
     return "0";
   }

@@ -228,6 +228,10 @@
         BindingInfo binding = getBindingInfo(stmt);
         const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
         const bool lambdaInit = stmt.args.size() == 1 && stmt.args.front().isLambda;
+        if (!hasExplicitType && lambdaInit) {
+          binding.typeName = "lambda";
+          binding.typeTemplateArg.clear();
+        }
         if (!hasExplicitType && stmt.args.size() == 1 && !lambdaInit) {
           std::unordered_map<std::string, ReturnKind> locals;
           locals.reserve(localTypes.size());
@@ -560,8 +564,9 @@
             return;
           }
           if (vectorHelper == "push") {
-            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
-                << ".push_back("
+            out << pad << "ps_vector_push("
+                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+                << ", "
                 << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;

@@ -991,7 +991,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 468);
+  CHECK(runCommand(exePath) == expectedProcessExitCode(468));
 }
 
 TEST_CASE("rejects user wrapper temporary count capacity shadow value mismatch in C++ emitter") {
@@ -1358,7 +1358,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 814);
+  CHECK(runCommand(exePath) == expectedProcessExitCode(814));
 }
 
 TEST_CASE("rejects user wrapper temporary access shadow value mismatch in C++ emitter") {

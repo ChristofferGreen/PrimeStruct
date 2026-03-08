@@ -1,5 +1,7 @@
 #include "EmitterExprControlCountRewriteStep.h"
 
+#include <algorithm>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -75,6 +77,11 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
       appendReceiverIndex(i);
     }
   }
+  const bool hasAlternativeCollectionReceiver =
+      probePositionalReorderedAccessReceiver && isCollectionAccessReceiverExpr &&
+      std::any_of(receiverIndices.begin(), receiverIndices.end(), [&](size_t index) {
+        return index > 0 && index < expr.args.size() && isCollectionAccessReceiverExpr(expr.args[index]);
+      });
   for (size_t receiverIndex : receiverIndices) {
     Expr methodExpr = expr;
     methodExpr.isMethodCall = true;
@@ -87,6 +94,15 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
     }
     std::string methodPath;
     if (resolveMethodPath(methodExpr, methodPath)) {
+      if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
+        continue;
+      }
+      if (nameMap.count(methodPath) == 0 && methodPath.rfind("/array/", 0) == 0) {
+        const std::string vectorAlias = "/vector/" + methodPath.substr(std::string_view("/array/").size());
+        if (nameMap.count(vectorAlias) > 0) {
+          return vectorAlias;
+        }
+      }
       return methodPath;
     }
   }

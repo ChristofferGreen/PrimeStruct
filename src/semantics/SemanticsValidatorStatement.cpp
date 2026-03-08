@@ -440,6 +440,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (!parseBindingInfo(stmt, namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
       return false;
     }
+    if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1 && stmt.args.front().isLambda) {
+      info.typeName = "lambda";
+      info.typeTemplateArg.clear();
+    }
     if (stmt.args.empty()) {
       if (structNames_.count(currentDefinitionPath_) > 0) {
         if (restrictType.has_value()) {
@@ -558,7 +562,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return false;
   };
-  ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
+    ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
   if (initKind == ReturnKind::Void &&
       !isStructConstructorValueExpr(initializer)) {
     error_ = "binding initializer requires a value";
@@ -566,6 +570,20 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   }
     if (!hasExplicitBindingTypeTransform(stmt)) {
       (void)inferBindingTypeFromInitializer(initializer, params, locals, info);
+    } else {
+      const std::string expectedType = normalizeBindingTypeName(info.typeName);
+      if (expectedType == "string") {
+        if (!isStringExpr(initializer, params, locals)) {
+          error_ = "binding initializer type mismatch";
+          return false;
+        }
+      } else {
+        const ReturnKind expectedKind = returnKindForTypeName(expectedType);
+        if (expectedKind != ReturnKind::Unknown && initKind != ReturnKind::Unknown && initKind != expectedKind) {
+          error_ = "binding initializer type mismatch";
+          return false;
+        }
+      }
     }
     if (info.typeName == "uninitialized") {
       if (info.typeTemplateArg.empty()) {
@@ -1182,7 +1200,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
             error_ = "return type mismatch: expected array";
             return false;
           }
-        } else if (exprKind != returnKind) {
+        } else if (exprKind != ReturnKind::Unknown && exprKind != returnKind) {
           error_ = "return type mismatch: expected " + typeNameForReturnKind(returnKind);
           return false;
         }
@@ -1862,6 +1880,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   std::string vectorHelper;
   if (getVectorStatementHelperName(stmt, vectorHelper)) {
     std::string vectorHelperResolved = resolveCalleePath(stmt);
+    bool hasResolvedReceiverIndex = false;
+    size_t resolvedReceiverIndex = 0;
+    if (stmt.isMethodCall && !stmt.args.empty()) {
+      hasResolvedReceiverIndex = true;
+      resolvedReceiverIndex = 0;
+    }
     if (defMap_.find(vectorHelperResolved) == defMap_.end() && !stmt.args.empty()) {
       auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
         if (candidate.kind != Expr::Kind::Name) {
@@ -1923,9 +1947,18 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         }
         const Expr &receiverCandidate = stmt.args[receiverIndex];
         std::string methodTarget;
-        if (resolveVectorHelperTargetPath(receiverCandidate, stmt.name, methodTarget) &&
-            defMap_.count(methodTarget) > 0) {
+        if (resolveVectorHelperTargetPath(receiverCandidate, stmt.name, methodTarget)) {
+          if (defMap_.count(methodTarget) == 0 && methodTarget.rfind("/array/", 0) == 0) {
+            const std::string vectorAlias = "/vector/" + methodTarget.substr(std::string("/array/").size());
+            if (defMap_.count(vectorAlias) > 0) {
+              methodTarget = vectorAlias;
+            }
+          }
+        }
+        if (defMap_.count(methodTarget) > 0) {
           vectorHelperResolved = methodTarget;
+          hasResolvedReceiverIndex = true;
+          resolvedReceiverIndex = receiverIndex;
           break;
         }
       }
@@ -1934,6 +1967,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       Expr helperCall = stmt;
       helperCall.name = vectorHelperResolved;
       helperCall.isMethodCall = false;
+      if (hasResolvedReceiverIndex && resolvedReceiverIndex > 0 && resolvedReceiverIndex < helperCall.args.size()) {
+        std::swap(helperCall.args[0], helperCall.args[resolvedReceiverIndex]);
+        if (helperCall.argNames.size() < helperCall.args.size()) {
+          helperCall.argNames.resize(helperCall.args.size());
+        }
+        std::swap(helperCall.argNames[0], helperCall.argNames[resolvedReceiverIndex]);
+      }
       return validateExpr(params, locals, helperCall, enclosingStatements, statementIndex);
     }
     if (defMap_.find(vectorHelperResolved) == defMap_.end()) {

@@ -3,6 +3,7 @@
 
 #include "primec/StringLiteral.h"
 
+#include <algorithm>
 #include <cctype>
 #include <functional>
 #include <optional>
@@ -253,19 +254,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     return returnKindForTypeName(binding.typeName);
   };
-  auto isIntegerOrBoolExpr = [&](const Expr &arg,
-                                 const std::vector<ParameterInfo> &paramsIn,
-                                 const std::unordered_map<std::string, BindingInfo> &localsIn) -> bool {
+  auto isIntegerExpr = [&](const Expr &arg,
+                           const std::vector<ParameterInfo> &paramsIn,
+                           const std::unordered_map<std::string, BindingInfo> &localsIn) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, paramsIn, localsIn);
-    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
       return true;
     }
-    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Void ||
-        kind == ReturnKind::Array) {
+    if (kind == ReturnKind::Bool || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
+        kind == ReturnKind::String || kind == ReturnKind::Void || kind == ReturnKind::Array) {
       return false;
     }
     if (kind == ReturnKind::Unknown) {
-      if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral) {
+      if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral ||
+          arg.kind == Expr::Kind::BoolLiteral) {
         return false;
       }
       if (isPointerExpr(arg, paramsIn, localsIn)) {
@@ -274,14 +276,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (arg.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(paramsIn, arg.name)) {
           ReturnKind paramKind = returnKindForBinding(*paramBinding);
-          return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
-                 paramKind == ReturnKind::Bool;
+          return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64;
         }
         auto it = localsIn.find(arg.name);
         if (it != localsIn.end()) {
           ReturnKind localKind = returnKindForBinding(it->second);
-          return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
-                 localKind == ReturnKind::Bool;
+          return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64;
         }
       }
       return true;
@@ -1359,8 +1359,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           const Expr &receiverCandidate = expr.args[receiverIndex];
           std::string methodTarget;
-          if (resolveVectorHelperMethodTarget(receiverCandidate, expr.name, methodTarget) &&
-              defMap_.count(methodTarget) > 0) {
+          if (resolveVectorHelperMethodTarget(receiverCandidate, expr.name, methodTarget)) {
+            if (defMap_.count(methodTarget) == 0 && methodTarget.rfind("/array/", 0) == 0) {
+              const std::string vectorAlias = "/vector/" + methodTarget.substr(std::string("/array/").size());
+              if (defMap_.count(vectorAlias) > 0) {
+                methodTarget = vectorAlias;
+              }
+            }
+          }
+          if (defMap_.count(methodTarget) > 0) {
             resolved = methodTarget;
             break;
           }
@@ -1832,6 +1839,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string elemType;
       auto setCollectionMethodTarget = [&](const std::string &path) {
         resolvedOut = path;
+        if (resolvedOut.rfind("/array/", 0) == 0 && defMap_.count(resolvedOut) == 0) {
+          const std::string vectorAlias = "/vector/" + resolvedOut.substr(std::string("/array/").size());
+          if (defMap_.count(vectorAlias) > 0) {
+            resolvedOut = vectorAlias;
+          }
+        }
         isBuiltinOut = defMap_.count(resolvedOut) == 0;
         return true;
       };
@@ -2173,6 +2186,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     std::string resolved = resolveCalleePath(expr);
     bool resolvedMethod = false;
     bool usedMethodTarget = false;
+    bool hasMethodReceiverIndex = false;
+    size_t methodReceiverIndex = 0;
     auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {
       std::string elemType;
       return resolveVectorTarget(targetExpr, elemType) || resolveArrayTarget(targetExpr, elemType) ||
@@ -2256,6 +2271,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       usedMethodTarget = true;
+      hasMethodReceiverIndex = true;
+      methodReceiverIndex = 0;
       bool isBuiltinMethod = false;
       if (!resolveMethodTarget(expr.args.front(), expr.name, resolved, isBuiltinMethod)) {
         return false;
@@ -2270,6 +2287,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       resolvedMethod = isBuiltinMethod;
     } else if (expr.name == "count" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
       usedMethodTarget = true;
+      hasMethodReceiverIndex = true;
+      methodReceiverIndex = 0;
       bool isBuiltinMethod = false;
       std::string methodResolved;
       if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
@@ -2286,6 +2305,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       resolvedMethod = isBuiltinMethod;
     } else if (expr.name == "capacity" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
       usedMethodTarget = true;
+      hasMethodReceiverIndex = true;
+      methodReceiverIndex = 0;
       bool isBuiltinMethod = false;
       std::string methodResolved;
       if (!resolveMethodTarget(expr.args.front(), "capacity", methodResolved, isBuiltinMethod)) {
@@ -2353,6 +2374,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           appendReceiverIndex(i);
         }
       }
+      const bool hasAlternativeCollectionReceiver = probePositionalReorderedReceiver &&
+                                                    std::any_of(receiverIndices.begin(), receiverIndices.end(), [&](size_t index) {
+                                                      if (index == 0 || index >= expr.args.size()) {
+                                                        return false;
+                                                      }
+                                                      const Expr &candidate = expr.args[index];
+                                                      std::string elemType;
+                                                      return resolveVectorTarget(candidate, elemType) ||
+                                                             resolveArrayTarget(candidate, elemType) ||
+                                                             resolveStringTarget(candidate) || resolveMapTarget(candidate);
+                                                    });
       for (size_t receiverIndex : receiverIndices) {
         const Expr &receiverCandidate = expr.args[receiverIndex];
         std::string elemType;
@@ -2373,8 +2405,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = "unknown method: " + methodResolved;
           return false;
         }
+        if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
+          continue;
+        }
         resolved = methodResolved;
         resolvedMethod = isBuiltinMethod;
+        hasMethodReceiverIndex = true;
+        methodReceiverIndex = receiverIndex;
         break;
       }
     } else if ((expr.name == "get" || expr.name == "ref") && expr.args.size() == 2 &&
@@ -2428,6 +2465,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         resolved = methodResolved;
         resolvedMethod = isBuiltinMethod;
+        hasMethodReceiverIndex = true;
+        methodReceiverIndex = receiverIndex;
         break;
       }
     } else if (expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
@@ -2447,6 +2486,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         resolved = methodResolved;
         resolvedMethod = isBuiltinMethod;
+        hasMethodReceiverIndex = true;
+        methodReceiverIndex = 0;
       }
     }
     if (usedMethodTarget && !resolvedMethod) {
@@ -3670,7 +3711,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = helperName + " requires soa_vector target";
           return false;
         }
-        if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
+        if (!isIntegerExpr(expr.args[1], params, locals)) {
           error_ = helperName + " requires integer index";
           return false;
         }
@@ -3725,7 +3766,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = helperName + " requires soa_vector target";
           return false;
         }
-        if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
+        if (!isIntegerExpr(expr.args[1], params, locals)) {
           error_ = helperName + " requires integer index";
           return false;
         }
@@ -4117,7 +4158,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
         if (!isMap) {
-          if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
+          if (!isIntegerExpr(expr.args[1], params, locals)) {
             error_ = builtinName + " requires integer index";
             return false;
           }
@@ -4685,6 +4726,35 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
       }
+      if (!expr.isMethodCall && expr.name.find('/') == std::string::npos) {
+        const BindingInfo *callableBinding = findParamBinding(params, expr.name);
+        if (callableBinding == nullptr) {
+          auto localIt = locals.find(expr.name);
+          if (localIt != locals.end()) {
+            callableBinding = &localIt->second;
+          }
+        }
+        if (callableBinding != nullptr && callableBinding->typeName == "lambda") {
+          if (hasNamedArguments(expr.argNames)) {
+            error_ = "named arguments not supported for lambda calls";
+            return false;
+          }
+          if (!expr.templateArgs.empty()) {
+            error_ = "lambda calls do not accept template arguments";
+            return false;
+          }
+          if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+            error_ = "lambda calls do not accept block arguments";
+            return false;
+          }
+          for (const auto &arg : expr.args) {
+            if (!validateExpr(params, locals, arg)) {
+              return false;
+            }
+          }
+          return true;
+        }
+      }
       error_ = "unknown call target: " + expr.name;
       return false;
     }
@@ -4751,12 +4821,25 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     }
-    if (!validateNamedArgumentsAgainstParams(calleeParams, expr.argNames, error_)) {
+    Expr reorderedCallExpr;
+    const std::vector<Expr> *orderedCallArgs = &expr.args;
+    const std::vector<std::optional<std::string>> *orderedCallArgNames = &expr.argNames;
+    if (hasMethodReceiverIndex && methodReceiverIndex > 0 && methodReceiverIndex < expr.args.size()) {
+      reorderedCallExpr = expr;
+      std::swap(reorderedCallExpr.args[0], reorderedCallExpr.args[methodReceiverIndex]);
+      if (reorderedCallExpr.argNames.size() < reorderedCallExpr.args.size()) {
+        reorderedCallExpr.argNames.resize(reorderedCallExpr.args.size());
+      }
+      std::swap(reorderedCallExpr.argNames[0], reorderedCallExpr.argNames[methodReceiverIndex]);
+      orderedCallArgs = &reorderedCallExpr.args;
+      orderedCallArgNames = &reorderedCallExpr.argNames;
+    }
+    if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, error_)) {
       return false;
     }
     std::vector<const Expr *> orderedArgs;
     std::string orderError;
-    if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, orderError)) {
+    if (!buildOrderedArguments(calleeParams, *orderedCallArgs, *orderedCallArgNames, orderedArgs, orderError)) {
       if (orderError.find("argument count mismatch") != std::string::npos) {
         error_ = "argument count mismatch for " + resolved;
       } else {
@@ -4769,6 +4852,52 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         continue;
       }
       if (!validateExpr(params, locals, *arg)) {
+        return false;
+      }
+    }
+    auto isStringTypeName = [](const std::string &typeName) {
+      return normalizeBindingTypeName(typeName) == "string";
+    };
+    for (size_t paramIndex = 0; paramIndex < orderedArgs.size() && paramIndex < calleeParams.size(); ++paramIndex) {
+      const Expr *arg = orderedArgs[paramIndex];
+      if (arg == nullptr) {
+        continue;
+      }
+      const ParameterInfo &param = calleeParams[paramIndex];
+      const std::string &expectedTypeName = param.binding.typeName;
+      if (expectedTypeName.empty() || expectedTypeName == "auto") {
+        continue;
+      }
+      if (isStringTypeName(expectedTypeName)) {
+        if (!isStringExpr(*arg)) {
+          error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected string";
+          return false;
+        }
+        continue;
+      }
+      if (isStringExpr(*arg)) {
+        error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                 expectedTypeName;
+        return false;
+      }
+      const ReturnKind expectedKind = returnKindForTypeName(normalizeBindingTypeName(expectedTypeName));
+      if (expectedKind != ReturnKind::Unknown) {
+        const ReturnKind actualKind = inferExprReturnKind(*arg, params, locals);
+        if (actualKind != ReturnKind::Unknown && actualKind != expectedKind) {
+          error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                   typeNameForReturnKind(expectedKind) + " got " + typeNameForReturnKind(actualKind);
+          return false;
+        }
+        continue;
+      }
+      const std::string expectedStructPath = resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
+      if (expectedStructPath.empty()) {
+        continue;
+      }
+      const std::string actualStructPath = inferStructReturnPath(*arg, params, locals);
+      if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
+        error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                 expectedStructPath + " got " + actualStructPath;
         return false;
       }
     }

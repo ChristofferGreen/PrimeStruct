@@ -310,6 +310,10 @@
   out << "static inline int ps_vector_capacity(const std::vector<T> &value) {\n";
   out << "  return static_cast<int>(value.capacity());\n";
   out << "}\n";
+  out << "template <typename T, typename Value>\n";
+  out << "static inline void ps_vector_push(std::vector<T> &value, Value element) {\n";
+  out << "  value.push_back(static_cast<T>(element));\n";
+  out << "}\n";
   out << "template <typename T, typename Index>\n";
   out << "static inline void ps_vector_reserve(std::vector<T> &value, Index capacity) {\n";
   out << "  int64_t cap = static_cast<int64_t>(capacity);\n";

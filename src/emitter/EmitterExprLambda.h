@@ -271,6 +271,10 @@ std::string Emitter::emitExpr(const Expr &expr,
         BindingInfo binding = getBindingInfo(stmt);
         const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
         const bool lambdaInit = stmt.args.size() == 1 && stmt.args.front().isLambda;
+        if (!hasExplicitType && lambdaInit) {
+          binding.typeName = "lambda";
+          binding.typeTemplateArg.clear();
+        }
         if (!hasExplicitType && stmt.args.size() == 1 && !lambdaInit) {
           ReturnKind initKind = inferPrimitiveReturnKind(stmt.args.front(), activeTypes, returnKinds, allowMathBare);
           std::string inferred = typeNameForReturnKind(initKind);
@@ -612,8 +616,9 @@ std::string Emitter::emitExpr(const Expr &expr,
             return;
           }
           if (vectorHelper == "push") {
-            out << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
-                << ".push_back("
+            out << "ps_vector_push("
+                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+                << ", "
                 << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << "); ";
             return;

@@ -663,7 +663,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_wrapper_temp_at_shadow_precedence.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 302);
+  CHECK(runCommand(runCmd) == expectedProcessExitCode(302));
 }
 
 TEST_CASE("runs vm with user wrapper temporary count capacity shadow precedence") {
@@ -702,7 +702,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_wrapper_temp_count_capacity_shadow_precedence.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 468);
+  CHECK(runCommand(runCmd) == expectedProcessExitCode(468));
 }
 
 TEST_CASE("rejects vm user wrapper temporary count capacity shadow value mismatch") {
@@ -815,7 +815,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_wrapper_temp_syntax_parity_shadow_precedence.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 501);
+  CHECK(runCommand(runCmd) == expectedProcessExitCode(501));
 }
 
 TEST_CASE("rejects vm user wrapper temporary syntax parity shadow mismatch") {

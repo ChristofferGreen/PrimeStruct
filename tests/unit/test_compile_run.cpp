@@ -44,6 +44,14 @@ int runCommand(const std::string &command) {
 #endif
 }
 
+int expectedProcessExitCode(int code) {
+#if defined(__unix__) || defined(__APPLE__)
+  return code & 0xff;
+#else
+  return code;
+#endif
+}
+
 std::string readFile(const std::string &path) {
   std::ifstream file(path);
   std::stringstream buffer;

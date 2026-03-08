@@ -824,7 +824,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 302);
+  CHECK(runCommand(exePath) == expectedProcessExitCode(302));
 }
 
 TEST_CASE("compiles and runs native user wrapper temporary count capacity shadow precedence") {
@@ -869,7 +869,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 468);
+  CHECK(runCommand(exePath) == expectedProcessExitCode(468));
 }
 
 TEST_CASE("rejects native user wrapper temporary count capacity shadow value mismatch") {
@@ -994,7 +994,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 501);
+  CHECK(runCommand(exePath) == expectedProcessExitCode(501));
 }
 
 TEST_CASE("rejects native user wrapper temporary syntax parity shadow mismatch") {

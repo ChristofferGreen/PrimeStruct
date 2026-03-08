@@ -709,6 +709,23 @@ std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector
       ordered.push_back(&arg);
     }
   };
+  auto isCollectionBindingType = [](const std::string &typeName) {
+    return typeName == "array" || typeName == "vector" || typeName == "map" || typeName == "string" ||
+           typeName == "soa_vector";
+  };
+  if (!hasNamedArguments(expr.argNames) && expr.args.size() == 2 && params.size() == 2 &&
+      params[0].name == "values" && isCollectionBindingType(getBindingInfo(params[0]).typeName)) {
+    const Expr &first = expr.args.front();
+    const bool leadingNonReceiver =
+        first.kind == Expr::Kind::Literal || first.kind == Expr::Kind::BoolLiteral ||
+        first.kind == Expr::Kind::FloatLiteral || first.kind == Expr::Kind::StringLiteral;
+    if (leadingNonReceiver) {
+      ordered.assign(2, nullptr);
+      ordered[0] = &expr.args[1];
+      ordered[1] = &expr.args[0];
+      return ordered;
+    }
+  }
   ordered.assign(params.size(), nullptr);
   size_t positionalIndex = 0;
   for (size_t i = 0; i < expr.args.size(); ++i) {

@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <functional>
 
 namespace primec::semantics {
@@ -1203,6 +1204,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
+        if (methodResolved.rfind("/array/", 0) == 0 && defMap_.find(methodResolved) == defMap_.end()) {
+          const std::string vectorAlias = "/vector/" + methodResolved.substr(std::string("/array/").size());
+          if (defMap_.find(vectorAlias) != defMap_.end()) {
+            methodResolved = vectorAlias;
+          }
+        }
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
             resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
@@ -1233,6 +1240,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
+        if (methodResolved.rfind("/array/", 0) == 0 && defMap_.find(methodResolved) == defMap_.end()) {
+          const std::string vectorAlias = "/vector/" + methodResolved.substr(std::string("/array/").size());
+          if (defMap_.find(vectorAlias) != defMap_.end()) {
+            methodResolved = vectorAlias;
+          }
+        }
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
             resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
@@ -1307,6 +1320,21 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           appendReceiverIndex(i);
         }
       }
+      const bool hasAlternativeCollectionReceiver = probePositionalReorderedReceiver &&
+                                                    std::any_of(receiverIndices.begin(), receiverIndices.end(), [&](size_t index) {
+                                                      if (index == 0 || index >= expr.args.size()) {
+                                                        return false;
+                                                      }
+                                                      const Expr &candidate = expr.args[index];
+                                                      std::string elemType;
+                                                      std::string keyType;
+                                                      std::string valueType;
+                                                      return resolveVectorTarget(candidate, elemType) ||
+                                                             resolveArrayTarget(candidate, elemType) ||
+                                                             resolveSoaVectorTarget(candidate, elemType) ||
+                                                             resolveStringTarget(candidate) ||
+                                                             resolveMapTarget(candidate, keyType, valueType);
+                                                    });
       for (size_t receiverIndex : receiverIndices) {
         if (receiverIndex >= expr.args.size()) {
           continue;
@@ -1330,13 +1358,25 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         } else {
           continue;
         }
+        if (methodResolved.rfind("/array/", 0) == 0 && defMap_.find(methodResolved) == defMap_.end()) {
+          const std::string vectorAlias = "/vector/" + methodResolved.substr(std::string("/array/").size());
+          if (defMap_.find(vectorAlias) != defMap_.end()) {
+            methodResolved = vectorAlias;
+          }
+        }
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
             resolveBuiltinCollectionMethodReturnKind(methodResolved, receiverCandidate, builtinMethodKind)) {
+          if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
+            continue;
+          }
           return builtinMethodKind;
         }
         auto methodIt = defMap_.find(methodResolved);
         if (methodIt != defMap_.end()) {
+          if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
+            continue;
+          }
           if (!inferDefinitionReturnKind(*methodIt->second)) {
             return ReturnKind::Unknown;
           }
@@ -1753,13 +1793,6 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
   if (kindIt == returnKinds_.end()) {
     return false;
   }
-  if (kindIt->second != ReturnKind::Unknown) {
-    return true;
-  }
-  if (!inferenceStack_.insert(def.fullPath).second) {
-    error_ = "return type inference requires explicit annotation on " + def.fullPath;
-    return false;
-  }
   bool hasReturnTransform = false;
   bool hasReturnAuto = false;
   for (const auto &transform : def.transforms) {
@@ -1770,6 +1803,13 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
     if (transform.templateArgs.front() == "auto") {
       hasReturnAuto = true;
     }
+  }
+  if (kindIt->second != ReturnKind::Unknown && hasReturnTransform) {
+    return true;
+  }
+  if (!inferenceStack_.insert(def.fullPath).second) {
+    error_ = "return type inference requires explicit annotation on " + def.fullPath;
+    return false;
   }
   ReturnKind inferred = ReturnKind::Unknown;
   std::string inferredStructPath;
