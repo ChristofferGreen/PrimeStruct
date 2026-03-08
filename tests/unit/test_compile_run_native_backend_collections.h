@@ -686,6 +686,51 @@ main() {
   CHECK(runCommand(exePath) == 302);
 }
 
+TEST_CASE("compiles and runs native user wrapper temporary count capacity shadow precedence") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values) {
+  return(78i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(79i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(plus(count(wrapMap()), wrapMap().count()),
+              plus(plus(count(wrapVector()), wrapVector().count()),
+                   plus(capacity(wrapVector()), wrapVector().capacity()))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_user_wrapper_temp_count_capacity_shadow_precedence.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_user_wrapper_temp_count_capacity_shadow_precedence_exe")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 468);
+}
+
 TEST_CASE("rejects native templated stdlib collection return envelope unsupported arg") {
   const std::string source = R"(
 import /std/collections/*

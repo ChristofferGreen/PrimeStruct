@@ -525,6 +525,45 @@ main() {
   CHECK(runCommand(runCmd) == 302);
 }
 
+TEST_CASE("runs vm with user wrapper temporary count capacity shadow precedence") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values) {
+  return(78i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(79i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(plus(count(wrapMap()), wrapMap().count()),
+              plus(plus(count(wrapVector()), wrapVector().count()),
+                   plus(capacity(wrapVector()), wrapVector().capacity()))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_wrapper_temp_count_capacity_shadow_precedence.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 468);
+}
+
 TEST_CASE("rejects vm templated stdlib collection return envelope unsupported arg") {
   const std::string source = R"(
 import /std/collections/*
