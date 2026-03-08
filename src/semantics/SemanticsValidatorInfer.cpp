@@ -138,7 +138,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return refKind;
         }
       }
-      if (paramBinding->typeName == "array" && !paramBinding->typeTemplateArg.empty()) {
+      if ((paramBinding->typeName == "array" || paramBinding->typeName == "vector" || paramBinding->typeName == "map") &&
+          !paramBinding->typeTemplateArg.empty()) {
         return ReturnKind::Array;
       }
       if (isStructTypeName(paramBinding->typeName, expr.namespacePrefix)) {
@@ -156,7 +157,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return refKind;
       }
     }
-    if (it->second.typeName == "array" && !it->second.typeTemplateArg.empty()) {
+    if ((it->second.typeName == "array" || it->second.typeName == "vector" || it->second.typeName == "map") &&
+        !it->second.typeTemplateArg.empty()) {
       return ReturnKind::Array;
     }
     if (isStructTypeName(it->second.typeName, expr.namespacePrefix)) {
@@ -309,9 +311,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
     }
     std::string collection;
-    if (defMap_.find(resolveCalleePath(expr)) == defMap_.end() && getBuiltinCollectionName(expr, collection) &&
-        collection == "array" && expr.templateArgs.size() == 1) {
-      return ReturnKind::Array;
+    if (defMap_.find(resolveCalleePath(expr)) == defMap_.end() && getBuiltinCollectionName(expr, collection)) {
+      if ((collection == "array" || collection == "vector") && expr.templateArgs.size() == 1) {
+        return ReturnKind::Array;
+      }
+      if (collection == "map" && expr.templateArgs.size() == 2) {
+        return ReturnKind::Array;
+      }
     }
     if (isMatchCall(expr)) {
       Expr expanded;
@@ -434,6 +440,90 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return result;
       }
     }
+    auto normalizeCollectionTypePath = [](const std::string &typePath) -> std::string {
+      if (typePath == "/array" || typePath == "array") {
+        return "/array";
+      }
+      if (typePath == "/vector" || typePath == "vector") {
+        return "/vector";
+      }
+      if (typePath == "/map" || typePath == "map") {
+        return "/map";
+      }
+      if (typePath == "/string" || typePath == "string") {
+        return "/string";
+      }
+      return "";
+    };
+    auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {
+      typePathOut.clear();
+      if (target.kind != Expr::Kind::Call) {
+        return false;
+      }
+      const std::string resolvedTarget = resolveCalleePath(target);
+      std::string collection;
+      if (defMap_.find(resolvedTarget) == defMap_.end() && getBuiltinCollectionName(target, collection)) {
+        if ((collection == "array" || collection == "vector") && target.templateArgs.size() == 1) {
+          typePathOut = "/" + collection;
+          return true;
+        }
+        if (collection == "map" && target.templateArgs.size() == 2) {
+          typePathOut = "/map";
+          return true;
+        }
+      }
+      auto structIt = returnStructs_.find(resolvedTarget);
+      if (structIt != returnStructs_.end()) {
+        std::string normalized = normalizeCollectionTypePath(structIt->second);
+        if (!normalized.empty()) {
+          typePathOut = normalized;
+          return true;
+        }
+      }
+      auto kindIt = returnKinds_.find(resolvedTarget);
+      if (kindIt != returnKinds_.end()) {
+        if (kindIt->second == ReturnKind::Array) {
+          typePathOut = "/array";
+          return true;
+        }
+        if (kindIt->second == ReturnKind::String) {
+          typePathOut = "/string";
+          return true;
+        }
+      }
+      return false;
+    };
+    auto resolveCallCollectionTemplateArgs =
+        [&](const Expr &target, const std::string &expectedBase, std::vector<std::string> &argsOut) -> bool {
+      argsOut.clear();
+      if (target.kind != Expr::Kind::Call) {
+        return false;
+      }
+      const std::string resolvedTarget = resolveCalleePath(target);
+      std::string collection;
+      if (defMap_.find(resolvedTarget) == defMap_.end() && getBuiltinCollectionName(target, collection) &&
+          collection == expectedBase) {
+        argsOut = target.templateArgs;
+        return true;
+      }
+      auto defIt = defMap_.find(resolvedTarget);
+      if (defIt == defMap_.end() || !defIt->second) {
+        return false;
+      }
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string base;
+        std::string arg;
+        const std::string normalizedReturn = normalizeBindingTypeName(transform.templateArgs.front());
+        if (!splitTemplateTypeName(normalizedReturn, base, arg) || base != expectedBase) {
+          return false;
+        }
+        return splitTopLevelTemplateArgs(arg, argsOut);
+      }
+      return false;
+    };
     auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
         auto resolveReference = [&](const BindingInfo &binding) -> bool {
@@ -478,13 +568,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return false;
       }
       if (target.kind == Expr::Kind::Call) {
-        std::string collection;
-        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
-          return false;
-        }
-        if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
-            target.templateArgs.size() == 1) {
-          elemType = target.templateArgs.front();
+        std::string collectionTypePath;
+        if (resolveCallCollectionTypePath(target, collectionTypePath) &&
+            (collectionTypePath == "/array" || collectionTypePath == "/vector")) {
+          std::vector<std::string> args;
+          const std::string expectedBase = collectionTypePath == "/vector" ? "vector" : "array";
+          if (resolveCallCollectionTemplateArgs(target, expectedBase, args) && args.size() == 1) {
+            elemType = args.front();
+          }
           return true;
         }
       }
@@ -510,12 +601,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return false;
       }
       if (target.kind == Expr::Kind::Call) {
-        std::string collection;
-        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
-          return false;
-        }
-        if (getBuiltinCollectionName(target, collection) && collection == "vector" && target.templateArgs.size() == 1) {
-          elemType = target.templateArgs.front();
+        std::string collectionTypePath;
+        if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/vector") {
+          std::vector<std::string> args;
+          if (resolveCallCollectionTemplateArgs(target, "vector", args) && args.size() == 1) {
+            elemType = args.front();
+          }
           return true;
         }
       }
@@ -561,6 +652,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return it != locals.end() && it->second.typeName == "string";
       }
       if (target.kind == Expr::Kind::Call) {
+        std::string collectionTypePath;
+        if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/string") {
+          return true;
+        }
         std::string builtinName;
         if (defMap_.find(resolveCalleePath(target)) == defMap_.end() && getBuiltinArrayAccessName(target, builtinName) &&
             target.args.size() == 2) {
@@ -601,15 +696,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return true;
       }
       if (target.kind == Expr::Kind::Call) {
-        std::string collection;
-        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+        std::string collectionTypePath;
+        if (!resolveCallCollectionTypePath(target, collectionTypePath) || collectionTypePath != "/map") {
           return false;
         }
-        if (!getBuiltinCollectionName(target, collection) || collection != "map" || target.templateArgs.size() != 2) {
-          return false;
+        std::vector<std::string> args;
+        if (resolveCallCollectionTemplateArgs(target, "map", args) && args.size() == 2) {
+          keyTypeOut = args[0];
+          valueTypeOut = args[1];
         }
-        keyTypeOut = target.templateArgs[0];
-        valueTypeOut = target.templateArgs[1];
         return true;
       }
       return false;
@@ -769,11 +864,40 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return true;
     };
     auto resolveBuiltinCollectionMethodReturnKind = [&](const std::string &resolvedPath,
+                                                        const Expr &receiverExpr,
                                                         ReturnKind &kindOut) -> bool {
       if (resolvedPath == "/array/count" || resolvedPath == "/vector/count" || resolvedPath == "/string/count" ||
           resolvedPath == "/map/count" || resolvedPath == "/vector/capacity") {
         kindOut = ReturnKind::Int;
         return true;
+      }
+      if (resolvedPath == "/string/at" || resolvedPath == "/string/at_unsafe") {
+        kindOut = ReturnKind::Int;
+        return true;
+      }
+      if (resolvedPath == "/array/at" || resolvedPath == "/array/at_unsafe" || resolvedPath == "/vector/at" ||
+          resolvedPath == "/vector/at_unsafe") {
+        std::string elemType;
+        if (resolveArrayTarget(receiverExpr, elemType) || resolveVectorTarget(receiverExpr, elemType)) {
+          ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
+          if (kind != ReturnKind::Unknown) {
+            kindOut = kind;
+            return true;
+          }
+        }
+        return false;
+      }
+      if (resolvedPath == "/map/at" || resolvedPath == "/map/at_unsafe") {
+        std::string keyType;
+        std::string valueType;
+        if (resolveMapTarget(receiverExpr, keyType, valueType)) {
+          ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
+          if (kind != ReturnKind::Unknown) {
+            kindOut = kind;
+            return true;
+          }
+        }
+        return false;
       }
       return false;
     };
@@ -839,7 +963,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
-            resolveBuiltinCollectionMethodReturnKind(methodResolved, builtinMethodKind)) {
+            resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
           return builtinMethodKind;
         }
         resolved = methodResolved;
@@ -862,7 +986,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (resolveMethodCallPath(methodResolved)) {
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
-            resolveBuiltinCollectionMethodReturnKind(methodResolved, builtinMethodKind)) {
+            resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
           return builtinMethodKind;
         }
         auto methodIt = defMap_.find(methodResolved);
@@ -892,7 +1016,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (resolveMethodCallPath(methodResolved)) {
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
-            resolveBuiltinCollectionMethodReturnKind(methodResolved, builtinMethodKind)) {
+            resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
           return builtinMethodKind;
         }
         auto methodIt = defMap_.find(methodResolved);
@@ -920,6 +1044,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           resolveStringTarget(expr.args.front()) || resolveMapTarget(expr.args.front(), keyType, valueType)) {
         std::string methodResolved;
         if (resolveMethodCallPath(methodResolved)) {
+          ReturnKind builtinMethodKind = ReturnKind::Unknown;
+          if (defMap_.find(methodResolved) == defMap_.end() &&
+              resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
+            return builtinMethodKind;
+          }
           auto methodIt = defMap_.find(methodResolved);
           if (methodIt != defMap_.end()) {
             if (!inferDefinitionReturnKind(*methodIt->second)) {
@@ -1097,6 +1226,34 @@ std::string SemanticsValidator::inferStructReturnPath(
     const Expr &expr,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals) {
+  auto normalizeCollectionPath = [&](std::string typeName, std::string typeTemplateArg) -> std::string {
+    if ((typeName == "Reference" || typeName == "Pointer") && !typeTemplateArg.empty()) {
+      typeName = normalizeBindingTypeName(typeTemplateArg);
+      typeTemplateArg.clear();
+    } else {
+      typeName = normalizeBindingTypeName(typeName);
+    }
+    if (typeName == "string") {
+      return "/string";
+    }
+    if ((typeName == "array" || typeName == "vector" || typeName == "map") && !typeTemplateArg.empty()) {
+      return "/" + typeName;
+    }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(typeName, base, arg)) {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args)) {
+        if ((base == "array" || base == "vector") && args.size() == 1) {
+          return "/" + base;
+        }
+        if (base == "map" && args.size() == 2) {
+          return "/map";
+        }
+      }
+    }
+    return "";
+  };
   auto resolveStructTypePath = [&](const std::string &typeName,
                                    const std::string &namespacePrefix) -> std::string {
     if (typeName.empty()) {
@@ -1174,6 +1331,11 @@ std::string SemanticsValidator::inferStructReturnPath(
 
   if (expr.kind == Expr::Kind::Name) {
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
+      if (std::string collectionPath =
+              normalizeCollectionPath(paramBinding->typeName, paramBinding->typeTemplateArg);
+          !collectionPath.empty()) {
+        return collectionPath;
+      }
       if (paramBinding->typeName != "Reference" && paramBinding->typeName != "Pointer") {
         return resolveStructTypePath(paramBinding->typeName, expr.namespacePrefix);
       }
@@ -1181,6 +1343,10 @@ std::string SemanticsValidator::inferStructReturnPath(
     }
     auto it = locals.find(expr.name);
     if (it != locals.end()) {
+      if (std::string collectionPath = normalizeCollectionPath(it->second.typeName, it->second.typeTemplateArg);
+          !collectionPath.empty()) {
+        return collectionPath;
+      }
       if (it->second.typeName != "Reference" && it->second.typeName != "Pointer") {
         return resolveStructTypePath(it->second.typeName, expr.namespacePrefix);
       }
@@ -1271,6 +1437,15 @@ std::string SemanticsValidator::inferStructReturnPath(
       return inferStructReturnPath(*valueExpr, params, locals);
     }
 
+    std::string collection;
+    if (defMap_.find(resolveCalleePath(expr)) == defMap_.end() && getBuiltinCollectionName(expr, collection)) {
+      if ((collection == "array" || collection == "vector") && expr.templateArgs.size() == 1) {
+        return "/" + collection;
+      }
+      if (collection == "map" && expr.templateArgs.size() == 2) {
+        return "/map";
+      }
+    }
     const std::string resolved = resolveCalleePath(expr);
     if (!resolved.empty() && structNames_.count(resolved) > 0) {
       return resolved;

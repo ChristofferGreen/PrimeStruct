@@ -179,6 +179,45 @@ main() {
   CHECK(error.find("unknown method: /i32/missing_tag") != std::string::npos);
 }
 
+TEST_CASE("access wrapper temporaries infer i32 for chained methods") {
+  const std::string source = R"(
+wrapText() {
+  [string] text{"abc"utf8}
+  return(text)
+}
+
+[return<int>]
+/i32/tag([i32] value) {
+  return(plus(value, 10i32))
+}
+
+[return<int>]
+main() {
+  return(plus(at(wrapText(), 1i32).tag(), wrapText().at_unsafe(2i32).tag()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("access wrapper temporary chained method reports i32 path diagnostics") {
+  const std::string source = R"(
+wrapText() {
+  [string] text{"abc"utf8}
+  return(text)
+}
+
+[return<int>]
+main() {
+  return(at(wrapText(), 1i32).missing_tag())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/missing_tag") != std::string::npos);
+}
+
 TEST_CASE("capacity builtin validates on vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

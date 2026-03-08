@@ -745,6 +745,32 @@ bool SemanticsValidator::buildDefinitionMaps() {
     if (typeName.empty()) {
       return "";
     }
+    auto normalizeCollectionPath = [](const std::string &baseName) -> std::string {
+      if (baseName == "array" || baseName == "vector" || baseName == "map" || baseName == "string") {
+        return "/" + baseName;
+      }
+      return "";
+    };
+    std::string normalizedType = normalizeBindingTypeName(typeName);
+    if (std::string collectionPath = normalizeCollectionPath(normalizedType); !collectionPath.empty()) {
+      return collectionPath;
+    }
+    std::string collectionBase;
+    std::string collectionArgs;
+    if (splitTemplateTypeName(normalizedType, collectionBase, collectionArgs)) {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(collectionArgs, args)) {
+        if (collectionBase == "array" && args.size() == 1) {
+          return "/array";
+        }
+        if (collectionBase == "vector" && args.size() == 1) {
+          return "/vector";
+        }
+        if (collectionBase == "map" && args.size() == 2) {
+          return "/map";
+        }
+      }
+    }
     if (!typeName.empty() && typeName[0] == '/') {
       return structNames_.count(typeName) > 0 ? typeName : "";
     }
