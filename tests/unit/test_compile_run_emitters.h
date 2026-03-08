@@ -310,6 +310,75 @@ main() {
   CHECK(output.find("[=, &bump]") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lambda mutators honor user vector helpers") {
+  const std::string source = R"(
+/vector/push([vector<i32> mut] values, [i32] value) { }
+/vector/pop([vector<i32> mut] values) { }
+/vector/reserve([vector<i32> mut] values, [i32] target) { }
+/vector/clear([vector<i32> mut] values) { }
+/vector/remove_at([vector<i32> mut] values, [i32] index) { }
+/vector/remove_swap([vector<i32> mut] values, [i32] index) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  holder{[]([i32] seed) {
+    [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32, seed)}
+    push(values, 5i32)
+    values.push(6i32)
+    reserve(values, 10i32)
+    values.reserve(11i32)
+    remove_at(values, 0i32)
+    values.remove_at(0i32)
+    remove_swap(values, 0i32)
+    values.remove_swap(0i32)
+    pop(values)
+    values.clear()
+    clear(values)
+    return(values.count())
+  }}
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_shadow_precedence.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_shadow_precedence.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_vector_push(values, 5)") != std::string::npos);
+  CHECK(output.find("ps_vector_push(values, 6)") != std::string::npos);
+  CHECK(output.find("ps_vector_reserve(values, 10)") != std::string::npos);
+  CHECK(output.find("ps_vector_reserve(values, 11)") != std::string::npos);
+  CHECK(output.find("ps_vector_remove_at(values, 0)") != std::string::npos);
+  CHECK(output.find("ps_vector_remove_swap(values, 0)") != std::string::npos);
+  CHECK(output.find("ps_vector_pop(values)") != std::string::npos);
+  CHECK(output.find("ps_vector_clear(values)") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter lambda mutator mismatch rejects user helper signatures") {
+  const std::string source = R"(
+/vector/push([vector<i32> mut] values, [bool] value) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  []([i32] seed) {
+    [vector<i32> mut] values{vector<i32>(seed)}
+    push(values, 1i32)
+    values.push(2i32)
+    return(0i32)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_shadow_mismatch.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_shadow_mismatch_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs import alias in C++ emitter") {
   const std::string source = R"(
 import /util
