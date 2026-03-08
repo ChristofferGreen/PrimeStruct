@@ -607,6 +607,49 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("compiles and runs user vector mutator positional call shadow in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/vector/push([vector<i32> mut] values, [i32] value) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  push(3i32, values)
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_mutator_positional_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_mutator_positional_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("C++ emitter mutator rewrite keeps known vector receiver leading names") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/i32/push([i32] value, [vector<i32> mut] values) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  [i32] index{7i32}
+  push(values, index)
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_mutator_known_receiver_no_reorder.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_mutator_known_receiver_no_reorder_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("compiles and runs user vector access named call shadow in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

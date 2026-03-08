@@ -485,7 +485,17 @@
             }
           } else {
             std::vector<size_t> receiverIndices{0};
-            if (hasNamedArguments(stmt.argNames) && stmt.args.size() > 1) {
+            const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
+            if (hasNamedArgs && stmt.args.size() > 1) {
+              for (size_t i = 1; i < stmt.args.size(); ++i) {
+                receiverIndices.push_back(i);
+              }
+            }
+            const bool probePositionalReorderedReceiver =
+                !hasNamedArgs && stmt.args.size() > 1 &&
+                (stmt.args.front().kind == Expr::Kind::Literal ||
+                 (stmt.args.front().kind == Expr::Kind::Name && !isVectorValue(stmt.args.front(), localTypes)));
+            if (probePositionalReorderedReceiver) {
               for (size_t i = 1; i < stmt.args.size(); ++i) {
                 receiverIndices.push_back(i);
               }
