@@ -8,6 +8,18 @@
 
 namespace primec::ir_lowerer {
 
+static bool isSoaVectorTargetExpr(const Expr &expr, const LocalMap &localsIn) {
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.name);
+    return it != localsIn.end() && it->second.isSoaVector;
+  }
+  if (expr.kind == Expr::Kind::Call) {
+    std::string collection;
+    return getBuiltinCollectionName(expr, collection) && collection == "soa_vector";
+  }
+  return false;
+}
+
 BufferStoreStatementEmitResult tryEmitBufferStoreStatement(
     const Expr &stmt,
     const LocalMap &localsIn,
@@ -250,6 +262,25 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     std::string &error) {
   if (stmt.kind != Expr::Kind::Call) {
     return DirectCallStatementEmitResult::NotMatched;
+  }
+
+  if (!stmt.isMethodCall &&
+      stmt.args.size() == 1 &&
+      isSoaVectorTargetExpr(stmt.args.front(), localsIn)) {
+    Expr methodStmt = stmt;
+    methodStmt.isMethodCall = true;
+    const std::string priorError = error;
+    if (const Definition *callee = resolveMethodCallDefinition(methodStmt, localsIn)) {
+      if (methodStmt.hasBodyArguments || !methodStmt.bodyArguments.empty()) {
+        error = "native backend does not support block arguments on calls";
+        return DirectCallStatementEmitResult::Error;
+      }
+      if (!emitInlineDefinitionCall(methodStmt, *callee, localsIn, false)) {
+        return DirectCallStatementEmitResult::Error;
+      }
+      return DirectCallStatementEmitResult::Emitted;
+    }
+    error = priorError;
   }
 
   if (stmt.isMethodCall) {

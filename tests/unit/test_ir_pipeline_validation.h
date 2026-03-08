@@ -22482,6 +22482,64 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   CHECK(inlineCalls == 1);
   REQUIRE(instructions.size() == 1);
   CHECK(instructions.front().op == primec::IrOpcode::Pop);
+
+  primec::Expr soaFieldStmt;
+  soaFieldStmt.kind = primec::Expr::Kind::Call;
+  soaFieldStmt.name = "x";
+  primec::Expr soaValuesName;
+  soaValuesName.kind = primec::Expr::Kind::Name;
+  soaValuesName.name = "values";
+  soaFieldStmt.args.push_back(soaValuesName);
+  soaFieldStmt.argNames.push_back(std::nullopt);
+
+  primec::ir_lowerer::LocalMap soaLocals;
+  primec::ir_lowerer::LocalInfo soaValuesInfo;
+  soaValuesInfo.isSoaVector = true;
+  soaLocals.emplace("values", soaValuesInfo);
+
+  primec::Definition soaFieldDef;
+  soaFieldDef.fullPath = "/soa_vector/x";
+  int methodResolutionCalls = 0;
+  int definitionResolutionCalls = 0;
+  inlineCalls = 0;
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            soaFieldStmt,
+            soaLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &callExpr,
+                const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              ++methodResolutionCalls;
+              CHECK(callExpr.isMethodCall);
+              CHECK(callExpr.name == "x");
+              return &soaFieldDef;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++definitionResolutionCalls;
+              return nullptr;
+            },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return true; },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &localsIn,
+                bool expectValue) {
+              ++inlineCalls;
+              CHECK(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/soa_vector/x");
+              CHECK(localsIn.find("values") != localsIn.end());
+              CHECK_FALSE(expectValue);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(methodResolutionCalls == 1);
+  CHECK(definitionResolutionCalls == 0);
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer statement call helper validates direct-call diagnostics") {
@@ -22580,6 +22638,47 @@ TEST_CASE("ir lowerer statement call helper validates direct-call diagnostics") 
             instructions,
             error) == EmitResult::NotMatched);
   CHECK(error.empty());
+
+  primec::Expr soaFieldStmt;
+  soaFieldStmt.kind = primec::Expr::Kind::Call;
+  soaFieldStmt.name = "x";
+  primec::Expr soaValuesName;
+  soaValuesName.kind = primec::Expr::Kind::Name;
+  soaValuesName.name = "values";
+  soaFieldStmt.args.push_back(soaValuesName);
+  soaFieldStmt.argNames.push_back(std::nullopt);
+
+  primec::ir_lowerer::LocalMap soaLocals;
+  primec::ir_lowerer::LocalInfo soaValuesInfo;
+  soaValuesInfo.isSoaVector = true;
+  soaLocals.emplace("values", soaValuesInfo);
+
+  int methodResolutionCalls = 0;
+  int definitionResolutionCalls = 0;
+  error = "preserve me";
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            soaFieldStmt,
+            soaLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              ++methodResolutionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++definitionResolutionCalls;
+              return nullptr;
+            },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return true; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::NotMatched);
+  CHECK(error == "preserve me");
+  CHECK(methodResolutionCalls == 1);
+  CHECK(definitionResolutionCalls == 1);
 }
 
 TEST_CASE("ir lowerer statement call helper emits assign and expression pops") {
