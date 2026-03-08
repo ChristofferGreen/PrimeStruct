@@ -30,27 +30,44 @@ bool checkedSubI64(int64_t lhs, int64_t rhs, int64_t &out) {
   return true;
 }
 
-bool tryEvaluateSignedLiteralIntegerExpr(const Expr &expr, int64_t &out) {
+enum class SignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
+
+SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(const Expr &expr, int64_t &out) {
   if (expr.kind == Expr::Kind::Literal && !expr.isUnsigned) {
     out = expr.intWidth == 32 ? static_cast<int32_t>(expr.literalValue) : static_cast<int64_t>(expr.literalValue);
-    return true;
+    return SignedLiteralIntegerEvalResult::Value;
   }
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding || !expr.templateArgs.empty() ||
       expr.hasBodyArguments || !expr.bodyArguments.empty() || expr.args.size() != 2) {
-    return false;
+    return SignedLiteralIntegerEvalResult::NotFoldable;
   }
   const bool isPlus = isSimpleCallName(expr, "plus");
   const bool isMinus = isSimpleCallName(expr, "minus");
   if (!isPlus && !isMinus) {
-    return false;
+    return SignedLiteralIntegerEvalResult::NotFoldable;
   }
   int64_t lhs = 0;
   int64_t rhs = 0;
-  if (!tryEvaluateSignedLiteralIntegerExpr(expr.args[0], lhs) ||
-      !tryEvaluateSignedLiteralIntegerExpr(expr.args[1], rhs)) {
-    return false;
+  const SignedLiteralIntegerEvalResult lhsResult = tryEvaluateSignedLiteralIntegerExpr(expr.args[0], lhs);
+  const SignedLiteralIntegerEvalResult rhsResult = tryEvaluateSignedLiteralIntegerExpr(expr.args[1], rhs);
+  if (lhsResult == SignedLiteralIntegerEvalResult::Overflow ||
+      rhsResult == SignedLiteralIntegerEvalResult::Overflow) {
+    return SignedLiteralIntegerEvalResult::Overflow;
   }
-  return isPlus ? checkedAddI64(lhs, rhs, out) : checkedSubI64(lhs, rhs, out);
+  if (lhsResult != SignedLiteralIntegerEvalResult::Value ||
+      rhsResult != SignedLiteralIntegerEvalResult::Value) {
+    return SignedLiteralIntegerEvalResult::NotFoldable;
+  }
+  if (isPlus) {
+    if (!checkedAddI64(lhs, rhs, out)) {
+      return SignedLiteralIntegerEvalResult::Overflow;
+    }
+  } else {
+    if (!checkedSubI64(lhs, rhs, out)) {
+      return SignedLiteralIntegerEvalResult::Overflow;
+    }
+  }
+  return SignedLiteralIntegerEvalResult::Value;
 }
 
 bool tryEvaluateUnsignedLiteralIntegerExpr(const Expr &expr, uint64_t &out) {
@@ -600,7 +617,12 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const Expr &desiredExpr = stmt.args[1];
     int64_t signedDesired = 0;
     uint64_t unsignedDesired = 0;
-    if (tryEvaluateSignedLiteralIntegerExpr(desiredExpr, signedDesired)) {
+    const SignedLiteralIntegerEvalResult signedEvalResult = tryEvaluateSignedLiteralIntegerExpr(desiredExpr, signedDesired);
+    if (signedEvalResult == SignedLiteralIntegerEvalResult::Overflow) {
+      error = "vector reserve literal expression overflow";
+      return VectorStatementHelperEmitResult::Error;
+    }
+    if (signedEvalResult == SignedLiteralIntegerEvalResult::Value) {
       if (signedDesired < 0) {
         error = "vector reserve expects non-negative capacity";
         return VectorStatementHelperEmitResult::Error;
