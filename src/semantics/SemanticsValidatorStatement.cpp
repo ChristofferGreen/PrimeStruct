@@ -275,7 +275,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return true;
   };
   auto validateVectorHelperTarget = [&](const Expr &target, const char *helperName, const BindingInfo *&bindingOut) -> bool {
-    if (!resolveVectorBinding(target, bindingOut) || bindingOut == nullptr || bindingOut->typeName != "vector") {
+    const std::string helper = helperName == nullptr ? "" : std::string(helperName);
+    const bool allowSoaVectorTarget = helper == "push" || helper == "reserve";
+    if (!resolveVectorBinding(target, bindingOut) || bindingOut == nullptr ||
+        (bindingOut->typeName != "vector" && !(allowSoaVectorTarget && bindingOut->typeName == "soa_vector"))) {
       error_ = std::string(helperName) + " requires vector binding";
       return false;
     }

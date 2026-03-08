@@ -70,6 +70,24 @@
       info.valueKind = valueKind;
       info.mapKeyKind = mapKeyKind;
       info.mapValueKind = mapValueKind;
+      for (const auto &transform : stmt.transforms) {
+        if (transform.name == "soa_vector") {
+          info.isSoaVector = true;
+          break;
+        }
+      }
+      if (!info.isSoaVector && init.kind == Expr::Kind::Name) {
+        auto existing = localsIn.find(init.name);
+        if (existing != localsIn.end() && existing->second.isSoaVector) {
+          info.isSoaVector = true;
+        }
+      }
+      if (!info.isSoaVector && init.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (getBuiltinCollectionName(init, collection) && collection == "soa_vector") {
+          info.isSoaVector = true;
+        }
+      }
       setReferenceArrayInfo(stmt, info);
       applyStructArrayInfo(stmt, info);
       applyStructValueInfo(stmt, info);

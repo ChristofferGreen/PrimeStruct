@@ -8,6 +8,19 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool hasSoaVectorTypeTransform(const Expr &expr) {
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "soa_vector") {
+      return true;
+    }
+  }
+  return false;
+}
+
+} // namespace
+
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const Expr &init,
                                                        const LocalMap &localsIn,
@@ -110,6 +123,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                  LocalInfo &infoOut,
                                  std::string &error) {
   infoOut.isMutable = isBindingMutable(param);
+  infoOut.isSoaVector = hasSoaVectorTypeTransform(param);
   infoOut.kind = bindingKind(param);
   if (hasExplicitBindingTypeTransform(param)) {
     infoOut.valueKind = bindingValueKind(param, infoOut.kind);

@@ -1162,6 +1162,27 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("push validates on mutable soa_vector parameter") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<void>]
+touch([soa_vector<Particle> mut] values) {
+  push(values, Particle(2i32))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("collection syntax parity validates for call and method forms") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -1350,6 +1371,48 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("reserve validates on mutable soa_vector parameter") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<void>]
+touch([soa_vector<Particle> mut] values) {
+  reserve(values, 8i32)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pop still rejects soa_vector helper target") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+touch([soa_vector<Particle> mut] values) {
+  pop(values)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pop requires vector binding") != std::string::npos);
 }
 
 TEST_CASE("reserve call keeps user-defined vector helper precedence") {

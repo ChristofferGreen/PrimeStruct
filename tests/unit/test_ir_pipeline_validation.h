@@ -9138,6 +9138,13 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   indexInfo.valueKind = LocalInfo::ValueKind::Int32;
   locals.emplace("idx", indexInfo);
 
+  LocalInfo soaInfo;
+  soaInfo.kind = LocalInfo::Kind::Value;
+  soaInfo.index = 7;
+  soaInfo.valueKind = LocalInfo::ValueKind::Unknown;
+  soaInfo.isSoaVector = true;
+  locals.emplace("soa", soaInfo);
+
   primec::Expr arrName;
   arrName.kind = primec::Expr::Kind::Name;
   arrName.name = "arr";
@@ -9224,6 +9231,43 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             error) == Result::Emitted);
   CHECK(error.empty());
   CHECK_FALSE(instructions.empty());
+
+  primec::Expr soaName;
+  soaName.kind = primec::Expr::Kind::Name;
+  soaName.name = "soa";
+
+  primec::Expr soaCountCall;
+  soaCountCall.kind = primec::Expr::Kind::Call;
+  soaCountCall.name = "count";
+  soaCountCall.args = {soaName};
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+            soaCountCall,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == Result::Error);
+  CHECK(error == "native backend does not support soa_vector count");
 
   primec::Expr printCall;
   printCall.kind = primec::Expr::Kind::Call;
@@ -26031,6 +26075,35 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             error) == EmitResult::Error);
   CHECK(error == "push requires mutable vector binding");
+
+  primec::ir_lowerer::LocalInfo soaInfo;
+  soaInfo.kind = Kind::Value;
+  soaInfo.valueKind = ValueKind::Unknown;
+  soaInfo.isMutable = true;
+  soaInfo.index = 8;
+  soaInfo.isSoaVector = true;
+  locals.emplace("soa", soaInfo);
+
+  primec::Expr soaPushCall;
+  soaPushCall.kind = primec::Expr::Kind::Call;
+  soaPushCall.name = "push";
+  soaPushCall.args = {makeName("soa"), makeName("value")};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            soaPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "native backend does not support soa_vector helper: push");
 
   locals.at("v").isMutable = true;
   pushCall.templateArgs = {"i32"};

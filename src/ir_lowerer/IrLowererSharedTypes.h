@@ -25,6 +25,7 @@ struct LocalInfo {
   bool argvChecked = true;
   bool referenceToArray = false;
   bool isUninitializedStorage = false;
+  bool isSoaVector = false;
 };
 
 using LocalMap = std::unordered_map<std::string, LocalInfo>;

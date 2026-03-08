@@ -620,6 +620,10 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     return VectorStatementHelperEmitResult::Error;
   }
   auto it = localsIn.find(target.name);
+  if (it != localsIn.end() && it->second.isSoaVector) {
+    error = "native backend does not support soa_vector helper: " + vectorHelper;
+    return VectorStatementHelperEmitResult::Error;
+  }
   if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Vector || !it->second.isMutable) {
     error = vectorHelper + " requires mutable vector binding";
     return VectorStatementHelperEmitResult::Error;

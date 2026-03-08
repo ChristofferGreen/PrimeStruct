@@ -122,6 +122,18 @@ bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
   return definitionReturnsVoid && isTailCallCandidateFn(lastStmt);
 }
 
+bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.name);
+    return it != localsIn.end() && it->second.isSoaVector;
+  }
+  if (expr.kind == Expr::Kind::Call) {
+    std::string collection;
+    return getBuiltinCollectionName(expr, collection) && collection == "soa_vector";
+  }
+  return false;
+}
+
 ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
     const Expr &callExpr,
     const Definition *callee,
@@ -310,6 +322,11 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   std::string mathName;
   if (tryGetMathBuiltinName(expr, mathName) && !isSupportedMathBuiltinName(mathName)) {
     error = "native backend does not support math builtin: " + mathName;
+    return NativeCallTailDispatchResult::Error;
+  }
+  if (isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
+      isSoaVectorTarget(expr.args.front(), localsIn)) {
+    error = "native backend does not support soa_vector count";
     return NativeCallTailDispatchResult::Error;
   }
 
