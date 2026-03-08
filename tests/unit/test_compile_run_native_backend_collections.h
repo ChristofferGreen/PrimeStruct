@@ -5603,6 +5603,67 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("compiles and runs native vector literal at local dynamic limit") {
+  auto buildVectorLiteralArgs = [](int count) {
+    std::string args;
+    args.reserve(static_cast<size_t>(count) * 6);
+    for (int i = 0; i < count; ++i) {
+      if (i > 0) {
+        args += ", ";
+      }
+      args += "1i32";
+    }
+    return args;
+  };
+
+  const std::string source = std::string(
+      "[effects(heap_alloc), return<int>]\n"
+      "main() {\n"
+      "  [vector<i32> mut] values{vector<i32>(") +
+                             buildVectorLiteralArgs(256) +
+                             ")}\n"
+                             "  return(convert<i32>(and(equal(count(values), 256i32), equal(capacity(values), "
+                             "256i32))))\n"
+                             "}\n";
+  const std::string srcPath = writeTemp("compile_native_vector_literal_local_limit.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_literal_local_limit_exe").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("rejects native vector literal above local dynamic limit") {
+  auto buildVectorLiteralArgs = [](int count) {
+    std::string args;
+    args.reserve(static_cast<size_t>(count) * 6);
+    for (int i = 0; i < count; ++i) {
+      if (i > 0) {
+        args += ", ";
+      }
+      args += "1i32";
+    }
+    return args;
+  };
+
+  const std::string source = std::string(
+      "[effects(heap_alloc), return<int>]\n"
+      "main() {\n"
+      "  [vector<i32> mut] values{vector<i32>(") +
+                             buildVectorLiteralArgs(257) +
+                             ")}\n"
+                             "  return(count(values))\n"
+                             "}\n";
+  const std::string srcPath = writeTemp("compile_native_vector_literal_local_limit_overflow.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_literal_local_limit_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("vector literal exceeds local capacity limit") != std::string::npos);
+}
+
 TEST_CASE("rejects native vector reserve beyond local dynamic limit") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

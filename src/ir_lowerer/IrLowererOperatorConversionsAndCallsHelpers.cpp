@@ -296,6 +296,10 @@ bool emitConversionsAndCallsOperatorExpr(
             const int32_t baseLocal = nextLocal;
             const int32_t headerSlots = isVector ? 2 : 1;
             const int32_t literalCount = static_cast<int32_t>(expr.args.size());
+            if (isVector && literalCount > kVectorLocalDynamicCapacityLimit) {
+              error = "vector literal exceeds local capacity limit";
+              return false;
+            }
             const int32_t storageCapacity =
                 isVector ? std::max(literalCount, kVectorLocalDynamicCapacityLimit) : literalCount;
             nextLocal += headerSlots + storageCapacity;

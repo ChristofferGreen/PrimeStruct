@@ -4901,6 +4901,61 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
+TEST_CASE("runs vm vector literal at local dynamic limit") {
+  auto buildVectorLiteralArgs = [](int count) {
+    std::string args;
+    args.reserve(static_cast<size_t>(count) * 6);
+    for (int i = 0; i < count; ++i) {
+      if (i > 0) {
+        args += ", ";
+      }
+      args += "1i32";
+    }
+    return args;
+  };
+
+  const std::string source = std::string(
+      "[effects(heap_alloc), return<int>]\n"
+      "main() {\n"
+      "  [vector<i32> mut] values{vector<i32>(") +
+                             buildVectorLiteralArgs(256) +
+                             ")}\n"
+                             "  return(convert<i32>(and(equal(count(values), 256i32), equal(capacity(values), "
+                             "256i32))))\n"
+                             "}\n";
+  const std::string srcPath = writeTemp("vm_vector_literal_local_limit.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
+TEST_CASE("rejects vm vector literal above local dynamic limit") {
+  auto buildVectorLiteralArgs = [](int count) {
+    std::string args;
+    args.reserve(static_cast<size_t>(count) * 6);
+    for (int i = 0; i < count; ++i) {
+      if (i > 0) {
+        args += ", ";
+      }
+      args += "1i32";
+    }
+    return args;
+  };
+
+  const std::string source = std::string(
+      "[effects(heap_alloc), return<int>]\n"
+      "main() {\n"
+      "  [vector<i32> mut] values{vector<i32>(") +
+                             buildVectorLiteralArgs(257) +
+                             ")}\n"
+                             "  return(count(values))\n"
+                             "}\n";
+  const std::string srcPath = writeTemp("vm_vector_literal_local_limit_overflow.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_limit_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vector literal exceeds local capacity limit") != std::string::npos);
+}
+
 TEST_CASE("rejects vm vector reserve beyond local dynamic limit") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
