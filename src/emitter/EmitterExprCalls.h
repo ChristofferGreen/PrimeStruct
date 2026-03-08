@@ -283,63 +283,89 @@
     }
     return "0";
   }
-  auto isResolvedMapTarget = [&](const Expr &targetExpr) -> bool {
-    if (isMapValue(targetExpr, localTypes)) {
-      return true;
+  auto normalizedTypePath = [](const std::string &typePath) -> std::string {
+    if (typePath == "/array" || typePath == "array") {
+      return "/array";
     }
-    auto isMapTypePath = [](const std::string &typePath) -> bool {
-      return typePath == "/map" || typePath == "map";
-    };
+    if (typePath == "/vector" || typePath == "vector") {
+      return "/vector";
+    }
+    if (typePath == "/map" || typePath == "map") {
+      return "/map";
+    }
+    if (typePath == "/string" || typePath == "string") {
+      return "/string";
+    }
+    return "";
+  };
+  auto resolvedTypePathForResolvedCall = [&](const std::string &resolvedPath) -> std::string {
+    auto structIt = returnStructs.find(resolvedPath);
+    if (structIt != returnStructs.end()) {
+      std::string normalized = normalizedTypePath(structIt->second);
+      if (!normalized.empty()) {
+        return normalized;
+      }
+    }
+    auto kindIt = returnKinds.find(resolvedPath);
+    if (kindIt == returnKinds.end()) {
+      return "";
+    }
+    if (kindIt->second == ReturnKind::String) {
+      return "/string";
+    }
+    if (kindIt->second == ReturnKind::Array) {
+      return "/array";
+    }
+    return "";
+  };
+  auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
+    if (isStringValue(targetExpr, localTypes)) {
+      return "/string";
+    }
+    if (isMapValue(targetExpr, localTypes)) {
+      return "/map";
+    }
+    if (isVectorValue(targetExpr, localTypes)) {
+      return "/vector";
+    }
+    if (isArrayValue(targetExpr, localTypes)) {
+      return "/array";
+    }
     if (targetExpr.kind != Expr::Kind::Call) {
-      return false;
+      return "";
+    }
+    std::string collectionName;
+    if (getBuiltinCollectionName(targetExpr, collectionName)) {
+      if (collectionName == "array" || collectionName == "vector" || collectionName == "map") {
+        return "/" + collectionName;
+      }
     }
     if (!targetExpr.isMethodCall) {
-      const std::string resolvedTarget = resolveExprPath(targetExpr);
-      auto structIt = returnStructs.find(resolvedTarget);
-      return structIt != returnStructs.end() && isMapTypePath(structIt->second);
+      return resolvedTypePathForResolvedCall(resolveExprPath(targetExpr));
     }
     std::string methodPath;
     if (!resolveMethodCallPath(
             targetExpr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
-      return false;
+      return "";
     }
-    auto structIt = returnStructs.find(methodPath);
-    return structIt != returnStructs.end() && isMapTypePath(structIt->second);
+    return resolvedTypePathForResolvedCall(methodPath);
+  };
+  auto isResolvedMapTarget = [&](const Expr &targetExpr) -> bool {
+    return resolvedTypePathForTarget(targetExpr) == "/map";
   };
   auto isResolvedStringTarget = [&](const Expr &targetExpr) -> bool {
-    if (isStringValue(targetExpr, localTypes)) {
-      return true;
-    }
-    auto isStringTypePath = [](const std::string &typePath) -> bool {
-      return typePath == "/string" || typePath == "string";
-    };
-    if (targetExpr.kind != Expr::Kind::Call) {
-      return false;
-    }
-    if (!targetExpr.isMethodCall) {
-      const std::string resolvedTarget = resolveExprPath(targetExpr);
-      auto structIt = returnStructs.find(resolvedTarget);
-      if (structIt != returnStructs.end() && isStringTypePath(structIt->second)) {
-        return true;
-      }
-      auto kindIt = returnKinds.find(resolvedTarget);
-      return kindIt != returnKinds.end() && kindIt->second == ReturnKind::String;
-    }
-    std::string methodPath;
-    if (!resolveMethodCallPath(
-            targetExpr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
-      return false;
-    }
-    auto structIt = returnStructs.find(methodPath);
-    if (structIt != returnStructs.end() && isStringTypePath(structIt->second)) {
-      return true;
-    }
-    auto kindIt = returnKinds.find(methodPath);
-    return kindIt != returnKinds.end() && kindIt->second == ReturnKind::String;
+    return resolvedTypePathForTarget(targetExpr) == "/string";
+  };
+  auto isResolvedArrayLikeTarget = [&](const Expr &targetExpr) -> bool {
+    const std::string typePath = resolvedTypePathForTarget(targetExpr);
+    return typePath == "/array" || typePath == "/vector";
+  };
+  auto isResolvedVectorTarget = [&](const Expr &targetExpr) -> bool {
+    return resolvedTypePathForTarget(targetExpr) == "/vector";
   };
   auto it = nameMap.find(full);
   if (it == nameMap.end()) {
-    if (isMapCountCall(expr, localTypes)) {
+    if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && isResolvedMapTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_map_count("
           << emitExpr(expr.args.front(),
@@ -355,7 +381,7 @@
           << ")";
       return out.str();
     }
-    if (isArrayCountCall(expr, localTypes)) {
+    if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && isResolvedArrayLikeTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_array_count("
           << emitExpr(expr.args.front(),
@@ -371,7 +397,7 @@
           << ")";
       return out.str();
     }
-    if (isStringCountCall(expr, localTypes)) {
+    if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && isResolvedStringTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_string_count("
           << emitExpr(expr.args.front(),
@@ -387,7 +413,7 @@
           << ")";
       return out.str();
     }
-    if (isVectorCapacityCall(expr, localTypes)) {
+    if (isSimpleCallName(expr, "capacity") && expr.args.size() == 1 && isResolvedVectorTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_vector_capacity("
           << emitExpr(expr.args.front(),
