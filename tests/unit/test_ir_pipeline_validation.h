@@ -13985,6 +13985,73 @@ TEST_CASE("ir lowerer setup type helper resolves soa get/ref call method return 
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer setup type helper resolves soa field call method return kinds") {
+  primec::Definition fieldDef;
+  fieldDef.fullPath = "/soa_vector/x";
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo scalarInfo;
+  scalarInfo.returnsVoid = false;
+  scalarInfo.returnsArray = false;
+  scalarInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  infoByPath.emplace("/soa_vector/x", scalarInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr fieldCall;
+  fieldCall.kind = primec::Expr::Kind::Call;
+  fieldCall.name = "x";
+  fieldCall.args = {receiverExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  valuesLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  valuesLocal.isSoaVector = true;
+  locals.emplace("values", valuesLocal);
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  bool methodResolved = false;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      fieldCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&fieldDef](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return &fieldDef; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  methodResolved = true;
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      fieldCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return nullptr; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer setup type helper resolves builtin-like count call methods") {
   primec::Definition methodDef;
   methodDef.fullPath = "/array/count";

@@ -222,6 +222,18 @@ std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallEx
   return typeNameForValueKind(inferredKind);
 }
 
+bool isSoaVectorReceiverExpr(const Expr &receiverExpr, const LocalMap &localsIn) {
+  if (receiverExpr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(receiverExpr.name);
+    return it != localsIn.end() && it->second.isSoaVector;
+  }
+  if (receiverExpr.kind == Expr::Kind::Call) {
+    std::string collection;
+    return getBuiltinCollectionName(receiverExpr, collection) && collection == "soa_vector";
+  }
+  return false;
+}
+
 std::string resolveMethodReceiverStructTypePathFromCallExpr(
     const Expr &receiverCallExpr,
     const std::string &resolvedReceiverPath,
@@ -374,7 +386,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe") ||
        isSimpleCallName(callExpr, "get") || isSimpleCallName(callExpr, "ref")) &&
       callExpr.args.size() == 2;
-  if (!isCountCall && !isAccessCall) {
+  const bool isSoaFieldHelperCall =
+      callExpr.args.size() == 1 && !isCountCall && isSoaVectorReceiverExpr(callExpr.args.front(), localsIn);
+  if (!isCountCall && !isAccessCall && !isSoaFieldHelperCall) {
     return false;
   }
   (void)isArrayCountCall;
