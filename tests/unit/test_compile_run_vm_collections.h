@@ -526,6 +526,43 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("rejects vm user wrapper temporary unsafe parity shadow value mismatch") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<bool>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(true)
+}
+
+[effects(heap_alloc), return<bool>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32] mapCall{at_unsafe(wrapMap(), 1i32)}
+  [i32] mapMethod{wrapMap().at_unsafe(1i32)}
+  [i32] vectorCall{at_unsafe(wrapVector(), 0i32)}
+  [i32] vectorMethod{wrapVector().at_unsafe(0i32)}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_user_wrapper_temp_unsafe_parity_shadow_value_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with user wrapper temporary at shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
