@@ -229,7 +229,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCallFn,
     std::string &error) {
-  if (expr.isMethodCall && isSimpleCallName(expr, "get") && expr.args.size() == 2 &&
+  if (expr.isMethodCall &&
+      (isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref")) &&
+      expr.args.size() == 2 &&
       isSoaVectorTarget(expr.args.front(), localsIn)) {
     if (const Definition *callee = resolveMethodCallDefinitionFn(expr, localsIn)) {
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
@@ -357,9 +359,10 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     error = "native backend does not support soa_vector count";
     return NativeCallTailDispatchResult::Error;
   }
-  if (isSimpleCallName(expr, "get") && expr.args.size() == 2 &&
+  if ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref")) &&
+      expr.args.size() == 2 &&
       isSoaVectorTarget(expr.args.front(), localsIn)) {
-    error = "native backend does not support soa_vector get";
+    error = std::string("native backend does not support soa_vector ") + expr.name;
     return NativeCallTailDispatchResult::Error;
   }
 
@@ -1287,7 +1290,8 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   const bool isCountCall = isSimpleCallName(expr, "count");
   const bool isCapacityCall = isSimpleCallName(expr, "capacity");
   const bool isAccessCall =
-      isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "get");
+      isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe") ||
+      isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref");
   const bool isVectorMutatorCall =
       isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") || isSimpleCallName(expr, "reserve") ||
       isSimpleCallName(expr, "clear") || isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap");

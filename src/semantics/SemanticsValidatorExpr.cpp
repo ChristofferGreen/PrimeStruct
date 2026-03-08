@@ -1802,9 +1802,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return setCollectionMethodTarget("/map/" + methodName);
         }
       }
-      if (methodName == "get") {
+      if (methodName == "get" || methodName == "ref") {
         if (resolveSoaVectorTarget(receiver, elemType)) {
-          return setCollectionMethodTarget("/soa_vector/get");
+          return setCollectionMethodTarget("/soa_vector/" + methodName);
         }
       }
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
@@ -2236,7 +2236,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         resolvedMethod = isBuiltinMethod;
         break;
       }
-    } else if (expr.name == "get" && expr.args.size() == 2 &&
+    } else if ((expr.name == "get" || expr.name == "ref") && expr.args.size() == 2 &&
                defMap_.find(resolved) == defMap_.end()) {
       std::vector<size_t> receiverIndices{0};
       if (hasNamedArguments(expr.argNames) && expr.args.size() > 1) {
@@ -2977,6 +2977,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           return defMap_.find(resolved) == defMap_.end();
         };
+        auto isLegacySoaAccessBuiltinCall = [&]() {
+          if (!(expr.name == "get" || expr.name == "ref")) {
+            return false;
+          }
+          if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
+            for (const auto &receiverCandidate : expr.args) {
+              bool isBuiltinMethod = false;
+              std::string methodResolved;
+              if (resolveMethodTarget(receiverCandidate, expr.name, methodResolved, isBuiltinMethod) &&
+                  !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
+                return false;
+              }
+            }
+          }
+          return defMap_.find(resolved) == defMap_.end();
+        };
         auto isLegacyVectorHelperBuiltinCall = [&]() {
           if (!(isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
                 isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
@@ -3009,7 +3025,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             isAssignCall(expr) || isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) ||
             isForCall(expr) ||
             isRepeatCall(expr) || isLegacyCountBuiltinCall() || expr.name == "File" || expr.name == "try" ||
-            isLegacyCapacityBuiltinCall() || isLegacyVectorHelperBuiltinCall() ||
+            isLegacyCapacityBuiltinCall() || isLegacySoaAccessBuiltinCall() ||
+            isLegacyVectorHelperBuiltinCall() ||
             isSimpleCallName(expr, "dispatch") || isSimpleCallName(expr, "buffer") ||
             isSimpleCallName(expr, "upload") || isSimpleCallName(expr, "readback") ||
             isSimpleCallName(expr, "buffer_load") || isSimpleCallName(expr, "buffer_store")) {
@@ -3418,26 +3435,28 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (resolvedMethod && resolved == "/soa_vector/get") {
+      if (resolvedMethod &&
+          (resolved == "/soa_vector/get" || resolved == "/soa_vector/ref")) {
+        const std::string helperName = resolved == "/soa_vector/ref" ? "ref" : "get";
         if (!expr.templateArgs.empty()) {
-          error_ = "get does not accept template arguments";
+          error_ = helperName + " does not accept template arguments";
           return false;
         }
         if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = "get does not accept block arguments";
+          error_ = helperName + " does not accept block arguments";
           return false;
         }
         if (expr.args.size() != 2) {
-          error_ = "argument count mismatch for builtin get";
+          error_ = "argument count mismatch for builtin " + helperName;
           return false;
         }
         std::string elemType;
         if (!resolveSoaVectorTarget(expr.args.front(), elemType)) {
-          error_ = "get requires soa_vector target";
+          error_ = helperName + " requires soa_vector target";
           return false;
         }
         if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
-          error_ = "get requires integer index";
+          error_ = helperName + " requires integer index";
           return false;
         }
         for (const auto &arg : expr.args) {
@@ -3447,26 +3466,27 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (!resolvedMethod && expr.name == "get" && it == defMap_.end()) {
+      if (!resolvedMethod && (expr.name == "get" || expr.name == "ref") && it == defMap_.end()) {
+        const std::string helperName = expr.name;
         if (!expr.templateArgs.empty()) {
-          error_ = "get does not accept template arguments";
+          error_ = helperName + " does not accept template arguments";
           return false;
         }
         if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = "get does not accept block arguments";
+          error_ = helperName + " does not accept block arguments";
           return false;
         }
         if (expr.args.size() != 2) {
-          error_ = "argument count mismatch for builtin get";
+          error_ = "argument count mismatch for builtin " + helperName;
           return false;
         }
         std::string elemType;
         if (!resolveSoaVectorTarget(expr.args.front(), elemType)) {
-          error_ = "get requires soa_vector target";
+          error_ = helperName + " requires soa_vector target";
           return false;
         }
         if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
-          error_ = "get requires integer index";
+          error_ = helperName + " requires integer index";
           return false;
         }
         for (const auto &arg : expr.args) {

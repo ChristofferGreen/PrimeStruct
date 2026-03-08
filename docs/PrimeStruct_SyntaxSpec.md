@@ -608,6 +608,7 @@ element-field envelopes in literal, binding, and return validation paths). Built
 `soa_vector` targets so programs reach lowering/runtime paths. Lowering/runtime support remains
 incomplete; current IR lowering emits deterministic unsupported diagnostics
 (`native backend does not support soa_vector literals`, `native backend does not support soa_vector count`,
+`native backend does not support soa_vector get`, `native backend does not support soa_vector ref`,
 `native backend does not support soa_vector helper: push`, `native backend does not support soa_vector helper: reserve`).
 
 ### 8.5 Matrix and Quaternion Types (Draft)

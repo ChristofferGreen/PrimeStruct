@@ -166,6 +166,28 @@ Particle() {
   CHECK(error == "native backend does not support soa_vector get");
 }
 
+TEST_CASE("semantics accepts soa_vector ref before lowerer rejection") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/use([soa_vector<Particle>] values) {
+  ref(values, 0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
+  CHECK(error == "native backend does not support soa_vector ref");
+}
+
 TEST_CASE("ir lowerer effects unit validates program effect traversal") {
   auto makeEffectsTransform = [](const std::vector<std::string> &effects) {
     primec::Transform transform;
@@ -9157,6 +9179,102 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
   CHECK(soaGetEmitCalls == 1);
   CHECK(error.empty());
 
+  primec::Expr methodRefCall = methodGetCall;
+  methodRefCall.name = "ref";
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            methodRefCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+
+  int soaRefEmitCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            methodRefCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &resolvedCallee, const primec::ir_lowerer::LocalMap &) {
+              ++soaRefEmitCalls;
+              CHECK(resolvedCallee.fullPath == "/pkg/helper");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(soaRefEmitCalls == 1);
+  CHECK(error.empty());
+
+  primec::Expr callRefExpr;
+  callRefExpr.kind = primec::Expr::Kind::Call;
+  callRefExpr.name = "ref";
+  callRefExpr.args.push_back(methodCountReceiver);
+  callRefExpr.args.push_back(indexArg);
+  callRefExpr.args.front().name = "soa_values";
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            callRefExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+
+  int soaRefCallEmitCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            callRefExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &resolvedCallee, const primec::ir_lowerer::LocalMap &) {
+              ++soaRefCallEmitCalls;
+              CHECK(resolvedCallee.fullPath == "/pkg/helper");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(soaRefCallEmitCalls == 1);
+  CHECK(error.empty());
+
   primec::Expr directCall;
   directCall.kind = primec::Expr::Kind::Call;
   directCall.name = "helper";
@@ -9452,6 +9570,39 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             patchInstructionImm,
             error) == Result::Error);
   CHECK(error == "native backend does not support soa_vector get");
+
+  primec::Expr soaRefCall;
+  soaRefCall.kind = primec::Expr::Kind::Call;
+  soaRefCall.name = "ref";
+  soaRefCall.args = {soaName, idxName};
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+            soaRefCall,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == Result::Error);
+  CHECK(error == "native backend does not support soa_vector ref");
 
   primec::Expr printCall;
   printCall.kind = primec::Expr::Kind::Call;

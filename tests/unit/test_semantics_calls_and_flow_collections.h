@@ -172,6 +172,77 @@ main() {
   CHECK(error.find("get requires soa_vector target") != std::string::npos);
 }
 
+TEST_CASE("ref helper validates on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  ref(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("ref method validates on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  values.ref(0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("ref helper rejects non-soa target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  ref(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ref requires soa_vector target") != std::string::npos);
+}
+
+TEST_CASE("soa_vector get and ref reject named arguments for builtin calls") {
+  const auto checkNamedArgs = [](const std::string &callExpr) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [soa_vector<Particle>] values{soa_vector<Particle>()}\n"
+        "  " + callExpr + "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  };
+
+  checkNamedArgs("get([index] 0i32, [values] values)");
+  checkNamedArgs("ref([index] 0i32, [values] values)");
+}
+
 TEST_CASE("count rejects vector named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
