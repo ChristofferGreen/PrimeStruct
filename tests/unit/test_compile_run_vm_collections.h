@@ -564,6 +564,49 @@ main() {
   CHECK(runCommand(runCmd) == 468);
 }
 
+TEST_CASE("rejects vm user wrapper temporary count capacity shadow value mismatch") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<bool>]
+/map/count([map<i32, i32>] values) {
+  return(true)
+}
+
+[effects(heap_alloc), return<bool>]
+/vector/count([vector<i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+/vector/capacity([vector<i32>] values) {
+  return(true)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32] mapCall{count(wrapMap())}
+  [i32] mapMethod{wrapMap().count()}
+  [i32] vectorCountCall{count(wrapVector())}
+  [i32] vectorCountMethod{wrapVector().count()}
+  [i32] vectorCapacityCall{capacity(wrapVector())}
+  [i32] vectorCapacityMethod{wrapVector().capacity()}
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_wrapper_temp_count_capacity_shadow_value_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with user wrapper temporary index shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
