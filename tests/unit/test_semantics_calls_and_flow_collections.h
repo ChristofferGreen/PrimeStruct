@@ -2461,6 +2461,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector at call-form helper shadow accepts positional reordered arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(79i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(at(1i32, values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector at_unsafe call-form helper shadow accepts reordered named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -2477,6 +2495,32 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("vector at call-form helper shadow skips temp-leading positional probing") {
+  const std::string source = R"(
+Counter {
+}
+
+[return<Counter>]
+makeCounter() {
+  return(Counter())
+}
+
+[effects(heap_alloc), return<Counter>]
+/vector/at([vector<Counter>] values, [Counter] index) {
+  return(index)
+}
+
+[effects(heap_alloc), return<Counter>]
+main() {
+  [vector<Counter>] values{vector<Counter>(Counter())}
+  return(at(makeCounter(), values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/at") != std::string::npos);
 }
 
 TEST_CASE("user definition named push with positional args is not treated as builtin") {

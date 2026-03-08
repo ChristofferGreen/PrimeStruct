@@ -11839,6 +11839,39 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(atResolveCalls == 1);
   CHECK(atEmitCalls == 1);
 
+  primec::Expr reorderedAtCall = atCall;
+  reorderedAtCall.args = {indexArg, targetArg};
+  int reorderedAtResolveCalls = 0;
+  int reorderedAtEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            reorderedAtCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++reorderedAtResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+                  methodExpr.args.front().name == "items") {
+                return &callee;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++reorderedAtEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              REQUIRE_FALSE(methodExpr.args.empty());
+              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(methodExpr.args.front().name == "items");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(reorderedAtResolveCalls == 2);
+  CHECK(reorderedAtEmitCalls == 1);
+
   primec::Expr atUnsafeCall = atCall;
   atUnsafeCall.name = "at_unsafe";
   int atUnsafeResolveCalls = 0;
@@ -11864,6 +11897,30 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(error.empty());
   CHECK(atUnsafeResolveCalls == 1);
   CHECK(atUnsafeEmitCalls == 1);
+
+  primec::Expr tempReceiver;
+  tempReceiver.kind = primec::Expr::Kind::Call;
+  tempReceiver.name = "wrapItems";
+  primec::Expr tempLeadingAtCall = reorderedAtCall;
+  tempLeadingAtCall.args = {tempReceiver, targetArg};
+  int tempLeadingAtResolveCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            tempLeadingAtCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++tempLeadingAtResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NoCallee);
+  CHECK(error.empty());
+  CHECK(tempLeadingAtResolveCalls == 1);
 
   primec::Expr reorderedPushCall;
   reorderedPushCall.kind = primec::Expr::Kind::Call;
@@ -11899,9 +11956,6 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(reorderedPushResolveCalls == 2);
   CHECK(reorderedPushEmitCalls == 1);
 
-  primec::Expr tempReceiver;
-  tempReceiver.kind = primec::Expr::Kind::Call;
-  tempReceiver.name = "wrapItems";
   primec::Expr tempFirstPushCall = reorderedPushCall;
   tempFirstPushCall.args = {tempReceiver, targetArg};
   int tempFirstPushResolveCalls = 0;

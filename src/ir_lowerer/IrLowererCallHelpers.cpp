@@ -1367,6 +1367,14 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       receiverIndices.push_back(i);
     }
   }
+  const bool probePositionalReorderedAccessReceiver =
+      isAccessCall && !hasNamedArgsValue && expr.args.size() > 1 &&
+      (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::Name);
+  if (probePositionalReorderedAccessReceiver) {
+    for (size_t i = 1; i < expr.args.size(); ++i) {
+      receiverIndices.push_back(i);
+    }
+  }
 
   const std::string priorError = error;
   for (size_t receiverIndex : receiverIndices) {

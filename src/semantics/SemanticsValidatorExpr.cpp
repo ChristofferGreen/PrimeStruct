@@ -2283,7 +2283,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     } else if ((expr.name == "at" || expr.name == "at_unsafe") && expr.args.size() == 2 &&
                defMap_.find(resolved) == defMap_.end()) {
       std::vector<size_t> receiverIndices{0};
-      if (hasNamedArguments(expr.argNames) && expr.args.size() > 1) {
+      const bool hasNamedArgs = hasNamedArguments(expr.argNames);
+      if (hasNamedArgs && expr.args.size() > 1) {
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          receiverIndices.push_back(i);
+        }
+      }
+      auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
+        std::string elemType;
+        return resolveVectorTarget(candidate, elemType) || resolveArrayTarget(candidate, elemType) ||
+               resolveStringTarget(candidate) || resolveMapTarget(candidate);
+      };
+      const bool probePositionalReorderedReceiver =
+          !hasNamedArgs && expr.args.size() > 1 &&
+          (expr.args.front().kind == Expr::Kind::Literal ||
+           (expr.args.front().kind == Expr::Kind::Name &&
+            !isCollectionAccessReceiverExpr(expr.args.front())));
+      if (probePositionalReorderedReceiver) {
         for (size_t i = 1; i < expr.args.size(); ++i) {
           receiverIndices.push_back(i);
         }
