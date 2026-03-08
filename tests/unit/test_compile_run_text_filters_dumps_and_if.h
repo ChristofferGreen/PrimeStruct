@@ -1934,6 +1934,142 @@ main() {
   CHECK(firstMessage < secondMessage);
 }
 
+TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity arg-type diagnostics in definition scope") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<i32>]
+/map/count([map<i32, i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[effects(heap_alloc), return<i32>]
+/vector/capacity([vector<i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[return<i32>]
+bad() {
+  count(wrapMap(), true)
+  wrapVector().capacity(true)
+  return(0i32)
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp(
+      "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_shadow.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_shadow_err.json")
+          .string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
+  const size_t secondMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity arg-type diagnostics in definition scope") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<i32>]
+/map/count([map<i32, i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[effects(heap_alloc), return<i32>]
+/vector/capacity([vector<i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[return<i32>]
+bad() {
+  count(wrapMap(), true)
+  wrapVector().capacity(true)
+  return(0i32)
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp(
+      "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_shadow.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_shadow_err.json")
+          .string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
+  const size_t secondMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
 TEST_CASE("primec collect-diagnostics reports builtin map named-arg rejection in definition and execution scopes") {
   const std::string source = R"(
 [return<i32>]
@@ -3611,6 +3747,142 @@ execute_repeat(count(wrapMap(), 1i32), wrapVector().capacity(1i32))
 
   const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
   const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity arg-type diagnostics") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<i32>]
+/map/count([map<i32, i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[effects(heap_alloc), return<i32>]
+/vector/capacity([vector<i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+execute_repeat(count(wrapMap(), true), wrapVector().capacity(true))
+)";
+  const std::string srcPath = writeTemp(
+      "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_shadow.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_shadow_err.json")
+          .string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
+  const size_t secondMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity arg-type diagnostics") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<i32>]
+/map/count([map<i32, i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[effects(heap_alloc), return<i32>]
+/vector/capacity([vector<i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+execute_repeat(count(wrapMap(), true), wrapVector().capacity(true))
+)";
+  const std::string srcPath = writeTemp(
+      "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_shadow.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_shadow_err.json")
+          .string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
+  const size_t secondMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
   REQUIRE(firstMessage != std::string::npos);
   REQUIRE(secondMessage != std::string::npos);
   CHECK(firstMessage < secondMessage);
