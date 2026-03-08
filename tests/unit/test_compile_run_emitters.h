@@ -404,6 +404,33 @@ main() {
   CHECK(output.find("ps_vector_push(values, true)") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lambda mutator named call prefers values receiver") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/vector/push([vector<i32> mut] values, [vector<i32> mut] value) {
+  pop(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  holder{[]() {
+    [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+    [vector<i32> mut] payload{vector<i32>(7i32, 8i32)}
+    push([value] payload, [values] values)
+    return(values.count())
+  }}
+  return(holder())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_named_values_receiver.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_named_values_receiver_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("C++ emitter lambda mutator rewrite keeps known vector receiver leading names") {
   const std::string source = R"(
 /i32/push([i32] value, [vector<i32> mut] values) { }
@@ -679,6 +706,30 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("C++ emitter statement mutator named call prefers values receiver") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/vector/push([vector<i32> mut] values, [vector<i32> mut] value) {
+  pop(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [vector<i32> mut] payload{vector<i32>(9i32, 10i32)}
+  push([value] payload, [values] values)
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_values_receiver.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_mutator_named_values_receiver_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs user vector mutator positional call shadow in C++ emitter") {

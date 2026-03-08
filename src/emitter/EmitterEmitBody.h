@@ -484,12 +484,36 @@
               helperCall.isMethodCall = true;
             }
           } else {
-            std::vector<size_t> receiverIndices{0};
-            const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
-            if (hasNamedArgs && stmt.args.size() > 1) {
-              for (size_t i = 1; i < stmt.args.size(); ++i) {
-                receiverIndices.push_back(i);
+            std::vector<size_t> receiverIndices;
+            auto appendReceiverIndex = [&](size_t index) {
+              if (index >= stmt.args.size()) {
+                return;
               }
+              for (size_t existing : receiverIndices) {
+                if (existing == index) {
+                  return;
+                }
+              }
+              receiverIndices.push_back(index);
+            };
+            const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
+            if (hasNamedArgs) {
+              bool hasValuesNamedReceiver = false;
+              for (size_t i = 0; i < stmt.args.size(); ++i) {
+                if (i < stmt.argNames.size() && stmt.argNames[i].has_value() &&
+                    *stmt.argNames[i] == "values") {
+                  appendReceiverIndex(i);
+                  hasValuesNamedReceiver = true;
+                }
+              }
+              if (!hasValuesNamedReceiver) {
+                appendReceiverIndex(0);
+                for (size_t i = 1; i < stmt.args.size(); ++i) {
+                  appendReceiverIndex(i);
+                }
+              }
+            } else {
+              appendReceiverIndex(0);
             }
             const bool probePositionalReorderedReceiver =
                 !hasNamedArgs && stmt.args.size() > 1 &&
@@ -498,7 +522,7 @@
                  (stmt.args.front().kind == Expr::Kind::Name && !isVectorValue(stmt.args.front(), localTypes)));
             if (probePositionalReorderedReceiver) {
               for (size_t i = 1; i < stmt.args.size(); ++i) {
-                receiverIndices.push_back(i);
+                appendReceiverIndex(i);
               }
             }
             for (size_t receiverIndex : receiverIndices) {
