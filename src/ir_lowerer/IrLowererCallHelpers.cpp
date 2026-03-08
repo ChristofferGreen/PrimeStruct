@@ -231,6 +231,16 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     std::string &error) {
   if (expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
       isSoaVectorTarget(expr.args.front(), localsIn)) {
+    if (const Definition *callee = resolveMethodCallDefinitionFn(expr, localsIn)) {
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error = "native backend does not support block arguments on calls";
+        return InlineCallDispatchResult::Error;
+      }
+      if (!emitInlineDefinitionCallFn(expr, *callee, localsIn)) {
+        return InlineCallDispatchResult::Error;
+      }
+      return InlineCallDispatchResult::Emitted;
+    }
     return InlineCallDispatchResult::NotHandled;
   }
   return tryEmitInlineCallWithCountFallbacks(

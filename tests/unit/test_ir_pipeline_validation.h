@@ -9055,6 +9055,30 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             error) == Result::NotHandled);
   CHECK(error == "stale");
 
+  int soaEmitCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            methodCountCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &resolvedCallee, const primec::ir_lowerer::LocalMap &) {
+              ++soaEmitCalls;
+              CHECK(resolvedCallee.fullPath == "/pkg/helper");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(soaEmitCalls == 1);
+  CHECK(error.empty());
+
   primec::Expr directCall;
   directCall.kind = primec::Expr::Kind::Call;
   directCall.name = "helper";
