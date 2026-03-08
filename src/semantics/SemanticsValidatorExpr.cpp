@@ -1295,7 +1295,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     std::string vectorHelper;
     if (getVectorStatementHelperName(expr, vectorHelper)) {
       std::string resolved = resolveCalleePath(expr);
-      if (defMap_.find(resolved) == defMap_.end() && expr.isMethodCall && !expr.args.empty()) {
+      if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
         std::string methodTarget;
         if (resolveVectorHelperMethodTarget(expr.args.front(), expr.name, methodTarget) &&
             defMap_.count(methodTarget) > 0) {

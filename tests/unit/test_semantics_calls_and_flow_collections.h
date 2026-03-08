@@ -1960,6 +1960,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector helper call-form expression uses user-defined method target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/push([vector<i32> mut] values, [i32] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(push(values, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector helper call-form expression stays statement-only without user helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(push(values, 3i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+}
+
 TEST_CASE("user definition named push with positional args is not treated as builtin") {
   const std::string source = R"(
 [return<int>]
