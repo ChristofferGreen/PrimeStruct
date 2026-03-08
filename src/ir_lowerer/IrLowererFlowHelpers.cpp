@@ -6,9 +6,53 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <optional>
 #include <utility>
 
 namespace primec::ir_lowerer {
+
+namespace {
+bool checkedAddI64(int64_t lhs, int64_t rhs, int64_t &out) {
+  if ((rhs > 0 && lhs > std::numeric_limits<int64_t>::max() - rhs) ||
+      (rhs < 0 && lhs < std::numeric_limits<int64_t>::min() - rhs)) {
+    return false;
+  }
+  out = lhs + rhs;
+  return true;
+}
+
+bool checkedSubI64(int64_t lhs, int64_t rhs, int64_t &out) {
+  if ((rhs > 0 && lhs < std::numeric_limits<int64_t>::min() + rhs) ||
+      (rhs < 0 && lhs > std::numeric_limits<int64_t>::max() + rhs)) {
+    return false;
+  }
+  out = lhs - rhs;
+  return true;
+}
+
+bool tryEvaluateSignedLiteralIntegerExpr(const Expr &expr, int64_t &out) {
+  if (expr.kind == Expr::Kind::Literal && !expr.isUnsigned) {
+    out = expr.intWidth == 32 ? static_cast<int32_t>(expr.literalValue) : static_cast<int64_t>(expr.literalValue);
+    return true;
+  }
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding || !expr.templateArgs.empty() ||
+      expr.hasBodyArguments || !expr.bodyArguments.empty() || expr.args.size() != 2) {
+    return false;
+  }
+  const bool isPlus = isSimpleCallName(expr, "plus");
+  const bool isMinus = isSimpleCallName(expr, "minus");
+  if (!isPlus && !isMinus) {
+    return false;
+  }
+  int64_t lhs = 0;
+  int64_t rhs = 0;
+  if (!tryEvaluateSignedLiteralIntegerExpr(expr.args[0], lhs) ||
+      !tryEvaluateSignedLiteralIntegerExpr(expr.args[1], rhs)) {
+    return false;
+  }
+  return isPlus ? checkedAddI64(lhs, rhs, out) : checkedSubI64(lhs, rhs, out);
+}
+} // namespace
 
 OnErrorScope::OnErrorScope(std::optional<OnErrorHandler> &targetIn, std::optional<OnErrorHandler> next)
     : target(targetIn), previous(targetIn) {
@@ -530,25 +574,20 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       return VectorStatementHelperEmitResult::Error;
     }
     const Expr &desiredExpr = stmt.args[1];
-    if (desiredExpr.kind == Expr::Kind::Literal) {
-      if (desiredExpr.isUnsigned) {
-        if (desiredExpr.literalValue > static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)) {
-          error = vectorReserveExceedsLocalCapacityLimitMessage();
-          return VectorStatementHelperEmitResult::Error;
-        }
-      } else {
-        const int64_t signedDesired = desiredExpr.intWidth == 32
-                                          ? static_cast<int32_t>(desiredExpr.literalValue)
-                                          : static_cast<int64_t>(desiredExpr.literalValue);
-        if (signedDesired < 0) {
-          error = "vector reserve expects non-negative capacity";
-          return VectorStatementHelperEmitResult::Error;
-        }
-        if (signedDesired > static_cast<int64_t>(kVectorLocalDynamicCapacityLimit)) {
-          error = vectorReserveExceedsLocalCapacityLimitMessage();
-          return VectorStatementHelperEmitResult::Error;
-        }
+    int64_t signedDesired = 0;
+    if (tryEvaluateSignedLiteralIntegerExpr(desiredExpr, signedDesired)) {
+      if (signedDesired < 0) {
+        error = "vector reserve expects non-negative capacity";
+        return VectorStatementHelperEmitResult::Error;
       }
+      if (signedDesired > static_cast<int64_t>(kVectorLocalDynamicCapacityLimit)) {
+        error = vectorReserveExceedsLocalCapacityLimitMessage();
+        return VectorStatementHelperEmitResult::Error;
+      }
+    } else if (desiredExpr.kind == Expr::Kind::Literal && desiredExpr.isUnsigned &&
+               desiredExpr.literalValue > static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)) {
+      error = vectorReserveExceedsLocalCapacityLimitMessage();
+      return VectorStatementHelperEmitResult::Error;
     }
 
     const int32_t desiredLocal = allocTempLocal();

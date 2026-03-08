@@ -5702,6 +5702,44 @@ main() {
   CHECK(readFile(errPath).find("vector reserve expects non-negative capacity") != std::string::npos);
 }
 
+TEST_CASE("rejects native vector reserve folded expression beyond local dynamic limit") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, plus(200i32, 57i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_limit.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_reserve_folded_limit_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (256)") != std::string::npos);
+}
+
+TEST_CASE("rejects native vector reserve folded negative expression at lowering") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, minus(1i32, 2i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_reserve_folded_negative.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_reserve_folded_negative_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("vector reserve expects non-negative capacity") != std::string::npos);
+}
+
 TEST_CASE("rejects native vector reserve dynamic value beyond local dynamic limit") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
