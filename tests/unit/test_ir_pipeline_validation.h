@@ -11865,6 +11865,64 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(atUnsafeResolveCalls == 1);
   CHECK(atUnsafeEmitCalls == 1);
 
+  primec::Expr reorderedPushCall;
+  reorderedPushCall.kind = primec::Expr::Kind::Call;
+  reorderedPushCall.name = "push";
+  reorderedPushCall.args = {indexArg, targetArg};
+  int reorderedPushResolveCalls = 0;
+  int reorderedPushEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            reorderedPushCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++reorderedPushResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "push");
+              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+                  methodExpr.args.front().name == "items") {
+                return &callee;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++reorderedPushEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              REQUIRE_FALSE(methodExpr.args.empty());
+              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(methodExpr.args.front().name == "items");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(reorderedPushResolveCalls == 2);
+  CHECK(reorderedPushEmitCalls == 1);
+
+  primec::Expr tempReceiver;
+  tempReceiver.kind = primec::Expr::Kind::Call;
+  tempReceiver.name = "wrapItems";
+  primec::Expr tempFirstPushCall = reorderedPushCall;
+  tempFirstPushCall.args = {tempReceiver, targetArg};
+  int tempFirstPushResolveCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            tempFirstPushCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++tempFirstPushResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "push");
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NoCallee);
+  CHECK(error.empty());
+  CHECK(tempFirstPushResolveCalls == 1);
+
   int builtinLikeResolveCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
             countCall,

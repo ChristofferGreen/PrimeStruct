@@ -1353,7 +1353,16 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   };
 
   std::vector<size_t> receiverIndices{0};
-  if (hasNamedArgs() && expr.args.size() > 1) {
+  const bool hasNamedArgsValue = hasNamedArgs();
+  if (hasNamedArgsValue && expr.args.size() > 1) {
+    for (size_t i = 1; i < expr.args.size(); ++i) {
+      receiverIndices.push_back(i);
+    }
+  }
+  const bool probePositionalReorderedVectorMutatorReceiver =
+      isVectorMutatorCall && !hasNamedArgsValue && expr.args.size() > 1 &&
+      (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::Name);
+  if (probePositionalReorderedVectorMutatorReceiver) {
     for (size_t i = 1; i < expr.args.size(); ++i) {
       receiverIndices.push_back(i);
     }
