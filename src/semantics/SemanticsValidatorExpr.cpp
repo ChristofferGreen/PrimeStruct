@@ -3835,6 +3835,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = builtinName + " literal does not accept block arguments";
           return false;
         }
+        if (builtinName == "soa_vector") {
+          if (expr.templateArgs.size() != 1) {
+            error_ = "soa_vector literal requires exactly one template argument";
+            return false;
+          }
+          error_ = "soa_vector is not implemented yet";
+          return false;
+        }
         if (builtinName == "vector" && !expr.args.empty()) {
           if (activeEffects_.count("heap_alloc") == 0) {
             error_ = "vector literal requires heap_alloc effect";

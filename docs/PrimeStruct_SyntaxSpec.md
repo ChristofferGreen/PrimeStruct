@@ -600,6 +600,11 @@ Draft constraints:
 - AoS/SoA conversions are explicit helpers only (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`).
 - Reallocation invalidates SoA field views/proxies.
 
+Current implementation status: parser/text-transform support accepts surface `soa_vector<T>{...}`/`soa_vector<T>[...]`,
+but semantic validation rejects `soa_vector` usage with deterministic diagnostics
+(`soa_vector is not implemented yet`, `soa_vector literal requires exactly one template argument`,
+`soa_vector return type requires exactly one template argument`).
+
 ### 8.5 Matrix and Quaternion Types (Draft)
 
 `Mat2`, `Mat3`, `Mat4`, and `Quat` are planned nominal math types with explicit interaction rules.

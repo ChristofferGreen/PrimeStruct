@@ -425,8 +425,19 @@ ReturnKind getReturnKind(const Definition &def,
           return ReturnKind::Unknown;
         }
         nextKind = ReturnKind::Array;
+      } else if (splitTemplateTypeName(typeName, base, arg) && base == "soa_vector") {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+          error = "soa_vector return type requires exactly one template argument on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        error = "soa_vector is not implemented yet on " + def.fullPath;
+        return ReturnKind::Unknown;
       } else if (typeName == "array") {
         error = "array return type requires exactly one template argument on " + def.fullPath;
+        return ReturnKind::Unknown;
+      } else if (typeName == "soa_vector") {
+        error = "soa_vector return type requires exactly one template argument on " + def.fullPath;
         return ReturnKind::Unknown;
       } else {
         std::string base;
@@ -736,7 +747,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "array" || name == "vector" || name == "map") {
+  if (name == "array" || name == "vector" || name == "map" || name == "soa_vector") {
     out = name;
     return true;
   }
@@ -1250,6 +1261,14 @@ bool parseBindingInfo(const Expr &expr,
       }
       if (transform.name == "map" && transform.templateArgs.size() != 2) {
         error = "map requires exactly two template arguments";
+        return false;
+      }
+      if (transform.name == "soa_vector") {
+        if (transform.templateArgs.size() != 1) {
+          error = "soa_vector requires exactly one template argument";
+          return false;
+        }
+        error = "soa_vector is not implemented yet";
         return false;
       }
       if (transform.name == "uninitialized" && transform.templateArgs.size() != 1) {

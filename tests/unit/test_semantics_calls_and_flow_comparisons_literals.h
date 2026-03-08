@@ -184,6 +184,32 @@ main() {
   CHECK(error.find("vector literal requires exactly one template argument") != std::string::npos);
 }
 
+TEST_CASE("soa_vector literal missing template arg fails") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  soa_vector(1i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector literal requires exactly one template argument") != std::string::npos);
+}
+
+TEST_CASE("soa_vector literal emits deterministic unsupported diagnostic") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  soa_vector<i32>(1i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector is not implemented yet") != std::string::npos);
+}
+
 TEST_CASE("array literal type mismatch fails") {
   const std::string source = R"(
 [return<int>]

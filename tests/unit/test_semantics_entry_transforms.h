@@ -72,6 +72,31 @@ main() {
   CHECK(error.find("map return type requires exactly two template arguments") != std::string::npos);
 }
 
+TEST_CASE("soa_vector return rejects missing template arg") {
+  const std::string source = R"(
+[return<soa_vector>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector return type requires exactly one template argument on /main") !=
+        std::string::npos);
+}
+
+TEST_CASE("soa_vector return emits deterministic unsupported diagnostic") {
+  const std::string source = R"(
+[return<soa_vector<i32>>]
+main() {
+  return(soa_vector<i32>())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector is not implemented yet on /main") != std::string::npos);
+}
+
 TEST_CASE("reference return allows direct parameter reference") {
   const std::string source = R"(
 [return<Reference<i32>>]
