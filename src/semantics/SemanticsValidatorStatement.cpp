@@ -1848,9 +1848,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   if (getVectorStatementHelperName(stmt, vectorHelper)) {
     std::string vectorHelperResolved = resolveCalleePath(stmt);
     if (defMap_.find(vectorHelperResolved) == defMap_.end() && !stmt.args.empty()) {
-      std::string methodTarget;
-      if (resolveVectorHelperTargetPath(stmt.args.front(), stmt.name, methodTarget) && defMap_.count(methodTarget) > 0) {
-        vectorHelperResolved = methodTarget;
+      for (const auto &receiverCandidate : stmt.args) {
+        std::string methodTarget;
+        if (resolveVectorHelperTargetPath(receiverCandidate, stmt.name, methodTarget) &&
+            defMap_.count(methodTarget) > 0) {
+          vectorHelperResolved = methodTarget;
+          break;
+        }
       }
     }
     if (defMap_.find(vectorHelperResolved) == defMap_.end()) {

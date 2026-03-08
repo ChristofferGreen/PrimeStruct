@@ -474,24 +474,42 @@
         if (getVectorMutatorName(stmt, nameMap, vectorHelper)) {
           std::string helperPath;
           bool hasUserVectorHelper = false;
+          Expr helperCall = stmt;
           if (stmt.isMethodCall) {
             hasUserVectorHelper =
                 resolveMethodCallPath(stmt, localTypes, importAliases, structTypeMap, returnKinds, returnStructs,
                                       helperPath) &&
                 nameMap.find(helperPath) != nameMap.end();
-          } else {
-            Expr methodCandidate = stmt;
-            methodCandidate.isMethodCall = true;
-            hasUserVectorHelper =
-                resolveMethodCallPath(methodCandidate, localTypes, importAliases, structTypeMap, returnKinds,
-                                      returnStructs, helperPath) &&
-                nameMap.find(helperPath) != nameMap.end();
-          }
-          if (hasUserVectorHelper) {
-            Expr helperCall = stmt;
-            if (!helperCall.isMethodCall) {
+            if (hasUserVectorHelper) {
               helperCall.isMethodCall = true;
             }
+          } else {
+            std::vector<size_t> receiverIndices{0};
+            if (hasNamedArguments(stmt.argNames) && stmt.args.size() > 1) {
+              for (size_t i = 1; i < stmt.args.size(); ++i) {
+                receiverIndices.push_back(i);
+              }
+            }
+            for (size_t receiverIndex : receiverIndices) {
+              Expr methodCandidate = stmt;
+              methodCandidate.isMethodCall = true;
+              if (receiverIndex != 0 && receiverIndex < methodCandidate.args.size()) {
+                std::swap(methodCandidate.args[0], methodCandidate.args[receiverIndex]);
+                if (methodCandidate.argNames.size() < methodCandidate.args.size()) {
+                  methodCandidate.argNames.resize(methodCandidate.args.size());
+                }
+                std::swap(methodCandidate.argNames[0], methodCandidate.argNames[receiverIndex]);
+              }
+              if (resolveMethodCallPath(methodCandidate, localTypes, importAliases, structTypeMap, returnKinds,
+                                        returnStructs, helperPath) &&
+                  nameMap.find(helperPath) != nameMap.end()) {
+                hasUserVectorHelper = true;
+                helperCall = std::move(methodCandidate);
+                break;
+              }
+            }
+          }
+          if (hasUserVectorHelper) {
             out << pad
                 << emitExpr(helperCall,
                             nameMap,

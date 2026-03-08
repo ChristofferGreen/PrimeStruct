@@ -1296,10 +1296,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (getVectorStatementHelperName(expr, vectorHelper)) {
       std::string resolved = resolveCalleePath(expr);
       if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
-        std::string methodTarget;
-        if (resolveVectorHelperMethodTarget(expr.args.front(), expr.name, methodTarget) &&
-            defMap_.count(methodTarget) > 0) {
-          resolved = methodTarget;
+        for (const auto &receiverCandidate : expr.args) {
+          std::string methodTarget;
+          if (resolveVectorHelperMethodTarget(receiverCandidate, expr.name, methodTarget) &&
+              defMap_.count(methodTarget) > 0) {
+            resolved = methodTarget;
+            break;
+          }
         }
       }
       if (defMap_.find(resolved) == defMap_.end()) {
@@ -2891,11 +2894,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
           if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
-            bool isBuiltinMethod = false;
-            std::string methodResolved;
-            if (resolveMethodTarget(expr.args.front(), expr.name, methodResolved, isBuiltinMethod) &&
-                !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
-              return false;
+            for (const auto &receiverCandidate : expr.args) {
+              bool isBuiltinMethod = false;
+              std::string methodResolved;
+              if (resolveMethodTarget(receiverCandidate, expr.name, methodResolved, isBuiltinMethod) &&
+                  !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
+                return false;
+              }
             }
           }
           return defMap_.find(resolved) == defMap_.end();

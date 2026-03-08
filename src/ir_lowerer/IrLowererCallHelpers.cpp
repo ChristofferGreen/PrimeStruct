@@ -1259,20 +1259,49 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   (void)isArrayCountCall;
   (void)isStringCountCall;
 
-  Expr methodExpr = expr;
-  methodExpr.isMethodCall = true;
+  auto hasNamedArgs = [&]() {
+    for (const auto &argName : expr.argNames) {
+      if (argName.has_value()) {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto buildMethodExprForReceiverIndex = [&](size_t receiverIndex) {
+    Expr methodExpr = expr;
+    methodExpr.isMethodCall = true;
+    if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
+      std::swap(methodExpr.args[0], methodExpr.args[receiverIndex]);
+      if (methodExpr.argNames.size() < methodExpr.args.size()) {
+        methodExpr.argNames.resize(methodExpr.args.size());
+      }
+      std::swap(methodExpr.argNames[0], methodExpr.argNames[receiverIndex]);
+    }
+    return methodExpr;
+  };
+
+  std::vector<size_t> receiverIndices{0};
+  if (hasNamedArgs() && expr.args.size() > 1) {
+    for (size_t i = 1; i < expr.args.size(); ++i) {
+      receiverIndices.push_back(i);
+    }
+  }
+
   const std::string priorError = error;
-  const Definition *callee = resolveMethodCallDefinition(methodExpr);
-  const auto emitResult = emitResolvedInlineDefinitionCall(
-      methodExpr, callee, emitInlineDefinitionCall, error);
-  if (emitResult == ResolvedInlineCallResult::NoCallee) {
+  for (size_t receiverIndex : receiverIndices) {
+    Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
+    const Definition *callee = resolveMethodCallDefinition(methodExpr);
+    const auto emitResult = emitResolvedInlineDefinitionCall(
+        methodExpr, callee, emitInlineDefinitionCall, error);
+    if (emitResult == ResolvedInlineCallResult::Emitted) {
+      return CountMethodFallbackResult::Emitted;
+    }
+    if (emitResult == ResolvedInlineCallResult::Error) {
+      return CountMethodFallbackResult::Error;
+    }
     error = priorError;
-    return CountMethodFallbackResult::NoCallee;
   }
-  if (emitResult == ResolvedInlineCallResult::Error) {
-    return CountMethodFallbackResult::Error;
-  }
-  return CountMethodFallbackResult::Emitted;
+  return CountMethodFallbackResult::NoCallee;
 }
 
 bool buildOrderedCallArguments(const Expr &callExpr,

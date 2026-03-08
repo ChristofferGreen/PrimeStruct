@@ -2001,7 +2001,7 @@ TEST_CASE("vector helper call-form expression user shadow accepts named argument
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  return(push([values] values, [value] 3i32))
+  return(push([value] 3i32, [values] values))
 }
 )";
   std::string error;
@@ -2031,7 +2031,7 @@ TEST_CASE("vector helper statement call-form user shadow accepts named arguments
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  push([values] values, [value] 3i32)
+  push([value] 3i32, [values] values)
   return(count(values))
 }
 )";

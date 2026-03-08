@@ -4683,7 +4683,7 @@ TEST_CASE("runs vm with user vector push call named shadow") {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  push([values] values, [value] 3i32)
+  push([value] 3i32, [values] values)
   return(count(values))
 }
 )";

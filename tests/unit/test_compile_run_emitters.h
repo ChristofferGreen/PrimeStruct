@@ -586,6 +586,27 @@ main() {
   CHECK(output.find("ps_vector_push(values, 2)") != std::string::npos);
 }
 
+TEST_CASE("compiles and runs user vector mutator named call shadow in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/vector/push([vector<i32> mut] values, [i32] value) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  push([value] 3i32, [values] values)
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_mutator_named_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("rejects user vector mutator shadow arg mismatch in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]
