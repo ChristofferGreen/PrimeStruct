@@ -5522,6 +5522,38 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("compiles and runs native auto-inferred named vector push expression receiver precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/push([vector<i32> mut] values, [string] value) {
+  return(11i32)
+}
+
+[effects(heap_alloc), return<int>]
+/string/push([vector<i32> mut] values, [string] value) {
+  return(99i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [string] payload{"tag"raw_utf8}
+  [auto] inferred{push([value] payload, [values] values)}
+  return(inferred)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_user_vector_push_expr_named_receiver_precedence_auto.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_user_vector_push_expr_named_receiver_precedence_auto_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("compiles and runs native user vector pop call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]

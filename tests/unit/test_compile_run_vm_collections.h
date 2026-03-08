@@ -4830,6 +4830,31 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with auto-inferred named vector push expression receiver precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/push([vector<i32> mut] values, [string] value) {
+  return(11i32)
+}
+
+[effects(heap_alloc), return<int>]
+/string/push([vector<i32> mut] values, [string] value) {
+  return(99i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [string] payload{"tag"raw_utf8}
+  [auto] inferred{push([value] payload, [values] values)}
+  return(inferred)
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_push_expr_named_receiver_precedence_auto.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
+}
+
 TEST_CASE("runs vm with user vector pop call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]

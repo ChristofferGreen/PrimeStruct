@@ -901,6 +901,117 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
+      if (candidate.kind != Expr::Kind::Call) {
+        return false;
+      }
+      auto matchesHelper = [&](const char *helper) -> bool {
+        if (isSimpleCallName(candidate, helper)) {
+          return true;
+        }
+        if (candidate.name.empty()) {
+          return false;
+        }
+        std::string normalized = candidate.name;
+        if (!normalized.empty() && normalized[0] == '/') {
+          normalized.erase(0, 1);
+        }
+        return normalized == std::string("vector/") + helper;
+      };
+      if (matchesHelper("push")) {
+        nameOut = "push";
+        return true;
+      }
+      if (matchesHelper("pop")) {
+        nameOut = "pop";
+        return true;
+      }
+      if (matchesHelper("reserve")) {
+        nameOut = "reserve";
+        return true;
+      }
+      if (matchesHelper("clear")) {
+        nameOut = "clear";
+        return true;
+      }
+      if (matchesHelper("remove_at")) {
+        nameOut = "remove_at";
+        return true;
+      }
+      if (matchesHelper("remove_swap")) {
+        nameOut = "remove_swap";
+        return true;
+      }
+      return false;
+    };
+    auto resolveVectorHelperMethodTarget = [&](const Expr &receiver,
+                                               const std::string &helperName,
+                                               std::string &resolvedOut) -> bool {
+      resolvedOut.clear();
+      auto resolveReceiverTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
+        if (typeName.empty()) {
+          return "";
+        }
+        if (isPrimitiveBindingTypeName(typeName)) {
+          return "/" + normalizeBindingTypeName(typeName);
+        }
+        std::string resolvedType = resolveTypePath(typeName, namespacePrefix);
+        if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
+          auto importIt = importAliases_.find(typeName);
+          if (importIt != importAliases_.end()) {
+            resolvedType = importIt->second;
+          }
+        }
+        return resolvedType;
+      };
+      if (receiver.kind == Expr::Kind::Name) {
+        std::string typeName;
+        if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+          typeName = paramBinding->typeName;
+        } else {
+          auto it = locals.find(receiver.name);
+          if (it != locals.end()) {
+            typeName = it->second.typeName;
+          }
+        }
+        if (typeName.empty() || typeName == "Pointer" || typeName == "Reference") {
+          return false;
+        }
+        const std::string resolvedType = resolveReceiverTypePath(typeName, receiver.namespacePrefix);
+        if (resolvedType.empty()) {
+          return false;
+        }
+        resolvedOut = resolvedType + "/" + helperName;
+        return true;
+      }
+      if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+        std::string resolvedType = resolveCalleePath(receiver);
+        if (resolvedType.empty() || structNames_.count(resolvedType) == 0) {
+          resolvedType = inferStructReturnPath(receiver, params, locals);
+        }
+        if (resolvedType.empty()) {
+          return false;
+        }
+        resolvedOut = resolvedType + "/" + helperName;
+        return true;
+      }
+      return false;
+    };
+    auto inferResolvedPathReturnKind = [&](const std::string &resolvedPath, ReturnKind &kindOut) -> bool {
+      auto methodIt = defMap_.find(resolvedPath);
+      if (methodIt == defMap_.end()) {
+        return false;
+      }
+      if (!inferDefinitionReturnKind(*methodIt->second)) {
+        return false;
+      }
+      auto kindIt = returnKinds_.find(resolvedPath);
+      if (kindIt == returnKinds_.end()) {
+        return false;
+      }
+      kindOut = kindIt->second;
+      return true;
+    };
     std::string resolved = resolveCalleePath(expr);
     bool hasResolvedPath = !expr.isMethodCall;
     if (expr.isMethodCall && expr.name == "ok" && expr.args.size() >= 1) {
@@ -980,6 +1091,82 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return kindIt->second;
       }
       return ReturnKind::Unknown;
+    }
+    if (!expr.isMethodCall && defMap_.find(resolved) == defMap_.end()) {
+      std::string vectorHelper;
+      if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {
+        auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
+          if (candidate.kind != Expr::Kind::Name) {
+            return false;
+          }
+          std::string typeName;
+          if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+            typeName = normalizeBindingTypeName(paramBinding->typeName);
+          } else {
+            auto it = locals.find(candidate.name);
+            if (it != locals.end()) {
+              typeName = normalizeBindingTypeName(it->second.typeName);
+            }
+          }
+          return typeName == "vector" || typeName == "soa_vector";
+        };
+        std::vector<size_t> receiverIndices;
+        auto appendReceiverIndex = [&](size_t index) {
+          if (index >= expr.args.size()) {
+            return;
+          }
+          for (size_t existing : receiverIndices) {
+            if (existing == index) {
+              return;
+            }
+          }
+          receiverIndices.push_back(index);
+        };
+        const bool hasNamedArgs = hasNamedArguments(expr.argNames);
+        if (hasNamedArgs) {
+          bool hasValuesNamedReceiver = false;
+          for (size_t i = 0; i < expr.args.size(); ++i) {
+            if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
+                *expr.argNames[i] == "values") {
+              appendReceiverIndex(i);
+              hasValuesNamedReceiver = true;
+            }
+          }
+          if (!hasValuesNamedReceiver) {
+            appendReceiverIndex(0);
+            for (size_t i = 1; i < expr.args.size(); ++i) {
+              appendReceiverIndex(i);
+            }
+          }
+        } else {
+          appendReceiverIndex(0);
+        }
+        const bool probePositionalReorderedReceiver =
+            !hasNamedArgs && expr.args.size() > 1 &&
+            (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
+             expr.args.front().kind == Expr::Kind::FloatLiteral || expr.args.front().kind == Expr::Kind::StringLiteral ||
+             (expr.args.front().kind == Expr::Kind::Name &&
+              !isVectorHelperReceiverName(expr.args.front())));
+        if (probePositionalReorderedReceiver) {
+          for (size_t i = 1; i < expr.args.size(); ++i) {
+            appendReceiverIndex(i);
+          }
+        }
+        for (size_t receiverIndex : receiverIndices) {
+          if (receiverIndex >= expr.args.size()) {
+            continue;
+          }
+          const Expr &receiverCandidate = expr.args[receiverIndex];
+          std::string methodResolved;
+          if (!resolveVectorHelperMethodTarget(receiverCandidate, vectorHelper, methodResolved)) {
+            continue;
+          }
+          ReturnKind helperReturnKind = ReturnKind::Unknown;
+          if (inferResolvedPathReturnKind(methodResolved, helperReturnKind)) {
+            return helperReturnKind;
+          }
+        }
+      }
     }
     if (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
