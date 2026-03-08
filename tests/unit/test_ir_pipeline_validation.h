@@ -12295,6 +12295,42 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(reorderedBoolPushResolveCalls == 2);
   CHECK(reorderedBoolPushEmitCalls == 1);
 
+  primec::Expr namedPushCall = reorderedPushCall;
+  primec::Expr namedPushValueArg;
+  namedPushValueArg.kind = primec::Expr::Kind::StringLiteral;
+  namedPushValueArg.stringValue = "\"payload\"raw_utf8";
+  namedPushCall.args = {namedPushValueArg, targetArg};
+  namedPushCall.argNames = {std::string("value"), std::string("values")};
+  int namedPushResolveCalls = 0;
+  int namedPushEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            namedPushCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++namedPushResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "push");
+              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+                  methodExpr.args.front().name == "items") {
+                return &callee;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++namedPushEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              REQUIRE_FALSE(methodExpr.args.empty());
+              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(methodExpr.args.front().name == "items");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(namedPushResolveCalls == 1);
+  CHECK(namedPushEmitCalls == 1);
+
   primec::Expr tempFirstPushCall = reorderedPushCall;
   tempFirstPushCall.args = {tempReceiver, targetArg};
   int tempFirstPushResolveCalls = 0;

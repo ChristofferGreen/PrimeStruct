@@ -1406,12 +1406,38 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     return methodExpr;
   };
 
-  std::vector<size_t> receiverIndices{0};
-  const bool hasNamedArgsValue = hasNamedArgs();
-  if (hasNamedArgsValue && expr.args.size() > 1) {
-    for (size_t i = 1; i < expr.args.size(); ++i) {
-      receiverIndices.push_back(i);
+  std::vector<size_t> receiverIndices;
+  auto appendReceiverIndex = [&](size_t index) {
+    if (index >= expr.args.size()) {
+      return;
     }
+    for (size_t existing : receiverIndices) {
+      if (existing == index) {
+        return;
+      }
+    }
+    receiverIndices.push_back(index);
+  };
+  const bool hasNamedArgsValue = hasNamedArgs();
+  if (hasNamedArgsValue) {
+    bool hasValuesNamedReceiver = false;
+    if (isVectorMutatorCall) {
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
+            *expr.argNames[i] == "values") {
+          appendReceiverIndex(i);
+          hasValuesNamedReceiver = true;
+        }
+      }
+    }
+    if (!hasValuesNamedReceiver) {
+      appendReceiverIndex(0);
+      for (size_t i = 1; i < expr.args.size(); ++i) {
+        appendReceiverIndex(i);
+      }
+    }
+  } else {
+    appendReceiverIndex(0);
   }
   const bool probePositionalReorderedVectorMutatorReceiver =
       isVectorMutatorCall && !hasNamedArgsValue && expr.args.size() > 1 &&
@@ -1420,7 +1446,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
        expr.args.front().kind == Expr::Kind::Name);
   if (probePositionalReorderedVectorMutatorReceiver) {
     for (size_t i = 1; i < expr.args.size(); ++i) {
-      receiverIndices.push_back(i);
+      appendReceiverIndex(i);
     }
   }
   const bool probePositionalReorderedAccessReceiver =
@@ -1432,7 +1458,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
          !isCollectionAccessReceiverExpr(expr.args.front()))));
   if (probePositionalReorderedAccessReceiver) {
     for (size_t i = 1; i < expr.args.size(); ++i) {
-      receiverIndices.push_back(i);
+      appendReceiverIndex(i);
     }
   }
 
