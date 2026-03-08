@@ -529,6 +529,27 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       error = "reserve requires integer capacity";
       return VectorStatementHelperEmitResult::Error;
     }
+    const Expr &desiredExpr = stmt.args[1];
+    if (desiredExpr.kind == Expr::Kind::Literal) {
+      if (desiredExpr.isUnsigned) {
+        if (desiredExpr.literalValue > static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)) {
+          error = vectorReserveExceedsLocalCapacityLimitMessage();
+          return VectorStatementHelperEmitResult::Error;
+        }
+      } else {
+        const int64_t signedDesired = desiredExpr.intWidth == 32
+                                          ? static_cast<int32_t>(desiredExpr.literalValue)
+                                          : static_cast<int64_t>(desiredExpr.literalValue);
+        if (signedDesired < 0) {
+          error = "vector reserve expects non-negative capacity";
+          return VectorStatementHelperEmitResult::Error;
+        }
+        if (signedDesired > static_cast<int64_t>(kVectorLocalDynamicCapacityLimit)) {
+          error = vectorReserveExceedsLocalCapacityLimitMessage();
+          return VectorStatementHelperEmitResult::Error;
+        }
+      }
+    }
 
     const int32_t desiredLocal = allocTempLocal();
     if (!emitExpr(stmt.args[1], localsIn)) {
