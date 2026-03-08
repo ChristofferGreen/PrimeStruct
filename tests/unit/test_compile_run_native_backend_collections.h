@@ -5567,20 +5567,56 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects native vector reserve beyond capacity") {
+TEST_CASE("grows native vector reserve beyond initial capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   reserve(values, 3i32)
+  push(values, 9i32)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_reserve_grows.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_reserve_grows_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("grows native vector push beyond initial capacity") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  push(values, 2i32)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_push_grows.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_push_grows_exe").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("rejects native vector reserve beyond local dynamic limit") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, 257i32)
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_vector_reserve_unsupported.prime", source);
+  const std::string srcPath = writeTemp("compile_native_vector_reserve_local_limit.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_reserve_unsupported_exe").string();
+      (std::filesystem::temp_directory_path() / "primec_native_vector_reserve_local_limit_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_reserve_err.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_native_vector_reserve_limit_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -5589,20 +5625,22 @@ main() {
   CHECK(readFile(errPath) == "vector reserve exceeds capacity\n");
 }
 
-TEST_CASE("rejects native vector push beyond capacity") {
+TEST_CASE("rejects native vector push beyond local dynamic limit") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  push(values, 2i32)
+  [vector<i32> mut] values{vector<i32>()}
+  repeat(257i32) {
+    push(values, 1i32)
+  }
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_vector_push_full.prime", source);
+  const std::string srcPath = writeTemp("compile_native_vector_push_local_limit.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_push_full_exe").string();
+      (std::filesystem::temp_directory_path() / "primec_native_vector_push_local_limit_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_push_full_err.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_native_vector_push_limit_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

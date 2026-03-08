@@ -4872,33 +4872,64 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm vector reserve beyond capacity") {
+TEST_CASE("grows vm vector reserve beyond initial capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   reserve(values, 3i32)
-  return(0i32)
+  push(values, 9i32)
+  return(count(values))
 }
 )";
-  const std::string srcPath = writeTemp("vm_vector_reserve_unsupported.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  const std::string srcPath = writeTemp("vm_vector_reserve_grows.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector reserve exceeds capacity\n");
 }
 
-TEST_CASE("rejects vm vector push beyond capacity") {
+TEST_CASE("grows vm vector push beyond initial capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   push(values, 2i32)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_push_grows.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("rejects vm vector reserve beyond local dynamic limit") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, 257i32)
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("vm_vector_push_full.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_push_full_err.txt").string();
+  const std::string srcPath = writeTemp("vm_vector_reserve_local_limit.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_limit_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "vector reserve exceeds capacity\n");
+}
+
+TEST_CASE("rejects vm vector push beyond local dynamic limit") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>()}
+  repeat(257i32) {
+    push(values, 1i32)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_push_local_limit.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_push_limit_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "vector capacity exceeded\n");

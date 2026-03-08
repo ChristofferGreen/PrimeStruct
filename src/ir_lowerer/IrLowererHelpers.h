@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -11,6 +12,7 @@ namespace primec::ir_lowerer {
 constexpr const char *kGpuGlobalIdXName = "__gpu_global_id_x";
 constexpr const char *kGpuGlobalIdYName = "__gpu_global_id_y";
 constexpr const char *kGpuGlobalIdZName = "__gpu_global_id_z";
+constexpr int32_t kVectorLocalDynamicCapacityLimit = 256;
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool isReturnCall(const Expr &expr);

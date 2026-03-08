@@ -2,6 +2,7 @@
 
 #include "IrLowererHelpers.h"
 
+#include <algorithm>
 #include <cstring>
 #include <limits>
 
@@ -294,12 +295,15 @@ bool emitConversionsAndCallsOperatorExpr(
             const bool isVector = (builtin == "vector");
             const int32_t baseLocal = nextLocal;
             const int32_t headerSlots = isVector ? 2 : 1;
-            nextLocal += static_cast<int32_t>(headerSlots + expr.args.size());
+            const int32_t literalCount = static_cast<int32_t>(expr.args.size());
+            const int32_t storageCapacity =
+                isVector ? std::max(literalCount, kVectorLocalDynamicCapacityLimit) : literalCount;
+            nextLocal += headerSlots + storageCapacity;
 
-            instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(expr.args.size()))});
+            instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
             instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
             if (isVector) {
-              instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(expr.args.size()))});
+              instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
               instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
             }
 

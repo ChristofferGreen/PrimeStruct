@@ -547,18 +547,46 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
     }
 
-    IrOpcode cmpLtOp =
-        (capacityKind == LocalInfo::ValueKind::Int32)
-            ? IrOpcode::CmpLtI32
-            : (capacityKind == LocalInfo::ValueKind::Int64 ? IrOpcode::CmpLtI64 : IrOpcode::CmpLtU64);
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    const IrOpcode cmpLeOp = (capacityKind == LocalInfo::ValueKind::Int32)
+                                 ? IrOpcode::CmpLeI32
+                                 : (capacityKind == LocalInfo::ValueKind::Int64 ? IrOpcode::CmpLeI64 : IrOpcode::CmpLeU64);
+    const IrOpcode cmpGtOp = (capacityKind == LocalInfo::ValueKind::Int32)
+                                 ? IrOpcode::CmpGtI32
+                                 : (capacityKind == LocalInfo::ValueKind::Int64 ? IrOpcode::CmpGtI64 : IrOpcode::CmpGtU64);
+    const IrOpcode pushLimitOp =
+        (capacityKind == LocalInfo::ValueKind::Int32) ? IrOpcode::PushI32 : IrOpcode::PushI64;
+
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
-    instructions.push_back({cmpLtOp, 0});
-    size_t jumpWithinCapacity = instructions.size();
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({cmpLeOp, 0});
+    const size_t jumpNeedsGrowth = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    const size_t jumpReserveEnd = instructions.size();
+    instructions.push_back({IrOpcode::Jump, 0});
+
+    const size_t growthPathIndex = instructions.size();
+    instructions[jumpNeedsGrowth].imm = static_cast<int32_t>(growthPathIndex);
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
+    instructions.push_back({pushLimitOp, static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)});
+    instructions.push_back({cmpGtOp, 0});
+    const size_t jumpWithinLimit = instructions.size();
     instructions.push_back({IrOpcode::JumpIfZero, 0});
     emitVectorReserveExceeded();
-    size_t withinCapacityIndex = instructions.size();
-    instructions[jumpWithinCapacity].imm = static_cast<int32_t>(withinCapacityIndex);
+    const size_t withinLimitIndex = instructions.size();
+    instructions[jumpWithinLimit].imm = static_cast<int32_t>(withinLimitIndex);
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
+
+    const size_t reserveEndIndex = instructions.size();
+    instructions[jumpReserveEnd].imm = static_cast<int32_t>(reserveEndIndex);
     return VectorStatementHelperEmitResult::Emitted;
   }
 
@@ -566,9 +594,10 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
     instructions.push_back({IrOpcode::CmpLtI32, 0});
-    size_t jumpHasSpace = instructions.size();
+    const size_t jumpNeedsGrowth = instructions.size();
     instructions.push_back({IrOpcode::JumpIfZero, 0});
 
+    const size_t pushBodyIndex = instructions.size();
     const int32_t valueLocal = allocTempLocal();
     if (!emitExpr(stmt.args[1], localsIn)) {
       return VectorStatementHelperEmitResult::Error;
@@ -600,12 +629,33 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     instructions.push_back({IrOpcode::StoreIndirect, 0});
     instructions.push_back({IrOpcode::Pop, 0});
 
-    size_t jumpEnd = instructions.size();
+    const size_t jumpEnd = instructions.size();
     instructions.push_back({IrOpcode::Jump, 0});
-    size_t errorIndex = instructions.size();
+
+    const size_t growthPathIndex = instructions.size();
+    instructions[jumpNeedsGrowth].imm = static_cast<int32_t>(growthPathIndex);
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)});
+    instructions.push_back({IrOpcode::CmpLtI32, 0});
+    const size_t jumpOom = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
+
+    instructions.push_back({IrOpcode::Jump, static_cast<int32_t>(pushBodyIndex)});
+
+    const size_t errorIndex = instructions.size();
+    instructions[jumpOom].imm = static_cast<int32_t>(errorIndex);
     emitVectorCapacityExceeded();
-    size_t endIndex = instructions.size();
-    instructions[jumpHasSpace].imm = static_cast<int32_t>(errorIndex);
+    const size_t endIndex = instructions.size();
     instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
     return VectorStatementHelperEmitResult::Emitted;
   }
