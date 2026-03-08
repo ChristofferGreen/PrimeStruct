@@ -205,6 +205,23 @@ Particle() {
   CHECK(error == "soa_vector field views are not implemented yet: x");
 }
 
+TEST_CASE("semantics rejects soa_vector field-view call-form before lowerer") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/use([soa_vector<Particle>] values) {
+  x(values)
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error == "soa_vector field views are not implemented yet: x");
+}
+
 TEST_CASE("ir lowerer effects unit validates program effect traversal") {
   auto makeEffectsTransform = [](const std::vector<std::string> &effects) {
     primec::Transform transform;

@@ -261,6 +261,24 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
+TEST_CASE("soa_vector field-view call-form reports unsupported diagnostic") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  x(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
 TEST_CASE("soa_vector field-view index syntax reports unsupported diagnostic") {
   const std::string source = R"(
 Particle() {
@@ -294,6 +312,28 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("soa_vector field-view call-form falls back to user helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/soa_vector/x([soa_vector<Particle>] values) {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(x(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("soa_vector field-view method falls back to user helper") {

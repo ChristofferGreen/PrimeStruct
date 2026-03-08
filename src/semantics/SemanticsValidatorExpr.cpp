@@ -2305,6 +2305,24 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         resolvedMethod = isBuiltinMethod;
         break;
       }
+    } else if (expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
+      const Expr &receiverCandidate = expr.args.front();
+      std::string elemType;
+      if (resolveSoaVectorTarget(receiverCandidate, elemType)) {
+        usedMethodTarget = true;
+        bool isBuiltinMethod = false;
+        std::string methodResolved;
+        if (!resolveMethodTarget(receiverCandidate, expr.name, methodResolved, isBuiltinMethod)) {
+          (void)validateExpr(params, locals, receiverCandidate);
+          return false;
+        }
+        if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+          error_ = "unknown method: " + methodResolved;
+          return false;
+        }
+        resolved = methodResolved;
+        resolvedMethod = isBuiltinMethod;
+      }
     }
     if (usedMethodTarget && !resolvedMethod) {
       auto defIt = defMap_.find(resolved);
