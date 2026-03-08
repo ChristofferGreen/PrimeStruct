@@ -471,6 +471,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("reordered access wrapper temporaries infer i32 for chained methods") {
+  const std::string source = R"(
+[return<map<string, i32>>]
+wrapMapText() {
+  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 21i32)}
+  return(values)
+}
+
+[return<int>]
+/map/at_unsafe([map<string, i32>] values, [string] key) {
+  return(values.at_unsafe(key))
+}
+
+[return<int>]
+/i32/tag([i32] value) {
+  return(plus(value, 1i32))
+}
+
+[return<int>]
+main() {
+  return(at_unsafe("only"raw_utf8, wrapMapText()).tag())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("access wrapper temporary chained method reports i32 path diagnostics") {
   const std::string source = R"(
 wrapText() {
@@ -2508,6 +2536,24 @@ TEST_CASE("map at call-form helper shadow accepts string positional reordered ar
 main() {
   [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
   return(at("only"raw_utf8, values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map at_unsafe call-form helper shadow accepts string positional reordered arguments") {
+  const std::string source = R"(
+[return<int>]
+/map/at_unsafe([map<string, i32>] values, [string] key) {
+  return(82i32)
+}
+
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(at_unsafe("only"raw_utf8, values))
 }
 )";
   std::string error;

@@ -1037,29 +1037,66 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (!expr.isMethodCall && (expr.name == "at" || expr.name == "at_unsafe") && expr.args.size() == 2 &&
         defMap_.find(resolved) == defMap_.end()) {
-      std::string elemType;
-      std::string keyType;
-      std::string valueType;
-      if (resolveVectorTarget(expr.args.front(), elemType) || resolveArrayTarget(expr.args.front(), elemType) ||
-          resolveStringTarget(expr.args.front()) || resolveMapTarget(expr.args.front(), keyType, valueType)) {
+      std::vector<size_t> receiverIndices{0};
+      const bool hasNamedArgs = hasNamedArguments(expr.argNames);
+      if (hasNamedArgs && expr.args.size() > 1) {
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          receiverIndices.push_back(i);
+        }
+      }
+      auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
+        std::string elemType;
+        std::string keyType;
+        std::string valueType;
+        return resolveVectorTarget(candidate, elemType) || resolveArrayTarget(candidate, elemType) ||
+               resolveStringTarget(candidate) || resolveMapTarget(candidate, keyType, valueType);
+      };
+      const bool probePositionalReorderedReceiver =
+          !hasNamedArgs && expr.args.size() > 1 &&
+          (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
+           expr.args.front().kind == Expr::Kind::FloatLiteral || expr.args.front().kind == Expr::Kind::StringLiteral ||
+           (expr.args.front().kind == Expr::Kind::Name &&
+            !isCollectionAccessReceiverExpr(expr.args.front())));
+      if (probePositionalReorderedReceiver) {
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          receiverIndices.push_back(i);
+        }
+      }
+      for (size_t receiverIndex : receiverIndices) {
+        if (receiverIndex >= expr.args.size()) {
+          continue;
+        }
+        const Expr &receiverCandidate = expr.args[receiverIndex];
         std::string methodResolved;
-        if (resolveMethodCallPath(methodResolved)) {
-          ReturnKind builtinMethodKind = ReturnKind::Unknown;
-          if (defMap_.find(methodResolved) == defMap_.end() &&
-              resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
-            return builtinMethodKind;
-          }
-          auto methodIt = defMap_.find(methodResolved);
-          if (methodIt != defMap_.end()) {
-            if (!inferDefinitionReturnKind(*methodIt->second)) {
-              return ReturnKind::Unknown;
-            }
-            auto kindIt = returnKinds_.find(methodResolved);
-            if (kindIt != returnKinds_.end()) {
-              return kindIt->second;
-            }
+        std::string elemType;
+        std::string keyType;
+        std::string valueType;
+        if (resolveVectorTarget(receiverCandidate, elemType)) {
+          methodResolved = "/vector/" + expr.name;
+        } else if (resolveArrayTarget(receiverCandidate, elemType)) {
+          methodResolved = "/array/" + expr.name;
+        } else if (resolveStringTarget(receiverCandidate)) {
+          methodResolved = "/string/" + expr.name;
+        } else if (resolveMapTarget(receiverCandidate, keyType, valueType)) {
+          methodResolved = "/map/" + expr.name;
+        } else {
+          continue;
+        }
+        ReturnKind builtinMethodKind = ReturnKind::Unknown;
+        if (defMap_.find(methodResolved) == defMap_.end() &&
+            resolveBuiltinCollectionMethodReturnKind(methodResolved, receiverCandidate, builtinMethodKind)) {
+          return builtinMethodKind;
+        }
+        auto methodIt = defMap_.find(methodResolved);
+        if (methodIt != defMap_.end()) {
+          if (!inferDefinitionReturnKind(*methodIt->second)) {
             return ReturnKind::Unknown;
           }
+          auto kindIt = returnKinds_.find(methodResolved);
+          if (kindIt != returnKinds_.end()) {
+            return kindIt->second;
+          }
+          return ReturnKind::Unknown;
         }
       }
     }

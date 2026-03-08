@@ -3959,6 +3959,32 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   CHECK(*positionalStringAccessResolvedPath == "/map/at");
   CHECK(positionalStringResolveCalls == 2);
 
+  primec::Expr positionalUnsafeStringAccessExpr = positionalStringAccessExpr;
+  positionalUnsafeStringAccessExpr.name = "at_unsafe";
+  int positionalUnsafeStringResolveCalls = 0;
+  auto positionalUnsafeStringAccessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      positionalUnsafeStringAccessExpr,
+      "at_unsafe",
+      {},
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        ++positionalUnsafeStringResolveCalls;
+        if (!methodCandidate.isMethodCall || methodCandidate.args.empty()) {
+          return false;
+        }
+        if (methodCandidate.args.front().kind == primec::Expr::Kind::Name && methodCandidate.args.front().name == "values") {
+          pathOut = "/map/at_unsafe";
+          return true;
+        }
+        return false;
+      });
+  REQUIRE(positionalUnsafeStringAccessResolvedPath.has_value());
+  CHECK(*positionalUnsafeStringAccessResolvedPath == "/map/at_unsafe");
+  CHECK(positionalUnsafeStringResolveCalls == 2);
+
   primec::Expr positionalNameAccessExpr = positionalAccessExpr;
   positionalNameAccessExpr.args[0].kind = primec::Expr::Kind::Name;
   positionalNameAccessExpr.args[0].name = "indexName";
@@ -12115,6 +12141,39 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(error.empty());
   CHECK(atUnsafeResolveCalls == 1);
   CHECK(atUnsafeEmitCalls == 1);
+
+  primec::Expr reorderedAtUnsafeStringCall = atUnsafeCall;
+  reorderedAtUnsafeStringCall.args = {stringKeyArg, targetArg};
+  int reorderedAtUnsafeStringResolveCalls = 0;
+  int reorderedAtUnsafeStringEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            reorderedAtUnsafeStringCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++reorderedAtUnsafeStringResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at_unsafe");
+              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+                  methodExpr.args.front().name == "items") {
+                return &callee;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++reorderedAtUnsafeStringEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at_unsafe");
+              REQUIRE_FALSE(methodExpr.args.empty());
+              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(methodExpr.args.front().name == "items");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(reorderedAtUnsafeStringResolveCalls == 2);
+  CHECK(reorderedAtUnsafeStringEmitCalls == 1);
 
   primec::Expr tempReceiver;
   tempReceiver.kind = primec::Expr::Kind::Call;
