@@ -550,6 +550,46 @@ main() {
   CHECK(error.find("unknown method: /Counter/at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("push call keeps unknown method on non-collection receiver") {
+  const std::string source = R"(
+Counter {
+  [i32] value{0i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Counter mut] counter{Counter()}
+  push(counter, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/push") != std::string::npos);
+}
+
+TEST_CASE("reserve method keeps unknown method on wrapper temporary") {
+  const std::string source = R"(
+Counter {
+  [i32] value{0i32}
+}
+
+makeCounter() {
+  [Counter mut] counter{Counter()}
+  return(counter)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  makeCounter().reserve(2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/reserve") != std::string::npos);
+}
+
 TEST_CASE("at method validates on array binding") {
   const std::string source = R"(
 [return<int>]

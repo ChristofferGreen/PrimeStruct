@@ -328,6 +328,84 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return false;
   };
+  auto resolveVectorHelperTargetPath = [&](const Expr &receiver,
+                                           const std::string &helperName,
+                                           std::string &resolvedOut) -> bool {
+    resolvedOut.clear();
+    auto resolveReceiverTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
+      if (typeName.empty()) {
+        return "";
+      }
+      if (isPrimitiveBindingTypeName(typeName)) {
+        return "/" + normalizeBindingTypeName(typeName);
+      }
+      std::string resolvedType = resolveTypePath(typeName, namespacePrefix);
+      if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
+        auto importIt = importAliases_.find(typeName);
+        if (importIt != importAliases_.end()) {
+          resolvedType = importIt->second;
+        }
+      }
+      return resolvedType;
+    };
+    if (receiver.kind == Expr::Kind::Name) {
+      std::string typeName;
+      if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+        typeName = paramBinding->typeName;
+      } else {
+        auto it = locals.find(receiver.name);
+        if (it != locals.end()) {
+          typeName = it->second.typeName;
+        }
+      }
+      if (typeName.empty() || typeName == "Pointer" || typeName == "Reference") {
+        return false;
+      }
+      const std::string resolvedType = resolveReceiverTypePath(typeName, receiver.namespacePrefix);
+      if (resolvedType.empty()) {
+        return false;
+      }
+      resolvedOut = resolvedType + "/" + helperName;
+      return true;
+    }
+    if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+      std::string resolvedType = resolveCalleePath(receiver);
+      if (resolvedType.empty() || structNames_.count(resolvedType) == 0) {
+        resolvedType = inferStructReturnPath(receiver, params, locals);
+      }
+      if (resolvedType.empty()) {
+        return false;
+      }
+      resolvedOut = resolvedType + "/" + helperName;
+      return true;
+    }
+    return false;
+  };
+  auto isNonCollectionStructVectorHelperTarget = [&](const std::string &resolvedPath) -> bool {
+    const size_t slash = resolvedPath.find_last_of('/');
+    if (slash == std::string::npos || slash == 0) {
+      return false;
+    }
+    const std::string receiverPath = resolvedPath.substr(0, slash);
+    if (receiverPath == "/array" || receiverPath == "/vector" || receiverPath == "/map" || receiverPath == "/string") {
+      return false;
+    }
+    return structNames_.count(receiverPath) > 0;
+  };
+  auto validateVectorHelperReceiver = [&](const Expr &receiver, const std::string &helperName) -> bool {
+    if (!validateExpr(params, locals, receiver)) {
+      return false;
+    }
+    std::string resolvedMethod;
+    if (!resolveVectorHelperTargetPath(receiver, helperName, resolvedMethod)) {
+      return true;
+    }
+    if (defMap_.find(resolvedMethod) == defMap_.end() && isNonCollectionStructVectorHelperTarget(resolvedMethod)) {
+      error_ = "unknown method: " + resolvedMethod;
+      return false;
+    }
+    return true;
+  };
 
   if (stmt.isBinding) {
     if (!allowBindings) {
@@ -1819,6 +1897,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           error_ = "push requires exactly two arguments";
           return false;
         }
+        if (!validateVectorHelperReceiver(stmt.args.front(), "push")) {
+          return false;
+        }
         if (activeEffects_.count("heap_alloc") == 0) {
           error_ = "push requires heap_alloc effect";
           return false;
@@ -1827,8 +1908,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         if (!validateVectorHelperTarget(stmt.args.front(), "push", binding)) {
           return false;
         }
-        if (!validateExpr(params, locals, stmt.args.front()) ||
-            !validateExpr(params, locals, stmt.args[1])) {
+        if (!validateExpr(params, locals, stmt.args[1])) {
           return false;
         }
         if (!validateVectorElementType(stmt.args[1], binding->typeTemplateArg)) {
@@ -1841,6 +1921,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           error_ = "reserve requires exactly two arguments";
           return false;
         }
+        if (!validateVectorHelperReceiver(stmt.args.front(), "reserve")) {
+          return false;
+        }
         if (activeEffects_.count("heap_alloc") == 0) {
           error_ = "reserve requires heap_alloc effect";
           return false;
@@ -1849,8 +1932,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         if (!validateVectorHelperTarget(stmt.args.front(), "reserve", binding)) {
           return false;
         }
-        if (!validateExpr(params, locals, stmt.args.front()) ||
-            !validateExpr(params, locals, stmt.args[1])) {
+        if (!validateExpr(params, locals, stmt.args[1])) {
           return false;
         }
         if (!isIntegerOrBoolExpr(stmt.args[1])) {
@@ -1864,12 +1946,14 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           error_ = vectorHelper + " requires exactly two arguments";
           return false;
         }
+        if (!validateVectorHelperReceiver(stmt.args.front(), vectorHelper)) {
+          return false;
+        }
         const BindingInfo *binding = nullptr;
         if (!validateVectorHelperTarget(stmt.args.front(), vectorHelper.c_str(), binding)) {
           return false;
         }
-        if (!validateExpr(params, locals, stmt.args.front()) ||
-            !validateExpr(params, locals, stmt.args[1])) {
+        if (!validateExpr(params, locals, stmt.args[1])) {
           return false;
         }
         if (!isIntegerOrBoolExpr(stmt.args[1])) {
@@ -1883,11 +1967,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           error_ = vectorHelper + " requires exactly one argument";
           return false;
         }
-        const BindingInfo *binding = nullptr;
-        if (!validateVectorHelperTarget(stmt.args.front(), vectorHelper.c_str(), binding)) {
+        if (!validateVectorHelperReceiver(stmt.args.front(), vectorHelper)) {
           return false;
         }
-        if (!validateExpr(params, locals, stmt.args.front())) {
+        const BindingInfo *binding = nullptr;
+        if (!validateVectorHelperTarget(stmt.args.front(), vectorHelper.c_str(), binding)) {
           return false;
         }
         return true;
