@@ -9309,6 +9309,63 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
   CHECK(soaRefCallEmitCalls == 1);
   CHECK(error.empty());
 
+  primec::Expr callFieldExpr;
+  callFieldExpr.kind = primec::Expr::Kind::Call;
+  callFieldExpr.name = "x";
+  callFieldExpr.args.push_back(methodCountReceiver);
+  callFieldExpr.args.front().name = "soa_values";
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            callFieldExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+
+  int soaFieldCallEmitCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            callFieldExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &candidate,
+                const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              CHECK(candidate.isMethodCall);
+              CHECK(candidate.name == "x");
+              CHECK(candidate.args.size() == 1);
+              CHECK(candidate.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(candidate.args.front().name == "soa_values");
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &candidate,
+                const primec::Definition &resolvedCallee,
+                const primec::ir_lowerer::LocalMap &) {
+              ++soaFieldCallEmitCalls;
+              CHECK(candidate.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/pkg/helper");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(soaFieldCallEmitCalls == 1);
+  CHECK(error.empty());
+
   primec::Expr directCall;
   directCall.kind = primec::Expr::Kind::Call;
   directCall.name = "helper";

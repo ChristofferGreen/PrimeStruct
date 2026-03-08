@@ -229,6 +229,23 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCallFn,
     std::string &error) {
+  if (!expr.isMethodCall && expr.args.size() == 1 &&
+      isSoaVectorTarget(expr.args.front(), localsIn)) {
+    Expr methodExpr = expr;
+    methodExpr.isMethodCall = true;
+    const std::string priorError = error;
+    if (const Definition *callee = resolveMethodCallDefinitionFn(methodExpr, localsIn)) {
+      if (methodExpr.hasBodyArguments || !methodExpr.bodyArguments.empty()) {
+        error = "native backend does not support block arguments on calls";
+        return InlineCallDispatchResult::Error;
+      }
+      if (!emitInlineDefinitionCallFn(methodExpr, *callee, localsIn)) {
+        return InlineCallDispatchResult::Error;
+      }
+      return InlineCallDispatchResult::Emitted;
+    }
+    error = priorError;
+  }
   if (expr.isMethodCall &&
       (isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref")) &&
       expr.args.size() == 2 &&
