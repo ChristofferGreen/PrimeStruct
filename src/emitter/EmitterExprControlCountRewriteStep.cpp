@@ -17,7 +17,14 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
   (void)isArrayCountCall;
   (void)isMapCountCall;
   (void)isStringCountCall;
-  if (expr.isMethodCall || !isSimpleCallName(expr, "count") || expr.args.size() != 1 || nameMap.count(resolvedPath) != 0) {
+  if (expr.isMethodCall || nameMap.count(resolvedPath) != 0) {
+    return std::nullopt;
+  }
+  const bool isCountLikeCall = isSimpleCallName(expr, "count") && expr.args.size() == 1;
+  const bool isCapacityLikeCall = isSimpleCallName(expr, "capacity") && expr.args.size() == 1;
+  const bool isAccessLikeCall =
+      (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe")) && expr.args.size() == 2;
+  if (!isCountLikeCall && !isCapacityLikeCall && !isAccessLikeCall) {
     return std::nullopt;
   }
   if (!resolveMethodPath) {

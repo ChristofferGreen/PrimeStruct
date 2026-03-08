@@ -521,6 +521,115 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("compiles and runs user wrapper temporary access shadow precedence in C++ emitter") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(80i32)
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(81i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(82i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(83i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(plus(plus(at(wrapMap(), 1i32), wrapMap().at(1i32)), wrapMap()[1i32]),
+              plus(plus(at_unsafe(wrapMap(), 1i32), wrapMap().at_unsafe(1i32)),
+                   plus(plus(plus(at(wrapVector(), 0i32), wrapVector().at(0i32)), wrapVector()[0i32]),
+                        plus(at_unsafe(wrapVector(), 0i32), wrapVector().at_unsafe(0i32))))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_user_wrapper_temp_access_shadow_precedence.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_user_wrapper_temp_access_shadow_precedence_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 814);
+}
+
+TEST_CASE("rejects user wrapper temporary access shadow value mismatch in C++ emitter") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<bool>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(true)
+}
+
+[return<bool>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(true)
+}
+
+[effects(heap_alloc), return<bool>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32] mapCall{at(wrapMap(), 1i32)}
+  [i32] mapMethod{wrapMap().at(1i32)}
+  [i32] mapIndex{wrapMap()[1i32]}
+  [i32] mapUnsafeCall{at_unsafe(wrapMap(), 1i32)}
+  [i32] mapUnsafeMethod{wrapMap().at_unsafe(1i32)}
+  [i32] vectorCall{at(wrapVector(), 0i32)}
+  [i32] vectorMethod{wrapVector().at(0i32)}
+  [i32] vectorIndex{wrapVector()[0i32]}
+  [i32] vectorUnsafeCall{at_unsafe(wrapVector(), 0i32)}
+  [i32] vectorUnsafeMethod{wrapVector().at_unsafe(0i32)}
+  return(plus(mapCall, plus(mapMethod, plus(mapIndex, plus(mapUnsafeCall, plus(mapUnsafeMethod,
+              plus(vectorCall, plus(vectorMethod, plus(vectorIndex, plus(vectorUnsafeCall, vectorUnsafeMethod)))))))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_user_wrapper_temp_access_shadow_value_mismatch.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_user_wrapper_temp_access_shadow_value_mismatch_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("rejects non-vector capacity call target in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
