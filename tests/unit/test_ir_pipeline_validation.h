@@ -144,6 +144,28 @@ Particle() {
   CHECK(error == "native backend does not support soa_vector count");
 }
 
+TEST_CASE("semantics accepts soa_vector get before lowerer rejection") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/use([soa_vector<Particle>] values) {
+  get(values, 0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
+  CHECK(error == "native backend does not support soa_vector get");
+}
+
 TEST_CASE("ir lowerer effects unit validates program effect traversal") {
   auto makeEffectsTransform = [](const std::vector<std::string> &effects) {
     primec::Transform transform;
@@ -9079,6 +9101,62 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
   CHECK(soaEmitCalls == 1);
   CHECK(error.empty());
 
+  primec::Expr methodGetCall;
+  methodGetCall.kind = primec::Expr::Kind::Call;
+  methodGetCall.name = "get";
+  methodGetCall.isMethodCall = true;
+  methodGetCall.args.push_back(methodCountReceiver);
+  primec::Expr indexArg;
+  indexArg.kind = primec::Expr::Kind::Literal;
+  indexArg.intWidth = 32;
+  indexArg.literalValue = 0;
+  methodGetCall.args.push_back(indexArg);
+  methodGetCall.args.front().name = "soa_values";
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            methodGetCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+
+  int soaGetEmitCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            methodGetCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &resolvedCallee, const primec::ir_lowerer::LocalMap &) {
+              ++soaGetEmitCalls;
+              CHECK(resolvedCallee.fullPath == "/pkg/helper");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(soaGetEmitCalls == 1);
+  CHECK(error.empty());
+
   primec::Expr directCall;
   directCall.kind = primec::Expr::Kind::Call;
   directCall.name = "helper";
@@ -9341,6 +9419,39 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             patchInstructionImm,
             error) == Result::Error);
   CHECK(error == "native backend does not support soa_vector count");
+
+  primec::Expr soaGetCall;
+  soaGetCall.kind = primec::Expr::Kind::Call;
+  soaGetCall.name = "get";
+  soaGetCall.args = {soaName, idxName};
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+            soaGetCall,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == Result::Error);
+  CHECK(error == "native backend does not support soa_vector get");
 
   primec::Expr printCall;
   printCall.kind = primec::Expr::Kind::Call;

@@ -229,6 +229,20 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCallFn,
     std::string &error) {
+  if (expr.isMethodCall && isSimpleCallName(expr, "get") && expr.args.size() == 2 &&
+      isSoaVectorTarget(expr.args.front(), localsIn)) {
+    if (const Definition *callee = resolveMethodCallDefinitionFn(expr, localsIn)) {
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error = "native backend does not support block arguments on calls";
+        return InlineCallDispatchResult::Error;
+      }
+      if (!emitInlineDefinitionCallFn(expr, *callee, localsIn)) {
+        return InlineCallDispatchResult::Error;
+      }
+      return InlineCallDispatchResult::Emitted;
+    }
+    return InlineCallDispatchResult::NotHandled;
+  }
   if (expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
       isSoaVectorTarget(expr.args.front(), localsIn)) {
     if (const Definition *callee = resolveMethodCallDefinitionFn(expr, localsIn)) {
@@ -341,6 +355,11 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   if (isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
       isSoaVectorTarget(expr.args.front(), localsIn)) {
     error = "native backend does not support soa_vector count";
+    return NativeCallTailDispatchResult::Error;
+  }
+  if (isSimpleCallName(expr, "get") && expr.args.size() == 2 &&
+      isSoaVectorTarget(expr.args.front(), localsIn)) {
+    error = "native backend does not support soa_vector get";
     return NativeCallTailDispatchResult::Error;
   }
 
@@ -1267,7 +1286,8 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     std::string &error) {
   const bool isCountCall = isSimpleCallName(expr, "count");
   const bool isCapacityCall = isSimpleCallName(expr, "capacity");
-  const bool isAccessCall = isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe");
+  const bool isAccessCall =
+      isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "get");
   const bool isVectorMutatorCall =
       isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") || isSimpleCallName(expr, "reserve") ||
       isSimpleCallName(expr, "clear") || isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap");

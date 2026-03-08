@@ -1802,6 +1802,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return setCollectionMethodTarget("/map/" + methodName);
         }
       }
+      if (methodName == "get") {
+        if (resolveSoaVectorTarget(receiver, elemType)) {
+          return setCollectionMethodTarget("/soa_vector/get");
+        }
+      }
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
         const std::string resolvedType = resolveCalleePath(receiver);
         if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
@@ -2220,6 +2225,35 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (!resolveMethodTarget(receiverCandidate, expr.name, methodResolved, isBuiltinMethod)) {
           // Preserve receiver diagnostics (for example unknown call target)
           // when collection-target resolution fails.
+          (void)validateExpr(params, locals, receiverCandidate);
+          return false;
+        }
+        if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+          error_ = "unknown method: " + methodResolved;
+          return false;
+        }
+        resolved = methodResolved;
+        resolvedMethod = isBuiltinMethod;
+        break;
+      }
+    } else if (expr.name == "get" && expr.args.size() == 2 &&
+               defMap_.find(resolved) == defMap_.end()) {
+      std::vector<size_t> receiverIndices{0};
+      if (hasNamedArguments(expr.argNames) && expr.args.size() > 1) {
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          receiverIndices.push_back(i);
+        }
+      }
+      for (size_t receiverIndex : receiverIndices) {
+        const Expr &receiverCandidate = expr.args[receiverIndex];
+        std::string elemType;
+        if (!resolveSoaVectorTarget(receiverCandidate, elemType)) {
+          continue;
+        }
+        usedMethodTarget = true;
+        bool isBuiltinMethod = false;
+        std::string methodResolved;
+        if (!resolveMethodTarget(receiverCandidate, expr.name, methodResolved, isBuiltinMethod)) {
           (void)validateExpr(params, locals, receiverCandidate);
           return false;
         }
@@ -3381,6 +3415,64 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         if (!validateExpr(params, locals, expr.args.front())) {
           return false;
+        }
+        return true;
+      }
+      if (resolvedMethod && resolved == "/soa_vector/get") {
+        if (!expr.templateArgs.empty()) {
+          error_ = "get does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "get does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 2) {
+          error_ = "argument count mismatch for builtin get";
+          return false;
+        }
+        std::string elemType;
+        if (!resolveSoaVectorTarget(expr.args.front(), elemType)) {
+          error_ = "get requires soa_vector target";
+          return false;
+        }
+        if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
+          error_ = "get requires integer index";
+          return false;
+        }
+        for (const auto &arg : expr.args) {
+          if (!validateExpr(params, locals, arg)) {
+            return false;
+          }
+        }
+        return true;
+      }
+      if (!resolvedMethod && expr.name == "get" && it == defMap_.end()) {
+        if (!expr.templateArgs.empty()) {
+          error_ = "get does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "get does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 2) {
+          error_ = "argument count mismatch for builtin get";
+          return false;
+        }
+        std::string elemType;
+        if (!resolveSoaVectorTarget(expr.args.front(), elemType)) {
+          error_ = "get requires soa_vector target";
+          return false;
+        }
+        if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
+          error_ = "get requires integer index";
+          return false;
+        }
+        for (const auto &arg : expr.args) {
+          if (!validateExpr(params, locals, arg)) {
+            return false;
+          }
         }
         return true;
       }
