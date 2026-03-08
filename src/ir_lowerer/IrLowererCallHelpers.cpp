@@ -1393,7 +1393,8 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   }
   const bool probePositionalReorderedAccessReceiver =
       isAccessCall && !hasNamedArgsValue && expr.args.size() > 1 &&
-      (expr.args.front().kind == Expr::Kind::Literal ||
+      (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
+       expr.args.front().kind == Expr::Kind::FloatLiteral || expr.args.front().kind == Expr::Kind::StringLiteral ||
        (expr.args.front().kind == Expr::Kind::Name &&
         (!isCollectionAccessReceiverExpr ||
          !isCollectionAccessReceiverExpr(expr.args.front()))));

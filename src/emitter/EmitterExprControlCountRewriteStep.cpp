@@ -43,7 +43,8 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
   }
   const bool probePositionalReorderedAccessReceiver =
       isAccessLikeCall && !hasNamedArgs && expr.args.size() > 1 &&
-      (expr.args.front().kind == Expr::Kind::Literal ||
+      (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
+       expr.args.front().kind == Expr::Kind::FloatLiteral || expr.args.front().kind == Expr::Kind::StringLiteral ||
        (expr.args.front().kind == Expr::Kind::Name &&
         (!isCollectionAccessReceiverExpr || !isCollectionAccessReceiverExpr(expr.args.front()))));
   if (probePositionalReorderedAccessReceiver) {

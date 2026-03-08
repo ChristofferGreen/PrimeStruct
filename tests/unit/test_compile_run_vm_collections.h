@@ -4282,6 +4282,24 @@ main() {
   CHECK(runCommand(runCmd) == 67);
 }
 
+TEST_CASE("runs vm with user map at string positional call shadow") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<string, i32>] values, [string] key) {
+  return(83i32)
+}
+
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(at("only"raw_utf8, values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_map_at_string_positional_call_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 83);
+}
+
 TEST_CASE("runs vm with user map at method shadow") {
   const std::string source = R"(
 [return<int>]

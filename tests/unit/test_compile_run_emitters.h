@@ -789,6 +789,28 @@ main() {
   CHECK(runCommand(exePath) == 73);
 }
 
+TEST_CASE("compiles and runs user map access string positional call shadow in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<string, i32>] values, [string] key) {
+  return(84i32)
+}
+
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(at("only"raw_utf8, values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_map_access_string_positional_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_map_access_string_positional_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 84);
+}
+
 TEST_CASE("C++ emitter access rewrite keeps known collection receiver leading names") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

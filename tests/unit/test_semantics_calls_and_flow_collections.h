@@ -2497,6 +2497,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map at call-form helper shadow accepts string positional reordered arguments") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<string, i32>] values, [string] key) {
+  return(81i32)
+}
+
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(at("only"raw_utf8, values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector at_unsafe call-form helper shadow accepts reordered named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

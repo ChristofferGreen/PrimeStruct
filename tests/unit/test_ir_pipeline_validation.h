@@ -3932,6 +3932,33 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   CHECK(*positionalAccessResolvedPath == "/vector/at");
   CHECK(positionalResolveCalls == 2);
 
+  primec::Expr positionalStringAccessExpr = positionalAccessExpr;
+  positionalStringAccessExpr.args[0].kind = primec::Expr::Kind::StringLiteral;
+  positionalStringAccessExpr.args[0].stringValue = "\"only\"raw_utf8";
+  int positionalStringResolveCalls = 0;
+  auto positionalStringAccessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      positionalStringAccessExpr,
+      "at",
+      {},
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        ++positionalStringResolveCalls;
+        if (!methodCandidate.isMethodCall || methodCandidate.args.empty()) {
+          return false;
+        }
+        if (methodCandidate.args.front().kind == primec::Expr::Kind::Name && methodCandidate.args.front().name == "values") {
+          pathOut = "/map/at";
+          return true;
+        }
+        return false;
+      });
+  REQUIRE(positionalStringAccessResolvedPath.has_value());
+  CHECK(*positionalStringAccessResolvedPath == "/map/at");
+  CHECK(positionalStringResolveCalls == 2);
+
   primec::Expr positionalNameAccessExpr = positionalAccessExpr;
   positionalNameAccessExpr.args[0].kind = primec::Expr::Kind::Name;
   positionalNameAccessExpr.args[0].name = "indexName";
@@ -11959,6 +11986,42 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(error.empty());
   CHECK(reorderedAtResolveCalls == 2);
   CHECK(reorderedAtEmitCalls == 1);
+
+  primec::Expr reorderedAtStringCall = atCall;
+  primec::Expr stringKeyArg;
+  stringKeyArg.kind = primec::Expr::Kind::StringLiteral;
+  stringKeyArg.stringValue = "\"only\"raw_utf8";
+  reorderedAtStringCall.args = {stringKeyArg, targetArg};
+  int reorderedAtStringResolveCalls = 0;
+  int reorderedAtStringEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            reorderedAtStringCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++reorderedAtStringResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+                  methodExpr.args.front().name == "items") {
+                return &callee;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++reorderedAtStringEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              REQUIRE_FALSE(methodExpr.args.empty());
+              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(methodExpr.args.front().name == "items");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(reorderedAtStringResolveCalls == 2);
+  CHECK(reorderedAtStringEmitCalls == 1);
 
   primec::Expr reorderedAtNameCall = atCall;
   primec::Expr indexNameArg;
