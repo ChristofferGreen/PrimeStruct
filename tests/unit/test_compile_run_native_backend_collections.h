@@ -720,6 +720,76 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects native user wrapper temporary unsafe parity shadow arity mismatch") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(73i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(74i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(
+      plus(at_unsafe(wrapMap(), 1i32, 2i32), wrapMap().at_unsafe(1i32, 2i32)),
+      plus(at_unsafe(wrapVector(), 0i32, 1i32), wrapVector().at_unsafe(0i32, 1i32))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_user_wrapper_temp_unsafe_parity_shadow_arity_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("rejects native user wrapper temporary unsafe parity shadow missing arguments") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(73i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(74i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(
+      plus(at_unsafe(wrapMap()), wrapMap().at_unsafe()),
+      plus(at_unsafe(wrapVector()), wrapVector().at_unsafe())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_user_wrapper_temp_unsafe_parity_shadow_missing_arguments.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs native user wrapper temporary at shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
