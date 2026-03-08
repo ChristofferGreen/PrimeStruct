@@ -840,7 +840,30 @@ bool SemanticsValidator::buildDefinitionMaps() {
       kind = ReturnKind::Array;
     } else {
       std::string returnKindError;
-      kind = getReturnKind(def, structNames_, importAliases_, returnKindError);
+      for (const auto &transform : def.transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string base;
+        std::string arg;
+        if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "soa_vector") {
+          break;
+        }
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+          break;
+        }
+        if (!isSoaVectorStructElementType(args.front(), def.namespacePrefix, structNames_, importAliases_)) {
+          break;
+        }
+        if (!validateSoaVectorElementFieldEnvelopes(args.front(), def.namespacePrefix)) {
+          returnKindError = error_;
+        }
+        break;
+      }
+      if (returnKindError.empty()) {
+        kind = getReturnKind(def, structNames_, importAliases_, returnKindError);
+      }
       if (!returnKindError.empty()) {
         if (!collectReturnKindDiagnostics) {
           error_ = returnKindError;
@@ -1263,6 +1286,55 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
   }
   error_ = "unresolved or ambiguous omitted struct field envelope: " + fieldPath;
   return false;
+}
+
+bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::string &typeArg,
+                                                                const std::string &namespacePrefix) {
+  const std::string normalizedTypeArg = normalizeBindingTypeName(typeArg);
+  std::string elementStructPath = resolveStructTypePath(normalizedTypeArg, namespacePrefix, structNames_);
+  if (elementStructPath.empty()) {
+    auto importIt = importAliases_.find(normalizedTypeArg);
+    if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+      elementStructPath = importIt->second;
+    }
+  }
+  if (elementStructPath.empty()) {
+    return true;
+  }
+  auto structIt = defMap_.find(elementStructPath);
+  if (structIt == defMap_.end()) {
+    return true;
+  }
+  auto hasStaticTransform = [](const Expr &stmt) -> bool {
+    for (const auto &transform : stmt.transforms) {
+      if (transform.name == "static") {
+        return true;
+      }
+    }
+    return false;
+  };
+  const Definition &elementStruct = *structIt->second;
+  for (const auto &fieldStmt : elementStruct.statements) {
+    if (!fieldStmt.isBinding || hasStaticTransform(fieldStmt)) {
+      continue;
+    }
+    BindingInfo fieldBinding;
+    if (!resolveStructFieldBinding(elementStruct, fieldStmt, fieldBinding)) {
+      return false;
+    }
+    const std::string normalizedFieldType = normalizeBindingTypeName(fieldBinding.typeName);
+    if (normalizedFieldType == "string" || fieldBinding.typeName == "Pointer" || fieldBinding.typeName == "Reference" ||
+        !fieldBinding.typeTemplateArg.empty()) {
+      std::string fieldType = fieldBinding.typeName;
+      if (!fieldBinding.typeTemplateArg.empty()) {
+        fieldType += "<" + fieldBinding.typeTemplateArg + ">";
+      }
+      error_ =
+          "soa_vector field envelope is unsupported on " + elementStruct.fullPath + "/" + fieldStmt.name + ": " + fieldType;
+      return false;
+    }
+  }
+  return true;
 }
 
 bool SemanticsValidator::resolveUninitializedStorageBinding(const std::vector<ParameterInfo> &params,

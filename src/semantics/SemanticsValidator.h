@@ -56,6 +56,7 @@ private:
   bool resolveStructFieldBinding(const Definition &structDef,
                                  const Expr &fieldStmt,
                                  BindingInfo &bindingOut);
+  bool validateSoaVectorElementFieldEnvelopes(const std::string &typeArg, const std::string &namespacePrefix);
   bool allowMathBareName(const std::string &name) const;
   bool hasAnyMathImport() const;
   bool isEntryArgsName(const std::string &name) const;

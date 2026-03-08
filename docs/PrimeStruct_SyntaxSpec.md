@@ -605,7 +605,8 @@ but semantic validation rejects `soa_vector` usage with deterministic diagnostic
 (`soa_vector is not implemented yet`, `soa_vector requires struct element type`,
 `soa_vector literal requires struct element type`, `soa_vector return type requires struct element type`,
 `soa_vector literal requires exactly one template argument`, `soa_vector return type requires exactly one template argument`,
-and `soa_vector field envelope is unsupported on /Type/field: ...` for disallowed literal element-field envelopes).
+and `soa_vector field envelope is unsupported on /Type/field: ...` for disallowed element-field envelopes in literal,
+binding, and return validation paths).
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 

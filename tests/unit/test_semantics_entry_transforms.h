@@ -113,6 +113,22 @@ main() {
   CHECK(error.find("soa_vector return type requires struct element type on /main") != std::string::npos);
 }
 
+TEST_CASE("soa_vector return rejects disallowed element field envelope") {
+  const std::string source = R"(
+Particle() {
+  [array<i32>] values{array<i32>(1i32)}
+}
+
+[return<soa_vector<Particle>>]
+main() {
+  return(soa_vector<Particle>())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field envelope is unsupported on /Particle/values: array<i32>") != std::string::npos);
+}
+
 TEST_CASE("reference return allows direct parameter reference") {
   const std::string source = R"(
 [return<Reference<i32>>]

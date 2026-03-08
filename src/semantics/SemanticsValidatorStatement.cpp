@@ -420,6 +420,18 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       error_ = "duplicate binding name: " + stmt.name;
       return false;
     }
+    for (const auto &transform : stmt.transforms) {
+      if (transform.name != "soa_vector" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      if (!isSoaVectorStructElementType(transform.templateArgs.front(), namespacePrefix, structNames_, importAliases_)) {
+        break;
+      }
+      if (!validateSoaVectorElementFieldEnvelopes(transform.templateArgs.front(), namespacePrefix)) {
+        return false;
+      }
+      break;
+    }
     BindingInfo info;
     std::optional<std::string> restrictType;
     if (!parseBindingInfo(stmt, namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
