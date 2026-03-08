@@ -294,7 +294,7 @@ bool emitConversionsAndCallsOperatorExpr(
 
             const bool isVector = (builtin == "vector");
             const int32_t baseLocal = nextLocal;
-            const int32_t headerSlots = isVector ? 2 : 1;
+            const int32_t headerSlots = isVector ? 3 : 1;
             const int32_t literalCount = static_cast<int32_t>(expr.args.size());
             if (isVector && literalCount > kVectorLocalDynamicCapacityLimit) {
               error = vectorLiteralExceedsLocalCapacityLimitMessage();
@@ -302,6 +302,7 @@ bool emitConversionsAndCallsOperatorExpr(
             }
             const int32_t storageCapacity =
                 isVector ? std::max(literalCount, kVectorLocalDynamicCapacityLimit) : literalCount;
+            const int32_t dataBaseLocal = baseLocal + headerSlots;
             nextLocal += headerSlots + storageCapacity;
 
             instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
@@ -309,6 +310,8 @@ bool emitConversionsAndCallsOperatorExpr(
             if (isVector) {
               instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
               instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+              instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(dataBaseLocal)});
+              instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
             }
 
             for (size_t i = 0; i < expr.args.size(); ++i) {
@@ -326,7 +329,7 @@ bool emitConversionsAndCallsOperatorExpr(
                 return false;
               }
               instructions.push_back(
-                  {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + headerSlots + static_cast<int32_t>(i))});
+                  {IrOpcode::StoreLocal, static_cast<uint64_t>(dataBaseLocal + static_cast<int32_t>(i))});
             }
 
             instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});

@@ -634,9 +634,16 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   };
 
   const int32_t ptrLocal = allocTempLocal();
-  const int32_t elementOffset = 2;
+  constexpr uint64_t kVectorDataPtrOffsetBytes = 2 * IrSlotBytes;
   instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+  auto emitLoadVectorDataPtr = [&](int32_t dataPtrLocal) {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::PushI64, kVectorDataPtrOffsetBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::LoadIndirect, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataPtrLocal)});
+  };
 
   if (vectorHelper == "clear") {
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
@@ -772,11 +779,11 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     }
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
 
+    const int32_t dataPtrLocal = allocTempLocal();
+    emitLoadVectorDataPtr(dataPtrLocal);
     const int32_t destPtrLocal = allocTempLocal();
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
-    instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(elementOffset)});
-    instructions.push_back({IrOpcode::AddI32, 0});
     instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
     instructions.push_back({IrOpcode::MulI32, 0});
     instructions.push_back({IrOpcode::AddI64, 0});
@@ -901,23 +908,21 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(lastIndexLocal)});
 
   if (vectorHelper == "remove_swap") {
+    const int32_t dataPtrLocal = allocTempLocal();
+    emitLoadVectorDataPtr(dataPtrLocal);
     const int32_t destPtrLocal = allocTempLocal();
     const int32_t srcPtrLocal = allocTempLocal();
     const int32_t tempValueLocal = allocTempLocal();
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-    pushIndexConst(indexKind, elementOffset);
-    instructions.push_back({addOp, 0});
     pushIndexConst(indexKind, IrSlotBytesI32);
     instructions.push_back({mulOp, 0});
     instructions.push_back({IrOpcode::AddI64, 0});
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(lastIndexLocal)});
-    pushIndexConst(indexKind, elementOffset);
-    instructions.push_back({addOp, 0});
     pushIndexConst(indexKind, IrSlotBytesI32);
     instructions.push_back({mulOp, 0});
     instructions.push_back({IrOpcode::AddI64, 0});
@@ -947,6 +952,8 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   const int32_t destPtrLocal = allocTempLocal();
   const int32_t srcPtrLocal = allocTempLocal();
   const int32_t tempValueLocal = allocTempLocal();
+  const int32_t dataPtrLocal = allocTempLocal();
+  emitLoadVectorDataPtr(dataPtrLocal);
 
   const size_t loopStart = instructions.size();
   instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
@@ -955,18 +962,16 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   size_t jumpLoopEnd = instructions.size();
   instructions.push_back({IrOpcode::JumpIfZero, 0});
 
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
   instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-  pushIndexConst(indexKind, elementOffset);
-  instructions.push_back({addOp, 0});
   pushIndexConst(indexKind, IrSlotBytesI32);
   instructions.push_back({mulOp, 0});
   instructions.push_back({IrOpcode::AddI64, 0});
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
 
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
   instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-  pushIndexConst(indexKind, elementOffset + 1);
+  pushIndexConst(indexKind, 1);
   instructions.push_back({addOp, 0});
   pushIndexConst(indexKind, IrSlotBytesI32);
   instructions.push_back({mulOp, 0});

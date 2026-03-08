@@ -671,7 +671,6 @@ bool emitArrayVectorIndexedAccess(
     return false;
   }
 
-  const uint64_t headerSlots = arrayVectorTargetInfo.isVectorTarget ? 2 : 1;
   const int32_t ptrLocal = allocTempLocal();
   if (!emitExpr(targetExpr, localsIn)) {
     return false;
@@ -689,7 +688,8 @@ bool emitArrayVectorIndexedAccess(
       ptrLocal,
       indexLocal,
       indexKind,
-      headerSlots,
+      arrayVectorTargetInfo.isVectorTarget,
+      1,
       allocTempLocal,
       emitArrayIndexOutOfBounds,
       instructionCount,
@@ -1044,7 +1044,8 @@ void emitArrayVectorAccessLoad(
     int32_t ptrLocal,
     int32_t indexLocal,
     LocalInfo::ValueKind indexKind,
-    uint64_t headerSlots,
+    bool isVectorTarget,
+    uint64_t arrayHeaderSlots,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void()> &emitArrayIndexOutOfBounds,
     const std::function<size_t()> &instructionCount,
@@ -1075,10 +1076,22 @@ void emitArrayVectorAccessLoad(
     patchInstructionImm(jumpInRange, static_cast<uint64_t>(instructionCount()));
   }
 
-  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  int32_t basePtrLocal = ptrLocal;
+  if (isVectorTarget) {
+    basePtrLocal = allocTempLocal();
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+    emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(2 * IrSlotBytes));
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(basePtrLocal));
+  }
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(basePtrLocal));
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
-  emitInstruction(pushOneForIndex(indexKind), headerSlots);
-  emitInstruction(addForIndex(indexKind), 0);
+  if (!isVectorTarget) {
+    emitInstruction(pushOneForIndex(indexKind), arrayHeaderSlots);
+    emitInstruction(addForIndex(indexKind), 0);
+  }
   emitInstruction(pushOneForIndex(indexKind), IrSlotBytesI32);
   emitInstruction(mulForIndex(indexKind), 0);
   emitInstruction(IrOpcode::AddI64, 0);

@@ -10040,10 +10040,10 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
       error));
   CHECK(error.empty());
   CHECK(inferCalls == 1);
-  CHECK(allocCalls == 3);
+  CHECK(allocCalls == 4);
   CHECK(emitExprCalls == 2);
   CHECK(arrayIndexOutOfBoundsCalls == 2);
-  REQUIRE(instructions.size() == 23);
+  REQUIRE(instructions.size() == 26);
   CHECK(instructions[0].op == primec::IrOpcode::PushI32);
   CHECK(instructions[0].imm == 101);
   CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
@@ -10052,8 +10052,14 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
   CHECK(instructions[2].imm == 3);
   CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[3].imm == 51);
-  CHECK(instructions[17].op == primec::ir_lowerer::pushOneForIndex(Kind::Int32));
-  CHECK(instructions[17].imm == 2);
+  CHECK(instructions[16].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[16].imm == 16);
+  CHECK(instructions[19].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[19].imm == 53);
+  CHECK(instructions[20].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[20].imm == 53);
+  CHECK(instructions[22].op == primec::ir_lowerer::pushOneForIndex(Kind::Int32));
+  CHECK(instructions[22].imm == primec::IrSlotBytesI32);
   CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
 }
 
@@ -10913,15 +10919,16 @@ TEST_CASE("ir lowerer call helpers emit array vector access load") {
       8,
       9,
       Kind::Int32,
-      2,
+      true,
+      1,
       [&]() { return nextLocal++; },
       [&]() { ++arrayIndexOutOfBoundsCalls; },
       [&]() { return instructions.size(); },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; });
-  CHECK(nextLocal == 31);
+  CHECK(nextLocal == 32);
   CHECK(arrayIndexOutOfBoundsCalls == 2);
-  REQUIRE(instructions.size() == 19);
+  REQUIRE(instructions.size() == 22);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 8);
   CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
@@ -10942,16 +10949,21 @@ TEST_CASE("ir lowerer call helpers emit array vector access load") {
   CHECK(instructions[10].imm == 11);
   CHECK(instructions[11].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[11].imm == 8);
-  CHECK(instructions[12].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[12].imm == 9);
-  CHECK(instructions[13].op == primec::ir_lowerer::pushOneForIndex(Kind::Int32));
-  CHECK(instructions[13].imm == 2);
-  CHECK(instructions[14].op == primec::ir_lowerer::addForIndex(Kind::Int32));
-  CHECK(instructions[15].op == primec::ir_lowerer::pushOneForIndex(Kind::Int32));
-  CHECK(instructions[15].imm == primec::IrSlotBytesI32);
-  CHECK(instructions[16].op == primec::ir_lowerer::mulForIndex(Kind::Int32));
-  CHECK(instructions[17].op == primec::IrOpcode::AddI64);
-  CHECK(instructions[18].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[12].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[12].imm == 16);
+  CHECK(instructions[13].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[14].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[15].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[15].imm == 31);
+  CHECK(instructions[16].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[16].imm == 31);
+  CHECK(instructions[17].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[17].imm == 9);
+  CHECK(instructions[18].op == primec::ir_lowerer::pushOneForIndex(Kind::Int32));
+  CHECK(instructions[18].imm == primec::IrSlotBytesI32);
+  CHECK(instructions[19].op == primec::ir_lowerer::mulForIndex(Kind::Int32));
+  CHECK(instructions[20].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[21].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   nextLocal = 40;
@@ -10961,6 +10973,7 @@ TEST_CASE("ir lowerer call helpers emit array vector access load") {
       8,
       9,
       Kind::UInt64,
+      false,
       1,
       [&]() { return nextLocal++; },
       [&]() { ++arrayIndexOutOfBoundsCalls; },
@@ -22952,6 +22965,90 @@ TEST_CASE("ir lowerer conversions helper emits float conversion opcode") {
   CHECK(std::any_of(instructions.begin(),
                     instructions.end(),
                     [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::ConvertI32ToF32; }));
+}
+
+TEST_CASE("ir lowerer conversions helper emits vector record header with data pointer") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr argA;
+  argA.kind = primec::Expr::Kind::Literal;
+  argA.intWidth = 32;
+  argA.literalValue = 11;
+
+  primec::Expr argB;
+  argB.kind = primec::Expr::Kind::Literal;
+  argB.intWidth = 32;
+  argB.literalValue = 22;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "vector";
+  expr.templateArgs = {"i32"};
+  expr.args = {argA, argB};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 5;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      {},
+      nextLocal,
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(valueExpr.literalValue)});
+        return true;
+      },
+      [](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        if (valueExpr.kind == primec::Expr::Kind::Literal) {
+          return ValueKind::Int32;
+        }
+        return ValueKind::Unknown;
+      },
+      [](ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const std::string &typeName) {
+        if (typeName == "i32") {
+          return ValueKind::Int32;
+        }
+        return ValueKind::Unknown;
+      },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, int32_t &) { return false; },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK(ok);
+  CHECK(handled);
+  CHECK(error.empty());
+  CHECK(nextLocal == 264);
+  REQUIRE(instructions.size() == 11);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 2);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 5);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[2].imm == 2);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 6);
+  CHECK(instructions[4].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[4].imm == 8);
+  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[5].imm == 7);
+  CHECK(instructions[6].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[6].imm == 11);
+  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[7].imm == 8);
+  CHECK(instructions[8].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[8].imm == 22);
+  CHECK(instructions[9].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[9].imm == 9);
+  CHECK(instructions[10].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[10].imm == 5);
 }
 
 TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
