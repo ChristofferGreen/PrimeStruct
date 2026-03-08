@@ -1,5 +1,8 @@
 #include "EmitterExprControlCountRewriteStep.h"
 
+#include <utility>
+#include <vector>
+
 #include "EmitterHelpers.h"
 
 namespace primec::emitter {
@@ -30,13 +33,28 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
   if (!resolveMethodPath) {
     return std::nullopt;
   }
-  Expr methodExpr = expr;
-  methodExpr.isMethodCall = true;
-  std::string methodPath;
-  if (!resolveMethodPath(methodExpr, methodPath)) {
-    return std::nullopt;
+  std::vector<size_t> receiverIndices{0};
+  if (hasNamedArguments(expr.argNames) && expr.args.size() > 1) {
+    for (size_t i = 1; i < expr.args.size(); ++i) {
+      receiverIndices.push_back(i);
+    }
   }
-  return methodPath;
+  for (size_t receiverIndex : receiverIndices) {
+    Expr methodExpr = expr;
+    methodExpr.isMethodCall = true;
+    if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
+      std::swap(methodExpr.args[0], methodExpr.args[receiverIndex]);
+      if (methodExpr.argNames.size() < methodExpr.args.size()) {
+        methodExpr.argNames.resize(methodExpr.args.size());
+      }
+      std::swap(methodExpr.argNames[0], methodExpr.argNames[receiverIndex]);
+    }
+    std::string methodPath;
+    if (resolveMethodPath(methodExpr, methodPath)) {
+      return methodPath;
+    }
+  }
+  return std::nullopt;
 }
 
 } // namespace primec::emitter

@@ -2040,6 +2040,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector at call-form helper shadow accepts reordered named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(at([index] 1i32, [values] values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector at_unsafe call-form helper shadow accepts reordered named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(78i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(at_unsafe([index] 1i32, [values] values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("user definition named push with positional args is not treated as builtin") {
   const std::string source = R"(
 [return<int>]

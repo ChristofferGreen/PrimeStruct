@@ -2166,16 +2166,26 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       resolvedMethod = isBuiltinMethod;
     } else if ((expr.name == "at" || expr.name == "at_unsafe") && expr.args.size() == 2 &&
                defMap_.find(resolved) == defMap_.end()) {
-      std::string elemType;
-      if (resolveVectorTarget(expr.args.front(), elemType) || resolveArrayTarget(expr.args.front(), elemType) ||
-          resolveStringTarget(expr.args.front()) || resolveMapTarget(expr.args.front())) {
+      std::vector<size_t> receiverIndices{0};
+      if (hasNamedArguments(expr.argNames) && expr.args.size() > 1) {
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          receiverIndices.push_back(i);
+        }
+      }
+      for (size_t receiverIndex : receiverIndices) {
+        const Expr &receiverCandidate = expr.args[receiverIndex];
+        std::string elemType;
+        if (!(resolveVectorTarget(receiverCandidate, elemType) || resolveArrayTarget(receiverCandidate, elemType) ||
+              resolveStringTarget(receiverCandidate) || resolveMapTarget(receiverCandidate))) {
+          continue;
+        }
         usedMethodTarget = true;
         bool isBuiltinMethod = false;
         std::string methodResolved;
-        if (!resolveMethodTarget(expr.args.front(), expr.name, methodResolved, isBuiltinMethod)) {
+        if (!resolveMethodTarget(receiverCandidate, expr.name, methodResolved, isBuiltinMethod)) {
           // Preserve receiver diagnostics (for example unknown call target)
           // when collection-target resolution fails.
-          (void)validateExpr(params, locals, expr.args.front());
+          (void)validateExpr(params, locals, receiverCandidate);
           return false;
         }
         if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
@@ -2184,6 +2194,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         resolved = methodResolved;
         resolvedMethod = isBuiltinMethod;
+        break;
       }
     }
     if (usedMethodTarget && !resolvedMethod) {
@@ -2872,6 +2883,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           std::string arrayAccessName;
           if (!getBuiltinArrayAccessName(expr, arrayAccessName)) {
             return false;
+          }
+          if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
+            for (const auto &receiverCandidate : expr.args) {
+              bool isBuiltinMethod = false;
+              std::string methodResolved;
+              if (resolveMethodTarget(receiverCandidate, expr.name, methodResolved, isBuiltinMethod) &&
+                  !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
+                return false;
+              }
+            }
           }
           return defMap_.find(resolved) == defMap_.end();
         };

@@ -607,6 +607,28 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("compiles and runs user vector access named call shadow in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(at([index] 1i32, [values] values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_access_named_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_access_named_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
+}
+
 TEST_CASE("rejects user vector mutator shadow arg mismatch in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]

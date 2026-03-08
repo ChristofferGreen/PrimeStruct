@@ -3715,6 +3715,39 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   CHECK(*countLikeResolvedPath == "/Vec3/count");
   CHECK(resolverCalled);
 
+  primec::Expr accessExpr = wrongArityExpr;
+  accessExpr.name = "at";
+  accessExpr.args = {primec::Expr{}, primec::Expr{}};
+  accessExpr.args[0].kind = primec::Expr::Kind::Literal;
+  accessExpr.args[0].intValue = 1;
+  accessExpr.args[1].kind = primec::Expr::Kind::Name;
+  accessExpr.args[1].name = "values";
+  accessExpr.argNames = {std::string("index"), std::string("values")};
+  bool sawReorderedReceiver = false;
+  auto accessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      accessExpr,
+      "at",
+      {},
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        if (!methodCandidate.isMethodCall || methodCandidate.argNames.size() < 2 ||
+            !methodCandidate.argNames[0].has_value() || !methodCandidate.argNames[1].has_value()) {
+          return false;
+        }
+        if (*methodCandidate.argNames[0] != "values" || *methodCandidate.argNames[1] != "index") {
+          return false;
+        }
+        sawReorderedReceiver = true;
+        pathOut = "/vector/at";
+        return true;
+      });
+  REQUIRE(accessResolvedPath.has_value());
+  CHECK(*accessResolvedPath == "/vector/at");
+  CHECK(sawReorderedReceiver);
+
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
       countExpr,
       "count",

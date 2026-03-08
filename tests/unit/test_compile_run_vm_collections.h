@@ -4310,7 +4310,7 @@ TEST_CASE("runs vm with user vector at call shadow") {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(at(values, 1i32))
+  return(at([index] 1i32, [values] values))
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_at_call_shadow.prime", source);
@@ -4382,7 +4382,7 @@ TEST_CASE("runs vm with user vector at_unsafe call shadow") {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(at_unsafe(values, 1i32))
+  return(at_unsafe([index] 1i32, [values] values))
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_at_unsafe_call_shadow.prime", source);
