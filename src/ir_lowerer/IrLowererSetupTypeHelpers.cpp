@@ -394,15 +394,85 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   (void)isArrayCountCall;
   (void)isStringCountCall;
 
-  Expr methodExpr = callExpr;
-  methodExpr.isMethodCall = true;
-  return resolveMethodCallReturnKind(methodExpr,
-                                     localsIn,
-                                     resolveMethodCallDefinition,
-                                     getReturnInfo,
-                                     requireArrayReturn,
-                                     kindOut,
-                                     methodResolvedOut);
+  auto hasNamedArgs = [&]() {
+    for (const auto &argName : callExpr.argNames) {
+      if (argName.has_value()) {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto isKnownCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
+    if (candidate.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(candidate.name);
+    if (it == localsIn.end()) {
+      return false;
+    }
+    const LocalInfo &info = it->second;
+    return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
+           (info.kind == LocalInfo::Kind::Reference && info.referenceToArray) || info.isSoaVector ||
+           (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
+  };
+  auto buildMethodExprForReceiverIndex = [&](size_t receiverIndex) {
+    Expr methodExpr = callExpr;
+    methodExpr.isMethodCall = true;
+    if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
+      std::swap(methodExpr.args[0], methodExpr.args[receiverIndex]);
+      if (methodExpr.argNames.size() < methodExpr.args.size()) {
+        methodExpr.argNames.resize(methodExpr.args.size());
+      }
+      std::swap(methodExpr.argNames[0], methodExpr.argNames[receiverIndex]);
+    }
+    return methodExpr;
+  };
+
+  std::vector<size_t> receiverIndices{0};
+  const bool hasNamedArgsValue = hasNamedArgs();
+  if (hasNamedArgsValue && callExpr.args.size() > 1) {
+    for (size_t i = 1; i < callExpr.args.size(); ++i) {
+      receiverIndices.push_back(i);
+    }
+  }
+  const bool probePositionalReorderedAccessReceiver =
+      isAccessCall && !hasNamedArgsValue && callExpr.args.size() > 1 &&
+      (callExpr.args.front().kind == Expr::Kind::Literal || callExpr.args.front().kind == Expr::Kind::BoolLiteral ||
+       callExpr.args.front().kind == Expr::Kind::FloatLiteral || callExpr.args.front().kind == Expr::Kind::StringLiteral ||
+       (callExpr.args.front().kind == Expr::Kind::Name &&
+        !isKnownCollectionAccessReceiverExpr(callExpr.args.front())));
+  if (probePositionalReorderedAccessReceiver) {
+    for (size_t i = 1; i < callExpr.args.size(); ++i) {
+      receiverIndices.push_back(i);
+    }
+  }
+
+  for (size_t receiverIndex : receiverIndices) {
+    Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
+    bool methodResolved = false;
+    if (resolveMethodCallReturnKind(methodExpr,
+                                    localsIn,
+                                    resolveMethodCallDefinition,
+                                    getReturnInfo,
+                                    requireArrayReturn,
+                                    kindOut,
+                                    &methodResolved)) {
+      if (methodResolvedOut != nullptr) {
+        *methodResolvedOut = true;
+      }
+      return true;
+    }
+    if (methodResolved) {
+      if (methodResolvedOut != nullptr) {
+        *methodResolvedOut = true;
+      }
+      return false;
+    }
+  }
+  return false;
 }
 
 bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
