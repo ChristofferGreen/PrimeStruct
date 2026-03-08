@@ -629,6 +629,51 @@ main() {
   CHECK(runCommand(exePath) == 91);
 }
 
+TEST_CASE("compiles and runs user vector access positional call shadow in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(73i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(at(1i32, values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_access_positional_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_access_positional_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 73);
+}
+
+TEST_CASE("C++ emitter access rewrite keeps known collection receiver leading names") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/i32/at([i32] index, [vector<i32>] values) {
+  return(66i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [i32] index{1i32}
+  return(at(values, index))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_access_known_receiver_no_reorder.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_access_known_receiver_no_reorder_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("rejects user vector mutator shadow arg mismatch in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]

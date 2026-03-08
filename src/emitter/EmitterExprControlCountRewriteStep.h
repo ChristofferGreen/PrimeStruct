@@ -13,6 +13,7 @@ namespace primec::emitter {
 using EmitterExprControlCountRewriteIsCountLikeCallFn =
     std::function<bool(const Expr &, const std::unordered_map<std::string, Emitter::BindingInfo> &)>;
 using EmitterExprControlCountRewriteResolveMethodPathFn = std::function<bool(const Expr &, std::string &)>;
+using EmitterExprControlCountRewriteIsCollectionAccessReceiverFn = std::function<bool(const Expr &)>;
 
 std::optional<std::string> runEmitterExprControlCountRewriteStep(
     const Expr &expr,
@@ -22,6 +23,7 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isArrayCountCall,
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isMapCountCall,
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isStringCountCall,
-    const EmitterExprControlCountRewriteResolveMethodPathFn &resolveMethodPath);
+    const EmitterExprControlCountRewriteResolveMethodPathFn &resolveMethodPath,
+    const EmitterExprControlCountRewriteIsCollectionAccessReceiverFn &isCollectionAccessReceiverExpr = {});
 
 } // namespace primec::emitter

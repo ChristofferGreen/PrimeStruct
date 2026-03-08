@@ -82,6 +82,10 @@
                                          returnKinds,
                                          returnStructs,
                                          methodPathOut);
+          },
+          [&](const Expr &receiverExpr) {
+            return isArrayValue(receiverExpr, localTypes) || isMapValue(receiverExpr, localTypes) ||
+                   isStringValue(receiverExpr, localTypes);
           });
       countRewritePath.has_value()) {
     full = *countRewritePath;

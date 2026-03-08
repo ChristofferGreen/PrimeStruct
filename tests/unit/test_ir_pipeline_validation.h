@@ -3906,6 +3906,94 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   CHECK(*accessResolvedPath == "/vector/at");
   CHECK(sawReorderedReceiver);
 
+  primec::Expr positionalAccessExpr = accessExpr;
+  positionalAccessExpr.argNames.clear();
+  int positionalResolveCalls = 0;
+  auto positionalAccessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      positionalAccessExpr,
+      "at",
+      {},
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        ++positionalResolveCalls;
+        if (!methodCandidate.isMethodCall || methodCandidate.args.empty()) {
+          return false;
+        }
+        if (methodCandidate.args.front().kind == primec::Expr::Kind::Name && methodCandidate.args.front().name == "values") {
+          pathOut = "/vector/at";
+          return true;
+        }
+        return false;
+      });
+  REQUIRE(positionalAccessResolvedPath.has_value());
+  CHECK(*positionalAccessResolvedPath == "/vector/at");
+  CHECK(positionalResolveCalls == 2);
+
+  primec::Expr positionalNameAccessExpr = positionalAccessExpr;
+  positionalNameAccessExpr.args[0].kind = primec::Expr::Kind::Name;
+  positionalNameAccessExpr.args[0].name = "indexName";
+  int positionalNameResolveCalls = 0;
+  auto positionalNameAccessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      positionalNameAccessExpr,
+      "at",
+      {},
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        ++positionalNameResolveCalls;
+        if (!methodCandidate.isMethodCall || methodCandidate.args.empty()) {
+          return false;
+        }
+        if (methodCandidate.args.front().kind == primec::Expr::Kind::Name && methodCandidate.args.front().name == "values") {
+          pathOut = "/vector/at";
+          return true;
+        }
+        return false;
+      },
+      [&](const primec::Expr &receiverExpr) {
+        return receiverExpr.kind == primec::Expr::Kind::Name && receiverExpr.name == "values";
+      });
+  REQUIRE(positionalNameAccessResolvedPath.has_value());
+  CHECK(*positionalNameAccessResolvedPath == "/vector/at");
+  CHECK(positionalNameResolveCalls == 2);
+
+  primec::Expr knownReceiverAccessExpr = positionalAccessExpr;
+  knownReceiverAccessExpr.args[0].kind = primec::Expr::Kind::Name;
+  knownReceiverAccessExpr.args[0].name = "values";
+  knownReceiverAccessExpr.args[1].kind = primec::Expr::Kind::Name;
+  knownReceiverAccessExpr.args[1].name = "indexName";
+  int knownReceiverResolveCalls = 0;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
+                  knownReceiverAccessExpr,
+                  "at",
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+                    ++knownReceiverResolveCalls;
+                    if (!methodCandidate.isMethodCall || methodCandidate.args.empty()) {
+                      return false;
+                    }
+                    if (methodCandidate.args.front().kind == primec::Expr::Kind::Name &&
+                        methodCandidate.args.front().name == "indexName") {
+                      pathOut = "/i32/at";
+                      return true;
+                    }
+                    return false;
+                  },
+                  [&](const primec::Expr &receiverExpr) {
+                    return receiverExpr.kind == primec::Expr::Kind::Name && receiverExpr.name == "values";
+                  })
+                  .has_value());
+  CHECK(knownReceiverResolveCalls == 1);
+
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
       countExpr,
       "count",

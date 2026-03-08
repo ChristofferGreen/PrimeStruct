@@ -15,7 +15,8 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isArrayCountCall,
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isMapCountCall,
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isStringCountCall,
-    const EmitterExprControlCountRewriteResolveMethodPathFn &resolveMethodPath) {
+    const EmitterExprControlCountRewriteResolveMethodPathFn &resolveMethodPath,
+    const EmitterExprControlCountRewriteIsCollectionAccessReceiverFn &isCollectionAccessReceiverExpr) {
   (void)localTypes;
   (void)isArrayCountCall;
   (void)isMapCountCall;
@@ -33,8 +34,19 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
   if (!resolveMethodPath) {
     return std::nullopt;
   }
+  const bool hasNamedArgs = hasNamedArguments(expr.argNames);
   std::vector<size_t> receiverIndices{0};
-  if (hasNamedArguments(expr.argNames) && expr.args.size() > 1) {
+  if (hasNamedArgs && expr.args.size() > 1) {
+    for (size_t i = 1; i < expr.args.size(); ++i) {
+      receiverIndices.push_back(i);
+    }
+  }
+  const bool probePositionalReorderedAccessReceiver =
+      isAccessLikeCall && !hasNamedArgs && expr.args.size() > 1 &&
+      (expr.args.front().kind == Expr::Kind::Literal ||
+       (expr.args.front().kind == Expr::Kind::Name &&
+        (!isCollectionAccessReceiverExpr || !isCollectionAccessReceiverExpr(expr.args.front()))));
+  if (probePositionalReorderedAccessReceiver) {
     for (size_t i = 1; i < expr.args.size(); ++i) {
       receiverIndices.push_back(i);
     }
