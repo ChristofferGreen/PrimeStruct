@@ -222,6 +222,7 @@ private:
   std::vector<std::string_view> ownedArgs_;
   std::vector<size_t> localCounts_;
   std::vector<uint64_t> stack_;
+  std::vector<uint64_t> heapSlots_;
   std::vector<Frame> frames_;
   VmDebugSessionState state_ = VmDebugSessionState::Idle;
   uint64_t result_ = 0;

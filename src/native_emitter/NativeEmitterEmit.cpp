@@ -276,6 +276,9 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
       case IrOpcode::StoreIndirect:
         emitter.emitStoreIndirect();
         break;
+      case IrOpcode::HeapAlloc:
+        emitter.emitHeapAlloc();
+        break;
       case IrOpcode::Dup:
         emitter.emitDup();
         break;

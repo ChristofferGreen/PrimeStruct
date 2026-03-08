@@ -1211,6 +1211,24 @@ TEST_CASE("vm debug opcode matrix matches vm execute for expanded families") {
 
   {
     OpcodeMatrixCase c;
+    c.name = "heap allocation opcode family";
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+    fn.instructions.push_back({primec::IrOpcode::HeapAlloc, 0});
+    fn.instructions.push_back({primec::IrOpcode::Dup, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 55});
+    fn.instructions.push_back({primec::IrOpcode::StoreIndirect, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::LoadIndirect, 0});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    OpcodeMatrixCase c;
     c.name = "float compare and convert families";
     primec::IrFunction fn;
     fn.name = "/main";

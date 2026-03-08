@@ -66,6 +66,7 @@ bool stackEffectForOpcode(IrOpcode op, StackEffect &out, std::string &error) {
       out = {1, 0, 0};
       return true;
     case IrOpcode::LoadIndirect:
+    case IrOpcode::HeapAlloc:
     case IrOpcode::NegI32:
     case IrOpcode::NegI64:
     case IrOpcode::NegF32:

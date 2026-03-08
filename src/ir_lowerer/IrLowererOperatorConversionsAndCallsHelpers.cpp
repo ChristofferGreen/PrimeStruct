@@ -303,14 +303,15 @@ bool emitConversionsAndCallsOperatorExpr(
             const int32_t storageCapacity =
                 isVector ? std::max(literalCount, kVectorLocalDynamicCapacityLimit) : literalCount;
             const int32_t dataBaseLocal = baseLocal + headerSlots;
-            nextLocal += headerSlots + storageCapacity;
+            nextLocal += isVector ? headerSlots : (headerSlots + storageCapacity);
 
             instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
             instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
             if (isVector) {
               instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
               instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-              instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(dataBaseLocal)});
+              instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(storageCapacity)});
+              instructions.push_back({IrOpcode::HeapAlloc, 0});
               instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
             }
 
@@ -325,11 +326,25 @@ bool emitConversionsAndCallsOperatorExpr(
                 error = builtin + " literal element type mismatch";
                 return false;
               }
-              if (!emitExpr(arg, localsIn)) {
-                return false;
+              if (isVector) {
+                instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+                const uint64_t offsetBytes = static_cast<uint64_t>(i) * IrSlotBytes;
+                if (offsetBytes != 0) {
+                  instructions.push_back({IrOpcode::PushI64, offsetBytes});
+                  instructions.push_back({IrOpcode::AddI64, 0});
+                }
+                if (!emitExpr(arg, localsIn)) {
+                  return false;
+                }
+                instructions.push_back({IrOpcode::StoreIndirect, 0});
+                instructions.push_back({IrOpcode::Pop, 0});
+              } else {
+                if (!emitExpr(arg, localsIn)) {
+                  return false;
+                }
+                instructions.push_back(
+                    {IrOpcode::StoreLocal, static_cast<uint64_t>(dataBaseLocal + static_cast<int32_t>(i))});
               }
-              instructions.push_back(
-                  {IrOpcode::StoreLocal, static_cast<uint64_t>(dataBaseLocal + static_cast<int32_t>(i))});
             }
 
             instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});

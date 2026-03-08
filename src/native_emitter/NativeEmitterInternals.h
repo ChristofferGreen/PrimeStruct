@@ -7,6 +7,7 @@
 #include "primec/Ir.h"
 
 #if defined(__APPLE__)
+#include <sys/mman.h>
 #include <sys/syscall.h>
 #endif
 
@@ -29,11 +30,25 @@ constexpr uint64_t SysWrite = SYS_write;
 constexpr uint64_t SysOpen = SYS_open;
 constexpr uint64_t SysClose = SYS_close;
 constexpr uint64_t SysFsync = SYS_fsync;
+#if defined(SYS_mmap)
+constexpr uint64_t SysMmap = SYS_mmap;
+#else
+constexpr uint64_t SysMmap = 197;
+#endif
+constexpr uint64_t MmapProtReadWrite = static_cast<uint64_t>(PROT_READ | PROT_WRITE);
+#if defined(MAP_ANON)
+constexpr uint64_t MmapFlagsPrivateAnon = static_cast<uint64_t>(MAP_PRIVATE | MAP_ANON);
+#else
+constexpr uint64_t MmapFlagsPrivateAnon = static_cast<uint64_t>(MAP_PRIVATE | MAP_ANONYMOUS);
+#endif
 #else
 constexpr uint64_t SysWrite = 0;
 constexpr uint64_t SysOpen = 0;
 constexpr uint64_t SysClose = 0;
 constexpr uint64_t SysFsync = 0;
+constexpr uint64_t SysMmap = 0;
+constexpr uint64_t MmapProtReadWrite = 0;
+constexpr uint64_t MmapFlagsPrivateAnon = 0;
 #endif
 
 inline uint64_t alignTo(uint64_t value, uint64_t alignment) {
@@ -168,6 +183,39 @@ class Arm64Emitter {
     emitPopReg(1);
     emit(encodeStrRegBase(0, 1, 0));
     emitPushReg(0);
+  }
+
+  void emitHeapAlloc() {
+    emitPopReg(1);
+    emitCompareRegZero(1);
+    const size_t jumpNonZeroSlots = emitCondBranchPlaceholder(CondCode::Ne);
+    emitMovImm64(0, 0);
+    emitPushReg(0);
+    const size_t jumpDone = emitJumpPlaceholder();
+
+    const size_t nonZeroSlotsIndex = currentWordIndex();
+    patchCondBranch(jumpNonZeroSlots, static_cast<int32_t>(nonZeroSlotsIndex - jumpNonZeroSlots), CondCode::Ne);
+
+    // x0=addr(nullptr), x1=len(bytes), x2=prot, x3=flags, x4=fd(-1), x5=offset(0)
+    emitMovImm64(2, IrSlotBytes);
+    emitMulReg(1, 1, 2);
+    emitMovImm64(0, 0);
+    emitMovImm64(2, MmapProtReadWrite);
+    emitMovImm64(3, MmapFlagsPrivateAnon);
+    emitMovImm64(4, ~0ull);
+    emitMovImm64(5, 0);
+    emitMovImm64(16, SysMmap);
+    emit(encodeSvc());
+
+    emitCompareRegZero(0);
+    const size_t jumpNonNegative = emitCondBranchPlaceholder(CondCode::Ge);
+    emitMovImm64(0, 0);
+    const size_t nonNegativeIndex = currentWordIndex();
+    patchCondBranch(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex - jumpNonNegative), CondCode::Ge);
+
+    emitPushReg(0);
+    const size_t doneIndex = currentWordIndex();
+    patchJump(jumpDone, static_cast<int32_t>(doneIndex - jumpDone));
   }
 
   void emitDup() {

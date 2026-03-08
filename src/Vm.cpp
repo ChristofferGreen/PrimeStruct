@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
+#include <limits>
 #include <sstream>
 #include <unordered_map>
 #include <unistd.h>
@@ -52,6 +53,70 @@ const char *sourceMapProvenanceName(IrSourceMapProvenance provenance) {
   return "unknown";
 }
 
+constexpr uint64_t kVmHeapAddressTag = 1ull << 63;
+
+bool isVmHeapAddress(uint64_t address) {
+  return (address & kVmHeapAddressTag) != 0;
+}
+
+bool resolveIndirectAddress(uint64_t address,
+                            uint64_t slotBytes,
+                            std::vector<uint64_t> &locals,
+                            std::vector<uint64_t> &heapSlots,
+                            uint64_t *&slotOut,
+                            std::string &error) {
+  if (address % slotBytes != 0) {
+    error = "unaligned indirect address in IR: " + std::to_string(address);
+    return false;
+  }
+  if (isVmHeapAddress(address)) {
+    const uint64_t heapAddress = address & ~kVmHeapAddressTag;
+    const uint64_t index = heapAddress / slotBytes;
+    if (index >= heapSlots.size()) {
+      error = "invalid indirect address in IR: " + std::to_string(address);
+      return false;
+    }
+    slotOut = &heapSlots[static_cast<size_t>(index)];
+    return true;
+  }
+  const uint64_t index = address / slotBytes;
+  if (index >= locals.size()) {
+    error = "invalid indirect address in IR: " + std::to_string(address);
+    return false;
+  }
+  slotOut = &locals[static_cast<size_t>(index)];
+  return true;
+}
+
+bool allocateVmHeapSlots(uint64_t slotCount,
+                         uint64_t slotBytes,
+                         std::vector<uint64_t> &heapSlots,
+                         uint64_t &addressOut,
+                         std::string &error) {
+  if (slotCount == 0) {
+    addressOut = 0;
+    return true;
+  }
+  if (slotCount > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+    error = "VM heap allocation overflow";
+    return false;
+  }
+  const size_t baseIndex = heapSlots.size();
+  const size_t allocationSlots = static_cast<size_t>(slotCount);
+  if (allocationSlots > heapSlots.max_size() - baseIndex) {
+    error = "VM heap allocation overflow";
+    return false;
+  }
+  const uint64_t maxAddressableIndex = (std::numeric_limits<uint64_t>::max() - kVmHeapAddressTag) / slotBytes;
+  if (baseIndex > maxAddressableIndex) {
+    error = "VM heap allocation overflow";
+    return false;
+  }
+  heapSlots.resize(baseIndex + allocationSlots, 0);
+  addressOut = kVmHeapAddressTag + static_cast<uint64_t>(baseIndex) * slotBytes;
+  return true;
+}
+
 bool executeImpl(const IrModule &module,
                  uint64_t &result,
                  std::string &error,
@@ -84,6 +149,7 @@ bool executeImpl(const IrModule &module,
     localCounts[i] = computeLocalCount(module.functions[i]);
   }
   std::vector<uint64_t> stack;
+  std::vector<uint64_t> heapSlots;
   std::vector<Frame> frames;
   frames.reserve(64);
   Frame entryFrame;
@@ -181,16 +247,11 @@ bool executeImpl(const IrModule &module,
         }
         uint64_t address = stack.back();
         stack.pop_back();
-        if (address % kSlotBytes != 0) {
-          error = "unaligned indirect address in IR: " + std::to_string(address);
+        uint64_t *slot = nullptr;
+        if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots, slot, error)) {
           return false;
         }
-        uint64_t index = address / kSlotBytes;
-        if (index >= locals.size()) {
-          error = "invalid indirect address in IR: " + std::to_string(address);
-          return false;
-        }
-        stack.push_back(locals[static_cast<size_t>(index)]);
+        stack.push_back(*slot);
         ip += 1;
         break;
       }
@@ -203,17 +264,27 @@ bool executeImpl(const IrModule &module,
         stack.pop_back();
         uint64_t address = stack.back();
         stack.pop_back();
-        if (address % kSlotBytes != 0) {
-          error = "unaligned indirect address in IR: " + std::to_string(address);
+        uint64_t *slot = nullptr;
+        if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots, slot, error)) {
           return false;
         }
-        uint64_t index = address / kSlotBytes;
-        if (index >= locals.size()) {
-          error = "invalid indirect address in IR: " + std::to_string(address);
-          return false;
-        }
-        locals[static_cast<size_t>(index)] = value;
+        *slot = value;
         stack.push_back(value);
+        ip += 1;
+        break;
+      }
+      case IrOpcode::HeapAlloc: {
+        if (stack.empty()) {
+          error = "IR stack underflow on heap alloc";
+          return false;
+        }
+        const uint64_t slotCount = stack.back();
+        stack.pop_back();
+        uint64_t address = 0;
+        if (!allocateVmHeapSlots(slotCount, kSlotBytes, heapSlots, address, error)) {
+          return false;
+        }
+        stack.push_back(address);
         ip += 1;
         break;
       }
@@ -1259,6 +1330,7 @@ bool VmDebugSession::initFromModule(const IrModule &module,
   args_ = args;
   localCounts_.assign(module.functions.size(), 0);
   stack_.clear();
+  heapSlots_.clear();
   frames_.clear();
   result_ = 0;
   pauseRequested_ = false;
@@ -1508,16 +1580,11 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       const uint64_t address = stack_.back();
       stack_.pop_back();
-      if (address % kSlotBytes != 0) {
-        error = "unaligned indirect address in IR: " + std::to_string(address);
+      uint64_t *slot = nullptr;
+      if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots_, slot, error)) {
         return finishFault();
       }
-      const uint64_t index = address / kSlotBytes;
-      if (index >= locals.size()) {
-        error = "invalid indirect address in IR: " + std::to_string(address);
-        return finishFault();
-      }
-      stack_.push_back(locals[static_cast<size_t>(index)]);
+      stack_.push_back(*slot);
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
@@ -1530,17 +1597,27 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       stack_.pop_back();
       const uint64_t address = stack_.back();
       stack_.pop_back();
-      if (address % kSlotBytes != 0) {
-        error = "unaligned indirect address in IR: " + std::to_string(address);
+      uint64_t *slot = nullptr;
+      if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots_, slot, error)) {
         return finishFault();
       }
-      const uint64_t index = address / kSlotBytes;
-      if (index >= locals.size()) {
-        error = "invalid indirect address in IR: " + std::to_string(address);
-        return finishFault();
-      }
-      locals[static_cast<size_t>(index)] = value;
+      *slot = value;
       stack_.push_back(value);
+      ip += 1;
+      return finishStep(StepOutcome::Continue);
+    }
+    case IrOpcode::HeapAlloc: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on heap alloc";
+        return finishFault();
+      }
+      const uint64_t slotCount = stack_.back();
+      stack_.pop_back();
+      uint64_t address = 0;
+      if (!allocateVmHeapSlots(slotCount, kSlotBytes, heapSlots_, address, error)) {
+        return finishFault();
+      }
+      stack_.push_back(address);
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }

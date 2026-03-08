@@ -115,6 +115,7 @@ bool isSchedulingBarrierOpcode(IrOpcode op) {
     case IrOpcode::PrintArgv:
     case IrOpcode::PrintArgvUnsafe:
     case IrOpcode::StoreLocal:
+    case IrOpcode::HeapAlloc:
     case IrOpcode::LoadIndirect:
     case IrOpcode::StoreIndirect:
     case IrOpcode::FileOpenRead:

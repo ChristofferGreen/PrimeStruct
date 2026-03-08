@@ -23025,8 +23025,8 @@ TEST_CASE("ir lowerer conversions helper emits vector record header with data po
   CHECK(ok);
   CHECK(handled);
   CHECK(error.empty());
-  CHECK(nextLocal == 264);
-  REQUIRE(instructions.size() == 11);
+  CHECK(nextLocal == 8);
+  REQUIRE(instructions.size() == 18);
   CHECK(instructions[0].op == primec::IrOpcode::PushI32);
   CHECK(instructions[0].imm == 2);
   CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
@@ -23035,20 +23035,28 @@ TEST_CASE("ir lowerer conversions helper emits vector record header with data po
   CHECK(instructions[2].imm == 2);
   CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[3].imm == 6);
-  CHECK(instructions[4].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[4].imm == 8);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 7);
-  CHECK(instructions[6].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[6].imm == 11);
-  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[7].imm == 8);
+  CHECK(instructions[4].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[4].imm == 256);
+  CHECK(instructions[5].op == primec::IrOpcode::HeapAlloc);
+  CHECK(instructions[6].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[6].imm == 7);
+  CHECK(instructions[7].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[7].imm == 7);
   CHECK(instructions[8].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[8].imm == 22);
-  CHECK(instructions[9].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[9].imm == 9);
-  CHECK(instructions[10].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[10].imm == 5);
+  CHECK(instructions[8].imm == 11);
+  CHECK(instructions[9].op == primec::IrOpcode::StoreIndirect);
+  CHECK(instructions[10].op == primec::IrOpcode::Pop);
+  CHECK(instructions[11].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[11].imm == 7);
+  CHECK(instructions[12].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[12].imm == primec::IrSlotBytes);
+  CHECK(instructions[13].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[14].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[14].imm == 22);
+  CHECK(instructions[15].op == primec::IrOpcode::StoreIndirect);
+  CHECK(instructions[16].op == primec::IrOpcode::Pop);
+  CHECK(instructions[17].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[17].imm == 5);
 }
 
 TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
@@ -27578,9 +27586,10 @@ TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
       primec::IrOpcode::PrintStringDynamic,
       primec::IrOpcode::Call,
       primec::IrOpcode::CallVoid,
+      primec::IrOpcode::HeapAlloc,
   };
 
-  CHECK(expected.size() == static_cast<size_t>(static_cast<uint8_t>(primec::IrOpcode::CallVoid)));
+  CHECK(expected.size() == static_cast<size_t>(static_cast<uint8_t>(primec::IrOpcode::HeapAlloc)));
   for (size_t i = 0; i < expected.size(); ++i) {
     const auto expectedValue = static_cast<uint8_t>(i + 1);
     CHECK(static_cast<uint8_t>(expected[i]) == expectedValue);

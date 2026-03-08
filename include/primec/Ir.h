@@ -110,6 +110,7 @@ enum class IrOpcode : uint8_t {
   PrintStringDynamic,
   Call,
   CallVoid,
+  HeapAlloc,
 };
 
 enum class IrStructFieldCategory : uint8_t {

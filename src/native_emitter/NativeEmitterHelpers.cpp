@@ -158,6 +158,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "Call";
       case IrOpcode::CallVoid:
         return "CallVoid";
+      case IrOpcode::HeapAlloc:
+        return "HeapAlloc";
       case IrOpcode::PushF32:
         return "PushF32";
       case IrOpcode::PushF64:
@@ -252,6 +254,7 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       case IrOpcode::Pop:
         return -1;
       case IrOpcode::LoadIndirect:
+      case IrOpcode::HeapAlloc:
         return 0;
       case IrOpcode::StoreIndirect:
         return -1;
