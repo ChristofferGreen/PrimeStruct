@@ -38,7 +38,24 @@ bool checkedNegI64(int64_t value, int64_t &out) {
   return true;
 }
 
+bool checkedAddU64(uint64_t lhs, uint64_t rhs, uint64_t &out) {
+  if (lhs > std::numeric_limits<uint64_t>::max() - rhs) {
+    return false;
+  }
+  out = lhs + rhs;
+  return true;
+}
+
+bool checkedSubU64(uint64_t lhs, uint64_t rhs, uint64_t &out) {
+  if (lhs < rhs) {
+    return false;
+  }
+  out = lhs - rhs;
+  return true;
+}
+
 enum class SignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
+enum class UnsignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 
 SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(const Expr &expr, int64_t &out) {
   if (expr.kind == Expr::Kind::Literal && !expr.isUnsigned) {
@@ -92,28 +109,42 @@ SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(const Expr &e
   return SignedLiteralIntegerEvalResult::Value;
 }
 
-bool tryEvaluateUnsignedLiteralIntegerExpr(const Expr &expr, uint64_t &out) {
+UnsignedLiteralIntegerEvalResult tryEvaluateUnsignedLiteralIntegerExpr(const Expr &expr, uint64_t &out) {
   if (expr.kind == Expr::Kind::Literal && expr.isUnsigned) {
     out = expr.literalValue;
-    return true;
+    return UnsignedLiteralIntegerEvalResult::Value;
   }
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding || !expr.templateArgs.empty() ||
       expr.hasBodyArguments || !expr.bodyArguments.empty() || expr.args.size() != 2) {
-    return false;
+    return UnsignedLiteralIntegerEvalResult::NotFoldable;
   }
   const bool isPlus = isSimpleCallName(expr, "plus");
   const bool isMinus = isSimpleCallName(expr, "minus");
   if (!isPlus && !isMinus) {
-    return false;
+    return UnsignedLiteralIntegerEvalResult::NotFoldable;
   }
   uint64_t lhs = 0;
   uint64_t rhs = 0;
-  if (!tryEvaluateUnsignedLiteralIntegerExpr(expr.args[0], lhs) ||
-      !tryEvaluateUnsignedLiteralIntegerExpr(expr.args[1], rhs)) {
-    return false;
+  const UnsignedLiteralIntegerEvalResult lhsResult = tryEvaluateUnsignedLiteralIntegerExpr(expr.args[0], lhs);
+  const UnsignedLiteralIntegerEvalResult rhsResult = tryEvaluateUnsignedLiteralIntegerExpr(expr.args[1], rhs);
+  if (lhsResult == UnsignedLiteralIntegerEvalResult::Overflow ||
+      rhsResult == UnsignedLiteralIntegerEvalResult::Overflow) {
+    return UnsignedLiteralIntegerEvalResult::Overflow;
   }
-  out = isPlus ? (lhs + rhs) : (lhs - rhs);
-  return true;
+  if (lhsResult != UnsignedLiteralIntegerEvalResult::Value ||
+      rhsResult != UnsignedLiteralIntegerEvalResult::Value) {
+    return UnsignedLiteralIntegerEvalResult::NotFoldable;
+  }
+  if (isPlus) {
+    if (!checkedAddU64(lhs, rhs, out)) {
+      return UnsignedLiteralIntegerEvalResult::Overflow;
+    }
+  } else {
+    if (!checkedSubU64(lhs, rhs, out)) {
+      return UnsignedLiteralIntegerEvalResult::Overflow;
+    }
+  }
+  return UnsignedLiteralIntegerEvalResult::Value;
 }
 } // namespace
 
@@ -653,10 +684,18 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
         error = vectorReserveExceedsLocalCapacityLimitMessage();
         return VectorStatementHelperEmitResult::Error;
       }
-    } else if (tryEvaluateUnsignedLiteralIntegerExpr(desiredExpr, unsignedDesired) &&
-               unsignedDesired > static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)) {
-      error = vectorReserveExceedsLocalCapacityLimitMessage();
-      return VectorStatementHelperEmitResult::Error;
+    } else {
+      const UnsignedLiteralIntegerEvalResult unsignedEvalResult =
+          tryEvaluateUnsignedLiteralIntegerExpr(desiredExpr, unsignedDesired);
+      if (unsignedEvalResult == UnsignedLiteralIntegerEvalResult::Overflow) {
+        error = "vector reserve literal expression overflow";
+        return VectorStatementHelperEmitResult::Error;
+      }
+      if (unsignedEvalResult == UnsignedLiteralIntegerEvalResult::Value &&
+          unsignedDesired > static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)) {
+        error = vectorReserveExceedsLocalCapacityLimitMessage();
+        return VectorStatementHelperEmitResult::Error;
+      }
     }
 
     const int32_t desiredLocal = allocTempLocal();
