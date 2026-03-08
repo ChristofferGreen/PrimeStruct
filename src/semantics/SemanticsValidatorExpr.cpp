@@ -2030,6 +2030,25 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return structNames_.count(receiverPath) > 0;
     };
+    auto isNonCollectionStructAccessTarget = [&](const std::string &resolvedPath) -> bool {
+      constexpr std::string_view atSuffix = "/at";
+      constexpr std::string_view atUnsafeSuffix = "/at_unsafe";
+      std::string receiverPath;
+      if (resolvedPath.size() > atSuffix.size() &&
+          resolvedPath.compare(resolvedPath.size() - atSuffix.size(), atSuffix.size(), atSuffix) == 0) {
+        receiverPath = resolvedPath.substr(0, resolvedPath.size() - atSuffix.size());
+      } else if (resolvedPath.size() > atUnsafeSuffix.size() &&
+                 resolvedPath.compare(resolvedPath.size() - atUnsafeSuffix.size(), atUnsafeSuffix.size(),
+                                      atUnsafeSuffix) == 0) {
+        receiverPath = resolvedPath.substr(0, resolvedPath.size() - atUnsafeSuffix.size());
+      } else {
+        return false;
+      }
+      if (receiverPath == "/array" || receiverPath == "/vector" || receiverPath == "/map" || receiverPath == "/string") {
+        return false;
+      }
+      return structNames_.count(receiverPath) > 0;
+    };
     if (expr.isFieldAccess) {
       if (expr.args.size() != 1) {
         error_ = "field access requires a receiver";
@@ -3636,6 +3655,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         bool isMap = resolveMapKeyType(expr.args.front(), mapKeyType);
         if (!isArrayOrString && !isMap) {
           if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          bool isBuiltinMethod = false;
+          std::string methodResolved;
+          if (resolveMethodTarget(expr.args.front(), builtinName, methodResolved, isBuiltinMethod) && !isBuiltinMethod &&
+              defMap_.find(methodResolved) == defMap_.end() && isNonCollectionStructAccessTarget(methodResolved)) {
+            error_ = "unknown method: " + methodResolved;
             return false;
           }
           error_ = builtinName + " requires array, vector, map, or string target";
