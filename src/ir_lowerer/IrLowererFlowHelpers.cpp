@@ -644,10 +644,14 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
     instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
     instructions.push_back({IrOpcode::AddI64, 0});
-    instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::PushI32, 1});
+    instructions.push_back({IrOpcode::AddI32, 0});
     instructions.push_back({IrOpcode::StoreIndirect, 0});
     instructions.push_back({IrOpcode::Pop, 0});
-    instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(kVectorLocalDynamicCapacityLimit)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::PushI32, 1});
+    instructions.push_back({IrOpcode::AddI32, 0});
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
 
     instructions.push_back({IrOpcode::Jump, static_cast<int32_t>(pushBodyIndex)});

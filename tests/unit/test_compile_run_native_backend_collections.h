@@ -5574,7 +5574,7 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   reserve(values, 3i32)
   push(values, 9i32)
-  return(count(values))
+  return(plus(count(values), capacity(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_reserve_grows.prime", source);
@@ -5583,7 +5583,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(exePath) == 6);
 }
 
 TEST_CASE("grows native vector push beyond initial capacity") {
@@ -5592,7 +5592,7 @@ TEST_CASE("grows native vector push beyond initial capacity") {
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   push(values, 2i32)
-  return(count(values))
+  return(plus(count(values), capacity(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_push_grows.prime", source);
@@ -5600,7 +5600,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_native_vector_push_grows_exe").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("rejects native vector reserve beyond local dynamic limit") {

@@ -4879,12 +4879,12 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   reserve(values, 3i32)
   push(values, 9i32)
-  return(count(values))
+  return(plus(count(values), capacity(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_reserve_grows.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 3);
+  CHECK(runCommand(runCmd) == 6);
 }
 
 TEST_CASE("grows vm vector push beyond initial capacity") {
@@ -4893,12 +4893,12 @@ TEST_CASE("grows vm vector push beyond initial capacity") {
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   push(values, 2i32)
-  return(count(values))
+  return(plus(count(values), capacity(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_push_grows.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 4);
 }
 
 TEST_CASE("rejects vm vector reserve beyond local dynamic limit") {
