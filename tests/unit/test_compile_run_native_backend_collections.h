@@ -847,6 +847,45 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects native user wrapper temporary syntax parity shadow value mismatch") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
+[return<bool>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(true)
+}
+
+[effects(heap_alloc), return<bool>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32] mapCall{at(wrapMap(), 1i32)}
+  [i32] mapMethod{wrapMap().at(1i32)}
+  [i32] mapIndex{wrapMap()[1i32]}
+  [i32] vectorCall{at(wrapVector(), 0i32)}
+  [i32] vectorMethod{wrapVector().at(0i32)}
+  [i32] vectorIndex{wrapVector()[0i32]}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_user_wrapper_temp_syntax_parity_shadow_value_mismatch.prime", source);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("rejects native templated stdlib collection return envelope unsupported arg") {
   const std::string source = R"(
 import /std/collections/*
