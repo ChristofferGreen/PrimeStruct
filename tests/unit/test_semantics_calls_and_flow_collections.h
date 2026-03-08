@@ -2329,6 +2329,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector helper call-form expression user shadow accepts bool positional reordered arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/vector/push([vector<i32> mut] values, [bool] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(push(true, values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector helper call-form expression stays statement-only without user helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

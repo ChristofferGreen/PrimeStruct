@@ -546,7 +546,8 @@ std::string Emitter::emitExpr(const Expr &expr,
             }
             const bool probePositionalReorderedReceiver =
                 !hasNamedArgs && stmt.args.size() > 1 &&
-                (stmt.args.front().kind == Expr::Kind::Literal ||
+                (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
+                 stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
                  (stmt.args.front().kind == Expr::Kind::Name && !isVectorValue(stmt.args.front(), activeTypes)));
             if (probePositionalReorderedReceiver) {
               for (size_t i = 1; i < stmt.args.size(); ++i) {

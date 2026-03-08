@@ -623,7 +623,8 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     }
     const bool probePositionalReorderedReceiver =
         !hasNamedArgs && stmt.args.size() > 1 &&
-        (stmt.args.front().kind == Expr::Kind::Literal ||
+        (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
+         stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
          (stmt.args.front().kind == Expr::Kind::Name &&
           !isVectorStatementReceiverExpr(stmt.args.front(), localsIn)));
     if (probePositionalReorderedReceiver) {

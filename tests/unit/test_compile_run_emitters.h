@@ -380,6 +380,30 @@ main() {
   CHECK(output.find("ps_vector_push(values, 5)") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lambda mutator bool positional call resolves user helper") {
+  const std::string source = R"(
+/vector/push([vector<i32> mut] values, [bool] value) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  []() {
+    [vector<i32> mut] values{vector<i32>(1i32)}
+    push(true, values)
+    return(values.count())
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_bool_positional_shadow.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_bool_positional_shadow.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_vector_push(values, true)") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter lambda mutator rewrite keeps known vector receiver leading names") {
   const std::string source = R"(
 /i32/push([i32] value, [vector<i32> mut] values) { }
@@ -672,6 +696,27 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_positional_call_shadow.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_vector_mutator_positional_call_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("compiles and runs user vector mutator bool positional call shadow in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/vector/push([vector<i32> mut] values, [bool] value) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  push(true, values)
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_mutator_bool_positional_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_mutator_bool_positional_call_shadow_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

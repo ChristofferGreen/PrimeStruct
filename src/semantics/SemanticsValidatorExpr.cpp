@@ -1320,7 +1320,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         const bool probePositionalReorderedReceiver =
             !hasNamedArgs && expr.args.size() > 1 &&
-            (expr.args.front().kind == Expr::Kind::Literal ||
+            (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
+             expr.args.front().kind == Expr::Kind::FloatLiteral || expr.args.front().kind == Expr::Kind::StringLiteral ||
              (expr.args.front().kind == Expr::Kind::Name &&
               !isVectorHelperReceiverName(expr.args.front())));
         if (probePositionalReorderedReceiver) {

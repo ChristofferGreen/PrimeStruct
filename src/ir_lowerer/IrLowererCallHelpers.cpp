@@ -1383,7 +1383,9 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   }
   const bool probePositionalReorderedVectorMutatorReceiver =
       isVectorMutatorCall && !hasNamedArgsValue && expr.args.size() > 1 &&
-      (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::Name);
+      (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
+       expr.args.front().kind == Expr::Kind::FloatLiteral || expr.args.front().kind == Expr::Kind::StringLiteral ||
+       expr.args.front().kind == Expr::Kind::Name);
   if (probePositionalReorderedVectorMutatorReceiver) {
     for (size_t i = 1; i < expr.args.size(); ++i) {
       receiverIndices.push_back(i);

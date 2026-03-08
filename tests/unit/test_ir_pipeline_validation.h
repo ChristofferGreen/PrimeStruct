@@ -12111,6 +12111,41 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(reorderedPushResolveCalls == 2);
   CHECK(reorderedPushEmitCalls == 1);
 
+  primec::Expr boolArg;
+  boolArg.kind = primec::Expr::Kind::BoolLiteral;
+  boolArg.boolValue = true;
+  primec::Expr reorderedBoolPushCall = reorderedPushCall;
+  reorderedBoolPushCall.args = {boolArg, targetArg};
+  int reorderedBoolPushResolveCalls = 0;
+  int reorderedBoolPushEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            reorderedBoolPushCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++reorderedBoolPushResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "push");
+              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+                  methodExpr.args.front().name == "items") {
+                return &callee;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++reorderedBoolPushEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              REQUIRE_FALSE(methodExpr.args.empty());
+              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(methodExpr.args.front().name == "items");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(reorderedBoolPushResolveCalls == 2);
+  CHECK(reorderedBoolPushEmitCalls == 1);
+
   primec::Expr tempFirstPushCall = reorderedPushCall;
   tempFirstPushCall.args = {tempReceiver, targetArg};
   int tempFirstPushResolveCalls = 0;
