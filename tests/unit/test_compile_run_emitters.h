@@ -1166,6 +1166,40 @@ main() {
   CHECK(runCommand(exePath) == 180);
 }
 
+TEST_CASE("compiles and runs vector alias implicit canonical forwarding on struct type mismatch in C++ emitter") {
+  const std::string source = R"(
+MarkerA() {}
+MarkerB() {}
+
+[return<int>]
+/vector/count([vector<i32>] values, [MarkerA] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [MarkerB] marker{MarkerB()}
+  return(plus(/vector/count(values, marker), values.count(marker)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_alias_implicit_canonical_forwarding_struct_type_mismatch.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_alias_implicit_canonical_forwarding_struct_type_mismatch_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 180);
+}
+
 TEST_CASE("compiles and runs vector alias implicit canonical templated forwarding on named args in C++ emitter") {
   const std::string source = R"(
 [return<int>]

@@ -394,12 +394,43 @@ bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actual
   }
 }
 
+std::string resolveStructLikeTypePathForTemplatedVectorFallback(const std::string &typeName,
+                                                                const std::string &namespacePrefix,
+                                                                const Context &ctx) {
+  std::string normalized = normalizeBindingTypeName(typeName);
+  if (normalized.empty()) {
+    return {};
+  }
+  std::string base;
+  std::string argText;
+  if (splitTemplateTypeName(normalized, base, argText) && !base.empty()) {
+    normalized = base;
+  }
+  if (isPrimitiveBindingTypeName(normalized) || isSoftwareNumericTypeName(normalized) || normalized == "string" ||
+      isBuiltinTemplateContainer(normalized)) {
+    return {};
+  }
+  if (!normalized.empty() && normalized[0] == '/') {
+    return ctx.sourceDefs.count(normalized) > 0 ? normalized : std::string{};
+  }
+  auto aliasIt = ctx.importAliases.find(normalized);
+  if (aliasIt != ctx.importAliases.end() && ctx.sourceDefs.count(aliasIt->second) > 0) {
+    return aliasIt->second;
+  }
+  std::string resolved = resolveTypePath(normalized, namespacePrefix);
+  if (ctx.sourceDefs.count(resolved) > 0) {
+    return resolved;
+  }
+  return {};
+}
+
 bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
                                                         const Expr &expr,
                                                         const LocalTypeMap &locals,
                                                         const std::vector<ParameterInfo> &params,
                                                         bool allowMathBare,
-                                                        Context &ctx) {
+                                                        Context &ctx,
+                                                        const std::string &namespacePrefix) {
   std::vector<ParameterInfo> callParams;
   callParams.reserve(def.parameters.size());
   for (const auto &paramExpr : def.parameters) {
@@ -442,8 +473,17 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
       return true;
     }
     const ReturnKind expectedKind = returnKindForTypeName(normalizedExpected);
-    const ReturnKind actualKind = returnKindForTypeName(normalizeBindingTypeName(actual.typeName));
+    const ReturnKind actualKind = returnKindForTypeName(normalizedActual);
     if (expectedKind == ReturnKind::Unknown || actualKind == ReturnKind::Unknown) {
+      if (expectedKind == ReturnKind::Unknown && actualKind == ReturnKind::Unknown) {
+        const std::string expectedStructPath =
+            resolveStructLikeTypePathForTemplatedVectorFallback(param.binding.typeName, def.namespacePrefix, ctx);
+        const std::string actualStructPath =
+            resolveStructLikeTypePathForTemplatedVectorFallback(actual.typeName, namespacePrefix, ctx);
+        if (!expectedStructPath.empty() && !actualStructPath.empty() && expectedStructPath != actualStructPath) {
+          return true;
+        }
+      }
       continue;
     }
     if (isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
@@ -461,7 +501,8 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
                                                    const LocalTypeMap &locals,
                                                    const std::vector<ParameterInfo> &params,
                                                    bool allowMathBare,
-                                                   Context &ctx) {
+                                                   Context &ctx,
+                                                   const std::string &namespacePrefix) {
   if (!expr.templateArgs.empty()) {
     return path;
   }
@@ -471,7 +512,8 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
   }
   const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);
   if (definitionAcceptsCallShape(defIt->second, expr) &&
-      !shouldPreferTemplatedVectorFallbackForTypeMismatch(defIt->second, expr, locals, params, allowMathBare, ctx)) {
+      !shouldPreferTemplatedVectorFallbackForTypeMismatch(
+          defIt->second, expr, locals, params, allowMathBare, ctx, namespacePrefix)) {
     return path;
   }
   if (preferred != path && ctx.sourceDefs.count(preferred) > 0 && ctx.templateDefs.count(preferred) > 0) {
@@ -1051,7 +1093,7 @@ bool rewriteExpr(Expr &expr,
     }
     if (expr.templateArgs.empty()) {
       const std::string implicitTemplatePreferredPath =
-          preferVectorStdlibImplicitTemplatePath(expr, resolvedPath, locals, params, allowMathBare, ctx);
+          preferVectorStdlibImplicitTemplatePath(expr, resolvedPath, locals, params, allowMathBare, ctx, namespacePrefix);
       if (implicitTemplatePreferredPath != resolvedPath) {
         resolvedPath = implicitTemplatePreferredPath;
         expr.name = implicitTemplatePreferredPath;
@@ -1109,7 +1151,8 @@ bool rewriteExpr(Expr &expr,
         methodPath = preferVectorStdlibTemplatePath(methodPath, ctx);
       }
       if (expr.templateArgs.empty()) {
-        methodPath = preferVectorStdlibImplicitTemplatePath(expr, methodPath, locals, params, allowMathBare, ctx);
+        methodPath =
+            preferVectorStdlibImplicitTemplatePath(expr, methodPath, locals, params, allowMathBare, ctx, namespacePrefix);
       }
       const bool isTemplateDef = ctx.templateDefs.count(methodPath) > 0;
       const bool isKnownDef = ctx.sourceDefs.count(methodPath) > 0;
