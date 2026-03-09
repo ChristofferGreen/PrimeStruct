@@ -596,8 +596,15 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   } else if (receiver.kind == Expr::Kind::StringLiteral) {
     typeName = "string";
   } else if (receiver.kind == Expr::Kind::Call) {
-    if (!receiver.isMethodCall && !receiver.isBinding) {
-      std::string resolved = resolveCalleePath(receiver, receiver.namespacePrefix, ctx);
+    if (!receiver.isBinding) {
+      std::string resolved;
+      if (receiver.isMethodCall) {
+        if (!resolveMethodCallTemplateTarget(receiver, locals, ctx, resolved)) {
+          resolved.clear();
+        }
+      } else {
+        resolved = resolveCalleePath(receiver, receiver.namespacePrefix, ctx);
+      }
       auto defIt = ctx.sourceDefs.find(resolved);
       if (defIt != ctx.sourceDefs.end()) {
         if (isStructDefinition(defIt->second)) {

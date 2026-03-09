@@ -1273,6 +1273,53 @@ main() {
   CHECK(runCommand(exePath) == 180);
 }
 
+TEST_CASE("compiles and runs vector alias canonical forwarding on chained method-call temporary struct mismatch in C++ emitter") {
+  const std::string source = R"(
+MarkerA() {}
+MarkerB() {}
+Middle() {}
+Holder() {}
+
+[return<Middle>]
+/Holder/first([Holder] self) {
+  return(Middle())
+}
+
+[return<MarkerB>]
+/Middle/next([Middle] self) {
+  return(MarkerB())
+}
+
+[return<int>]
+/vector/count([vector<i32>] values, [MarkerA] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [Holder] holder{Holder()}
+  return(plus(/vector/count(values, holder.first().next()),
+              values.count(holder.first().next())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_alias_canonical_forwarding_chained_method_struct_mismatch.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_alias_canonical_forwarding_chained_method_struct_mismatch_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 180);
+}
+
 TEST_CASE("compiles and runs vector alias implicit canonical templated forwarding on named args in C++ emitter") {
   const std::string source = R"(
 [return<int>]
