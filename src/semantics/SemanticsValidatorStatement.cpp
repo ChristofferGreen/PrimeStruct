@@ -2022,11 +2022,27 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           return true;
         }
         size_t receiverIndex = 0;
+        bool hasExplicitValuesReceiver = false;
         for (size_t i = 0; i < stmt.args.size(); ++i) {
           if (i < stmt.argNames.size() && stmt.argNames[i].has_value() &&
               *stmt.argNames[i] == "values") {
             receiverIndex = i;
+            hasExplicitValuesReceiver = true;
             break;
+          }
+        }
+        if (!hasExplicitValuesReceiver) {
+          for (size_t i = 0; i < stmt.args.size(); ++i) {
+            const BindingInfo *candidateBinding = nullptr;
+            if (!resolveVectorBinding(stmt.args[i], candidateBinding) || candidateBinding == nullptr) {
+              continue;
+            }
+            const bool allowSoaVectorTarget = helperName == "push" || helperName == "reserve";
+            if (candidateBinding->typeName == "vector" ||
+                (allowSoaVectorTarget && candidateBinding->typeName == "soa_vector")) {
+              receiverIndex = i;
+              break;
+            }
           }
         }
         if (receiverIndex >= stmt.args.size()) {

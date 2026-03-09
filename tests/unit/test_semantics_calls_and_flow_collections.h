@@ -2342,6 +2342,30 @@ TEST_CASE("vector helper named args on array targets report vector binding") {
   checkInvalidStatement("values.remove_swap([index] 0i32)");
 }
 
+TEST_CASE("vector helper named args keep named-arg error on vector targets") {
+  const auto checkInvalidStatement = [](const std::string &stmtText) {
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  };
+
+  checkInvalidStatement("push([value] 3i32, [payload] values)");
+  checkInvalidStatement("reserve([capacity] 8i32, [payload] values)");
+  checkInvalidStatement("remove_at([index] 0i32, [payload] values)");
+  checkInvalidStatement("remove_swap([index] 0i32, [payload] values)");
+  checkInvalidStatement("pop([payload] values)");
+  checkInvalidStatement("clear([payload] values)");
+}
+
 TEST_CASE("vector helper expressions with named arguments stay statement-only") {
   struct HelperCase {
     const char *name;
