@@ -1492,6 +1492,26 @@ main() {
   CHECK(error.find("push requires heap_alloc effect") != std::string::npos);
 }
 
+TEST_CASE("push on array reports vector binding before effect requirement") {
+  const auto checkInvalidPush = [](const std::string &stmtText) {
+    const std::string source =
+        "[return<int>]\n"
+        "main() {\n"
+        "  [array<i32> mut] values{array<i32>(1i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("push requires vector binding") != std::string::npos);
+  };
+
+  checkInvalidPush("push(values, 2i32)");
+  checkInvalidPush("values.push(2i32)");
+}
+
 TEST_CASE("push validates on mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -1659,6 +1679,26 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("reserve requires heap_alloc effect") != std::string::npos);
+}
+
+TEST_CASE("reserve on array reports vector binding before effect requirement") {
+  const auto checkInvalidReserve = [](const std::string &stmtText) {
+    const std::string source =
+        "[return<int>]\n"
+        "main() {\n"
+        "  [array<i32> mut] values{array<i32>(1i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("reserve requires vector binding") != std::string::npos);
+  };
+
+  checkInvalidReserve("reserve(values, 8i32)");
+  checkInvalidReserve("values.reserve(8i32)");
 }
 
 TEST_CASE("reserve requires integer capacity") {

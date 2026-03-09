@@ -2039,12 +2039,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         if (!validateVectorHelperReceiver(stmt.args.front(), "push")) {
           return false;
         }
-        if (activeEffects_.count("heap_alloc") == 0) {
-          error_ = "push requires heap_alloc effect";
-          return false;
-        }
         const BindingInfo *binding = nullptr;
         if (!validateVectorHelperTarget(stmt.args.front(), "push", binding)) {
+          return false;
+        }
+        if (activeEffects_.count("heap_alloc") == 0) {
+          error_ = "push requires heap_alloc effect";
           return false;
         }
         if (!validateExpr(params, locals, stmt.args[1])) {
@@ -2063,12 +2063,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         if (!validateVectorHelperReceiver(stmt.args.front(), "reserve")) {
           return false;
         }
-        if (activeEffects_.count("heap_alloc") == 0) {
-          error_ = "reserve requires heap_alloc effect";
-          return false;
-        }
         const BindingInfo *binding = nullptr;
         if (!validateVectorHelperTarget(stmt.args.front(), "reserve", binding)) {
+          return false;
+        }
+        if (activeEffects_.count("heap_alloc") == 0) {
+          error_ = "reserve requires heap_alloc effect";
           return false;
         }
         if (!validateExpr(params, locals, stmt.args[1])) {
