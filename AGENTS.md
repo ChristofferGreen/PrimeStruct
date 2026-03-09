@@ -63,6 +63,7 @@ build and layout solidify.
 - If the highest-priority TODO is too large, split it into explicit sub-items in `docs/todo.md` before continuing implementation.
 - Each implementation run should complete one vertical slice that changes behavior/code, not only tests.
 - Do not ship repeated test-only slices on the same parent TODO; if tests reveal more work, add follow-up TODO sub-items and move to the next code-affecting slice.
+- If the repo is red, stabilize the existing failing tests before starting a new TODO slice; only proceed under a clear "no new failures" rule when red status cannot be resolved immediately.
 
 ## Code guidelines
 - **Language:** C++23 for compiler/VM tooling unless otherwise documented.
