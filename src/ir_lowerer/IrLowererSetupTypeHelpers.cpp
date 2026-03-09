@@ -5,6 +5,39 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(0, 1);
+  }
+  const std::string vectorPrefix = "vector/";
+  const std::string stdVectorPrefix = "std/collections/vector/";
+  if (normalized.rfind(vectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(vectorPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    return true;
+  }
+  return false;
+}
+
+bool isVectorBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+} // namespace
+
 SetupTypeAdapters makeSetupTypeAdapters() {
   SetupTypeAdapters adapters;
   adapters.valueKindFromTypeName = makeValueKindFromTypeName();
@@ -206,7 +239,7 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
-      isSimpleCallName(callExpr, "count") || isSimpleCallName(callExpr, "capacity");
+      isVectorBuiltinName(callExpr, "count") || isVectorBuiltinName(callExpr, "capacity");
   const bool allowBuiltinFallback =
       isBuiltinCountOrCapacityCall ||
       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
@@ -476,17 +509,17 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
-  const bool isCountCall = isSimpleCallName(callExpr, "count") && callExpr.args.size() == 1;
+  const bool isCountCall = isVectorBuiltinName(callExpr, "count") && callExpr.args.size() == 1;
   const bool isAccessCall =
-      (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe") ||
+      (isVectorBuiltinName(callExpr, "at") || isVectorBuiltinName(callExpr, "at_unsafe") ||
        isSimpleCallName(callExpr, "get") || isSimpleCallName(callExpr, "ref")) &&
       callExpr.args.size() == 2;
   const bool isVectorMutatorCall =
-      isSimpleCallName(callExpr, "push") || isSimpleCallName(callExpr, "pop") ||
-      isSimpleCallName(callExpr, "reserve") || isSimpleCallName(callExpr, "clear") ||
-      isSimpleCallName(callExpr, "remove_at") || isSimpleCallName(callExpr, "remove_swap");
+      isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
+      isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
+      isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
   auto expectedVectorMutatorArgCount = [&]() -> size_t {
-    if (isSimpleCallName(callExpr, "pop") || isSimpleCallName(callExpr, "clear")) {
+    if (isVectorBuiltinName(callExpr, "pop") || isVectorBuiltinName(callExpr, "clear")) {
       return 1u;
     }
     return 2u;
@@ -533,6 +566,10 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   auto buildMethodExprForReceiverIndex = [&](size_t receiverIndex) {
     Expr methodExpr = callExpr;
     methodExpr.isMethodCall = true;
+    std::string normalizedHelperName;
+    if (resolveVectorHelperAliasName(methodExpr, normalizedHelperName)) {
+      methodExpr.name = normalizedHelperName;
+    }
     if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
       std::swap(methodExpr.args[0], methodExpr.args[receiverIndex]);
       if (methodExpr.argNames.size() < methodExpr.args.size()) {
@@ -640,12 +677,16 @@ bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
-  if (!isSimpleCallName(callExpr, "capacity") || callExpr.args.size() != 1) {
+  if (!isVectorBuiltinName(callExpr, "capacity") || callExpr.args.size() != 1) {
     return false;
   }
 
   Expr methodExpr = callExpr;
   methodExpr.isMethodCall = true;
+  std::string normalizedHelperName;
+  if (resolveVectorHelperAliasName(methodExpr, normalizedHelperName)) {
+    methodExpr.name = normalizedHelperName;
+  }
   return resolveMethodCallReturnKind(methodExpr,
                                      localsIn,
                                      resolveMethodCallDefinition,
@@ -670,7 +711,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
-      isSimpleCallName(callExpr, "count") || isSimpleCallName(callExpr, "capacity");
+      isVectorBuiltinName(callExpr, "count") || isVectorBuiltinName(callExpr, "capacity");
   const bool allowBuiltinFallback =
       isBuiltinCountOrCapacityCall ||
       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||

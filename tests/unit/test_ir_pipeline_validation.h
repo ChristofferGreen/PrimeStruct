@@ -14562,6 +14562,168 @@ TEST_CASE("ir lowerer setup type helper resolves access call method return kinds
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer setup type helper normalizes namespaced vector call fallback helpers") {
+  primec::Definition countDef;
+  countDef.fullPath = "/vector/count";
+  primec::Definition atDef;
+  atDef.fullPath = "/vector/at";
+  primec::Definition pushDef;
+  pushDef.fullPath = "/vector/push";
+  primec::Definition capacityDef;
+  capacityDef.fullPath = "/vector/capacity";
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo countInfo;
+  countInfo.returnsVoid = false;
+  countInfo.returnsArray = false;
+  countInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  infoByPath.emplace(countDef.fullPath, countInfo);
+
+  primec::ir_lowerer::ReturnInfo atInfo;
+  atInfo.returnsVoid = false;
+  atInfo.returnsArray = false;
+  atInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  infoByPath.emplace(atDef.fullPath, atInfo);
+
+  primec::ir_lowerer::ReturnInfo pushInfo;
+  pushInfo.returnsVoid = false;
+  pushInfo.returnsArray = false;
+  pushInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  infoByPath.emplace(pushDef.fullPath, pushInfo);
+
+  primec::ir_lowerer::ReturnInfo capacityInfo;
+  capacityInfo.returnsVoid = false;
+  capacityInfo.returnsArray = false;
+  capacityInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
+  infoByPath.emplace(capacityDef.fullPath, capacityInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  bool methodResolved = false;
+
+  primec::Expr aliasCountCall;
+  aliasCountCall.kind = primec::Expr::Kind::Call;
+  aliasCountCall.name = "/vector/count";
+  aliasCountCall.args = {receiverExpr};
+
+  int aliasCountResolveCalls = 0;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      aliasCountCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++aliasCountResolveCalls;
+        CHECK(methodExpr.isMethodCall);
+        CHECK(methodExpr.name == "count");
+        return &countDef;
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(aliasCountResolveCalls == 1);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  methodResolved = false;
+  primec::Expr canonicalAtCall;
+  canonicalAtCall.kind = primec::Expr::Kind::Call;
+  canonicalAtCall.name = "/std/collections/vector/at";
+  canonicalAtCall.args = {receiverExpr, indexExpr};
+  int canonicalAtResolveCalls = 0;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      canonicalAtCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++canonicalAtResolveCalls;
+        CHECK(methodExpr.isMethodCall);
+        CHECK(methodExpr.name == "at");
+        return &atDef;
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(canonicalAtResolveCalls == 1);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  methodResolved = false;
+  primec::Expr aliasPushCall;
+  aliasPushCall.kind = primec::Expr::Kind::Call;
+  aliasPushCall.name = "/vector/push";
+  aliasPushCall.args = {indexExpr, receiverExpr};
+  int aliasPushResolveCalls = 0;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      aliasPushCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++aliasPushResolveCalls;
+        CHECK(methodExpr.isMethodCall);
+        CHECK(methodExpr.name == "push");
+        if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+            methodExpr.args.front().name == "items") {
+          return &pushDef;
+        }
+        return static_cast<const primec::Definition *>(nullptr);
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(aliasPushResolveCalls == 2);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  methodResolved = false;
+  primec::Expr canonicalCapacityCall;
+  canonicalCapacityCall.kind = primec::Expr::Kind::Call;
+  canonicalCapacityCall.name = "/std/collections/vector/capacity";
+  canonicalCapacityCall.args = {receiverExpr};
+  int canonicalCapacityResolveCalls = 0;
+  CHECK(primec::ir_lowerer::resolveCapacityMethodCallReturnKind(
+      canonicalCapacityCall,
+      {},
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++canonicalCapacityResolveCalls;
+        CHECK(methodExpr.isMethodCall);
+        CHECK(methodExpr.name == "capacity");
+        return &capacityDef;
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(canonicalCapacityResolveCalls == 1);
+}
+
 TEST_CASE("ir lowerer setup type helper resolves reordered positional access call method return kinds") {
   primec::Definition atUnsafeDef;
   atUnsafeDef.fullPath = "/map/at_unsafe";
