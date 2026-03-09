@@ -3729,6 +3729,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector count rejects template arguments as builtin alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/std/collections/vector/count<i32>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity rejects template arguments as builtin alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/vector/capacity<i32>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capacity does not accept template arguments") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector access helper rejects named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

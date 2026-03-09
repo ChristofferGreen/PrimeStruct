@@ -1196,23 +1196,26 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "buffer_store is only supported as a statement";
       return false;
     }
+    auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
+      if (isSimpleCallName(candidate, helper)) {
+        return true;
+      }
+      if (candidate.name.empty()) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized[0] == '/') {
+        normalized.erase(0, 1);
+      }
+      return normalized == std::string("vector/") + helper ||
+             normalized == std::string("std/collections/vector/") + helper;
+    };
     auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call) {
         return false;
       }
       auto matchesHelper = [&](const char *helper) -> bool {
-        if (isSimpleCallName(candidate, helper)) {
-          return true;
-        }
-        if (candidate.name.empty()) {
-          return false;
-        }
-        std::string normalized = candidate.name;
-        if (!normalized.empty() && normalized[0] == '/') {
-          normalized.erase(0, 1);
-        }
-        return normalized == std::string("vector/") + helper ||
-               normalized == std::string("std/collections/vector/") + helper;
+        return isVectorBuiltinName(candidate, helper);
       };
       if (matchesHelper("push")) {
         nameOut = "push";
@@ -2312,7 +2315,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (!resolveMethodTarget(expr.args.front(), expr.name, resolved, isBuiltinMethod)) {
           return false;
         }
-        if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && isSimpleCallName(expr, "capacity")) {
+        if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && isVectorBuiltinName(expr, "capacity")) {
           promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
         }
         if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end()) {
@@ -2323,7 +2326,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         resolvedMethod = false;
       }
-    } else if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
+    } else if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+               defMap_.find(resolved) == defMap_.end()) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;
@@ -2341,7 +2345,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (isSimpleCallName(expr, "capacity") && expr.args.size() == 1 &&
+    } else if (isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
                defMap_.find(resolved) == defMap_.end()) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
@@ -3794,7 +3798,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (!resolvedMethod && isSimpleCallName(expr, "count") && it == defMap_.end()) {
+      if (!resolvedMethod && isVectorBuiltinName(expr, "count") && it == defMap_.end()) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;
@@ -3835,7 +3839,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (!resolvedMethod && isSimpleCallName(expr, "capacity") && it == defMap_.end()) {
+      if (!resolvedMethod && isVectorBuiltinName(expr, "capacity") && it == defMap_.end()) {
         if (!expr.templateArgs.empty()) {
           error_ = "capacity does not accept template arguments";
           return false;
