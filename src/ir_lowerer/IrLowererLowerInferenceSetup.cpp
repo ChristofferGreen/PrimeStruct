@@ -590,19 +590,47 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
   const auto resolveExprPath = input.resolveExprPath;
   const auto isArrayCountCall = input.isArrayCountCall;
   const auto isStringCountCall = input.isStringCountCall;
+  auto isNamespacedVectorCountCapacityCall = [](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalizedName = candidate.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    if (normalizedName != "vector/count" && normalizedName != "std/collections/vector/count" &&
+        normalizedName != "vector/capacity" && normalizedName != "std/collections/vector/capacity") {
+      return false;
+    }
+    return candidate.args.size() == 1;
+  };
+  auto resolveDefinitionCallReturnKindForCandidate =
+      [defMap, resolveExprPath, &stateInOut](const Expr &candidate,
+                                             LocalInfo::ValueKind &candidateKindOut,
+                                             bool &matchedOut) {
+        bool definitionMatched = false;
+        const bool resolved = resolveDefinitionCallReturnKind(
+            candidate, *defMap, resolveExprPath, stateInOut.getReturnInfo, false, candidateKindOut, &definitionMatched);
+        matchedOut = definitionMatched;
+        return resolved;
+      };
 
   stateInOut.inferCallExprDirectReturnKind =
-      [defMap, resolveExprPath, isArrayCountCall, isStringCountCall, &stateInOut](
+      [isArrayCountCall,
+       isStringCountCall,
+       &stateInOut,
+       isNamespacedVectorCountCapacityCall,
+       resolveDefinitionCallReturnKindForCandidate](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         return resolveCallExpressionReturnKind(
             expr,
             localsIn,
             [&](const Expr &candidate, const LocalMap &, LocalInfo::ValueKind &candidateKindOut, bool &matchedOut) {
-              bool definitionMatched = false;
-              const bool resolved = resolveDefinitionCallReturnKind(
-                  candidate, *defMap, resolveExprPath, stateInOut.getReturnInfo, false, candidateKindOut, &definitionMatched);
-              matchedOut = definitionMatched;
-              return resolved;
+              if (isNamespacedVectorCountCapacityCall(candidate)) {
+                matchedOut = false;
+                return false;
+              }
+              return resolveDefinitionCallReturnKindForCandidate(candidate, candidateKindOut, matchedOut);
             },
             [&](const Expr &candidate,
                 const LocalMap &candidateLocals,
@@ -633,8 +661,19 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
                                                                                 false,
                                                                                 candidateKindOut,
                                                                                 &capacityMethodResolved);
-              matchedOut = capacityMethodResolved;
-              return capacityResolved;
+              if (capacityResolved) {
+                matchedOut = true;
+                return true;
+              }
+              if (capacityMethodResolved) {
+                matchedOut = true;
+                return false;
+              }
+              if (!isNamespacedVectorCountCapacityCall(candidate)) {
+                matchedOut = false;
+                return false;
+              }
+              return resolveDefinitionCallReturnKindForCandidate(candidate, candidateKindOut, matchedOut);
             },
             [&](const Expr &candidate,
                 const LocalMap &candidateLocals,
