@@ -6131,6 +6131,28 @@ main() {
   CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("rejects native namespaced vector count on soa_vector target") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(/std/collections/vector/count(values))
+}
+)";
+  const std::string srcPath = writeTemp("native_namespaced_vector_count_soa_vector_target.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_namespaced_vector_count_soa_vector_target_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend does not support soa_vector count") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native user map constructor block shadow") {
   const std::string source = R"(
 [return<int>]
