@@ -4310,6 +4310,74 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector stdlib namespaced count helper auto inference keeps receiver helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values) {
+  return(12i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/vector/count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector stdlib namespaced count helper auto inference keeps inferred return mismatch diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values) {
+  return(12i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/vector/count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
+}
+
+TEST_CASE("vector stdlib namespaced count helper auto inference falls back to canonical helper return") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/vector/count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced capacity auto inference keeps non-vector target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

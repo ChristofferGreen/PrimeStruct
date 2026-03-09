@@ -5582,6 +5582,49 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with auto-inferred std namespaced count helper receiver precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values) {
+  return(12i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/vector/count(values)}
+  return(inferred)
+}
+)";
+  const std::string srcPath = writeTemp("vm_std_namespaced_vector_count_receiver_precedence_auto.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 12);
+}
+
+TEST_CASE("runs vm with auto-inferred std namespaced count helper canonical fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/vector/count(values)}
+  return(inferred)
+}
+)";
+  const std::string srcPath = writeTemp("vm_std_namespaced_vector_count_canonical_fallback_auto.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+}
+
 TEST_CASE("runs vm with auto-inferred named access helper receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

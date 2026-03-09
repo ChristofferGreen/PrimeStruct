@@ -1238,21 +1238,27 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
     }
-    bool shouldDeferResolvedNamespacedVectorAccessReturn = false;
-    if (!expr.isMethodCall && expr.args.size() == 2 && !expr.name.empty()) {
-      std::string probeBuiltinAccessName;
-      if (getBuiltinArrayAccessName(expr, probeBuiltinAccessName)) {
-        std::string normalizedName = expr.name;
-        if (!normalizedName.empty() && normalizedName[0] == '/') {
-          normalizedName.erase(normalizedName.begin());
-        }
-        shouldDeferResolvedNamespacedVectorAccessReturn =
-            normalizedName.rfind("vector/", 0) == 0 ||
-            normalizedName.rfind("std/collections/vector/", 0) == 0;
+    auto isNamespacedVectorHelperCall = [&](const Expr &candidate) -> bool {
+      if (candidate.name.empty()) {
+        return false;
       }
-    }
+      std::string normalizedName = candidate.name;
+      if (!normalizedName.empty() && normalizedName[0] == '/') {
+        normalizedName.erase(normalizedName.begin());
+      }
+      return normalizedName.rfind("vector/", 0) == 0 ||
+             normalizedName.rfind("std/collections/vector/", 0) == 0;
+    };
+    const bool isNamespacedVectorCountCall =
+        !expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+        isNamespacedVectorHelperCall(expr);
+    const bool isNamespacedVectorCapacityCall =
+        !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+        isNamespacedVectorHelperCall(expr);
+    bool shouldDeferResolvedNamespacedVectorHelperReturn =
+        isNamespacedVectorCountCall || isNamespacedVectorCapacityCall;
     auto defIt = hasResolvedPath ? defMap_.find(resolved) : defMap_.end();
-    if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedVectorAccessReturn) {
+    if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedVectorHelperReturn) {
       if (!inferDefinitionReturnKind(*defIt->second)) {
         return ReturnKind::Unknown;
       }
@@ -1263,7 +1269,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Unknown;
     }
     if (!expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-        defMap_.find(resolved) == defMap_.end()) {
+        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall)) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -1294,7 +1300,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Int;
     }
     if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
-        defMap_.find(resolved) == defMap_.end()) {
+        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -1325,13 +1331,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isBuiltinRef = isSimpleCallName(expr, "ref");
     bool isNamespacedVectorAccessCall = false;
     if (isBuiltinAccess && !expr.name.empty()) {
-      std::string normalizedName = expr.name;
-      if (!normalizedName.empty() && normalizedName[0] == '/') {
-        normalizedName.erase(normalizedName.begin());
-      }
-      isNamespacedVectorAccessCall =
-          normalizedName.rfind("vector/", 0) == 0 ||
-          normalizedName.rfind("std/collections/vector/", 0) == 0;
+      isNamespacedVectorAccessCall = isNamespacedVectorHelperCall(expr);
+    }
+    if (isNamespacedVectorAccessCall) {
+      shouldDeferResolvedNamespacedVectorHelperReturn = true;
     }
     if (!expr.isMethodCall && (isBuiltinAccess || isBuiltinGet || isBuiltinRef) && expr.args.size() == 2 &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorAccessCall)) {
@@ -1448,7 +1451,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
     }
-    if (defIt != defMap_.end() && shouldDeferResolvedNamespacedVectorAccessReturn) {
+    if (defIt != defMap_.end() && shouldDeferResolvedNamespacedVectorHelperReturn) {
       if (!inferDefinitionReturnKind(*defIt->second)) {
         return ReturnKind::Unknown;
       }
