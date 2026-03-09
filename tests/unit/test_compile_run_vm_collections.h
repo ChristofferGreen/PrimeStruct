@@ -5471,6 +5471,24 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with reordered namespaced vector push call expression shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  return(/vector/push(3i32, values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_reordered_namespaced_vector_push_call_expr_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
+}
+
 TEST_CASE("runs vm with named vector push expression receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

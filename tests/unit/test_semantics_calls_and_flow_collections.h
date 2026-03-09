@@ -2550,6 +2550,62 @@ main() {
   CHECK(error.find("/std/collections/vector/push") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced helper reordered expression resolves canonical stdlib helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(/vector/push(2i32, values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced helper reordered expression resolves canonical stdlib helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(/std/collections/vector/push(2i32, values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced helper reordered expression mismatch keeps canonical diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(/std/collections/vector/push(true, values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32 got bool") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/push") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced helper reordered statement resolves canonical stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]

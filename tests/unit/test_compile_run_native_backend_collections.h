@@ -6306,6 +6306,31 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs native reordered namespaced vector push call expression shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  return(/vector/push(3i32, values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_reordered_namespaced_vector_push_call_expr_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_reordered_namespaced_vector_push_call_expr_shadow_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("compiles and runs native named vector push expression receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
