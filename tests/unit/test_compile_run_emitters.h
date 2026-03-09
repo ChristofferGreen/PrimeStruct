@@ -1489,6 +1489,39 @@ main() {
   CHECK(runCommand(exePath) == 180);
 }
 
+TEST_CASE("compiles and runs vector alias canonical forwarding when unknown expected meets primitive binding in C++ emitter") {
+  const std::string source = R"(
+Marker() {}
+
+[return<int>]
+/vector/count([vector<i32>] values, [Marker] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [i32] marker{1i32}
+  return(plus(/vector/count(values, marker), values.count(marker)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_binding.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_binding_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 180);
+}
+
 TEST_CASE("compiles and runs vector alias implicit canonical templated forwarding on named args in C++ emitter") {
   const std::string source = R"(
 [return<int>]

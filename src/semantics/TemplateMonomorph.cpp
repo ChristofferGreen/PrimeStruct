@@ -632,6 +632,10 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
             }
           }
         }
+      } else if (expectedKind != actualKind) {
+        if (normalizedExpected != normalizedActual) {
+          return true;
+        }
       }
       continue;
     }
