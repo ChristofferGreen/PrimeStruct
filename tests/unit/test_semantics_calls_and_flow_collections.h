@@ -2637,6 +2637,42 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced call alias forwards to templated canonical helper with explicit template args") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/vector/count<i32>(values, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced alias keeps templated canonical helper diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/vector/count(values, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments required for /std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced access and count helpers are builtin-alias validated") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -889,11 +889,8 @@ bool rewriteExpr(Expr &expr,
     std::string resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx);
     const std::string preferredPath = preferVectorStdlibHelperPath(resolvedPath, ctx.sourceDefs);
     if (preferredPath != resolvedPath && ctx.sourceDefs.count(preferredPath) > 0) {
-      const bool preferredIsTemplate = ctx.templateDefs.count(preferredPath) > 0;
-      if (!preferredIsTemplate || !expr.templateArgs.empty()) {
-        resolvedPath = preferredPath;
-        expr.name = preferredPath;
-      }
+      resolvedPath = preferredPath;
+      expr.name = preferredPath;
     }
     std::string builtinCollectionName;
     const bool builtinCollectionCall = getBuiltinCollectionName(expr, builtinCollectionName);
