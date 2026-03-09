@@ -138,6 +138,30 @@ main() {
   CHECK(runCommand(runCmd) == 90);
 }
 
+TEST_CASE("runs vm with vector alias implicit canonical templated forwarding on arity mismatch") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values, true), values.count(true)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_alias_implicit_canonical_templated_forwarding_arity_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 180);
+}
+
 TEST_CASE("runs vm with wrapper temporary templated vector method canonical forwarding") {
   const std::string source = R"(
 [return<int>]

@@ -359,6 +359,34 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
   return path;
 }
 
+bool definitionAcceptsPositionalArity(const Definition &def, size_t providedCount) {
+  size_t requiredCount = 0;
+  for (const auto &param : def.parameters) {
+    if (param.args.size() != 1) {
+      ++requiredCount;
+    }
+  }
+  return providedCount >= requiredCount && providedCount <= def.parameters.size();
+}
+
+std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr, const std::string &path, const Context &ctx) {
+  if (!expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
+    return path;
+  }
+  const auto defIt = ctx.sourceDefs.find(path);
+  if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
+    return path;
+  }
+  if (definitionAcceptsPositionalArity(defIt->second, expr.args.size())) {
+    return path;
+  }
+  const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);
+  if (preferred != path && ctx.sourceDefs.count(preferred) > 0 && ctx.templateDefs.count(preferred) > 0) {
+    return preferred;
+  }
+  return path;
+}
+
 bool resolveMethodCallTemplateTarget(const Expr &expr,
                                      const LocalTypeMap &locals,
                                      const Context &ctx,
@@ -928,6 +956,13 @@ bool rewriteExpr(Expr &expr,
         expr.name = templatePreferredPath;
       }
     }
+    if (expr.templateArgs.empty()) {
+      const std::string implicitTemplatePreferredPath = preferVectorStdlibImplicitTemplatePath(expr, resolvedPath, ctx);
+      if (implicitTemplatePreferredPath != resolvedPath) {
+        resolvedPath = implicitTemplatePreferredPath;
+        expr.name = implicitTemplatePreferredPath;
+      }
+    }
     std::string builtinCollectionName;
     const bool builtinCollectionCall = getBuiltinCollectionName(expr, builtinCollectionName);
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
@@ -978,6 +1013,9 @@ bool rewriteExpr(Expr &expr,
       const bool methodWasTemplate = ctx.templateDefs.count(methodPath) > 0;
       if (!expr.templateArgs.empty() && !methodWasTemplate) {
         methodPath = preferVectorStdlibTemplatePath(methodPath, ctx);
+      }
+      if (expr.templateArgs.empty()) {
+        methodPath = preferVectorStdlibImplicitTemplatePath(expr, methodPath, ctx);
       }
       const bool isTemplateDef = ctx.templateDefs.count(methodPath) > 0;
       const bool isKnownDef = ctx.sourceDefs.count(methodPath) > 0;
