@@ -162,6 +162,30 @@ main() {
   CHECK(runCommand(runCmd) == 180);
 }
 
+TEST_CASE("runs vm with vector alias implicit canonical forwarding on bool type mismatch") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values, [i32] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values, true), values.count(true)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_alias_implicit_canonical_forwarding_bool_type_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 180);
+}
+
 TEST_CASE("runs vm with vector alias implicit canonical templated forwarding on named args") {
   const std::string source = R"(
 [return<int>]

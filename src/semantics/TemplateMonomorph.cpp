@@ -375,7 +375,53 @@ bool definitionAcceptsCallShape(const Definition &def, const Expr &expr) {
   return buildOrderedArguments(params, expr.args, expr.argNames, ordered, error);
 }
 
-std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr, const std::string &path, const Context &ctx) {
+bool shouldPreferTemplatedVectorFallbackForBoolMismatch(const Definition &def,
+                                                        const Expr &expr,
+                                                        const LocalTypeMap &locals,
+                                                        const std::vector<ParameterInfo> &params,
+                                                        bool allowMathBare,
+                                                        Context &ctx) {
+  std::vector<ParameterInfo> callParams;
+  callParams.reserve(def.parameters.size());
+  for (const auto &paramExpr : def.parameters) {
+    ParameterInfo param;
+    param.name = paramExpr.name;
+    extractExplicitBindingType(paramExpr, param.binding);
+    if (paramExpr.args.size() == 1) {
+      param.defaultExpr = &paramExpr.args.front();
+    }
+    callParams.push_back(std::move(param));
+  }
+  std::vector<const Expr *> ordered;
+  std::string orderError;
+  if (!buildOrderedArguments(callParams, expr.args, expr.argNames, ordered, orderError)) {
+    return false;
+  }
+  for (size_t i = 0; i < callParams.size(); ++i) {
+    const auto &param = callParams[i];
+    if (param.binding.typeName.empty() || !ordered[i]) {
+      continue;
+    }
+    BindingInfo actual;
+    if (!inferBindingTypeForMonomorph(*ordered[i], params, locals, allowMathBare, ctx, actual)) {
+      continue;
+    }
+    const ReturnKind expectedKind = returnKindForTypeName(normalizeBindingTypeName(param.binding.typeName));
+    const ReturnKind actualKind = returnKindForTypeName(normalizeBindingTypeName(actual.typeName));
+    if ((expectedKind == ReturnKind::Bool && actualKind != ReturnKind::Bool) ||
+        (expectedKind != ReturnKind::Bool && actualKind == ReturnKind::Bool)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
+                                                   const std::string &path,
+                                                   const LocalTypeMap &locals,
+                                                   const std::vector<ParameterInfo> &params,
+                                                   bool allowMathBare,
+                                                   Context &ctx) {
   if (!expr.templateArgs.empty()) {
     return path;
   }
@@ -383,10 +429,11 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr, const std::
   if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
     return path;
   }
-  if (definitionAcceptsCallShape(defIt->second, expr)) {
+  const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);
+  if (definitionAcceptsCallShape(defIt->second, expr) &&
+      !shouldPreferTemplatedVectorFallbackForBoolMismatch(defIt->second, expr, locals, params, allowMathBare, ctx)) {
     return path;
   }
-  const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);
   if (preferred != path && ctx.sourceDefs.count(preferred) > 0 && ctx.templateDefs.count(preferred) > 0) {
     return preferred;
   }
@@ -963,7 +1010,8 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (expr.templateArgs.empty()) {
-      const std::string implicitTemplatePreferredPath = preferVectorStdlibImplicitTemplatePath(expr, resolvedPath, ctx);
+      const std::string implicitTemplatePreferredPath =
+          preferVectorStdlibImplicitTemplatePath(expr, resolvedPath, locals, params, allowMathBare, ctx);
       if (implicitTemplatePreferredPath != resolvedPath) {
         resolvedPath = implicitTemplatePreferredPath;
         expr.name = implicitTemplatePreferredPath;
@@ -1021,7 +1069,7 @@ bool rewriteExpr(Expr &expr,
         methodPath = preferVectorStdlibTemplatePath(methodPath, ctx);
       }
       if (expr.templateArgs.empty()) {
-        methodPath = preferVectorStdlibImplicitTemplatePath(expr, methodPath, ctx);
+        methodPath = preferVectorStdlibImplicitTemplatePath(expr, methodPath, locals, params, allowMathBare, ctx);
       }
       const bool isTemplateDef = ctx.templateDefs.count(methodPath) > 0;
       const bool isKnownDef = ctx.sourceDefs.count(methodPath) > 0;
