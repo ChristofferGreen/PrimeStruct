@@ -1238,8 +1238,21 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
     }
+    bool shouldDeferResolvedNamespacedVectorAccessReturn = false;
+    if (!expr.isMethodCall && expr.args.size() == 2 && !expr.name.empty()) {
+      std::string probeBuiltinAccessName;
+      if (getBuiltinArrayAccessName(expr, probeBuiltinAccessName)) {
+        std::string normalizedName = expr.name;
+        if (!normalizedName.empty() && normalizedName[0] == '/') {
+          normalizedName.erase(normalizedName.begin());
+        }
+        shouldDeferResolvedNamespacedVectorAccessReturn =
+            normalizedName.rfind("vector/", 0) == 0 ||
+            normalizedName.rfind("std/collections/vector/", 0) == 0;
+      }
+    }
     auto defIt = hasResolvedPath ? defMap_.find(resolved) : defMap_.end();
-    if (defIt != defMap_.end()) {
+    if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedVectorAccessReturn) {
       if (!inferDefinitionReturnKind(*defIt->second)) {
         return ReturnKind::Unknown;
       }
@@ -1434,6 +1447,16 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return ReturnKind::Unknown;
         }
       }
+    }
+    if (defIt != defMap_.end() && shouldDeferResolvedNamespacedVectorAccessReturn) {
+      if (!inferDefinitionReturnKind(*defIt->second)) {
+        return ReturnKind::Unknown;
+      }
+      auto kindIt = returnKinds_.find(resolved);
+      if (kindIt != returnKinds_.end()) {
+        return kindIt->second;
+      }
+      return ReturnKind::Unknown;
     }
     std::string builtinName;
     if (defMap_.find(resolved) == defMap_.end() && getBuiltinArrayAccessName(expr, builtinName) &&

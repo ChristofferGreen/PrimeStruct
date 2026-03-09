@@ -4398,6 +4398,25 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
+TEST_CASE("vector stdlib namespaced access helper auto inference falls back to canonical helper return") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/vector/at([index] 0i32, [values] values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa access helper call-form expression infers auto binding from labeled receiver helper") {
   const std::string source = R"(
 Particle() {

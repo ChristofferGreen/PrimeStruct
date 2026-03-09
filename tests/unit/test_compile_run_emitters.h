@@ -979,6 +979,33 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
+TEST_CASE("compiles and runs auto-inferred std namespaced access helper canonical fallback in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/vector/at([index] 0i32, [values] values)}
+  return(inferred)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto.prime",
+                source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("compiles and runs user vector access positional call shadow in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

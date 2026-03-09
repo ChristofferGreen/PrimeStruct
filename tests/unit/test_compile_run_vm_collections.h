@@ -5632,6 +5632,26 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
+TEST_CASE("runs vm with auto-inferred std namespaced access helper canonical fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/vector/at([index] 0i32, [values] values)}
+  return(inferred)
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+}
+
 TEST_CASE("runs vm with user vector pop call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
