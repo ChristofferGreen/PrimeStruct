@@ -150,6 +150,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("array literal validates") {
+  const std::string source = R"(
+[return<int>]
+use([i32] x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(array<i32>(1i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("array literal missing template arg fails") {
   const std::string source = R"(
 [return<int>]

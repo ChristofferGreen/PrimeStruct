@@ -4957,6 +4957,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto isStringTypeName = [](const std::string &typeName) {
       return normalizeBindingTypeName(typeName) == "string";
     };
+    auto isBuiltinCollectionLiteralExpr = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call) {
+        return false;
+      }
+      if (defMap_.find(resolveCalleePath(candidate)) != defMap_.end()) {
+        return false;
+      }
+      std::string collectionName;
+      return getBuiltinCollectionName(candidate, collectionName);
+    };
     for (size_t paramIndex = 0; paramIndex < orderedArgs.size() && paramIndex < calleeParams.size(); ++paramIndex) {
       const Expr *arg = orderedArgs[paramIndex];
       if (arg == nullptr) {
@@ -4982,6 +4992,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       const ReturnKind expectedKind = returnKindForTypeName(normalizeBindingTypeName(expectedTypeName));
       if (expectedKind != ReturnKind::Unknown) {
         const ReturnKind actualKind = inferExprReturnKind(*arg, params, locals);
+        if (actualKind == ReturnKind::Array && isBuiltinCollectionLiteralExpr(*arg)) {
+          continue;
+        }
         if (actualKind != ReturnKind::Unknown && actualKind != expectedKind) {
           error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
                    typeNameForReturnKind(expectedKind) + " got " + typeNameForReturnKind(actualKind);
