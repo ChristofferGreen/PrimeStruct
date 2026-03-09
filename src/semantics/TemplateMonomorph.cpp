@@ -535,6 +535,18 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
         if (!expectedStructPath.empty() && !actualStructPath.empty() && expectedStructPath != actualStructPath) {
           return true;
         }
+        if (normalizedExpected != normalizedActual) {
+          std::string expectedBase;
+          std::string expectedArgText;
+          std::string actualBase;
+          std::string actualArgText;
+          if (splitTemplateTypeName(normalizedExpected, expectedBase, expectedArgText) &&
+              splitTemplateTypeName(normalizedActual, actualBase, actualArgText)) {
+            if (normalizeBindingTypeName(expectedBase) == normalizeBindingTypeName(actualBase)) {
+              return true;
+            }
+          }
+        }
       }
       continue;
     }
