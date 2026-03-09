@@ -2487,6 +2487,36 @@ main() {
   CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector access and count helpers are builtin-alias validated") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 5i32)}
+  [i32] c{/std/collections/vector/count(values)}
+  [i32] k{/std/collections/vector/capacity(values)}
+  [i32] first{/std/collections/vector/at(values, 0i32)}
+  [i32] second{/std/collections/vector/at_unsafe(values, 1i32)}
+  return(plus(plus(c, k), plus(first, second)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector capacity keeps non-vector target diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/vector/capacity(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
+}
+
 TEST_CASE("namespaced vector helper with named arguments is statement-only in expressions") {
   struct HelperCase {
     const char *name;
