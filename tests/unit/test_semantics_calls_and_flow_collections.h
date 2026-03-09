@@ -4114,6 +4114,35 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector namespaced count-capacity call-form infers auto bindings") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 5i32)}
+  [auto] inferredCount{/vector/count(values)}
+  [auto] inferredCapacity{/std/collections/vector/capacity(values)}
+  return(plus(inferredCount, inferredCapacity))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced capacity auto inference keeps non-vector target diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/vector/capacity(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
+}
+
 TEST_CASE("access helper call-form expression infers auto binding from labeled receiver helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

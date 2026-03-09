@@ -937,23 +937,26 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
+      if (isSimpleCallName(candidate, helper)) {
+        return true;
+      }
+      if (candidate.name.empty()) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(0, 1);
+      }
+      return normalized == std::string("vector/") + helper ||
+             normalized == std::string("std/collections/vector/") + helper;
+    };
     auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call) {
         return false;
       }
       auto matchesHelper = [&](const char *helper) -> bool {
-        if (isSimpleCallName(candidate, helper)) {
-          return true;
-        }
-        if (candidate.name.empty()) {
-          return false;
-        }
-        std::string normalized = candidate.name;
-        if (!normalized.empty() && normalized[0] == '/') {
-          normalized.erase(0, 1);
-        }
-        return normalized == std::string("vector/") + helper ||
-               normalized == std::string("std/collections/vector/") + helper;
+        return isVectorBuiltinName(candidate, helper);
       };
       if (matchesHelper("push")) {
         nameOut = "push";
@@ -1085,7 +1088,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::String;
       }
     }
-    if (expr.isMethodCall && expr.name == "count" && expr.args.size() == 1) {
+    if (expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1) {
       std::string elemType;
       std::string keyType;
       std::string valueType;
@@ -1117,7 +1120,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         hasResolvedPath = true;
       }
     }
-    if (expr.isMethodCall && expr.name == "capacity" && expr.args.size() == 1) {
+    if (expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1) {
       std::string elemType;
       if (resolveVectorTarget(expr.args.front(), elemType)) {
         const std::string methodPath = preferVectorStdlibHelperPath("/vector/capacity");
@@ -1232,7 +1235,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
     }
-    if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
+    if (!expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
@@ -1263,7 +1266,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return ReturnKind::Int;
     }
-    if (!expr.isMethodCall && isSimpleCallName(expr, "capacity") && expr.args.size() == 1 &&
+    if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
         defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
