@@ -3349,24 +3349,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           return defMap_.find(resolved) == defMap_.end();
         };
-        auto isLegacyVectorHelperBuiltinCall = [&]() {
-          if (!(isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
-                isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
-                isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap"))) {
-            return false;
-          }
-          if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
-            for (const auto &receiverCandidate : expr.args) {
-              bool isBuiltinMethod = false;
-              std::string methodResolved;
-              if (resolveMethodTarget(receiverCandidate, expr.name, methodResolved, isBuiltinMethod) &&
-                  !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
-                return false;
-              }
-            }
-          }
-          return defMap_.find(resolved) == defMap_.end();
-        };
         auto resolveLegacyVectorHelperName = [&](std::string &nameOut) -> bool {
           if (isSimpleCallName(expr, "push")) {
             nameOut = "push";
@@ -3392,7 +3374,40 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             nameOut = "remove_swap";
             return true;
           }
+          if (expr.name.empty()) {
+            return false;
+          }
+          std::string normalized = expr.name;
+          if (!normalized.empty() && normalized.front() == '/') {
+            normalized.erase(normalized.begin());
+          }
+          if (normalized.rfind("vector/", 0) != 0) {
+            return false;
+          }
+          normalized = normalized.substr(std::string("vector/").size());
+          if (normalized == "push" || normalized == "pop" || normalized == "reserve" || normalized == "clear" ||
+              normalized == "remove_at" || normalized == "remove_swap") {
+            nameOut = normalized;
+            return true;
+          }
           return false;
+        };
+        auto isLegacyVectorHelperBuiltinCall = [&]() {
+          std::string helperName;
+          if (!resolveLegacyVectorHelperName(helperName)) {
+            return false;
+          }
+          if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
+            for (const auto &receiverCandidate : expr.args) {
+              bool isBuiltinMethod = false;
+              std::string methodResolved;
+              if (resolveMethodTarget(receiverCandidate, expr.name, methodResolved, isBuiltinMethod) &&
+                  !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
+                return false;
+              }
+            }
+          }
+          return defMap_.find(resolved) == defMap_.end();
         };
         const bool isLegacyVectorHelperBuiltin = isLegacyVectorHelperBuiltinCall();
         std::string vectorHelperName;

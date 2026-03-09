@@ -2447,6 +2447,32 @@ main() {
   CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
+TEST_CASE("namespaced vector helper with named arguments is statement-only in expressions") {
+  struct HelperCase {
+    const char *name;
+    const char *args;
+  };
+  const HelperCase helpers[] = {
+      {"push", "[values] values, [value] 2i32"},
+      {"reserve", "[values] values, [capacity] 8i32"},
+      {"remove_at", "[values] values, [index] 0i32"},
+      {"remove_swap", "[values] values, [index] 0i32"},
+  };
+  for (const auto &helper : helpers) {
+    CAPTURE(helper.name);
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32)}\n"
+        "  return(/vector/" +
+        std::string(helper.name) + "(" + helper.args + "))\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("only supported as a statement") != std::string::npos);
+  }
+}
+
 TEST_CASE("user definition named push is not treated as builtin vector helper") {
   const std::string source = R"(
 [return<void>]
@@ -2808,7 +2834,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector helper call-form expression builtin rejects named arguments") {
+TEST_CASE("vector helper call-form expression builtin stays statement-only with named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2818,7 +2844,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("vector helper statement call-form user shadow accepts named arguments") {
