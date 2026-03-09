@@ -2382,6 +2382,39 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
+TEST_CASE("C++ emitter keeps namespaced wrapper string access method chain fallback") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(plus(/std/collections/vector/at(wrapText(), 1i32).tag(),
+              /vector/at_unsafe(wrapText(), 0i32).tag()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_namespaced_wrapper_string_access_method_chain_fallback.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_namespaced_wrapper_string_access_method_chain_fallback.cpp")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_i32_tag(ps_string_at(ps_wrapText(), 1))") != std::string::npos);
+  CHECK(output.find("ps_i32_tag(ps_string_at_unsafe(ps_wrapText(), 0))") != std::string::npos);
+}
+
 TEST_CASE("rejects namespaced access method chain non-collection target in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
@@ -2400,6 +2433,37 @@ main() {
       writeTemp("compile_cpp_namespaced_access_method_chain_non_collection_reject.prime", source);
   const std::string errPath = (std::filesystem::temp_directory_path() /
                                "primec_cpp_namespaced_access_method_chain_non_collection_reject.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("at requires array, vector, map, or string target") != std::string::npos);
+}
+
+TEST_CASE("rejects namespaced wrapper access method chain non-collection target in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<int>]
+wrapNumber() {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/at(wrapNumber(), 0i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_namespaced_wrapper_access_method_chain_non_collection_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_namespaced_wrapper_access_method_chain_non_collection_reject.err")
                                   .string();
 
   const std::string compileCmd =

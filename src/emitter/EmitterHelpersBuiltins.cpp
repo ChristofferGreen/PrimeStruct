@@ -651,7 +651,8 @@ bool inferCollectionElementTypeNameFromExpr(const Expr &expr,
 }
 
 std::string inferAccessCallTypeName(const Expr &call,
-                                    const std::unordered_map<std::string, BindingInfo> &localTypes) {
+                                    const std::unordered_map<std::string, BindingInfo> &localTypes,
+                                    const std::function<std::string(const Expr &)> &inferPrimitiveTypeName) {
   if (!(isSimpleCallName(call, "at") || isSimpleCallName(call, "at_unsafe")) || call.args.size() != 2) {
     return "";
   }
@@ -662,6 +663,12 @@ std::string inferAccessCallTypeName(const Expr &call,
   const Expr &receiver = call.args[receiverIndex];
   if (isStringValue(receiver, localTypes)) {
     return "i32";
+  }
+  if (inferPrimitiveTypeName) {
+    const std::string inferredReceiverType = normalizeBindingTypeName(inferPrimitiveTypeName(receiver));
+    if (inferredReceiverType == "string") {
+      return "i32";
+    }
   }
   std::string elementType;
   if (inferCollectionElementTypeNameFromExpr(receiver, localTypes, elementType)) {
@@ -736,7 +743,7 @@ bool resolveMethodCallPath(const Expr &call,
         if (isVectorCapacityCall(expr, localTypes)) {
           return "i32";
         }
-        const std::string accessTypeName = inferAccessCallTypeName(expr, localTypes);
+        const std::string accessTypeName = inferAccessCallTypeName(expr, localTypes, inferPrimitiveTypeName);
         if (!accessTypeName.empty()) {
           return accessTypeName;
         }
