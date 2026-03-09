@@ -301,7 +301,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (!normalized.empty() && normalized[0] == '/') {
         normalized.erase(0, 1);
       }
-      return normalized == std::string("vector/") + helper;
+      return normalized == std::string("vector/") + helper ||
+             normalized == std::string("std/collections/vector/") + helper;
     };
     if (matchesHelper("push")) {
       nameOut = "push";
