@@ -380,10 +380,24 @@
     }
     return 0;
   };
+  auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
+    if (isSimpleCallName(candidate, helper)) {
+      return true;
+    }
+    if (candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    return normalized == std::string("vector/") + helper ||
+           normalized == std::string("std/collections/vector/") + helper;
+  };
   const std::string resolvedFull = preferVectorStdlibHelperPath(full, nameMap);
   auto it = nameMap.find(resolvedFull);
   if (it == nameMap.end()) {
-    if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && isResolvedMapTarget(expr.args.front())) {
+    if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 && isResolvedMapTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_map_count("
           << emitExpr(expr.args.front(),
@@ -399,7 +413,7 @@
           << ")";
       return out.str();
     }
-    if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && isResolvedArrayLikeTarget(expr.args.front())) {
+    if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 && isResolvedArrayLikeTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_array_count("
           << emitExpr(expr.args.front(),
@@ -415,7 +429,7 @@
           << ")";
       return out.str();
     }
-    if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && isResolvedStringTarget(expr.args.front())) {
+    if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 && isResolvedStringTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_string_count("
           << emitExpr(expr.args.front(),
@@ -431,7 +445,7 @@
           << ")";
       return out.str();
     }
-    if (isSimpleCallName(expr, "capacity") && expr.args.size() == 1 && isResolvedVectorTarget(expr.args.front())) {
+    if (isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 && isResolvedVectorTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_vector_capacity("
           << emitExpr(expr.args.front(),
