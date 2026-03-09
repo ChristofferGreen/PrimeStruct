@@ -2313,6 +2313,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     std::string accessHelperName;
+    auto isNamespacedVectorHelperCall = [&](const Expr &candidate) -> bool {
+      if (candidate.name.empty()) {
+        return false;
+      }
+      std::string normalizedName = candidate.name;
+      if (!normalizedName.empty() && normalizedName[0] == '/') {
+        normalizedName.erase(normalizedName.begin());
+      }
+      return normalizedName.rfind("vector/", 0) == 0 ||
+             normalizedName.rfind("std/collections/vector/", 0) == 0;
+    };
+    const bool isNamespacedVectorCountCall =
+        !expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+        isNamespacedVectorHelperCall(expr);
     if (expr.isMethodCall) {
       if (!hasVectorHelperCallResolution) {
         if (expr.args.empty()) {
@@ -2338,7 +2352,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         resolvedMethod = false;
       }
     } else if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-               defMap_.find(resolved) == defMap_.end()) {
+               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;

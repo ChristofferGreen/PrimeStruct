@@ -940,6 +940,61 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("compiles and runs std namespaced count expression receiver precedence in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values) {
+  return(12i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/std/collections/vector/count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_expr_receiver_precedence.prime",
+                                        source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_std_namespaced_vector_count_expr_receiver_precedence_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+}
+
+TEST_CASE("compiles and runs std namespaced count expression canonical fallback in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/std/collections/vector/count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_expr_canonical_fallback.prime",
+                                        source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_std_namespaced_vector_count_expr_canonical_fallback_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("compiles and runs user vector mutator bool positional call shadow in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]
