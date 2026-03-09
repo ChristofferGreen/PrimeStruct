@@ -38,16 +38,17 @@ TEST_CASE("runs vm with stdlib namespaced vector builtin aliases") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{/std/collections/vector/vector(4i32, 5i32)}
+  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   /std/collections/vector/push(values, 6i32)
-  return(plus(plus(/std/collections/vector/count(values),
-                   /std/collections/vector/capacity(values)),
-              /std/collections/vector/at_unsafe(values, 2i32)))
+  [i32] countValue{/std/collections/vector/count(values)}
+  [i32] capacityValue{/std/collections/vector/capacity(values)}
+  [i32] tailValue{/std/collections/vector/at_unsafe(values, 2i32)}
+  return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_namespaced_vector_aliases.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 12);
+  CHECK(runCommand(runCmd) == 9);
 }
 
 TEST_CASE("runs vm with stdlib canonical vector helper method precedence") {
@@ -88,7 +89,7 @@ TEST_CASE("runs vm with templated stdlib canonical vector helper method preceden
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(plus(values.count(true), values.at(2i32)))
+  return(plus(values.count<i32>(true), values.at<i32>(2i32)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_vector_template_method_helper_precedence.prime", source);

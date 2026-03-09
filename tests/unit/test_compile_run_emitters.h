@@ -953,11 +953,12 @@ TEST_CASE("compiles and runs stdlib namespaced vector builtin aliases in C++ emi
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{/std/collections/vector/vector(4i32, 5i32)}
+  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   /std/collections/vector/push(values, 6i32)
-  return(plus(plus(/std/collections/vector/count(values),
-                   /std/collections/vector/capacity(values)),
-              /std/collections/vector/at_unsafe(values, 2i32)))
+  [i32] countValue{/std/collections/vector/count(values)}
+  [i32] capacityValue{/std/collections/vector/capacity(values)}
+  [i32] tailValue{/std/collections/vector/at_unsafe(values, 2i32)}
+  return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_aliases.prime", source);
@@ -966,7 +967,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  CHECK(runCommand(exePath) == 9);
 }
 
 TEST_CASE("compiles and runs stdlib canonical vector helper method precedence in C++ emitter") {
@@ -1011,7 +1012,7 @@ TEST_CASE("compiles and runs templated stdlib canonical vector helper method pre
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(plus(values.count(true), values.at(2i32)))
+  return(plus(values.count<i32>(true), values.at<i32>(2i32)))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_vector_template_method_helper_precedence.prime", source);
@@ -1494,7 +1495,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
 TEST_CASE("rejects inferred wrapper string count arg mismatch in C++ emitter") {

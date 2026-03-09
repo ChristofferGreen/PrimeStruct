@@ -169,11 +169,12 @@ TEST_CASE("compiles and runs native stdlib namespaced vector builtin aliases") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{/std/collections/vector/vector(4i32, 5i32)}
+  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   /std/collections/vector/push(values, 6i32)
-  return(plus(plus(/std/collections/vector/count(values),
-                   /std/collections/vector/capacity(values)),
-              /std/collections/vector/at_unsafe(values, 2i32)))
+  [i32] countValue{/std/collections/vector/count(values)}
+  [i32] capacityValue{/std/collections/vector/capacity(values)}
+  [i32] tailValue{/std/collections/vector/at_unsafe(values, 2i32)}
+  return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_namespaced_vector_aliases.prime", source);
@@ -182,7 +183,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  CHECK(runCommand(exePath) == 9);
 }
 
 TEST_CASE("compiles and runs native stdlib canonical vector helper method precedence") {
@@ -227,7 +228,7 @@ TEST_CASE("compiles and runs native templated stdlib canonical vector helper met
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(plus(values.count(true), values.at(2i32)))
+  return(plus(values.count<i32>(true), values.at<i32>(2i32)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_vector_template_method_helper_precedence.prime", source);

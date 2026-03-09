@@ -2491,7 +2491,7 @@ TEST_CASE("stdlib namespaced vector constructor is treated as builtin collection
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{/std/collections/vector/vector(4i32, 5i32)}
+  [vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   return(count(values))
 }
 )";
@@ -2504,7 +2504,7 @@ TEST_CASE("stdlib namespaced vector constructor rejects named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{/std/collections/vector/vector([first] 4i32, [second] 5i32)}
+  [vector<i32>] values{/std/collections/vector/vector<i32>([first] 4i32, [second] 5i32)}
   return(count(values))
 }
 )";
@@ -2568,7 +2568,7 @@ TEST_CASE("templated stdlib canonical vector helpers resolve in method-call suga
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(plus(values.count(true), values.at(2i32)))
+  return(plus(values.count<i32>(true), values.at<i32>(2i32)))
 }
 )";
   std::string error;
@@ -2586,7 +2586,7 @@ TEST_CASE("templated stdlib canonical vector helper keeps precedence diagnostics
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values.count())
+  return(values.count<i32>())
 }
 )";
   std::string error;
