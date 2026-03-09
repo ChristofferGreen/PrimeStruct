@@ -5399,6 +5399,24 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with std namespaced reordered mutator call and compatibility helper shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/push([vector<i32> mut] values, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /std/collections/vector/push(3i32, values)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_std_namespaced_reordered_mutator_compat_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with user vector push bool positional call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]

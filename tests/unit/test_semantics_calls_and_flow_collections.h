@@ -2461,6 +2461,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector helper statement resolves compatibility helper definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/vector/push([vector<i32> mut] values, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /std/collections/vector/push(2i32, values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced vector helper is statement-only in expressions") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

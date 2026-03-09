@@ -533,6 +533,7 @@
             for (size_t receiverIndex : receiverIndices) {
               Expr methodCandidate = stmt;
               methodCandidate.isMethodCall = true;
+              methodCandidate.name = vectorHelper;
               if (receiverIndex != 0 && receiverIndex < methodCandidate.args.size()) {
                 std::swap(methodCandidate.args[0], methodCandidate.args[receiverIndex]);
                 if (methodCandidate.argNames.size() < methodCandidate.args.size()) {
