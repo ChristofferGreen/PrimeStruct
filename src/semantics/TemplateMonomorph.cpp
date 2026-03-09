@@ -338,6 +338,13 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
       preferred = stdlibAlias;
     }
   }
+  if (preferred.rfind("/map/", 0) == 0 && defs.count(preferred) == 0) {
+    const std::string stdlibAlias =
+        "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+    if (defs.count(stdlibAlias) > 0) {
+      preferred = stdlibAlias;
+    }
+  }
   return preferred;
 }
 
@@ -355,6 +362,12 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     return path;
   }
   if (path.rfind("/vector/", 0) != 0) {
+    if (path.rfind("/map/", 0) == 0) {
+      const std::string stdlibPath = "/std/collections/map/" + path.substr(std::string("/map/").size());
+      if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
+        return stdlibPath;
+      }
+    }
     return path;
   }
   const std::string stdlibPath = "/std/collections/vector/" + path.substr(std::string("/vector/").size());

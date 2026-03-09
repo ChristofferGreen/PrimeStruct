@@ -390,6 +390,13 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         return defIt->second;
       }
     }
+    if (path.rfind("/map/", 0) == 0) {
+      const std::string stdlibAlias = "/std/collections/map/" + path.substr(std::string("/map/").size());
+      defIt = defMap.find(stdlibAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
     return nullptr;
   };
   if (!resolvedTypePath.empty()) {

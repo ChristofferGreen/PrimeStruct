@@ -1316,6 +1316,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           preferred = stdlibAlias;
         }
       }
+      if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string stdlibAlias =
+            "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+        if (defMap_.count(stdlibAlias) > 0) {
+          preferred = stdlibAlias;
+        }
+      }
       return preferred;
     };
     bool hasVectorHelperCallResolution = false;
@@ -2329,9 +2336,34 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return normalizedName.rfind("vector/", 0) == 0 ||
              normalizedName.rfind("std/collections/vector/", 0) == 0;
     };
+    auto isNamespacedMapHelperCall = [&](const Expr &candidate) -> bool {
+      if (candidate.name.empty()) {
+        return false;
+      }
+      std::string normalizedName = candidate.name;
+      if (!normalizedName.empty() && normalizedName[0] == '/') {
+        normalizedName.erase(normalizedName.begin());
+      }
+      return normalizedName.rfind("map/", 0) == 0 ||
+             normalizedName.rfind("std/collections/map/", 0) == 0;
+    };
     const bool isNamespacedVectorCountCall =
         !expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         isNamespacedVectorHelperCall(expr);
+    const bool isNamespacedMapCountCall =
+        !expr.isMethodCall && expr.args.size() == 1 && isNamespacedMapHelperCall(expr) &&
+        [&]() {
+          std::string normalizedName = expr.name;
+          if (!normalizedName.empty() && normalizedName[0] == '/') {
+            normalizedName.erase(normalizedName.begin());
+          }
+          if (normalizedName.rfind("map/", 0) == 0) {
+            normalizedName = normalizedName.substr(std::string("map/").size());
+          } else if (normalizedName.rfind("std/collections/map/", 0) == 0) {
+            normalizedName = normalizedName.substr(std::string("std/collections/map/").size());
+          }
+          return normalizedName == "count";
+        }();
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
         isNamespacedVectorHelperCall(expr);
@@ -2359,8 +2391,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         resolvedMethod = false;
       }
-    } else if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall)) {
+    } else if ((isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall) && expr.args.size() == 1 &&
+               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;

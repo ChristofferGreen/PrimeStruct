@@ -2723,6 +2723,66 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced map constructor is treated as builtin collection") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(/std/collections/map/at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced map constructor rejects named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>([firstKey] 1i32, [firstValue] 4i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced map access and count helpers are builtin-alias validated") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [i32] c{/std/collections/map/count(values)}
+  [i32] first{/std/collections/map/at(values, 1i32)}
+  [i32] second{/std/collections/map/at_unsafe(values, 2i32)}
+  return(plus(c, plus(first, second)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map helpers resolve in method-call sugar") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.count(true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib canonical vector helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]

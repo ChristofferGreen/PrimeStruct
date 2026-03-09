@@ -1082,6 +1082,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           preferred = stdlibAlias;
         }
       }
+      if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string stdlibAlias =
+            "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+        if (defMap_.count(stdlibAlias) > 0) {
+          preferred = stdlibAlias;
+        }
+      }
       return preferred;
     };
     std::string resolved = resolveCalleePath(expr);
@@ -1262,6 +1269,21 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isNamespacedVectorCountCall =
         !expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         isNamespacedVectorHelperCall(expr);
+    const bool isNamespacedMapCountCall =
+        !expr.isMethodCall && expr.args.size() == 1 && !expr.name.empty() &&
+        [&]() {
+          std::string normalizedName = expr.name;
+          if (!normalizedName.empty() && normalizedName[0] == '/') {
+            normalizedName.erase(normalizedName.begin());
+          }
+          if (normalizedName.rfind("map/", 0) == 0) {
+            return normalizedName.substr(std::string("map/").size()) == "count";
+          }
+          if (normalizedName.rfind("std/collections/map/", 0) == 0) {
+            return normalizedName.substr(std::string("std/collections/map/").size()) == "count";
+          }
+          return false;
+        }();
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
         isNamespacedVectorHelperCall(expr);
@@ -1282,8 +1304,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return ReturnKind::Unknown;
     }
-    if (!expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall)) {
+    if (!expr.isMethodCall && (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall) &&
+        expr.args.size() == 1 &&
+        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall)) {
       std::string methodResolved;
       if (resolveMethodCallPath("count", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);

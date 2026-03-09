@@ -136,6 +136,20 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
       return alias == targetName;
     }
   }
+  if (name.rfind("map/", 0) == 0) {
+    std::string alias = name.substr(std::string("map/").size());
+    if (alias.find('/') == std::string::npos &&
+        (alias == "map" || alias == "count" || alias == "at" || alias == "at_unsafe")) {
+      return alias == targetName;
+    }
+  }
+  if (name.rfind("std/collections/map/", 0) == 0) {
+    std::string alias = name.substr(std::string("std/collections/map/").size());
+    if (alias.find('/') == std::string::npos &&
+        (alias == "map" || alias == "count" || alias == "at" || alias == "at_unsafe")) {
+      return alias == targetName;
+    }
+  }
   if (name.find('/') != std::string::npos) {
     return false;
   }
@@ -392,6 +406,22 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
+  if (name.rfind("map/", 0) == 0) {
+    std::string alias = name.substr(std::string("map/").size());
+    if (alias == "map") {
+      out = "map";
+      return true;
+    }
+    return false;
+  }
+  if (name.rfind("std/collections/map/", 0) == 0) {
+    std::string alias = name.substr(std::string("std/collections/map/").size());
+    if (alias == "map") {
+      out = "map";
+      return true;
+    }
+    return false;
+  }
   if (name.find('/') != std::string::npos) {
     return false;
   }
@@ -429,6 +459,13 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   if (preferred.rfind("/vector/", 0) == 0 && nameMap.count(preferred) == 0) {
     const std::string stdlibAlias =
         "/std/collections/vector/" + preferred.substr(std::string("/vector/").size());
+    if (nameMap.count(stdlibAlias) > 0) {
+      preferred = stdlibAlias;
+    }
+  }
+  if (preferred.rfind("/map/", 0) == 0 && nameMap.count(preferred) == 0) {
+    const std::string stdlibAlias =
+        "/std/collections/map/" + preferred.substr(std::string("/map/").size());
     if (nameMap.count(stdlibAlias) > 0) {
       preferred = stdlibAlias;
     }

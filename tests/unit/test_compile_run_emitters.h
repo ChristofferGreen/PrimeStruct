@@ -2157,6 +2157,48 @@ main() {
   CHECK(output.find("ps_map_at(") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter compiles stdlib namespaced map access and count helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [i32] c{/std/collections/map/count(values)}
+  [i32] first{/std/collections/map/at(values, 1i32)}
+  [i32] second{/std/collections/map/at_unsafe(values, 2i32)}
+  return(plus(c, plus(first, second)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_map_access_count.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_namespaced_map_access_count_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
+TEST_CASE("C++ emitter resolves stdlib canonical map count helper in method-call sugar") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.count(true))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_stdlib_canonical_map_count_method_sugar.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_canonical_map_count_method_sugar_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
+}
+
 TEST_CASE("rejects stdlib namespaced vector capacity on map target in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

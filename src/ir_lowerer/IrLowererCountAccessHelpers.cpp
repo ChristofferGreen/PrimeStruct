@@ -30,12 +30,41 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   return false;
 }
 
+bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(0, 1);
+  }
+  const std::string mapPrefix = "map/";
+  const std::string stdMapPrefix = "std/collections/map/";
+  if (normalized.rfind(mapPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(mapPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(stdMapPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdMapPrefix.size());
+    return true;
+  }
+  return false;
+}
+
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
   if (isSimpleCallName(expr, name)) {
     return true;
   }
   std::string aliasName;
   return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+bool isMapBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
 } // namespace
@@ -117,7 +146,7 @@ bool isEntryArgsName(const Expr &expr, const LocalMap &localsIn, bool hasEntryAr
 }
 
 bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName) {
-  if (!isVectorBuiltinName(expr, "count") || expr.args.size() != 1) {
+  if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) || expr.args.size() != 1) {
     return false;
   }
   const Expr &target = expr.args.front();
@@ -170,7 +199,7 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
 }
 
 bool isStringCountCall(const Expr &expr, const LocalMap &localsIn) {
-  if (!isVectorBuiltinName(expr, "count") || expr.args.size() != 1) {
+  if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) || expr.args.size() != 1) {
     return false;
   }
   const Expr &target = expr.args.front();
@@ -247,7 +276,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
 
-  if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+  if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
       isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;

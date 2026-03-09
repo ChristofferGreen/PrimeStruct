@@ -350,6 +350,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         preferred = stdlibAlias;
       }
     }
+    if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+      const std::string stdlibAlias =
+          "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+      if (defMap_.count(stdlibAlias) > 0) {
+        preferred = stdlibAlias;
+      }
+    }
     return preferred;
   };
   auto resolveVectorHelperTargetPath = [&](const Expr &receiver,

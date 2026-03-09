@@ -781,6 +781,22 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
+  if (name.rfind("map/", 0) == 0) {
+    std::string alias = name.substr(std::string("map/").size());
+    if (alias == "map") {
+      out = "map";
+      return true;
+    }
+    return false;
+  }
+  if (name.rfind("std/collections/map/", 0) == 0) {
+    std::string alias = name.substr(std::string("std/collections/map/").size());
+    if (alias == "map") {
+      out = "map";
+      return true;
+    }
+    return false;
+  }
   if (name.find('/') != std::string::npos) {
     return false;
   }
@@ -809,6 +825,22 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   }
   if (name.rfind("std/collections/vector/", 0) == 0) {
     std::string alias = name.substr(std::string("std/collections/vector/").size());
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
+  if (name.rfind("map/", 0) == 0) {
+    std::string alias = name.substr(std::string("map/").size());
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
+  if (name.rfind("std/collections/map/", 0) == 0) {
+    std::string alias = name.substr(std::string("std/collections/map/").size());
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
@@ -923,6 +955,20 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
         (alias == "vector" || alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" ||
          alias == "push" || alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap")) {
+      return alias == targetName;
+    }
+  }
+  if (name.rfind("map/", 0) == 0) {
+    std::string alias = name.substr(std::string("map/").size());
+    if (alias.find('/') == std::string::npos &&
+        (alias == "map" || alias == "count" || alias == "at" || alias == "at_unsafe")) {
+      return alias == targetName;
+    }
+  }
+  if (name.rfind("std/collections/map/", 0) == 0) {
+    std::string alias = name.substr(std::string("std/collections/map/").size());
+    if (alias.find('/') == std::string::npos &&
+        (alias == "map" || alias == "count" || alias == "at" || alias == "at_unsafe")) {
       return alias == targetName;
     }
   }

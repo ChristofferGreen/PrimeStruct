@@ -36,12 +36,41 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   return false;
 }
 
+bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  constexpr std::string_view mapPrefix = "map/";
+  constexpr std::string_view stdMapPrefix = "std/collections/map/";
+  if (normalized.rfind(mapPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(mapPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(stdMapPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdMapPrefix.size());
+    return true;
+  }
+  return false;
+}
+
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
   if (isSimpleCallName(expr, name)) {
     return true;
   }
   std::string aliasName;
   return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+bool isMapBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
 } // namespace
@@ -412,7 +441,7 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const Expr &expr,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     std::string &error) {
-  if (isVectorBuiltinName(expr, "count")) {
+  if (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) {
     error = "count requires array, vector, map, or string target";
     return UnsupportedNativeCallResult::Error;
   }
