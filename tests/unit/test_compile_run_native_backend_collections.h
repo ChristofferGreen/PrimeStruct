@@ -772,6 +772,31 @@ main() {
   CHECK(runCommand(exePath) == 180);
 }
 
+TEST_CASE("compiles and runs native vector helper method expression canonical stdlib forwarding") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  return(plus(count(values), value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(plus(/vector/push(values, 2i32), values.push(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_vector_helper_method_expression_canonical_stdlib_forwarding.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_vector_helper_method_expression_canonical_stdlib_forwarding_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("compiles and runs native vector alias implicit canonical templated forwarding on named args") {
   const std::string source = R"(
 [return<int>]

@@ -533,6 +533,25 @@ main() {
   CHECK(runCommand(runCmd) == 180);
 }
 
+TEST_CASE("runs vm with vector helper method expression canonical stdlib forwarding") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  return(plus(count(values), value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(plus(/vector/push(values, 2i32), values.push(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_helper_method_expression_canonical_stdlib_forwarding.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
 TEST_CASE("runs vm with vector alias implicit canonical templated forwarding on named args") {
   const std::string source = R"(
 [return<int>]

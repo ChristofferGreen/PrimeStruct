@@ -2300,25 +2300,29 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     std::string accessHelperName;
     if (expr.isMethodCall) {
-      if (expr.args.empty()) {
-        error_ = "method call missing receiver";
-        return false;
+      if (!hasVectorHelperCallResolution) {
+        if (expr.args.empty()) {
+          error_ = "method call missing receiver";
+          return false;
+        }
+        usedMethodTarget = true;
+        hasMethodReceiverIndex = true;
+        methodReceiverIndex = 0;
+        bool isBuiltinMethod = false;
+        if (!resolveMethodTarget(expr.args.front(), expr.name, resolved, isBuiltinMethod)) {
+          return false;
+        }
+        if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && isSimpleCallName(expr, "capacity")) {
+          promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
+        }
+        if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end()) {
+          error_ = "unknown method: " + resolved;
+          return false;
+        }
+        resolvedMethod = isBuiltinMethod;
+      } else {
+        resolvedMethod = false;
       }
-      usedMethodTarget = true;
-      hasMethodReceiverIndex = true;
-      methodReceiverIndex = 0;
-      bool isBuiltinMethod = false;
-      if (!resolveMethodTarget(expr.args.front(), expr.name, resolved, isBuiltinMethod)) {
-        return false;
-      }
-      if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && isSimpleCallName(expr, "capacity")) {
-        promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
-      }
-      if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end()) {
-        error_ = "unknown method: " + resolved;
-        return false;
-      }
-      resolvedMethod = isBuiltinMethod;
     } else if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;

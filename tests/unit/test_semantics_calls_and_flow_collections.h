@@ -2513,6 +2513,43 @@ main() {
   CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
+TEST_CASE("vector helper method expression resolves canonical stdlib helper") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  return(plus(count(values), value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(values.push(2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector helper method expression canonical stdlib mismatch keeps canonical diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [bool] value) {
+  return(plus(count(values), convert<int>(value)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(values.push(2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/push") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector constructor is treated as builtin collection") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
