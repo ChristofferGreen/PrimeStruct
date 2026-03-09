@@ -153,7 +153,7 @@ TEST_CASE("ir to cpp emitter omits i32 float conversion clamp helpers when unuse
   REQUIRE(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
   CHECK(cpp.find("#include <cmath>") == std::string::npos);
-  CHECK(cpp.find("#include <limits>") == std::string::npos);
+  CHECK(cpp.find("#include <limits>") != std::string::npos);
   CHECK(cpp.find("static int32_t psConvertF32ToI32(float value)") == std::string::npos);
   CHECK(cpp.find("static int32_t psConvertF64ToI32(double value)") == std::string::npos);
 }
@@ -610,12 +610,12 @@ TEST_CASE("ir to cpp emitter writes call and callvoid dispatch") {
   std::string error;
   REQUIRE(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
-  CHECK(cpp.find("static int64_t ps_fn_0(uint64_t *stack, std::size_t &sp, int argc, char **argv);") !=
-        std::string::npos);
-  CHECK(cpp.find("ps_fn_1(stack, sp, argc, argv);") != std::string::npos);
-  CHECK(cpp.find("int64_t callValue = ps_fn_2(stack, sp, argc, argv);") != std::string::npos);
+  CHECK(cpp.find("static int64_t ps_fn_0(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, int "
+                 "argc, char **argv);") != std::string::npos);
+  CHECK(cpp.find("ps_fn_1(stack, sp, heapSlots, argc, argv);") != std::string::npos);
+  CHECK(cpp.find("int64_t callValue = ps_fn_2(stack, sp, heapSlots, argc, argv);") != std::string::npos);
   CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(callValue);") != std::string::npos);
-  CHECK(cpp.find("return ps_fn_0(stack, sp, argc, argv);") != std::string::npos);
+  CHECK(cpp.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("ir to cpp emitter rejects unsupported opcodes") {

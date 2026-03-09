@@ -411,24 +411,26 @@ bool emitCountedLoopPrologue(
   out.countKind = countKind;
   emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(out.counterLocal));
 
-  if (countKind == LocalInfo::ValueKind::Int32) {
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(out.counterLocal));
-    emitInstruction(IrOpcode::PushI32, 0);
-    emitInstruction(IrOpcode::CmpLtI32, 0);
-    const size_t jumpNonNegative = instructionCount();
-    emitInstruction(IrOpcode::JumpIfZero, 0);
-    emitLoopCountNegative();
-    const size_t nonNegativeIndex = instructionCount();
-    patchInstructionImm(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex));
-  } else if (countKind == LocalInfo::ValueKind::Int64) {
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(out.counterLocal));
-    emitInstruction(IrOpcode::PushI64, 0);
-    emitInstruction(IrOpcode::CmpLtI64, 0);
-    const size_t jumpNonNegative = instructionCount();
-    emitInstruction(IrOpcode::JumpIfZero, 0);
-    emitLoopCountNegative();
-    const size_t nonNegativeIndex = instructionCount();
-    patchInstructionImm(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex));
+  if (emitLoopCountNegative) {
+    if (countKind == LocalInfo::ValueKind::Int32) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(out.counterLocal));
+      emitInstruction(IrOpcode::PushI32, 0);
+      emitInstruction(IrOpcode::CmpLtI32, 0);
+      const size_t jumpNonNegative = instructionCount();
+      emitInstruction(IrOpcode::JumpIfZero, 0);
+      emitLoopCountNegative();
+      const size_t nonNegativeIndex = instructionCount();
+      patchInstructionImm(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex));
+    } else if (countKind == LocalInfo::ValueKind::Int64) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(out.counterLocal));
+      emitInstruction(IrOpcode::PushI64, 0);
+      emitInstruction(IrOpcode::CmpLtI64, 0);
+      const size_t jumpNonNegative = instructionCount();
+      emitInstruction(IrOpcode::JumpIfZero, 0);
+      emitLoopCountNegative();
+      const size_t nonNegativeIndex = instructionCount();
+      patchInstructionImm(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex));
+    }
   }
 
   out.checkIndex = instructionCount();

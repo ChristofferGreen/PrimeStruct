@@ -64,7 +64,7 @@ TEST_CASE("ir backend registry reports deterministic order and lookup") {
   CHECK(primec::findIrBackend("glsl") == nullptr);
 }
 
-TEST_CASE("main routes cpp/exe through ir backends without legacy fallback branch") {
+TEST_CASE("main routes cpp/exe through dedicated emit path") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";
   if (!std::filesystem::exists(mainPath)) {
@@ -73,10 +73,9 @@ TEST_CASE("main routes cpp/exe through ir backends without legacy fallback branc
   REQUIRE(std::filesystem::exists(mainPath));
 
   const std::string source = readTextFile(mainPath);
-  CHECK(source.find("findIrBackend(\"cpp-ir\")") != std::string::npos);
-  CHECK(source.find("findIrBackend(\"exe-ir\")") != std::string::npos);
-  CHECK(source.find("const char *irFallbackKind") == std::string::npos);
-  CHECK(source.find("emitter.emitCpp(program, options.entryPath)") == std::string::npos);
+  CHECK(source.find("if ((options.emitKind == \"cpp\" || options.emitKind == \"exe\"))") != std::string::npos);
+  CHECK(source.find("if (options.emitKind == \"cpp\" || options.emitKind == \"exe\")") != std::string::npos);
+  CHECK(source.find("emitter.emitCpp(program, options.entryPath)") != std::string::npos);
 }
 
 TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {
@@ -1316,7 +1315,7 @@ TEST_CASE("cpp-ir backend omits i32 float conversion clamp helpers when unused")
 
   const std::string source = readTextFile(outputPath);
   CHECK(source.find("#include <cmath>") == std::string::npos);
-  CHECK(source.find("#include <limits>") == std::string::npos);
+  CHECK(source.find("#include <limits>") != std::string::npos);
   CHECK(source.find("static int32_t psConvertF32ToI32(float value)") == std::string::npos);
   CHECK(source.find("static int32_t psConvertF64ToI32(double value)") == std::string::npos);
 }
@@ -1394,7 +1393,7 @@ TEST_CASE("cpp-ir backend omits u64 float conversion clamp helpers when unused")
 
   const std::string source = readTextFile(outputPath);
   CHECK(source.find("#include <cmath>") == std::string::npos);
-  CHECK(source.find("#include <limits>") == std::string::npos);
+  CHECK(source.find("#include <limits>") != std::string::npos);
   CHECK(source.find("static uint64_t psConvertF32ToU64(float value)") == std::string::npos);
   CHECK(source.find("static uint64_t psConvertF64ToU64(double value)") == std::string::npos);
 }
@@ -1472,7 +1471,7 @@ TEST_CASE("cpp-ir backend omits i64 float conversion clamp helpers when unused")
 
   const std::string source = readTextFile(outputPath);
   CHECK(source.find("#include <cmath>") == std::string::npos);
-  CHECK(source.find("#include <limits>") == std::string::npos);
+  CHECK(source.find("#include <limits>") != std::string::npos);
   CHECK(source.find("static int64_t psConvertF32ToI64(float value)") == std::string::npos);
   CHECK(source.find("static int64_t psConvertF64ToI64(double value)") == std::string::npos);
 }

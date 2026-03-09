@@ -1,6 +1,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -126,6 +127,42 @@ std::string typeNameForValueKind(LocalInfo::ValueKind kind) {
   }
 }
 
+bool inferDeclaredReturnCollection(const Definition &definition,
+                                   std::string &collectionNameOut,
+                                   std::vector<std::string> &collectionArgsOut) {
+  collectionNameOut.clear();
+  collectionArgsOut.clear();
+  for (const auto &transform : definition.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(transform.templateArgs.front(), base, argText)) {
+      return false;
+    }
+    if (!splitTemplateArgs(argText, collectionArgsOut)) {
+      return false;
+    }
+    if ((base == "array" || base == "vector" || base == "soa_vector") &&
+        collectionArgsOut.size() == 1) {
+      collectionNameOut = base;
+      return true;
+    }
+    if (base == "map" && collectionArgsOut.size() == 2) {
+      collectionNameOut = base;
+      return true;
+    }
+    return false;
+  }
+  return false;
+}
+
+bool inferReceiverTypeFromDeclaredReturn(const Definition &definition, std::string &typeNameOut) {
+  std::vector<std::string> collectionArgs;
+  return inferDeclaredReturnCollection(definition, typeNameOut, collectionArgs);
+}
+
 bool resolveMethodCallReceiverExpr(const Expr &callExpr,
                                    const LocalMap &localsIn,
                                    const IsMethodCallClassifierFn &isArrayCountCall,
@@ -144,7 +181,10 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   }
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
+  const bool isBuiltinCountOrCapacityCall =
+      isSimpleCallName(callExpr, "count") || isSimpleCallName(callExpr, "capacity");
   const bool allowBuiltinFallback =
+      isBuiltinCountOrCapacityCall ||
       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall;
   const Expr &receiver = callExpr.args.front();
@@ -386,9 +426,26 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe") ||
        isSimpleCallName(callExpr, "get") || isSimpleCallName(callExpr, "ref")) &&
       callExpr.args.size() == 2;
+  const bool isVectorMutatorCall =
+      isSimpleCallName(callExpr, "push") || isSimpleCallName(callExpr, "pop") ||
+      isSimpleCallName(callExpr, "reserve") || isSimpleCallName(callExpr, "clear") ||
+      isSimpleCallName(callExpr, "remove_at") || isSimpleCallName(callExpr, "remove_swap");
+  auto expectedVectorMutatorArgCount = [&]() -> size_t {
+    if (isSimpleCallName(callExpr, "pop") || isSimpleCallName(callExpr, "clear")) {
+      return 1u;
+    }
+    return 2u;
+  };
+  size_t expectedArgCount = 1u;
+  if (isAccessCall) {
+    expectedArgCount = 2u;
+  } else if (isVectorMutatorCall) {
+    expectedArgCount = expectedVectorMutatorArgCount();
+  }
   const bool isSoaFieldHelperCall =
       callExpr.args.size() == 1 && !isCountCall && isSoaVectorReceiverExpr(callExpr.args.front(), localsIn);
-  if (!isCountCall && !isAccessCall && !isSoaFieldHelperCall) {
+  if ((!isCountCall && !isAccessCall && !isSoaFieldHelperCall && !isVectorMutatorCall) ||
+      callExpr.args.size() != expectedArgCount) {
     return false;
   }
   (void)isArrayCountCall;
@@ -446,10 +503,13 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   const bool hasNamedArgsValue = hasNamedArgs();
   if (hasNamedArgsValue) {
     bool hasValuesNamedReceiver = false;
-    for (size_t i = 0; i < callExpr.args.size(); ++i) {
-      if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value() && *callExpr.argNames[i] == "values") {
-        appendReceiverIndex(i);
-        hasValuesNamedReceiver = true;
+    if (isVectorMutatorCall || isAccessCall) {
+      for (size_t i = 0; i < callExpr.args.size(); ++i) {
+        if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value() &&
+            *callExpr.argNames[i] == "values") {
+          appendReceiverIndex(i);
+          hasValuesNamedReceiver = true;
+        }
       }
     }
     if (!hasValuesNamedReceiver) {
@@ -460,6 +520,18 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
   } else {
     appendReceiverIndex(0);
+  }
+  const bool probePositionalReorderedVectorMutatorReceiver =
+      isVectorMutatorCall && !hasNamedArgsValue && callExpr.args.size() > 1 &&
+      (callExpr.args.front().kind == Expr::Kind::Literal ||
+       callExpr.args.front().kind == Expr::Kind::BoolLiteral ||
+       callExpr.args.front().kind == Expr::Kind::FloatLiteral ||
+       callExpr.args.front().kind == Expr::Kind::StringLiteral ||
+       callExpr.args.front().kind == Expr::Kind::Name);
+  if (probePositionalReorderedVectorMutatorReceiver) {
+    for (size_t i = 1; i < callExpr.args.size(); ++i) {
+      appendReceiverIndex(i);
+    }
   }
   const bool probePositionalReorderedAccessReceiver =
       isAccessCall && !hasNamedArgsValue && callExpr.args.size() > 1 &&
@@ -542,7 +614,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     std::string &errorOut) {
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
+  const bool isBuiltinCountOrCapacityCall =
+      isSimpleCallName(callExpr, "count") || isSimpleCallName(callExpr, "capacity");
   const bool allowBuiltinFallback =
+      isBuiltinCountOrCapacityCall ||
       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall;
 
@@ -584,6 +659,15 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   std::string lookupError;
   const Definition *resolvedDef = resolveMethodDefinitionFromReceiverTarget(
       callExpr.name, typeName, resolvedTypePath, defMap, lookupError);
+  if (resolvedDef == nullptr && typeName.empty() && resolvedTypePath.empty() &&
+      receiver->kind == Expr::Kind::Call) {
+    auto receiverDefIt = defMap.find(resolveExprPath(*receiver));
+    if (receiverDefIt != defMap.end() && receiverDefIt->second != nullptr &&
+        inferReceiverTypeFromDeclaredReturn(*receiverDefIt->second, typeName)) {
+      lookupError.clear();
+      resolvedDef = resolveMethodDefinitionFromReceiverTarget(callExpr.name, typeName, "", defMap, lookupError);
+    }
+  }
   if (resolvedDef == nullptr) {
     if (allowBuiltinFallback) {
       errorOut = priorError;

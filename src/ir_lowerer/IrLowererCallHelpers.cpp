@@ -212,8 +212,11 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
   if (expr.isMethodCall) {
     std::string accessName;
     const bool isBuiltinAccessMethod = getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2;
+    const bool isBuiltinCountName = isSimpleCallName(expr, "count") && expr.args.size() == 1;
+    const bool isBuiltinCapacityName = isSimpleCallName(expr, "capacity") && expr.args.size() == 1;
     const bool isBuiltinCountLikeMethod =
-        isArrayCountCall(expr) || isStringCountCall(expr) || isVectorCapacityCall(expr) || isBuiltinAccessMethod;
+        isBuiltinCountName || isBuiltinCapacityName || isArrayCountCall(expr) || isStringCountCall(expr) ||
+        isVectorCapacityCall(expr) || isBuiltinAccessMethod;
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
       const auto emitResult = emitResolvedInlineDefinitionCall(
@@ -409,6 +412,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<int32_t()> &allocTempLocal,
@@ -443,6 +448,19 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       isVectorCapacityCall,
       isStringCountCall,
       isEntryArgsName,
+      [&](const Expr &targetExpr, const LocalMap &targetLocals) {
+        if (resolveMapAccessTargetInfo(targetExpr, targetLocals, resolveCallMapAccessTargetInfo).isMapTarget) {
+          return true;
+        }
+        return resolveArrayVectorAccessTargetInfo(
+                   targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo)
+            .isArrayOrVectorTarget;
+      },
+      [&](const Expr &targetExpr, const LocalMap &targetLocals) {
+        const auto targetInfo = resolveArrayVectorAccessTargetInfo(
+            targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo);
+        return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
+      },
       resolveStringTableTarget,
       emitExpr,
       emitInstruction,
@@ -471,6 +489,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
                                 expr.args[1],
                                 localsIn,
                                 resolveStringTableTarget,
+                                resolveCallMapAccessTargetInfo,
+                                resolveCallArrayVectorAccessTargetInfo,
                                 inferExprKind,
                                 isEntryArgsName,
                                 allocTempLocal,
@@ -488,6 +508,52 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   return NativeCallTailDispatchResult::NotHandled;
+}
+
+NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
+    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return tryEmitNativeCallTailDispatch(
+      expr,
+      localsIn,
+      tryGetMathBuiltinName,
+      isSupportedMathBuiltinName,
+      isArrayCountCall,
+      isVectorCapacityCall,
+      isStringCountCall,
+      isEntryArgsName,
+      resolveStringTableTarget,
+      emitExpr,
+      {},
+      {},
+      tryGetPrintBuiltinName,
+      inferExprKind,
+      allocTempLocal,
+      emitStringIndexOutOfBounds,
+      emitMapKeyNotFound,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
 }
 
 BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(
@@ -530,6 +596,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<int32_t()> &allocTempLocal,
@@ -551,6 +619,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       isEntryArgsName,
       resolveStringTableTarget,
       emitExpr,
+      resolveCallMapAccessTargetInfo,
+      resolveCallArrayVectorAccessTargetInfo,
       tryGetPrintBuiltinName,
       inferExprKind,
       allocTempLocal,
@@ -563,7 +633,56 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       error);
 }
 
-MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn) {
+NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
+    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return tryEmitNativeCallTailDispatchWithLocals(
+      expr,
+      localsIn,
+      tryGetMathBuiltinName,
+      isSupportedMathBuiltinName,
+      isArrayCountCall,
+      isVectorCapacityCall,
+      isStringCountCall,
+      isEntryArgsName,
+      resolveStringTableTarget,
+      emitExpr,
+      {},
+      {},
+      tryGetPrintBuiltinName,
+      inferExprKind,
+      allocTempLocal,
+      emitStringIndexOutOfBounds,
+      emitMapKeyNotFound,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+}
+
+MapAccessTargetInfo resolveMapAccessTargetInfo(
+    const Expr &target,
+    const LocalMap &localsIn,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo) {
   MapAccessTargetInfo info;
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
@@ -581,9 +700,20 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMa
       info.isMapTarget = true;
       info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
       info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
+      return info;
+    }
+    if (resolveCallMapAccessTargetInfo) {
+      MapAccessTargetInfo inferred;
+      if (resolveCallMapAccessTargetInfo(target, inferred)) {
+        return inferred;
+      }
     }
   }
   return info;
+}
+
+MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn) {
+  return resolveMapAccessTargetInfo(target, localsIn, {});
 }
 
 bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
@@ -612,13 +742,15 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<void()> &emitMapKeyNotFound,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  const auto mapTargetInfo = resolveMapAccessTargetInfo(targetExpr, localsIn);
+  const auto mapTargetInfo = resolveMapAccessTargetInfo(
+      targetExpr, localsIn, resolveCallMapAccessTargetInfo);
   if (!mapTargetInfo.isMapTarget) {
     return MapAccessLookupEmitResult::NotHandled;
   }
@@ -643,6 +775,37 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     return MapAccessLookupEmitResult::Error;
   }
   return MapAccessLookupEmitResult::Emitted;
+}
+
+MapAccessLookupEmitResult tryEmitMapAccessLookup(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return tryEmitMapAccessLookup(
+      accessName,
+      targetExpr,
+      lookupKeyExpr,
+      localsIn,
+      allocTempLocal,
+      emitExpr,
+      resolveStringTableTarget,
+      {},
+      inferExprKind,
+      emitMapKeyNotFound,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
 }
 
 StringTableAccessEmitResult tryEmitStringTableAccessLoad(
@@ -731,7 +894,9 @@ bool resolveValidatedAccessIndexKind(
 }
 
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
-    const Expr &target, const LocalMap &localsIn) {
+    const Expr &target,
+    const LocalMap &localsIn,
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo) {
   ArrayVectorAccessTargetInfo info;
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
@@ -757,9 +922,21 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isArrayOrVectorTarget = true;
       info.elemKind = valueKindFromTypeName(target.templateArgs.front());
       info.isVectorTarget = (collection == "vector");
+      return info;
+    }
+    if (resolveCallArrayVectorAccessTargetInfo) {
+      ArrayVectorAccessTargetInfo inferred;
+      if (resolveCallArrayVectorAccessTargetInfo(target, inferred)) {
+        return inferred;
+      }
     }
   }
   return info;
+}
+
+ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
+    const Expr &target, const LocalMap &localsIn) {
+  return resolveArrayVectorAccessTargetInfo(target, localsIn, {});
 }
 
 bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo, std::string &error) {
@@ -776,6 +953,7 @@ bool emitArrayVectorIndexedAccess(
     const Expr &targetExpr,
     const Expr &indexExpr,
     const LocalMap &localsIn,
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
@@ -784,7 +962,8 @@ bool emitArrayVectorIndexedAccess(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(targetExpr, localsIn);
+  const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(
+      targetExpr, localsIn, resolveCallArrayVectorAccessTargetInfo);
   if (!validateArrayVectorAccessTargetInfo(arrayVectorTargetInfo, error)) {
     return false;
   }
@@ -821,12 +1000,43 @@ bool emitArrayVectorIndexedAccess(
   return true;
 }
 
+bool emitArrayVectorIndexedAccess(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return emitArrayVectorIndexedAccess(
+      accessName,
+      targetExpr,
+      indexExpr,
+      localsIn,
+      {},
+      inferExprKind,
+      allocTempLocal,
+      emitExpr,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+}
+
 bool emitBuiltinArrayAccess(
     const std::string &accessName,
     const Expr &targetExpr,
     const Expr &indexExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<int32_t()> &allocTempLocal,
@@ -876,6 +1086,7 @@ bool emitBuiltinArrayAccess(
       allocTempLocal,
       emitExpr,
       resolveStringTableTarget,
+      resolveCallMapAccessTargetInfo,
       inferExprKind,
       emitMapKeyNotFound,
       instructionCount,
@@ -894,9 +1105,48 @@ bool emitBuiltinArrayAccess(
       targetExpr,
       indexExpr,
       localsIn,
+      resolveCallArrayVectorAccessTargetInfo,
       inferExprKind,
       allocTempLocal,
       emitExpr,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+}
+
+bool emitBuiltinArrayAccess(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return emitBuiltinArrayAccess(
+      accessName,
+      targetExpr,
+      indexExpr,
+      localsIn,
+      resolveStringTableTarget,
+      {},
+      {},
+      inferExprKind,
+      isEntryArgsName,
+      allocTempLocal,
+      emitExpr,
+      emitStringIndexOutOfBounds,
+      emitMapKeyNotFound,
       emitArrayIndexOutOfBounds,
       instructionCount,
       emitInstruction,
@@ -924,13 +1174,13 @@ MapLookupStringKeyResult tryResolveMapLookupStringKey(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     int32_t &stringIndexOut,
     std::string &error) {
+  (void)error;
   if (mapKeyKind != LocalInfo::ValueKind::String) {
     return MapLookupStringKeyResult::NotHandled;
   }
   size_t length = 0;
   if (!resolveStringTableTarget(lookupKeyExpr, localsIn, stringIndexOut, length)) {
-    error = "native backend requires map lookup key to be string literal or binding backed by literals";
-    return MapLookupStringKeyResult::Error;
+    return MapLookupStringKeyResult::NotHandled;
   }
   return MapLookupStringKeyResult::Resolved;
 }
@@ -967,10 +1217,6 @@ bool emitMapLookupNonStringKeyLocal(
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t keyLocal,
     std::string &error) {
-  if (mapKeyKind == LocalInfo::ValueKind::String) {
-    error = "native backend requires map lookup key to be string literal or binding backed by literals";
-    return false;
-  }
   const LocalInfo::ValueKind lookupKeyKind = inferExprKind(lookupKeyExpr, localsIn);
   if (!validateMapLookupKeyKind(mapKeyKind, lookupKeyKind, error)) {
     return false;
@@ -1338,8 +1584,18 @@ void emitMapLookupValueLoad(
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error) {
-  if (lookupKeyKind == LocalInfo::ValueKind::Unknown ||
-      lookupKeyKind == LocalInfo::ValueKind::String) {
+  if (lookupKeyKind == LocalInfo::ValueKind::Unknown) {
+    error = "native backend requires map lookup key type to match map key type";
+    return false;
+  }
+  if (mapKeyKind == LocalInfo::ValueKind::String) {
+    if (lookupKeyKind != LocalInfo::ValueKind::String) {
+      error = "native backend requires map lookup key type to match map key type";
+      return false;
+    }
+    return true;
+  }
+  if (lookupKeyKind == LocalInfo::ValueKind::String) {
     error = "native backend requires map lookup key to be numeric/bool";
     return false;
   }

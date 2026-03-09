@@ -587,6 +587,44 @@
             [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
               return emitExpr(valueExpr, localMap);
             },
+            [&](const Expr &targetCallExpr, ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
+              targetInfoOut = {};
+              const Definition *callee = resolveDefinitionCall(targetCallExpr);
+              if (callee == nullptr) {
+                return false;
+              }
+              std::string collectionName;
+              std::vector<std::string> collectionArgs;
+              if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs)) {
+                return false;
+              }
+              if (collectionName != "map" || collectionArgs.size() != 2) {
+                return false;
+              }
+              targetInfoOut.isMapTarget = true;
+              targetInfoOut.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs[0]);
+              targetInfoOut.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs[1]);
+              return true;
+            },
+            [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
+              targetInfoOut = {};
+              const Definition *callee = resolveDefinitionCall(targetCallExpr);
+              if (callee == nullptr) {
+                return false;
+              }
+              std::string collectionName;
+              std::vector<std::string> collectionArgs;
+              if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs)) {
+                return false;
+              }
+              if ((collectionName != "array" && collectionName != "vector") || collectionArgs.size() != 1) {
+                return false;
+              }
+              targetInfoOut.isArrayOrVectorTarget = true;
+              targetInfoOut.isVectorTarget = (collectionName == "vector");
+              targetInfoOut.elemKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+              return true;
+            },
             [&](const Expr &callExpr, std::string &builtinName) {
               PrintBuiltin printBuiltin;
               if (!getPrintBuiltin(callExpr, printBuiltin)) {

@@ -386,12 +386,19 @@ bool emitConversionsAndCallsOperatorExpr(
               if (i % 2 == 0 && keyKind == LocalInfo::ValueKind::String) {
                 int32_t stringIndex = -1;
                 size_t length = 0;
-                if (!resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
-                  error =
-                      "native backend requires map literal string keys to be string literals or bindings backed by literals";
+                if (resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
+                  instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+                  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(slot)});
+                  continue;
+                }
+                const LocalInfo::ValueKind keyArgKind = inferExprKind(arg, localsIn);
+                if (keyArgKind != LocalInfo::ValueKind::String) {
+                  error = "map literal key type mismatch";
                   return false;
                 }
-                instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+                if (!emitExpr(arg, localsIn)) {
+                  return false;
+                }
                 instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(slot)});
                 continue;
               }

@@ -96,7 +96,46 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
     std::string arg;
     if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
       info.returnsArray = true;
-      info.kind = valueKindFromTypeName(arg);
+      info.kind = valueKindFromTypeName(trimTemplateTypeText(arg));
+      info.returnsVoid = false;
+      break;
+    }
+    if (splitTemplateTypeName(typeName, base, arg) && base == "vector") {
+      std::vector<std::string> args;
+      if (!splitTemplateArgs(arg, args) || args.size() != 1) {
+        info.returnsArray = false;
+        info.kind = LocalInfo::ValueKind::Unknown;
+        info.returnsVoid = false;
+        break;
+      }
+      info.returnsArray = true;
+      info.kind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
+      info.returnsVoid = false;
+      break;
+    }
+    if (splitTemplateTypeName(typeName, base, arg) && base == "map") {
+      std::vector<std::string> args;
+      if (!splitTemplateArgs(arg, args) || args.size() != 2) {
+        info.returnsArray = false;
+        info.kind = LocalInfo::ValueKind::Unknown;
+        info.returnsVoid = false;
+        break;
+      }
+      info.returnsArray = true;
+      info.kind = valueKindFromTypeName(trimTemplateTypeText(args.back()));
+      info.returnsVoid = false;
+      break;
+    }
+    if (splitTemplateTypeName(typeName, base, arg) && base == "soa_vector") {
+      std::vector<std::string> args;
+      if (!splitTemplateArgs(arg, args) || args.size() != 1) {
+        info.returnsArray = false;
+        info.kind = LocalInfo::ValueKind::Unknown;
+        info.returnsVoid = false;
+        break;
+      }
+      info.returnsArray = true;
+      info.kind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
       info.returnsVoid = false;
       break;
     }

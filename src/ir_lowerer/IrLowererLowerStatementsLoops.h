@@ -218,7 +218,7 @@
               [&]() { return function.instructions.size(); },
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               [&](size_t instructionIndex, int32_t imm) { function.instructions[instructionIndex].imm = imm; },
-              [&]() { emitLoopCountNegative(); },
+              std::function<void()>{},
               loopControl,
               error)) {
         return false;

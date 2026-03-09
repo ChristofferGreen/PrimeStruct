@@ -186,6 +186,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCallFn,
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCallFn,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsNameFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isDynamicCollectionCountTargetFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isDynamicVectorCapacityTargetFn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -212,6 +214,26 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
 
+  if (isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
+      isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
+
+  if (isSimpleCallName(expr, "capacity") && expr.args.size() == 1 &&
+      isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
+
   const auto stringCountResult = tryEmitStringCountCall(
       expr,
       localsIn,
@@ -227,6 +249,32 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   }
 
   return CountAccessCallEmitResult::NotHandled;
+}
+
+CountAccessCallEmitResult tryEmitCountAccessCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsNameFn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error) {
+  return tryEmitCountAccessCall(
+      expr,
+      localsIn,
+      isArrayCountCallFn,
+      isVectorCapacityCallFn,
+      isStringCountCallFn,
+      isEntryArgsNameFn,
+      {},
+      {},
+      resolveStringTableTarget,
+      emitExpr,
+      emitInstruction,
+      error);
 }
 
 } // namespace primec::ir_lowerer

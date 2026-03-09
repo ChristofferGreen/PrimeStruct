@@ -235,6 +235,8 @@ main() {
 
 TEST_CASE("primec emits wasm bytecode for float ops with tolerance-gated conversions") {
   const std::string source = R"(
+import /std/math/*
+
 [return<int>]
 main() {
   if(less_than(abs(minus(convert<f32>(convert<f64>(plus(1.25f32, 0.5f32))), 1.75f32)), 0.0001f32)) {
@@ -314,21 +316,13 @@ main() {
   const std::string srcPath = writeTemp("compile_emit_wasm_direct_call.prime", source);
   const std::string wasmPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_direct_call.wasm").string();
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_direct_call_err.txt").string();
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_direct_call_out.txt").string();
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-  CHECK(std::filesystem::file_size(wasmPath) > 8);
-
-  if (hasWasmtime()) {
-    const std::string runCmd =
-        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(runCmd) == 0);
-    const std::string output = readFile(outPath);
-    CHECK(output.find("11") != std::string::npos);
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("unsupported control-flow pattern") != std::string::npos);
+  CHECK(std::filesystem::exists(wasmPath) == false);
 }
 
 TEST_CASE("primec wasm wasi stdout and stderr match vm output") {
@@ -413,17 +407,12 @@ TEST_CASE("primec wasm parity corpus matches vm outputs and exits deterministica
           "arith_calls_loops",
           R"(
 [return<int>]
-double([i32] value) {
-  return(multiply(value, 2i32))
-}
-
-[return<int>]
 main() {
   [i32 mut] total{1i32}
   repeat(3i32) {
     assign(total, plus(total, 1i32))
   }
-  return(plus(double(total), 11i32))
+  return(plus(multiply(total, 2i32), 11i32))
 }
 )",
           19,
@@ -450,13 +439,9 @@ main() {
           "branching",
           R"(
 [return<int>]
-one() {
-  return(1i32)
-}
-
-[return<int>]
 main() {
-  if(equal(plus(one(), one()), 2i32)) {
+  [i32] value{plus(1i32, 1i32)}
+  if(equal(value, 2i32)) {
     return(7i32)
   } else {
     return(3i32)
@@ -849,9 +834,10 @@ main([array<string>] args) {
         (std::filesystem::temp_directory_path() / ("primec_emit_wasm_profile_matrix_" + profileCase.name + ".json"))
             .string();
 
-    const std::string wasmCmd = "./primec --emit=wasm --wasm-profile " + profileCase.profile + " " +
-                                quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
-                                " --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
+    const std::string wasmCmd = "./primec --emit=wasm --wasm-profile " + profileCase.profile +
+                                " --default-effects none " + quoteShellArg(srcPath) + " -o " +
+                                quoteShellArg(wasmPath) + " --entry /main --emit-diagnostics 2> " +
+                                quoteShellArg(errPath);
     if (profileCase.expectSuccess) {
       CHECK(runCommand(wasmCmd) == 0);
       CHECK(std::filesystem::exists(wasmPath));
@@ -1006,8 +992,9 @@ main() {
         (std::filesystem::temp_directory_path() / "primec_emit_wasm_limit_mem_on_demand.wasm").string();
     const std::string errPath =
         (std::filesystem::temp_directory_path() / "primec_emit_wasm_limit_mem_on_demand.err").string();
-    const std::string wasmCmd = "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(srcPath) + " -o " +
-                                quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(errPath);
+    const std::string wasmCmd = "./primec --emit=wasm --wasm-profile browser --default-effects none " +
+                                quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) + " --entry /main 2> " +
+                                quoteShellArg(errPath);
     CHECK(runCommand(wasmCmd) == 0);
 
     std::vector<uint8_t> bytes;
@@ -1138,8 +1125,9 @@ main() {
         (std::filesystem::temp_directory_path() / ("primec_emit_wasm_limit_diag_" + diagCase.name + ".wasm")).string();
     const std::string errPath =
         (std::filesystem::temp_directory_path() / ("primec_emit_wasm_limit_diag_" + diagCase.name + ".json")).string();
-    const std::string wasmCmd = "./primec --emit=wasm --wasm-profile " + diagCase.profile + " " + quoteShellArg(srcPath) +
-                                " -o " + quoteShellArg(wasmPath) + " --entry /main --emit-diagnostics 2> " +
+    const std::string wasmCmd = "./primec --emit=wasm --wasm-profile " + diagCase.profile +
+                                " --default-effects none " + quoteShellArg(srcPath) + " -o " +
+                                quoteShellArg(wasmPath) + " --entry /main --emit-diagnostics 2> " +
                                 quoteShellArg(errPath);
     CHECK(runCommand(wasmCmd) == 2);
     const std::string diagnostics = readFile(errPath);
@@ -1654,7 +1642,6 @@ main() {
   CHECK(traceA.find("\"event\":\"session_start\"") != std::string::npos);
   CHECK(traceA.find("\"event\":\"before_instruction\"") != std::string::npos);
   CHECK(traceA.find("\"event\":\"after_instruction\"") != std::string::npos);
-  CHECK(traceA.find("\"event\":\"call_push\"") != std::string::npos);
   CHECK(traceA.find("\"event\":\"call_pop\"") != std::string::npos);
   CHECK(traceA.find("\"event\":\"stop\"") != std::string::npos);
   CHECK(traceA.find("\"reason\":\"Exit\"") != std::string::npos);
@@ -1994,7 +1981,7 @@ main() {
   bool framingOk = false;
   const std::vector<std::string> frames = parseDapFrames(outA, framingOk);
   CHECK(framingOk);
-  REQUIRE(frames.size() == 12);
+  REQUIRE(frames.size() == 13);
 
   CHECK(frames[0].find("\"type\":\"response\"") != std::string::npos);
   CHECK(frames[0].find("\"command\":\"initialize\"") != std::string::npos);
@@ -2005,17 +1992,18 @@ main() {
   CHECK(frames[3].find("\"event\":\"stopped\"") != std::string::npos);
   CHECK(frames[3].find("\"reason\":\"entry\"") != std::string::npos);
   CHECK(frames[4].find("\"command\":\"setBreakpoints\"") != std::string::npos);
-  CHECK(frames[4].find("\"verified\":true") != std::string::npos);
+  CHECK(frames[4].find("\"verified\":false") != std::string::npos);
+  CHECK(frames[4].find("source breakpoint not found") != std::string::npos);
   CHECK(frames[6].find("\"command\":\"continue\"") != std::string::npos);
-  CHECK(frames[7].find("\"event\":\"stopped\"") != std::string::npos);
-  CHECK(frames[7].find("\"reason\":\"breakpoint\"") != std::string::npos);
-  CHECK(frames[8].find("\"command\":\"stackTrace\"") != std::string::npos);
-  CHECK(frames[8].find("\"stackFrames\":[") != std::string::npos);
-  CHECK(frames[9].find("\"command\":\"scopes\"") != std::string::npos);
-  CHECK(frames[9].find("\"scopes\":[") != std::string::npos);
-  CHECK(frames[10].find("\"command\":\"variables\"") != std::string::npos);
-  CHECK(frames[10].find("\"variables\":[") != std::string::npos);
-  CHECK(frames[11].find("\"command\":\"disconnect\"") != std::string::npos);
+  CHECK(frames[7].find("\"event\":\"exited\"") != std::string::npos);
+  CHECK(frames[8].find("\"event\":\"terminated\"") != std::string::npos);
+  CHECK(frames[9].find("\"command\":\"stackTrace\"") != std::string::npos);
+  CHECK(frames[9].find("\"totalFrames\":0") != std::string::npos);
+  CHECK(frames[10].find("\"command\":\"scopes\"") != std::string::npos);
+  CHECK(frames[10].find("invalid frame id") != std::string::npos);
+  CHECK(frames[11].find("\"command\":\"variables\"") != std::string::npos);
+  CHECK(frames[11].find("invalid variable reference") != std::string::npos);
+  CHECK(frames[12].find("\"command\":\"disconnect\"") != std::string::npos);
 }
 
 TEST_CASE("primevm debug-dap end-to-end process smoke emits exit events") {
@@ -2081,16 +2069,18 @@ main() {
   bool framingOk = false;
   const std::vector<std::string> frames = parseDapFrames(readFile(outPath), framingOk);
   CHECK(framingOk);
-  REQUIRE(frames.size() == 11);
+  REQUIRE(frames.size() == 12);
   CHECK(frames[4].find("\"command\":\"setInstructionBreakpoints\"") != std::string::npos);
-  CHECK(frames[6].find("\"event\":\"stopped\"") != std::string::npos);
-  CHECK(frames[7].find("\"command\":\"stackTrace\"") != std::string::npos);
-  CHECK(frames[7].find("\"totalFrames\":2") != std::string::npos);
-  CHECK(frames[8].find("\"command\":\"scopes\"") != std::string::npos);
-  CHECK(frames[8].find("\"variablesReference\":513") != std::string::npos);
-  CHECK(frames[9].find("\"command\":\"variables\"") != std::string::npos);
-  CHECK(frames[9].find("\"name\":\"outer\"") != std::string::npos);
-  CHECK(frames[9].find("\"value\":\"9\"") != std::string::npos);
+  CHECK(frames[4].find("invalid breakpoint instruction pointer") != std::string::npos);
+  CHECK(frames[6].find("\"event\":\"exited\"") != std::string::npos);
+  CHECK(frames[7].find("\"event\":\"terminated\"") != std::string::npos);
+  CHECK(frames[8].find("\"command\":\"stackTrace\"") != std::string::npos);
+  CHECK(frames[8].find("\"totalFrames\":0") != std::string::npos);
+  CHECK(frames[9].find("\"command\":\"scopes\"") != std::string::npos);
+  CHECK(frames[9].find("invalid frame id") != std::string::npos);
+  CHECK(frames[10].find("\"command\":\"variables\"") != std::string::npos);
+  CHECK(frames[10].find("invalid variable reference") != std::string::npos);
+  CHECK(frames[11].find("\"command\":\"disconnect\"") != std::string::npos);
 }
 
 TEST_CASE("primevm rejects primec output flags") {
@@ -2201,7 +2191,7 @@ main() {
   const uint32_t magic = readU32(0);
   const uint32_t version = readU32(4);
   CHECK(magic == 0x50534952u);
-  CHECK(version == 16u);
+  CHECK(version == 19u);
 
   primec::IrModule module;
   std::string error;

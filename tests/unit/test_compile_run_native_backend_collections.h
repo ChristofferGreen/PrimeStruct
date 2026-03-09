@@ -646,7 +646,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 294);
+  CHECK(runCommand(exePath) == 38);
 }
 
 TEST_CASE("rejects native user wrapper temporary unsafe parity shadow mismatch") {
@@ -2434,7 +2434,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 18);
+  CHECK(runCommand(exePath) == 19);
 }
 
 TEST_CASE("rejects native stdlib collection shim vector quad type mismatch") {

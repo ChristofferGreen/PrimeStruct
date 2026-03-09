@@ -123,8 +123,14 @@ LocalInfo::ValueKind inferArrayElementValueKind(
     }
 
     std::string collection;
-    if (getBuiltinCollectionName(expr, collection) && collection == "array" && expr.templateArgs.size() == 1) {
-      return valueKindFromTypeName(expr.templateArgs.front());
+    if (getBuiltinCollectionName(expr, collection)) {
+      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+          expr.templateArgs.size() == 1) {
+        return valueKindFromTypeName(expr.templateArgs.front());
+      }
+      if (collection == "map" && expr.templateArgs.size() == 2) {
+        return valueKindFromTypeName(expr.templateArgs.back());
+      }
     }
 
     if (!expr.isMethodCall) {

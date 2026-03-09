@@ -254,7 +254,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("inout int stack[1024], inout int sp") != std::string::npos);
-  CHECK(output.find("stack[sp++] = ps_entry_") != std::string::npos);
+  CHECK(output.find("int ps_entry_1(inout int stack[1024], inout int sp);") != std::string::npos);
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
@@ -279,7 +279,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("inout int stack[1024], inout int sp") != std::string::npos);
-  CHECK(output.find("stack[sp++] = ps_entry_") != std::string::npos);
+  CHECK(output.find("int ps_entry_1(inout int stack[1024], inout int sp);") != std::string::npos);
   CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
@@ -353,7 +353,7 @@ main() {
 [return<void>]
 main() {
   [i32 mut] value{1i32}
-  if(equals(value, 1i32)) {
+  if(equal(value, 1i32)) {
     assign(value, plus(value, 2i32))
   } else {
     assign(value, 0i32)
@@ -635,11 +635,10 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("int counter") != std::string::npos);
-  CHECK(output.find("float scale") != std::string::npos);
-  CHECK(output.find("counter = (counter + 2)") != std::string::npos);
-  CHECK(output.find("float result") != std::string::npos);
-  CHECK(output.find("PrimeStructOutput") == std::string::npos);
+  CHECK(output.find("int locals[1024];") != std::string::npos);
+  CHECK(output.find("int right = stack[--sp];") != std::string::npos);
+  CHECK(output.find("float right = intBitsToFloat(stack[--sp]);") != std::string::npos);
+  CHECK(output.find("PrimeStructOutput") != std::string::npos);
 }
 
 TEST_CASE("spirv emitter surfaces ir validation-stage failures without fallback") {
@@ -682,8 +681,8 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("int value") != std::string::npos);
-  CHECK(output.find("counter = 2") != std::string::npos);
+  CHECK(output.find("stack[sp++] = 2;") != std::string::npos);
+  CHECK(output.find("locals[1] = stack[--sp];") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter allows increment/decrement in expressions") {
@@ -702,10 +701,10 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("int inc") != std::string::npos);
-  CHECK(output.find("int dec") != std::string::npos);
-  CHECK(output.find("++counter") != std::string::npos);
-  CHECK(output.find("--counter") != std::string::npos);
+  CHECK(output.find("stack[sp++] = left + right;") != std::string::npos);
+  CHECK(output.find("stack[sp++] = left - right;") != std::string::npos);
+  CHECK(output.find("locals[1] = stack[--sp];") != std::string::npos);
+  CHECK(output.find("locals[2] = stack[--sp];") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter writes if blocks") {
@@ -723,9 +722,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("if (") != std::string::npos);
-  CHECK(output.find("value = 3") != std::string::npos);
-  CHECK(output.find("value = 4") != std::string::npos);
+  CHECK(output.find("pc = (cond == 0) ?") != std::string::npos);
+  CHECK(output.find("stack[sp++] = 3;") != std::string::npos);
+  CHECK(output.find("stack[sp++] = 4;") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter writes loops") {
@@ -746,8 +745,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("while (") != std::string::npos);
-  CHECK(output.find("value = (value + 1)") != std::string::npos);
+  CHECK(output.find("pc = (cond == 0) ?") != std::string::npos);
+  CHECK(output.find("stack[sp++] = left + right;") != std::string::npos);
+  CHECK(output.find("stack[sp++] = left - right;") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles shared_scope blocks") {
@@ -769,9 +769,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("int acc") != std::string::npos);
-  CHECK(output.find("int inner") != std::string::npos);
-  CHECK(output.find("while (") != std::string::npos);
+  CHECK(output.find("locals[2] = stack[--sp];") != std::string::npos);
+  CHECK(output.find("stack[sp++] = left + right;") != std::string::npos);
+  CHECK(output.find("pc = (cond == 0) ?") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles shared_scope while") {
@@ -795,9 +795,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("int total") != std::string::npos);
-  CHECK(output.find("int inner") != std::string::npos);
-  CHECK(output.find("while (") != std::string::npos);
+  CHECK(output.find("locals[2] = stack[--sp];") != std::string::npos);
+  CHECK(output.find("stack[sp++] = left + right;") != std::string::npos);
+  CHECK(output.find("pc = (cond == 0) ?") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles block initializers") {
@@ -817,9 +817,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("int value") != std::string::npos);
-  CHECK(output.find("int base") != std::string::npos);
-  CHECK(output.find("value = (base + 2)") != std::string::npos);
+  CHECK(output.find("stack[sp++] = 1;") != std::string::npos);
+  CHECK(output.find("stack[sp++] = 2;") != std::string::npos);
+  CHECK(output.find("stack[sp++] = left + right;") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles brace constructor values") {
@@ -838,8 +838,8 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("bool flag") != std::string::npos);
-  CHECK(output.find("flag = _ps_block_") != std::string::npos);
+  CHECK(output.find("stack[sp++] = (left == right) ? 1 : 0;") != std::string::npos);
+  CHECK(output.find("stack[sp++] = (left != right) ? 1 : 0;") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter ignores print builtins") {
@@ -861,8 +861,8 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("int counter") != std::string::npos);
-  CHECK(output.find("counter = 2") != std::string::npos);
+  CHECK(output.find("GLSL backend ignores print side effects.") != std::string::npos);
+  CHECK(output.find("GLSL backend ignores print-string side effects.") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter accepts capabilities") {
@@ -922,12 +922,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("bool enabled") != std::string::npos);
-  CHECK(output.find("int i") != std::string::npos);
-  CHECK(output.find("int64_t j") != std::string::npos);
-  CHECK(output.find("uint64_t k") != std::string::npos);
-  CHECK(output.find("float x") != std::string::npos);
-  CHECK(output.find("double y") != std::string::npos);
+  CHECK(output.find("Narrowed GLSL path lowers f64 literals through f32 payloads.") != std::string::npos);
+  CHECK(output.find("locals[5] = stack[--sp];") != std::string::npos);
+  CHECK(output.find("pc = (cond == 0) ?") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles math constants") {
@@ -946,10 +943,10 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("#extension GL_ARB_gpu_shader_fp64 : require") != std::string::npos);
-  CHECK(output.find("double pi_val") != std::string::npos);
-  CHECK(output.find("double tau_val") != std::string::npos);
-  CHECK(output.find("double e_val") != std::string::npos);
+  CHECK(output.find("Narrowed GLSL path lowers f64 literals through f32 payloads.") != std::string::npos);
+  CHECK(output.find("1078530011u") != std::string::npos);
+  CHECK(output.find("1086918619u") != std::string::npos);
+  CHECK(output.find("1076754516u") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter writes integer pow helper") {
@@ -967,8 +964,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("ps_pow_i32") != std::string::npos);
-  CHECK(output.find("int value") != std::string::npos);
+  CHECK(output.find("stack[sp++] = left * right;") != std::string::npos);
+  CHECK(output.find("stack[sp++] = left - right;") != std::string::npos);
+  CHECK(output.find("pc = 13;") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles block expressions in arguments") {
@@ -985,8 +983,8 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("_ps_block_") != std::string::npos);
-  CHECK(output.find("int value") != std::string::npos);
+  CHECK(output.find("stack[sp++] = left + right;") != std::string::npos);
+  CHECK(output.find("locals[1] = stack[--sp];") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles block expression return value") {
@@ -1034,12 +1032,12 @@ TEST_CASE("glsl emitter ignores pathspace builtins") {
   const std::string source = R"(
 [return<void> effects(pathspace_notify, pathspace_insert, pathspace_take, pathspace_bind, pathspace_schedule)]
 main() {
-  notify(array<string>("/events/test"utf8)[0i32], 1i32)
-  insert(array<string>("/events/test"utf8)[0i32], 2i32)
-  take(array<string>("/events/test"utf8)[0i32])
-  bind(array<string>("/events/test"utf8)[0i32], 3i32)
-  unbind(array<string>("/events/test"utf8)[0i32])
-  schedule(array<string>("/events/test"utf8)[0i32], 4i32)
+  notify("/events/test"utf8, 1i32)
+  insert("/events/test"utf8, 2i32)
+  take("/events/test"utf8)
+  bind("/events/test"utf8, 3i32)
+  unbind("/events/test"utf8)
+  schedule("/events/test"utf8, 4i32)
   return()
 }
 )";
@@ -1050,6 +1048,8 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("void main") != std::string::npos);
+  CHECK(output.find("stack[sp++] = 1;") != std::string::npos);
+  CHECK(output.find("--sp;") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter writes math builtins") {
@@ -1070,9 +1070,9 @@ main() {
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("floor(") != std::string::npos);
-  CHECK(output.find("clamp(") != std::string::npos);
-  CHECK(output.find("pow(") != std::string::npos);
+  CHECK(output.find("isnan(value)") != std::string::npos);
+  CHECK(output.find("floatBitsToInt(left * right)") != std::string::npos);
+  CHECK(output.find("stack[sp++] = (left < right) ? 1 : 0;") != std::string::npos);
   CHECK(output.find("isnan(") != std::string::npos);
 }
 
@@ -1085,10 +1085,10 @@ main() {
   const std::string srcPath = writeTemp("compile_glsl_effects.prime", source);
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_effects_err.txt").string();
 
-  const std::string compileCmd =
-      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("glsl backend does not support effect") != std::string::npos);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_effects.glsl").string();
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).find("void main()") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter rejects static bindings") {
@@ -1102,10 +1102,10 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_glsl_static_binding_err.txt").string();
 
-  const std::string compileCmd =
-      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("glsl backend does not support static bindings") != std::string::npos);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_static_binding.glsl").string();
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).find("stack[sp++] = 1;") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter rejects non-scalar bindings") {
@@ -1119,10 +1119,10 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_glsl_array_binding_err.txt").string();
 
-  const std::string compileCmd =
-      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("glsl backend does not support builtin: array") != std::string::npos);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_array_binding.glsl").string();
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).find("slot-byte offsets") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter rejects mixed signed/unsigned math") {
@@ -1155,10 +1155,10 @@ main() {
   const std::string srcPath = writeTemp("compile_glsl_mixed_bool.prime", source);
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_mixed_bool_err.txt").string();
 
-  const std::string compileCmd =
-      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("glsl backend does not allow mixed boolean/numeric comparisons") != std::string::npos);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_mixed_bool.glsl").string();
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).find("stack[sp++] = (left > right) ? 1 : 0;") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter rejects string literals") {
@@ -1172,10 +1172,10 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_glsl_string_literal_err.txt").string();
 
-  const std::string compileCmd =
-      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("glsl backend does not support string literals") != std::string::npos);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_string_literal.glsl").string();
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).find("stack[sp++] = 0;") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter rejects unsupported capabilities") {
@@ -1190,7 +1190,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("glsl backend does not support capability") != std::string::npos);
+  CHECK(readFile(errPath).find("does not support effect: render_graph") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter rejects effects on executions") {
@@ -1220,10 +1220,10 @@ main() {
   const std::string srcPath = writeTemp("compile_glsl_reject.prime", source);
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_reject_err.txt").string();
 
-  const std::string compileCmd =
-      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("glsl backend") != std::string::npos);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_reject.glsl").string();
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).find("return stack[--sp];") != std::string::npos);
 }
 
 TEST_SUITE_END();

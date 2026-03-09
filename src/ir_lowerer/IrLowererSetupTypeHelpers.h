@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "primec/Ast.h"
 
@@ -33,6 +34,10 @@ LocalInfo::ValueKind valueKindFromTypeName(const std::string &name);
 LocalInfo::ValueKind combineNumericKinds(LocalInfo::ValueKind left, LocalInfo::ValueKind right);
 LocalInfo::ValueKind comparisonKind(LocalInfo::ValueKind left, LocalInfo::ValueKind right);
 std::string typeNameForValueKind(LocalInfo::ValueKind kind);
+bool inferDeclaredReturnCollection(const Definition &definition,
+                                   std::string &collectionNameOut,
+                                   std::vector<std::string> &collectionArgsOut);
+bool inferReceiverTypeFromDeclaredReturn(const Definition &definition, std::string &typeNameOut);
 bool resolveMethodCallReceiverExpr(const Expr &callExpr,
                                    const LocalMap &localsIn,
                                    const IsMethodCallClassifierFn &isArrayCountCall,

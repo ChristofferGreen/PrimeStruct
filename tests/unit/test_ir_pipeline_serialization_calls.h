@@ -22,13 +22,15 @@ main() {
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
   CHECK(module.functions[1].name == "/addOne");
-  CHECK(module.functions[1].instructions.size() > 2);
+  CHECK(module.functions[0].instructions.size() > 2);
   bool sawAdd = false;
   bool sawReturn = false;
-  for (const auto &inst : module.functions[1].instructions) {
+  for (const auto &inst : module.functions[0].instructions) {
     if (inst.op == primec::IrOpcode::AddI32) {
       sawAdd = true;
     }
+  }
+  for (const auto &inst : module.functions[1].instructions) {
     if (inst.op == primec::IrOpcode::ReturnI32) {
       sawReturn = true;
     }
@@ -67,13 +69,15 @@ main() {
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
   CHECK(module.functions[1].name == "/sum3");
-  CHECK(module.functions[1].instructions.size() > 2);
+  CHECK(module.functions[0].instructions.size() > 2);
   int addCount = 0;
   bool sawReturn = false;
-  for (const auto &inst : module.functions[1].instructions) {
+  for (const auto &inst : module.functions[0].instructions) {
     if (inst.op == primec::IrOpcode::AddI32) {
       addCount++;
     }
+  }
+  for (const auto &inst : module.functions[1].instructions) {
     if (inst.op == primec::IrOpcode::ReturnI32) {
       sawReturn = true;
     }
@@ -152,13 +156,15 @@ main() {
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
   CHECK(module.functions[1].name == "/helper");
-  CHECK(module.functions[1].instructions.size() > 2);
+  CHECK(module.functions[0].instructions.size() > 2);
   bool sawPush = false;
   bool sawReturn = false;
-  for (const auto &inst : module.functions[1].instructions) {
+  for (const auto &inst : module.functions[0].instructions) {
     if (inst.op == primec::IrOpcode::PushF64) {
       sawPush = true;
     }
+  }
+  for (const auto &inst : module.functions[1].instructions) {
     if (inst.op == primec::IrOpcode::ReturnF64) {
       sawReturn = true;
     }
