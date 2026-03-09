@@ -3195,6 +3195,67 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced alias forwards when unknown expected meets primitive call return") {
+  const std::string source = R"(
+Marker() {}
+
+[return<i32>]
+makeMarker() {
+  return(1i32)
+}
+
+[return<int>]
+/vector/count([vector<i32>] values, [Marker] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values, makeMarker()), values.count(makeMarker())))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced unknown expected primitive call return keeps canonical diagnostics") {
+  const std::string source = R"(
+Marker() {}
+
+[return<i32>]
+makeMarker() {
+  return(1i32)
+}
+
+[return<int>]
+/vector/count([vector<i32>] values, [Marker] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.count(makeMarker()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced alias implicit template forwarding keeps canonical diagnostics") {
   const std::string source = R"(
 [return<int>]

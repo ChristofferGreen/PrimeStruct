@@ -448,6 +448,37 @@ main() {
   CHECK(runCommand(runCmd) == 180);
 }
 
+TEST_CASE("runs vm with vector alias canonical forwarding when unknown expected meets primitive call return") {
+  const std::string source = R"(
+Marker() {}
+
+[return<i32>]
+makeMarker() {
+  return(1i32)
+}
+
+[return<int>]
+/vector/count([vector<i32>] values, [Marker] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values, makeMarker()), values.count(makeMarker())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_alias_canonical_forwarding_unknown_expected_primitive_call_return.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 180);
+}
+
 TEST_CASE("runs vm with vector alias implicit canonical templated forwarding on named args") {
   const std::string source = R"(
 [return<int>]

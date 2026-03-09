@@ -571,6 +571,10 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
               return true;
             }
           }
+        } else if (expectedKind != actualKind) {
+          if (normalizedExpected != normalizedActual) {
+            return true;
+          }
         } else if (normalizedExpected != normalizedActual) {
           std::string expectedBase;
           std::string expectedArgText;
