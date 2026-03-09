@@ -2701,10 +2701,57 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector namespaced alias implicitly forwards on non-bool type mismatch with same arity") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values, [string] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values, 1i32), values.count(1i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced alias implicit template forwarding keeps canonical diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.count(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced non-bool mismatch fallback keeps canonical diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values, [string] marker) {
   return(7i32)
 }
 

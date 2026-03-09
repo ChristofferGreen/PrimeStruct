@@ -375,7 +375,26 @@ bool definitionAcceptsCallShape(const Definition &def, const Expr &expr) {
   return buildOrderedArguments(params, expr.args, expr.argNames, ordered, error);
 }
 
-bool shouldPreferTemplatedVectorFallbackForBoolMismatch(const Definition &def,
+bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind) {
+  switch (expectedKind) {
+    case ReturnKind::Integer:
+      return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+             actualKind == ReturnKind::Bool || actualKind == ReturnKind::Integer;
+    case ReturnKind::Decimal:
+      return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+             actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
+             actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal;
+    case ReturnKind::Complex:
+      return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+             actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
+             actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal ||
+             actualKind == ReturnKind::Complex;
+    default:
+      return false;
+  }
+}
+
+bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
                                                         const Expr &expr,
                                                         const LocalTypeMap &locals,
                                                         const std::vector<ParameterInfo> &params,
@@ -397,19 +416,40 @@ bool shouldPreferTemplatedVectorFallbackForBoolMismatch(const Definition &def,
   if (!buildOrderedArguments(callParams, expr.args, expr.argNames, ordered, orderError)) {
     return false;
   }
+  std::unordered_set<const Expr *> explicitArgs;
+  explicitArgs.reserve(expr.args.size());
+  for (const auto &arg : expr.args) {
+    explicitArgs.insert(&arg);
+  }
   for (size_t i = 0; i < callParams.size(); ++i) {
     const auto &param = callParams[i];
     if (param.binding.typeName.empty() || !ordered[i]) {
+      continue;
+    }
+    if (explicitArgs.count(ordered[i]) == 0) {
       continue;
     }
     BindingInfo actual;
     if (!inferBindingTypeForMonomorph(*ordered[i], params, locals, allowMathBare, ctx, actual)) {
       continue;
     }
-    const ReturnKind expectedKind = returnKindForTypeName(normalizeBindingTypeName(param.binding.typeName));
+    const std::string normalizedExpected = normalizeBindingTypeName(param.binding.typeName);
+    const std::string normalizedActual = normalizeBindingTypeName(actual.typeName);
+    if (normalizedExpected == "string" && normalizedActual != "string") {
+      return true;
+    }
+    if (normalizedExpected != "string" && normalizedActual == "string") {
+      return true;
+    }
+    const ReturnKind expectedKind = returnKindForTypeName(normalizedExpected);
     const ReturnKind actualKind = returnKindForTypeName(normalizeBindingTypeName(actual.typeName));
-    if ((expectedKind == ReturnKind::Bool && actualKind != ReturnKind::Bool) ||
-        (expectedKind != ReturnKind::Bool && actualKind == ReturnKind::Bool)) {
+    if (expectedKind == ReturnKind::Unknown || actualKind == ReturnKind::Unknown) {
+      continue;
+    }
+    if (isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
+      continue;
+    }
+    if (actualKind != expectedKind) {
       return true;
     }
   }
@@ -431,7 +471,7 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
   }
   const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);
   if (definitionAcceptsCallShape(defIt->second, expr) &&
-      !shouldPreferTemplatedVectorFallbackForBoolMismatch(defIt->second, expr, locals, params, allowMathBare, ctx)) {
+      !shouldPreferTemplatedVectorFallbackForTypeMismatch(defIt->second, expr, locals, params, allowMathBare, ctx)) {
     return path;
   }
   if (preferred != path && ctx.sourceDefs.count(preferred) > 0 && ctx.templateDefs.count(preferred) > 0) {
