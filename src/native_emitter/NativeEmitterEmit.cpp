@@ -241,8 +241,18 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
     emitter.emitStoreLocalFromReg(layout.framePointerLocalIndex, 21);
     emitter.emitStoreLocalFromReg(layout.linkLocalIndex, 30);
     instOffsets[functionIndex].assign(fn.instructions.size() + 1, 0);
+    std::vector<bool> branchTargets(fn.instructions.size() + 1, false);
+    for (const auto &inst : fn.instructions) {
+      if ((inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) &&
+          inst.imm <= fn.instructions.size()) {
+        branchTargets[static_cast<size_t>(inst.imm)] = true;
+      }
+    }
 
     for (size_t index = 0; index < fn.instructions.size(); ++index) {
+      if (branchTargets[index]) {
+        emitter.flushValueStackCachePublic();
+      }
       const auto &inst = fn.instructions[index];
       instOffsets[functionIndex][index] = emitter.currentWordIndex();
       switch (inst.op) {

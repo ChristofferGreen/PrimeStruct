@@ -91,6 +91,25 @@ main() {
   CHECK(runCommand(exePath) == 18);
 }
 
+TEST_CASE("native preserves if expression values in arithmetic context") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [bool] on{true}
+  [bool] off{false}
+  [int] whenOn{plus(0i32, if(on, then() { 1i32 }, else() { 0i32 }))}
+  [int] whenOff{plus(0i32, if(off, then() { 1i32 }, else() { 0i32 }))}
+  return(plus(whenOn, whenOff))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_if_expr_stack_merge.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_if_expr_stack_merge").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs native float arithmetic") {
   const std::string source = R"(
 [return<int>]

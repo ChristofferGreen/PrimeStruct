@@ -570,6 +570,31 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     error_ = "binding initializer requires a value";
     return false;
   }
+    auto isSoftwareNumericBindingCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {
+      switch (expectedKind) {
+        case ReturnKind::Integer:
+          return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+                 actualKind == ReturnKind::Bool || actualKind == ReturnKind::Integer;
+        case ReturnKind::Decimal:
+          return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+                 actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 ||
+                 actualKind == ReturnKind::Float64 || actualKind == ReturnKind::Integer ||
+                 actualKind == ReturnKind::Decimal;
+        case ReturnKind::Complex:
+          return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+                 actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 ||
+                 actualKind == ReturnKind::Float64 || actualKind == ReturnKind::Integer ||
+                 actualKind == ReturnKind::Decimal || actualKind == ReturnKind::Complex;
+        default:
+          return false;
+      }
+    };
+    auto isFloatBindingCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {
+      if (expectedKind != ReturnKind::Float32 && expectedKind != ReturnKind::Float64) {
+        return false;
+      }
+      return actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64;
+    };
     if (!hasExplicitType || explicitAutoType) {
       (void)inferBindingTypeFromInitializer(initializer, params, locals, info);
     } else {
@@ -581,9 +606,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         }
       } else {
         const ReturnKind expectedKind = returnKindForTypeName(expectedType);
-        if (expectedKind != ReturnKind::Unknown && initKind != ReturnKind::Unknown && initKind != expectedKind) {
-          error_ = "binding initializer type mismatch";
-          return false;
+        if (expectedKind != ReturnKind::Unknown && initKind != ReturnKind::Unknown) {
+          if (!isSoftwareNumericBindingCompatible(expectedKind, initKind) &&
+              !isFloatBindingCompatible(expectedKind, initKind) &&
+              initKind != expectedKind) {
+            error_ = "binding initializer type mismatch";
+            return false;
+          }
         }
       }
     }

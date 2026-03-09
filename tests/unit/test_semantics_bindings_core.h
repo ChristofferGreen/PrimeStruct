@@ -367,6 +367,33 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("float binding accepts math expression with imported constants") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [f32] value{abs(sin(pi))}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit fixed numeric binding rejects incompatible kind") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1.5f32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
+}
+
 TEST_CASE("bool binding validates") {
   const std::string source = R"(
 [return<int>]

@@ -77,6 +77,10 @@ class Arm64Emitter {
     }
   }
 
+  void flushValueStackCachePublic() {
+    flushValueStackCache();
+  }
+
   bool beginFunction(uint64_t frameSize, bool resetValueStack, std::string &error) {
     (void)error;
     hasValueStackCache_ = false;

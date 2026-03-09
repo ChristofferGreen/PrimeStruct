@@ -5,6 +5,9 @@ Legend:
   ◐ Started
   ✓ Finished
 
+**Regression stabilization (March 9, 2026)**
+- ✓ Fix failing `PrimeStruct_primestruct_compile_run_native_backend_core` and `PrimeStruct_primestruct_compile_run_native_backend_math_numeric` by restoring explicit-binding numeric compatibility for float/software-numeric initializers in semantics and by flushing native value-stack cache at control-flow merge targets; added focused semantics/native regression tests.
+
 **Architecture follow-up (callable IR decoupling)**
 - ✓ Add PSIR `Call`/`Return` function-call opcodes and update `docs/PrimeStruct.md` IR spec.
 - ✓ Refactor IR lowerer to emit full function tables instead of a single inlined entry function.
