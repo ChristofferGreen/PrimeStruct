@@ -480,7 +480,7 @@ bool isStringValue(const Expr &target, const std::unordered_map<std::string, Bin
     return it != localTypes.end() && it->second.typeName == "string";
   }
   if (target.kind == Expr::Kind::Call) {
-    if ((target.name == "at" || target.name == "at_unsafe") && target.args.size() == 2) {
+    if ((isSimpleCallName(target, "at") || isSimpleCallName(target, "at_unsafe")) && target.args.size() == 2) {
       const Expr &receiver = target.args.front();
       if (receiver.kind == Expr::Kind::Name) {
         auto it = localTypes.find(receiver.name);

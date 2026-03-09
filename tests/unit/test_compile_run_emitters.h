@@ -1341,6 +1341,46 @@ main() {
   CHECK(output.find("ps_array_count(ps_wrapText())") == std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps stdlib namespaced vector string access count fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<string>] values{vector<string>("abc"raw_utf8)}
+  return(count(/std/collections/vector/at(values, 0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_namespaced_vector_string_access_count_fallback.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_stdlib_namespaced_vector_string_access_count_fallback.cpp")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_string_count(ps_array_at(") != std::string::npos);
+}
+
+TEST_CASE("rejects stdlib namespaced vector access count for non-string element in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  return(count(/std/collections/vector/at(values, 0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_namespaced_vector_access_count_non_string_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_stdlib_namespaced_vector_access_count_non_string_reject.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+}
+
 TEST_CASE("rejects inferred wrapper string count arg mismatch in C++ emitter") {
   const std::string source = R"(
 wrapText() {
