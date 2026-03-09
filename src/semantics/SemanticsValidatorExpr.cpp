@@ -2413,6 +2413,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
+    } else if (isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall(expr) && !expr.args.empty() &&
+               expr.args.size() != 1 && defMap_.find(resolved) != defMap_.end()) {
+      usedMethodTarget = true;
+      hasMethodReceiverIndex = true;
+      methodReceiverIndex = 0;
+      bool isBuiltinMethod = false;
+      std::string methodResolved;
+      if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
+        (void)validateExpr(params, locals, expr.args.front());
+        return false;
+      }
+      if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+        error_ = "unknown method: " + methodResolved;
+        return false;
+      }
+      resolved = methodResolved;
+      resolvedMethod = isBuiltinMethod;
     } else if (isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
                (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
       usedMethodTarget = true;
