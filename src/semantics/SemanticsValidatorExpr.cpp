@@ -2634,6 +2634,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         if (normalized.rfind("vector/", 0) == 0) {
           normalized = normalized.substr(std::string("vector/").size());
+        } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
+          normalized = normalized.substr(std::string("std/collections/vector/").size());
         }
         if (normalized == "push" || normalized == "pop" || normalized == "reserve" || normalized == "clear" ||
             normalized == "remove_at" || normalized == "remove_swap") {
@@ -3391,9 +3393,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             normalized.erase(normalized.begin());
           }
           if (normalized.rfind("vector/", 0) != 0) {
-            return false;
+            if (normalized.rfind("std/collections/vector/", 0) != 0) {
+              return false;
+            }
+            normalized = normalized.substr(std::string("std/collections/vector/").size());
+          } else {
+            normalized = normalized.substr(std::string("vector/").size());
           }
-          normalized = normalized.substr(std::string("vector/").size());
           if (normalized == "push" || normalized == "pop" || normalized == "reserve" || normalized == "clear" ||
               normalized == "remove_at" || normalized == "remove_swap") {
             nameOut = normalized;
