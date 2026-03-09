@@ -7,6 +7,39 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(0, 1);
+  }
+  const std::string vectorPrefix = "vector/";
+  const std::string stdVectorPrefix = "std/collections/vector/";
+  if (normalized.rfind(vectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(vectorPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    return true;
+  }
+  return false;
+}
+
+bool isVectorBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+} // namespace
+
 bool resolveEntryArgsParameter(const Definition &entryDef,
                                bool &hasEntryArgsOut,
                                std::string &entryArgsNameOut,
@@ -84,7 +117,7 @@ bool isEntryArgsName(const Expr &expr, const LocalMap &localsIn, bool hasEntryAr
 }
 
 bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName) {
-  if (!isSimpleCallName(expr, "count") || expr.args.size() != 1) {
+  if (!isVectorBuiltinName(expr, "count") || expr.args.size() != 1) {
     return false;
   }
   const Expr &target = expr.args.front();
@@ -118,7 +151,7 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
 }
 
 bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
-  if (!isSimpleCallName(expr, "capacity") || expr.args.size() != 1) {
+  if (!isVectorBuiltinName(expr, "capacity") || expr.args.size() != 1) {
     return false;
   }
   const Expr &target = expr.args.front();
@@ -137,7 +170,7 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
 }
 
 bool isStringCountCall(const Expr &expr, const LocalMap &localsIn) {
-  if (!isSimpleCallName(expr, "count") || expr.args.size() != 1) {
+  if (!isVectorBuiltinName(expr, "count") || expr.args.size() != 1) {
     return false;
   }
   const Expr &target = expr.args.front();
@@ -214,7 +247,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
 
-  if (isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
+  if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
       isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
@@ -223,7 +256,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
 
-  if (isSimpleCallName(expr, "capacity") && expr.args.size() == 1 &&
+  if (isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
       isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;

@@ -19387,6 +19387,8 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   countEntry.name = "count";
   countEntry.args = {entryName};
   CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, true, "argv"));
+  countEntry.name = "/vector/count";
+  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, true, "argv"));
 
   primec::ir_lowerer::LocalInfo arrayInfo;
   arrayInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
@@ -19412,6 +19414,7 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   vectorCall.name = "vector";
   vectorCall.templateArgs = {"i64"};
   countEntry.args = {vectorCall};
+  countEntry.name = "/std/collections/vector/count";
   CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
 }
 
@@ -19471,6 +19474,8 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
   CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+  capacityCall.name = "/std/collections/vector/capacity";
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 
   primec::Expr stringCount;
   stringCount.kind = primec::Expr::Kind::Call;
@@ -19488,6 +19493,8 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   textName.kind = primec::Expr::Kind::Name;
   textName.name = "text";
   stringCount.args = {textName};
+  CHECK(primec::ir_lowerer::isStringCountCall(stringCount, locals));
+  stringCount.name = "/vector/count";
   CHECK(primec::ir_lowerer::isStringCountCall(stringCount, locals));
 
   capacityCall.name = "count";
@@ -19707,6 +19714,61 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
 
   instructions.clear();
   error.clear();
+  callExpr.name = "/std/collections/vector/count";
+  int dynamicCountEmitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++dynamicCountEmitExprCalls;
+              instructions.push_back({primec::IrOpcode::PushI64, 3});
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Emitted);
+  CHECK(dynamicCountEmitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  error.clear();
+  callExpr.name = "/vector/capacity";
+  int dynamicCapacityEmitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++dynamicCapacityEmitExprCalls;
+              instructions.push_back({primec::IrOpcode::AddressOfLocal, 2});
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Emitted);
+  CHECK(dynamicCapacityEmitExprCalls == 1);
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == primec::IrSlotBytes);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  error.clear();
+  callExpr.name = "count";
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
             callExpr,
             locals,
@@ -19738,6 +19800,8 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   countEntry.name = "count";
   countEntry.args = {entryName};
   CHECK(isArrayCountCall(countEntry, locals));
+  countEntry.name = "/vector/count";
+  CHECK(isArrayCountCall(countEntry, locals));
 
   primec::ir_lowerer::LocalInfo vecInfo;
   vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
@@ -19750,6 +19814,8 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
   CHECK(isVectorCapacityCall(capacityCall, locals));
+  capacityCall.name = "/std/collections/vector/capacity";
+  CHECK(isVectorCapacityCall(capacityCall, locals));
 
   primec::Expr stringCount;
   stringCount.kind = primec::Expr::Kind::Call;
@@ -19758,6 +19824,8 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   literal.kind = primec::Expr::Kind::StringLiteral;
   literal.stringValue = "\"ok\"utf8";
   stringCount.args = {literal};
+  CHECK(isStringCountCall(stringCount, locals));
+  stringCount.name = "/std/collections/vector/count";
   CHECK(isStringCountCall(stringCount, locals));
 }
 
@@ -19775,6 +19843,8 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   countEntry.name = "count";
   countEntry.args = {entryName};
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
+  countEntry.name = "/std/collections/vector/count";
+  CHECK(classifiers.isArrayCountCall(countEntry, locals));
 
   primec::ir_lowerer::LocalInfo vecInfo;
   vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
@@ -19786,6 +19856,8 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
+  CHECK(classifiers.isVectorCapacityCall(capacityCall, locals));
+  capacityCall.name = "/vector/capacity";
   CHECK(classifiers.isVectorCapacityCall(capacityCall, locals));
   CHECK_FALSE(classifiers.isStringCountCall(capacityCall, locals));
 }
