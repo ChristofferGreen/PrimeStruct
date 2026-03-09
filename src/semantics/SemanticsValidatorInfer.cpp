@@ -1310,8 +1310,18 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isBuiltinAccess = getBuiltinArrayAccessName(expr, builtinAccessName);
     const bool isBuiltinGet = isSimpleCallName(expr, "get");
     const bool isBuiltinRef = isSimpleCallName(expr, "ref");
+    bool isNamespacedVectorAccessCall = false;
+    if (isBuiltinAccess && !expr.name.empty()) {
+      std::string normalizedName = expr.name;
+      if (!normalizedName.empty() && normalizedName[0] == '/') {
+        normalizedName.erase(normalizedName.begin());
+      }
+      isNamespacedVectorAccessCall =
+          normalizedName.rfind("vector/", 0) == 0 ||
+          normalizedName.rfind("std/collections/vector/", 0) == 0;
+    }
     if (!expr.isMethodCall && (isBuiltinAccess || isBuiltinGet || isBuiltinRef) && expr.args.size() == 2 &&
-        defMap_.find(resolved) == defMap_.end()) {
+        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorAccessCall)) {
       const std::string helperName = isBuiltinAccess ? builtinAccessName : (isBuiltinGet ? "get" : "ref");
       std::vector<size_t> receiverIndices;
       auto appendReceiverIndex = [&](size_t index) {
