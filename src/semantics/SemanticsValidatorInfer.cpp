@@ -1049,6 +1049,28 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       kindOut = kindIt->second;
       return true;
     };
+    auto preferVectorStdlibHelperPath = [&](const std::string &path) -> std::string {
+      std::string preferred = path;
+      if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string suffix = preferred.substr(std::string("/array/").size());
+        const std::string vectorAlias = "/vector/" + suffix;
+        if (defMap_.count(vectorAlias) > 0) {
+          return vectorAlias;
+        }
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        if (defMap_.count(stdlibAlias) > 0) {
+          return stdlibAlias;
+        }
+      }
+      if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string stdlibAlias =
+            "/std/collections/vector/" + preferred.substr(std::string("/vector/").size());
+        if (defMap_.count(stdlibAlias) > 0) {
+          preferred = stdlibAlias;
+        }
+      }
+      return preferred;
+    };
     std::string resolved = resolveCalleePath(expr);
     bool hasResolvedPath = !expr.isMethodCall;
     if (expr.isMethodCall && expr.name == "ok" && expr.args.size() >= 1) {
@@ -1068,16 +1090,18 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string keyType;
       std::string valueType;
       if (resolveVectorTarget(expr.args.front(), elemType)) {
-        if (defMap_.find("/vector/count") == defMap_.end()) {
+        const std::string methodPath = preferVectorStdlibHelperPath("/vector/count");
+        if (defMap_.find(methodPath) == defMap_.end()) {
           return ReturnKind::Int;
         }
-        resolved = "/vector/count";
+        resolved = methodPath;
         hasResolvedPath = true;
       } else if (resolveArrayTarget(expr.args.front(), elemType)) {
-        if (defMap_.find("/array/count") == defMap_.end()) {
+        const std::string methodPath = preferVectorStdlibHelperPath("/array/count");
+        if (defMap_.find(methodPath) == defMap_.end()) {
           return ReturnKind::Int;
         }
-        resolved = "/array/count";
+        resolved = methodPath;
         hasResolvedPath = true;
       } else if (resolveStringTarget(expr.args.front())) {
         if (defMap_.find("/string/count") == defMap_.end()) {
@@ -1096,16 +1120,18 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (expr.isMethodCall && expr.name == "capacity" && expr.args.size() == 1) {
       std::string elemType;
       if (resolveVectorTarget(expr.args.front(), elemType)) {
-        if (defMap_.find("/vector/capacity") == defMap_.end()) {
+        const std::string methodPath = preferVectorStdlibHelperPath("/vector/capacity");
+        if (defMap_.find(methodPath) == defMap_.end()) {
           return ReturnKind::Int;
         }
-        resolved = "/vector/capacity";
+        resolved = methodPath;
         hasResolvedPath = true;
       }
     }
     if (expr.isMethodCall) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
+        methodResolved = preferVectorStdlibHelperPath(methodResolved);
         if (methodResolved == "/file_error/why") {
           return ReturnKind::String;
         }
@@ -1198,6 +1224,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           if (!resolveVectorHelperMethodTarget(receiverCandidate, vectorHelper, methodResolved)) {
             continue;
           }
+          methodResolved = preferVectorStdlibHelperPath(methodResolved);
           ReturnKind helperReturnKind = ReturnKind::Unknown;
           if (inferResolvedPathReturnKind(methodResolved, helperReturnKind)) {
             return helperReturnKind;
@@ -1209,12 +1236,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
-        if (methodResolved.rfind("/array/", 0) == 0 && defMap_.find(methodResolved) == defMap_.end()) {
-          const std::string vectorAlias = "/vector/" + methodResolved.substr(std::string("/array/").size());
-          if (defMap_.find(vectorAlias) != defMap_.end()) {
-            methodResolved = vectorAlias;
-          }
-        }
+        methodResolved = preferVectorStdlibHelperPath(methodResolved);
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
             resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
@@ -1245,12 +1267,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
-        if (methodResolved.rfind("/array/", 0) == 0 && defMap_.find(methodResolved) == defMap_.end()) {
-          const std::string vectorAlias = "/vector/" + methodResolved.substr(std::string("/array/").size());
-          if (defMap_.find(vectorAlias) != defMap_.end()) {
-            methodResolved = vectorAlias;
-          }
-        }
+        methodResolved = preferVectorStdlibHelperPath(methodResolved);
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
             resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
@@ -1366,12 +1383,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         } else {
           continue;
         }
-        if (methodResolved.rfind("/array/", 0) == 0 && defMap_.find(methodResolved) == defMap_.end()) {
-          const std::string vectorAlias = "/vector/" + methodResolved.substr(std::string("/array/").size());
-          if (defMap_.find(vectorAlias) != defMap_.end()) {
-            methodResolved = vectorAlias;
-          }
-        }
+        methodResolved = preferVectorStdlibHelperPath(methodResolved);
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
             resolveBuiltinCollectionMethodReturnKind(methodResolved, receiverCandidate, builtinMethodKind)) {

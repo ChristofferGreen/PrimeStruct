@@ -412,6 +412,30 @@ std::string resolveExprPath(const Expr &expr) {
   return "/" + expr.name;
 }
 
+std::string preferVectorStdlibHelperPath(const std::string &path,
+                                         const std::unordered_map<std::string, std::string> &nameMap) {
+  std::string preferred = path;
+  if (preferred.rfind("/array/", 0) == 0 && nameMap.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string("/array/").size());
+    const std::string vectorAlias = "/vector/" + suffix;
+    if (nameMap.count(vectorAlias) > 0) {
+      return vectorAlias;
+    }
+    const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+    if (nameMap.count(stdlibAlias) > 0) {
+      return stdlibAlias;
+    }
+  }
+  if (preferred.rfind("/vector/", 0) == 0 && nameMap.count(preferred) == 0) {
+    const std::string stdlibAlias =
+        "/std/collections/vector/" + preferred.substr(std::string("/vector/").size());
+    if (nameMap.count(stdlibAlias) > 0) {
+      preferred = stdlibAlias;
+    }
+  }
+  return preferred;
+}
+
 bool isArrayValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);

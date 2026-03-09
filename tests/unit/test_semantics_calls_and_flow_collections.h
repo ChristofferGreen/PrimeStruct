@@ -2530,6 +2530,29 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib canonical vector helpers resolve in method-call sugar") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[return<int>]
+/std/collections/vector/at([vector<i32>] values, [bool] index) {
+  return(40i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values.count(true), values.at(true)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced access and count helpers are builtin-alias validated") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

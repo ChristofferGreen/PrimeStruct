@@ -1,7 +1,6 @@
 #include "EmitterExprControlCountRewriteStep.h"
 
 #include <algorithm>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -97,13 +96,7 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
       if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
         continue;
       }
-      if (nameMap.count(methodPath) == 0 && methodPath.rfind("/array/", 0) == 0) {
-        const std::string vectorAlias = "/vector/" + methodPath.substr(std::string_view("/array/").size());
-        if (nameMap.count(vectorAlias) > 0) {
-          return vectorAlias;
-        }
-      }
-      return methodPath;
+      return preferVectorStdlibHelperPath(methodPath, nameMap);
     }
   }
   return std::nullopt;

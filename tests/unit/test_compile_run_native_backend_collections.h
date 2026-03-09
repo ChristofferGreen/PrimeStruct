@@ -185,6 +185,33 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
+TEST_CASE("compiles and runs native stdlib canonical vector helper method precedence") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(90i32)
+}
+
+[return<int>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(plus(index, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values.count(), values.at(2i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_vector_method_helper_precedence.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_vector_method_helper_precedence_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 132);
+}
+
 TEST_CASE("compiles and runs native vector namespaced mutator builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

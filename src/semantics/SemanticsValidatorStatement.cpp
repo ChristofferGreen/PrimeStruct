@@ -330,6 +330,28 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return false;
   };
+  auto preferVectorStdlibHelperPath = [&](const std::string &path) -> std::string {
+    std::string preferred = path;
+    if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
+      const std::string suffix = preferred.substr(std::string("/array/").size());
+      const std::string vectorAlias = "/vector/" + suffix;
+      if (defMap_.count(vectorAlias) > 0) {
+        return vectorAlias;
+      }
+      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      if (defMap_.count(stdlibAlias) > 0) {
+        return stdlibAlias;
+      }
+    }
+    if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+      const std::string stdlibAlias =
+          "/std/collections/vector/" + preferred.substr(std::string("/vector/").size());
+      if (defMap_.count(stdlibAlias) > 0) {
+        preferred = stdlibAlias;
+      }
+    }
+    return preferred;
+  };
   auto resolveVectorHelperTargetPath = [&](const Expr &receiver,
                                            const std::string &helperName,
                                            std::string &resolvedOut) -> bool {
@@ -1989,12 +2011,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         const Expr &receiverCandidate = stmt.args[receiverIndex];
         std::string methodTarget;
         if (resolveVectorHelperTargetPath(receiverCandidate, stmt.name, methodTarget)) {
-          if (defMap_.count(methodTarget) == 0 && methodTarget.rfind("/array/", 0) == 0) {
-            const std::string vectorAlias = "/vector/" + methodTarget.substr(std::string("/array/").size());
-            if (defMap_.count(vectorAlias) > 0) {
-              methodTarget = vectorAlias;
-            }
-          }
+          methodTarget = preferVectorStdlibHelperPath(methodTarget);
         }
         if (defMap_.count(methodTarget) > 0) {
           vectorHelperResolved = methodTarget;

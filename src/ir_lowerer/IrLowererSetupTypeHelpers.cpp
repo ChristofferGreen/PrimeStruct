@@ -300,14 +300,41 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::string &resolvedTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
+  auto findMethodDefinitionByPath = [&](const std::string &path) -> const Definition * {
+    auto defIt = defMap.find(path);
+    if (defIt != defMap.end()) {
+      return defIt->second;
+    }
+    if (path.rfind("/array/", 0) == 0) {
+      const std::string suffix = path.substr(std::string("/array/").size());
+      const std::string vectorAlias = "/vector/" + suffix;
+      defIt = defMap.find(vectorAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      defIt = defMap.find(stdlibAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
+    if (path.rfind("/vector/", 0) == 0) {
+      const std::string stdlibAlias = "/std/collections/vector/" + path.substr(std::string("/vector/").size());
+      defIt = defMap.find(stdlibAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
+    return nullptr;
+  };
   if (!resolvedTypePath.empty()) {
     const std::string resolved = resolvedTypePath + "/" + methodName;
-    auto defIt = defMap.find(resolved);
-    if (defIt == defMap.end()) {
+    const Definition *resolvedDef = findMethodDefinitionByPath(resolved);
+    if (resolvedDef == nullptr) {
       errorOut = "unknown method: " + resolved;
       return nullptr;
     }
-    return defIt->second;
+    return resolvedDef;
   }
 
   if (typeName.empty()) {
@@ -316,12 +343,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   }
 
   const std::string resolved = "/" + typeName + "/" + methodName;
-  auto defIt = defMap.find(resolved);
-  if (defIt == defMap.end()) {
+  const Definition *resolvedDef = findMethodDefinitionByPath(resolved);
+  if (resolvedDef == nullptr) {
     errorOut = "unknown method: " + resolved;
     return nullptr;
   }
-  return defIt->second;
+  return resolvedDef;
 }
 
 bool resolveReturnInfoKindForPath(const std::string &path,

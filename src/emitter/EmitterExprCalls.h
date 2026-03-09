@@ -380,7 +380,8 @@
     }
     return 0;
   };
-  auto it = nameMap.find(full);
+  const std::string resolvedFull = preferVectorStdlibHelperPath(full, nameMap);
+  auto it = nameMap.find(resolvedFull);
   if (it == nameMap.end()) {
     if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && isResolvedMapTarget(expr.args.front())) {
       std::ostringstream out;
@@ -827,7 +828,7 @@
   std::ostringstream out;
   out << it->second << "(";
   std::vector<const Expr *> orderedArgs;
-  auto paramIt = paramMap.find(full);
+  auto paramIt = paramMap.find(resolvedFull);
   if (paramIt != paramMap.end()) {
     orderedArgs = orderCallArguments(expr, paramIt->second);
   } else {

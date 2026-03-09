@@ -1293,6 +1293,28 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    auto preferVectorStdlibHelperPath = [&](const std::string &path) -> std::string {
+      std::string preferred = path;
+      if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string suffix = preferred.substr(std::string("/array/").size());
+        const std::string vectorAlias = "/vector/" + suffix;
+        if (defMap_.count(vectorAlias) > 0) {
+          return vectorAlias;
+        }
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        if (defMap_.count(stdlibAlias) > 0) {
+          return stdlibAlias;
+        }
+      }
+      if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string stdlibAlias =
+            "/std/collections/vector/" + preferred.substr(std::string("/vector/").size());
+        if (defMap_.count(stdlibAlias) > 0) {
+          preferred = stdlibAlias;
+        }
+      }
+      return preferred;
+    };
     bool hasVectorHelperCallResolution = false;
     std::string vectorHelperCallResolvedPath;
     size_t vectorHelperCallReceiverIndex = 0;
@@ -1365,12 +1387,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           const Expr &receiverCandidate = expr.args[receiverIndex];
           std::string methodTarget;
           if (resolveVectorHelperMethodTarget(receiverCandidate, expr.name, methodTarget)) {
-            if (defMap_.count(methodTarget) == 0 && methodTarget.rfind("/array/", 0) == 0) {
-              const std::string vectorAlias = "/vector/" + methodTarget.substr(std::string("/array/").size());
-              if (defMap_.count(vectorAlias) > 0) {
-                methodTarget = vectorAlias;
-              }
-            }
+            methodTarget = preferVectorStdlibHelperPath(methodTarget);
           }
           if (defMap_.count(methodTarget) > 0) {
             resolved = methodTarget;
@@ -1848,13 +1865,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       std::string elemType;
       auto setCollectionMethodTarget = [&](const std::string &path) {
-        resolvedOut = path;
-        if (resolvedOut.rfind("/array/", 0) == 0 && defMap_.count(resolvedOut) == 0) {
-          const std::string vectorAlias = "/vector/" + resolvedOut.substr(std::string("/array/").size());
-          if (defMap_.count(vectorAlias) > 0) {
-            resolvedOut = vectorAlias;
-          }
-        }
+        resolvedOut = preferVectorStdlibHelperPath(path);
         isBuiltinOut = defMap_.count(resolvedOut) == 0;
         return true;
       };
@@ -2503,12 +2514,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         const Expr &receiverCandidate = expr.args[receiverIndex];
         std::string methodTarget;
         if (resolveVectorHelperMethodTarget(receiverCandidate, expr.name, methodTarget)) {
-          if (defMap_.count(methodTarget) == 0 && methodTarget.rfind("/array/", 0) == 0) {
-            const std::string vectorAlias = "/vector/" + methodTarget.substr(std::string("/array/").size());
-            if (defMap_.count(vectorAlias) > 0) {
-              methodTarget = vectorAlias;
-            }
-          }
+          methodTarget = preferVectorStdlibHelperPath(methodTarget);
           if (defMap_.count(methodTarget) > 0) {
             usedMethodTarget = true;
             resolved = methodTarget;

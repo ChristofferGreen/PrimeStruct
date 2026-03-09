@@ -68,6 +68,8 @@ bool getBuiltinPointerOperator(const Expr &expr, char &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
 std::string resolveExprPath(const Expr &expr);
+std::string preferVectorStdlibHelperPath(const std::string &path,
+                                         const std::unordered_map<std::string, std::string> &nameMap);
 bool isArrayValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isMapValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);

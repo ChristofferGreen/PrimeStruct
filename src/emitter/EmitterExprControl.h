@@ -54,7 +54,7 @@
                                          methodPathOut);
           });
       methodPath.has_value()) {
-    full = *methodPath;
+    full = preferVectorStdlibHelperPath(*methodPath, nameMap);
   }
   if (const auto callPath = emitter::runEmitterExprControlCallPathStep(expr, full, nameMap, importAliases);
       callPath.has_value()) {
@@ -88,7 +88,7 @@
                    isStringValue(receiverExpr, localTypes);
           });
       countRewritePath.has_value()) {
-    full = *countRewritePath;
+    full = preferVectorStdlibHelperPath(*countRewritePath, nameMap);
   }
   if (const auto builtinBlockPrelude = emitter::runEmitterExprControlBuiltinBlockPreludeStep(
           expr,
