@@ -598,6 +598,41 @@ main() {
   CHECK(runCommand(exePath) == 180);
 }
 
+TEST_CASE("compiles and runs native vector alias canonical forwarding on map envelope mismatch from call return") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i64>>]
+makeMarker() {
+  return(map<i32, i64>(1i32, 2i64))
+}
+
+[return<int>]
+/vector/count([vector<i32>] values, [map<i32, string>] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [map<i32, i64>] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values, makeMarker()), values.count(makeMarker())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_vector_alias_canonical_forwarding_map_call_return_mismatch.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_vector_alias_canonical_forwarding_map_call_return_mismatch_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 180);
+}
+
 TEST_CASE("compiles and runs native vector alias implicit canonical templated forwarding on named args") {
   const std::string source = R"(
 [return<int>]

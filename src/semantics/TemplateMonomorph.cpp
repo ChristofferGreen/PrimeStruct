@@ -464,6 +464,51 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
   return {};
 }
 
+std::string inferExprTypeTextForTemplatedVectorFallback(const Expr &expr,
+                                                        const LocalTypeMap &locals,
+                                                        const std::string &namespacePrefix,
+                                                        const Context &ctx) {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding) {
+    return {};
+  }
+  std::string builtinCollection;
+  if (getBuiltinCollectionName(expr, builtinCollection)) {
+    if ((builtinCollection == "array" || builtinCollection == "vector" || builtinCollection == "soa_vector") &&
+        expr.templateArgs.size() == 1) {
+      return builtinCollection + "<" + expr.templateArgs.front() + ">";
+    }
+    if (builtinCollection == "map" && expr.templateArgs.size() == 2) {
+      return "map<" + expr.templateArgs.front() + ", " + expr.templateArgs[1] + ">";
+    }
+  }
+  std::string resolved;
+  if (expr.isMethodCall) {
+    if (!resolveMethodCallTemplateTarget(expr, locals, ctx, resolved)) {
+      return {};
+    }
+  } else {
+    resolved = resolveCalleePath(expr, namespacePrefix, ctx);
+  }
+  const auto defIt = ctx.sourceDefs.find(resolved);
+  if (defIt == ctx.sourceDefs.end()) {
+    return {};
+  }
+  if (isStructDefinition(defIt->second)) {
+    return resolved;
+  }
+  for (const auto &transform : defIt->second.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    const std::string &returnType = transform.templateArgs.front();
+    if (returnType == "auto") {
+      continue;
+    }
+    return returnType;
+  }
+  return {};
+}
+
 bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
                                                         const Expr &expr,
                                                         const LocalTypeMap &locals,
@@ -502,6 +547,25 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
     }
     BindingInfo actual;
     if (!inferBindingTypeForMonomorph(*ordered[i], params, locals, allowMathBare, ctx, actual)) {
+      const std::string expectedTypeText = bindingTypeToString(param.binding);
+      const std::string inferredActualTypeText =
+          inferExprTypeTextForTemplatedVectorFallback(*ordered[i], locals, namespacePrefix, ctx);
+      if (!expectedTypeText.empty() && !inferredActualTypeText.empty()) {
+        const std::string normalizedExpected = normalizeBindingTypeName(expectedTypeText);
+        const std::string normalizedActual = normalizeBindingTypeName(inferredActualTypeText);
+        if (normalizedExpected != normalizedActual) {
+          std::string expectedBase;
+          std::string expectedArgText;
+          std::string actualBase;
+          std::string actualArgText;
+          if (splitTemplateTypeName(normalizedExpected, expectedBase, expectedArgText) &&
+              splitTemplateTypeName(normalizedActual, actualBase, actualArgText)) {
+            if (normalizeBindingTypeName(expectedBase) == normalizeBindingTypeName(actualBase)) {
+              return true;
+            }
+          }
+        }
+      }
       const std::string expectedStructPath =
           resolveStructLikeTypePathForTemplatedVectorFallback(param.binding.typeName, def.namespacePrefix, ctx);
       if (expectedStructPath.empty()) {

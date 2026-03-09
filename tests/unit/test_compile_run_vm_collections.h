@@ -390,6 +390,35 @@ main() {
   CHECK(runCommand(runCmd) == 180);
 }
 
+TEST_CASE("runs vm with vector alias canonical forwarding on map envelope mismatch from call return") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i64>>]
+makeMarker() {
+  return(map<i32, i64>(1i32, 2i64))
+}
+
+[return<int>]
+/vector/count([vector<i32>] values, [map<i32, string>] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [map<i32, i64>] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values, makeMarker()), values.count(makeMarker())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_alias_canonical_forwarding_map_call_return_mismatch.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 180);
+}
+
 TEST_CASE("runs vm with vector alias implicit canonical templated forwarding on named args") {
   const std::string source = R"(
 [return<int>]
