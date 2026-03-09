@@ -516,6 +516,46 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
                                                         bool allowMathBare,
                                                         Context &ctx,
                                                         const std::string &namespacePrefix) {
+  auto isTemplateParamName = [&](const std::string &name) {
+    for (const auto &templateArg : def.templateArgs) {
+      if (templateArg == name) {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto isCollectionEnvelopeBase = [&](const std::string &base) {
+    return base == "array" || base == "vector" || base == "map" || base == "soa_vector";
+  };
+  auto hasUnknownEnvelopeMismatch = [&](const std::string &normalizedExpected,
+                                        const std::string &normalizedActual) {
+    if (normalizedExpected == normalizedActual) {
+      return false;
+    }
+    std::string expectedBase;
+    std::string expectedArgText;
+    std::string actualBase;
+    std::string actualArgText;
+    const bool expectedIsTemplate = splitTemplateTypeName(normalizedExpected, expectedBase, expectedArgText);
+    const bool actualIsTemplate = splitTemplateTypeName(normalizedActual, actualBase, actualArgText);
+    if (expectedIsTemplate && actualIsTemplate) {
+      const std::string normalizedExpectedBase = normalizeBindingTypeName(expectedBase);
+      const std::string normalizedActualBase = normalizeBindingTypeName(actualBase);
+      if (normalizedExpectedBase == normalizedActualBase) {
+        return true;
+      }
+      return isCollectionEnvelopeBase(normalizedExpectedBase) || isCollectionEnvelopeBase(normalizedActualBase);
+    }
+    if (expectedIsTemplate == actualIsTemplate) {
+      return false;
+    }
+    const std::string &nonTemplateText = expectedIsTemplate ? normalizedActual : normalizedExpected;
+    if (isTemplateParamName(nonTemplateText)) {
+      return false;
+    }
+    const std::string templateBase = normalizeBindingTypeName(expectedIsTemplate ? expectedBase : actualBase);
+    return isCollectionEnvelopeBase(templateBase);
+  };
   std::vector<ParameterInfo> callParams;
   callParams.reserve(def.parameters.size());
   for (const auto &paramExpr : def.parameters) {
@@ -575,16 +615,8 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
           if (normalizedExpected != normalizedActual) {
             return true;
           }
-        } else if (normalizedExpected != normalizedActual) {
-          std::string expectedBase;
-          std::string expectedArgText;
-          std::string actualBase;
-          std::string actualArgText;
-          if (splitTemplateTypeName(normalizedExpected, expectedBase, expectedArgText) &&
-              splitTemplateTypeName(normalizedActual, actualBase, actualArgText) &&
-              normalizeBindingTypeName(expectedBase) == normalizeBindingTypeName(actualBase)) {
-            return true;
-          }
+        } else if (hasUnknownEnvelopeMismatch(normalizedExpected, normalizedActual)) {
+          return true;
         }
       }
       const std::string expectedStructPath =
@@ -620,17 +652,8 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
         if (!expectedStructPath.empty() && !actualStructPath.empty() && expectedStructPath != actualStructPath) {
           return true;
         }
-        if (normalizedExpected != normalizedActual) {
-          std::string expectedBase;
-          std::string expectedArgText;
-          std::string actualBase;
-          std::string actualArgText;
-          if (splitTemplateTypeName(normalizedExpected, expectedBase, expectedArgText) &&
-              splitTemplateTypeName(normalizedActual, actualBase, actualArgText)) {
-            if (normalizeBindingTypeName(expectedBase) == normalizeBindingTypeName(actualBase)) {
-              return true;
-            }
-          }
+        if (hasUnknownEnvelopeMismatch(normalizedExpected, normalizedActual)) {
+          return true;
         }
       } else if (expectedKind != actualKind) {
         if (normalizedExpected != normalizedActual) {
