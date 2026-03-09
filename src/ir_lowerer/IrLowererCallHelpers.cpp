@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <limits>
+#include <string_view>
 #include <utility>
 
 #include "IrLowererCountAccessHelpers.h"
@@ -11,6 +12,39 @@
 #include "IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
+
+namespace {
+
+bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  constexpr std::string_view vectorPrefix = "vector/";
+  constexpr std::string_view stdVectorPrefix = "std/collections/vector/";
+  if (normalized.rfind(vectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(vectorPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    return true;
+  }
+  return false;
+}
+
+bool isVectorBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+} // namespace
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
@@ -347,27 +381,27 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
 }
 
 bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName) {
-  if (isSimpleCallName(expr, "push")) {
+  if (isVectorBuiltinName(expr, "push")) {
     helperName = "push";
     return true;
   }
-  if (isSimpleCallName(expr, "pop")) {
+  if (isVectorBuiltinName(expr, "pop")) {
     helperName = "pop";
     return true;
   }
-  if (isSimpleCallName(expr, "reserve")) {
+  if (isVectorBuiltinName(expr, "reserve")) {
     helperName = "reserve";
     return true;
   }
-  if (isSimpleCallName(expr, "clear")) {
+  if (isVectorBuiltinName(expr, "clear")) {
     helperName = "clear";
     return true;
   }
-  if (isSimpleCallName(expr, "remove_at")) {
+  if (isVectorBuiltinName(expr, "remove_at")) {
     helperName = "remove_at";
     return true;
   }
-  if (isSimpleCallName(expr, "remove_swap")) {
+  if (isVectorBuiltinName(expr, "remove_swap")) {
     helperName = "remove_swap";
     return true;
   }
@@ -378,11 +412,11 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const Expr &expr,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     std::string &error) {
-  if (isSimpleCallName(expr, "count")) {
+  if (isVectorBuiltinName(expr, "count")) {
     error = "count requires array, vector, map, or string target";
     return UnsupportedNativeCallResult::Error;
   }
-  if (isSimpleCallName(expr, "capacity")) {
+  if (isVectorBuiltinName(expr, "capacity")) {
     error = "capacity requires vector target";
     return UnsupportedNativeCallResult::Error;
   }
