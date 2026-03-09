@@ -1715,6 +1715,26 @@ main() {
   CHECK(error.find("reserve requires integer capacity") != std::string::npos);
 }
 
+TEST_CASE("reserve rejects bool capacity in call and method forms") {
+  const auto checkInvalidReserve = [](const std::string &stmtText) {
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("reserve requires integer capacity") != std::string::npos);
+  };
+
+  checkInvalidReserve("reserve(values, true)");
+  checkInvalidReserve("values.reserve(true)");
+}
+
 TEST_CASE("reserve rejects template arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -2061,6 +2081,26 @@ main() {
   CHECK(error.find("remove_at requires integer index") != std::string::npos);
 }
 
+TEST_CASE("remove_at rejects bool index in call and method forms") {
+  const auto checkInvalidRemoveAt = [](const std::string &stmtText) {
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("remove_at requires integer index") != std::string::npos);
+  };
+
+  checkInvalidRemoveAt("remove_at(values, true)");
+  checkInvalidRemoveAt("values.remove_at(true)");
+}
+
 TEST_CASE("remove_at rejects template arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -2137,6 +2177,26 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("remove_swap requires integer index") != std::string::npos);
+}
+
+TEST_CASE("remove_swap rejects bool index in call and method forms") {
+  const auto checkInvalidRemoveSwap = [](const std::string &stmtText) {
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("remove_swap requires integer index") != std::string::npos);
+  };
+
+  checkInvalidRemoveSwap("remove_swap(values, true)");
+  checkInvalidRemoveSwap("values.remove_swap(true)");
 }
 
 TEST_CASE("remove_swap requires mutable vector binding") {
