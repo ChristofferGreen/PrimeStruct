@@ -366,6 +366,28 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (typeName.empty()) {
     return false;
   }
+  auto preferVectorStdlibMethodPath = [&](const std::string &path) -> std::string {
+    std::string preferred = path;
+    if (preferred.rfind("/array/", 0) == 0 && ctx.sourceDefs.count(preferred) == 0) {
+      const std::string suffix = preferred.substr(std::string("/array/").size());
+      const std::string vectorAlias = "/vector/" + suffix;
+      if (ctx.sourceDefs.count(vectorAlias) > 0) {
+        return vectorAlias;
+      }
+      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      if (ctx.sourceDefs.count(stdlibAlias) > 0) {
+        return stdlibAlias;
+      }
+    }
+    if (preferred.rfind("/vector/", 0) == 0 && ctx.sourceDefs.count(preferred) == 0) {
+      const std::string stdlibAlias =
+          "/std/collections/vector/" + preferred.substr(std::string("/vector/").size());
+      if (ctx.sourceDefs.count(stdlibAlias) > 0) {
+        preferred = stdlibAlias;
+      }
+    }
+    return preferred;
+  };
   if (isPrimitiveBindingTypeName(typeName)) {
     pathOut = "/" + normalizeBindingTypeName(typeName) + "/" + expr.name;
     return true;
@@ -378,9 +400,19 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
   }
   if (ctx.sourceDefs.count(resolvedType) == 0) {
+    if (typeName == "array" || typeName == "vector" || typeName == "map" || typeName == "soa_vector") {
+      pathOut = "/" + typeName + "/" + expr.name;
+      pathOut = preferVectorStdlibMethodPath(pathOut);
+      return true;
+    }
+    if (typeName == "string") {
+      pathOut = "/string/" + expr.name;
+      return true;
+    }
     return false;
   }
   pathOut = resolvedType + "/" + expr.name;
+  pathOut = preferVectorStdlibMethodPath(pathOut);
   return true;
 }
 

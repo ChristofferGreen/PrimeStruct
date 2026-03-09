@@ -73,6 +73,29 @@ main() {
   CHECK(runCommand(runCmd) == 132);
 }
 
+TEST_CASE("runs vm with templated stdlib canonical vector helper method precedence") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[return<int>]
+/std/collections/vector/at<T>([vector<T>] values, [i32] index) {
+  return(plus(index, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values.count(true), values.at(2i32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_vector_template_method_helper_precedence.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 132);
+}
+
 TEST_CASE("runs vm with vector namespaced mutator builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
