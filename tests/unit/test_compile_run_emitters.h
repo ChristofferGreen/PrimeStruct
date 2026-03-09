@@ -969,6 +969,46 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
+TEST_CASE("C++ emitter emits builtin statement for stdlib namespaced vector mutator") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /std/collections/vector/push(values, 2i32)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_mutator_stmt.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_stdlib_namespaced_vector_mutator_stmt.cpp")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_vector_push(values, 2)") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter emits builtin statement for vector namespaced mutator") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /vector/push(values, 2i32)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_mutator_stmt.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_vector_namespaced_mutator_stmt.cpp")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_vector_push(values, 2)") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter keeps stdlib namespaced vector access builtin fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
