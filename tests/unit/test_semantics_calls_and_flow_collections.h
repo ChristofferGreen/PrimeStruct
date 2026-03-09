@@ -2487,6 +2487,32 @@ main() {
   CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector constructor is treated as builtin collection") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{/std/collections/vector/vector(4i32, 5i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector constructor rejects named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{/std/collections/vector/vector([first] 4i32, [second] 5i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector access and count helpers are builtin-alias validated") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -2502,6 +2528,19 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector access helper rejects named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/std/collections/vector/at([values] values, [index] 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity keeps non-vector target diagnostics") {

@@ -765,6 +765,14 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
+  if (name.rfind("std/collections/vector/", 0) == 0) {
+    std::string alias = name.substr(std::string("std/collections/vector/").size());
+    if (alias == "vector") {
+      out = "vector";
+      return true;
+    }
+    return false;
+  }
   if (name.find('/') != std::string::npos) {
     return false;
   }
@@ -782,6 +790,14 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
+  }
+  if (name.rfind("std/collections/vector/", 0) == 0) {
+    std::string alias = name.substr(std::string("std/collections/vector/").size());
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
   }
   if (name.find('/') != std::string::npos) {
     return false;

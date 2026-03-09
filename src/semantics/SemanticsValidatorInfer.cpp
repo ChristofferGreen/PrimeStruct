@@ -1205,7 +1205,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
     }
-    if (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
+    if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
+        defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
         if (methodResolved.rfind("/array/", 0) == 0 && defMap_.find(methodResolved) == defMap_.end()) {
@@ -1240,7 +1241,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return ReturnKind::Int;
     }
-    if (!expr.isMethodCall && expr.name == "capacity" && expr.args.size() == 1 &&
+    if (!expr.isMethodCall && isSimpleCallName(expr, "capacity") && expr.args.size() == 1 &&
         defMap_.find(resolved) == defMap_.end()) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
@@ -1271,10 +1272,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Int;
       }
     }
-    if (!expr.isMethodCall &&
-        (expr.name == "at" || expr.name == "at_unsafe" || expr.name == "get" || expr.name == "ref") &&
-        expr.args.size() == 2 &&
+    std::string builtinAccessName;
+    const bool isBuiltinAccess = getBuiltinArrayAccessName(expr, builtinAccessName);
+    const bool isBuiltinGet = isSimpleCallName(expr, "get");
+    const bool isBuiltinRef = isSimpleCallName(expr, "ref");
+    if (!expr.isMethodCall && (isBuiltinAccess || isBuiltinGet || isBuiltinRef) && expr.args.size() == 2 &&
         defMap_.find(resolved) == defMap_.end()) {
+      const std::string helperName = isBuiltinAccess ? builtinAccessName : (isBuiltinGet ? "get" : "ref");
       std::vector<size_t> receiverIndices;
       auto appendReceiverIndex = [&](size_t index) {
         if (index >= expr.args.size()) {
@@ -1349,16 +1353,16 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         std::string keyType;
         std::string valueType;
         if (resolveVectorTarget(receiverCandidate, elemType)) {
-          methodResolved = "/vector/" + expr.name;
+          methodResolved = "/vector/" + helperName;
         } else if (resolveArrayTarget(receiverCandidate, elemType)) {
-          methodResolved = "/array/" + expr.name;
-        } else if ((expr.name == "get" || expr.name == "ref") &&
+          methodResolved = "/array/" + helperName;
+        } else if ((helperName == "get" || helperName == "ref") &&
                    resolveSoaVectorTarget(receiverCandidate, elemType)) {
-          methodResolved = "/soa_vector/" + expr.name;
+          methodResolved = "/soa_vector/" + helperName;
         } else if (resolveStringTarget(receiverCandidate)) {
-          methodResolved = "/string/" + expr.name;
+          methodResolved = "/string/" + helperName;
         } else if (resolveMapTarget(receiverCandidate, keyType, valueType)) {
-          methodResolved = "/map/" + expr.name;
+          methodResolved = "/map/" + helperName;
         } else {
           continue;
         }

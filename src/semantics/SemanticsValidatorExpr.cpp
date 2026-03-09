@@ -2287,6 +2287,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     }
+    std::string accessHelperName;
     if (expr.isMethodCall) {
       if (expr.args.empty()) {
         error_ = "method call missing receiver";
@@ -2299,7 +2300,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (!resolveMethodTarget(expr.args.front(), expr.name, resolved, isBuiltinMethod)) {
         return false;
       }
-      if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && expr.name == "capacity") {
+      if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && isSimpleCallName(expr, "capacity")) {
         promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
       }
       if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end()) {
@@ -2307,7 +2308,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       resolvedMethod = isBuiltinMethod;
-    } else if (expr.name == "count" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
+    } else if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;
@@ -2325,7 +2326,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (expr.name == "capacity" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
+    } else if (isSimpleCallName(expr, "capacity") && expr.args.size() == 1 &&
+               defMap_.find(resolved) == defMap_.end()) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;
@@ -2348,7 +2350,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if ((expr.name == "at" || expr.name == "at_unsafe") && expr.args.size() == 2 &&
+    } else if (getBuiltinArrayAccessName(expr, accessHelperName) && expr.args.size() == 2 &&
                defMap_.find(resolved) == defMap_.end()) {
       std::vector<size_t> receiverIndices;
       auto appendReceiverIndex = [&](size_t index) {
@@ -2417,7 +2419,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         usedMethodTarget = true;
         bool isBuiltinMethod = false;
         std::string methodResolved;
-        if (!resolveMethodTarget(receiverCandidate, expr.name, methodResolved, isBuiltinMethod)) {
+        if (!resolveMethodTarget(receiverCandidate, accessHelperName, methodResolved, isBuiltinMethod)) {
           // Preserve receiver diagnostics (for example unknown call target)
           // when collection-target resolution fails.
           (void)validateExpr(params, locals, receiverCandidate);
@@ -2440,7 +2442,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           (expr.args.front().kind == Expr::Kind::Name || expr.args.front().kind == Expr::Kind::Call)) {
         bool isBuiltinMethod = false;
         std::string methodResolved;
-        if (resolveMethodTarget(expr.args.front(), expr.name, methodResolved, isBuiltinMethod)) {
+        if (resolveMethodTarget(expr.args.front(), accessHelperName, methodResolved, isBuiltinMethod)) {
           if (isBuiltinMethod) {
             usedMethodTarget = true;
             hasMethodReceiverIndex = true;
@@ -2465,7 +2467,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         }
       }
-    } else if ((expr.name == "get" || expr.name == "ref") && expr.args.size() == 2 &&
+    } else if ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref")) && expr.args.size() == 2 &&
                defMap_.find(resolved) == defMap_.end()) {
       std::vector<size_t> receiverIndices;
       auto appendReceiverIndex = [&](size_t index) {
@@ -3776,7 +3778,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (!resolvedMethod && expr.name == "count" && it == defMap_.end()) {
+      if (!resolvedMethod && isSimpleCallName(expr, "count") && it == defMap_.end()) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;
@@ -3817,7 +3819,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (!resolvedMethod && expr.name == "capacity" && it == defMap_.end()) {
+      if (!resolvedMethod && isSimpleCallName(expr, "capacity") && it == defMap_.end()) {
         if (!expr.templateArgs.empty()) {
           error_ = "capacity does not accept template arguments";
           return false;
