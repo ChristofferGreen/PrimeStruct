@@ -590,7 +590,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
   const auto resolveExprPath = input.resolveExprPath;
   const auto isArrayCountCall = input.isArrayCountCall;
   const auto isStringCountCall = input.isStringCountCall;
-  auto isNamespacedVectorCountCapacityCall = [](const Expr &candidate) {
+  auto isNamespacedVectorReceiverProbeCall = [](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
@@ -599,8 +599,14 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
       normalizedName.erase(normalizedName.begin());
     }
     if (normalizedName != "vector/count" && normalizedName != "std/collections/vector/count" &&
-        normalizedName != "vector/capacity" && normalizedName != "std/collections/vector/capacity") {
+        normalizedName != "vector/capacity" && normalizedName != "std/collections/vector/capacity" &&
+        normalizedName != "vector/at" && normalizedName != "std/collections/vector/at" &&
+        normalizedName != "vector/at_unsafe" && normalizedName != "std/collections/vector/at_unsafe") {
       return false;
+    }
+    if (normalizedName == "vector/at" || normalizedName == "std/collections/vector/at" ||
+        normalizedName == "vector/at_unsafe" || normalizedName == "std/collections/vector/at_unsafe") {
+      return candidate.args.size() == 2;
     }
     return candidate.args.size() == 1;
   };
@@ -619,14 +625,14 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
       [isArrayCountCall,
        isStringCountCall,
        &stateInOut,
-       isNamespacedVectorCountCapacityCall,
+       isNamespacedVectorReceiverProbeCall,
        resolveDefinitionCallReturnKindForCandidate](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         return resolveCallExpressionReturnKind(
             expr,
             localsIn,
             [&](const Expr &candidate, const LocalMap &, LocalInfo::ValueKind &candidateKindOut, bool &matchedOut) {
-              if (isNamespacedVectorCountCapacityCall(candidate)) {
+              if (isNamespacedVectorReceiverProbeCall(candidate)) {
                 matchedOut = false;
                 return false;
               }
@@ -669,7 +675,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
                 matchedOut = true;
                 return false;
               }
-              if (!isNamespacedVectorCountCapacityCall(candidate)) {
+              if (!isNamespacedVectorReceiverProbeCall(candidate)) {
                 matchedOut = false;
                 return false;
               }

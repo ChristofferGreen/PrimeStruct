@@ -1198,6 +1198,159 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced capacity def
   CHECK(resolveMethodCalls == 1);
 }
 
+TEST_CASE("ir lowerer inference call-return setup defers namespaced access definition lookup") {
+  primec::Definition receiverAtDef;
+  receiverAtDef.fullPath = "/vector/at";
+  primec::Definition canonicalAtDef;
+  canonicalAtDef.fullPath = "/std/collections/vector/at";
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/std/collections/vector/at", &canonicalAtDef},
+  };
+
+  bool resolveReceiverHelper = true;
+  int resolveMethodCalls = 0;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.getReturnInfo = [](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    out.returnsVoid = false;
+    out.returnsArray = false;
+    if (path == "/vector/at") {
+      out.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+      return true;
+    }
+    if (path == "/std/collections/vector/at") {
+      out.kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
+      return true;
+    }
+    return false;
+  };
+  state.resolveMethodCallDefinition =
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    ++resolveMethodCalls;
+    if (!resolveReceiverHelper || !methodExpr.isMethodCall || methodExpr.name != "at" || methodExpr.args.empty()) {
+      return nullptr;
+    }
+    if (methodExpr.args.front().kind == primec::Expr::Kind::Name && methodExpr.args.front().name == "values") {
+      return &receiverAtDef;
+    }
+    return nullptr;
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/std/collections/vector/at";
+  callExpr.args = {receiverExpr, indexExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(resolveMethodCalls == 1);
+
+  resolveReceiverHelper = false;
+  resolveMethodCalls = 0;
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 1);
+}
+
+TEST_CASE("ir lowerer inference call-return setup defers namespaced at unsafe definition lookup") {
+  primec::Definition receiverAtUnsafeDef;
+  receiverAtUnsafeDef.fullPath = "/vector/at_unsafe";
+  primec::Definition canonicalAtUnsafeDef;
+  canonicalAtUnsafeDef.fullPath = "/std/collections/vector/at_unsafe";
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/std/collections/vector/at_unsafe", &canonicalAtUnsafeDef},
+  };
+
+  bool resolveReceiverHelper = true;
+  int resolveMethodCalls = 0;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.getReturnInfo = [](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    out.returnsVoid = false;
+    out.returnsArray = false;
+    if (path == "/vector/at_unsafe") {
+      out.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+      return true;
+    }
+    if (path == "/std/collections/vector/at_unsafe") {
+      out.kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
+      return true;
+    }
+    return false;
+  };
+  state.resolveMethodCallDefinition =
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    ++resolveMethodCalls;
+    if (!resolveReceiverHelper || !methodExpr.isMethodCall || methodExpr.name != "at_unsafe" ||
+        methodExpr.args.empty()) {
+      return nullptr;
+    }
+    if (methodExpr.args.front().kind == primec::Expr::Kind::Name && methodExpr.args.front().name == "values") {
+      return &receiverAtUnsafeDef;
+    }
+    return nullptr;
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/std/collections/vector/at_unsafe";
+  callExpr.args = {receiverExpr, indexExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(resolveMethodCalls == 1);
+
+  resolveReceiverHelper = false;
+  resolveMethodCalls = 0;
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 1);
+}
+
 TEST_CASE("ir lowerer inference expr-kind call-return setup validates dependencies") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
