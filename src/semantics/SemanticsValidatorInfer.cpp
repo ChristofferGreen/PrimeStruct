@@ -796,7 +796,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return ReturnKind::Unknown;
     };
-    auto resolveMethodCallPath = [&](std::string &resolvedOut) -> bool {
+    auto resolveMethodCallPath = [&](const std::string &methodName, std::string &resolvedOut) -> bool {
       auto resolveStructTypePath = [&](const std::string &typeName,
                                        const std::string &namespacePrefix) -> std::string {
         if (typeName.empty()) {
@@ -848,10 +848,20 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       const Expr &receiver = expr.args.front();
       std::string typeName;
       std::string typeTemplateArg;
+      std::string normalizedMethodName = methodName;
+      if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
+        normalizedMethodName.erase(normalizedMethodName.begin());
+      }
+      if (normalizedMethodName.rfind("vector/", 0) == 0) {
+        normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+      } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
+        normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+      }
+
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
         const std::string resolvedType = resolveCalleePath(receiver);
         if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
-          resolvedOut = resolvedType + "/" + expr.name;
+          resolvedOut = resolvedType + "/" + normalizedMethodName;
           return true;
         }
       }
@@ -889,14 +899,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return false;
       }
       if (isPrimitiveBindingTypeName(typeName)) {
-        resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + expr.name;
+        resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;
         return true;
       }
       std::string resolvedType = resolveStructTypePath(typeName, expr.namespacePrefix);
       if (resolvedType.empty()) {
         resolvedType = resolveTypePath(typeName, expr.namespacePrefix);
       }
-      resolvedOut = resolvedType + "/" + expr.name;
+      resolvedOut = resolvedType + "/" + normalizedMethodName;
       return true;
     };
     auto resolveBuiltinCollectionMethodReturnKind = [&](const std::string &resolvedPath,
@@ -1133,7 +1143,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (expr.isMethodCall) {
       std::string methodResolved;
-      if (resolveMethodCallPath(methodResolved)) {
+      if (resolveMethodCallPath(expr.name, methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
         if (methodResolved == "/file_error/why") {
           return ReturnKind::String;
@@ -1255,8 +1265,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
         isNamespacedVectorHelperCall(expr);
+    std::string builtinAccessName;
+    const bool isBuiltinAccess = getBuiltinArrayAccessName(expr, builtinAccessName);
+    const bool isNamespacedVectorAccessCall =
+        !expr.isMethodCall && isBuiltinAccess && expr.args.size() == 2 && isNamespacedVectorHelperCall(expr);
     bool shouldDeferResolvedNamespacedVectorHelperReturn =
-        isNamespacedVectorCountCall || isNamespacedVectorCapacityCall;
+        isNamespacedVectorCountCall || isNamespacedVectorCapacityCall || isNamespacedVectorAccessCall;
     auto defIt = hasResolvedPath ? defMap_.find(resolved) : defMap_.end();
     if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedVectorHelperReturn) {
       if (!inferDefinitionReturnKind(*defIt->second)) {
@@ -1271,7 +1285,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall)) {
       std::string methodResolved;
-      if (resolveMethodCallPath(methodResolved)) {
+      if (resolveMethodCallPath("count", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
@@ -1302,7 +1316,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
       std::string methodResolved;
-      if (resolveMethodCallPath(methodResolved)) {
+      if (resolveMethodCallPath("capacity", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
@@ -1325,17 +1339,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Int;
       }
     }
-    std::string builtinAccessName;
-    const bool isBuiltinAccess = getBuiltinArrayAccessName(expr, builtinAccessName);
     const bool isBuiltinGet = isSimpleCallName(expr, "get");
     const bool isBuiltinRef = isSimpleCallName(expr, "ref");
-    bool isNamespacedVectorAccessCall = false;
-    if (isBuiltinAccess && !expr.name.empty()) {
-      isNamespacedVectorAccessCall = isNamespacedVectorHelperCall(expr);
-    }
-    if (isNamespacedVectorAccessCall) {
-      shouldDeferResolvedNamespacedVectorHelperReturn = true;
-    }
     if (!expr.isMethodCall && (isBuiltinAccess || isBuiltinGet || isBuiltinRef) && expr.args.size() == 2 &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorAccessCall)) {
       const std::string helperName = isBuiltinAccess ? builtinAccessName : (isBuiltinGet ? "get" : "ref");

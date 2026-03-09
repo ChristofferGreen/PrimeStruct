@@ -6131,7 +6131,7 @@ main() {
   CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("rejects native namespaced vector count on soa_vector target") {
+TEST_CASE("rejects native namespaced vector count with soa_vector literal target") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -6150,7 +6150,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend does not support soa_vector count") != std::string::npos);
+  CHECK(readFile(errPath).find("native backend does not support soa_vector literals") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user map constructor block shadow") {

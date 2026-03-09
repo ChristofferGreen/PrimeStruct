@@ -39,6 +39,18 @@ bool isVectorBuiltinName(const Expr &expr, const char *name) {
   return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
+bool isNamespacedVectorHelperCall(const Expr &expr) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(0, 1);
+  }
+  return normalized.rfind("vector/", 0) == 0 ||
+         normalized.rfind("std/collections/vector/", 0) == 0;
+}
+
 } // namespace
 
 std::optional<std::string> runEmitterExprControlCountRewriteStep(
@@ -55,14 +67,20 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
   (void)isArrayCountCall;
   (void)isMapCountCall;
   (void)isStringCountCall;
-  if (expr.isMethodCall || nameMap.count(resolvedPath) != 0) {
+  if (expr.isMethodCall ||
+      (!isNamespacedVectorHelperCall(expr) && nameMap.count(resolvedPath) != 0)) {
     return std::nullopt;
   }
   const bool isCountLikeCall = isVectorBuiltinName(expr, "count") && expr.args.size() == 1;
   const bool isCapacityLikeCall = isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1;
   const bool isAccessLikeCall =
       (isVectorBuiltinName(expr, "at") || isVectorBuiltinName(expr, "at_unsafe")) && expr.args.size() == 2;
-  if (!isCountLikeCall && !isCapacityLikeCall && !isAccessLikeCall) {
+  const bool isVectorMutatorLikeCall =
+      ((isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "reserve") ||
+        isVectorBuiltinName(expr, "remove_at") || isVectorBuiltinName(expr, "remove_swap")) &&
+       expr.args.size() == 2) ||
+      ((isVectorBuiltinName(expr, "pop") || isVectorBuiltinName(expr, "clear")) && expr.args.size() == 1);
+  if (!isCountLikeCall && !isCapacityLikeCall && !isAccessLikeCall && !isVectorMutatorLikeCall) {
     return std::nullopt;
   }
   if (!resolveMethodPath) {
@@ -133,7 +151,11 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
       if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
         continue;
       }
-      return preferVectorStdlibHelperPath(methodPath, nameMap);
+      const std::string preferredPath = preferVectorStdlibHelperPath(methodPath, nameMap);
+      if (isVectorMutatorLikeCall && nameMap.count(preferredPath) == 0) {
+        continue;
+      }
+      return preferredPath;
     }
   }
   return std::nullopt;

@@ -567,6 +567,23 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
            (info.kind == LocalInfo::Kind::Reference && info.referenceToArray) || info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
   };
+  auto isKnownVectorMutatorReceiverExpr = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(candidate.name);
+    if (it == localsIn.end()) {
+      return false;
+    }
+    const LocalInfo &info = it->second;
+    return info.kind == LocalInfo::Kind::Vector || info.isSoaVector;
+  };
+  auto isKnownLocalName = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    return localsIn.find(candidate.name) != localsIn.end();
+  };
   auto buildMethodExprForReceiverIndex = [&](size_t receiverIndex) {
     Expr methodExpr = callExpr;
     methodExpr.isMethodCall = true;
@@ -623,7 +640,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
        callExpr.args.front().kind == Expr::Kind::BoolLiteral ||
        callExpr.args.front().kind == Expr::Kind::FloatLiteral ||
        callExpr.args.front().kind == Expr::Kind::StringLiteral ||
-       callExpr.args.front().kind == Expr::Kind::Name);
+       (callExpr.args.front().kind == Expr::Kind::Name &&
+        isKnownLocalName(callExpr.args.front()) &&
+        !isKnownVectorMutatorReceiverExpr(callExpr.args.front())));
   if (probePositionalReorderedVectorMutatorReceiver) {
     for (size_t i = 1; i < callExpr.args.size(); ++i) {
       appendReceiverIndex(i);
@@ -634,6 +653,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       (callExpr.args.front().kind == Expr::Kind::Literal || callExpr.args.front().kind == Expr::Kind::BoolLiteral ||
        callExpr.args.front().kind == Expr::Kind::FloatLiteral || callExpr.args.front().kind == Expr::Kind::StringLiteral ||
        (callExpr.args.front().kind == Expr::Kind::Name &&
+        isKnownLocalName(callExpr.args.front()) &&
         !isKnownCollectionAccessReceiverExpr(callExpr.args.front())));
   if (probePositionalReorderedAccessReceiver) {
     for (size_t i = 1; i < callExpr.args.size(); ++i) {

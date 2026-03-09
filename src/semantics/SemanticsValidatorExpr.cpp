@@ -2012,6 +2012,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
       if (typeName.empty()) {
+        if (receiver.kind == Expr::Kind::Call) {
+          if (!validateExpr(params, locals, receiver)) {
+            return false;
+          }
+        }
         error_ = "unknown method target for " + methodName;
         return false;
       }
