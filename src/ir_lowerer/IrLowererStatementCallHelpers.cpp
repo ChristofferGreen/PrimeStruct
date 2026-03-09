@@ -10,6 +10,35 @@
 
 namespace primec::ir_lowerer {
 
+static bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  const std::string vectorPrefix = "vector/";
+  const std::string stdVectorPrefix = "std/collections/vector/";
+  if (normalized.rfind(vectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(vectorPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    return true;
+  }
+  return false;
+}
+
+static bool isVectorBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
 static bool isSoaVectorTargetExpr(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
@@ -32,8 +61,9 @@ static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
     return DirectCallStatementEmitResult::NotMatched;
   }
   const bool isVectorMutatorCall =
-      isSimpleCallName(stmt, "push") || isSimpleCallName(stmt, "pop") || isSimpleCallName(stmt, "reserve") ||
-      isSimpleCallName(stmt, "clear") || isSimpleCallName(stmt, "remove_at") || isSimpleCallName(stmt, "remove_swap");
+      isVectorBuiltinName(stmt, "push") || isVectorBuiltinName(stmt, "pop") || isVectorBuiltinName(stmt, "reserve") ||
+      isVectorBuiltinName(stmt, "clear") || isVectorBuiltinName(stmt, "remove_at") ||
+      isVectorBuiltinName(stmt, "remove_swap");
   if (!isVectorMutatorCall || stmt.args.empty()) {
     return DirectCallStatementEmitResult::NotMatched;
   }
@@ -84,6 +114,10 @@ static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
   for (size_t receiverIndex : receiverIndices) {
     Expr methodStmt = stmt;
     methodStmt.isMethodCall = true;
+    std::string normalizedHelperName;
+    if (resolveVectorHelperAliasName(methodStmt, normalizedHelperName)) {
+      methodStmt.name = normalizedHelperName;
+    }
     if (receiverIndex != 0) {
       std::swap(methodStmt.args[0], methodStmt.args[receiverIndex]);
       if (methodStmt.argNames.size() < methodStmt.args.size()) {

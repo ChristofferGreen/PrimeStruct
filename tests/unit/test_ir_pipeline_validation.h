@@ -23928,6 +23928,84 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   CHECK(definitionResolutionCalls == 0);
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
+
+  const auto runVectorMutatorAliasCase = [&](const std::string &aliasName) {
+    primec::Expr aliasStmt;
+    aliasStmt.kind = primec::Expr::Kind::Call;
+    aliasStmt.name = aliasName;
+    primec::Expr valueArg;
+    valueArg.kind = primec::Expr::Kind::BoolLiteral;
+    valueArg.boolValue = true;
+    primec::Expr valuesArg;
+    valuesArg.kind = primec::Expr::Kind::Name;
+    valuesArg.name = "values";
+    aliasStmt.args = {valueArg, valuesArg};
+    aliasStmt.argNames = {std::nullopt, std::nullopt};
+
+    primec::ir_lowerer::LocalMap locals;
+    primec::ir_lowerer::LocalInfo valuesInfo;
+    valuesInfo.isSoaVector = true;
+    locals.emplace("values", valuesInfo);
+
+    primec::Definition aliasDef;
+    aliasDef.fullPath = "/std/collections/vector/push";
+
+    int aliasMethodResolutionCalls = 0;
+    int aliasDefinitionResolutionCalls = 0;
+    int aliasInlineCalls = 0;
+    error.clear();
+    instructions.clear();
+    CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+              aliasStmt,
+              locals,
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [&](const primec::Expr &callExpr,
+                  const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+                ++aliasMethodResolutionCalls;
+                CHECK(callExpr.isMethodCall);
+                CHECK(callExpr.name == "push");
+                REQUIRE(callExpr.args.size() == 2);
+                if (callExpr.args.front().kind == primec::Expr::Kind::Name &&
+                    callExpr.args.front().name == "values") {
+                  return &aliasDef;
+                }
+                CHECK(callExpr.args.front().kind == primec::Expr::Kind::BoolLiteral);
+                CHECK(callExpr.args.front().boolValue);
+                return nullptr;
+              },
+              [&](const primec::Expr &) -> const primec::Definition * {
+                ++aliasDefinitionResolutionCalls;
+                return nullptr;
+              },
+              [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return true; },
+              [&](const primec::Expr &callExpr,
+                  const primec::Definition &callee,
+                  const primec::ir_lowerer::LocalMap &localsIn,
+                  bool expectValue) {
+                ++aliasInlineCalls;
+                CHECK(callExpr.isMethodCall);
+                CHECK(callExpr.name == "push");
+                REQUIRE(callExpr.args.size() == 2);
+                CHECK(callExpr.args.front().kind == primec::Expr::Kind::Name);
+                CHECK(callExpr.args.front().name == "values");
+                CHECK(callee.fullPath == "/std/collections/vector/push");
+                CHECK(localsIn.find("values") != localsIn.end());
+                CHECK_FALSE(expectValue);
+                return true;
+              },
+              instructions,
+              error) == EmitResult::Emitted);
+    CHECK(error.empty());
+    CHECK(aliasMethodResolutionCalls == 2);
+    CHECK(aliasDefinitionResolutionCalls == 0);
+    CHECK(aliasInlineCalls == 1);
+    CHECK(instructions.empty());
+  };
+
+  runVectorMutatorAliasCase("/vector/push");
+  runVectorMutatorAliasCase("/std/collections/vector/push");
 }
 
 TEST_CASE("ir lowerer statement call helper validates direct-call diagnostics") {
