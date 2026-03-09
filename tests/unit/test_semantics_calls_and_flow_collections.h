@@ -2370,6 +2370,32 @@ TEST_CASE("vector helper expressions with named arguments stay statement-only") 
   }
 }
 
+TEST_CASE("vector helper method expressions with named arguments stay statement-only") {
+  struct HelperCase {
+    const char *name;
+    const char *args;
+  };
+  const HelperCase helpers[] = {
+      {"push", "[value] 2i32"},
+      {"reserve", "[capacity] 8i32"},
+      {"remove_at", "[index] 0i32"},
+      {"remove_swap", "[index] 0i32"},
+  };
+  for (const auto &helper : helpers) {
+    CAPTURE(helper.name);
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32)}\n"
+        "  return(values." +
+        std::string(helper.name) + "(" + helper.args + "))\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("only supported as a statement") != std::string::npos);
+  }
+}
+
 TEST_CASE("namespaced vector helper accepts statement form") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

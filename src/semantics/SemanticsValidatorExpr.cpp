@@ -2617,6 +2617,30 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
 
+    if (hasNamedArguments(expr.argNames)) {
+      auto resolveVectorMutatorName = [&](const std::string &name, std::string &helperOut) -> bool {
+        std::string normalized = name;
+        if (!normalized.empty() && normalized.front() == '/') {
+          normalized.erase(normalized.begin());
+        }
+        if (normalized.rfind("vector/", 0) == 0) {
+          normalized = normalized.substr(std::string("vector/").size());
+        }
+        if (normalized == "push" || normalized == "pop" || normalized == "reserve" || normalized == "clear" ||
+            normalized == "remove_at" || normalized == "remove_swap") {
+          helperOut = normalized;
+          return true;
+        }
+        return false;
+      };
+      std::string vectorHelperName;
+      if (resolveVectorMutatorName(expr.name, vectorHelperName) &&
+          (resolvedMethod || defMap_.find(resolved) == defMap_.end())) {
+        error_ = vectorHelperName + " is only supported as a statement";
+        return false;
+      }
+    }
+
     if (!validateNamedArguments(expr.args, expr.argNames, resolved, error_)) {
       return false;
     }
@@ -3231,6 +3255,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (hasNamedArguments(expr.argNames) && resolvedMethod) {
+        std::string vectorHelperName;
+        if (getVectorStatementHelperName(expr, vectorHelperName)) {
+          error_ = vectorHelperName + " is only supported as a statement";
+          return false;
+        }
         error_ = "named arguments not supported for builtin calls";
         return false;
       }
@@ -3338,6 +3367,39 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           return defMap_.find(resolved) == defMap_.end();
         };
+        auto resolveLegacyVectorHelperName = [&](std::string &nameOut) -> bool {
+          if (isSimpleCallName(expr, "push")) {
+            nameOut = "push";
+            return true;
+          }
+          if (isSimpleCallName(expr, "pop")) {
+            nameOut = "pop";
+            return true;
+          }
+          if (isSimpleCallName(expr, "reserve")) {
+            nameOut = "reserve";
+            return true;
+          }
+          if (isSimpleCallName(expr, "clear")) {
+            nameOut = "clear";
+            return true;
+          }
+          if (isSimpleCallName(expr, "remove_at")) {
+            nameOut = "remove_at";
+            return true;
+          }
+          if (isSimpleCallName(expr, "remove_swap")) {
+            nameOut = "remove_swap";
+            return true;
+          }
+          return false;
+        };
+        const bool isLegacyVectorHelperBuiltin = isLegacyVectorHelperBuiltinCall();
+        std::string vectorHelperName;
+        if (isLegacyVectorHelperBuiltin && resolveLegacyVectorHelperName(vectorHelperName)) {
+          error_ = vectorHelperName + " is only supported as a statement";
+          return false;
+        }
         bool isBuiltin = false;
         if (getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
             getBuiltinMutationName(expr, builtinName) ||
@@ -3353,7 +3415,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             isForCall(expr) ||
             isRepeatCall(expr) || isLegacyCountBuiltinCall() || expr.name == "File" || expr.name == "try" ||
             isLegacyCapacityBuiltinCall() || isLegacySoaAccessBuiltinCall() ||
-            isLegacyVectorHelperBuiltinCall() ||
+            isLegacyVectorHelperBuiltin ||
             isSimpleCallName(expr, "dispatch") || isSimpleCallName(expr, "buffer") ||
             isSimpleCallName(expr, "upload") || isSimpleCallName(expr, "readback") ||
             isSimpleCallName(expr, "buffer_load") || isSimpleCallName(expr, "buffer_store")) {
