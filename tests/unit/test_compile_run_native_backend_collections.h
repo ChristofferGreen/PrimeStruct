@@ -6194,6 +6194,29 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("compiles and runs native reordered namespaced vector push call shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<void>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /vector/push(3i32, values)
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_reordered_namespaced_vector_push_call_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_reordered_namespaced_vector_push_call_shadow_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("compiles and runs native user vector push bool positional call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]

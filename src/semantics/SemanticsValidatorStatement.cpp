@@ -1937,6 +1937,16 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   std::string vectorHelper;
   if (getVectorStatementHelperName(stmt, vectorHelper)) {
     std::string vectorHelperResolved = resolveCalleePath(stmt);
+    bool isNamespacedVectorHelperCall = false;
+    if (!stmt.name.empty()) {
+      std::string normalizedName = stmt.name;
+      if (!normalizedName.empty() && normalizedName[0] == '/') {
+        normalizedName.erase(normalizedName.begin());
+      }
+      isNamespacedVectorHelperCall =
+          normalizedName.rfind("vector/", 0) == 0 ||
+          normalizedName.rfind("std/collections/vector/", 0) == 0;
+    }
     const bool isUserMethodTarget =
         stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
         vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
@@ -1949,7 +1959,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       hasResolvedReceiverIndex = true;
       resolvedReceiverIndex = 0;
     }
-    if (defMap_.find(vectorHelperResolved) == defMap_.end() && !stmt.args.empty()) {
+    if ((defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
+        !stmt.args.empty()) {
       auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
         if (candidate.kind != Expr::Kind::Name) {
           return false;
@@ -2010,7 +2021,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         }
         const Expr &receiverCandidate = stmt.args[receiverIndex];
         std::string methodTarget;
-        if (resolveVectorHelperTargetPath(receiverCandidate, stmt.name, methodTarget)) {
+        if (resolveVectorHelperTargetPath(receiverCandidate, vectorHelper, methodTarget)) {
           methodTarget = preferVectorStdlibHelperPath(methodTarget);
         }
         if (defMap_.count(methodTarget) > 0) {
