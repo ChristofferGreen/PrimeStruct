@@ -359,25 +359,31 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
   return path;
 }
 
-bool definitionAcceptsPositionalArity(const Definition &def, size_t providedCount) {
-  size_t requiredCount = 0;
-  for (const auto &param : def.parameters) {
-    if (param.args.size() != 1) {
-      ++requiredCount;
+bool definitionAcceptsCallShape(const Definition &def, const Expr &expr) {
+  std::vector<ParameterInfo> params;
+  params.reserve(def.parameters.size());
+  for (const auto &paramExpr : def.parameters) {
+    ParameterInfo param;
+    param.name = paramExpr.name;
+    if (paramExpr.args.size() == 1) {
+      param.defaultExpr = &paramExpr.args.front();
     }
+    params.push_back(std::move(param));
   }
-  return providedCount >= requiredCount && providedCount <= def.parameters.size();
+  std::vector<const Expr *> ordered;
+  std::string error;
+  return buildOrderedArguments(params, expr.args, expr.argNames, ordered, error);
 }
 
 std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr, const std::string &path, const Context &ctx) {
-  if (!expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
+  if (!expr.templateArgs.empty()) {
     return path;
   }
   const auto defIt = ctx.sourceDefs.find(path);
   if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
     return path;
   }
-  if (definitionAcceptsPositionalArity(defIt->second, expr.args.size())) {
+  if (definitionAcceptsCallShape(defIt->second, expr)) {
     return path;
   }
   const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);
