@@ -28,12 +28,41 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   return false;
 }
 
+bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(0, 1);
+  }
+  const std::string mapPrefix = "map/";
+  const std::string stdMapPrefix = "std/collections/map/";
+  if (normalized.rfind(mapPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(mapPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(stdMapPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdMapPrefix.size());
+    return true;
+  }
+  return false;
+}
+
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
   if (isSimpleCallName(expr, name)) {
     return true;
   }
   std::string aliasName;
   return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+bool isMapBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
 } // namespace
@@ -239,7 +268,8 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
-      isVectorBuiltinName(callExpr, "count") || isVectorBuiltinName(callExpr, "capacity");
+      isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count") ||
+      isVectorBuiltinName(callExpr, "capacity");
   const bool isBuiltinVectorMutatorCall =
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
@@ -520,11 +550,13 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
-  const bool isCountCall = isVectorBuiltinName(callExpr, "count") && callExpr.args.size() == 1;
-  const bool isAccessCall =
-      (isVectorBuiltinName(callExpr, "at") || isVectorBuiltinName(callExpr, "at_unsafe") ||
-       isSimpleCallName(callExpr, "get") || isSimpleCallName(callExpr, "ref")) &&
-      callExpr.args.size() == 2;
+  const bool isCountCall = (isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count")) &&
+                           callExpr.args.size() == 1;
+  std::string accessName;
+  const bool isCollectionAccessCall = getBuiltinArrayAccessName(callExpr, accessName);
+  const bool isAccessCall = (isCollectionAccessCall || isSimpleCallName(callExpr, "get") ||
+                             isSimpleCallName(callExpr, "ref")) &&
+                            callExpr.args.size() == 2;
   const bool isVectorMutatorCall =
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
@@ -596,6 +628,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     methodExpr.isMethodCall = true;
     std::string normalizedHelperName;
     if (resolveVectorHelperAliasName(methodExpr, normalizedHelperName)) {
+      methodExpr.name = normalizedHelperName;
+    } else if (resolveMapHelperAliasName(methodExpr, normalizedHelperName)) {
       methodExpr.name = normalizedHelperName;
     }
     if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
@@ -742,7 +776,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
-      isVectorBuiltinName(callExpr, "count") || isVectorBuiltinName(callExpr, "capacity");
+      isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count") ||
+      isVectorBuiltinName(callExpr, "capacity");
   const bool isBuiltinVectorMutatorCall =
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||

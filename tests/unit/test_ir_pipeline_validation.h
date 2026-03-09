@@ -15355,6 +15355,131 @@ TEST_CASE("ir lowerer setup type helper normalizes namespaced vector call fallba
   CHECK(canonicalCapacityResolveCalls == 1);
 }
 
+TEST_CASE("ir lowerer setup type helper normalizes namespaced map call fallback helpers") {
+  primec::Definition countDef;
+  countDef.fullPath = "/map/count";
+  primec::Definition atDef;
+  atDef.fullPath = "/map/at";
+  primec::Definition atUnsafeDef;
+  atUnsafeDef.fullPath = "/map/at_unsafe";
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo countInfo;
+  countInfo.returnsVoid = false;
+  countInfo.returnsArray = false;
+  countInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  infoByPath.emplace(countDef.fullPath, countInfo);
+
+  primec::ir_lowerer::ReturnInfo accessInfo;
+  accessInfo.returnsVoid = false;
+  accessInfo.returnsArray = false;
+  accessInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  infoByPath.emplace(atDef.fullPath, accessInfo);
+  infoByPath.emplace(atUnsafeDef.fullPath, accessInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  bool methodResolved = false;
+
+  primec::Expr aliasCountCall;
+  aliasCountCall.kind = primec::Expr::Kind::Call;
+  aliasCountCall.name = "/map/count";
+  aliasCountCall.args = {receiverExpr};
+
+  int aliasCountResolveCalls = 0;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      aliasCountCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++aliasCountResolveCalls;
+        CHECK(methodExpr.isMethodCall);
+        CHECK(methodExpr.name == "count");
+        return &countDef;
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(aliasCountResolveCalls == 1);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  methodResolved = false;
+  primec::Expr canonicalAtCall;
+  canonicalAtCall.kind = primec::Expr::Kind::Call;
+  canonicalAtCall.name = "/std/collections/map/at";
+  canonicalAtCall.args = {receiverExpr, keyExpr};
+  int canonicalAtResolveCalls = 0;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      canonicalAtCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++canonicalAtResolveCalls;
+        CHECK(methodExpr.isMethodCall);
+        CHECK(methodExpr.name == "at");
+        return &atDef;
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(canonicalAtResolveCalls == 1);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  methodResolved = false;
+  primec::Expr aliasAtUnsafeCall;
+  aliasAtUnsafeCall.kind = primec::Expr::Kind::Call;
+  aliasAtUnsafeCall.name = "/map/at_unsafe";
+  aliasAtUnsafeCall.args = {keyExpr, receiverExpr};
+  int aliasAtUnsafeResolveCalls = 0;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      aliasAtUnsafeCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++aliasAtUnsafeResolveCalls;
+        CHECK(methodExpr.isMethodCall);
+        CHECK(methodExpr.name == "at_unsafe");
+        if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+            methodExpr.args.front().name == "items") {
+          return &atUnsafeDef;
+        }
+        return static_cast<const primec::Definition *>(nullptr);
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(aliasAtUnsafeResolveCalls == 2);
+}
+
 TEST_CASE("ir lowerer setup type helper resolves reordered positional access call method return kinds") {
   primec::Definition atUnsafeDef;
   atUnsafeDef.fullPath = "/map/at_unsafe";
