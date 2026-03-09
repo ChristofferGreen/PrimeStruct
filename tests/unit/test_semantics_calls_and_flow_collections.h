@@ -2595,6 +2595,48 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced call aliases forward to canonical stdlib helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(90i32)
+}
+
+[return<int>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(plus(index, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values), /vector/at(values, 2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced count alias keeps canonical helper diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/vector/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced access and count helpers are builtin-alias validated") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

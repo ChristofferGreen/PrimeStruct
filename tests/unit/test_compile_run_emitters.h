@@ -1025,6 +1025,34 @@ main() {
   CHECK(runCommand(exePath) == 132);
 }
 
+TEST_CASE("compiles and runs vector namespaced call aliases forwarding to canonical stdlib helpers in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(90i32)
+}
+
+[return<int>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(plus(index, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values), /vector/at(values, 2i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_call_alias_canonical_precedence.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_call_alias_canonical_precedence_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 132);
+}
+
 TEST_CASE("compiles and runs vector namespaced count capacity access aliases in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
