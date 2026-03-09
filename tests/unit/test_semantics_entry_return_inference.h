@@ -230,6 +230,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("return auto infers struct constructor return type") {
+  const std::string source = R"(
+[struct]
+Point() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<auto>]
+make_point([i32] x, [i32] y) {
+  return(Point([x] x, [y] y))
+}
+
+[return<int>]
+main() {
+  [Point] value{make_point(1i32, 2i32)}
+  return(plus(value.x, value.y))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("return struct mismatch is diagnostic") {
   const std::string source = R"(
 [struct]

@@ -1808,7 +1808,7 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
       hasReturnAuto = true;
     }
   }
-  if (kindIt->second != ReturnKind::Unknown && hasReturnTransform) {
+  if (kindIt->second != ReturnKind::Unknown) {
     return true;
   }
   if (!inferenceStack_.insert(def.fullPath).second) {
