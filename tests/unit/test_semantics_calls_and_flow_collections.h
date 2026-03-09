@@ -3885,6 +3885,84 @@ main() {
   CHECK(error.find("capacity does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector count rejects named arguments as builtin alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/std/collections/vector/count([values] values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count rejects named arguments as builtin alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/vector/count([values] values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity rejects named arguments as builtin alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/std/collections/vector/capacity([values] values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity rejects named arguments as builtin alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/vector/capacity([values] values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("namespaced vector count and capacity allow named args for user helper receiver") {
+  const std::string source = R"(
+Counter {}
+
+[return<int>]
+/Counter/count([Counter] values) {
+  return(4i32)
+}
+
+[return<int>]
+/Counter/capacity([Counter] values) {
+  return(5i32)
+}
+
+[return<int>]
+main() {
+  [Counter] values{Counter()}
+  return(plus(/std/collections/vector/count([values] values),
+              /vector/capacity([values] values)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced vector access helper rejects named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

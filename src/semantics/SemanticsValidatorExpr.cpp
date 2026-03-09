@@ -3336,18 +3336,24 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           return defMap_.find(resolved) == defMap_.end();
         };
-        auto isLegacyCountBuiltinCall = [&]() {
-          if (expr.name != "count") {
+        auto isLegacyCountLikeBuiltinCall = [&](const char *helperName) {
+          if (!isVectorBuiltinName(expr, helperName)) {
             return false;
+          }
+          if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
+            for (const auto &receiverCandidate : expr.args) {
+              bool isBuiltinMethod = false;
+              std::string methodResolved;
+              if (resolveMethodTarget(receiverCandidate, helperName, methodResolved, isBuiltinMethod) &&
+                  !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
+                return false;
+              }
+            }
           }
           return defMap_.find(resolved) == defMap_.end();
         };
-        auto isLegacyCapacityBuiltinCall = [&]() {
-          if (expr.name != "capacity") {
-            return false;
-          }
-          return defMap_.find(resolved) == defMap_.end();
-        };
+        auto isLegacyCountBuiltinCall = [&]() { return isLegacyCountLikeBuiltinCall("count"); };
+        auto isLegacyCapacityBuiltinCall = [&]() { return isLegacyCountLikeBuiltinCall("capacity"); };
         auto isLegacySoaAccessBuiltinCall = [&]() {
           if (!(expr.name == "get" || expr.name == "ref")) {
             return false;
