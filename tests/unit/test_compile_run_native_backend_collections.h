@@ -292,6 +292,35 @@ main() {
   CHECK(runCommand(exePath) == 90);
 }
 
+TEST_CASE("compiles and runs native vector alias templated forwarding past non-templated compatibility helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count<i32>(values, true), values.count<i32>(true)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_vector_templated_alias_forwarding_non_template_compat.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_vector_templated_alias_forwarding_non_template_compat_exe")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 180);
+}
+
 TEST_CASE("compiles and runs native vector namespaced mutator builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

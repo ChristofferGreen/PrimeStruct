@@ -336,6 +336,17 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   return preferred;
 }
 
+std::string preferVectorStdlibTemplatePath(const std::string &path, const Context &ctx) {
+  if (path.rfind("/vector/", 0) != 0) {
+    return path;
+  }
+  const std::string stdlibPath = "/std/collections/vector/" + path.substr(std::string("/vector/").size());
+  if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
+    return stdlibPath;
+  }
+  return path;
+}
+
 bool resolveMethodCallTemplateTarget(const Expr &expr,
                                      const LocalTypeMap &locals,
                                      const Context &ctx,
@@ -892,6 +903,14 @@ bool rewriteExpr(Expr &expr,
       resolvedPath = preferredPath;
       expr.name = preferredPath;
     }
+    const bool resolvedWasTemplate = ctx.templateDefs.count(resolvedPath) > 0;
+    if (!expr.templateArgs.empty() && !resolvedWasTemplate) {
+      const std::string templatePreferredPath = preferVectorStdlibTemplatePath(resolvedPath, ctx);
+      if (templatePreferredPath != resolvedPath) {
+        resolvedPath = templatePreferredPath;
+        expr.name = templatePreferredPath;
+      }
+    }
     std::string builtinCollectionName;
     const bool builtinCollectionCall = getBuiltinCollectionName(expr, builtinCollectionName);
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
@@ -939,6 +958,10 @@ bool rewriteExpr(Expr &expr,
   if (expr.isMethodCall) {
     std::string methodPath;
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
+      const bool methodWasTemplate = ctx.templateDefs.count(methodPath) > 0;
+      if (!expr.templateArgs.empty() && !methodWasTemplate) {
+        methodPath = preferVectorStdlibTemplatePath(methodPath, ctx);
+      }
       const bool isTemplateDef = ctx.templateDefs.count(methodPath) > 0;
       const bool isKnownDef = ctx.sourceDefs.count(methodPath) > 0;
       if (isTemplateDef) {
