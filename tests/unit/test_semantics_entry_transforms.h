@@ -26,12 +26,12 @@ main() {
 
 TEST_CASE("template vector and map returns are allowed") {
   const std::string source = R"(
-[return<vector<T>>]
+[effects(heap_alloc), return<vector<T>>]
 wrapVector<T>([T] value) {
   return(vector<T>(value))
 }
 
-[return<map<K, V>>]
+[effects(heap_alloc), return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
   return(map<K, V>(key, value))
 }

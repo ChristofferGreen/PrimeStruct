@@ -139,7 +139,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return refKind;
         }
       }
-      if ((paramBinding->typeName == "array" || paramBinding->typeName == "vector" || paramBinding->typeName == "map") &&
+      if ((paramBinding->typeName == "array" || paramBinding->typeName == "vector" ||
+           paramBinding->typeName == "soa_vector" || paramBinding->typeName == "map") &&
           !paramBinding->typeTemplateArg.empty()) {
         return ReturnKind::Array;
       }
@@ -158,7 +159,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return refKind;
       }
     }
-    if ((it->second.typeName == "array" || it->second.typeName == "vector" || it->second.typeName == "map") &&
+    if ((it->second.typeName == "array" || it->second.typeName == "vector" ||
+         it->second.typeName == "soa_vector" || it->second.typeName == "map") &&
         !it->second.typeTemplateArg.empty()) {
       return ReturnKind::Array;
     }
@@ -313,7 +315,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     std::string collection;
     if (defMap_.find(resolveCalleePath(expr)) == defMap_.end() && getBuiltinCollectionName(expr, collection)) {
-      if ((collection == "array" || collection == "vector") && expr.templateArgs.size() == 1) {
+      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+          expr.templateArgs.size() == 1) {
         return ReturnKind::Array;
       }
       if (collection == "map" && expr.templateArgs.size() == 2) {
@@ -1561,7 +1564,8 @@ std::string SemanticsValidator::inferStructReturnPath(
     if (typeName == "string") {
       return "/string";
     }
-    if ((typeName == "array" || typeName == "vector" || typeName == "map") && !typeTemplateArg.empty()) {
+    if ((typeName == "array" || typeName == "vector" || typeName == "soa_vector" || typeName == "map") &&
+        !typeTemplateArg.empty()) {
       return "/" + typeName;
     }
     std::string base;
@@ -1569,7 +1573,7 @@ std::string SemanticsValidator::inferStructReturnPath(
     if (splitTemplateTypeName(typeName, base, arg)) {
       std::vector<std::string> args;
       if (splitTopLevelTemplateArgs(arg, args)) {
-        if ((base == "array" || base == "vector") && args.size() == 1) {
+        if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
           return "/" + base;
         }
         if (base == "map" && args.size() == 2) {

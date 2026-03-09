@@ -92,6 +92,7 @@ build and layout solidify.
 
 ## Bug-fix workflow
 - Before fixing a bug, find a concrete way to reproduce it.
+- If the current `./scripts/compile.sh` or focused `ctest` run has failing targets, prioritize reducing those failures before starting new TODO implementation slices.
 - Do not claim a bug is fixed unless you can no longer reproduce it after the change.
 
 ## Git commit guidelines
