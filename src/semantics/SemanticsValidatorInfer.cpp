@@ -1268,8 +1268,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
              normalizedName.rfind("std/collections/vector/", 0) == 0;
     };
     const bool isNamespacedVectorCountCall =
-        !expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-        isNamespacedVectorHelperCall(expr);
+        !expr.isMethodCall && isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall(expr);
     auto isNamespacedMapHelperCall = [&](const Expr &candidate) -> bool {
       if (candidate.name.empty()) {
         return false;
@@ -1350,6 +1349,17 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Unknown;
       }
       return ReturnKind::Int;
+    }
+    if (!expr.isMethodCall && isVectorBuiltinName(expr, "count") && !expr.args.empty() && expr.args.size() != 1 &&
+        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall)) {
+      std::string methodResolved;
+      if (resolveMethodCallPath("count", methodResolved)) {
+        methodResolved = preferVectorStdlibHelperPath(methodResolved);
+        ReturnKind helperReturnKind = ReturnKind::Unknown;
+        if (inferResolvedPathReturnKind(methodResolved, helperReturnKind)) {
+          return helperReturnKind;
+        }
+      }
     }
     if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
