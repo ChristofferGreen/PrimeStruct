@@ -601,12 +601,28 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
     if (normalizedName != "vector/count" && normalizedName != "std/collections/vector/count" &&
         normalizedName != "vector/capacity" && normalizedName != "std/collections/vector/capacity" &&
         normalizedName != "vector/at" && normalizedName != "std/collections/vector/at" &&
-        normalizedName != "vector/at_unsafe" && normalizedName != "std/collections/vector/at_unsafe") {
+        normalizedName != "vector/at_unsafe" && normalizedName != "std/collections/vector/at_unsafe" &&
+        normalizedName != "vector/push" && normalizedName != "std/collections/vector/push" &&
+        normalizedName != "vector/pop" && normalizedName != "std/collections/vector/pop" &&
+        normalizedName != "vector/reserve" && normalizedName != "std/collections/vector/reserve" &&
+        normalizedName != "vector/clear" && normalizedName != "std/collections/vector/clear" &&
+        normalizedName != "vector/remove_at" && normalizedName != "std/collections/vector/remove_at" &&
+        normalizedName != "vector/remove_swap" && normalizedName != "std/collections/vector/remove_swap") {
       return false;
     }
     if (normalizedName == "vector/at" || normalizedName == "std/collections/vector/at" ||
         normalizedName == "vector/at_unsafe" || normalizedName == "std/collections/vector/at_unsafe") {
       return candidate.args.size() == 2;
+    }
+    if (normalizedName == "vector/push" || normalizedName == "std/collections/vector/push" ||
+        normalizedName == "vector/reserve" || normalizedName == "std/collections/vector/reserve" ||
+        normalizedName == "vector/remove_at" || normalizedName == "std/collections/vector/remove_at" ||
+        normalizedName == "vector/remove_swap" || normalizedName == "std/collections/vector/remove_swap") {
+      return candidate.args.size() == 2;
+    }
+    if (normalizedName == "vector/pop" || normalizedName == "std/collections/vector/pop" ||
+        normalizedName == "vector/clear" || normalizedName == "std/collections/vector/clear") {
+      return candidate.args.size() == 1;
     }
     return candidate.args.size() == 1;
   };
