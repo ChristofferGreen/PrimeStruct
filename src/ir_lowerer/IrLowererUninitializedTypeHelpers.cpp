@@ -552,6 +552,26 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       if (!fieldAccessStruct.empty() || exprIn.isFieldAccess) {
         return fieldAccessStruct;
       }
+      if (!exprIn.isMethodCall) {
+        const std::string resolvedPath = resolveExprPath(exprIn);
+        auto defIt = defMap.find(resolvedPath);
+        if (defIt != defMap.end() && defIt->second != nullptr && isStructDefinition(*defIt->second)) {
+          return resolvedPath;
+        }
+      }
+      if (exprIn.isMethodCall && !exprIn.args.empty()) {
+        const std::string receiverStruct = inferStructExprPath(exprIn.args.front(), localsInExpr);
+        if (!receiverStruct.empty()) {
+          const std::string methodPath = receiverStruct + "/" + exprIn.name;
+          if (defMap.count(methodPath) > 0) {
+            const std::string methodStruct = inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
+                methodPath, defMap, resolveStructTypeName, resolveExprPath, fieldIndex);
+            if (!methodStruct.empty()) {
+              return methodStruct;
+            }
+          }
+        }
+      }
       return inferStructPathFromCallTargetWithFieldBindingIndex(
           exprIn,
           resolveExprPath,

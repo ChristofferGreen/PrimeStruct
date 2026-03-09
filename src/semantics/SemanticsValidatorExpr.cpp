@@ -5085,6 +5085,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       const ParameterInfo &param = calleeParams[paramIndex];
       const std::string &expectedTypeName = param.binding.typeName;
+      const std::string expectedTypeText =
+          param.binding.typeTemplateArg.empty() ? expectedTypeName : expectedTypeName + "<" + param.binding.typeTemplateArg + ">";
       if (expectedTypeName.empty() || expectedTypeName == "auto") {
         continue;
       }
@@ -5097,8 +5099,47 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (isStringExpr(*arg)) {
         error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
-                 expectedTypeName;
+                 expectedTypeText;
         return false;
+      }
+      std::string expectedBase;
+      std::string expectedArgText;
+      if (splitTemplateTypeName(expectedTypeText, expectedBase, expectedArgText)) {
+        const std::string normalizedExpectedBase = normalizeBindingTypeName(expectedBase);
+        std::vector<std::string> expectedTemplateArgs;
+        if (splitTopLevelTemplateArgs(expectedArgText, expectedTemplateArgs)) {
+          if (normalizedExpectedBase == "array" && expectedTemplateArgs.size() == 1) {
+            std::string actualElemType;
+            if (resolveArrayTarget(*arg, actualElemType) &&
+                normalizeBindingTypeName(expectedTemplateArgs.front()) != normalizeBindingTypeName(actualElemType)) {
+              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                       expectedTypeText + " got array<" + actualElemType + ">";
+              return false;
+            }
+          } else if ((normalizedExpectedBase == "vector" || normalizedExpectedBase == "soa_vector") &&
+                     expectedTemplateArgs.size() == 1) {
+            std::string actualElemType;
+            const bool resolvedVectorTarget = normalizedExpectedBase == "vector"
+                                                  ? resolveVectorTarget(*arg, actualElemType)
+                                                  : resolveSoaVectorTarget(*arg, actualElemType);
+            if (resolvedVectorTarget &&
+                normalizeBindingTypeName(expectedTemplateArgs.front()) != normalizeBindingTypeName(actualElemType)) {
+              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                       expectedTypeText + " got " + normalizedExpectedBase + "<" + actualElemType + ">";
+              return false;
+            }
+          } else if (normalizedExpectedBase == "map" && expectedTemplateArgs.size() == 2) {
+            std::string actualKeyType;
+            std::string actualValueType;
+            if (resolveMapKeyType(*arg, actualKeyType) && resolveMapValueType(*arg, actualValueType) &&
+                (normalizeBindingTypeName(expectedTemplateArgs[0]) != normalizeBindingTypeName(actualKeyType) ||
+                 normalizeBindingTypeName(expectedTemplateArgs[1]) != normalizeBindingTypeName(actualValueType))) {
+              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                       expectedTypeText + " got map<" + actualKeyType + ", " + actualValueType + ">";
+              return false;
+            }
+          }
+        }
       }
       const ReturnKind expectedKind = returnKindForTypeName(normalizeBindingTypeName(expectedTypeName));
       if (expectedKind != ReturnKind::Unknown) {

@@ -436,6 +436,27 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
   const auto resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath;
   const auto isArrayCountCall = input.isArrayCountCall;
   const auto isStringCountCall = input.isStringCountCall;
+  auto isZeroFieldStructDef = [](const Definition &def) -> bool {
+    if (!isStructDefinition(def)) {
+      return false;
+    }
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        return false;
+      }
+      bool isStaticField = false;
+      for (const auto &transform : stmt.transforms) {
+        if (transform.name == "static") {
+          isStaticField = true;
+          break;
+        }
+      }
+      if (!isStaticField) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   stateInOut.inferBufferElementKind = [&stateInOut](const Expr &expr,
                                                      const LocalMap &localsIn) -> LocalInfo::ValueKind {
@@ -452,6 +473,7 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
                                       resolveStructArrayInfoFromPath,
                                       isArrayCountCall,
                                       isStringCountCall,
+                                      isZeroFieldStructDef,
                                       &stateInOut](const Expr &expr,
                                                    const LocalMap &localsIn) -> LocalInfo::ValueKind {
     return inferArrayElementValueKind(
@@ -463,11 +485,16 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
         [&](const Expr &candidate) { return resolveExprPath(candidate); },
         [&](const std::string &structPath, LocalInfo::ValueKind &kindOut) {
           StructArrayTypeInfo structInfo;
-          if (!resolveStructArrayInfoFromPath(structPath, structInfo)) {
-            return false;
+          if (resolveStructArrayInfoFromPath(structPath, structInfo)) {
+            kindOut = structInfo.elementKind;
+            return true;
           }
-          kindOut = structInfo.elementKind;
-          return true;
+          auto defIt = defMap->find(structPath);
+          if (defIt != defMap->end() && defIt->second != nullptr && isZeroFieldStructDef(*defIt->second)) {
+            kindOut = LocalInfo::ValueKind::Int32;
+            return true;
+          }
+          return false;
         },
         [&](const Expr &candidate, const LocalMap &, LocalInfo::ValueKind &kindOut) {
           return resolveDefinitionCallReturnKind(
@@ -741,6 +768,21 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
                                                              inferError);
   };
 
+  auto hasDeclaredStructReturn = [&]() -> bool {
+    for (const auto &transform : definition.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string &declaredType = transform.templateArgs.front();
+      if (declaredType == "auto" || declaredType == "void") {
+        return false;
+      }
+      std::string structPath;
+      return resolveStructTypeName(declaredType, definition.namespacePrefix, structPath);
+    }
+    return false;
+  };
+
   if (hasReturnTransformLocal) {
     if (hasReturnAuto) {
       ReturnInferenceOptions options;
@@ -762,8 +804,14 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
       }
     } else if (!infoInOut.returnsVoid) {
       if (infoInOut.kind == LocalInfo::ValueKind::Unknown) {
-        errorOut = "native backend does not support return type on " + definition.fullPath;
-        return false;
+        if (hasDeclaredStructReturn()) {
+          // Struct-return helpers lower through array-handle return paths.
+          infoInOut.returnsArray = true;
+          infoInOut.kind = LocalInfo::ValueKind::Int32;
+        } else {
+          errorOut = "native backend does not support return type on " + definition.fullPath;
+          return false;
+        }
       }
       if (infoInOut.returnsArray && infoInOut.kind == LocalInfo::ValueKind::String) {
         errorOut = "native backend does not support string array return types on " + definition.fullPath;

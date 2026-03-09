@@ -1192,6 +1192,95 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   return root;
 }
 
+bool inferStdlibVectorHelperTemplateArgs(const Definition &def,
+                                         const Expr &callExpr,
+                                         const LocalTypeMap &locals,
+                                         const std::vector<ParameterInfo> &params,
+                                         const SubstMap &mapping,
+                                         const std::unordered_set<std::string> &allowedParams,
+                                         const std::string &namespacePrefix,
+                                         Context &ctx,
+                                         bool allowMathBare,
+                                         std::vector<std::string> &outArgs) {
+  if (def.fullPath.rfind("/std/collections/vector/", 0) != 0) {
+    return false;
+  }
+  const std::string helperSuffix = def.fullPath.substr(std::string("/std/collections/vector/").size());
+  const std::string vectorAliasPath = "/vector/" + helperSuffix;
+  const std::string arrayAliasPath = "/array/" + helperSuffix;
+  if (ctx.sourceDefs.count(vectorAliasPath) == 0 && ctx.sourceDefs.count(arrayAliasPath) == 0) {
+    return false;
+  }
+  if (def.templateArgs.size() != 1 || def.parameters.empty()) {
+    return false;
+  }
+  BindingInfo receiverParamInfo;
+  if (!extractExplicitBindingType(def.parameters.front(), receiverParamInfo)) {
+    return false;
+  }
+  const std::string normalizedReceiverParamType = normalizeBindingTypeName(receiverParamInfo.typeName);
+  if (normalizedReceiverParamType != "vector" && normalizedReceiverParamType != "soa_vector") {
+    return false;
+  }
+  std::vector<std::string> receiverParamTemplateArgs;
+  if (!splitTopLevelTemplateArgs(receiverParamInfo.typeTemplateArg, receiverParamTemplateArgs) ||
+      receiverParamTemplateArgs.size() != 1 || trimWhitespace(receiverParamTemplateArgs.front()) != def.templateArgs.front()) {
+    return false;
+  }
+
+  std::vector<ParameterInfo> callParams;
+  callParams.reserve(def.parameters.size());
+  for (const auto &paramExpr : def.parameters) {
+    ParameterInfo paramInfo;
+    paramInfo.name = paramExpr.name;
+    if (paramExpr.args.size() == 1) {
+      paramInfo.defaultExpr = &paramExpr.args.front();
+    }
+    callParams.push_back(std::move(paramInfo));
+  }
+  std::vector<const Expr *> orderedArgs;
+  std::string orderError;
+  if (!buildOrderedArguments(callParams, callExpr.args, callExpr.argNames, orderedArgs, orderError)) {
+    return false;
+  }
+  if (orderedArgs.empty() || orderedArgs.front() == nullptr) {
+    return false;
+  }
+
+  BindingInfo receiverArgInfo;
+  if (!inferBindingTypeForMonomorph(*orderedArgs.front(), params, locals, allowMathBare, ctx, receiverArgInfo)) {
+    return false;
+  }
+  std::string receiverArgType = normalizeBindingTypeName(receiverArgInfo.typeName);
+  std::string receiverArgTemplateArg = receiverArgInfo.typeTemplateArg;
+  if ((receiverArgType == "Reference" || receiverArgType == "Pointer") && !receiverArgTemplateArg.empty()) {
+    std::string pointeeBase;
+    std::string pointeeArgText;
+    if (splitTemplateTypeName(receiverArgTemplateArg, pointeeBase, pointeeArgText)) {
+      receiverArgType = normalizeBindingTypeName(pointeeBase);
+      receiverArgTemplateArg = pointeeArgText;
+    }
+  }
+  if (receiverArgType != normalizedReceiverParamType) {
+    return false;
+  }
+
+  std::vector<std::string> receiverArgTemplateArgs;
+  if (!splitTopLevelTemplateArgs(receiverArgTemplateArg, receiverArgTemplateArgs) ||
+      receiverArgTemplateArgs.size() != 1) {
+    return false;
+  }
+  std::string resolvedError;
+  ResolvedType resolvedArg = resolveTypeString(
+      receiverArgTemplateArgs.front(), mapping, allowedParams, namespacePrefix, ctx, resolvedError);
+  if (!resolvedError.empty() || !resolvedArg.concrete || resolvedArg.text.empty()) {
+    return false;
+  }
+  outArgs.clear();
+  outArgs.push_back(resolvedArg.text);
+  return true;
+}
+
 bool rewriteExpr(Expr &expr,
                  const SubstMap &mapping,
                  const std::unordered_set<std::string> &allowedParams,
@@ -1307,6 +1396,19 @@ bool rewriteExpr(Expr &expr,
                                         error)) {
             expr.templateArgs = std::move(inferredArgs);
             allConcrete = true;
+          } else if (error.empty() &&
+                     inferStdlibVectorHelperTemplateArgs(defIt->second,
+                                                         expr,
+                                                         locals,
+                                                         params,
+                                                         mapping,
+                                                         allowedParams,
+                                                         namespacePrefix,
+                                                         ctx,
+                                                         allowMathBare,
+                                                         inferredArgs)) {
+            expr.templateArgs = std::move(inferredArgs);
+            allConcrete = true;
           } else if (!error.empty()) {
             return false;
           }
@@ -1358,6 +1460,19 @@ bool rewriteExpr(Expr &expr,
                                           allowMathBare,
                                           inferredArgs,
                                           error)) {
+              expr.templateArgs = std::move(inferredArgs);
+              allConcrete = true;
+            } else if (error.empty() &&
+                       inferStdlibVectorHelperTemplateArgs(defIt->second,
+                                                           expr,
+                                                           locals,
+                                                           params,
+                                                           mapping,
+                                                           allowedParams,
+                                                           namespacePrefix,
+                                                           ctx,
+                                                           allowMathBare,
+                                                           inferredArgs)) {
               expr.templateArgs = std::move(inferredArgs);
               allConcrete = true;
             } else if (!error.empty()) {

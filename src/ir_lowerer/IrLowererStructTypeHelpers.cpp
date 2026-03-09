@@ -537,9 +537,10 @@ bool resolveStructSlotLayoutFromDefinitionFields(
 
   std::vector<StructLayoutFieldInfo> fields;
   if (!collectStructLayoutFields(structPath, fields)) {
-    error = "native backend cannot resolve struct fields: " + structPath;
-    layoutStack.erase(structPath);
-    return false;
+    // Zero-field structs may not produce any enumerated field entries.
+    // At this point the definition path already resolved, so treat this as
+    // an empty struct layout instead of an error.
+    fields.clear();
   }
 
   StructSlotLayoutInfo layout;

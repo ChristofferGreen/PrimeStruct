@@ -1,5 +1,6 @@
 #include "IrLowererCallHelpers.h"
 
+#include <cctype>
 #include <limits>
 #include <utility>
 
@@ -1802,6 +1803,18 @@ bool isStructTransformName(const std::string &name) {
 }
 
 bool isStructDefinition(const Definition &def) {
+  auto hasTypeLikeName = [&]() -> bool {
+    if (def.fullPath.empty()) {
+      return false;
+    }
+    const size_t slash = def.fullPath.find_last_of('/');
+    const std::string_view name = (slash == std::string::npos) ? std::string_view(def.fullPath)
+                                                                : std::string_view(def.fullPath).substr(slash + 1);
+    if (name.empty()) {
+      return false;
+    }
+    return std::isupper(static_cast<unsigned char>(name.front())) != 0;
+  };
   bool hasStruct = false;
   bool hasReturn = false;
   for (const auto &transform : def.transforms) {
@@ -1819,7 +1832,7 @@ bool isStructDefinition(const Definition &def) {
     return false;
   }
   if (def.statements.empty()) {
-    return false;
+    return hasTypeLikeName();
   }
   for (const auto &stmt : def.statements) {
     if (!stmt.isBinding) {
