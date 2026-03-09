@@ -4270,6 +4270,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector stdlib namespaced helper auto inference keeps receiver helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/push([vector<i32> mut] values, [string] value) {
+  return(11i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/push([vector<i32> mut] values, [string] value) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  [string] payload{"tag"raw_utf8}
+  [auto] inferred{/std/collections/vector/push([value] payload, [values] values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced count-capacity call-form infers auto bindings") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
