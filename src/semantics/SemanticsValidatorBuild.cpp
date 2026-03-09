@@ -142,7 +142,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
         return false;
       }
     }
-    bool sawEffects = false;
+    std::unordered_set<std::string> seenEffects;
     bool sawCapabilities = false;
     bool sawOnError = false;
     bool sawCompute = false;
@@ -380,17 +380,21 @@ bool SemanticsValidator::buildDefinitionMaps() {
         }
         break;
       } else if (transform.name == "effects") {
-        if (sawEffects) {
-          if (addTransformDiagnostic("duplicate effects transform on " + def.fullPath)) {
-            return false;
-          }
-          break;
-        }
-        sawEffects = true;
         if (!validateEffectsTransform(transform, def.fullPath, error_)) {
           if (addTransformDiagnostic(error_)) {
             return false;
           }
+          break;
+        }
+        for (const auto &effect : transform.arguments) {
+          if (!seenEffects.insert(effect).second) {
+            if (addTransformDiagnostic("duplicate effects transform on " + def.fullPath)) {
+              return false;
+            }
+            break;
+          }
+        }
+        if (definitionTransformError) {
           break;
         }
       } else if (transform.name == "capabilities") {

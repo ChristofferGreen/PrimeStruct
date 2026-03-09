@@ -1098,9 +1098,21 @@ main() {
   CHECK(error.find("duplicate capability") != std::string::npos);
 }
 
-TEST_CASE("effects transform rejects duplicates") {
+TEST_CASE("effects transform allows distinct transforms") {
   const std::string source = R"(
 [effects(io_out), effects(asset_read), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("effects transform rejects duplicate effect names across transforms") {
+  const std::string source = R"(
+[effects(io_out), effects(io_out), return<int>]
 main() {
   return(1i32)
 }

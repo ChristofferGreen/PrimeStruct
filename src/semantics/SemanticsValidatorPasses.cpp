@@ -58,7 +58,6 @@ std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::ve
       continue;
     }
     sawEffects = true;
-    effects.clear();
     for (const auto &arg : transform.arguments) {
       effects.insert(arg);
     }

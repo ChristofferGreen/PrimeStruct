@@ -1149,6 +1149,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("definition rejects duplicate identical effects transforms") {
+  const std::string source = R"(
+[effects(io_out), effects(io_out), return<int>]
+main() {
+  print_line("hi"utf8)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate effects transform on /main") != std::string::npos);
+}
+
 TEST_CASE("print rejects user-defined at on user-defined vector target") {
   const std::string source = R"(
 Thing() {
