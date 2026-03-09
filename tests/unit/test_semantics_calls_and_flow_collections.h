@@ -2983,6 +2983,55 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced alias forwards on array envelope element mismatch") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values, [array<i32>] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [array<i64>] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [array<i64>] marker{array<i64>(1i64)}
+  return(plus(/vector/count(values, marker), values.count(marker)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced array envelope mismatch keeps canonical diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values, [array<i32>] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [array<bool>] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [array<i64>] marker{array<i64>(1i64)}
+  return(values.count(marker))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced alias implicit template forwarding keeps canonical diagnostics") {
   const std::string source = R"(
 [return<int>]

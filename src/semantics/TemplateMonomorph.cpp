@@ -514,8 +514,10 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
       }
       continue;
     }
-    const std::string normalizedExpected = normalizeBindingTypeName(param.binding.typeName);
-    const std::string normalizedActual = normalizeBindingTypeName(actual.typeName);
+    const std::string expectedTypeText = bindingTypeToString(param.binding);
+    const std::string actualTypeText = bindingTypeToString(actual);
+    const std::string normalizedExpected = normalizeBindingTypeName(expectedTypeText);
+    const std::string normalizedActual = normalizeBindingTypeName(actualTypeText);
     if (normalizedExpected == "string" && normalizedActual != "string") {
       return true;
     }
@@ -538,6 +540,9 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
     }
     if (isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
       continue;
+    }
+    if (expectedKind == actualKind && expectedKind == ReturnKind::Array && normalizedExpected != normalizedActual) {
+      return true;
     }
     if (actualKind != expectedKind) {
       return true;
