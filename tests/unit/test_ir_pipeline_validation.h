@@ -11983,6 +11983,32 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(resolveCalls == 1);
   CHECK(emitCalls == 1);
 
+  primec::Expr aliasCountCall = countCall;
+  aliasCountCall.name = "/vector/count";
+  int aliasCountResolveCalls = 0;
+  int aliasCountEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            aliasCountCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++aliasCountResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "count");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++aliasCountEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "count");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(aliasCountResolveCalls == 1);
+  CHECK(aliasCountEmitCalls == 1);
+
   primec::Expr capacityCall;
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
@@ -12044,6 +12070,32 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(error.empty());
   CHECK(atResolveCalls == 1);
   CHECK(atEmitCalls == 1);
+
+  primec::Expr canonicalAtCall = atCall;
+  canonicalAtCall.name = "/std/collections/vector/at";
+  int canonicalAtResolveCalls = 0;
+  int canonicalAtEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            canonicalAtCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++canonicalAtResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++canonicalAtEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(canonicalAtResolveCalls == 1);
+  CHECK(canonicalAtEmitCalls == 1);
 
   primec::Expr reorderedAtCall = atCall;
   reorderedAtCall.args = {indexArg, targetArg};
@@ -12333,6 +12385,39 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(error.empty());
   CHECK(reorderedPushResolveCalls == 2);
   CHECK(reorderedPushEmitCalls == 1);
+
+  primec::Expr aliasPushCall = reorderedPushCall;
+  aliasPushCall.name = "/vector/push";
+  int aliasPushResolveCalls = 0;
+  int aliasPushEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            aliasPushCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++aliasPushResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "push");
+              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+                  methodExpr.args.front().name == "items") {
+                return &callee;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++aliasPushEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "push");
+              REQUIRE_FALSE(methodExpr.args.empty());
+              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(methodExpr.args.front().name == "items");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(aliasPushResolveCalls == 2);
+  CHECK(aliasPushEmitCalls == 1);
 
   primec::Expr boolArg;
   boolArg.kind = primec::Expr::Kind::BoolLiteral;

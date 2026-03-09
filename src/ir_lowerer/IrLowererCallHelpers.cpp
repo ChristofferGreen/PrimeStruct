@@ -1649,16 +1649,19 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error,
     std::function<bool(const Expr &)> isCollectionAccessReceiverExpr) {
-  const bool isCountCall = isSimpleCallName(expr, "count");
-  const bool isCapacityCall = isSimpleCallName(expr, "capacity");
+  std::string normalizedVectorHelperName;
+  const bool hasVectorHelperAlias = resolveVectorHelperAliasName(expr, normalizedVectorHelperName);
+  const bool isCountCall = isVectorBuiltinName(expr, "count");
+  const bool isCapacityCall = isVectorBuiltinName(expr, "capacity");
   const bool isAccessCall =
-      isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe") ||
+      isVectorBuiltinName(expr, "at") || isVectorBuiltinName(expr, "at_unsafe") ||
       isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref");
   const bool isVectorMutatorCall =
-      isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") || isSimpleCallName(expr, "reserve") ||
-      isSimpleCallName(expr, "clear") || isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap");
+      isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "pop") || isVectorBuiltinName(expr, "reserve") ||
+      isVectorBuiltinName(expr, "clear") || isVectorBuiltinName(expr, "remove_at") ||
+      isVectorBuiltinName(expr, "remove_swap");
   auto expectedVectorMutatorArgCount = [&]() -> size_t {
-    if (isSimpleCallName(expr, "pop") || isSimpleCallName(expr, "clear")) {
+    if (isVectorBuiltinName(expr, "pop") || isVectorBuiltinName(expr, "clear")) {
       return 1u;
     }
     return 2u;
@@ -1687,6 +1690,9 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   auto buildMethodExprForReceiverIndex = [&](size_t receiverIndex) {
     Expr methodExpr = expr;
     methodExpr.isMethodCall = true;
+    if (hasVectorHelperAlias) {
+      methodExpr.name = normalizedVectorHelperName;
+    }
     if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
       std::swap(methodExpr.args[0], methodExpr.args[receiverIndex]);
       if (methodExpr.argNames.size() < methodExpr.args.size()) {
