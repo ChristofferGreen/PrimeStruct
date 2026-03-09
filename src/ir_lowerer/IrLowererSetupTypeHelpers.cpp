@@ -240,8 +240,12 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
       isVectorBuiltinName(callExpr, "count") || isVectorBuiltinName(callExpr, "capacity");
+  const bool isBuiltinVectorMutatorCall =
+      isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
+      isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
+      isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
   const bool allowBuiltinFallback =
-      isBuiltinCountOrCapacityCall ||
+      isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall;
   const Expr &receiver = callExpr.args.front();
@@ -712,8 +716,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
       isVectorBuiltinName(callExpr, "count") || isVectorBuiltinName(callExpr, "capacity");
+  const bool isBuiltinVectorMutatorCall =
+      isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
+      isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
+      isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
   const bool allowBuiltinFallback =
-      isBuiltinCountOrCapacityCall ||
+      isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall;
 

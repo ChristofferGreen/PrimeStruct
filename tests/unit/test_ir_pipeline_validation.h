@@ -14703,6 +14703,64 @@ TEST_CASE("ir lowerer setup type helper keeps builtin count/capacity fallback wh
   CHECK(error == "stale");
 }
 
+TEST_CASE("ir lowerer setup type helper keeps builtin mutator fallback when no override definition exists") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr pushValueExpr;
+  pushValueExpr.kind = primec::Expr::Kind::Literal;
+  pushValueExpr.intWidth = 32;
+  pushValueExpr.literalValue = 7;
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "push";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverExpr, pushValueExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("values", valuesLocal);
+
+  std::string error = "stale";
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return std::string(); },
+            {},
+            error) == nullptr);
+  CHECK(error == "stale");
+
+  methodCall.name = "pop";
+  methodCall.args = {receiverExpr};
+  error = "stale";
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return std::string(); },
+            {},
+            error) == nullptr);
+  CHECK(error == "stale");
+}
+
 TEST_CASE("ir lowerer setup type helper reports method call definition diagnostics from expressions") {
   primec::Expr methodCall;
   methodCall.kind = primec::Expr::Kind::Call;
