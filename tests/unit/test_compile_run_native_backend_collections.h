@@ -185,6 +185,24 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
+TEST_CASE("compiles and runs native vector namespaced mutator builtin alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /vector/push(values, 2i32)
+  return(plus(count(values), 10i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_namespaced_mutator_alias.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_namespaced_mutator_alias_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+}
+
 TEST_CASE("compiles and runs native vector access checks bounds") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

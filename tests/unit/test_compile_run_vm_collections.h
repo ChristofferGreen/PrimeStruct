@@ -50,6 +50,20 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
+TEST_CASE("runs vm with vector namespaced mutator builtin alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /vector/push(values, 2i32)
+  return(plus(count(values), 10i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_namespaced_mutator_alias.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 12);
+}
+
 TEST_CASE("runs vm with collection bracket literals") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
