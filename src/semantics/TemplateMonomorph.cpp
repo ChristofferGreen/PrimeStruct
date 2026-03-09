@@ -553,16 +553,33 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
       if (!expectedTypeText.empty() && !inferredActualTypeText.empty()) {
         const std::string normalizedExpected = normalizeBindingTypeName(expectedTypeText);
         const std::string normalizedActual = normalizeBindingTypeName(inferredActualTypeText);
-        if (normalizedExpected != normalizedActual) {
+        if (normalizedExpected == "string" && normalizedActual != "string") {
+          return true;
+        }
+        if (normalizedExpected != "string" && normalizedActual == "string") {
+          return true;
+        }
+        const ReturnKind expectedKind = returnKindForTypeName(normalizedExpected);
+        const ReturnKind actualKind = returnKindForTypeName(normalizedActual);
+        if (expectedKind != ReturnKind::Unknown && actualKind != ReturnKind::Unknown) {
+          if (!isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
+            if (expectedKind == actualKind && expectedKind == ReturnKind::Array &&
+                normalizedExpected != normalizedActual) {
+              return true;
+            }
+            if (expectedKind != actualKind) {
+              return true;
+            }
+          }
+        } else if (normalizedExpected != normalizedActual) {
           std::string expectedBase;
           std::string expectedArgText;
           std::string actualBase;
           std::string actualArgText;
           if (splitTemplateTypeName(normalizedExpected, expectedBase, expectedArgText) &&
-              splitTemplateTypeName(normalizedActual, actualBase, actualArgText)) {
-            if (normalizeBindingTypeName(expectedBase) == normalizeBindingTypeName(actualBase)) {
-              return true;
-            }
+              splitTemplateTypeName(normalizedActual, actualBase, actualArgText) &&
+              normalizeBindingTypeName(expectedBase) == normalizeBindingTypeName(actualBase)) {
+            return true;
           }
         }
       }

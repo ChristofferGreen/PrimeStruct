@@ -1417,6 +1417,41 @@ main() {
   CHECK(runCommand(exePath) == 180);
 }
 
+TEST_CASE("compiles and runs vector alias canonical forwarding on primitive mismatch from call return in C++ emitter") {
+  const std::string source = R"(
+[return<i32>]
+makeMarker() {
+  return(1i32)
+}
+
+[return<int>]
+/vector/count([vector<i32>] values, [string] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values, makeMarker()), values.count(makeMarker())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_alias_canonical_forwarding_primitive_call_return_mismatch.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_alias_canonical_forwarding_primitive_call_return_mismatch_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 180);
+}
+
 TEST_CASE("compiles and runs vector alias implicit canonical templated forwarding on named args in C++ emitter") {
   const std::string source = R"(
 [return<int>]
