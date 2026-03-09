@@ -949,6 +949,45 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("compiles and runs stdlib namespaced vector builtin aliases in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{/std/collections/vector/vector(4i32, 5i32)}
+  /std/collections/vector/push(values, 6i32)
+  return(plus(plus(/std/collections/vector/count(values),
+                   /std/collections/vector/capacity(values)),
+              /std/collections/vector/at_unsafe(values, 2i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_aliases.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_namespaced_vector_aliases_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+}
+
+TEST_CASE("rejects stdlib namespaced vector capacity on map target in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/vector/capacity(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_capacity_map_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_namespaced_vector_capacity_map_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs user wrapper temporary count capacity shadow precedence in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]

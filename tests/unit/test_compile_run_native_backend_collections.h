@@ -165,6 +165,26 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs native stdlib namespaced vector builtin aliases") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{/std/collections/vector/vector(4i32, 5i32)}
+  /std/collections/vector/push(values, 6i32)
+  return(plus(plus(/std/collections/vector/count(values),
+                   /std/collections/vector/capacity(values)),
+              /std/collections/vector/at_unsafe(values, 2i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_namespaced_vector_aliases.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_namespaced_vector_aliases_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+}
+
 TEST_CASE("compiles and runs native vector access checks bounds") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
