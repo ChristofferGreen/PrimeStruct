@@ -2327,6 +2327,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isNamespacedVectorCountCall =
         !expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         isNamespacedVectorHelperCall(expr);
+    const bool isNamespacedVectorCapacityCall =
+        !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+        isNamespacedVectorHelperCall(expr);
     if (expr.isMethodCall) {
       if (!hasVectorHelperCallResolution) {
         if (expr.args.empty()) {
@@ -2371,7 +2374,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
     } else if (isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
-               defMap_.find(resolved) == defMap_.end()) {
+               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;
