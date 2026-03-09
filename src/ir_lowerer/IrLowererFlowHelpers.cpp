@@ -71,6 +71,65 @@ bool isVectorStatementReceiverExpr(const Expr &expr, const LocalMap &localsIn) {
   return it->second.kind == LocalInfo::Kind::Vector && it->second.isMutable;
 }
 
+bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  const std::string vectorPrefix = "vector/";
+  const std::string stdVectorPrefix = "std/collections/vector/";
+  if (normalized.rfind(vectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(vectorPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    return true;
+  }
+  return false;
+}
+
+bool resolveVectorMutatorName(const Expr &expr, std::string &helperNameOut) {
+  if (isSimpleCallName(expr, "push")) {
+    helperNameOut = "push";
+    return true;
+  }
+  if (isSimpleCallName(expr, "pop")) {
+    helperNameOut = "pop";
+    return true;
+  }
+  if (isSimpleCallName(expr, "reserve")) {
+    helperNameOut = "reserve";
+    return true;
+  }
+  if (isSimpleCallName(expr, "clear")) {
+    helperNameOut = "clear";
+    return true;
+  }
+  if (isSimpleCallName(expr, "remove_at")) {
+    helperNameOut = "remove_at";
+    return true;
+  }
+  if (isSimpleCallName(expr, "remove_swap")) {
+    helperNameOut = "remove_swap";
+    return true;
+  }
+
+  std::string aliasName;
+  if (!resolveVectorMutatorAliasName(expr, aliasName)) {
+    return false;
+  }
+  if (aliasName == "push" || aliasName == "pop" || aliasName == "reserve" ||
+      aliasName == "clear" || aliasName == "remove_at" || aliasName == "remove_swap") {
+    helperNameOut = aliasName;
+    return true;
+  }
+  return false;
+}
+
 SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(const Expr &expr, int64_t &out) {
   if (expr.kind == Expr::Kind::Literal && !expr.isUnsigned) {
     out = expr.intWidth == 32 ? static_cast<int32_t>(expr.literalValue) : static_cast<int64_t>(expr.literalValue);
@@ -591,21 +650,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const std::function<void()> &emitVectorReserveExceeded,
     std::string &error) {
   std::string vectorHelper;
-  if (isSimpleCallName(stmt, "push")) {
-    vectorHelper = "push";
-  } else if (isSimpleCallName(stmt, "pop")) {
-    vectorHelper = "pop";
-  } else if (isSimpleCallName(stmt, "reserve")) {
-    vectorHelper = "reserve";
-  } else if (isSimpleCallName(stmt, "clear")) {
-    vectorHelper = "clear";
-  } else if (isSimpleCallName(stmt, "remove_at")) {
-    vectorHelper = "remove_at";
-  } else if (isSimpleCallName(stmt, "remove_swap")) {
-    vectorHelper = "remove_swap";
-  }
-
-  if (vectorHelper.empty()) {
+  if (!resolveVectorMutatorName(stmt, vectorHelper)) {
     return VectorStatementHelperEmitResult::NotMatched;
   }
 
@@ -665,6 +710,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       }
       Expr methodStmt = stmt;
       methodStmt.isMethodCall = true;
+      methodStmt.name = vectorHelper;
       if (receiverIndex != 0) {
         std::swap(methodStmt.args[0], methodStmt.args[receiverIndex]);
         if (methodStmt.argNames.size() < methodStmt.args.size()) {
