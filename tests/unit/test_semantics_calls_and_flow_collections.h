@@ -2314,6 +2314,34 @@ TEST_CASE("vector helpers are statement-only in expressions") {
   }
 }
 
+TEST_CASE("vector helper expressions with named arguments stay statement-only") {
+  struct HelperCase {
+    const char *name;
+    const char *args;
+  };
+  const HelperCase helpers[] = {
+      {"push", "[values] values, [value] 2i32"},
+      {"pop", "[values] values"},
+      {"reserve", "[values] values, [capacity] 8i32"},
+      {"clear", "[values] values"},
+      {"remove_at", "[values] values, [index] 0i32"},
+      {"remove_swap", "[values] values, [index] 0i32"},
+  };
+  for (const auto &helper : helpers) {
+    CAPTURE(helper.name);
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32)}\n"
+        "  return(" +
+        std::string(helper.name) + "(" + helper.args + "))\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("only supported as a statement") != std::string::npos);
+  }
+}
+
 TEST_CASE("namespaced vector helper accepts statement form") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

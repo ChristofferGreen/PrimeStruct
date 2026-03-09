@@ -1379,10 +1379,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (defMap_.find(resolved) == defMap_.end()) {
-        if (hasNamedArguments(expr.argNames)) {
-          error_ = "named arguments not supported for builtin calls";
-          return false;
-        }
         error_ = vectorHelper + " is only supported as a statement";
         return false;
       }
