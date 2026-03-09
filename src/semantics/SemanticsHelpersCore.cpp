@@ -38,7 +38,7 @@ bool hasExplicitBindingTypeTransform(const Expr &expr) {
 bool isPrimitiveBindingTypeName(const std::string &name) {
   return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "float" || name == "f32" ||
          name == "f64" || name == "integer" || name == "decimal" || name == "complex" || name == "bool" ||
-         name == "string";
+         name == "string" || name == "auto";
 }
 
 bool isSoftwareNumericTypeName(const std::string &name) {

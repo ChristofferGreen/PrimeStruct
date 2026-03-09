@@ -440,7 +440,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (!parseBindingInfo(stmt, namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
       return false;
     }
-    if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1 && stmt.args.front().isLambda) {
+    const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
+    const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(info.typeName) == "auto";
+    if (stmt.args.size() == 1 && stmt.args.front().isLambda && (!hasExplicitType || explicitAutoType)) {
       info.typeName = "lambda";
       info.typeTemplateArg.clear();
     }
@@ -568,7 +570,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     error_ = "binding initializer requires a value";
     return false;
   }
-    if (!hasExplicitBindingTypeTransform(stmt)) {
+    if (!hasExplicitType || explicitAutoType) {
       (void)inferBindingTypeFromInitializer(initializer, params, locals, info);
     } else {
       const std::string expectedType = normalizeBindingTypeName(info.typeName);
@@ -1193,7 +1195,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           if (structIt != returnStructs_.end()) {
             std::string actualStruct = inferStructReturnPath(stmt.args.front(), params, locals);
             if (actualStruct.empty() || actualStruct != structIt->second) {
-              error_ = "return type mismatch: expected " + structIt->second;
+              std::string expectedType = structIt->second;
+              if (expectedType == "/array" || expectedType == "/vector" || expectedType == "/map" ||
+                  expectedType == "/string") {
+                expectedType.erase(0, 1);
+              }
+              error_ = "return type mismatch: expected " + expectedType;
               return false;
             }
           } else if (exprKind != ReturnKind::Array) {
@@ -1880,6 +1887,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   std::string vectorHelper;
   if (getVectorStatementHelperName(stmt, vectorHelper)) {
     std::string vectorHelperResolved = resolveCalleePath(stmt);
+    const bool isUserMethodTarget =
+        stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
+        vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
+    if (isUserMethodTarget) {
+      return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
+    }
     bool hasResolvedReceiverIndex = false;
     size_t resolvedReceiverIndex = 0;
     if (stmt.isMethodCall && !stmt.args.empty()) {

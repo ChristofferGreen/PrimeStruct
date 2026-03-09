@@ -2301,6 +2301,27 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct push helper assign to immutable field is rejected") {
+  const std::string source = R"(
+Counter {
+  [i32] value{0i32}
+  push([i32] next) {
+    assign(this.value, next)
+  }
+}
+
+[return<int>]
+main() {
+  [Counter mut] counter{Counter()}
+  counter.push(7i32)
+  return(counter.value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
+}
+
 TEST_CASE("struct push helper wrapper temporary statement call is not treated as builtin vector helper") {
   const std::string source = R"(
 Counter {

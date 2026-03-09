@@ -60,8 +60,8 @@ bool isNonTypeTransformName(const std::string &name) {
 }
 
 bool isBuiltinTemplateContainer(const std::string &name) {
-  return name == "array" || name == "vector" || name == "map" || name == "Result" || name == "File" ||
-         isBuiltinTemplateTypeName(name);
+  return name == "array" || name == "vector" || name == "soa_vector" || name == "map" || name == "Result" ||
+         name == "File" || isBuiltinTemplateTypeName(name);
 }
 
 bool isStructDefinition(const Definition &def) {
@@ -853,6 +853,8 @@ bool rewriteExpr(Expr &expr,
 
   if (!expr.isMethodCall) {
     std::string resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx);
+    std::string builtinCollectionName;
+    const bool builtinCollectionCall = getBuiltinCollectionName(expr, builtinCollectionName);
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
     const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
     if (isTemplateDef) {
@@ -890,7 +892,7 @@ bool rewriteExpr(Expr &expr,
         expr.name = specializedPath;
         expr.templateArgs.clear();
       }
-    } else if (isKnownDef && !expr.templateArgs.empty()) {
+    } else if (isKnownDef && !expr.templateArgs.empty() && !builtinCollectionCall) {
       error = "template arguments are only supported on templated definitions: " + resolvedPath;
       return false;
     }

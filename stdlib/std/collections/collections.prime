@@ -5,44 +5,44 @@ namespace std {
     return(vector<T>())
   }
 
-  [public return<vector<T>>]
+  [public effects(heap_alloc), return<vector<T>>]
   vectorSingle<T>([T] value) {
-    return(vector(value))
+    return(vector<T>(value))
   }
 
-  [public return<vector<T>>]
+  [public effects(heap_alloc), return<vector<T>>]
   vectorPair<T>([T] first, [T] second) {
-    return(vector(first, second))
+    return(vector<T>(first, second))
   }
 
-  [public return<vector<T>>]
+  [public effects(heap_alloc), return<vector<T>>]
   vectorTriple<T>([T] first, [T] second, [T] third) {
-    return(vector(first, second, third))
+    return(vector<T>(first, second, third))
   }
 
-  [public return<vector<T>>]
+  [public effects(heap_alloc), return<vector<T>>]
   vectorQuad<T>([T] first, [T] second, [T] third, [T] fourth) {
-    return(vector(first, second, third, fourth))
+    return(vector<T>(first, second, third, fourth))
   }
 
-  [public return<vector<T>>]
+  [public effects(heap_alloc), return<vector<T>>]
   vectorQuint<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth) {
-    return(vector(first, second, third, fourth, fifth))
+    return(vector<T>(first, second, third, fourth, fifth))
   }
 
-  [public return<vector<T>>]
+  [public effects(heap_alloc), return<vector<T>>]
   vectorSext<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth) {
-    return(vector(first, second, third, fourth, fifth, sixth))
+    return(vector<T>(first, second, third, fourth, fifth, sixth))
   }
 
-  [public return<vector<T>>]
+  [public effects(heap_alloc), return<vector<T>>]
   vectorSept<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth, [T] seventh) {
-    return(vector(first, second, third, fourth, fifth, sixth, seventh))
+    return(vector<T>(first, second, third, fourth, fifth, sixth, seventh))
   }
 
-  [public return<vector<T>>]
+  [public effects(heap_alloc), return<vector<T>>]
   vectorOct<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth, [T] seventh, [T] eighth) {
-    return(vector(first, second, third, fourth, fifth, sixth, seventh, eighth))
+    return(vector<T>(first, second, third, fourth, fifth, sixth, seventh, eighth))
   }
 
   [public return<i32>]
@@ -55,32 +55,32 @@ namespace std {
     return(capacity(values))
   }
 
-  [public return<void>]
+  [public effects(heap_alloc), return<void>]
   vectorPush<T>([vector<T> mut] values, [T] value) {
     push(values, value)
   }
 
-  [public return<void>]
+  [public effects(heap_alloc), return<void>]
   vectorPop<T>([vector<T> mut] values) {
     pop(values)
   }
 
-  [public return<void>]
+  [public effects(heap_alloc), return<void>]
   vectorReserve<T>([vector<T> mut] values, [i32] capacity) {
     reserve(values, capacity)
   }
 
-  [public return<void>]
+  [public effects(heap_alloc), return<void>]
   vectorClear<T>([vector<T> mut] values) {
     clear(values)
   }
 
-  [public return<void>]
+  [public effects(heap_alloc), return<void>]
   vectorRemoveAt<T>([vector<T> mut] values, [i32] index) {
     remove_at(values, index)
   }
 
-  [public return<void>]
+  [public effects(heap_alloc), return<void>]
   vectorRemoveSwap<T>([vector<T> mut] values, [i32] index) {
     remove_swap(values, index)
   }
@@ -102,12 +102,12 @@ namespace std {
 
   [public return<map<K, V>>]
   mapSingle<K, V>([K] key, [V] value) {
-    return(map(key, value))
+    return(map<K, V>(key, value))
   }
 
   [public return<map<K, V>>]
   mapDouble<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-    return(map(firstKey, firstValue, secondKey, secondValue))
+    return(map<K, V>(firstKey, firstValue, secondKey, secondValue))
   }
 
   [public return<map<K, V>>]
@@ -118,21 +118,21 @@ namespace std {
   [public return<map<K, V>>]
   mapTriple<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue) {
-    return(map(firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue))
+    return(map<K, V>(firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue))
   }
 
   [public return<map<K, V>>]
   mapQuad<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue) {
-    return(map(firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue))
+    return(map<K, V>(firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue))
   }
 
   [public return<map<K, V>>]
   mapQuint<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue) {
-    return(map(
+    return(map<K, V>(
         firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
         fifthValue))
   }
@@ -141,7 +141,7 @@ namespace std {
   mapSext<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue) {
-    return(map(
+    return(map<K, V>(
         firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
         fifthValue, sixthKey, sixthValue))
   }
@@ -150,7 +150,7 @@ namespace std {
   mapSept<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey, [V] seventhValue) {
-    return(map(
+    return(map<K, V>(
         firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
         fifthValue, sixthKey, sixthValue, seventhKey, seventhValue))
   }
@@ -160,7 +160,7 @@ namespace std {
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey, [V] seventhValue,
       [K] eighthKey, [V] eighthValue) {
-    return(map(
+    return(map<K, V>(
         firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
         fifthValue, sixthKey, sixthValue, seventhKey, seventhValue, eighthKey, eighthValue))
   }

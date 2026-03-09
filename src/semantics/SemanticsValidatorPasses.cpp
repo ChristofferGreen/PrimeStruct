@@ -213,6 +213,9 @@ bool SemanticsValidator::validateDefinitions() {
     if (expr.isMethodCall) {
       return false;
     }
+    if (isRootBuiltinName(expr.name)) {
+      return true;
+    }
     if (isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
         isRepeatCall(expr) || isReturnCall(expr) || isBlockCall(expr)) {
       return true;
@@ -315,7 +318,7 @@ bool SemanticsValidator::validateDefinitions() {
         ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
         if (expectedKind != ReturnKind::Unknown) {
           ReturnKind actualKind = inferExprReturnKind(*arg, definitionParams, definitionLocals);
-          if (actualKind == ReturnKind::Unknown || actualKind == expectedKind) {
+          if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array || actualKind == expectedKind) {
             continue;
           }
           const std::string expectedName = typeNameForReturnKind(expectedKind);
@@ -367,7 +370,7 @@ bool SemanticsValidator::validateDefinitions() {
           }
           effectScope.emplace(*this, std::move(executionEffects));
         }
-        if (!expr.name.empty() && !isBuiltinCall(expr)) {
+        if (!expr.isBinding && !expr.name.empty() && !isBuiltinCall(expr)) {
           const std::string resolved = resolveCalleePath(expr);
           if (defMap_.count(resolved) == 0) {
             appendDefinitionRecord(expr, "unknown call target: " + expr.name);
@@ -481,7 +484,7 @@ bool SemanticsValidator::validateDefinitions() {
       bool allPathsReturn = blockAlwaysReturns(def.statements);
       if (!allPathsReturn) {
         if (sawReturn) {
-          error_ = "not all control paths return in " + def.fullPath;
+          error_ = "not all control paths return in " + def.fullPath + " (missing return statement)";
         } else {
           error_ = "missing return statement in " + def.fullPath;
         }
@@ -1215,6 +1218,9 @@ bool SemanticsValidator::validateExecutions() {
     if (expr.isMethodCall) {
       return false;
     }
+    if (isRootBuiltinName(expr.name)) {
+      return true;
+    }
     if (isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
         isRepeatCall(expr) || isReturnCall(expr) || isBlockCall(expr)) {
       return true;
@@ -1313,7 +1319,7 @@ bool SemanticsValidator::validateExecutions() {
         ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
         if (expectedKind != ReturnKind::Unknown) {
           ReturnKind actualKind = inferExprReturnKind(*arg, executionParams, executionLocals);
-          if (actualKind == ReturnKind::Unknown || actualKind == expectedKind) {
+          if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array || actualKind == expectedKind) {
             continue;
           }
           const std::string expectedName = typeNameForReturnKind(expectedKind);
@@ -1365,7 +1371,7 @@ bool SemanticsValidator::validateExecutions() {
           }
           effectScope.emplace(*this, std::move(executionEffects));
         }
-        if (!expr.name.empty() && !isBuiltinCall(expr)) {
+        if (!expr.isBinding && !expr.name.empty() && !isBuiltinCall(expr)) {
           const std::string resolved = resolveCalleePath(expr);
           if (defMap_.count(resolved) == 0) {
             appendExecutionRecord(expr, "unknown call target: " + expr.name);

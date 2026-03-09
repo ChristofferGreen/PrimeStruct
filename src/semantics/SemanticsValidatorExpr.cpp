@@ -1292,9 +1292,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    bool hasVectorHelperCallResolution = false;
+    std::string vectorHelperCallResolvedPath;
+    size_t vectorHelperCallReceiverIndex = 0;
     std::string vectorHelper;
     if (getVectorStatementHelperName(expr, vectorHelper)) {
       std::string resolved = resolveCalleePath(expr);
+      size_t resolvedReceiverIndex = 0;
       if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
         auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
           if (candidate.kind != Expr::Kind::Name) {
@@ -1369,14 +1373,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           if (defMap_.count(methodTarget) > 0) {
             resolved = methodTarget;
+            resolvedReceiverIndex = receiverIndex;
             break;
           }
         }
       }
       if (defMap_.find(resolved) == defMap_.end()) {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
         error_ = vectorHelper + " is only supported as a statement";
         return false;
       }
+      hasVectorHelperCallResolution = true;
+      vectorHelperCallResolvedPath = resolved;
+      vectorHelperCallReceiverIndex = resolvedReceiverIndex;
     }
     if (isReturnCall(expr)) {
       error_ = "return not allowed in expression context";
@@ -1421,6 +1433,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           typePathOut = normalized;
           return true;
         }
+        return false;
       }
       auto kindIt = returnKinds_.find(resolvedTarget);
       if (kindIt != returnKinds_.end()) {
@@ -1943,6 +1956,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (typeName.empty()) {
+        std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
+        if (!inferredStruct.empty()) {
+          typeName = inferredStruct;
+        }
+      }
+      if (typeName.empty()) {
         ReturnKind inferredKind = inferExprReturnKind(receiver, params, locals);
         std::string inferred;
         if (inferredKind == ReturnKind::Array) {
@@ -2188,6 +2207,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     bool usedMethodTarget = false;
     bool hasMethodReceiverIndex = false;
     size_t methodReceiverIndex = 0;
+    if (hasVectorHelperCallResolution) {
+      resolved = vectorHelperCallResolvedPath;
+      usedMethodTarget = true;
+      hasMethodReceiverIndex = true;
+      methodReceiverIndex = vectorHelperCallReceiverIndex;
+    }
     auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {
       std::string elemType;
       return resolveVectorTarget(targetExpr, elemType) || resolveArrayTarget(targetExpr, elemType) ||
@@ -2414,6 +2439,35 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         methodReceiverIndex = receiverIndex;
         break;
       }
+      if (!hasMethodReceiverIndex &&
+          (expr.args.front().kind == Expr::Kind::Name || expr.args.front().kind == Expr::Kind::Call)) {
+        bool isBuiltinMethod = false;
+        std::string methodResolved;
+        if (resolveMethodTarget(expr.args.front(), expr.name, methodResolved, isBuiltinMethod)) {
+          if (isBuiltinMethod) {
+            usedMethodTarget = true;
+            hasMethodReceiverIndex = true;
+            methodReceiverIndex = 0;
+            resolved = methodResolved;
+            resolvedMethod = true;
+          } else {
+            const size_t methodSlash = methodResolved.find_last_of('/');
+            const bool hasStructReceiver = methodSlash != std::string::npos && methodSlash > 0 &&
+                                           structNames_.count(methodResolved.substr(0, methodSlash)) > 0;
+            if (hasStructReceiver) {
+              usedMethodTarget = true;
+              hasMethodReceiverIndex = true;
+              methodReceiverIndex = 0;
+              if (defMap_.find(methodResolved) == defMap_.end()) {
+                error_ = "unknown method: " + methodResolved;
+                return false;
+              }
+              resolved = methodResolved;
+              resolvedMethod = false;
+            }
+          }
+        }
+      }
     } else if ((expr.name == "get" || expr.name == "ref") && expr.args.size() == 2 &&
                defMap_.find(resolved) == defMap_.end()) {
       std::vector<size_t> receiverIndices;
@@ -2448,6 +2502,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       for (size_t receiverIndex : receiverIndices) {
         const Expr &receiverCandidate = expr.args[receiverIndex];
+        std::string methodTarget;
+        if (resolveVectorHelperMethodTarget(receiverCandidate, expr.name, methodTarget)) {
+          if (defMap_.count(methodTarget) == 0 && methodTarget.rfind("/array/", 0) == 0) {
+            const std::string vectorAlias = "/vector/" + methodTarget.substr(std::string("/array/").size());
+            if (defMap_.count(vectorAlias) > 0) {
+              methodTarget = vectorAlias;
+            }
+          }
+          if (defMap_.count(methodTarget) > 0) {
+            usedMethodTarget = true;
+            resolved = methodTarget;
+            resolvedMethod = false;
+            hasMethodReceiverIndex = true;
+            methodReceiverIndex = receiverIndex;
+            break;
+          }
+        }
         std::string elemType;
         if (!resolveSoaVectorTarget(receiverCandidate, elemType)) {
           continue;
@@ -3162,6 +3233,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           return true;
         }
+      }
+      if (hasNamedArguments(expr.argNames) && resolvedMethod) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
       }
       if (hasNamedArguments(expr.argNames)) {
         std::string builtinName;
@@ -4552,6 +4627,30 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           if (hasActiveBorrowForBinding(target.name)) {
             formatBorrowedBindingError(target.name, target.name);
+            return false;
+          }
+        } else if (target.kind == Expr::Kind::Call && target.isFieldAccess) {
+          if (target.args.size() != 1) {
+            error_ = "assign target must be a mutable binding";
+            return false;
+          }
+          if (!validateExpr(params, locals, target.args.front())) {
+            return false;
+          }
+          BindingInfo fieldBinding;
+          if (!resolveStructFieldBinding(target.args.front(), target.name, fieldBinding)) {
+            if (error_.empty()) {
+              error_ = "assign target must be a mutable binding";
+            }
+            return false;
+          }
+          if (!fieldBinding.isMutable) {
+            error_ = "assign target must be a mutable binding";
+            return false;
+          }
+          if (target.args.front().kind == Expr::Kind::Name &&
+              hasActiveBorrowForBinding(target.args.front().name)) {
+            formatBorrowedBindingError(target.args.front().name, target.args.front().name);
             return false;
           }
         } else if (target.kind == Expr::Kind::Call) {
