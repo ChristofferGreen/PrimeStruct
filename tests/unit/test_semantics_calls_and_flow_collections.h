@@ -2314,6 +2314,34 @@ TEST_CASE("vector helpers are statement-only in expressions") {
   }
 }
 
+TEST_CASE("vector helper named args on array targets report vector binding") {
+  const auto checkInvalidStatement = [](const std::string &stmtText) {
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [array<i32> mut] values{array<i32>(1i32, 2i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("requires vector binding") != std::string::npos);
+  };
+
+  checkInvalidStatement("push([values] values, [value] 3i32)");
+  checkInvalidStatement("reserve([values] values, [capacity] 8i32)");
+  checkInvalidStatement("remove_at([values] values, [index] 0i32)");
+  checkInvalidStatement("remove_swap([values] values, [index] 0i32)");
+  checkInvalidStatement("pop([values] values)");
+  checkInvalidStatement("clear([values] values)");
+  checkInvalidStatement("values.push([value] 3i32)");
+  checkInvalidStatement("values.reserve([capacity] 8i32)");
+  checkInvalidStatement("values.remove_at([index] 0i32)");
+  checkInvalidStatement("values.remove_swap([index] 0i32)");
+}
+
 TEST_CASE("vector helper expressions with named arguments stay statement-only") {
   struct HelperCase {
     const char *name;

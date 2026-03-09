@@ -2017,7 +2017,34 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return validateExpr(params, locals, helperCall, enclosingStatements, statementIndex);
     }
     if (defMap_.find(vectorHelperResolved) == defMap_.end()) {
+      auto validateBuiltinNamedReceiverShape = [&](const std::string &helperName) -> bool {
+        if (!hasNamedArguments(stmt.argNames) || stmt.args.empty()) {
+          return true;
+        }
+        size_t receiverIndex = 0;
+        for (size_t i = 0; i < stmt.args.size(); ++i) {
+          if (i < stmt.argNames.size() && stmt.argNames[i].has_value() &&
+              *stmt.argNames[i] == "values") {
+            receiverIndex = i;
+            break;
+          }
+        }
+        if (receiverIndex >= stmt.args.size()) {
+          receiverIndex = 0;
+        }
+        if (!validateVectorHelperReceiver(stmt.args[receiverIndex], helperName)) {
+          return false;
+        }
+        const BindingInfo *binding = nullptr;
+        if (!validateVectorHelperTarget(stmt.args[receiverIndex], helperName.c_str(), binding)) {
+          return false;
+        }
+        return true;
+      };
       if (hasNamedArguments(stmt.argNames)) {
+        if (!validateBuiltinNamedReceiverShape(vectorHelper)) {
+          return false;
+        }
         error_ = "named arguments not supported for builtin calls";
         return false;
       }
