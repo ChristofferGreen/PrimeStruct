@@ -138,6 +138,29 @@ main() {
   CHECK(runCommand(runCmd) == 90);
 }
 
+TEST_CASE("runs vm with array alias templated forwarding to canonical vector helper") {
+  const std::string source = R"(
+[return<int>]
+/array/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/array/count<i32>(values, true))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_alias_templated_vector_forwarding.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 90);
+}
+
 TEST_CASE("runs vm with vector alias templated forwarding past non-templated compatibility helper") {
   const std::string source = R"(
 [return<int>]

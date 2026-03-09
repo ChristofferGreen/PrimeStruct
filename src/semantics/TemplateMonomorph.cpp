@@ -337,6 +337,18 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
 }
 
 std::string preferVectorStdlibTemplatePath(const std::string &path, const Context &ctx) {
+  if (path.rfind("/array/", 0) == 0) {
+    const std::string suffix = path.substr(std::string("/array/").size());
+    const std::string stdlibPath = "/std/collections/vector/" + suffix;
+    if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
+      return stdlibPath;
+    }
+    const std::string vectorPath = "/vector/" + suffix;
+    if (ctx.sourceDefs.count(vectorPath) > 0 && ctx.templateDefs.count(vectorPath) > 0) {
+      return vectorPath;
+    }
+    return path;
+  }
   if (path.rfind("/vector/", 0) != 0) {
     return path;
   }
