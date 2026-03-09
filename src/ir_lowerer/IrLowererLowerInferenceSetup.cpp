@@ -590,7 +590,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
   const auto resolveExprPath = input.resolveExprPath;
   const auto isArrayCountCall = input.isArrayCountCall;
   const auto isStringCountCall = input.isStringCountCall;
-  auto isNamespacedVectorReceiverProbeCall = [](const Expr &candidate) {
+  auto isNamespacedCollectionReceiverProbeCall = [](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
@@ -607,11 +607,16 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
         normalizedName != "vector/reserve" && normalizedName != "std/collections/vector/reserve" &&
         normalizedName != "vector/clear" && normalizedName != "std/collections/vector/clear" &&
         normalizedName != "vector/remove_at" && normalizedName != "std/collections/vector/remove_at" &&
-        normalizedName != "vector/remove_swap" && normalizedName != "std/collections/vector/remove_swap") {
+        normalizedName != "vector/remove_swap" && normalizedName != "std/collections/vector/remove_swap" &&
+        normalizedName != "map/count" && normalizedName != "std/collections/map/count" &&
+        normalizedName != "map/at" && normalizedName != "std/collections/map/at" &&
+        normalizedName != "map/at_unsafe" && normalizedName != "std/collections/map/at_unsafe") {
       return false;
     }
     if (normalizedName == "vector/at" || normalizedName == "std/collections/vector/at" ||
-        normalizedName == "vector/at_unsafe" || normalizedName == "std/collections/vector/at_unsafe") {
+        normalizedName == "vector/at_unsafe" || normalizedName == "std/collections/vector/at_unsafe" ||
+        normalizedName == "map/at" || normalizedName == "std/collections/map/at" ||
+        normalizedName == "map/at_unsafe" || normalizedName == "std/collections/map/at_unsafe") {
       return candidate.args.size() == 2;
     }
     if (normalizedName == "vector/push" || normalizedName == "std/collections/vector/push" ||
@@ -641,14 +646,14 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
       [isArrayCountCall,
        isStringCountCall,
        &stateInOut,
-       isNamespacedVectorReceiverProbeCall,
+       isNamespacedCollectionReceiverProbeCall,
        resolveDefinitionCallReturnKindForCandidate](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         return resolveCallExpressionReturnKind(
             expr,
             localsIn,
             [&](const Expr &candidate, const LocalMap &, LocalInfo::ValueKind &candidateKindOut, bool &matchedOut) {
-              if (isNamespacedVectorReceiverProbeCall(candidate)) {
+              if (isNamespacedCollectionReceiverProbeCall(candidate)) {
                 matchedOut = false;
                 return false;
               }
