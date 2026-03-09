@@ -631,6 +631,12 @@ bool resolveMethodCallPath(const Expr &call,
         if (isMapCountCall(expr, localTypes)) {
           return "i32";
         }
+        if (isStringCountCall(expr, localTypes)) {
+          return "i32";
+        }
+        if (isVectorCapacityCall(expr, localTypes)) {
+          return "i32";
+        }
         if (!expr.isMethodCall) {
           const std::string resolved = resolveExprPath(expr);
           auto structIt = returnStructs.find(resolved);

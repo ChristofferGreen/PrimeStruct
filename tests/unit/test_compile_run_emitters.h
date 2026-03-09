@@ -2328,6 +2328,61 @@ main() {
   CHECK(output.find("ps_vector_capacity(ps_wrapVector())") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps namespaced count capacity method chain fallback") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [string] text{"abc"raw_utf8}
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(plus(/std/collections/vector/count(text).tag(),
+              /vector/capacity(values).tag()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_namespaced_count_capacity_method_chain_fallback.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_namespaced_count_capacity_method_chain_fallback.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_i32_tag(ps_string_count(") != std::string::npos);
+  CHECK(output.find("ps_i32_tag(ps_vector_capacity(") != std::string::npos);
+}
+
+TEST_CASE("rejects namespaced map capacity method chain target in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/vector/capacity(values).tag())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_namespaced_map_capacity_method_chain_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_namespaced_map_capacity_method_chain_reject.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+}
+
 TEST_CASE("rejects wrapper map capacity target in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
