@@ -2367,9 +2367,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
         isNamespacedVectorHelperCall(expr);
-    const bool isBuiltinAccessCall =
-        !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName) && expr.args.size() == 2;
-    const bool isNamespacedVectorAccessCall = isBuiltinAccessCall && isNamespacedVectorHelperCall(expr);
+    const bool isBuiltinAccessName =
+        !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
+    const bool isNamespacedVectorAccessCall = isBuiltinAccessName && isNamespacedVectorHelperCall(expr);
     if (expr.isMethodCall) {
       if (!hasVectorHelperCallResolution) {
         if (expr.args.empty()) {
@@ -2437,7 +2437,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (isBuiltinAccessCall &&
+    } else if (isBuiltinAccessName &&
                (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorAccessCall)) {
       std::vector<size_t> receiverIndices;
       auto appendReceiverIndex = [&](size_t index) {
@@ -2525,7 +2525,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         methodReceiverIndex = receiverIndex;
         break;
       }
-      if (!hasMethodReceiverIndex &&
+      if (!hasMethodReceiverIndex && !expr.args.empty() &&
           (expr.args.front().kind == Expr::Kind::Name || expr.args.front().kind == Expr::Kind::Call)) {
         bool isBuiltinMethod = false;
         std::string methodResolved;
