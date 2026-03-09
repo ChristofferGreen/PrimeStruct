@@ -8,6 +8,39 @@
 
 namespace primec::emitter {
 
+namespace {
+
+bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(0, 1);
+  }
+  const std::string vectorPrefix = "vector/";
+  const std::string stdVectorPrefix = "std/collections/vector/";
+  if (normalized.rfind(vectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(vectorPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    return true;
+  }
+  return false;
+}
+
+bool isVectorBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+} // namespace
+
 std::optional<std::string> runEmitterExprControlCountRewriteStep(
     const Expr &expr,
     const std::string &resolvedPath,
@@ -25,10 +58,10 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
   if (expr.isMethodCall || nameMap.count(resolvedPath) != 0) {
     return std::nullopt;
   }
-  const bool isCountLikeCall = isSimpleCallName(expr, "count") && expr.args.size() == 1;
-  const bool isCapacityLikeCall = isSimpleCallName(expr, "capacity") && expr.args.size() == 1;
+  const bool isCountLikeCall = isVectorBuiltinName(expr, "count") && expr.args.size() == 1;
+  const bool isCapacityLikeCall = isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1;
   const bool isAccessLikeCall =
-      (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe")) && expr.args.size() == 2;
+      (isVectorBuiltinName(expr, "at") || isVectorBuiltinName(expr, "at_unsafe")) && expr.args.size() == 2;
   if (!isCountLikeCall && !isCapacityLikeCall && !isAccessLikeCall) {
     return std::nullopt;
   }
@@ -84,6 +117,10 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
   for (size_t receiverIndex : receiverIndices) {
     Expr methodExpr = expr;
     methodExpr.isMethodCall = true;
+    std::string normalizedHelperName;
+    if (resolveVectorHelperAliasName(methodExpr, normalizedHelperName)) {
+      methodExpr.name = normalizedHelperName;
+    }
     if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
       std::swap(methodExpr.args[0], methodExpr.args[receiverIndex]);
       if (methodExpr.argNames.size() < methodExpr.args.size()) {

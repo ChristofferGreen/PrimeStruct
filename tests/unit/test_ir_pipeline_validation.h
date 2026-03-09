@@ -3888,6 +3888,50 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   CHECK(*countLikeResolvedPath == "/Vec3/count");
   CHECK(resolverCalled);
 
+  primec::Expr aliasCountExpr = countExpr;
+  aliasCountExpr.name = "/std/collections/vector/count";
+  int aliasCountResolveCalls = 0;
+  auto aliasCountResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      aliasCountExpr,
+      "/std/collections/vector/count",
+      {},
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        ++aliasCountResolveCalls;
+        CHECK(methodCandidate.isMethodCall);
+        CHECK(methodCandidate.name == "count");
+        pathOut = "/vector/count";
+        return true;
+      });
+  REQUIRE(aliasCountResolvedPath.has_value());
+  CHECK(*aliasCountResolvedPath == "/vector/count");
+  CHECK(aliasCountResolveCalls == 1);
+
+  primec::Expr aliasCapacityExpr = countExpr;
+  aliasCapacityExpr.name = "/vector/capacity";
+  int aliasCapacityResolveCalls = 0;
+  auto aliasCapacityResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      aliasCapacityExpr,
+      "/vector/capacity",
+      {},
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        ++aliasCapacityResolveCalls;
+        CHECK(methodCandidate.isMethodCall);
+        CHECK(methodCandidate.name == "capacity");
+        pathOut = "/vector/capacity";
+        return true;
+      });
+  REQUIRE(aliasCapacityResolvedPath.has_value());
+  CHECK(*aliasCapacityResolvedPath == "/vector/capacity");
+  CHECK(aliasCapacityResolveCalls == 1);
+
   primec::Expr accessExpr = wrongArityExpr;
   accessExpr.name = "at";
   accessExpr.args = {primec::Expr{}, primec::Expr{}};
@@ -3923,6 +3967,28 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   CHECK(*accessResolvedPath == "/vector/at");
   CHECK(sawReorderedReceiver);
   CHECK(accessResolveCalls == 1);
+
+  primec::Expr aliasAccessExpr = accessExpr;
+  aliasAccessExpr.name = "/std/collections/vector/at";
+  int aliasAccessResolveCalls = 0;
+  auto aliasAccessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      aliasAccessExpr,
+      "/std/collections/vector/at",
+      {},
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        ++aliasAccessResolveCalls;
+        CHECK(methodCandidate.isMethodCall);
+        CHECK(methodCandidate.name == "at");
+        pathOut = "/vector/at";
+        return true;
+      });
+  REQUIRE(aliasAccessResolvedPath.has_value());
+  CHECK(*aliasAccessResolvedPath == "/vector/at");
+  CHECK(aliasAccessResolveCalls == 1);
 
   int labeledAccessResolveCalls = 0;
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
