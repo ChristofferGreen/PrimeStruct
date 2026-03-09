@@ -2208,7 +2208,8 @@ TEST_CASE("array literal requires exactly one template argument") {
       "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {arrayCall})}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("array literal requires exactly one template argument") != std::string::npos);
+  CHECK(error.find("array<T, N> is unsupported; use array<T> (runtime-count array)") !=
+        std::string::npos);
 }
 
 TEST_CASE("if expression blocks require a value expression") {

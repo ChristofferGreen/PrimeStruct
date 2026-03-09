@@ -102,6 +102,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("software numeric parameter rejects non-numeric argument") {
+  const std::string source = R"(
+[return<int>]
+add([complex] value) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(add("bad"raw_utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /add parameter value: expected complex") != std::string::npos);
+}
+
 TEST_CASE("parameter default vector literal requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]

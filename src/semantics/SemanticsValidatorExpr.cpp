@@ -4957,6 +4957,25 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto isStringTypeName = [](const std::string &typeName) {
       return normalizeBindingTypeName(typeName) == "string";
     };
+    auto isSoftwareNumericParamCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {
+      switch (expectedKind) {
+        case ReturnKind::Integer:
+          return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+                 actualKind == ReturnKind::Bool || actualKind == ReturnKind::Integer;
+        case ReturnKind::Decimal:
+          return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+                 actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 ||
+                 actualKind == ReturnKind::Float64 || actualKind == ReturnKind::Integer ||
+                 actualKind == ReturnKind::Decimal;
+        case ReturnKind::Complex:
+          return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+                 actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 ||
+                 actualKind == ReturnKind::Float64 || actualKind == ReturnKind::Integer ||
+                 actualKind == ReturnKind::Decimal || actualKind == ReturnKind::Complex;
+        default:
+          return false;
+      }
+    };
     auto isBuiltinCollectionLiteralExpr = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call) {
         return false;
@@ -4993,6 +5012,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (expectedKind != ReturnKind::Unknown) {
         const ReturnKind actualKind = inferExprReturnKind(*arg, params, locals);
         if (actualKind == ReturnKind::Array && isBuiltinCollectionLiteralExpr(*arg)) {
+          continue;
+        }
+        if (isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
           continue;
         }
         if (actualKind != ReturnKind::Unknown && actualKind != expectedKind) {
