@@ -969,6 +969,46 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
+TEST_CASE("C++ emitter keeps stdlib namespaced vector access builtin fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(plus(/std/collections/vector/at(values, 0i32),
+              /std/collections/vector/at_unsafe(values, 1i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_access_fallback.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_stdlib_namespaced_vector_access_fallback.cpp")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_array_at(") != std::string::npos);
+  CHECK(output.find("ps_array_at_unsafe(") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter routes stdlib namespaced vector at map target to map helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/vector/at(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_at_map_helper.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_stdlib_namespaced_vector_at_map_helper.cpp")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_map_at(") != std::string::npos);
+}
+
 TEST_CASE("rejects stdlib namespaced vector capacity on map target in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

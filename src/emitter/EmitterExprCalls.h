@@ -511,7 +511,7 @@
           << ")";
       return out.str();
     }
-    if (expr.name == "at" && expr.args.size() == 2) {
+    if (isSimpleCallName(expr, "at") && expr.args.size() == 2) {
       std::ostringstream out;
       const size_t receiverIndex = pickAccessReceiverIndex();
       const size_t indexIndex = receiverIndex == 0 ? 1 : 0;
@@ -564,7 +564,7 @@
       }
       return out.str();
     }
-    if (expr.name == "at_unsafe" && expr.args.size() == 2) {
+    if (isSimpleCallName(expr, "at_unsafe") && expr.args.size() == 2) {
       std::ostringstream out;
       const size_t receiverIndex = pickAccessReceiverIndex();
       const size_t indexIndex = receiverIndex == 0 ? 1 : 0;
