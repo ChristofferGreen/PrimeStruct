@@ -2783,6 +2783,45 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib canonical map count method auto inference falls back to canonical helper return") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map count method auto inference keeps return mismatch diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected int") != std::string::npos);
+}
+
 TEST_CASE("stdlib canonical vector helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]

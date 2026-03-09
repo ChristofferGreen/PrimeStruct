@@ -1130,10 +1130,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         resolved = "/string/count";
         hasResolvedPath = true;
       } else if (resolveMapTarget(expr.args.front(), keyType, valueType)) {
-        if (defMap_.find("/map/count") == defMap_.end()) {
+        const std::string methodPath = preferVectorStdlibHelperPath("/map/count");
+        if (defMap_.find(methodPath) == defMap_.end()) {
           return ReturnKind::Int;
         }
-        resolved = "/map/count";
+        resolved = methodPath;
         hasResolvedPath = true;
       }
     }
