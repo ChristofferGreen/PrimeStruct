@@ -12807,6 +12807,32 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(aliasCountResolveCalls == 1);
   CHECK(aliasCountEmitCalls == 1);
 
+  primec::Expr aliasMapCountCall = countCall;
+  aliasMapCountCall.name = "/std/collections/map/count";
+  int aliasMapCountResolveCalls = 0;
+  int aliasMapCountEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            aliasMapCountCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++aliasMapCountResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "count");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++aliasMapCountEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "count");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(aliasMapCountResolveCalls == 1);
+  CHECK(aliasMapCountEmitCalls == 1);
+
   primec::Expr capacityCall;
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
@@ -12894,6 +12920,32 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(error.empty());
   CHECK(canonicalAtResolveCalls == 1);
   CHECK(canonicalAtEmitCalls == 1);
+
+  primec::Expr aliasMapAtCall = atCall;
+  aliasMapAtCall.name = "/map/at";
+  int aliasMapAtResolveCalls = 0;
+  int aliasMapAtEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            aliasMapAtCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++aliasMapAtResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++aliasMapAtEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(aliasMapAtResolveCalls == 1);
+  CHECK(aliasMapAtEmitCalls == 1);
 
   primec::Expr reorderedAtCall = atCall;
   reorderedAtCall.args = {indexArg, targetArg};
@@ -13125,6 +13177,39 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(error.empty());
   CHECK(reorderedAtUnsafeStringResolveCalls == 2);
   CHECK(reorderedAtUnsafeStringEmitCalls == 1);
+
+  primec::Expr canonicalMapAtUnsafeCall = reorderedAtUnsafeStringCall;
+  canonicalMapAtUnsafeCall.name = "/std/collections/map/at_unsafe";
+  int canonicalMapAtUnsafeResolveCalls = 0;
+  int canonicalMapAtUnsafeEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            canonicalMapAtUnsafeCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++canonicalMapAtUnsafeResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at_unsafe");
+              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+                  methodExpr.args.front().name == "items") {
+                return &callee;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++canonicalMapAtUnsafeEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at_unsafe");
+              REQUIRE_FALSE(methodExpr.args.empty());
+              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(methodExpr.args.front().name == "items");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(canonicalMapAtUnsafeResolveCalls == 2);
+  CHECK(canonicalMapAtUnsafeEmitCalls == 1);
 
   primec::Expr tempReceiver;
   tempReceiver.kind = primec::Expr::Kind::Call;

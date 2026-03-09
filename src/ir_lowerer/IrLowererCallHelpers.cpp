@@ -1679,12 +1679,14 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     std::string &error,
     std::function<bool(const Expr &)> isCollectionAccessReceiverExpr) {
   std::string normalizedVectorHelperName;
+  std::string normalizedMapHelperName;
   const bool hasVectorHelperAlias = resolveVectorHelperAliasName(expr, normalizedVectorHelperName);
-  const bool isCountCall = isVectorBuiltinName(expr, "count");
+  const bool hasMapHelperAlias = resolveMapHelperAliasName(expr, normalizedMapHelperName);
+  const bool isCountCall = isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count");
   const bool isCapacityCall = isVectorBuiltinName(expr, "capacity");
-  const bool isAccessCall =
-      isVectorBuiltinName(expr, "at") || isVectorBuiltinName(expr, "at_unsafe") ||
-      isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref");
+  std::string accessName;
+  const bool isCollectionAccessCall = getBuiltinArrayAccessName(expr, accessName);
+  const bool isAccessCall = isCollectionAccessCall || isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref");
   const bool isVectorMutatorCall =
       isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "pop") || isVectorBuiltinName(expr, "reserve") ||
       isVectorBuiltinName(expr, "clear") || isVectorBuiltinName(expr, "remove_at") ||
@@ -1721,6 +1723,8 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     methodExpr.isMethodCall = true;
     if (hasVectorHelperAlias) {
       methodExpr.name = normalizedVectorHelperName;
+    } else if (hasMapHelperAlias) {
+      methodExpr.name = normalizedMapHelperName;
     }
     if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
       std::swap(methodExpr.args[0], methodExpr.args[receiverIndex]);
