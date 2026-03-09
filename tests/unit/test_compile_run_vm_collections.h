@@ -64,6 +64,23 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
+TEST_CASE("runs vm with vector namespaced count capacity access aliases") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  [i32] c{/vector/count(values)}
+  [i32] k{/vector/capacity(values)}
+  [i32] first{/vector/at(values, 0i32)}
+  [i32] second{/vector/at_unsafe(values, 1i32)}
+  return(plus(plus(c, k), plus(first, second)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_namespaced_count_access_aliases.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 13);
+}
+
 TEST_CASE("runs vm with collection bracket literals") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

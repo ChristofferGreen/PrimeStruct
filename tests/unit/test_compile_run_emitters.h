@@ -969,6 +969,27 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
+TEST_CASE("compiles and runs vector namespaced count capacity access aliases in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  [i32] c{/vector/count(values)}
+  [i32] k{/vector/capacity(values)}
+  [i32] first{/vector/at(values, 0i32)}
+  [i32] second{/vector/at_unsafe(values, 1i32)}
+  return(plus(plus(c, k), plus(first, second)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_count_access_aliases.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_access_aliases_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 13);
+}
+
 TEST_CASE("C++ emitter emits builtin statement for stdlib namespaced vector mutator") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

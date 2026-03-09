@@ -765,6 +765,14 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
+  if (name.rfind("vector/", 0) == 0) {
+    std::string alias = name.substr(std::string("vector/").size());
+    if (alias == "vector") {
+      out = "vector";
+      return true;
+    }
+    return false;
+  }
   if (name.rfind("std/collections/vector/", 0) == 0) {
     std::string alias = name.substr(std::string("std/collections/vector/").size());
     if (alias == "vector") {
@@ -790,6 +798,14 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
+  }
+  if (name.rfind("vector/", 0) == 0) {
+    std::string alias = name.substr(std::string("vector/").size());
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
   }
   if (name.rfind("std/collections/vector/", 0) == 0) {
     std::string alias = name.substr(std::string("std/collections/vector/").size());
@@ -891,6 +907,15 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   }
   if (name.rfind("std/gpu/", 0) == 0) {
     name.erase(0, 8);
+  }
+  if (name.rfind("vector/", 0) == 0) {
+    std::string alias = name.substr(std::string("vector/").size());
+    if (alias.find('/') == std::string::npos &&
+        (alias == "vector" || alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" ||
+         alias == "push" || alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||
+         alias == "remove_swap")) {
+      return alias == targetName;
+    }
   }
   if (name.rfind("std/collections/vector/", 0) == 0) {
     std::string alias = name.substr(std::string("std/collections/vector/").size());

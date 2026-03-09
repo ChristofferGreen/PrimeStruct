@@ -2530,6 +2530,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector namespaced access and count helpers are builtin-alias validated") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 5i32)}
+  [i32] c{/vector/count(values)}
+  [i32] k{/vector/capacity(values)}
+  [i32] first{/vector/at(values, 0i32)}
+  [i32] second{/vector/at_unsafe(values, 1i32)}
+  return(plus(plus(c, k), plus(first, second)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced vector access helper rejects named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -2543,12 +2560,38 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced access helper rejects named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/vector/at([values] values, [index] 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector capacity keeps non-vector target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(/std/collections/vector/capacity(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity keeps non-vector target diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/vector/capacity(values))
 }
 )";
   std::string error;
