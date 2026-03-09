@@ -413,6 +413,11 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (typeName.empty()) {
     return false;
   }
+  std::string typeBase;
+  std::string typeArgText;
+  if (splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty()) {
+    typeName = typeBase;
+  }
   if (isPrimitiveBindingTypeName(typeName)) {
     pathOut = "/" + normalizeBindingTypeName(typeName) + "/" + expr.name;
     return true;

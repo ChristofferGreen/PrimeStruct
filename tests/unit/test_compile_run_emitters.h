@@ -1076,6 +1076,39 @@ main() {
   CHECK(runCommand(exePath) == 90);
 }
 
+TEST_CASE("compiles and runs wrapper temporary templated vector method canonical forwarding in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapValues() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapValues().count<i32>(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_temp_templated_vector_method_canonical_forwarding.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_temp_templated_vector_method_canonical_forwarding_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 90);
+}
+
 TEST_CASE("compiles and runs array alias templated forwarding to canonical vector helper in C++ emitter") {
   const std::string source = R"(
 [return<int>]

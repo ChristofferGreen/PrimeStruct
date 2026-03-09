@@ -2749,6 +2749,61 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("wrapper temporary templated vector method call forwards to canonical helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapValues() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapValues().count<i32>(true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper temporary templated vector method keeps canonical diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapValues() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapValues().count<i32>())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced alias keeps templated canonical helper diagnostics") {
   const std::string source = R"(
 [return<int>]
