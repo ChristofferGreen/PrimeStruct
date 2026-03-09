@@ -424,6 +424,33 @@ std::string resolveStructLikeTypePathForTemplatedVectorFallback(const std::strin
   return {};
 }
 
+std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr,
+                                                                const std::string &namespacePrefix,
+                                                                const Context &ctx) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding) {
+    return {};
+  }
+  const std::string resolved = resolveCalleePath(expr, namespacePrefix, ctx);
+  const auto defIt = ctx.sourceDefs.find(resolved);
+  if (defIt == ctx.sourceDefs.end()) {
+    return {};
+  }
+  if (isStructDefinition(defIt->second)) {
+    return resolved;
+  }
+  for (const auto &transform : defIt->second.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    const std::string &returnType = transform.templateArgs.front();
+    if (returnType == "auto") {
+      continue;
+    }
+    return resolveStructLikeTypePathForTemplatedVectorFallback(returnType, defIt->second.namespacePrefix, ctx);
+  }
+  return {};
+}
+
 bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
                                                         const Expr &expr,
                                                         const LocalTypeMap &locals,
@@ -462,6 +489,16 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
     }
     BindingInfo actual;
     if (!inferBindingTypeForMonomorph(*ordered[i], params, locals, allowMathBare, ctx, actual)) {
+      const std::string expectedStructPath =
+          resolveStructLikeTypePathForTemplatedVectorFallback(param.binding.typeName, def.namespacePrefix, ctx);
+      if (expectedStructPath.empty()) {
+        continue;
+      }
+      const std::string actualStructPath =
+          resolveStructLikeExprPathForTemplatedVectorFallback(*ordered[i], namespacePrefix, ctx);
+      if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
+        return true;
+      }
       continue;
     }
     const std::string normalizedExpected = normalizeBindingTypeName(param.binding.typeName);

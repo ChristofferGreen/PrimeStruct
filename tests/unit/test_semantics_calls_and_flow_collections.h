@@ -2780,6 +2780,60 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced alias forwards struct mismatch from constructor temporary") {
+  const std::string source = R"(
+MarkerA() {}
+MarkerB() {}
+
+[return<int>]
+/vector/count([vector<i32>] values, [MarkerA] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values, MarkerB()), values.count(MarkerB())))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced constructor temporary mismatch keeps canonical diagnostics") {
+  const std::string source = R"(
+MarkerA() {}
+MarkerB() {}
+MarkerC() {}
+
+[return<int>]
+/vector/count([vector<i32>] values, [MarkerA] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [MarkerC] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.count(MarkerB()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced alias implicit template forwarding keeps canonical diagnostics") {
   const std::string source = R"(
 [return<int>]
