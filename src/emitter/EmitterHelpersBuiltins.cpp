@@ -571,6 +571,105 @@ bool isVectorCapacityCall(const Expr &call, const std::unordered_map<std::string
   return isVectorValue(call.args.front(), localTypes);
 }
 
+size_t getAccessCallReceiverIndex(const Expr &call,
+                                  const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (call.args.size() != 2) {
+    return 0;
+  }
+  if (hasNamedArguments(call.argNames)) {
+    for (size_t i = 0; i < call.argNames.size() && i < call.args.size(); ++i) {
+      if (call.argNames[i].has_value() && *call.argNames[i] == "values") {
+        return i;
+      }
+    }
+  }
+  const bool leadingIsCollectionLike = isArrayValue(call.args.front(), localTypes) ||
+                                       isVectorValue(call.args.front(), localTypes) ||
+                                       isMapValue(call.args.front(), localTypes) ||
+                                       isStringValue(call.args.front(), localTypes);
+  const bool trailingIsCollectionLike = isArrayValue(call.args[1], localTypes) || isVectorValue(call.args[1], localTypes) ||
+                                        isMapValue(call.args[1], localTypes) || isStringValue(call.args[1], localTypes);
+  if (!leadingIsCollectionLike && trailingIsCollectionLike) {
+    return 1;
+  }
+  return 0;
+}
+
+bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::string &typeOut) {
+  std::string typeName = normalizeBindingTypeName(binding.typeName);
+  std::string templateArg = binding.typeTemplateArg;
+  if (typeName == "Reference" && !templateArg.empty()) {
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(templateArg, base, arg)) {
+      typeName = normalizeBindingTypeName(base);
+      templateArg = arg;
+    } else {
+      typeName = normalizeBindingTypeName(templateArg);
+      templateArg.clear();
+    }
+  }
+  if ((typeName == "array" || typeName == "vector") && !templateArg.empty()) {
+    typeOut = normalizeBindingTypeName(templateArg);
+    return true;
+  }
+  if (typeName == "map" && !templateArg.empty()) {
+    std::vector<std::string> templateParts;
+    if (splitTopLevelTemplateArgs(templateArg, templateParts) && templateParts.size() == 2) {
+      typeOut = normalizeBindingTypeName(templateParts[1]);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool inferCollectionElementTypeNameFromExpr(const Expr &expr,
+                                            const std::unordered_map<std::string, BindingInfo> &localTypes,
+                                            std::string &typeOut) {
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localTypes.find(expr.name);
+    if (it == localTypes.end()) {
+      return false;
+    }
+    return inferCollectionElementTypeNameFromBinding(it->second, typeOut);
+  }
+  if (expr.kind == Expr::Kind::Call) {
+    std::string collectionName;
+    if (!getBuiltinCollectionName(expr, collectionName)) {
+      return false;
+    }
+    if ((collectionName == "array" || collectionName == "vector") && expr.templateArgs.size() == 1) {
+      typeOut = normalizeBindingTypeName(expr.templateArgs.front());
+      return true;
+    }
+    if (collectionName == "map" && expr.templateArgs.size() == 2) {
+      typeOut = normalizeBindingTypeName(expr.templateArgs[1]);
+      return true;
+    }
+  }
+  return false;
+}
+
+std::string inferAccessCallTypeName(const Expr &call,
+                                    const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (!(isSimpleCallName(call, "at") || isSimpleCallName(call, "at_unsafe")) || call.args.size() != 2) {
+    return "";
+  }
+  const size_t receiverIndex = getAccessCallReceiverIndex(call, localTypes);
+  if (receiverIndex >= call.args.size()) {
+    return "";
+  }
+  const Expr &receiver = call.args[receiverIndex];
+  if (isStringValue(receiver, localTypes)) {
+    return "i32";
+  }
+  std::string elementType;
+  if (inferCollectionElementTypeNameFromExpr(receiver, localTypes, elementType)) {
+    return elementType;
+  }
+  return "";
+}
+
 bool resolveMethodCallPath(const Expr &call,
                            const std::unordered_map<std::string, BindingInfo> &localTypes,
                            const std::unordered_map<std::string, std::string> &importAliases,
@@ -636,6 +735,10 @@ bool resolveMethodCallPath(const Expr &call,
         }
         if (isVectorCapacityCall(expr, localTypes)) {
           return "i32";
+        }
+        const std::string accessTypeName = inferAccessCallTypeName(expr, localTypes);
+        if (!accessTypeName.empty()) {
+          return accessTypeName;
         }
         if (!expr.isMethodCall) {
           const std::string resolved = resolveExprPath(expr);

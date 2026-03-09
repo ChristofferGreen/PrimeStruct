@@ -2357,6 +2357,57 @@ main() {
   CHECK(output.find("ps_i32_tag(ps_vector_capacity(") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps namespaced access method chain fallback") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(7i32, 8i32)}
+  return(plus(/std/collections/vector/at(values, 0i32).tag(),
+              /vector/at_unsafe(values, 1i32).tag()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_namespaced_access_method_chain_fallback.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_namespaced_access_method_chain_fallback_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
+}
+
+TEST_CASE("rejects namespaced access method chain non-collection target in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/at(7i32, 0i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_namespaced_access_method_chain_non_collection_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_namespaced_access_method_chain_non_collection_reject.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("at requires array, vector, map, or string target") != std::string::npos);
+}
+
 TEST_CASE("rejects namespaced map capacity method chain target in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
