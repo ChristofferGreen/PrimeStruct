@@ -305,6 +305,11 @@ bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &err
 
 std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx);
 
+bool resolveMethodCallTemplateTarget(const Expr &expr,
+                                     const LocalTypeMap &locals,
+                                     const Context &ctx,
+                                     std::string &pathOut);
+
 bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   const std::vector<ParameterInfo> &params,
                                   const LocalTypeMap &locals,
@@ -425,12 +430,20 @@ std::string resolveStructLikeTypePathForTemplatedVectorFallback(const std::strin
 }
 
 std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr,
+                                                                const LocalTypeMap &locals,
                                                                 const std::string &namespacePrefix,
                                                                 const Context &ctx) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding) {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding) {
     return {};
   }
-  const std::string resolved = resolveCalleePath(expr, namespacePrefix, ctx);
+  std::string resolved;
+  if (expr.isMethodCall) {
+    if (!resolveMethodCallTemplateTarget(expr, locals, ctx, resolved)) {
+      return {};
+    }
+  } else {
+    resolved = resolveCalleePath(expr, namespacePrefix, ctx);
+  }
   const auto defIt = ctx.sourceDefs.find(resolved);
   if (defIt == ctx.sourceDefs.end()) {
     return {};
@@ -495,7 +508,7 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
         continue;
       }
       const std::string actualStructPath =
-          resolveStructLikeExprPathForTemplatedVectorFallback(*ordered[i], namespacePrefix, ctx);
+          resolveStructLikeExprPathForTemplatedVectorFallback(*ordered[i], locals, namespacePrefix, ctx);
       if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
         return true;
       }
