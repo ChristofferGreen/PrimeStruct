@@ -1980,8 +1980,55 @@ std::string SemanticsValidator::inferStructReturnPath(
       return inferStructReturnPath(*valueExpr, params, locals);
     }
 
+    auto preferVectorStdlibHelperPath = [&](const std::string &path) -> std::string {
+      std::string preferred = path;
+      if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string suffix = preferred.substr(std::string("/array/").size());
+        const std::string vectorAlias = "/vector/" + suffix;
+        if (defMap_.count(vectorAlias) > 0) {
+          return vectorAlias;
+        }
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        if (defMap_.count(stdlibAlias) > 0) {
+          return stdlibAlias;
+        }
+      }
+      if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string suffix = preferred.substr(std::string("/vector/").size());
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        if (defMap_.count(stdlibAlias) > 0) {
+          preferred = stdlibAlias;
+        } else {
+          const std::string arrayAlias = "/array/" + suffix;
+          if (defMap_.count(arrayAlias) > 0) {
+            preferred = arrayAlias;
+          }
+        }
+      }
+      if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
+        const std::string vectorAlias = "/vector/" + suffix;
+        if (defMap_.count(vectorAlias) > 0) {
+          preferred = vectorAlias;
+        } else {
+          const std::string arrayAlias = "/array/" + suffix;
+          if (defMap_.count(arrayAlias) > 0) {
+            preferred = arrayAlias;
+          }
+        }
+      }
+      if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string stdlibAlias =
+            "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+        if (defMap_.count(stdlibAlias) > 0) {
+          preferred = stdlibAlias;
+        }
+      }
+      return preferred;
+    };
+    const std::string resolved = preferVectorStdlibHelperPath(resolveCalleePath(expr));
     std::string collection;
-    if (defMap_.find(resolveCalleePath(expr)) == defMap_.end() && getBuiltinCollectionName(expr, collection)) {
+    if (defMap_.find(resolved) == defMap_.end() && getBuiltinCollectionName(expr, collection)) {
       if ((collection == "array" || collection == "vector") && expr.templateArgs.size() == 1) {
         return "/" + collection;
       }
@@ -1989,7 +2036,6 @@ std::string SemanticsValidator::inferStructReturnPath(
         return "/map";
       }
     }
-    const std::string resolved = resolveCalleePath(expr);
     if (!resolved.empty() && structNames_.count(resolved) > 0) {
       return resolved;
     }
