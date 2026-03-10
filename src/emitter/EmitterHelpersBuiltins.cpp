@@ -782,6 +782,50 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return typePath;
   };
+  auto collectionHelperPathCandidates = [](const std::string &path) {
+    std::vector<std::string> candidates;
+    auto appendUnique = [&](const std::string &candidate) {
+      if (candidate.empty()) {
+        return;
+      }
+      for (const auto &existing : candidates) {
+        if (existing == candidate) {
+          return;
+        }
+      }
+      candidates.push_back(candidate);
+    };
+
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+          normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+          normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+
+    appendUnique(path);
+    appendUnique(normalizedPath);
+    if (normalizedPath.rfind("/array/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+      appendUnique("/vector/" + suffix);
+      appendUnique("/std/collections/vector/" + suffix);
+    } else if (normalizedPath.rfind("/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
+      appendUnique("/std/collections/vector/" + suffix);
+      appendUnique("/array/" + suffix);
+    } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+      appendUnique("/vector/" + suffix);
+      appendUnique("/array/" + suffix);
+    } else if (normalizedPath.rfind("/map/", 0) == 0) {
+      appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
+    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+      appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
+    }
+    return candidates;
+  };
   std::function<std::string(const Expr &)> inferPrimitiveTypeName;
   inferPrimitiveTypeName = [&](const Expr &expr) -> std::string {
     switch (expr.kind) {
@@ -804,6 +848,27 @@ bool resolveMethodCallPath(const Expr &call,
         return "";
       }
       case Expr::Kind::Call: {
+        if (!expr.isMethodCall) {
+          for (const auto &candidate : collectionHelperPathCandidates(resolveExprPath(expr))) {
+            auto structIt = returnStructs.find(candidate);
+            if (structIt != returnStructs.end()) {
+              return normalizeCollectionReceiverType(structIt->second);
+            }
+          }
+          for (const auto &candidate : collectionHelperPathCandidates(resolveExprPath(expr))) {
+            auto it = returnKinds.find(candidate);
+            if (it == returnKinds.end()) {
+              continue;
+            }
+            if (it->second == ReturnKind::Array) {
+              return "array";
+            }
+            const std::string inferredType = typeNameForReturnKind(it->second);
+            if (!inferredType.empty()) {
+              return inferredType;
+            }
+          }
+        }
         std::string collectionName;
         if (getBuiltinCollectionName(expr, collectionName)) {
           if ((collectionName == "array" || collectionName == "vector") && expr.templateArgs.size() == 1) {
@@ -830,18 +895,6 @@ bool resolveMethodCallPath(const Expr &call,
           return accessTypeName;
         }
         if (!expr.isMethodCall) {
-          const std::string resolved = resolveExprPath(expr);
-          auto structIt = returnStructs.find(resolved);
-          if (structIt != returnStructs.end()) {
-            return normalizeCollectionReceiverType(structIt->second);
-          }
-          auto it = returnKinds.find(resolved);
-          if (it != returnKinds.end()) {
-            if (it->second == ReturnKind::Array) {
-              return "array";
-            }
-            return typeNameForReturnKind(it->second);
-          }
           return "";
         }
         std::string methodPath;
