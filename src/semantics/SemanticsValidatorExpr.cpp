@@ -1693,6 +1693,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    auto isArrayNamespacedVectorCountBuiltinCall = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.name.empty() || candidate.args.size() != 1) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      if (normalized != "array/count") {
+        return false;
+      }
+      std::string elemType;
+      return resolveVectorTarget(candidate.args.front(), elemType);
+    };
     auto resolveMapKeyType = [&](const Expr &target, std::string &keyTypeOut) -> bool {
       keyTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
@@ -2363,7 +2377,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         isNamespacedCollectionHelperCall && namespacedCollection == "map";
     const bool isNamespacedVectorCountCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
-        isVectorBuiltinName(expr, "count") && expr.args.size() == 1;
+        isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+        !isArrayNamespacedVectorCountBuiltinCall(expr);
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count";
     const bool isResolvedMapCountCall =
@@ -2538,6 +2553,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     } else if ((isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall || isResolvedMapCountCall) &&
                expr.args.size() == 1 &&
+               !isArrayNamespacedVectorCountBuiltinCall(expr) &&
                (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall ||
                 isNamespacedMapCountCall || isResolvedMapCountCall)) {
       usedMethodTarget = true;
@@ -4060,7 +4076,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (!resolvedMethod && isVectorBuiltinName(expr, "count") && it == defMap_.end()) {
+      if (!resolvedMethod && isVectorBuiltinName(expr, "count") &&
+          !isArrayNamespacedVectorCountBuiltinCall(expr) && it == defMap_.end()) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;

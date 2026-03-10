@@ -4943,7 +4943,7 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("array namespaced vector count rejects named arguments as builtin alias") {
+TEST_CASE("array namespaced vector count builtin alias named-argument diagnostics remain deterministic") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -4954,6 +4954,19 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("array namespaced vector count builtin alias call is rejected") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/array/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /array/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity rejects named arguments as builtin alias") {

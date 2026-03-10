@@ -9,6 +9,32 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isExplicitArrayCountName(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "array/count";
+}
+
+bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Vector;
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (!getBuiltinCollectionName(target, collection)) {
+      return false;
+    }
+    return collection == "vector" && target.templateArgs.size() == 1;
+  }
+  return false;
+}
+
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -155,6 +181,9 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     return false;
   }
   const Expr &target = expr.args.front();
+  if (isExplicitArrayCountName(expr) && isVectorCountTarget(target, localsIn)) {
+    return false;
+  }
   if (isEntryArgsName(target, localsIn, hasEntryArgs, entryArgsName)) {
     return true;
   }
