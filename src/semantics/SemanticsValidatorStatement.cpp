@@ -2260,7 +2260,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         typeName = inferred;
       }
     }
-    if (typeName.empty() || typeName == "Pointer" || typeName == "Reference") {
+    if (typeName == "Pointer" || typeName == "Reference") {
+      resolvedOut = "/" + typeName + "/" + methodName;
+      return;
+    }
+    if (typeName.empty()) {
       resolvedOut = preferVectorStdlibHelperPath(resolveCalleePath(callExpr));
       return;
     }
