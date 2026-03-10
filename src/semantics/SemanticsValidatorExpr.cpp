@@ -2686,6 +2686,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     }
       if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlockCall(expr)) {
+        if (!resolvedMethod) {
+          resolved = preferVectorStdlibHelperPath(resolved);
+        }
         if (resolvedMethod || defMap_.find(resolved) == defMap_.end()) {
           error_ = "block arguments require a definition target: " + resolved;
           return false;

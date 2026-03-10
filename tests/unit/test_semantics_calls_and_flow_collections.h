@@ -3147,6 +3147,61 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("array namespaced vector helper alias call form resolves for expression body arguments") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/array/count(values, true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced helper call form resolves for expression body arguments") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/vector/count(values, true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical vector helper call-form expression body arguments keep fallback diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/std/collections/vector/count(values, true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
+}
+
 TEST_CASE("templated stdlib canonical vector helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]
