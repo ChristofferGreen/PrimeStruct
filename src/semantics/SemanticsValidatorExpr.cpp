@@ -1331,16 +1331,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     std::string vectorHelper;
     if (getVectorStatementHelperName(expr, vectorHelper)) {
       std::string resolved = resolveCalleePath(expr);
-      bool isNamespacedVectorHelperCall = false;
-      if (!expr.name.empty()) {
-        std::string normalizedName = expr.name;
-        if (!normalizedName.empty() && normalizedName[0] == '/') {
-          normalizedName.erase(normalizedName.begin());
-        }
-        isNamespacedVectorHelperCall =
-            normalizedName.rfind("vector/", 0) == 0 ||
-            normalizedName.rfind("std/collections/vector/", 0) == 0;
-      }
+      std::string namespacedCollection;
+      std::string namespacedHelper;
+      const bool isNamespacedCollectionHelperCall =
+          getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
+      const bool isNamespacedVectorHelperCall =
+          isNamespacedCollectionHelperCall && namespacedCollection == "vector";
       size_t resolvedReceiverIndex = 0;
       if ((defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
           !expr.args.empty()) {
@@ -2325,52 +2321,30 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     std::string accessHelperName;
-    auto isNamespacedVectorHelperCall = [&](const Expr &candidate) -> bool {
-      if (candidate.name.empty()) {
-        return false;
-      }
-      std::string normalizedName = candidate.name;
-      if (!normalizedName.empty() && normalizedName[0] == '/') {
-        normalizedName.erase(normalizedName.begin());
-      }
-      return normalizedName.rfind("vector/", 0) == 0 ||
-             normalizedName.rfind("std/collections/vector/", 0) == 0;
-    };
-    auto isNamespacedMapHelperCall = [&](const Expr &candidate) -> bool {
-      if (candidate.name.empty()) {
-        return false;
-      }
-      std::string normalizedName = candidate.name;
-      if (!normalizedName.empty() && normalizedName[0] == '/') {
-        normalizedName.erase(normalizedName.begin());
-      }
-      return normalizedName.rfind("map/", 0) == 0 ||
-             normalizedName.rfind("std/collections/map/", 0) == 0;
-    };
+    std::string namespacedCollection;
+    std::string namespacedHelper;
+    const bool isNamespacedCollectionHelperCall =
+        getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
+    const bool isNamespacedVectorHelperCall =
+        isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+    const bool isNamespacedMapHelperCall =
+        isNamespacedCollectionHelperCall && namespacedCollection == "map";
     const bool isNamespacedVectorCountCall =
-        !expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-        isNamespacedVectorHelperCall(expr);
+        !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
+        isVectorBuiltinName(expr, "count") && expr.args.size() == 1;
     const bool isNamespacedMapCountCall =
-        !expr.isMethodCall && expr.args.size() == 1 && isNamespacedMapHelperCall(expr) &&
-        [&]() {
-          std::string normalizedName = expr.name;
-          if (!normalizedName.empty() && normalizedName[0] == '/') {
-            normalizedName.erase(normalizedName.begin());
-          }
-          if (normalizedName.rfind("map/", 0) == 0) {
-            normalizedName = normalizedName.substr(std::string("map/").size());
-          } else if (normalizedName.rfind("std/collections/map/", 0) == 0) {
-            normalizedName = normalizedName.substr(std::string("std/collections/map/").size());
-          }
-          return normalizedName == "count";
-        }();
+        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" && expr.args.size() == 1;
     const bool isNamespacedVectorCapacityCall =
-        !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
-        isNamespacedVectorHelperCall(expr);
+        !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
+        isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1;
     const bool isBuiltinAccessName =
         !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
-    const bool isNamespacedVectorAccessCall = isBuiltinAccessName && isNamespacedVectorHelperCall(expr);
-    const bool isNamespacedMapAccessCall = isBuiltinAccessName && isNamespacedMapHelperCall(expr);
+    const bool isNamespacedVectorAccessCall =
+        isBuiltinAccessName && isNamespacedVectorHelperCall &&
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
+    const bool isNamespacedMapAccessCall =
+        isBuiltinAccessName && isNamespacedMapHelperCall &&
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
     if (expr.isMethodCall) {
       if (!hasVectorHelperCallResolution) {
         if (expr.args.empty()) {
@@ -2414,7 +2388,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall(expr) && !expr.args.empty() &&
+    } else if (isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall && !expr.args.empty() &&
                expr.args.size() != 1 && defMap_.find(resolved) != defMap_.end()) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
@@ -2431,7 +2405,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (isVectorBuiltinName(expr, "capacity") && isNamespacedVectorHelperCall(expr) && !expr.args.empty() &&
+    } else if (isVectorBuiltinName(expr, "capacity") && isNamespacedVectorHelperCall && !expr.args.empty() &&
                expr.args.size() != 1 && defMap_.find(resolved) != defMap_.end()) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;

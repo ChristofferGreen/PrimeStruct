@@ -1168,16 +1168,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall) {
       std::string vectorHelper;
       if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {
-        bool isNamespacedVectorHelperCall = false;
-        if (!expr.name.empty()) {
-          std::string normalizedName = expr.name;
-          if (!normalizedName.empty() && normalizedName[0] == '/') {
-            normalizedName.erase(normalizedName.begin());
-          }
-          isNamespacedVectorHelperCall =
-              normalizedName.rfind("vector/", 0) == 0 ||
-              normalizedName.rfind("std/collections/vector/", 0) == 0;
-        }
+        std::string namespacedCollection;
+        std::string namespacedHelper;
+        const bool isNamespacedCollectionHelperCall =
+            getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
+        const bool isNamespacedVectorHelperCall =
+            isNamespacedCollectionHelperCall && namespacedCollection == "vector";
         if (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall) {
           auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
             if (candidate.kind != Expr::Kind::Name) {
@@ -1256,53 +1252,30 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
     }
-    auto isNamespacedVectorHelperCall = [&](const Expr &candidate) -> bool {
-      if (candidate.name.empty()) {
-        return false;
-      }
-      std::string normalizedName = candidate.name;
-      if (!normalizedName.empty() && normalizedName[0] == '/') {
-        normalizedName.erase(normalizedName.begin());
-      }
-      return normalizedName.rfind("vector/", 0) == 0 ||
-             normalizedName.rfind("std/collections/vector/", 0) == 0;
-    };
+    std::string namespacedCollection;
+    std::string namespacedHelper;
+    const bool isNamespacedCollectionHelperCall =
+        getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
+    const bool isNamespacedVectorHelperCall =
+        isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+    const bool isNamespacedMapHelperCall =
+        isNamespacedCollectionHelperCall && namespacedCollection == "map";
     const bool isNamespacedVectorCountCall =
-        !expr.isMethodCall && isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall(expr);
-    auto isNamespacedMapHelperCall = [&](const Expr &candidate) -> bool {
-      if (candidate.name.empty()) {
-        return false;
-      }
-      std::string normalizedName = candidate.name;
-      if (!normalizedName.empty() && normalizedName[0] == '/') {
-        normalizedName.erase(normalizedName.begin());
-      }
-      return normalizedName.rfind("map/", 0) == 0 ||
-             normalizedName.rfind("std/collections/map/", 0) == 0;
-    };
+        !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
+        isVectorBuiltinName(expr, "count");
     const bool isNamespacedMapCountCall =
-        !expr.isMethodCall && expr.args.size() == 1 && isNamespacedMapHelperCall(expr) &&
-        [&]() {
-          std::string normalizedName = expr.name;
-          if (!normalizedName.empty() && normalizedName[0] == '/') {
-            normalizedName.erase(normalizedName.begin());
-          }
-          if (normalizedName.rfind("map/", 0) == 0) {
-            return normalizedName.substr(std::string("map/").size()) == "count";
-          }
-          if (normalizedName.rfind("std/collections/map/", 0) == 0) {
-            return normalizedName.substr(std::string("std/collections/map/").size()) == "count";
-          }
-          return false;
-        }();
+        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" && expr.args.size() == 1;
     const bool isNamespacedVectorCapacityCall =
-        !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && isNamespacedVectorHelperCall(expr);
+        !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
+        isVectorBuiltinName(expr, "capacity");
     std::string builtinAccessName;
     const bool isBuiltinAccess = getBuiltinArrayAccessName(expr, builtinAccessName);
     const bool isNamespacedVectorAccessCall =
-        !expr.isMethodCall && isBuiltinAccess && isNamespacedVectorHelperCall(expr);
+        !expr.isMethodCall && isBuiltinAccess && isNamespacedVectorHelperCall &&
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
     const bool isNamespacedMapAccessCall =
-        !expr.isMethodCall && isBuiltinAccess && isNamespacedMapHelperCall(expr);
+        !expr.isMethodCall && isBuiltinAccess && isNamespacedMapHelperCall &&
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
     bool shouldDeferResolvedNamespacedCollectionHelperReturn =
         isNamespacedVectorCountCall || isNamespacedMapCountCall || isNamespacedVectorCapacityCall ||
         isNamespacedVectorAccessCall || isNamespacedMapAccessCall;

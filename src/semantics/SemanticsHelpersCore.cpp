@@ -857,6 +857,35 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut) {
+  collectionOut.clear();
+  helperOut.clear();
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+
+  auto extractHelper = [&](const std::string &prefix, const std::string &collectionName) -> bool {
+    if (normalized.rfind(prefix, 0) != 0) {
+      return false;
+    }
+    collectionOut = collectionName;
+    helperOut = normalized.substr(prefix.size());
+    return !helperOut.empty();
+  };
+
+  if (extractHelper("vector/", "vector") || extractHelper("std/collections/vector/", "vector") ||
+      extractHelper("map/", "map") || extractHelper("std/collections/map/", "map")) {
+    return true;
+  }
+  collectionOut.clear();
+  helperOut.clear();
+  return false;
+}
+
 bool isAssignCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
