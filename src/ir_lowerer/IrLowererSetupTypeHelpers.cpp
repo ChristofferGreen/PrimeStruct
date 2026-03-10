@@ -70,6 +70,59 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
+std::string preferCollectionHelperPath(const std::string &path,
+                                       const std::unordered_map<std::string, const Definition *> &defMap) {
+  std::string preferred = path;
+  if (preferred.rfind("/array/", 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string("/array/").size());
+    const std::string vectorAlias = "/vector/" + suffix;
+    if (defMap.count(vectorAlias) > 0) {
+      return vectorAlias;
+    }
+    const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+    if (defMap.count(stdlibAlias) > 0) {
+      return stdlibAlias;
+    }
+  }
+  if (preferred.rfind("/vector/", 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string("/vector/").size());
+    const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+    if (defMap.count(stdlibAlias) > 0) {
+      preferred = stdlibAlias;
+    } else {
+      const std::string arrayAlias = "/array/" + suffix;
+      if (defMap.count(arrayAlias) > 0) {
+        preferred = arrayAlias;
+      }
+    }
+  }
+  if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
+    const std::string vectorAlias = "/vector/" + suffix;
+    if (defMap.count(vectorAlias) > 0) {
+      preferred = vectorAlias;
+    } else {
+      const std::string arrayAlias = "/array/" + suffix;
+      if (defMap.count(arrayAlias) > 0) {
+        preferred = arrayAlias;
+      }
+    }
+  }
+  if (preferred.rfind("/map/", 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string stdlibAlias = "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+    if (defMap.count(stdlibAlias) > 0) {
+      preferred = stdlibAlias;
+    }
+  }
+  if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string mapAlias = "/map/" + preferred.substr(std::string("/std/collections/map/").size());
+    if (defMap.count(mapAlias) > 0) {
+      preferred = mapAlias;
+    }
+  }
+  return preferred;
+}
+
 } // namespace
 
 SetupTypeAdapters makeSetupTypeAdapters() {
@@ -865,7 +918,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       lookupError.clear();
       resolvedDef = resolveMethodDefinitionFromReceiverTarget(callExpr.name, typeName, "", defMap, lookupError);
     } else {
-      auto receiverDefIt = defMap.find(resolveExprPath(*receiver));
+      auto receiverDefIt = defMap.find(preferCollectionHelperPath(resolveExprPath(*receiver), defMap));
       if (receiverDefIt != defMap.end() && receiverDefIt->second != nullptr &&
           inferReceiverTypeFromDeclaredReturn(*receiverDefIt->second, typeName)) {
         lookupError.clear();
