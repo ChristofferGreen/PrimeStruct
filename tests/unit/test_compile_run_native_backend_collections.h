@@ -186,33 +186,33 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native array namespaced vector constructor alias") {
+TEST_CASE("rejects native array namespaced vector constructor alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/array/vector<i32>(4i32, 5i32)}
-  /std/collections/vector/push(values, 6i32)
-  [i32] countValue{/std/collections/vector/count(values)}
-  [i32] capacityValue{/std/collections/vector/capacity(values)}
-  [i32] tailValue{/std/collections/vector/at_unsafe(values, 2i32)}
-  return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_native_array_namespaced_vector_constructor_alias.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_array_namespaced_vector_constructor_alias_out.txt")
+          .string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_array_namespaced_vector_constructor_alias_exe")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/vector") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native array namespaced vector helper aliases") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{/array/vector<i32>(4i32, 5i32)}
+  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   /array/push(values, 6i32)
   [i32] countValue{/array/count(values)}
   [i32] capacityValue{/array/capacity(values)}

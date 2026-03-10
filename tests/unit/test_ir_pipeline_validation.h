@@ -74,6 +74,15 @@ TEST_CASE("ir lowerer helper classifies soa_vector as collection builtin") {
   CHECK(builtin == "soa_vector");
 }
 
+TEST_CASE("ir lowerer helper rejects array namespaced vector constructor alias builtin") {
+  primec::Expr arrayVectorCall;
+  arrayVectorCall.kind = primec::Expr::Kind::Call;
+  arrayVectorCall.name = "/array/vector";
+
+  std::string builtin;
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinCollectionName(arrayVectorCall, builtin));
+}
+
 TEST_CASE("ir lowerer rejects soa_vector literals with deterministic diagnostic") {
   primec::Program program;
   primec::Definition mainDef;

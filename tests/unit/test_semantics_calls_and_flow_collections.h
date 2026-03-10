@@ -2795,7 +2795,7 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("array namespaced vector constructor alias is treated as builtin collection") {
+TEST_CASE("array namespaced vector constructor alias is rejected") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2804,11 +2804,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /array/vector") != std::string::npos);
 }
 
-TEST_CASE("array namespaced vector constructor alias rejects named arguments") {
+TEST_CASE("array namespaced vector constructor alias named arguments keep unknown-call-target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2818,7 +2818,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /array/vector") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector access and count helpers are builtin-alias validated") {
