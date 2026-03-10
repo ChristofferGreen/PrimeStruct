@@ -2260,6 +2260,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         typeName = inferred;
       }
     }
+    if (typeName.empty()) {
+      if (isPointerExpr(receiver, params, locals)) {
+        typeName = "Pointer";
+      } else if (isPointerLikeExpr(receiver, params, locals)) {
+        typeName = "Reference";
+      }
+    }
     if (typeName == "Pointer" || typeName == "Reference") {
       resolvedOut = "/" + typeName + "/" + methodName;
       return;

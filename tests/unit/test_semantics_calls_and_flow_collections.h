@@ -3260,6 +3260,62 @@ main() {
   CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
 }
 
+TEST_CASE("array namespaced method body-arg diagnostics normalize reference receiver target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  ref./array/count(true) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize reference receiver target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  return(ref./std/collections/vector/count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
+}
+
+TEST_CASE("array namespaced method body-arg diagnostics normalize temporary pointer receiver target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  location(value)./array/count(true) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize temporary pointer receiver target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  return(location(value)./std/collections/vector/count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
+}
+
 TEST_CASE("templated stdlib canonical vector helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]
