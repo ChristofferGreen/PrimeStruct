@@ -781,6 +781,14 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
+  if (name.rfind("array/", 0) == 0) {
+    std::string alias = name.substr(std::string("array/").size());
+    if (alias == "vector") {
+      out = "vector";
+      return true;
+    }
+    return false;
+  }
   if (name.rfind("map/", 0) == 0) {
     std::string alias = name.substr(std::string("map/").size());
     if (alias == "map") {

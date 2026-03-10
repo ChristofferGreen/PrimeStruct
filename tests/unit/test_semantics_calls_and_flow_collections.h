@@ -2769,6 +2769,32 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("array namespaced vector constructor alias is treated as builtin collection") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{/array/vector<i32>(4i32, 5i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("array namespaced vector constructor alias rejects named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{/array/vector<i32>([first] 4i32, [second] 5i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector access and count helpers are builtin-alias validated") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -51,6 +51,23 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
+TEST_CASE("runs vm with array namespaced vector constructor alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{/array/vector<i32>(4i32, 5i32)}
+  /std/collections/vector/push(values, 6i32)
+  [i32] countValue{/std/collections/vector/count(values)}
+  [i32] capacityValue{/std/collections/vector/capacity(values)}
+  [i32] tailValue{/std/collections/vector/at_unsafe(values, 2i32)}
+  return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_namespaced_vector_constructor_alias.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
+}
+
 TEST_CASE("runs vm with stdlib canonical vector helper method precedence") {
   const std::string source = R"(
 [return<int>]
