@@ -3353,6 +3353,43 @@ main() {
   CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
 }
 
+TEST_CASE("array namespaced method body-arg diagnostics normalize canonical-fallback helper receiver target") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+/std/collections/vector/borrow([Reference<i32>] ref) {
+  return(ref)
+}
+
+[return<int>]
+main() {
+  [i32] value{1i32}
+  /vector/borrow(location(value))./array/count(true) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize canonical-fallback helper receiver target") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+/std/collections/vector/borrow([Reference<i32>] ref) {
+  return(ref)
+}
+
+[return<int>]
+main() {
+  [i32] value{1i32}
+  return(/vector/borrow(location(value))./std/collections/vector/count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
+}
+
 TEST_CASE("templated stdlib canonical vector helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]

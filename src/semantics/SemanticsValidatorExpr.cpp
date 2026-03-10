@@ -2400,7 +2400,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
         return "";
       }
-      const std::string callPath = resolveCalleePath(receiverExpr);
+      const std::string callPath = preferVectorStdlibHelperPath(resolveCalleePath(receiverExpr));
       if (callPath.empty()) {
         return "";
       }
