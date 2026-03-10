@@ -177,6 +177,111 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("omitted initializer accepts effect-free Create with explicit-template vector alias call fallback") {
+  const std::string source = R"(
+[effects(io_out), return<i32>]
+/vector/count([array<i32>] values, [bool] marker) {
+  print_line("alias"utf8)
+  return(9i32)
+}
+
+[return<i32>]
+/std/collections/vector/count<T>([array<T>] values, [bool] marker) {
+  return(17i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [array<i32>] items{array<i32>(1i32, 2i32)}
+  assign(this.value, /vector/count<i32>(items, true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("omitted initializer accepts effect-free Create with explicit-template vector alias method fallback") {
+  const std::string source = R"(
+[effects(io_out), return<i32>]
+/vector/count([array<i32>] values, [bool] marker) {
+  print_line("alias"utf8)
+  return(9i32)
+}
+
+[return<i32>]
+/std/collections/vector/count<T>([array<T>] values, [bool] marker) {
+  return(19i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [array<i32>] items{array<i32>(1i32, 2i32)}
+  assign(this.value, items./vector/count<i32>(true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit-template vector alias fallback keeps mismatch diagnostics in Create") {
+  const std::string source = R"(
+[return<i32>]
+/vector/count([array<i32>] values, [bool] marker) {
+  return(7i32)
+}
+
+[return<i32>]
+/std/collections/vector/count<T>([array<T>] values, [i32] marker) {
+  return(marker)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [array<i32>] items{array<i32>(1i32, 2i32)}
+  assign(this.value, /vector/count<i32>(items, true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+}
+
 TEST_CASE("vector alias method fallback keeps canonical mismatch diagnostics in Create") {
   const std::string source = R"(
 [return<i32>]

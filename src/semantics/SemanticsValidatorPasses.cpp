@@ -2541,6 +2541,50 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     }
     return preferred;
   };
+  auto collectionHelperPathCandidates = [&](const std::string &path) {
+    std::vector<std::string> candidates;
+    auto appendUnique = [&](const std::string &candidate) {
+      if (candidate.empty()) {
+        return;
+      }
+      for (const auto &existing : candidates) {
+        if (existing == candidate) {
+          return;
+        }
+      }
+      candidates.push_back(candidate);
+    };
+
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+          normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+          normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+
+    appendUnique(path);
+    appendUnique(normalizedPath);
+    if (normalizedPath.rfind("/array/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+      appendUnique("/vector/" + suffix);
+      appendUnique("/std/collections/vector/" + suffix);
+    } else if (normalizedPath.rfind("/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
+      appendUnique("/std/collections/vector/" + suffix);
+      appendUnique("/array/" + suffix);
+    } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+      appendUnique("/vector/" + suffix);
+      appendUnique("/array/" + suffix);
+    } else if (normalizedPath.rfind("/map/", 0) == 0) {
+      appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
+    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+      appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
+    }
+    return candidates;
+  };
   auto collectionPathFromBinding = [](const BindingInfo &binding) -> std::string {
     auto collectionPathFromType = [](const std::string &typeName, const std::string &typeTemplateArg) -> std::string {
       if (typeName == "string") {
@@ -2625,15 +2669,30 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     if (receiverStruct.empty()) {
       return false;
     }
+    auto isTemplateCompatibleDefinition = [&](const Definition &def) -> bool {
+      if (expr.templateArgs.empty()) {
+        return true;
+      }
+      return !def.templateArgs.empty() && def.templateArgs.size() == expr.templateArgs.size();
+    };
     const std::string normalizedMethodName = normalizeCollectionMethodName(receiverStruct, expr.name);
     const std::vector<std::string> methodCandidates =
         methodPathCandidatesForReceiver(receiverStruct, normalizedMethodName);
-    std::string methodPath = methodCandidates.empty() ? std::string() : methodCandidates.front();
+    std::string methodPath;
+    bool hasMethodDefinitionCandidate = false;
     for (const auto &candidate : methodCandidates) {
-      if (defMap_.count(candidate) > 0) {
+      auto candidateIt = defMap_.find(candidate);
+      if (candidateIt == defMap_.end() || !candidateIt->second) {
+        continue;
+      }
+      if (isTemplateCompatibleDefinition(*candidateIt->second)) {
         methodPath = candidate;
+        hasMethodDefinitionCandidate = true;
         break;
       }
+    }
+    if (!hasMethodDefinitionCandidate) {
+      return false;
     }
     auto defIt = defMap_.find(methodPath);
     if (defIt == defMap_.end() || !defIt->second) {
@@ -2800,7 +2859,38 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     return true;
   }
 
-  const std::string resolved = preferCollectionHelperPath(resolveCalleePath(expr));
+  auto isTemplateCompatibleDefinition = [&](const Definition &def) -> bool {
+    if (expr.templateArgs.empty()) {
+      return true;
+    }
+    return !def.templateArgs.empty() && def.templateArgs.size() == expr.templateArgs.size();
+  };
+  const std::string resolvedPath = resolveCalleePath(expr);
+  const auto resolvedCandidates = collectionHelperPathCandidates(resolvedPath);
+  const std::string resolved =
+      resolvedCandidates.empty() ? preferCollectionHelperPath(resolvedPath) : resolvedCandidates.front();
+  bool hasDefinitionCandidate = false;
+  std::string selectedDefinitionPath;
+  for (const auto &candidate : resolvedCandidates) {
+    auto candidateIt = defMap_.find(candidate);
+    if (candidateIt == defMap_.end() || !candidateIt->second) {
+      continue;
+    }
+    if (!isTemplateCompatibleDefinition(*candidateIt->second)) {
+      continue;
+    }
+    hasDefinitionCandidate = true;
+    selectedDefinitionPath = candidate;
+    break;
+  }
+  if (!hasDefinitionCandidate && resolvedCandidates.empty()) {
+    auto preferredIt = defMap_.find(resolved);
+    if (preferredIt != defMap_.end() && preferredIt->second &&
+        isTemplateCompatibleDefinition(*preferredIt->second)) {
+      hasDefinitionCandidate = true;
+      selectedDefinitionPath = resolved;
+    }
+  }
   std::string builtinName;
   if (getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
       getBuiltinClampName(expr, builtinName, true) || getBuiltinMinMaxName(expr, builtinName, true) ||
@@ -2814,7 +2904,7 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     }
     return true;
   }
-  if (defMap_.find(resolved) == defMap_.end() && getBuiltinCollectionName(expr, builtinName)) {
+  if (!hasDefinitionCandidate && getBuiltinCollectionName(expr, builtinName)) {
     if (builtinName != "array") {
       return false;
     }
@@ -2826,12 +2916,18 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     return true;
   }
 
-  auto defIt = defMap_.find(resolved);
+  auto defIt = defMap_.end();
+  if (!selectedDefinitionPath.empty()) {
+    defIt = defMap_.find(selectedDefinitionPath);
+  } else if (resolvedCandidates.empty()) {
+    defIt = defMap_.find(resolved);
+  }
   if (defIt == defMap_.end() || !defIt->second) {
     return false;
   }
-  if (structNames_.count(resolved) > 0) {
-    if (!isOutsideEffectFreeStructConstructor(resolved)) {
+  const std::string resolvedDefinitionPath = selectedDefinitionPath.empty() ? resolved : selectedDefinitionPath;
+  if (structNames_.count(resolvedDefinitionPath) > 0) {
+    if (!isOutsideEffectFreeStructConstructor(resolvedDefinitionPath)) {
       return false;
     }
   } else {
