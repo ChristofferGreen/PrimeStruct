@@ -2833,6 +2833,93 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter forwards vector alias access through auto wrapper canonical struct returns") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(index)
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(plus(index, 40i32)))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(/vector/at(values, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_alias_access_auto_wrapper_canonical_struct_return.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_vector_alias_access_auto_wrapper_canonical_struct_return_exe")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 42);
+}
+
+TEST_CASE("C++ emitter keeps canonical diagnostics for vector alias access auto wrapper method chains") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(index)
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(plus(index, 40i32)))
+}
+
+[return<int>]
+/Marker/tag([Marker] self, [bool] marker) {
+  return(self.value)
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(/vector/at(values, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values).tag(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_alias_access_auto_wrapper_canonical_diagnostic.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_alias_access_auto_wrapper_canonical_diagnostic.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
+}
+
 TEST_CASE("rejects namespaced access method chain non-collection target in C++ emitter") {
   const std::string source = R"(
 namespace i32 {

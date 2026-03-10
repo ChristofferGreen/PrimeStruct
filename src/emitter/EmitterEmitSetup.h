@@ -654,6 +654,50 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     return {receiverStruct + "/" + methodName};
   };
+  auto collectionHelperPathCandidates = [](const std::string &path) {
+    std::vector<std::string> candidates;
+    auto appendUnique = [&](const std::string &candidate) {
+      if (candidate.empty()) {
+        return;
+      }
+      for (const auto &existing : candidates) {
+        if (existing == candidate) {
+          return;
+        }
+      }
+      candidates.push_back(candidate);
+    };
+
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+          normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+          normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+
+    appendUnique(path);
+    appendUnique(normalizedPath);
+    if (normalizedPath.rfind("/array/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+      appendUnique("/vector/" + suffix);
+      appendUnique("/std/collections/vector/" + suffix);
+    } else if (normalizedPath.rfind("/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
+      appendUnique("/std/collections/vector/" + suffix);
+      appendUnique("/array/" + suffix);
+    } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+      appendUnique("/vector/" + suffix);
+      appendUnique("/array/" + suffix);
+    } else if (normalizedPath.rfind("/map/", 0) == 0) {
+      appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
+    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+      appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
+    }
+    return candidates;
+  };
 
   inferExprReturnKind = [&](const Expr &expr,
                             const std::vector<Expr> &params,
@@ -937,23 +981,24 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         }
         const std::string methodName = normalizeCollectionMethodName(receiverStruct, expr.name);
         const auto candidates = collectionMethodPathCandidates(receiverStruct, methodName);
-        auto pickExistingMethodPath = [&](const std::vector<std::string> &methodCandidates) -> std::string {
-          for (const auto &candidate : methodCandidates) {
-            if (defMap.count(candidate) > 0 || returnStructs.count(candidate) > 0) {
-              return candidate;
-            }
+        for (const auto &candidate : candidates) {
+          auto it = returnStructs.find(candidate);
+          if (it != returnStructs.end()) {
+            return it->second;
           }
-          return methodCandidates.empty() ? std::string() : methodCandidates.front();
-        };
-        const std::string methodPath = pickExistingMethodPath(candidates);
-        auto defIt = defMap.find(methodPath);
-        if (defIt != defMap.end()) {
-          (void)inferDefinitionReturnKind(*defIt->second);
-          auto it = returnStructs.find(methodPath);
-          return it != returnStructs.end() ? it->second : "";
         }
-        auto it = returnStructs.find(methodPath);
-        return it != returnStructs.end() ? it->second : "";
+        for (const auto &candidate : candidates) {
+          auto defIt = defMap.find(candidate);
+          if (defIt == defMap.end()) {
+            continue;
+          }
+          (void)inferDefinitionReturnKind(*defIt->second);
+          auto it = returnStructs.find(candidate);
+          if (it != returnStructs.end()) {
+            return it->second;
+          }
+        }
+        return "";
       }
 
       if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
@@ -988,7 +1033,15 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         }
       }
 
-      std::string resolved = preferCollectionHelperPath(resolveExprPath(expr));
+      const auto resolvedCandidates = collectionHelperPathCandidates(resolveExprPath(expr));
+      for (const auto &candidate : resolvedCandidates) {
+        auto it = returnStructs.find(candidate);
+        if (it != returnStructs.end()) {
+          return it->second;
+        }
+      }
+      std::string resolved = resolvedCandidates.empty() ? preferCollectionHelperPath(resolveExprPath(expr))
+                                                        : resolvedCandidates.front();
       if (structTypeMap.count(resolved) == 0) {
         auto importIt = importAliases.find(expr.name);
         if (importIt != importAliases.end() && structTypeMap.count(importIt->second) > 0) {
@@ -998,11 +1051,26 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (structTypeMap.count(resolved) > 0) {
         return resolved;
       }
-      auto defIt = defMap.find(resolved);
-      if (defIt != defMap.end()) {
+      bool hasDefinitionCandidate = false;
+      for (const auto &candidate : resolvedCandidates) {
+        auto defIt = defMap.find(candidate);
+        if (defIt == defMap.end()) {
+          continue;
+        }
+        hasDefinitionCandidate = true;
         (void)inferDefinitionReturnKind(*defIt->second);
-        auto it = returnStructs.find(resolved);
-        return it != returnStructs.end() ? it->second : "";
+        auto it = returnStructs.find(candidate);
+        if (it != returnStructs.end()) {
+          return it->second;
+        }
+      }
+      if (!hasDefinitionCandidate && resolvedCandidates.empty()) {
+        auto defIt = defMap.find(resolved);
+        if (defIt != defMap.end()) {
+          (void)inferDefinitionReturnKind(*defIt->second);
+          auto it = returnStructs.find(resolved);
+          return it != returnStructs.end() ? it->second : "";
+        }
       }
     }
 
