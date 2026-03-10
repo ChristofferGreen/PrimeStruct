@@ -2396,6 +2396,37 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return normalized;
     };
+    auto inferPointerLikeCallReturnType = [&](const Expr &receiverExpr) -> std::string {
+      if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
+        return "";
+      }
+      const std::string callPath = resolveCalleePath(receiverExpr);
+      if (callPath.empty()) {
+        return "";
+      }
+      auto defIt = defMap_.find(callPath);
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        return "";
+      }
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string base;
+        std::string arg;
+        if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg)) {
+          return "";
+        }
+        if (base == "Pointer") {
+          return "Pointer";
+        }
+        if (base == "Reference") {
+          return "Reference";
+        }
+        return "";
+      }
+      return "";
+    };
     auto resolvePointerLikeMethodTarget = [&](const Expr &receiverExpr,
                                               const std::string &methodName,
                                               std::string &resolvedOut) -> bool {
@@ -2409,6 +2440,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             typeName = it->second.typeName;
           }
         }
+      }
+      if (typeName.empty()) {
+        typeName = inferPointerLikeCallReturnType(receiverExpr);
       }
       if (typeName.empty()) {
         ReturnKind inferredKind = inferExprReturnKind(receiverExpr, params, locals);
