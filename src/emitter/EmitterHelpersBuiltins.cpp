@@ -758,6 +758,17 @@ bool resolveMethodCallPath(const Expr &call,
   if (!call.isMethodCall || call.args.empty()) {
     return false;
   }
+  std::string normalizedMethodName = call.name;
+  if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
+    normalizedMethodName.erase(normalizedMethodName.begin());
+  }
+  if (normalizedMethodName.rfind("vector/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+  } else if (normalizedMethodName.rfind("array/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
+  } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+  }
   const Expr &receiver = call.args.front();
   auto normalizeCollectionReceiverType = [](const std::string &typePath) -> std::string {
     if (typePath == "/array" || typePath == "array") {
@@ -866,7 +877,7 @@ bool resolveMethodCallPath(const Expr &call,
       resolved = importIt->second;
     }
     if (structTypeMap.count(resolved) > 0) {
-      resolvedOut = resolved + "/" + call.name;
+      resolvedOut = resolved + "/" + normalizedMethodName;
       return true;
     }
     typeName = inferPrimitiveTypeName(receiver);
@@ -877,10 +888,10 @@ bool resolveMethodCallPath(const Expr &call,
     return false;
   }
   if (typeName == "File") {
-    resolvedOut = "/file/" + call.name;
+    resolvedOut = "/file/" + normalizedMethodName;
     return true;
   }
-  if (typeName == "FileError" && call.name == "why") {
+  if (typeName == "FileError" && normalizedMethodName == "why") {
     resolvedOut = "/file_error/why";
     return true;
   }
@@ -888,7 +899,7 @@ bool resolveMethodCallPath(const Expr &call,
     return false;
   }
   if (isPrimitiveBindingTypeName(typeName)) {
-    resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + call.name;
+    resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;
     return true;
   }
   std::string resolvedType = resolveTypePath(typeName, call.namespacePrefix);
@@ -898,7 +909,7 @@ bool resolveMethodCallPath(const Expr &call,
       resolvedType = importIt->second;
     }
   }
-  resolvedOut = resolvedType + "/" + call.name;
+  resolvedOut = resolvedType + "/" + normalizedMethodName;
   return true;
 }
 

@@ -1820,6 +1820,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
+      std::string normalizedMethodName = methodName;
+      if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
+        normalizedMethodName.erase(normalizedMethodName.begin());
+      }
+      if (normalizedMethodName.rfind("vector/", 0) == 0) {
+        normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+      } else if (normalizedMethodName.rfind("array/", 0) == 0) {
+        normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
+      } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
+        normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+      }
       auto isStaticBinding = [&](const Expr &bindingExpr) -> bool {
         for (const auto &transform : bindingExpr.transforms) {
           if (transform.name == "static") {
@@ -1873,24 +1884,24 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return "";
       };
-      if (methodName == "ok" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
+      if (normalizedMethodName == "ok" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
         resolvedOut = "/result/ok";
         isBuiltinOut = true;
         return true;
       }
-      if (methodName == "error" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
+      if (normalizedMethodName == "error" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
         resolvedOut = "/result/error";
         isBuiltinOut = true;
         return true;
       }
-      if (methodName == "why" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
+      if (normalizedMethodName == "why" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
         resolvedOut = "/result/why";
         isBuiltinOut = true;
         return true;
       }
-      if ((methodName == "map" || methodName == "and_then" || methodName == "map2") &&
+      if ((normalizedMethodName == "map" || normalizedMethodName == "and_then" || normalizedMethodName == "map2") &&
           receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
-        resolvedOut = "/result/" + methodName;
+        resolvedOut = "/result/" + normalizedMethodName;
         isBuiltinOut = true;
         return true;
       }
@@ -1900,7 +1911,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         isBuiltinOut = defMap_.count(resolvedOut) == 0;
         return true;
       };
-      if (methodName == "count") {
+      if (normalizedMethodName == "count") {
         if (resolveVectorTarget(receiver, elemType)) {
           return setCollectionMethodTarget("/vector/count");
         }
@@ -1917,28 +1928,28 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return setCollectionMethodTarget("/map/count");
         }
       }
-      if (methodName == "capacity") {
+      if (normalizedMethodName == "capacity") {
         if (resolveVectorTarget(receiver, elemType)) {
           return setCollectionMethodTarget("/vector/capacity");
         }
       }
-      if (methodName == "at" || methodName == "at_unsafe") {
+      if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
         if (resolveVectorTarget(receiver, elemType)) {
-          return setCollectionMethodTarget("/vector/" + methodName);
+          return setCollectionMethodTarget("/vector/" + normalizedMethodName);
         }
         if (resolveArrayTarget(receiver, elemType)) {
-          return setCollectionMethodTarget("/array/" + methodName);
+          return setCollectionMethodTarget("/array/" + normalizedMethodName);
         }
         if (resolveStringTarget(receiver)) {
-          return setCollectionMethodTarget("/string/" + methodName);
+          return setCollectionMethodTarget("/string/" + normalizedMethodName);
         }
         if (resolveMapTarget(receiver)) {
-          return setCollectionMethodTarget("/map/" + methodName);
+          return setCollectionMethodTarget("/map/" + normalizedMethodName);
         }
       }
-      if (methodName == "get" || methodName == "ref") {
+      if (normalizedMethodName == "get" || normalizedMethodName == "ref") {
         if (resolveSoaVectorTarget(receiver, elemType)) {
-          return setCollectionMethodTarget("/soa_vector/" + methodName);
+          return setCollectionMethodTarget("/soa_vector/" + normalizedMethodName);
         }
       }
       if (resolveSoaVectorTarget(receiver, elemType)) {
@@ -1957,15 +1968,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           auto structIt = defMap_.find(elementStructPath);
           if (structIt != defMap_.end() && structIt->second != nullptr) {
             for (const auto &stmt : structIt->second->statements) {
-              if (!stmt.isBinding || isStaticBinding(stmt) || stmt.name != methodName) {
+              if (!stmt.isBinding || isStaticBinding(stmt) || stmt.name != normalizedMethodName) {
                 continue;
               }
-              const std::string helperPath = "/soa_vector/" + methodName;
+              const std::string helperPath = "/soa_vector/" + normalizedMethodName;
               if (defMap_.count(helperPath) > 0) {
                 resolvedOut = helperPath;
                 isBuiltinOut = false;
               } else {
-                resolvedOut = "/soa_vector/field_view/" + methodName;
+                resolvedOut = "/soa_vector/field_view/" + normalizedMethodName;
                 isBuiltinOut = true;
               }
               return true;
@@ -1976,7 +1987,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
         const std::string resolvedType = resolveCalleePath(receiver);
         if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
-          resolvedOut = resolvedType + "/" + methodName;
+          resolvedOut = resolvedType + "/" + normalizedMethodName;
           return true;
         }
       }
@@ -2016,14 +2027,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (typeName == "File") {
-        if (methodName == "write" || methodName == "write_line" || methodName == "write_byte" ||
-            methodName == "write_bytes" || methodName == "flush" || methodName == "close") {
-          resolvedOut = "/file/" + methodName;
+        if (normalizedMethodName == "write" || normalizedMethodName == "write_line" ||
+            normalizedMethodName == "write_byte" || normalizedMethodName == "write_bytes" ||
+            normalizedMethodName == "flush" || normalizedMethodName == "close") {
+          resolvedOut = "/file/" + normalizedMethodName;
           isBuiltinOut = true;
           return true;
         }
       }
-      if (typeName == "FileError" && methodName == "why") {
+      if (typeName == "FileError" && normalizedMethodName == "why") {
         resolvedOut = "/file_error/why";
         isBuiltinOut = true;
         return true;
@@ -2034,22 +2046,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
         }
-        error_ = "unknown method target for " + methodName;
+        error_ = "unknown method target for " + normalizedMethodName;
         return false;
       }
       if (typeName == "Pointer" || typeName == "Reference") {
-        error_ = "unknown method target for " + methodName;
+        error_ = "unknown method target for " + normalizedMethodName;
         return false;
       }
       if (isPrimitiveBindingTypeName(typeName)) {
-        resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + methodName;
+        resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;
         return true;
       }
       std::string resolvedType = resolveStructTypePath(typeName, receiver.namespacePrefix);
       if (resolvedType.empty()) {
         resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
       }
-      resolvedOut = resolvedType + "/" + methodName;
+      resolvedOut = resolvedType + "/" + normalizedMethodName;
       return true;
     };
     auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {

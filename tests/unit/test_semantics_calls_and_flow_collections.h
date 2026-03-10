@@ -2999,6 +2999,45 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector helper alias resolves in method-call sugar auto inference") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./std/collections/vector/count(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector helper alias method-call inference keeps mismatch diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./std/collections/vector/count(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
+}
+
 TEST_CASE("templated stdlib canonical vector helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]

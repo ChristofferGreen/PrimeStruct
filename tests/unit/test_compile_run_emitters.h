@@ -1451,6 +1451,37 @@ TEST_CASE("C++ emitter helper classifies full-path array mutator aliases") {
   CHECK_FALSE(primec::emitter::getVectorMutatorName(call, nameMap, helper));
 }
 
+TEST_CASE("C++ emitter helper normalizes full-path array method aliases") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+  call.name = "/array/count";
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+  call.args.push_back(receiver);
+  call.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  localTypes.emplace("values", receiverInfo);
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  std::string resolved;
+
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/vector/count");
+
+  localTypes.clear();
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+}
+
 TEST_CASE("compiles and runs stdlib canonical vector helper method precedence in C++ emitter") {
   const std::string source = R"(
 [return<int>]
