@@ -2509,6 +2509,37 @@ main() {
   CHECK(output.find("ps_vector_capacity(ps_wrapVector())") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps array namespaced wrapper count capacity builtin fallback") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(/array/count(wrapMap()),
+              /array/capacity(wrapVector())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_array_namespaced_wrapper_count_capacity_builtin_fallback.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_array_namespaced_wrapper_count_capacity_builtin_fallback.cpp")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_map_count(ps_wrapMap())") != std::string::npos);
+  CHECK(output.find("ps_vector_capacity(ps_wrapVector())") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter keeps namespaced count capacity method chain fallback") {
   const std::string source = R"(
 namespace i32 {

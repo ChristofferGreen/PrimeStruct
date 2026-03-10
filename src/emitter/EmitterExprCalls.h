@@ -392,6 +392,7 @@
       normalized.erase(normalized.begin());
     }
     return normalized == std::string("vector/") + helper ||
+           normalized == std::string("array/") + helper ||
            normalized == std::string("std/collections/vector/") + helper;
   };
   const std::string resolvedFull = preferVectorStdlibHelperPath(full, nameMap);
