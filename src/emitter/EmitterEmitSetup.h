@@ -554,6 +554,106 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
                             const std::vector<Expr> &,
                             const std::unordered_map<std::string, std::string> &)>
       inferStructReturnPath;
+  auto preferCollectionHelperPath = [&](const std::string &path) -> std::string {
+    std::string preferred = path;
+    if (preferred.rfind("/array/", 0) == 0 && defMap.count(preferred) == 0) {
+      const std::string suffix = preferred.substr(std::string("/array/").size());
+      const std::string vectorAlias = "/vector/" + suffix;
+      if (defMap.count(vectorAlias) > 0) {
+        return vectorAlias;
+      }
+      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      if (defMap.count(stdlibAlias) > 0) {
+        return stdlibAlias;
+      }
+    }
+    if (preferred.rfind("/vector/", 0) == 0 && defMap.count(preferred) == 0) {
+      const std::string suffix = preferred.substr(std::string("/vector/").size());
+      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      if (defMap.count(stdlibAlias) > 0) {
+        preferred = stdlibAlias;
+      } else {
+        const std::string arrayAlias = "/array/" + suffix;
+        if (defMap.count(arrayAlias) > 0) {
+          preferred = arrayAlias;
+        }
+      }
+    }
+    if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap.count(preferred) == 0) {
+      const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
+      const std::string vectorAlias = "/vector/" + suffix;
+      if (defMap.count(vectorAlias) > 0) {
+        preferred = vectorAlias;
+      } else {
+        const std::string arrayAlias = "/array/" + suffix;
+        if (defMap.count(arrayAlias) > 0) {
+          preferred = arrayAlias;
+        }
+      }
+    }
+    if (preferred.rfind("/map/", 0) == 0 && defMap.count(preferred) == 0) {
+      const std::string stdlibAlias = "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+      if (defMap.count(stdlibAlias) > 0) {
+        preferred = stdlibAlias;
+      }
+    }
+    if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap.count(preferred) == 0) {
+      const std::string mapAlias = "/map/" + preferred.substr(std::string("/std/collections/map/").size());
+      if (defMap.count(mapAlias) > 0) {
+        preferred = mapAlias;
+      }
+    }
+    return preferred;
+  };
+  auto normalizeCollectionMethodName = [](const std::string &receiverStruct,
+                                          std::string methodName) -> std::string {
+    if (!methodName.empty() && methodName.front() == '/') {
+      methodName.erase(methodName.begin());
+    }
+    if (receiverStruct == "/vector" || receiverStruct == "/array") {
+      const std::string vectorPrefix = "vector/";
+      const std::string arrayPrefix = "array/";
+      const std::string stdVectorPrefix = "std/collections/vector/";
+      if (methodName.rfind(vectorPrefix, 0) == 0) {
+        return methodName.substr(vectorPrefix.size());
+      }
+      if (methodName.rfind(arrayPrefix, 0) == 0) {
+        return methodName.substr(arrayPrefix.size());
+      }
+      if (methodName.rfind(stdVectorPrefix, 0) == 0) {
+        return methodName.substr(stdVectorPrefix.size());
+      }
+    }
+    if (receiverStruct == "/map") {
+      const std::string mapPrefix = "map/";
+      const std::string stdMapPrefix = "std/collections/map/";
+      if (methodName.rfind(mapPrefix, 0) == 0) {
+        return methodName.substr(mapPrefix.size());
+      }
+      if (methodName.rfind(stdMapPrefix, 0) == 0) {
+        return methodName.substr(stdMapPrefix.size());
+      }
+    }
+    return methodName;
+  };
+  auto collectionMethodPathCandidates = [](const std::string &receiverStruct,
+                                           const std::string &methodName) -> std::vector<std::string> {
+    if (receiverStruct == "/vector") {
+      return {"/vector/" + methodName,
+              "/std/collections/vector/" + methodName,
+              "/array/" + methodName};
+    }
+    if (receiverStruct == "/array") {
+      return {"/array/" + methodName,
+              "/vector/" + methodName,
+              "/std/collections/vector/" + methodName};
+    }
+    if (receiverStruct == "/map") {
+      return {"/map/" + methodName,
+              "/std/collections/map/" + methodName};
+    }
+    return {receiverStruct + "/" + methodName};
+  };
 
   inferExprReturnKind = [&](const Expr &expr,
                             const std::vector<Expr> &params,
@@ -621,7 +721,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       return it->second;
     }
     if (expr.kind == Expr::Kind::Call) {
-      std::string full = resolveExprPath(expr);
+      std::string full = preferCollectionHelperPath(resolveExprPath(expr));
       auto defIt = defMap.find(full);
       if (defIt != defMap.end()) {
         ReturnKind calleeKind = inferDefinitionReturnKind(*defIt->second);
@@ -835,7 +935,17 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         if (receiverStruct.empty()) {
           return "";
         }
-        const std::string methodPath = receiverStruct + "/" + expr.name;
+        const std::string methodName = normalizeCollectionMethodName(receiverStruct, expr.name);
+        const auto candidates = collectionMethodPathCandidates(receiverStruct, methodName);
+        auto pickExistingMethodPath = [&](const std::vector<std::string> &methodCandidates) -> std::string {
+          for (const auto &candidate : methodCandidates) {
+            if (defMap.count(candidate) > 0 || returnStructs.count(candidate) > 0) {
+              return candidate;
+            }
+          }
+          return methodCandidates.empty() ? std::string() : methodCandidates.front();
+        };
+        const std::string methodPath = pickExistingMethodPath(candidates);
         auto defIt = defMap.find(methodPath);
         if (defIt != defMap.end()) {
           (void)inferDefinitionReturnKind(*defIt->second);
@@ -878,7 +988,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         }
       }
 
-      std::string resolved = resolveExprPath(expr);
+      std::string resolved = preferCollectionHelperPath(resolveExprPath(expr));
       if (structTypeMap.count(resolved) == 0) {
         auto importIt = importAliases.find(expr.name);
         if (importIt != importAliases.end() && structTypeMap.count(importIt->second) > 0) {
