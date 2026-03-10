@@ -2734,6 +2734,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         if (normalized.rfind("vector/", 0) == 0) {
           normalized = normalized.substr(std::string("vector/").size());
+        } else if (normalized.rfind("array/", 0) == 0) {
+          normalized = normalized.substr(std::string("array/").size());
         } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
           normalized = normalized.substr(std::string("std/collections/vector/").size());
         }
@@ -3499,10 +3501,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             normalized.erase(normalized.begin());
           }
           if (normalized.rfind("vector/", 0) != 0) {
-            if (normalized.rfind("std/collections/vector/", 0) != 0) {
+            if (normalized.rfind("array/", 0) == 0) {
+              normalized = normalized.substr(std::string("array/").size());
+            } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
+              normalized = normalized.substr(std::string("std/collections/vector/").size());
+            } else {
               return false;
             }
-            normalized = normalized.substr(std::string("std/collections/vector/").size());
           } else {
             normalized = normalized.substr(std::string("vector/").size());
           }

@@ -2568,12 +2568,38 @@ main() {
   CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
+TEST_CASE("array namespaced vector helper named args stay statement-only in expressions") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(/array/push([values] values, [value] 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("only supported as a statement") != std::string::npos);
+}
+
 TEST_CASE("namespaced vector helper duplicate named args stay statement-only in expressions") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   return(/vector/push([values] values, [values] values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("only supported as a statement") != std::string::npos);
+}
+
+TEST_CASE("array namespaced vector helper duplicate named args stay statement-only in expressions") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(/array/push([values] values, [values] values))
 }
 )";
   std::string error;
