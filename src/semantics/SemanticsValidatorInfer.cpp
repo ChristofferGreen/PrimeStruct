@@ -854,6 +854,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (normalizedMethodName.rfind("vector/", 0) == 0) {
         normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+      } else if (normalizedMethodName.rfind("array/", 0) == 0) {
+        normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
       } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
         normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
       }
