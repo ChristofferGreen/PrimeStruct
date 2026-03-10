@@ -3698,6 +3698,48 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("templated stdlib canonical vector helpers resolve in slash-path method-call sugar") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[return<int>]
+/std/collections/vector/at<T>([vector<T>] values, [i32] index) {
+  return(plus(index, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./vector/count<i32>(true), values./std/collections/vector/at<i32>(2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("templated slash-path vector helper keeps canonical precedence diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/count<i32>())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("templated stdlib canonical vector helper keeps precedence diagnostics") {
   const std::string source = R"(
 [return<int>]

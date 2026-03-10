@@ -757,6 +757,38 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (!expr.isMethodCall || expr.args.empty() || expr.name.empty()) {
     return false;
   }
+  std::string methodName = expr.name;
+  if (!methodName.empty() && methodName.front() == '/') {
+    methodName.erase(methodName.begin());
+  }
+  auto normalizeCollectionMethodName = [](const std::string &receiverTypeName,
+                                          std::string candidate) -> std::string {
+    if (receiverTypeName == "array" || receiverTypeName == "vector" || receiverTypeName == "soa_vector") {
+      const std::string vectorPrefix = "vector/";
+      const std::string arrayPrefix = "array/";
+      const std::string stdVectorPrefix = "std/collections/vector/";
+      if (candidate.rfind(vectorPrefix, 0) == 0) {
+        return candidate.substr(vectorPrefix.size());
+      }
+      if (candidate.rfind(arrayPrefix, 0) == 0) {
+        return candidate.substr(arrayPrefix.size());
+      }
+      if (candidate.rfind(stdVectorPrefix, 0) == 0) {
+        return candidate.substr(stdVectorPrefix.size());
+      }
+    }
+    if (receiverTypeName == "map") {
+      const std::string mapPrefix = "map/";
+      const std::string stdMapPrefix = "std/collections/map/";
+      if (candidate.rfind(mapPrefix, 0) == 0) {
+        return candidate.substr(mapPrefix.size());
+      }
+      if (candidate.rfind(stdMapPrefix, 0) == 0) {
+        return candidate.substr(stdMapPrefix.size());
+      }
+    }
+    return candidate;
+  };
   const Expr &receiver = expr.args.front();
   std::string typeName;
   if (receiver.kind == Expr::Kind::Name) {
@@ -785,7 +817,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       auto defIt = ctx.sourceDefs.find(resolved);
       if (defIt != ctx.sourceDefs.end()) {
         if (isStructDefinition(defIt->second)) {
-          pathOut = resolved + "/" + expr.name;
+          pathOut = resolved + "/" + methodName;
           return true;
         }
         for (const auto &transform : defIt->second.transforms) {
@@ -815,8 +847,9 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty()) {
     typeName = typeBase;
   }
+  const std::string normalizedMethodName = normalizeCollectionMethodName(typeName, methodName);
   if (isPrimitiveBindingTypeName(typeName)) {
-    pathOut = "/" + normalizeBindingTypeName(typeName) + "/" + expr.name;
+    pathOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;
     return true;
   }
   std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
@@ -828,17 +861,17 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   if (ctx.sourceDefs.count(resolvedType) == 0) {
     if (typeName == "array" || typeName == "vector" || typeName == "map" || typeName == "soa_vector") {
-      pathOut = "/" + typeName + "/" + expr.name;
+      pathOut = "/" + typeName + "/" + normalizedMethodName;
       pathOut = preferVectorStdlibHelperPath(pathOut, ctx.sourceDefs);
       return true;
     }
     if (typeName == "string") {
-      pathOut = "/string/" + expr.name;
+      pathOut = "/string/" + normalizedMethodName;
       return true;
     }
     return false;
   }
-  pathOut = resolvedType + "/" + expr.name;
+  pathOut = resolvedType + "/" + normalizedMethodName;
   pathOut = preferVectorStdlibHelperPath(pathOut, ctx.sourceDefs);
   return true;
 }
