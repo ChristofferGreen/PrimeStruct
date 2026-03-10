@@ -1983,7 +1983,39 @@ std::string SemanticsValidator::inferStructReturnPath(
       if (receiverStruct.empty()) {
         return "";
       }
-      const std::string methodPath = receiverStruct + "/" + expr.name;
+      std::string methodName = expr.name;
+      if (!methodName.empty() && methodName.front() == '/') {
+        methodName.erase(methodName.begin());
+      }
+      std::string namespacedCollection;
+      std::string namespacedHelper;
+      if (getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
+          !namespacedHelper.empty()) {
+        methodName = namespacedHelper;
+      }
+      auto pickExistingMethodPath = [&](const std::vector<std::string> &candidates) -> std::string {
+        for (const auto &candidate : candidates) {
+          if (defMap_.count(candidate) > 0 || returnStructs_.count(candidate) > 0) {
+            return candidate;
+          }
+        }
+        return candidates.empty() ? std::string() : candidates.front();
+      };
+      std::string methodPath;
+      if (receiverStruct == "/vector") {
+        methodPath = pickExistingMethodPath({"/vector/" + methodName,
+                                             "/std/collections/vector/" + methodName,
+                                             "/array/" + methodName});
+      } else if (receiverStruct == "/array") {
+        methodPath = pickExistingMethodPath({"/array/" + methodName,
+                                             "/vector/" + methodName,
+                                             "/std/collections/vector/" + methodName});
+      } else if (receiverStruct == "/map") {
+        methodPath = pickExistingMethodPath({"/map/" + methodName,
+                                             "/std/collections/map/" + methodName});
+      } else {
+        methodPath = receiverStruct + "/" + methodName;
+      }
       auto defIt = defMap_.find(methodPath);
       if (defIt != defMap_.end()) {
         if (!inferDefinitionReturnKind(*defIt->second)) {
