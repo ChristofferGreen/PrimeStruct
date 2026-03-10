@@ -1911,6 +1911,47 @@ std::string SemanticsValidator::inferStructReturnPath(
     }
     return valueExpr;
   };
+  auto collectionHelperPathCandidates = [&](const std::string &path) {
+    std::vector<std::string> candidates;
+    auto appendUnique = [&](const std::string &candidate) {
+      for (const auto &existing : candidates) {
+        if (existing == candidate) {
+          return;
+        }
+      }
+      candidates.push_back(candidate);
+    };
+
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+          normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+          normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+
+    appendUnique(path);
+    appendUnique(normalizedPath);
+    if (normalizedPath.rfind("/array/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+      appendUnique("/vector/" + suffix);
+      appendUnique("/std/collections/vector/" + suffix);
+    } else if (normalizedPath.rfind("/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
+      appendUnique("/std/collections/vector/" + suffix);
+      appendUnique("/array/" + suffix);
+    } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+      appendUnique("/vector/" + suffix);
+      appendUnique("/array/" + suffix);
+    } else if (normalizedPath.rfind("/map/", 0) == 0) {
+      appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
+    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+      appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
+    }
+    return candidates;
+  };
 
   if (expr.isLambda) {
     return "";
@@ -1993,37 +2034,41 @@ std::string SemanticsValidator::inferStructReturnPath(
           !namespacedHelper.empty()) {
         methodName = namespacedHelper;
       }
-      auto pickExistingMethodPath = [&](const std::vector<std::string> &candidates) -> std::string {
-        for (const auto &candidate : candidates) {
-          if (defMap_.count(candidate) > 0 || returnStructs_.count(candidate) > 0) {
-            return candidate;
-          }
-        }
-        return candidates.empty() ? std::string() : candidates.front();
-      };
-      std::string methodPath;
+      std::vector<std::string> methodCandidates;
       if (receiverStruct == "/vector") {
-        methodPath = pickExistingMethodPath({"/vector/" + methodName,
-                                             "/std/collections/vector/" + methodName,
-                                             "/array/" + methodName});
+        methodCandidates = {"/vector/" + methodName,
+                            "/std/collections/vector/" + methodName,
+                            "/array/" + methodName};
       } else if (receiverStruct == "/array") {
-        methodPath = pickExistingMethodPath({"/array/" + methodName,
-                                             "/vector/" + methodName,
-                                             "/std/collections/vector/" + methodName});
+        methodCandidates = {"/array/" + methodName,
+                            "/vector/" + methodName,
+                            "/std/collections/vector/" + methodName};
       } else if (receiverStruct == "/map") {
-        methodPath = pickExistingMethodPath({"/map/" + methodName,
-                                             "/std/collections/map/" + methodName});
+        methodCandidates = {"/map/" + methodName,
+                            "/std/collections/map/" + methodName};
       } else {
-        methodPath = receiverStruct + "/" + methodName;
+        methodCandidates = {receiverStruct + "/" + methodName};
       }
-      auto defIt = defMap_.find(methodPath);
-      if (defIt != defMap_.end()) {
+      for (const auto &candidate : methodCandidates) {
+        auto structIt = returnStructs_.find(candidate);
+        if (structIt != returnStructs_.end()) {
+          return structIt->second;
+        }
+      }
+      for (const auto &candidate : methodCandidates) {
+        auto defIt = defMap_.find(candidate);
+        if (defIt == defMap_.end()) {
+          continue;
+        }
         if (!inferDefinitionReturnKind(*defIt->second)) {
           return "";
         }
+        auto structIt = returnStructs_.find(candidate);
+        if (structIt != returnStructs_.end()) {
+          return structIt->second;
+        }
       }
-      auto it = returnStructs_.find(methodPath);
-      return it != returnStructs_.end() ? it->second : "";
+      return "";
     }
 
     if (isMatchCall(expr)) {
@@ -2056,55 +2101,34 @@ std::string SemanticsValidator::inferStructReturnPath(
       return inferStructReturnPath(*valueExpr, params, locals);
     }
 
-    auto preferVectorStdlibHelperPath = [&](const std::string &path) -> std::string {
-      std::string preferred = path;
-      if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
-        const std::string suffix = preferred.substr(std::string("/array/").size());
-        const std::string vectorAlias = "/vector/" + suffix;
-        if (defMap_.count(vectorAlias) > 0) {
-          return vectorAlias;
-        }
-        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-        if (defMap_.count(stdlibAlias) > 0) {
-          return stdlibAlias;
-        }
+    const auto resolvedCandidates = collectionHelperPathCandidates(resolveCalleePath(expr));
+    for (const auto &candidate : resolvedCandidates) {
+      auto structIt = returnStructs_.find(candidate);
+      if (structIt != returnStructs_.end()) {
+        return structIt->second;
       }
-      if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
-        const std::string suffix = preferred.substr(std::string("/vector/").size());
-        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-        if (defMap_.count(stdlibAlias) > 0) {
-          preferred = stdlibAlias;
-        } else {
-          const std::string arrayAlias = "/array/" + suffix;
-          if (defMap_.count(arrayAlias) > 0) {
-            preferred = arrayAlias;
-          }
-        }
+    }
+    std::string resolved = resolvedCandidates.empty() ? std::string() : resolvedCandidates.front();
+    bool hasDefinitionCandidate = false;
+    for (const auto &candidate : resolvedCandidates) {
+      auto defIt = defMap_.find(candidate);
+      if (defIt == defMap_.end()) {
+        continue;
       }
-      if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
-        const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
-        const std::string vectorAlias = "/vector/" + suffix;
-        if (defMap_.count(vectorAlias) > 0) {
-          preferred = vectorAlias;
-        } else {
-          const std::string arrayAlias = "/array/" + suffix;
-          if (defMap_.count(arrayAlias) > 0) {
-            preferred = arrayAlias;
-          }
-        }
+      hasDefinitionCandidate = true;
+      if (!inferDefinitionReturnKind(*defIt->second)) {
+        return "";
       }
-      if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-        const std::string stdlibAlias =
-            "/std/collections/map/" + preferred.substr(std::string("/map/").size());
-        if (defMap_.count(stdlibAlias) > 0) {
-          preferred = stdlibAlias;
-        }
+      auto structIt = returnStructs_.find(candidate);
+      if (structIt != returnStructs_.end()) {
+        return structIt->second;
       }
-      return preferred;
-    };
-    const std::string resolved = preferVectorStdlibHelperPath(resolveCalleePath(expr));
+      if (resolved.empty()) {
+        resolved = candidate;
+      }
+    }
     std::string collection;
-    if (defMap_.find(resolved) == defMap_.end() && getBuiltinCollectionName(expr, collection)) {
+    if (!hasDefinitionCandidate && getBuiltinCollectionName(expr, collection)) {
       if ((collection == "array" || collection == "vector") && expr.templateArgs.size() == 1) {
         return "/" + collection;
       }
@@ -2114,14 +2138,6 @@ std::string SemanticsValidator::inferStructReturnPath(
     }
     if (!resolved.empty() && structNames_.count(resolved) > 0) {
       return resolved;
-    }
-    auto defIt = defMap_.find(resolved);
-    if (defIt != defMap_.end()) {
-      if (!inferDefinitionReturnKind(*defIt->second)) {
-        return "";
-      }
-      auto it = returnStructs_.find(resolved);
-      return it != returnStructs_.end() ? it->second : "";
     }
   }
 

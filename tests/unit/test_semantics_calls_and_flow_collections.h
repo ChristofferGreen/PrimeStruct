@@ -3326,7 +3326,7 @@ borrow([Reference<i32>] ref) {
 [return<int>]
 main() {
   [i32] value{1i32}
-  borrow(location(value))./array/count(true) { 1i32 }
+  borrow(location(value)).count(true) { 1i32 }
   return(0i32)
 }
 )";
@@ -3345,7 +3345,7 @@ borrow([Reference<i32>] ref) {
 [return<int>]
 main() {
   [i32] value{1i32}
-  return(borrow(location(value))./std/collections/vector/count(true) { 1i32 })
+  return(borrow(location(value)).count(true) { 1i32 })
 }
 )";
   std::string error;
@@ -3363,7 +3363,7 @@ TEST_CASE("array namespaced method body-arg diagnostics normalize canonical-fall
 [return<int>]
 main() {
   [i32] value{1i32}
-  /vector/borrow(location(value))./array/count(true) { 1i32 }
+  /vector/borrow(location(value)).count(true) { 1i32 }
   return(0i32)
 }
 )";
@@ -3382,7 +3382,7 @@ TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize ca
 [return<int>]
 main() {
   [i32] value{1i32}
-  return(/vector/borrow(location(value))./std/collections/vector/count(true) { 1i32 })
+  return(/vector/borrow(location(value)).count(true) { 1i32 })
 }
 )";
   std::string error;
@@ -3405,7 +3405,7 @@ TEST_CASE("array namespaced method expression body-arg infers helper-returned re
 [return<int>]
 main() {
   [i32] value{1i32}
-  return(/vector/borrow(location(value))./array/count(true) { 1i32 })
+  return(/vector/borrow(location(value)).count(true) { 1i32 })
 }
 )";
   std::string error;
@@ -3428,12 +3428,12 @@ TEST_CASE("array namespaced method expression body-arg helper-returned reference
 [return<int>]
 main() {
   [i32] value{1i32}
-  return(/vector/borrow(location(value))./array/count(true) { 1i32 })
+  return(/vector/borrow(location(value)).count(true) { 1i32 })
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Reference/count param marker") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /Reference/count parameter marker") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access alias chained method uses canonical struct return inference") {
@@ -3487,7 +3487,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag param marker") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access alias field expression infers canonical struct return") {
@@ -3546,7 +3546,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /i32/tag param marker") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("vector constructor alias call infers canonical helper return kind") {
@@ -3608,7 +3608,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag param marker") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("vector method alias access infers canonical struct return kind") {
@@ -3672,7 +3672,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag param marker") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("templated stdlib canonical vector helpers resolve in method-call sugar") {

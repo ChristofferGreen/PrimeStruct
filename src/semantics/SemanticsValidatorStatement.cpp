@@ -2238,30 +2238,60 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
         return "";
       }
-      const std::string callPath = preferVectorStdlibHelperPath(resolveCalleePath(receiverExpr));
-      if (callPath.empty()) {
-        return "";
-      }
-      auto defIt = defMap_.find(callPath);
-      if (defIt == defMap_.end() || defIt->second == nullptr) {
-        return "";
-      }
-      for (const auto &transform : defIt->second->transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      auto callPathCandidates = [&](const std::string &path) {
+        std::vector<std::string> candidates;
+        auto appendUnique = [&](const std::string &candidate) {
+          if (candidate.empty()) {
+            return;
+          }
+          for (const auto &existing : candidates) {
+            if (existing == candidate) {
+              return;
+            }
+          }
+          candidates.push_back(candidate);
+        };
+        appendUnique(path);
+        if (path.rfind("/array/", 0) == 0) {
+          const std::string suffix = path.substr(std::string("/array/").size());
+          appendUnique("/vector/" + suffix);
+          appendUnique("/std/collections/vector/" + suffix);
+        } else if (path.rfind("/vector/", 0) == 0) {
+          const std::string suffix = path.substr(std::string("/vector/").size());
+          appendUnique("/std/collections/vector/" + suffix);
+          appendUnique("/array/" + suffix);
+        } else if (path.rfind("/std/collections/vector/", 0) == 0) {
+          const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
+          appendUnique("/vector/" + suffix);
+          appendUnique("/array/" + suffix);
+        } else if (path.rfind("/map/", 0) == 0) {
+          appendUnique("/std/collections/map/" + path.substr(std::string("/map/").size()));
+        } else if (path.rfind("/std/collections/map/", 0) == 0) {
+          appendUnique("/map/" + path.substr(std::string("/std/collections/map/").size()));
+        }
+        return candidates;
+      };
+      for (const auto &callPath : callPathCandidates(resolveCalleePath(receiverExpr))) {
+        auto defIt = defMap_.find(callPath);
+        if (defIt == defMap_.end() || defIt->second == nullptr) {
           continue;
         }
-        std::string base;
-        std::string arg;
-        if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg)) {
-          return "";
+        for (const auto &transform : defIt->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string base;
+          std::string arg;
+          if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg)) {
+            continue;
+          }
+          if (base == "Pointer") {
+            return "Pointer";
+          }
+          if (base == "Reference") {
+            return "Reference";
+          }
         }
-        if (base == "Pointer") {
-          return "Pointer";
-        }
-        if (base == "Reference") {
-          return "Reference";
-        }
-        return "";
       }
       return "";
     };

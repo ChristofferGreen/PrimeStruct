@@ -6,6 +6,26 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string resolveUniqueStructByLeafName(const std::string &typeName,
+                                          const std::unordered_set<std::string> &structNames) {
+  if (typeName.empty() || typeName.front() == '/') {
+    return "";
+  }
+  const std::string suffix = "/" + typeName;
+  std::string uniqueMatch;
+  for (const auto &path : structNames) {
+    if (path.size() < suffix.size() ||
+        path.compare(path.size() - suffix.size(), suffix.size(), suffix) != 0) {
+      continue;
+    }
+    if (!uniqueMatch.empty() && uniqueMatch != path) {
+      return "";
+    }
+    uniqueMatch = path;
+  }
+  return uniqueMatch;
+}
+
 std::string normalizeCollectionMethodName(std::string methodName) {
   if (!methodName.empty() && methodName.front() == '/') {
     methodName.erase(methodName.begin());
@@ -158,6 +178,12 @@ std::string inferStructReturnPathFromDefinitionInternal(
           if (structNames.count(parentResolved) > 0) {
             resolved = parentResolved;
           }
+        }
+      }
+      if (structNames.count(resolved) == 0) {
+        const std::string uniqueResolved = resolveUniqueStructByLeafName(returnTypeName, structNames);
+        if (!uniqueResolved.empty()) {
+          resolved = uniqueResolved;
         }
       }
     }

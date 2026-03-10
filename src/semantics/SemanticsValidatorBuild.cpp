@@ -813,6 +813,23 @@ bool SemanticsValidator::buildDefinitionMaps() {
     if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
       return importIt->second;
     }
+    if (!typeName.empty() && typeName.front() != '/') {
+      const std::string suffix = "/" + typeName;
+      std::string uniqueMatch;
+      for (const auto &path : structNames_) {
+        if (path.size() < suffix.size() ||
+            path.compare(path.size() - suffix.size(), suffix.size(), suffix) != 0) {
+          continue;
+        }
+        if (!uniqueMatch.empty() && uniqueMatch != path) {
+          return "";
+        }
+        uniqueMatch = path;
+      }
+      if (!uniqueMatch.empty()) {
+        return uniqueMatch;
+      }
+    }
     return "";
   };
 

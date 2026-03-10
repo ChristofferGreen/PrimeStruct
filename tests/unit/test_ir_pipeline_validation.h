@@ -9454,7 +9454,8 @@ TEST_CASE("ir lowerer struct return helpers forward vector alias call paths") {
 
   primec::Expr indexLiteral;
   indexLiteral.kind = primec::Expr::Kind::Literal;
-  indexLiteral.intValue = 0;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
 
   primec::Expr aliasAt;
   aliasAt.kind = primec::Expr::Kind::Call;
@@ -15184,11 +15185,11 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/array/count", "vector", "", defMap, error) == &stdCountDef);
+            "/array/count", "vector", "", defMap, error) == &vectorCountDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/std/collections/vector/count", "vector", "", defMap, error) == &stdCountDef);
+            "/std/collections/vector/count", "vector", "", defMap, error) == &vectorCountDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(

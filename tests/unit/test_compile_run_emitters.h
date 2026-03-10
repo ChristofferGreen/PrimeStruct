@@ -2693,7 +2693,7 @@ Marker {
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(plus(/vector/at(values, 2i32).tag(),
-              values./vector/at(1i32).tag()))
+              /vector/at(values, 1i32).tag()))
 }
 )";
   const std::string srcPath =
@@ -2731,7 +2731,7 @@ Marker {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(values./vector/at(2i32).tag(1i32))
+  return(/vector/at(values, 2i32).tag(1i32))
 }
 )";
   const std::string srcPath =
@@ -2743,7 +2743,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag param marker") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("rejects namespaced access method chain non-collection target in C++ emitter") {
