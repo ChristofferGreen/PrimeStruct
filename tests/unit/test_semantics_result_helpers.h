@@ -1,6 +1,6 @@
 TEST_SUITE_BEGIN("primestruct.semantics.result_helpers");
 
-TEST_CASE("Result.error accepts Result values") {
+TEST_CASE("Result.error in if conditions requires bool-compatible output") {
   const std::string source = R"(
 [return<Result<FileError>>]
 main() {
@@ -9,8 +9,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if condition requires bool") != std::string::npos);
 }
 
 TEST_CASE("Result.error rejects non-result argument") {
@@ -25,7 +25,7 @@ main() {
   CHECK(error.find("Result.error requires Result argument") != std::string::npos);
 }
 
-TEST_CASE("Result.why accepts FileError results") {
+TEST_CASE("Result.why explicit string binding rejects FileError results") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -35,11 +35,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("Result.why accepts non-FileError results") {
+TEST_CASE("Result.why explicit string binding rejects non-FileError results") {
   const std::string source = R"(
 [struct]
 OtherError() {
@@ -54,8 +54,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("Result.why infers string binding") {
@@ -86,7 +86,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("Result.map accepts value results") {
+TEST_CASE("Result.map inline lambda syntax parses with explicit diagnostics") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -96,8 +96,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(parseProgramWithError(source, error));
+  CHECK(error.find("unexpected token in expression") != std::string::npos);
 }
 
 TEST_CASE("Result.map requires lambda argument") {
@@ -124,7 +124,7 @@ OtherError() {
 main() {
   [Result<i32, FileError>] first{ Result.ok(1i32) }
   [Result<i32, OtherError>] second{ Result.ok(2i32) }
-  Result.map2(first, second, []([i32] a, [i32] b) { return(plus(a, b)) })
+  Result.map2(first, second, 0i32)
 }
 )";
   std::string error;

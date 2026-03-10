@@ -9,7 +9,7 @@ TEST_CASE("lowers gpu dispatch fallback") {
   [i32] count
 ) {
   [i32] x{ /std/gpu/global_id_x() }
-  if (x >= count) {
+  if(greater_equal(x, count)) {
     return()
   }
   [i32] value{ /std/gpu/buffer_load(input, x) }

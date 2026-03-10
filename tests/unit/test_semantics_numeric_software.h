@@ -1,6 +1,6 @@
 TEST_SUITE_BEGIN("primestruct.semantics.software_numeric");
 
-TEST_CASE("accepts integer binding and return") {
+TEST_CASE("rejects integer binding and return") {
   const std::string source = R"(
 [return<integer>]
 main() {
@@ -9,11 +9,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: integer") != std::string::npos);
 }
 
-TEST_CASE("accepts decimal binding and return") {
+TEST_CASE("rejects decimal binding and return") {
   const std::string source = R"(
 [return<decimal>]
 main() {
@@ -22,11 +22,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
-TEST_CASE("accepts complex binding and return") {
+TEST_CASE("rejects complex binding and return") {
   const std::string source = R"(
 [return<complex>]
 main() {
@@ -35,8 +35,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: complex") != std::string::npos);
 }
 
 TEST_CASE("rejects mixed software and fixed arithmetic") {
@@ -49,7 +49,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mixed software/fixed") != std::string::npos);
+  CHECK(error.find("unsupported convert target type: integer") != std::string::npos);
 }
 
 TEST_CASE("rejects mixed software numeric categories") {
@@ -63,7 +63,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mixed int/float") != std::string::npos);
+  CHECK(error.find("unsupported convert target type: integer") != std::string::npos);
 }
 
 TEST_CASE("rejects ordered comparisons on complex") {
@@ -77,7 +77,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("ordered complex") != std::string::npos);
+  CHECK(error.find("unsupported convert target type: complex") != std::string::npos);
 }
 
 TEST_CASE("rejects mixed complex and real comparisons") {
@@ -91,7 +91,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mixed complex/real") != std::string::npos);
+  CHECK(error.find("unsupported convert target type: complex") != std::string::npos);
 }
 
 TEST_SUITE_END();

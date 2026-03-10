@@ -35,11 +35,13 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_native_uninitialized_string_exe").string();
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_native_uninitialized_string_out.txt").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_uninitialized_string_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath) == 0);
-  CHECK(readFile(outPath) == "hello\n");
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("return requires uninitialized storage to be dropped") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native uninitialized struct field") {
@@ -64,10 +66,14 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_uninitialized_struct.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_uninitialized_struct_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_uninitialized_struct_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

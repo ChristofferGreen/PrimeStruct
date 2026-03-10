@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.semantics.struct_helpers");
+
 TEST_CASE("struct helper method call uses implicit this") {
   const std::string source = R"(
 [struct]
@@ -157,3 +159,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("mut transform is not allowed on static helpers") != std::string::npos);
 }
+
+TEST_SUITE_END();

@@ -226,6 +226,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.pipeline.backends
     primestruct.ir.pipeline.to_cpp
     primestruct.ir.pipeline.to_glsl
+    primestruct.ir.pipeline.gpu
     primestruct.ir.pipeline.validation
     primestruct.vm.debug.session
     primestruct.lexer
@@ -254,6 +255,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.bindings.pointers
     primestruct.semantics.bindings.assignments
     primestruct.semantics.bindings.control_flow
+    primestruct.semantics.bindings.struct_defaults
+    primestruct.semantics.struct_helpers
+    primestruct.semantics.result_helpers
     primestruct.semantics.calls_flow.control
     primestruct.semantics.calls_flow.collections
     primestruct.semantics.calls_flow.access
@@ -261,9 +265,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.calls_flow.numeric_builtins
     primestruct.semantics.calls_flow.comparisons_literals
     primestruct.semantics.calls_flow.effects
+    primestruct.semantics.enum
     primestruct.semantics.imports
+    primestruct.semantics.lambdas
+    primestruct.semantics.maybe
     primestruct.semantics.traits
     primestruct.semantics.manual
+    primestruct.semantics.move
+    primestruct.semantics.software_numeric
+    primestruct.semantics.uninitialized_fields
     primestruct.parser.templates
     primestruct.text_filters.pipeline.basics
     primestruct.text_filters.pipeline.rewrites
@@ -286,16 +296,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.compile.run.smoke
     primestruct.compile.run.vm.core
     primestruct.compile.run.vm.collections
+    primestruct.compile.run.vm.uninitialized
+    primestruct.compile.run.vm.maybe
+    primestruct.compile.run.vm.gpu
     primestruct.compile.run.emitters.cpp
     primestruct.compile.run.math_conformance
     primestruct.compile.run.glsl
     primestruct.compile.run.native_backend.core
+    primestruct.compile.run.native_backend.uninitialized
+    primestruct.compile.run.native_backend.maybe
     primestruct.compile.run.native_backend.argv
     primestruct.compile.run.native_backend.control
     primestruct.compile.run.native_backend.pointers
     primestruct.compile.run.native_backend.math_numeric
     primestruct.compile.run.native_backend.collections
     primestruct.compile.run.native_backend.imports
+    primestruct.compile.run.benchmark_harness
     primestruct.compile.run.imports
     primestruct.compile.run.text_filters
     primestruct.compile.run.bindings
@@ -310,4 +326,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
       set_tests_properties("${testName}" PROPERTIES LABELS "math-conformance" TIMEOUT 600)
     endif()
   endforeach()
+
+  set(PrimeStructRegisteredSuites ${PrimeStructTestSuites} ${PrimeStructCompileRunSuites})
+  set(PrimeStructExpectedSuitesFile "${CMAKE_CURRENT_BINARY_DIR}/expected_doctest_suites.txt")
+  file(WRITE "${PrimeStructExpectedSuitesFile}" "")
+  foreach(suite IN LISTS PrimeStructRegisteredSuites)
+    file(APPEND "${PrimeStructExpectedSuitesFile}" "${suite}\n")
+  endforeach()
+  add_test(
+    NAME PrimeStruct_suite_registration
+    COMMAND ${CMAKE_COMMAND}
+            -DTEST_BINARY=$<TARGET_FILE:PrimeStruct_tests>
+            -DEXPECTED_SUITES_FILE=${PrimeStructExpectedSuitesFile}
+            -P ${CMAKE_SOURCE_DIR}/cmake/CheckDoctestSuites.cmake
+  )
+  set_tests_properties(PrimeStruct_suite_registration PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
 endif()

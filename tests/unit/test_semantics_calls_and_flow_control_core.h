@@ -111,8 +111,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_SUITE_END();
-
 TEST_CASE("for accepts semicolon separators") {
   const std::string source = R"(
 [return<int>]
@@ -988,3 +986,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

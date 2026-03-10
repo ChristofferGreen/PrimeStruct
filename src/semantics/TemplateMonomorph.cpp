@@ -993,17 +993,27 @@ bool inferImplicitTemplateArgs(const Definition &def,
                                bool allowMathBare,
                                std::vector<std::string> &outArgs,
                                std::string &error) {
-  auto implicitIt = ctx.implicitTemplateParams.find(def.fullPath);
-  if (implicitIt == ctx.implicitTemplateParams.end()) {
+  if (def.templateArgs.empty()) {
     return false;
   }
-  const auto &implicitParams = implicitIt->second;
-  std::unordered_set<std::string> implicitSet(implicitParams.begin(), implicitParams.end());
+  std::unordered_set<std::string> implicitSet;
+  auto implicitIt = ctx.implicitTemplateParams.find(def.fullPath);
+  if (implicitIt != ctx.implicitTemplateParams.end()) {
+    const auto &implicitParams = implicitIt->second;
+    implicitSet.insert(implicitParams.begin(), implicitParams.end());
+  } else {
+    implicitSet.insert(def.templateArgs.begin(), def.templateArgs.end());
+  }
   std::unordered_map<std::string, std::string> inferred;
-  inferred.reserve(implicitParams.size());
+  inferred.reserve(def.templateArgs.size());
   std::vector<const Expr *> orderedArgs(def.parameters.size(), nullptr);
+  size_t callArgStart = 0;
+  if (callExpr.isMethodCall && callExpr.args.size() == def.parameters.size() + 1) {
+    // Method-call sugar prepends the receiver expression.
+    callArgStart = 1;
+  }
   size_t positionalIndex = 0;
-  for (size_t i = 0; i < callExpr.args.size(); ++i) {
+  for (size_t i = callArgStart; i < callExpr.args.size(); ++i) {
     if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value()) {
       const std::string &name = *callExpr.argNames[i];
       size_t index = def.parameters.size();
@@ -1083,7 +1093,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
   for (const auto &paramName : def.templateArgs) {
     auto it = inferred.find(paramName);
     if (it == inferred.end()) {
-      error = "implicit template arguments could not be inferred for " + def.fullPath;
+      // Leave error empty so specialized fallback inference can run (for example,
+      // stdlib collection helpers that infer T from vector<T> receiver shape).
       return false;
     }
     outArgs.push_back(it->second);
@@ -1191,27 +1202,64 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
                        std::string &error) {
   for (auto &transform : transforms) {
     if (!isNonTypeTransformName(transform.name)) {
-      ResolvedType resolvedName = resolveTypeString(transform.name, mapping, allowedParams, namespacePrefix, ctx, error);
-      if (!error.empty()) {
-        return false;
-      }
-      if (resolvedName.text != transform.name) {
-        std::string base;
-        std::string argText;
-        if (splitTemplateTypeName(resolvedName.text, base, argText)) {
-          if (!transform.templateArgs.empty()) {
-            error = "template arguments cannot be combined on " + transform.name;
+      if (transform.templateArgs.empty()) {
+        ResolvedType resolvedName = resolveTypeString(transform.name, mapping, allowedParams, namespacePrefix, ctx, error);
+        if (!error.empty()) {
+          return false;
+        }
+        if (resolvedName.text != transform.name) {
+          std::string base;
+          std::string argText;
+          if (splitTemplateTypeName(resolvedName.text, base, argText)) {
+            if (!transform.templateArgs.empty()) {
+              error = "template arguments cannot be combined on " + transform.name;
+              return false;
+            }
+            std::vector<std::string> args;
+            if (!splitTopLevelTemplateArgs(argText, args)) {
+              error = "invalid template arguments for " + resolvedName.text;
+              return false;
+            }
+            transform.name = base;
+            transform.templateArgs = std::move(args);
+          } else {
+            transform.name = resolvedName.text;
+          }
+        }
+      } else {
+        for (auto &arg : transform.templateArgs) {
+          ResolvedType resolvedArg = resolveTypeString(arg, mapping, allowedParams, namespacePrefix, ctx, error);
+          if (!error.empty()) {
             return false;
           }
-          std::vector<std::string> args;
-          if (!splitTopLevelTemplateArgs(argText, args)) {
-            error = "invalid template arguments for " + resolvedName.text;
+          arg = resolvedArg.text;
+        }
+
+        const std::string resolvedPath =
+            resolveNameToPath(transform.name, namespacePrefix, ctx.importAliases, ctx.sourceDefs);
+        const bool canResolveTemplatedName =
+            isBuiltinTemplateContainer(transform.name) || ctx.templateDefs.count(resolvedPath) > 0;
+        if (canResolveTemplatedName) {
+          std::string templatedName = transform.name + "<" + joinTemplateArgs(transform.templateArgs) + ">";
+          ResolvedType resolvedName = resolveTypeString(templatedName, mapping, allowedParams, namespacePrefix, ctx, error);
+          if (!error.empty()) {
             return false;
           }
-          transform.name = base;
-          transform.templateArgs = std::move(args);
-        } else {
-          transform.name = resolvedName.text;
+
+          std::string base;
+          std::string argText;
+          if (splitTemplateTypeName(resolvedName.text, base, argText)) {
+            std::vector<std::string> args;
+            if (!splitTopLevelTemplateArgs(argText, args)) {
+              error = "invalid template arguments for " + resolvedName.text;
+              return false;
+            }
+            transform.name = base;
+            transform.templateArgs = std::move(args);
+          } else {
+            transform.name = resolvedName.text;
+            transform.templateArgs.clear();
+          }
         }
       }
     }
@@ -1418,6 +1466,20 @@ bool rewriteExpr(Expr &expr,
       }
     }
     return true;
+  }
+
+  if (expr.templateArgs.empty()) {
+    std::string explicitBase;
+    std::string explicitArgText;
+    if (splitTemplateTypeName(expr.name, explicitBase, explicitArgText)) {
+      std::vector<std::string> explicitArgs;
+      if (!splitTopLevelTemplateArgs(explicitArgText, explicitArgs)) {
+        error = "invalid template arguments for " + expr.name;
+        return false;
+      }
+      expr.name = explicitBase;
+      expr.templateArgs = std::move(explicitArgs);
+    }
   }
 
   bool allConcrete = true;

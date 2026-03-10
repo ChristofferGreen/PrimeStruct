@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.benchmark_harness");
+
 TEST_CASE("benchmark baseline artifact includes native allocator coverage") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::filesystem::path baselinePath = repoRoot / "benchmarks" / "benchmark_baseline.json";
@@ -107,3 +109,5 @@ TEST_CASE("benchmark regression checker fails for threshold regression") {
   CHECK(runCommand(cmd) == 1);
   CHECK(readFile(stderrPath).find("regression check failed") != std::string::npos);
 }
+
+TEST_SUITE_END();

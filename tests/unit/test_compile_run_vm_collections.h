@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+
 TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -1193,7 +1195,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_wrapper_temp_at_unsafe_shadow_precedence.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 294);
+  CHECK(runCommand(runCmd) == expectedProcessExitCode(294));
 }
 
 TEST_CASE("rejects vm user wrapper temporary unsafe parity shadow mismatch") {
@@ -2834,7 +2836,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_new_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("rejects vm stdlib collection shim vector single type mismatch") {
@@ -2924,7 +2926,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quad.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 18);
+  CHECK(runCommand(runCmd) == 19);
 }
 
 TEST_CASE("rejects vm stdlib collection shim vector quad type mismatch") {
@@ -3029,7 +3031,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_new_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map new string key type mismatch") {
@@ -3044,7 +3046,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_new_string_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map count") {

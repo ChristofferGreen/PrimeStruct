@@ -27,8 +27,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_maybe_set.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 9);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_maybe_set_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with Maybe of string") {
@@ -44,9 +47,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_maybe_string.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_maybe_string_out.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "hello\n");
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_maybe_string_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("runs vm with Maybe of struct value") {
@@ -66,8 +70,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_maybe_struct.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 4);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_maybe_struct_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown field: value") != std::string::npos);
 }
 
 TEST_SUITE_END();

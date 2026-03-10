@@ -2176,8 +2176,18 @@ SemanticsValidator::EffectFreeSummary SemanticsValidator::effectFreeSummaryForDe
     effectFreeDefStack_.erase(def.fullPath);
     return summary;
   }
-  const std::unordered_set<std::string> effects = resolveEffects(def.transforms, def.fullPath == entryPath_);
-  if (!effects.empty()) {
+  bool hasExplicitEffects = false;
+  std::unordered_set<std::string> explicitEffects;
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "effects") {
+      continue;
+    }
+    hasExplicitEffects = true;
+    for (const auto &arg : transform.arguments) {
+      explicitEffects.insert(arg);
+    }
+  }
+  if (hasExplicitEffects && !explicitEffects.empty()) {
     effectFreeDefCache_.emplace(def.fullPath, summary);
     effectFreeDefStack_.erase(def.fullPath);
     return summary;

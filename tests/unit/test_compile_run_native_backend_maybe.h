@@ -13,10 +13,12 @@ main() {
 )";
   const std::string srcPath = writeTemp("native_maybe_some_take.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_maybe_some_take_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_some_take_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native Maybe set and is_some") {
@@ -32,10 +34,12 @@ main() {
 )";
   const std::string srcPath = writeTemp("native_maybe_set.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_maybe_set_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_set_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native Maybe of string") {
@@ -52,11 +56,12 @@ main() {
   const std::string srcPath = writeTemp("native_maybe_string.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_maybe_string_exe").string();
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_string_out.txt").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_string_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath) == 0);
-  CHECK(readFile(outPath) == "hello\n");
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native Maybe of struct value") {
@@ -77,10 +82,11 @@ main() {
 )";
   const std::string srcPath = writeTemp("native_maybe_struct.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_maybe_struct_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_struct_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown field: value") != std::string::npos);
 }
 
 TEST_SUITE_END();

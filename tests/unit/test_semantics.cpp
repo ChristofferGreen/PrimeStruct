@@ -68,6 +68,7 @@ bool validateProgramWithDefaults(const std::string &source,
 #include "test_semantics_bindings_assignments.h"
 #include "test_semantics_bindings_control_flow.h"
 #include "test_semantics_struct_helpers.h"
+#include "test_semantics_result_helpers.h"
 #include "test_semantics_imports.h"
 #include "test_semantics_calls_and_flow_control_core.h"
 #include "test_semantics_calls_and_flow_control_misc.h"

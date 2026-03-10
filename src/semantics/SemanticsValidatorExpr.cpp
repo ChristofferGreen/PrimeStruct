@@ -3,6 +3,7 @@
 
 #include "primec/StringLiteral.h"
 
+#include <array>
 #include <algorithm>
 #include <cctype>
 #include <functional>
@@ -5001,7 +5002,33 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             }
             return false;
           }
-          if (!fieldBinding.isMutable) {
+          auto isLifecycleHelperPath = [](const std::string &fullPath) -> bool {
+            static const std::array<std::string_view, 10> suffixes = {
+                "/Create",       "/Destroy",       "/Copy",       "/Move",       "/CreateStack",
+                "/DestroyStack", "/CreateHeap",    "/DestroyHeap","/CreateBuffer","/DestroyBuffer"};
+            for (std::string_view suffix : suffixes) {
+              if (fullPath.size() < suffix.size()) {
+                continue;
+              }
+              if (fullPath.compare(fullPath.size() - suffix.size(), suffix.size(), suffix.data(), suffix.size()) == 0) {
+                return true;
+              }
+            }
+            return false;
+          };
+          auto isThisFieldTarget = [&](const Expr &candidate) -> bool {
+            if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess || candidate.args.size() != 1) {
+              return false;
+            }
+            const Expr *receiver = &candidate.args.front();
+            while (receiver->kind == Expr::Kind::Call && receiver->isFieldAccess && receiver->args.size() == 1) {
+              receiver = &receiver->args.front();
+            }
+            return receiver->kind == Expr::Kind::Name && receiver->name == "this";
+          };
+          const bool allowLifecycleFieldWrite =
+              !fieldBinding.isMutable && isThisFieldTarget(target) && isLifecycleHelperPath(currentDefinitionPath_);
+          if (!fieldBinding.isMutable && !allowLifecycleFieldWrite) {
             error_ = "assign target must be a mutable binding";
             return false;
           }

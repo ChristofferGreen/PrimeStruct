@@ -4,8 +4,8 @@ namespace {
 const std::string kMaybePrelude = R"(
 [public struct]
 Maybe<T>() {
-  [public bool] empty{true}
-  [public uninitialized<T>] value{uninitialized<T>()}
+  [public bool mut] empty{true}
+  [public uninitialized<T> mut] value{uninitialized<T>()}
 
   [public]
   Create() {
