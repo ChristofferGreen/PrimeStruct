@@ -19,14 +19,9 @@ static bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNa
     normalized.erase(normalized.begin());
   }
   const std::string vectorPrefix = "vector/";
-  const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = normalized.substr(vectorPrefix.size());
-    return true;
-  }
-  if (normalized.rfind(arrayPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(arrayPrefix.size());
     return true;
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {

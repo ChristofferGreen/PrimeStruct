@@ -607,17 +607,11 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
         normalizedName != "vector/at_unsafe" && normalizedName != "std/collections/vector/at_unsafe" &&
         normalizedName != "array/at_unsafe" &&
         normalizedName != "vector/push" && normalizedName != "std/collections/vector/push" &&
-        normalizedName != "array/push" &&
         normalizedName != "vector/pop" && normalizedName != "std/collections/vector/pop" &&
-        normalizedName != "array/pop" &&
         normalizedName != "vector/reserve" && normalizedName != "std/collections/vector/reserve" &&
-        normalizedName != "array/reserve" &&
         normalizedName != "vector/clear" && normalizedName != "std/collections/vector/clear" &&
-        normalizedName != "array/clear" &&
         normalizedName != "vector/remove_at" && normalizedName != "std/collections/vector/remove_at" &&
-        normalizedName != "array/remove_at" &&
         normalizedName != "vector/remove_swap" && normalizedName != "std/collections/vector/remove_swap" &&
-        normalizedName != "array/remove_swap" &&
         normalizedName != "map/count" && normalizedName != "std/collections/map/count" &&
         normalizedName != "map/at" && normalizedName != "std/collections/map/at" &&
         normalizedName != "map/at_unsafe" && normalizedName != "std/collections/map/at_unsafe") {
@@ -632,19 +626,13 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
       return candidate.args.size() == 2;
     }
     if (normalizedName == "vector/push" || normalizedName == "std/collections/vector/push" ||
-        normalizedName == "array/push" ||
         normalizedName == "vector/reserve" || normalizedName == "std/collections/vector/reserve" ||
-        normalizedName == "array/reserve" ||
         normalizedName == "vector/remove_at" || normalizedName == "std/collections/vector/remove_at" ||
-        normalizedName == "array/remove_at" ||
-        normalizedName == "vector/remove_swap" || normalizedName == "std/collections/vector/remove_swap" ||
-        normalizedName == "array/remove_swap") {
+        normalizedName == "vector/remove_swap" || normalizedName == "std/collections/vector/remove_swap") {
       return candidate.args.size() == 2;
     }
     if (normalizedName == "vector/pop" || normalizedName == "std/collections/vector/pop" ||
-        normalizedName == "array/pop" ||
-        normalizedName == "vector/clear" || normalizedName == "std/collections/vector/clear" ||
-        normalizedName == "array/clear") {
+        normalizedName == "vector/clear" || normalizedName == "std/collections/vector/clear") {
       return candidate.args.size() == 1;
     }
     return candidate.args.size() == 1;

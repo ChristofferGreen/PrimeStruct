@@ -1415,12 +1415,12 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/vector") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs array namespaced vector helper aliases in C++ emitter") {
+TEST_CASE("compiles and runs array namespaced vector count/access aliases in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
-  /array/push(values, 6i32)
+  /std/collections/vector/push(values, 6i32)
   [i32] countValue{/array/count(values)}
   [i32] capacityValue{/array/capacity(values)}
   [i32] tailValue{/array/at_unsafe(values, 2i32)}
@@ -1436,18 +1436,34 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("C++ emitter helper classifies full-path array mutator aliases") {
+TEST_CASE("rejects array namespaced vector mutator alias in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  /array/push(values, 6i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_array_namespaced_vector_mutator_alias.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_mutator_alias_out.txt").string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_mutator_alias_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/push") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter helper rejects full-path array mutator aliases") {
   primec::Expr call;
   call.kind = primec::Expr::Kind::Call;
   call.name = "/array/push";
 
   std::unordered_map<std::string, std::string> nameMap;
   std::string helper;
-  CHECK(primec::emitter::getVectorMutatorName(call, nameMap, helper));
-  CHECK(helper == "push");
-
-  nameMap.emplace("/array/push", "ps_user_array_push");
-  helper.clear();
   CHECK_FALSE(primec::emitter::getVectorMutatorName(call, nameMap, helper));
 }
 

@@ -130,9 +130,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (name.rfind("array/", 0) == 0) {
     std::string alias = name.substr(std::string("array/").size());
     if (alias.find('/') == std::string::npos &&
-        (alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" || alias == "push" ||
-         alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||
-         alias == "remove_swap")) {
+        (alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe")) {
       return alias == targetName;
     }
   }
@@ -992,8 +990,6 @@ bool getVectorMutatorName(const Expr &expr,
   }
   if (name.rfind("vector/", 0) == 0) {
     name = name.substr(std::string("vector/").size());
-  } else if (name.rfind("array/", 0) == 0) {
-    name = name.substr(std::string("array/").size());
   } else if (name.rfind("std/collections/vector/", 0) == 0) {
     name = name.substr(std::string("std/collections/vector/").size());
   } else if (name.find('/') != std::string::npos) {

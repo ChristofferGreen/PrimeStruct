@@ -41,6 +41,18 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   return false;
 }
 
+bool isArrayNamespacedVectorMutatorAlias(const Expr &expr, const std::string &helperName) {
+  if (helperName != "push" && helperName != "pop" && helperName != "reserve" && helperName != "clear" &&
+      helperName != "remove_at" && helperName != "remove_swap") {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  return normalized.rfind("array/", 0) == 0;
+}
+
 bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -67,7 +79,10 @@ bool isVectorBuiltinName(const Expr &expr, const char *name) {
     return true;
   }
   std::string aliasName;
-  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+  if (!resolveVectorHelperAliasName(expr, aliasName) || aliasName != name) {
+    return false;
+  }
+  return !isArrayNamespacedVectorMutatorAlias(expr, aliasName);
 }
 
 bool isMapBuiltinName(const Expr &expr, const char *name) {
