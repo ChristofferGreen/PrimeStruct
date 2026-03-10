@@ -1126,6 +1126,116 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced count defini
   CHECK(resolveMethodCalls == 1);
 }
 
+TEST_CASE("ir lowerer inference call-return setup defers compatibility array count definition lookup") {
+  primec::Definition receiverCountDef;
+  receiverCountDef.fullPath = "/vector/count";
+  primec::Definition arrayCountDef;
+  arrayCountDef.fullPath = "/array/count";
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/array/count", &arrayCountDef},
+  };
+
+  bool resolveReceiverHelper = true;
+  int resolveMethodCalls = 0;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.getReturnInfo = [](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    out.returnsVoid = false;
+    out.returnsArray = false;
+    if (path == "/vector/count") {
+      out.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+      return true;
+    }
+    if (path == "/array/count") {
+      out.kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
+      return true;
+    }
+    return false;
+  };
+  state.resolveMethodCallDefinition =
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    ++resolveMethodCalls;
+    if (!resolveReceiverHelper || !methodExpr.isMethodCall || methodExpr.name != "count" || methodExpr.args.empty()) {
+      return nullptr;
+    }
+    if (methodExpr.args.front().kind == primec::Expr::Kind::Name && methodExpr.args.front().name == "values") {
+      return &receiverCountDef;
+    }
+    return nullptr;
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/array/count";
+  callExpr.args = {receiverExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(resolveMethodCalls == 1);
+
+  resolveReceiverHelper = false;
+  resolveMethodCalls = 0;
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 1);
+}
+
+TEST_CASE("ir lowerer inference call-return setup keeps unresolved compatibility array count without definitions") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  int resolveMethodCalls = 0;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  state.resolveMethodCallDefinition =
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    ++resolveMethodCalls;
+    return nullptr;
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/array/count";
+  callExpr.args = {receiverExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(resolveMethodCalls == 1);
+}
+
 TEST_CASE("ir lowerer inference call-return setup defers namespaced capacity definition lookup") {
   primec::Definition receiverCapacityDef;
   receiverCapacityDef.fullPath = "/vector/capacity";
@@ -1257,6 +1367,82 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced access defin
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;
   callExpr.name = "/std/collections/vector/at";
+  callExpr.args = {receiverExpr, indexExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(resolveMethodCalls == 1);
+
+  resolveReceiverHelper = false;
+  resolveMethodCalls = 0;
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 1);
+}
+
+TEST_CASE("ir lowerer inference call-return setup defers compatibility array access definition lookup") {
+  primec::Definition receiverAtDef;
+  receiverAtDef.fullPath = "/vector/at";
+  primec::Definition arrayAtDef;
+  arrayAtDef.fullPath = "/array/at";
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/array/at", &arrayAtDef},
+  };
+
+  bool resolveReceiverHelper = true;
+  int resolveMethodCalls = 0;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.getReturnInfo = [](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    out.returnsVoid = false;
+    out.returnsArray = false;
+    if (path == "/vector/at") {
+      out.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+      return true;
+    }
+    if (path == "/array/at") {
+      out.kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
+      return true;
+    }
+    return false;
+  };
+  state.resolveMethodCallDefinition =
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    ++resolveMethodCalls;
+    if (!resolveReceiverHelper || !methodExpr.isMethodCall || methodExpr.name != "at" || methodExpr.args.empty()) {
+      return nullptr;
+    }
+    if (methodExpr.args.front().kind == primec::Expr::Kind::Name && methodExpr.args.front().name == "values") {
+      return &receiverAtDef;
+    }
+    return nullptr;
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/array/at";
   callExpr.args = {receiverExpr, indexExpr};
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
