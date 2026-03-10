@@ -15109,6 +15109,8 @@ TEST_CASE("ir lowerer setup type helper rejects non-struct method receiver call 
 TEST_CASE("ir lowerer setup type helper resolves method definitions from receiver targets") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
+  primec::Definition vectorCountDef;
+  vectorCountDef.fullPath = "/vector/count";
   primec::Definition stdCountDef;
   stdCountDef.fullPath = "/std/collections/vector/count";
   primec::Definition structMethodDef;
@@ -15116,6 +15118,7 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
 
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {"/array/count", &arrayCountDef},
+      {"/vector/count", &vectorCountDef},
       {"/std/collections/vector/count", &stdCountDef},
       {"/pkg/Ctor/length", &structMethodDef},
   };
@@ -15135,6 +15138,10 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "/std/collections/vector/count", "vector", "", defMap, error) == &stdCountDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "count", "std/collections/vector", "", defMap, error) == &stdCountDef);
   CHECK(error.empty());
 }
 
@@ -15159,6 +15166,37 @@ TEST_CASE("ir lowerer setup type helper reports method target lookup diagnostics
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "/array/missing", "vector", "", defMap, error) == nullptr);
   CHECK(error == "unknown method: /vector/missing");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "missing", "std/collections/vector", "", defMap, error) == nullptr);
+  CHECK(error == "unknown method: /std/collections/vector/missing");
+}
+
+TEST_CASE("ir lowerer setup type helper falls back from canonical vector receiver type to aliases") {
+  primec::Definition vectorCountDef;
+  vectorCountDef.fullPath = "/vector/count";
+  primec::Definition arrayCountDef;
+  arrayCountDef.fullPath = "/array/count";
+  std::string error;
+
+  {
+    const std::unordered_map<std::string, const primec::Definition *> defMap = {
+        {"/vector/count", &vectorCountDef},
+    };
+    CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+              "count", "std/collections/vector", "", defMap, error) == &vectorCountDef);
+    CHECK(error.empty());
+  }
+
+  {
+    const std::unordered_map<std::string, const primec::Definition *> defMap = {
+        {"/array/count", &arrayCountDef},
+    };
+    CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+              "count", "std/collections/vector", "", defMap, error) == &arrayCountDef);
+    CHECK(error.empty());
+  }
 }
 
 TEST_CASE("ir lowerer setup type helper resolves name receiver targets") {
