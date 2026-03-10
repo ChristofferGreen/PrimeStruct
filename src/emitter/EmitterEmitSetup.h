@@ -765,14 +765,33 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       return it->second;
     }
     if (expr.kind == Expr::Kind::Call) {
-      std::string full = preferCollectionHelperPath(resolveExprPath(expr));
-      auto defIt = defMap.find(full);
-      if (defIt != defMap.end()) {
-        ReturnKind calleeKind = inferDefinitionReturnKind(*defIt->second);
-        if (calleeKind == ReturnKind::Void || calleeKind == ReturnKind::Unknown) {
-          return ReturnKind::Unknown;
+      const std::string resolvedPath = resolveExprPath(expr);
+      const auto resolvedCandidates = collectionHelperPathCandidates(resolvedPath);
+      bool sawDefinitionCandidate = false;
+      for (const auto &candidate : resolvedCandidates) {
+        auto defIt = defMap.find(candidate);
+        if (defIt == defMap.end()) {
+          continue;
         }
-        return calleeKind;
+        sawDefinitionCandidate = true;
+        ReturnKind calleeKind = inferDefinitionReturnKind(*defIt->second);
+        if (calleeKind != ReturnKind::Void && calleeKind != ReturnKind::Unknown) {
+          return calleeKind;
+        }
+      }
+      if (resolvedCandidates.empty()) {
+        std::string preferred = preferCollectionHelperPath(resolvedPath);
+        auto defIt = defMap.find(preferred);
+        if (defIt != defMap.end()) {
+          sawDefinitionCandidate = true;
+          ReturnKind calleeKind = inferDefinitionReturnKind(*defIt->second);
+          if (calleeKind != ReturnKind::Void && calleeKind != ReturnKind::Unknown) {
+            return calleeKind;
+          }
+        }
+      }
+      if (sawDefinitionCandidate) {
+        return ReturnKind::Unknown;
       }
       if (isBuiltinBlock(expr, nameMap) && expr.hasBodyArguments) {
         if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
