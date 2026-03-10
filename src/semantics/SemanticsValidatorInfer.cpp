@@ -251,10 +251,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             (void)resolveStructPathFromType(typeName, receiver.namespacePrefix, structPath);
           }
         } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
-          std::string resolvedType = resolveCalleePath(receiver);
-          if (structNames_.count(resolvedType) > 0) {
-            structPath = resolvedType;
-          }
+          structPath = inferStructReturnPath(receiver, params, locals);
         }
         if (structPath.empty()) {
           return ReturnKind::Unknown;
