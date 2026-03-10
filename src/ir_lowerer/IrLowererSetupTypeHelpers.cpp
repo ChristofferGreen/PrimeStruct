@@ -83,23 +83,33 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     candidates.push_back(candidate);
   };
 
+  std::string normalizedPath = path;
+  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+    if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+      normalizedPath.insert(normalizedPath.begin(), '/');
+    }
+  }
+
   appendUnique(path);
-  if (path.rfind("/array/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/array/").size());
+  appendUnique(normalizedPath);
+  if (normalizedPath.rfind("/array/", 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     appendUnique("/vector/" + suffix);
     appendUnique("/std/collections/vector/" + suffix);
-  } else if (path.rfind("/vector/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/vector/").size());
+  } else if (normalizedPath.rfind("/vector/", 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
     appendUnique("/std/collections/vector/" + suffix);
     appendUnique("/array/" + suffix);
-  } else if (path.rfind("/std/collections/vector/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
+  } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
     appendUnique("/vector/" + suffix);
     appendUnique("/array/" + suffix);
-  } else if (path.rfind("/map/", 0) == 0) {
-    appendUnique("/std/collections/map/" + path.substr(std::string("/map/").size()));
-  } else if (path.rfind("/std/collections/map/", 0) == 0) {
-    appendUnique("/map/" + path.substr(std::string("/std/collections/map/").size()));
+  } else if (normalizedPath.rfind("/map/", 0) == 0) {
+    appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
+  } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+    appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
   }
 
   return candidates;
