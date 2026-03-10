@@ -910,7 +910,24 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       lookupError.clear();
       resolvedDef = resolveMethodDefinitionFromReceiverTarget(callExpr.name, typeName, "", defMap, lookupError);
     } else {
-      const auto receiverPaths = collectionHelperPathCandidates(resolveExprPath(*receiver));
+      std::vector<std::string> receiverPaths = collectionHelperPathCandidates(resolveExprPath(*receiver));
+      auto appendUniqueReceiverPath = [&](const std::string &candidate) {
+        if (candidate.empty()) {
+          return;
+        }
+        for (const auto &existing : receiverPaths) {
+          if (existing == candidate) {
+            return;
+          }
+        }
+        receiverPaths.push_back(candidate);
+      };
+      if (receiverMethodDef != nullptr) {
+        const auto resolvedReceiverPaths = collectionHelperPathCandidates(receiverMethodDef->fullPath);
+        for (const auto &resolvedReceiverPath : resolvedReceiverPaths) {
+          appendUniqueReceiverPath(resolvedReceiverPath);
+        }
+      }
       for (const auto &receiverPath : receiverPaths) {
         auto receiverDefIt = defMap.find(receiverPath);
         if (receiverDefIt == defMap.end() || receiverDefIt->second == nullptr) {
