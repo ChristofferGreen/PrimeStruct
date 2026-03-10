@@ -72,17 +72,6 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
 
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path);
 
-std::string preferCollectionHelperPath(const std::string &path,
-                                       const std::unordered_map<std::string, const Definition *> &defMap) {
-  auto candidates = collectionHelperPathCandidates(path);
-  for (const auto &candidate : candidates) {
-    if (defMap.count(candidate) > 0) {
-      return candidate;
-    }
-  }
-  return path;
-}
-
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path) {
   std::vector<std::string> candidates;
   auto appendUnique = [&](const std::string &candidate) {
@@ -589,16 +578,26 @@ bool resolveDefinitionCallReturnKind(const Expr &callExpr,
     return false;
   }
 
-  const std::string resolved = preferCollectionHelperPath(resolveExprPath(callExpr), defMap);
-  auto defIt = defMap.find(resolved);
-  if (defIt == defMap.end()) {
-    return false;
+  const auto candidates = collectionHelperPathCandidates(resolveExprPath(callExpr));
+  bool matchedDefinition = false;
+  for (const auto &candidate : candidates) {
+    auto defIt = defMap.find(candidate);
+    if (defIt == defMap.end()) {
+      continue;
+    }
+    matchedDefinition = true;
+    if (resolveReturnInfoKindForPath(candidate, getReturnInfo, requireArrayReturn, kindOut)) {
+      if (definitionMatchedOut != nullptr) {
+        *definitionMatchedOut = true;
+      }
+      return true;
+    }
   }
 
   if (definitionMatchedOut != nullptr) {
-    *definitionMatchedOut = true;
+    *definitionMatchedOut = matchedDefinition;
   }
-  return resolveReturnInfoKindForPath(resolved, getReturnInfo, requireArrayReturn, kindOut);
+  return false;
 }
 
 bool resolveCountMethodCallReturnKind(const Expr &callExpr,
