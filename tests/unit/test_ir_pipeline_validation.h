@@ -9489,6 +9489,130 @@ TEST_CASE("ir lowerer struct return helpers forward vector alias call paths") {
                                                           defMap).empty());
 }
 
+TEST_CASE("ir lowerer struct return helpers fall back from alias defs without returns") {
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/Entry",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  primec::Definition aliasAt;
+  aliasAt.fullPath = "/vector/at";
+  aliasAt.namespacePrefix = "/vector";
+
+  primec::Definition canonicalAt;
+  canonicalAt.fullPath = "/std/collections/vector/at";
+  canonicalAt.namespacePrefix = "/std/collections/vector";
+  primec::Transform returnEntry;
+  returnEntry.name = "return";
+  returnEntry.templateArgs = {"Entry"};
+  canonicalAt.transforms.push_back(returnEntry);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {aliasAt.fullPath, &aliasAt},
+      {canonicalAt.fullPath, &canonicalAt},
+  };
+  const std::unordered_map<std::string, primec::ir_lowerer::LayoutFieldBinding> knownFields;
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  primec::Expr aliasAtCall;
+  aliasAtCall.kind = primec::Expr::Kind::Call;
+  aliasAtCall.name = "/vector/at";
+  aliasAtCall.args = {valuesName, indexLiteral};
+
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(aliasAtCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap) == "/pkg/Entry");
+}
+
+TEST_CASE("ir lowerer struct return helpers keep empty result when alias candidates have no struct returns") {
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/Entry",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  primec::Definition aliasAt;
+  aliasAt.fullPath = "/vector/at";
+  aliasAt.namespacePrefix = "/vector";
+
+  primec::Definition canonicalAt;
+  canonicalAt.fullPath = "/std/collections/vector/at";
+  canonicalAt.namespacePrefix = "/std/collections/vector";
+  primec::Transform returnInt;
+  returnInt.name = "return";
+  returnInt.templateArgs = {"i32"};
+  canonicalAt.transforms.push_back(returnInt);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {aliasAt.fullPath, &aliasAt},
+      {canonicalAt.fullPath, &canonicalAt},
+  };
+  const std::unordered_map<std::string, primec::ir_lowerer::LayoutFieldBinding> knownFields;
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  primec::Expr aliasAtCall;
+  aliasAtCall.kind = primec::Expr::Kind::Call;
+  aliasAtCall.name = "/vector/at";
+  aliasAtCall.args = {valuesName, indexLiteral};
+
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(aliasAtCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap).empty());
+}
+
 TEST_CASE("ir lowerer struct layout helpers parse and extract alignment transforms") {
   CHECK(primec::ir_lowerer::alignTo(7u, 4u) == 8u);
   CHECK(primec::ir_lowerer::alignTo(16u, 8u) == 16u);

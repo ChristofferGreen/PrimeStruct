@@ -72,6 +72,51 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
   return {receiverStruct + "/" + methodName};
 }
 
+std::vector<std::string> collectionHelperPathCandidates(const std::string &path) {
+  std::vector<std::string> candidates;
+  auto appendUnique = [&](const std::string &candidate) {
+    if (candidate.empty()) {
+      return;
+    }
+    for (const auto &existing : candidates) {
+      if (existing == candidate) {
+        return;
+      }
+    }
+    candidates.push_back(candidate);
+  };
+
+  std::string normalizedPath = path;
+  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+    if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+      normalizedPath.insert(normalizedPath.begin(), '/');
+    }
+  }
+
+  appendUnique(path);
+  appendUnique(normalizedPath);
+  if (normalizedPath.rfind("/array/", 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+    appendUnique("/vector/" + suffix);
+    appendUnique("/std/collections/vector/" + suffix);
+  } else if (normalizedPath.rfind("/vector/", 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
+    appendUnique("/std/collections/vector/" + suffix);
+    appendUnique("/array/" + suffix);
+  } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
+    const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+    appendUnique("/vector/" + suffix);
+    appendUnique("/array/" + suffix);
+  } else if (normalizedPath.rfind("/map/", 0) == 0) {
+    appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
+  } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+    appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
+  }
+  return candidates;
+}
+
 std::string preferCollectionHelperPath(const std::string &path,
                                        const std::unordered_map<std::string, const Definition *> &defMap) {
   std::string preferred = path;
@@ -312,13 +357,29 @@ std::string inferStructReturnPathFromExprInternal(
     return "";
   }
 
-  std::string resolved = resolveStructLayoutExprPath(expr);
-  if (structNames.count(resolved) > 0) {
-    return resolved;
+  const auto resolvedCandidates = collectionHelperPathCandidates(resolveStructLayoutExprPath(expr));
+  for (const auto &candidate : resolvedCandidates) {
+    if (structNames.count(candidate) > 0) {
+      return candidate;
+    }
   }
-  resolved = preferCollectionHelperPath(resolved, defMap);
-  return inferStructReturnPathFromDefinitionInternal(
-      resolved, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);
+  for (const auto &candidate : resolvedCandidates) {
+    if (const std::string inferred = inferStructReturnPathFromDefinitionInternal(
+            candidate, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);
+        !inferred.empty()) {
+      return inferred;
+    }
+  }
+  if (resolvedCandidates.empty()) {
+    std::string resolved = resolveStructLayoutExprPath(expr);
+    if (structNames.count(resolved) > 0) {
+      return resolved;
+    }
+    resolved = preferCollectionHelperPath(resolved, defMap);
+    return inferStructReturnPathFromDefinitionInternal(
+        resolved, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);
+  }
+  return "";
 }
 
 } // namespace
