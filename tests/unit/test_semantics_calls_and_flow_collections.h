@@ -3549,6 +3549,68 @@ main() {
   CHECK(error.find("argument type mismatch for /i32/tag param marker") != std::string::npos);
 }
 
+TEST_CASE("vector constructor alias call infers canonical helper return kind") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/vector([i32] seed) {
+  return(Marker(seed))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[return<auto>]
+project() {
+  return(/vector/vector(9i32).tag())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(project())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector constructor alias call keeps canonical helper diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/vector([i32] seed) {
+  return(Marker(seed))
+}
+
+[return<int>]
+/Marker/tag([Marker] self, [bool] marker) {
+  return(self.value)
+}
+
+[return<auto>]
+project() {
+  return(/vector/vector(9i32).tag(1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(project())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /Marker/tag param marker") != std::string::npos);
+}
+
 TEST_CASE("templated stdlib canonical vector helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]

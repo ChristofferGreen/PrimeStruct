@@ -310,8 +310,55 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
     }
+    auto preferVectorStdlibHelperPathForCall = [&](const std::string &path) -> std::string {
+      std::string preferred = path;
+      if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string suffix = preferred.substr(std::string("/array/").size());
+        const std::string vectorAlias = "/vector/" + suffix;
+        if (defMap_.count(vectorAlias) > 0) {
+          return vectorAlias;
+        }
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        if (defMap_.count(stdlibAlias) > 0) {
+          return stdlibAlias;
+        }
+      }
+      if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string suffix = preferred.substr(std::string("/vector/").size());
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        if (defMap_.count(stdlibAlias) > 0) {
+          preferred = stdlibAlias;
+        } else {
+          const std::string arrayAlias = "/array/" + suffix;
+          if (defMap_.count(arrayAlias) > 0) {
+            preferred = arrayAlias;
+          }
+        }
+      }
+      if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
+        const std::string vectorAlias = "/vector/" + suffix;
+        if (defMap_.count(vectorAlias) > 0) {
+          preferred = vectorAlias;
+        } else {
+          const std::string arrayAlias = "/array/" + suffix;
+          if (defMap_.count(arrayAlias) > 0) {
+            preferred = arrayAlias;
+          }
+        }
+      }
+      if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string stdlibAlias =
+            "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+        if (defMap_.count(stdlibAlias) > 0) {
+          preferred = stdlibAlias;
+        }
+      }
+      return preferred;
+    };
+    const std::string resolvedCalleePath = preferVectorStdlibHelperPathForCall(resolveCalleePath(expr));
     std::string collection;
-    if (defMap_.find(resolveCalleePath(expr)) == defMap_.end() && getBuiltinCollectionName(expr, collection)) {
+    if (defMap_.find(resolvedCalleePath) == defMap_.end() && getBuiltinCollectionName(expr, collection)) {
       if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
           expr.templateArgs.size() == 1) {
         return ReturnKind::Array;
@@ -1188,7 +1235,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return preferred;
     };
-    std::string resolved = resolveCalleePath(expr);
+    std::string resolved = preferVectorStdlibHelperPath(resolveCalleePath(expr));
     bool hasResolvedPath = !expr.isMethodCall;
     if (expr.isMethodCall && expr.name == "ok" && expr.args.size() >= 1) {
       const Expr &receiver = expr.args.front();
