@@ -14940,7 +14940,7 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/array/count", "vector", "", defMap, error) == &arrayCountDef);
+            "/array/count", "vector", "", defMap, error) == &stdCountDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(

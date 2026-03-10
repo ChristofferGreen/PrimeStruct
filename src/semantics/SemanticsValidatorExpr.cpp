@@ -2359,7 +2359,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
         isVectorBuiltinName(expr, "count") && expr.args.size() == 1;
     const bool isNamespacedMapCountCall =
-        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" && expr.args.size() == 1;
+        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count";
+    const bool isResolvedMapCountCall =
+        !expr.isMethodCall && (resolved == "/map/count" || resolved == "/std/collections/map/count");
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
         isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1;
@@ -2371,6 +2373,56 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isNamespacedMapAccessCall =
         isBuiltinAccessName && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
+    auto normalizeCollectionMethodName = [](const std::string &methodName) {
+      std::string normalized = methodName;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      const std::string vectorPrefix = "vector/";
+      const std::string arrayPrefix = "array/";
+      const std::string stdVectorPrefix = "std/collections/vector/";
+      const std::string mapPrefix = "map/";
+      const std::string stdMapPrefix = "std/collections/map/";
+      if (normalized.rfind(vectorPrefix, 0) == 0) {
+        normalized = normalized.substr(vectorPrefix.size());
+      } else if (normalized.rfind(arrayPrefix, 0) == 0) {
+        normalized = normalized.substr(arrayPrefix.size());
+      } else if (normalized.rfind(stdVectorPrefix, 0) == 0) {
+        normalized = normalized.substr(stdVectorPrefix.size());
+      } else if (normalized.rfind(mapPrefix, 0) == 0) {
+        normalized = normalized.substr(mapPrefix.size());
+      } else if (normalized.rfind(stdMapPrefix, 0) == 0) {
+        normalized = normalized.substr(stdMapPrefix.size());
+      }
+      return normalized;
+    };
+    auto resolvePointerLikeMethodTarget = [&](const Expr &receiverExpr,
+                                              const std::string &methodName,
+                                              std::string &resolvedOut) -> bool {
+      std::string typeName;
+      if (receiverExpr.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, receiverExpr.name)) {
+          typeName = paramBinding->typeName;
+        } else {
+          auto it = locals.find(receiverExpr.name);
+          if (it != locals.end()) {
+            typeName = it->second.typeName;
+          }
+        }
+      }
+      if (typeName.empty()) {
+        ReturnKind inferredKind = inferExprReturnKind(receiverExpr, params, locals);
+        std::string inferred = typeNameForReturnKind(inferredKind);
+        if (!inferred.empty()) {
+          typeName = inferred;
+        }
+      }
+      if (typeName != "Pointer" && typeName != "Reference") {
+        return false;
+      }
+      resolvedOut = "/" + typeName + "/" + normalizeCollectionMethodName(methodName);
+      return true;
+    };
     if (expr.isMethodCall) {
       if (!hasVectorHelperCallResolution) {
         if (expr.args.empty()) {
@@ -2381,13 +2433,19 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         hasMethodReceiverIndex = true;
         methodReceiverIndex = 0;
         bool isBuiltinMethod = false;
+        const bool hasBlockArgs = expr.hasBodyArguments || !expr.bodyArguments.empty();
         if (!resolveMethodTarget(expr.args.front(), expr.name, resolved, isBuiltinMethod)) {
-          return false;
+          if (hasBlockArgs &&
+              resolvePointerLikeMethodTarget(expr.args.front(), expr.name, resolved)) {
+            isBuiltinMethod = false;
+          } else {
+            return false;
+          }
         }
         if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && isVectorBuiltinName(expr, "capacity")) {
           promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
         }
-        if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end()) {
+        if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && !hasBlockArgs) {
           error_ = "unknown method: " + resolved;
           return false;
         }
@@ -2395,8 +2453,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         resolvedMethod = false;
       }
-    } else if ((isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall) && expr.args.size() == 1 &&
-               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall)) {
+    } else if ((isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall || isResolvedMapCountCall) &&
+               expr.args.size() == 1 &&
+               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall ||
+                isNamespacedMapCountCall || isResolvedMapCountCall)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;
@@ -2414,8 +2474,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall && !expr.args.empty() &&
-               expr.args.size() != 1 && defMap_.find(resolved) != defMap_.end()) {
+    } else if (((isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall) || isNamespacedMapCountCall ||
+                isResolvedMapCountCall) &&
+               !expr.args.empty() && expr.args.size() != 1 && defMap_.find(resolved) != defMap_.end()) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;

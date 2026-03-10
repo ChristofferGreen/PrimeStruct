@@ -3232,6 +3232,34 @@ main() {
   CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
 }
 
+TEST_CASE("array namespaced method expression body-arg diagnostics normalize pointer receiver target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  [Pointer<i32>] ptr{location(value)}
+  return(ptr./array/count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize pointer receiver target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  [Pointer<i32>] ptr{location(value)}
+  return(ptr./std/collections/vector/count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
+}
+
 TEST_CASE("templated stdlib canonical vector helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]

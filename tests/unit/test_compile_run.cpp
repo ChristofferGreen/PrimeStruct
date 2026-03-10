@@ -3,7 +3,7 @@
 #include "primec/IrSerializer.h"
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
-#include "emitter/EmitterHelpers.h"
+#include "src/emitter/EmitterHelpers.h"
 
 #include <algorithm>
 #include <cctype>
