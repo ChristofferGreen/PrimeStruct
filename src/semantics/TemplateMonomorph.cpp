@@ -332,10 +332,15 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
     }
   }
   if (preferred.rfind("/vector/", 0) == 0 && defs.count(preferred) == 0) {
-    const std::string stdlibAlias =
-        "/std/collections/vector/" + preferred.substr(std::string("/vector/").size());
+    const std::string suffix = preferred.substr(std::string("/vector/").size());
+    const std::string stdlibAlias = "/std/collections/vector/" + suffix;
     if (defs.count(stdlibAlias) > 0) {
       preferred = stdlibAlias;
+    } else {
+      const std::string arrayAlias = "/array/" + suffix;
+      if (defs.count(arrayAlias) > 0) {
+        preferred = arrayAlias;
+      }
     }
   }
   if (preferred.rfind("/std/collections/vector/", 0) == 0 && defs.count(preferred) == 0) {

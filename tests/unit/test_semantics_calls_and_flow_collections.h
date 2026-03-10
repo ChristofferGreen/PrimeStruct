@@ -4919,6 +4919,62 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector namespaced count non-builtin arity falls back to array helper return") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/array/count([vector<i32>] values, [bool] marker) {
+  return(31i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/vector/count(values, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced count array fallback keeps return mismatch diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/array/count([vector<i32>] values, [bool] marker) {
+  return(31i32)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/vector/count(values, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count auto inference non-builtin arity falls back to array helper return") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/array/count([vector<i32>] values, [bool] marker) {
+  return(31i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{/vector/count(values, true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("map stdlib namespaced count expression keeps receiver helper precedence for non-builtin arity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

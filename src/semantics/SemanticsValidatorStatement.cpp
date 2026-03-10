@@ -344,10 +344,15 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
     }
     if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
-      const std::string stdlibAlias =
-          "/std/collections/vector/" + preferred.substr(std::string("/vector/").size());
+      const std::string suffix = preferred.substr(std::string("/vector/").size());
+      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
       if (defMap_.count(stdlibAlias) > 0) {
         preferred = stdlibAlias;
+      } else {
+        const std::string arrayAlias = "/array/" + suffix;
+        if (defMap_.count(arrayAlias) > 0) {
+          preferred = arrayAlias;
+        }
       }
     }
     if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap_.count(preferred) == 0) {

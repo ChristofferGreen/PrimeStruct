@@ -414,8 +414,14 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       }
     }
     if (path.rfind("/vector/", 0) == 0) {
-      const std::string stdlibAlias = "/std/collections/vector/" + path.substr(std::string("/vector/").size());
+      const std::string suffix = path.substr(std::string("/vector/").size());
+      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
       defIt = defMap.find(stdlibAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+      const std::string arrayAlias = "/array/" + suffix;
+      defIt = defMap.find(arrayAlias);
       if (defIt != defMap.end()) {
         return defIt->second;
       }

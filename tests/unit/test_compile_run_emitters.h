@@ -1041,6 +1041,29 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("compiles and runs vector namespaced count non-builtin array fallback in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/array/count([vector<i32>] values, [bool] marker) {
+  return(31i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/vector/count(values, true))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_count_non_builtin_array_fallback.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_non_builtin_array_fallback_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 31);
+}
+
 TEST_CASE("compiles and runs std namespaced capacity expression receiver precedence in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
