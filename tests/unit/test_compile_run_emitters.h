@@ -1436,6 +1436,21 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("C++ emitter helper classifies full-path array mutator aliases") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.name = "/array/push";
+
+  std::unordered_map<std::string, std::string> nameMap;
+  std::string helper;
+  CHECK(primec::emitter::getVectorMutatorName(call, nameMap, helper));
+  CHECK(helper == "push");
+
+  nameMap.emplace("/array/push", "ps_user_array_push");
+  helper.clear();
+  CHECK_FALSE(primec::emitter::getVectorMutatorName(call, nameMap, helper));
+}
+
 TEST_CASE("compiles and runs stdlib canonical vector helper method precedence in C++ emitter") {
   const std::string source = R"(
 [return<int>]

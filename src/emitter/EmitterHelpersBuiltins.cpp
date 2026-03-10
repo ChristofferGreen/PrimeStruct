@@ -936,6 +936,8 @@ bool getVectorMutatorName(const Expr &expr,
   }
   if (name.rfind("vector/", 0) == 0) {
     name = name.substr(std::string("vector/").size());
+  } else if (name.rfind("array/", 0) == 0) {
+    name = name.substr(std::string("array/").size());
   } else if (name.rfind("std/collections/vector/", 0) == 0) {
     name = name.substr(std::string("std/collections/vector/").size());
   } else if (name.find('/') != std::string::npos) {
