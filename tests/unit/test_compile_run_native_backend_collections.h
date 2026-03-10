@@ -6619,6 +6619,30 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("compiles and runs native std namespaced count non-builtin compatibility fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values, [bool] marker) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/std/collections/vector/count(values, true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_std_namespaced_count_non_builtin_compat_fallback.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_std_namespaced_count_non_builtin_compat_fallback_exe")
+                                  .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
+}
+
 TEST_CASE("compiles and runs native std namespaced capacity expression receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -5698,6 +5698,24 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
+TEST_CASE("runs vm with std namespaced count non-builtin compatibility fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values, [bool] marker) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/std/collections/vector/count(values, true))
+}
+)";
+  const std::string srcPath = writeTemp("vm_std_namespaced_count_non_builtin_compat_fallback.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 91);
+}
+
 TEST_CASE("runs vm with std namespaced capacity expression receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
