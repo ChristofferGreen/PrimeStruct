@@ -2209,11 +2209,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   }
   auto resolveBodyArgumentTarget = [&](const Expr &callExpr, std::string &resolvedOut) {
     if (!callExpr.isMethodCall) {
-      resolvedOut = resolveCalleePath(callExpr);
+      resolvedOut = preferVectorStdlibHelperPath(resolveCalleePath(callExpr));
       return;
     }
     if (callExpr.args.empty()) {
-      resolvedOut = resolveCalleePath(callExpr);
+      resolvedOut = preferVectorStdlibHelperPath(resolveCalleePath(callExpr));
       return;
     }
     const Expr &receiver = callExpr.args.front();
@@ -2261,7 +2261,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
     }
     if (typeName.empty() || typeName == "Pointer" || typeName == "Reference") {
-      resolvedOut = resolveCalleePath(callExpr);
+      resolvedOut = preferVectorStdlibHelperPath(resolveCalleePath(callExpr));
       return;
     }
     if (isPrimitiveBindingTypeName(typeName)) {

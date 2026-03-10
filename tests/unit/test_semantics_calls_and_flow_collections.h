@@ -3090,6 +3090,63 @@ main() {
   CHECK(error.find("block arguments require a definition target: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("array namespaced vector helper alias call form resolves for statement body arguments") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  /array/count(values, true) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced helper call form resolves for statement body arguments") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  /vector/count(values, true) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical vector helper call form falls back for statement body arguments") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  /std/collections/vector/count(values, true) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("templated stdlib canonical vector helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]
