@@ -859,6 +859,83 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
         normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
       }
+      auto preferVectorStdlibHelperPathForCall = [&](const std::string &path) -> std::string {
+        std::string preferred = path;
+        if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
+          const std::string suffix = preferred.substr(std::string("/array/").size());
+          const std::string vectorAlias = "/vector/" + suffix;
+          if (defMap_.count(vectorAlias) > 0) {
+            return vectorAlias;
+          }
+          const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+          if (defMap_.count(stdlibAlias) > 0) {
+            return stdlibAlias;
+          }
+        }
+        if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+          const std::string suffix = preferred.substr(std::string("/vector/").size());
+          const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+          if (defMap_.count(stdlibAlias) > 0) {
+            preferred = stdlibAlias;
+          } else {
+            const std::string arrayAlias = "/array/" + suffix;
+            if (defMap_.count(arrayAlias) > 0) {
+              preferred = arrayAlias;
+            }
+          }
+        }
+        if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+          const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
+          const std::string vectorAlias = "/vector/" + suffix;
+          if (defMap_.count(vectorAlias) > 0) {
+            preferred = vectorAlias;
+          } else {
+            const std::string arrayAlias = "/array/" + suffix;
+            if (defMap_.count(arrayAlias) > 0) {
+              preferred = arrayAlias;
+            }
+          }
+        }
+        if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+          const std::string stdlibAlias =
+              "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+          if (defMap_.count(stdlibAlias) > 0) {
+            preferred = stdlibAlias;
+          }
+        }
+        return preferred;
+      };
+      auto inferPointerLikeCallReturnType = [&](const Expr &receiverExpr) -> std::string {
+        if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
+          return "";
+        }
+        const std::string callPath = preferVectorStdlibHelperPathForCall(resolveCalleePath(receiverExpr));
+        if (callPath.empty()) {
+          return "";
+        }
+        auto defIt = defMap_.find(callPath);
+        if (defIt == defMap_.end() || defIt->second == nullptr) {
+          return "";
+        }
+        for (const auto &transform : defIt->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string base;
+          std::string arg;
+          if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg)) {
+            return "";
+          }
+          if (base == "Pointer") {
+            return "Pointer";
+          }
+          if (base == "Reference") {
+            return "Reference";
+          }
+          return "";
+        }
+        return "";
+      };
 
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
         const std::string resolvedType = resolveCalleePath(receiver);
@@ -880,6 +957,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
       if (typeName.empty()) {
+        typeName = inferPointerLikeCallReturnType(receiver);
+      }
+      if (typeName.empty()) {
         ReturnKind inferredKind = inferExprReturnKind(receiver, params, locals);
         std::string inferred;
         if (inferredKind == ReturnKind::Array) {
@@ -898,6 +978,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return false;
       }
       if (typeName == "Pointer" || typeName == "Reference") {
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          resolvedOut = "/" + typeName + "/" + normalizedMethodName;
+          return true;
+        }
         return false;
       }
       if (isPrimitiveBindingTypeName(typeName)) {

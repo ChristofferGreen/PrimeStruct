@@ -3390,6 +3390,52 @@ main() {
   CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
 }
 
+TEST_CASE("array namespaced method expression body-arg infers helper-returned reference target") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+/std/collections/vector/borrow([Reference<i32>] ref) {
+  return(ref)
+}
+
+[return<int>]
+/Reference/count([Reference<i32>] self, [bool] marker) {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  [i32] value{1i32}
+  return(/vector/borrow(location(value))./array/count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("array namespaced method expression body-arg helper-returned reference keeps canonical diagnostics") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+/std/collections/vector/borrow([Reference<i32>] ref) {
+  return(ref)
+}
+
+[return<int>]
+/Reference/count([Reference<i32>] self, [i32] marker) {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  [i32] value{1i32}
+  return(/vector/borrow(location(value))./array/count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /Reference/count param marker") != std::string::npos);
+}
+
 TEST_CASE("templated stdlib canonical vector helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]
