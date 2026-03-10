@@ -19,9 +19,14 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     normalized.erase(0, 1);
   }
   const std::string vectorPrefix = "vector/";
+  const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = normalized.substr(vectorPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(arrayPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(arrayPrefix.size());
     return true;
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
@@ -77,6 +82,7 @@ bool isNamespacedVectorHelperCall(const Expr &expr) {
     normalized.erase(0, 1);
   }
   return normalized.rfind("vector/", 0) == 0 ||
+         normalized.rfind("array/", 0) == 0 ||
          normalized.rfind("std/collections/vector/", 0) == 0;
 }
 

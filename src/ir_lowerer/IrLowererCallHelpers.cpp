@@ -24,9 +24,14 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     normalized.erase(0, 1);
   }
   constexpr std::string_view vectorPrefix = "vector/";
+  constexpr std::string_view arrayPrefix = "array/";
   constexpr std::string_view stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = normalized.substr(vectorPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(arrayPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(arrayPrefix.size());
     return true;
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {

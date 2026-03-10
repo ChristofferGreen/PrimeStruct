@@ -208,6 +208,28 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs native array namespaced vector helper aliases") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{/array/vector<i32>(4i32, 5i32)}
+  /array/push(values, 6i32)
+  [i32] countValue{/array/count(values)}
+  [i32] capacityValue{/array/capacity(values)}
+  [i32] tailValue{/array/at_unsafe(values, 2i32)}
+  return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_array_namespaced_vector_helper_aliases.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_array_namespaced_vector_helper_aliases_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles and runs native stdlib canonical vector helper method precedence") {
   const std::string source = R"(
 [return<int>]
