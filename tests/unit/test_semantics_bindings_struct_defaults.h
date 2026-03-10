@@ -119,6 +119,93 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("omitted initializer accepts effect-free Create with vector alias call helper fallback") {
+  const std::string source = R"(
+[return<i32>]
+/std/collections/vector/count([array<i32>] values, [bool] marker) {
+  return(11i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [array<i32>] items{array<i32>(1i32, 2i32)}
+  assign(this.value, /vector/count(items, true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("omitted initializer accepts effect-free Create with vector alias method helper fallback") {
+  const std::string source = R"(
+[return<i32>]
+/std/collections/vector/count([array<i32>] values, [bool] marker) {
+  return(13i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [array<i32>] items{array<i32>(1i32, 2i32)}
+  assign(this.value, items./vector/count(true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector alias method fallback keeps canonical mismatch diagnostics in Create") {
+  const std::string source = R"(
+[return<i32>]
+/std/collections/vector/count([array<i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [array<i32>] items{array<i32>(1i32, 2i32)}
+  assign(this.value, items./vector/count(true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count param marker") != std::string::npos);
+}
+
 TEST_CASE("omitted initializer allows Create to fill missing fields") {
   const std::string source = R"(
 [struct]

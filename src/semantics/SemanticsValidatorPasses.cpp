@@ -2441,6 +2441,137 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
   if (expr.isBinding) {
     return false;
   }
+  auto normalizeCollectionMethodName = [](const std::string &receiverPath,
+                                          std::string methodName) -> std::string {
+    if (!methodName.empty() && methodName.front() == '/') {
+      methodName.erase(methodName.begin());
+    }
+    if (receiverPath == "/vector" || receiverPath == "/array") {
+      const std::string vectorPrefix = "vector/";
+      const std::string arrayPrefix = "array/";
+      const std::string stdVectorPrefix = "std/collections/vector/";
+      if (methodName.rfind(vectorPrefix, 0) == 0) {
+        return methodName.substr(vectorPrefix.size());
+      }
+      if (methodName.rfind(arrayPrefix, 0) == 0) {
+        return methodName.substr(arrayPrefix.size());
+      }
+      if (methodName.rfind(stdVectorPrefix, 0) == 0) {
+        return methodName.substr(stdVectorPrefix.size());
+      }
+    }
+    if (receiverPath == "/map") {
+      const std::string mapPrefix = "map/";
+      const std::string stdMapPrefix = "std/collections/map/";
+      if (methodName.rfind(mapPrefix, 0) == 0) {
+        return methodName.substr(mapPrefix.size());
+      }
+      if (methodName.rfind(stdMapPrefix, 0) == 0) {
+        return methodName.substr(stdMapPrefix.size());
+      }
+    }
+    return methodName;
+  };
+  auto methodPathCandidatesForReceiver = [](const std::string &receiverPath,
+                                            const std::string &methodName) -> std::vector<std::string> {
+    if (receiverPath == "/vector") {
+      return {"/vector/" + methodName,
+              "/std/collections/vector/" + methodName,
+              "/array/" + methodName};
+    }
+    if (receiverPath == "/array") {
+      return {"/array/" + methodName,
+              "/vector/" + methodName,
+              "/std/collections/vector/" + methodName};
+    }
+    if (receiverPath == "/map") {
+      return {"/map/" + methodName,
+              "/std/collections/map/" + methodName};
+    }
+    return {receiverPath + "/" + methodName};
+  };
+  auto preferCollectionHelperPath = [&](const std::string &path) -> std::string {
+    std::string preferred = path;
+    if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
+      const std::string suffix = preferred.substr(std::string("/array/").size());
+      const std::string vectorAlias = "/vector/" + suffix;
+      if (defMap_.count(vectorAlias) > 0) {
+        return vectorAlias;
+      }
+      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      if (defMap_.count(stdlibAlias) > 0) {
+        return stdlibAlias;
+      }
+    }
+    if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+      const std::string suffix = preferred.substr(std::string("/vector/").size());
+      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      if (defMap_.count(stdlibAlias) > 0) {
+        preferred = stdlibAlias;
+      } else {
+        const std::string arrayAlias = "/array/" + suffix;
+        if (defMap_.count(arrayAlias) > 0) {
+          preferred = arrayAlias;
+        }
+      }
+    }
+    if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
+      const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
+      const std::string vectorAlias = "/vector/" + suffix;
+      if (defMap_.count(vectorAlias) > 0) {
+        preferred = vectorAlias;
+      } else {
+        const std::string arrayAlias = "/array/" + suffix;
+        if (defMap_.count(arrayAlias) > 0) {
+          preferred = arrayAlias;
+        }
+      }
+    }
+    if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+      const std::string stdlibAlias = "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+      if (defMap_.count(stdlibAlias) > 0) {
+        preferred = stdlibAlias;
+      }
+    }
+    if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+      const std::string mapAlias = "/map/" + preferred.substr(std::string("/std/collections/map/").size());
+      if (defMap_.count(mapAlias) > 0) {
+        preferred = mapAlias;
+      }
+    }
+    return preferred;
+  };
+  auto collectionPathFromBinding = [](const BindingInfo &binding) -> std::string {
+    auto collectionPathFromType = [](const std::string &typeName, const std::string &typeTemplateArg) -> std::string {
+      if (typeName == "string") {
+        return "/string";
+      }
+      if ((typeName == "array" || typeName == "vector" || typeName == "soa_vector" || typeName == "map") &&
+          !typeTemplateArg.empty()) {
+        return "/" + typeName;
+      }
+      std::string base;
+      std::string argsText;
+      if (!splitTemplateTypeName(typeName, base, argsText)) {
+        return "";
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argsText, args)) {
+        return "";
+      }
+      if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+        return "/" + base;
+      }
+      if (base == "map" && args.size() == 2) {
+        return "/map";
+      }
+      return "";
+    };
+    if ((binding.typeName == "Reference" || binding.typeName == "Pointer") && !binding.typeTemplateArg.empty()) {
+      return collectionPathFromType(normalizeBindingTypeName(binding.typeTemplateArg), "");
+    }
+    return collectionPathFromType(normalizeBindingTypeName(binding.typeName), binding.typeTemplateArg);
+  };
 
   for (const auto &transform : expr.transforms) {
     if (transform.name == "capabilities" && !transform.arguments.empty()) {
@@ -2470,7 +2601,9 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     if (receiver.kind == Expr::Kind::Name) {
       auto it = ctx.locals.find(receiver.name);
       if (it != ctx.locals.end()) {
-        if (it->second.typeName == "Reference" || it->second.typeName == "Pointer") {
+        receiverStruct = collectionPathFromBinding(it->second);
+        if (receiverStruct.empty() &&
+            (it->second.typeName == "Reference" || it->second.typeName == "Pointer")) {
           receiverStruct = resolveStructTypePath(it->second.typeTemplateArg, receiver.namespacePrefix, structNames_);
           if (receiverStruct.empty()) {
             auto importIt = importAliases_.find(it->second.typeTemplateArg);
@@ -2478,7 +2611,7 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
               receiverStruct = importIt->second;
             }
           }
-        } else {
+        } else if (receiverStruct.empty()) {
           receiverStruct = resolveStructTypePath(it->second.typeName, receiver.namespacePrefix, structNames_);
           if (receiverStruct.empty()) {
             auto importIt = importAliases_.find(it->second.typeName);
@@ -2492,7 +2625,16 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     if (receiverStruct.empty()) {
       return false;
     }
-    const std::string methodPath = receiverStruct + "/" + expr.name;
+    const std::string normalizedMethodName = normalizeCollectionMethodName(receiverStruct, expr.name);
+    const std::vector<std::string> methodCandidates =
+        methodPathCandidatesForReceiver(receiverStruct, normalizedMethodName);
+    std::string methodPath = methodCandidates.empty() ? std::string() : methodCandidates.front();
+    for (const auto &candidate : methodCandidates) {
+      if (defMap_.count(candidate) > 0) {
+        methodPath = candidate;
+        break;
+      }
+    }
     auto defIt = defMap_.find(methodPath);
     if (defIt == defMap_.end() || !defIt->second) {
       return false;
@@ -2658,7 +2800,7 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     return true;
   }
 
-  const std::string resolved = resolveCalleePath(expr);
+  const std::string resolved = preferCollectionHelperPath(resolveCalleePath(expr));
   std::string builtinName;
   if (getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
       getBuiltinClampName(expr, builtinName, true) || getBuiltinMinMaxName(expr, builtinName, true) ||
