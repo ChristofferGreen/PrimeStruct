@@ -3884,6 +3884,53 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced templated vector call falls back to array templated alias") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/array/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/std/collections/vector/count<i32>(values, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced templated vector call array fallback keeps array diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/array/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/std/collections/vector/count<i32>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK(error.find("/array/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced templated alias call forwards past non-templated compatibility helper") {
   const std::string source = R"(
 [return<int>]

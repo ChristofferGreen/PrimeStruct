@@ -373,6 +373,18 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     }
     return path;
   }
+  if (path.rfind("/std/collections/vector/", 0) == 0) {
+    const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
+    const std::string vectorPath = "/vector/" + suffix;
+    if (ctx.sourceDefs.count(vectorPath) > 0 && ctx.templateDefs.count(vectorPath) > 0) {
+      return vectorPath;
+    }
+    const std::string arrayPath = "/array/" + suffix;
+    if (ctx.sourceDefs.count(arrayPath) > 0 && ctx.templateDefs.count(arrayPath) > 0) {
+      return arrayPath;
+    }
+    return path;
+  }
   if (path.rfind("/vector/", 0) != 0) {
     if (path.rfind("/map/", 0) == 0) {
       const std::string stdlibPath = "/std/collections/map/" + path.substr(std::string("/map/").size());
@@ -385,6 +397,12 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
   const std::string stdlibPath = "/std/collections/vector/" + path.substr(std::string("/vector/").size());
   if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
     return stdlibPath;
+  }
+  if (ctx.sourceDefs.count(path) == 0 || ctx.templateDefs.count(path) == 0) {
+    const std::string arrayPath = "/array/" + path.substr(std::string("/vector/").size());
+    if (ctx.sourceDefs.count(arrayPath) > 0 && ctx.templateDefs.count(arrayPath) > 0) {
+      return arrayPath;
+    }
   }
   return path;
 }

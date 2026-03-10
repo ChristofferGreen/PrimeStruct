@@ -627,6 +627,29 @@ main() {
   CHECK(runCommand(runCmd) == 90);
 }
 
+TEST_CASE("runs vm with stdlib templated vector call fallback to array alias") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/array/count<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/std/collections/vector/count<i32>(values, true))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_templated_vector_call_array_fallback.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 90);
+}
+
 TEST_CASE("runs vm with vector alias templated forwarding past non-templated compatibility helper") {
   const std::string source = R"(
 [return<int>]
