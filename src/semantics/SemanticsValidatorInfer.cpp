@@ -1235,8 +1235,92 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return preferred;
     };
-    std::string resolved = preferVectorStdlibHelperPath(resolveCalleePath(expr));
+    auto collectionHelperPathCandidates = [&](const std::string &path) {
+      std::vector<std::string> candidates;
+      auto appendUnique = [&](const std::string &candidate) {
+        if (candidate.empty()) {
+          return;
+        }
+        for (const auto &existing : candidates) {
+          if (existing == candidate) {
+            return;
+          }
+        }
+        candidates.push_back(candidate);
+      };
+
+      std::string normalizedPath = path;
+      if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+        if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+            normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+            normalizedPath.rfind("std/collections/map/", 0) == 0) {
+          normalizedPath.insert(normalizedPath.begin(), '/');
+        }
+      }
+
+      appendUnique(path);
+      appendUnique(normalizedPath);
+      if (normalizedPath.rfind("/array/", 0) == 0) {
+        const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+        appendUnique("/vector/" + suffix);
+        appendUnique("/std/collections/vector/" + suffix);
+      } else if (normalizedPath.rfind("/vector/", 0) == 0) {
+        const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
+        appendUnique("/std/collections/vector/" + suffix);
+        appendUnique("/array/" + suffix);
+      } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
+        const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+        appendUnique("/vector/" + suffix);
+        appendUnique("/array/" + suffix);
+      } else if (normalizedPath.rfind("/map/", 0) == 0) {
+        appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
+      } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+        appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
+      }
+      return candidates;
+    };
+    auto isTemplateCompatibleDefinition = [&](const Definition &def) -> bool {
+      if (expr.templateArgs.empty()) {
+        return true;
+      }
+      return !def.templateArgs.empty() && def.templateArgs.size() == expr.templateArgs.size();
+    };
+    const std::string resolvedCallee = resolveCalleePath(expr);
+    const auto resolvedCandidates = collectionHelperPathCandidates(resolvedCallee);
+    std::string resolved = resolvedCandidates.empty() ? preferVectorStdlibHelperPath(resolvedCallee)
+                                                      : resolvedCandidates.front();
     bool hasResolvedPath = !expr.isMethodCall;
+    if (!expr.isMethodCall && !resolvedCandidates.empty()) {
+      std::string firstTemplateCompatibleCandidate;
+      for (const auto &candidate : resolvedCandidates) {
+        auto candidateIt = defMap_.find(candidate);
+        if (candidateIt == defMap_.end() || !candidateIt->second) {
+          continue;
+        }
+        if (!isTemplateCompatibleDefinition(*candidateIt->second)) {
+          continue;
+        }
+        if (firstTemplateCompatibleCandidate.empty()) {
+          firstTemplateCompatibleCandidate = candidate;
+        }
+        if (!inferDefinitionReturnKind(*candidateIt->second)) {
+          return ReturnKind::Unknown;
+        }
+        auto candidateKindIt = returnKinds_.find(candidate);
+        const bool candidateReturnsStruct =
+            candidateKindIt != returnKinds_.end() && candidateKindIt->second == ReturnKind::Array;
+        if (candidateReturnsStruct && returnStructs_.find(candidate) != returnStructs_.end()) {
+          resolved = candidate;
+          hasResolvedPath = true;
+          break;
+        }
+      }
+      if (!firstTemplateCompatibleCandidate.empty() && !expr.templateArgs.empty() &&
+          returnStructs_.find(resolved) == returnStructs_.end()) {
+        resolved = firstTemplateCompatibleCandidate;
+        hasResolvedPath = true;
+      }
+    }
     if (expr.isMethodCall && expr.name == "ok" && expr.args.size() >= 1) {
       const Expr &receiver = expr.args.front();
       if (receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
@@ -1422,10 +1506,23 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isNamespacedMapAccessCall =
         !expr.isMethodCall && isBuiltinAccess && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
+    auto defIt = hasResolvedPath ? defMap_.find(resolved) : defMap_.end();
+    const bool hasResolvedDefinition = defIt != defMap_.end();
+    std::string normalizedCallName = expr.name;
+    if (!normalizedCallName.empty() && normalizedCallName.front() == '/') {
+      normalizedCallName.erase(normalizedCallName.begin());
+    }
+    const bool isStdNamespacedVectorAccessSpelling =
+        normalizedCallName.rfind("std/collections/vector/", 0) == 0;
+    const bool isStdNamespacedMapAccessSpelling = normalizedCallName.rfind("std/collections/map/", 0) == 0;
+    const bool shouldDeferNamespacedVectorAccessCall =
+        isNamespacedVectorAccessCall && (!hasResolvedDefinition || isStdNamespacedVectorAccessSpelling);
+    const bool shouldDeferNamespacedMapAccessCall =
+        isNamespacedMapAccessCall && (!hasResolvedDefinition || isStdNamespacedMapAccessSpelling);
     bool shouldDeferResolvedNamespacedCollectionHelperReturn =
         isNamespacedVectorCountCall || isNamespacedMapCountCall || isResolvedMapCountCall ||
-        isNamespacedVectorCapacityCall || isNamespacedVectorAccessCall || isNamespacedMapAccessCall;
-    auto defIt = hasResolvedPath ? defMap_.find(resolved) : defMap_.end();
+        isNamespacedVectorCapacityCall || shouldDeferNamespacedVectorAccessCall ||
+        shouldDeferNamespacedMapAccessCall;
     if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedCollectionHelperReturn) {
       if (!inferDefinitionReturnKind(*defIt->second)) {
         return ReturnKind::Unknown;
@@ -1525,7 +1622,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isBuiltinRef = isSimpleCallName(expr, "ref");
     if (!expr.isMethodCall &&
         ((isBuiltinAccess && !expr.args.empty()) || ((isBuiltinGet || isBuiltinRef) && expr.args.size() == 2)) &&
-        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorAccessCall || isNamespacedMapAccessCall)) {
+        (defMap_.find(resolved) == defMap_.end() || shouldDeferNamespacedVectorAccessCall ||
+         shouldDeferNamespacedMapAccessCall)) {
       const std::string helperName = isBuiltinAccess ? builtinAccessName : (isBuiltinGet ? "get" : "ref");
       std::vector<size_t> receiverIndices;
       auto appendReceiverIndex = [&](size_t index) {

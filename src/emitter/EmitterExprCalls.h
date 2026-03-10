@@ -443,7 +443,28 @@
            normalized == std::string("array/") + helper ||
            normalized == std::string("std/collections/vector/") + helper;
   };
-  const std::string resolvedFull = preferVectorStdlibHelperPath(full, nameMap);
+  auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {
+    std::string firstExisting;
+    for (const auto &candidate : collectionHelperPathCandidates(path)) {
+      if (nameMap.count(candidate) == 0) {
+        continue;
+      }
+      if (firstExisting.empty()) {
+        firstExisting = candidate;
+      }
+      auto kindIt = returnKinds.find(candidate);
+      auto structIt = returnStructs.find(candidate);
+      if (kindIt != returnKinds.end() && kindIt->second == ReturnKind::Array &&
+          structIt != returnStructs.end() && !structIt->second.empty()) {
+        return candidate;
+      }
+    }
+    if (!firstExisting.empty()) {
+      return firstExisting;
+    }
+    return preferVectorStdlibHelperPath(path, nameMap);
+  };
+  const std::string resolvedFull = preferStructReturningCollectionHelperPath(full);
   auto it = nameMap.find(resolvedFull);
   if (it == nameMap.end()) {
     if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 && isResolvedMapTarget(expr.args.front())) {

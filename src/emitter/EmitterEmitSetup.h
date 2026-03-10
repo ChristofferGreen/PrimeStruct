@@ -768,6 +768,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       const std::string resolvedPath = resolveExprPath(expr);
       const auto resolvedCandidates = collectionHelperPathCandidates(resolvedPath);
       bool sawDefinitionCandidate = false;
+      ReturnKind firstValueKind = ReturnKind::Unknown;
       for (const auto &candidate : resolvedCandidates) {
         auto defIt = defMap.find(candidate);
         if (defIt == defMap.end()) {
@@ -775,9 +776,21 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         }
         sawDefinitionCandidate = true;
         ReturnKind calleeKind = inferDefinitionReturnKind(*defIt->second);
-        if (calleeKind != ReturnKind::Void && calleeKind != ReturnKind::Unknown) {
+        if (calleeKind == ReturnKind::Void || calleeKind == ReturnKind::Unknown) {
+          continue;
+        }
+        if (firstValueKind == ReturnKind::Unknown) {
+          firstValueKind = calleeKind;
+        }
+        auto structIt = returnStructs.find(candidate);
+        const bool candidateReturnsStruct =
+            calleeKind == ReturnKind::Array && structIt != returnStructs.end() && !structIt->second.empty();
+        if (candidateReturnsStruct) {
           return calleeKind;
         }
+      }
+      if (firstValueKind != ReturnKind::Unknown) {
+        return firstValueKind;
       }
       if (resolvedCandidates.empty()) {
         std::string preferred = preferCollectionHelperPath(resolvedPath);
