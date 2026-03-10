@@ -9247,6 +9247,91 @@ TEST_CASE("ir lowerer struct return path helpers infer from expressions") {
                                                           defMap).empty());
 }
 
+TEST_CASE("ir lowerer struct return helpers forward vector alias call paths") {
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/Entry",
+      "/pkg/Tagged",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  primec::Definition canonicalAt;
+  canonicalAt.fullPath = "/std/collections/vector/at";
+  canonicalAt.namespacePrefix = "/std/collections/vector";
+  primec::Transform returnEntry;
+  returnEntry.name = "return";
+  returnEntry.templateArgs = {"Entry"};
+  canonicalAt.transforms.push_back(returnEntry);
+
+  primec::Definition entryTag;
+  entryTag.fullPath = "/pkg/Entry/tag";
+  entryTag.namespacePrefix = "/pkg/Entry";
+  primec::Transform returnTagged;
+  returnTagged.name = "return";
+  returnTagged.templateArgs = {"Tagged"};
+  entryTag.transforms.push_back(returnTagged);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalAt.fullPath, &canonicalAt},
+      {entryTag.fullPath, &entryTag},
+  };
+  const std::unordered_map<std::string, primec::ir_lowerer::LayoutFieldBinding> knownFields;
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intValue = 0;
+
+  primec::Expr aliasAt;
+  aliasAt.kind = primec::Expr::Kind::Call;
+  aliasAt.name = "/vector/at";
+  aliasAt.args = {valuesName, indexLiteral};
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(aliasAt,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap) == "/pkg/Entry");
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "/vector/tag";
+  methodCall.args = {aliasAt};
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(methodCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap) == "/pkg/Tagged");
+
+  methodCall.name = "/std/collections/vector/missing";
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(methodCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap).empty());
+}
+
 TEST_CASE("ir lowerer struct layout helpers parse and extract alignment transforms") {
   CHECK(primec::ir_lowerer::alignTo(7u, 4u) == 8u);
   CHECK(primec::ir_lowerer::alignTo(16u, 8u) == 16u);

@@ -6,6 +6,105 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string normalizeCollectionMethodName(std::string methodName) {
+  if (!methodName.empty() && methodName.front() == '/') {
+    methodName.erase(methodName.begin());
+  }
+  const std::string vectorPrefix = "vector/";
+  const std::string arrayPrefix = "array/";
+  const std::string stdVectorPrefix = "std/collections/vector/";
+  const std::string mapPrefix = "map/";
+  const std::string stdMapPrefix = "std/collections/map/";
+  if (methodName.rfind(vectorPrefix, 0) == 0) {
+    return methodName.substr(vectorPrefix.size());
+  }
+  if (methodName.rfind(arrayPrefix, 0) == 0) {
+    return methodName.substr(arrayPrefix.size());
+  }
+  if (methodName.rfind(stdVectorPrefix, 0) == 0) {
+    return methodName.substr(stdVectorPrefix.size());
+  }
+  if (methodName.rfind(mapPrefix, 0) == 0) {
+    return methodName.substr(mapPrefix.size());
+  }
+  if (methodName.rfind(stdMapPrefix, 0) == 0) {
+    return methodName.substr(stdMapPrefix.size());
+  }
+  return methodName;
+}
+
+std::vector<std::string> collectionMethodPathCandidates(const std::string &receiverStruct,
+                                                        const std::string &methodName) {
+  if (receiverStruct == "/vector") {
+    return {"/vector/" + methodName,
+            "/std/collections/vector/" + methodName,
+            "/array/" + methodName};
+  }
+  if (receiverStruct == "/array") {
+    return {"/array/" + methodName,
+            "/vector/" + methodName,
+            "/std/collections/vector/" + methodName};
+  }
+  if (receiverStruct == "/map") {
+    return {"/map/" + methodName,
+            "/std/collections/map/" + methodName};
+  }
+  return {receiverStruct + "/" + methodName};
+}
+
+std::string preferCollectionHelperPath(const std::string &path,
+                                       const std::unordered_map<std::string, const Definition *> &defMap) {
+  std::string preferred = path;
+  if (preferred.rfind("/array/", 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string("/array/").size());
+    const std::string vectorAlias = "/vector/" + suffix;
+    if (defMap.count(vectorAlias) > 0) {
+      return vectorAlias;
+    }
+    const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+    if (defMap.count(stdlibAlias) > 0) {
+      return stdlibAlias;
+    }
+  }
+  if (preferred.rfind("/vector/", 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string("/vector/").size());
+    const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+    if (defMap.count(stdlibAlias) > 0) {
+      preferred = stdlibAlias;
+    } else {
+      const std::string arrayAlias = "/array/" + suffix;
+      if (defMap.count(arrayAlias) > 0) {
+        preferred = arrayAlias;
+      }
+    }
+  }
+  if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
+    const std::string vectorAlias = "/vector/" + suffix;
+    if (defMap.count(vectorAlias) > 0) {
+      preferred = vectorAlias;
+    } else {
+      const std::string arrayAlias = "/array/" + suffix;
+      if (defMap.count(arrayAlias) > 0) {
+        preferred = arrayAlias;
+      }
+    }
+  }
+  if (preferred.rfind("/map/", 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string stdlibAlias = "/std/collections/map/" + preferred.substr(std::string("/map/").size());
+    if (defMap.count(stdlibAlias) > 0) {
+      preferred = stdlibAlias;
+    }
+  }
+  if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap.count(preferred) == 0) {
+    const std::string mapAlias = "/map/" + preferred.substr(std::string("/std/collections/map/").size());
+    if (defMap.count(mapAlias) > 0) {
+      preferred = mapAlias;
+    }
+  }
+  return preferred;
+}
+
 std::string inferStructReturnPathFromExprInternal(
     const Expr &expr,
     const std::unordered_map<std::string, LayoutFieldBinding> &knownFields,
@@ -175,14 +274,23 @@ std::string inferStructReturnPathFromExprInternal(
     if (receiverStruct.empty()) {
       return "";
     }
-    return inferStructReturnPathFromDefinitionInternal(
-        receiverStruct + "/" + expr.name, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);
+    const std::string methodName = normalizeCollectionMethodName(expr.name);
+    const std::vector<std::string> candidates = collectionMethodPathCandidates(receiverStruct, methodName);
+    for (const auto &candidate : candidates) {
+      if (const std::string inferred = inferStructReturnPathFromDefinitionInternal(
+              candidate, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);
+          !inferred.empty()) {
+        return inferred;
+      }
+    }
+    return "";
   }
 
-  const std::string resolved = resolveStructLayoutExprPath(expr);
+  std::string resolved = resolveStructLayoutExprPath(expr);
   if (structNames.count(resolved) > 0) {
     return resolved;
   }
+  resolved = preferCollectionHelperPath(resolved, defMap);
   return inferStructReturnPathFromDefinitionInternal(
       resolved, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);
 }
