@@ -596,7 +596,7 @@ bool resolveDefinitionCallReturnKind(const Expr &callExpr,
     return false;
   }
 
-  const std::string resolved = resolveExprPath(callExpr);
+  const std::string resolved = preferCollectionHelperPath(resolveExprPath(callExpr), defMap);
   auto defIt = defMap.find(resolved);
   if (defIt == defMap.end()) {
     return false;
