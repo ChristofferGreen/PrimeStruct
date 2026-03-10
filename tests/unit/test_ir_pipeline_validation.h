@@ -14919,11 +14919,14 @@ TEST_CASE("ir lowerer setup type helper rejects non-struct method receiver call 
 TEST_CASE("ir lowerer setup type helper resolves method definitions from receiver targets") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
+  primec::Definition stdCountDef;
+  stdCountDef.fullPath = "/std/collections/vector/count";
   primec::Definition structMethodDef;
   structMethodDef.fullPath = "/pkg/Ctor/length";
 
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {"/array/count", &arrayCountDef},
+      {"/std/collections/vector/count", &stdCountDef},
       {"/pkg/Ctor/length", &structMethodDef},
   };
 
@@ -14934,6 +14937,14 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget("length", "", "/pkg/Ctor", defMap, error) ==
         &structMethodDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "/array/count", "vector", "", defMap, error) == &arrayCountDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "/std/collections/vector/count", "vector", "", defMap, error) == &stdCountDef);
   CHECK(error.empty());
 }
 
@@ -14953,6 +14964,11 @@ TEST_CASE("ir lowerer setup type helper reports method target lookup diagnostics
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "missing", "", "/pkg/Ctor", defMap, error) == nullptr);
   CHECK(error == "unknown method: /pkg/Ctor/missing");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "/array/missing", "vector", "", defMap, error) == nullptr);
+  CHECK(error == "unknown method: /vector/missing");
 }
 
 TEST_CASE("ir lowerer setup type helper resolves name receiver targets") {

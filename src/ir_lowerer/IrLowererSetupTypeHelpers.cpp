@@ -400,6 +400,17 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::string &resolvedTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
+  std::string normalizedMethodName = methodName;
+  if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
+    normalizedMethodName.erase(normalizedMethodName.begin());
+  }
+  if (normalizedMethodName.rfind("vector/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+  } else if (normalizedMethodName.rfind("array/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
+  } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+  }
   auto findMethodDefinitionByPath = [&](const std::string &path) -> const Definition * {
     auto defIt = defMap.find(path);
     if (defIt != defMap.end()) {
@@ -441,7 +452,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return nullptr;
   };
   if (!resolvedTypePath.empty()) {
-    const std::string resolved = resolvedTypePath + "/" + methodName;
+    const std::string resolved = resolvedTypePath + "/" + normalizedMethodName;
     const Definition *resolvedDef = findMethodDefinitionByPath(resolved);
     if (resolvedDef == nullptr) {
       errorOut = "unknown method: " + resolved;
@@ -451,11 +462,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   }
 
   if (typeName.empty()) {
-    errorOut = "unknown method target for " + methodName;
+    errorOut = "unknown method target for " + normalizedMethodName;
     return nullptr;
   }
 
-  const std::string resolved = "/" + typeName + "/" + methodName;
+  const std::string resolved = "/" + typeName + "/" + normalizedMethodName;
   const Definition *resolvedDef = findMethodDefinitionByPath(resolved);
   if (resolvedDef == nullptr) {
     errorOut = "unknown method: " + resolved;
