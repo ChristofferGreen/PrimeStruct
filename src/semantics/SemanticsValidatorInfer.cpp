@@ -951,15 +951,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (isSimpleCallName(candidate, helper)) {
         return true;
       }
-      if (candidate.name.empty()) {
+      std::string namespacedCollection;
+      std::string namespacedHelper;
+      if (!getNamespacedCollectionHelperName(candidate, namespacedCollection, namespacedHelper)) {
         return false;
       }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(0, 1);
-      }
-      return normalized == std::string("vector/") + helper ||
-             normalized == std::string("std/collections/vector/") + helper;
+      return namespacedCollection == "vector" && namespacedHelper == helper;
     };
     auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call) {

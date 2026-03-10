@@ -286,23 +286,23 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return true;
   };
+  auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
+    if (isSimpleCallName(candidate, helper)) {
+      return true;
+    }
+    std::string namespacedCollection;
+    std::string namespacedHelper;
+    if (!getNamespacedCollectionHelperName(candidate, namespacedCollection, namespacedHelper)) {
+      return false;
+    }
+    return namespacedCollection == "vector" && namespacedHelper == helper;
+  };
   auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
     if (candidate.kind != Expr::Kind::Call) {
       return false;
     }
     auto matchesHelper = [&](const char *helper) -> bool {
-      if (isSimpleCallName(candidate, helper)) {
-        return true;
-      }
-      if (candidate.name.empty()) {
-        return false;
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized[0] == '/') {
-        normalized.erase(0, 1);
-      }
-      return normalized == std::string("vector/") + helper ||
-             normalized == std::string("std/collections/vector/") + helper;
+      return isVectorBuiltinName(candidate, helper);
     };
     if (matchesHelper("push")) {
       nameOut = "push";
@@ -1944,16 +1944,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   std::string vectorHelper;
   if (getVectorStatementHelperName(stmt, vectorHelper)) {
     std::string vectorHelperResolved = resolveCalleePath(stmt);
-    bool isNamespacedVectorHelperCall = false;
-    if (!stmt.name.empty()) {
-      std::string normalizedName = stmt.name;
-      if (!normalizedName.empty() && normalizedName[0] == '/') {
-        normalizedName.erase(normalizedName.begin());
-      }
-      isNamespacedVectorHelperCall =
-          normalizedName.rfind("vector/", 0) == 0 ||
-          normalizedName.rfind("std/collections/vector/", 0) == 0;
-    }
+    std::string namespacedCollection;
+    std::string namespacedHelper;
+    const bool isNamespacedCollectionHelperCall =
+        getNamespacedCollectionHelperName(stmt, namespacedCollection, namespacedHelper);
+    const bool isNamespacedVectorHelperCall =
+        isNamespacedCollectionHelperCall && namespacedCollection == "vector";
     const bool isUserMethodTarget =
         stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
         vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;

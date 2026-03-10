@@ -2461,6 +2461,69 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("namespaced vector mutator statement helpers accept full helper surface") {
+  struct HelperCase {
+    const char *name;
+    const char *args;
+  };
+  const HelperCase helpers[] = {
+      {"push", "values, 2i32"},
+      {"pop", "values"},
+      {"reserve", "values, 8i32"},
+      {"clear", "values"},
+      {"remove_at", "values, 0i32"},
+      {"remove_swap", "values, 0i32"},
+  };
+  const char *prefixes[] = {"/vector/", "/std/collections/vector/"};
+  for (const auto &helper : helpers) {
+    for (const auto *prefix : prefixes) {
+      CAPTURE(helper.name);
+      CAPTURE(prefix);
+      const std::string source =
+          "[effects(heap_alloc), return<int>]\n"
+          "main() {\n"
+          "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
+          "  " + std::string(prefix) + helper.name + "(" + helper.args + ")\n"
+          "  return(count(values))\n"
+          "}\n";
+      std::string error;
+      CHECK(validateProgram(source, "/main", error));
+      CHECK(error.empty());
+    }
+  }
+}
+
+TEST_CASE("namespaced vector mutator expression helpers stay statement-only across helper surface") {
+  struct HelperCase {
+    const char *name;
+    const char *args;
+  };
+  const HelperCase helpers[] = {
+      {"push", "values, 2i32"},
+      {"pop", "values"},
+      {"reserve", "values, 8i32"},
+      {"clear", "values"},
+      {"remove_at", "values, 0i32"},
+      {"remove_swap", "values, 0i32"},
+  };
+  const char *prefixes[] = {"/vector/", "/std/collections/vector/"};
+  for (const auto &helper : helpers) {
+    for (const auto *prefix : prefixes) {
+      CAPTURE(helper.name);
+      CAPTURE(prefix);
+      const std::string source =
+          "[effects(heap_alloc), return<int>]\n"
+          "main() {\n"
+          "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
+          "  return(" + std::string(prefix) + helper.name + "(" + helper.args + "))\n"
+          "}\n";
+      std::string error;
+      CHECK_FALSE(validateProgram(source, "/main", error));
+      CHECK(error.find("only supported as a statement") != std::string::npos);
+    }
+  }
+}
+
 TEST_CASE("stdlib namespaced vector helper statement resolves compatibility helper definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
