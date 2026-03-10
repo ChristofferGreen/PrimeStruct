@@ -2370,6 +2370,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isBuiltinAccessName =
         !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
     const bool isNamespacedVectorAccessCall = isBuiltinAccessName && isNamespacedVectorHelperCall(expr);
+    const bool isNamespacedMapAccessCall = isBuiltinAccessName && isNamespacedMapHelperCall(expr);
     if (expr.isMethodCall) {
       if (!hasVectorHelperCallResolution) {
         if (expr.args.empty()) {
@@ -2472,7 +2473,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
     } else if (isBuiltinAccessName &&
-               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorAccessCall)) {
+               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorAccessCall ||
+                isNamespacedMapAccessCall)) {
       std::vector<size_t> receiverIndices;
       auto appendReceiverIndex = [&](size_t index) {
         if (index >= expr.args.size()) {

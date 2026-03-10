@@ -576,18 +576,36 @@ bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
                            const std::vector<std::optional<std::string>> &argNames,
                            std::vector<const Expr *> &ordered,
                            std::string &error) {
+  auto resolveNamedParamIndex = [&](const std::string &name) -> size_t {
+    for (size_t p = 0; p < params.size(); ++p) {
+      if (params[p].name == name) {
+        return p;
+      }
+    }
+    if (name == "index") {
+      bool hasIndexParam = false;
+      for (const auto &param : params) {
+        if (param.name == "index") {
+          hasIndexParam = true;
+          break;
+        }
+      }
+      if (!hasIndexParam) {
+        for (size_t p = 0; p < params.size(); ++p) {
+          if (params[p].name == "key") {
+            return p;
+          }
+        }
+      }
+    }
+    return params.size();
+  };
   ordered.assign(params.size(), nullptr);
   size_t positionalIndex = 0;
   for (size_t i = 0; i < args.size(); ++i) {
     if (i < argNames.size() && argNames[i].has_value()) {
       const std::string &name = *argNames[i];
-      size_t index = params.size();
-      for (size_t p = 0; p < params.size(); ++p) {
-        if (params[p].name == name) {
-          index = p;
-          break;
-        }
-      }
+      const size_t index = resolveNamedParamIndex(name);
       if (index >= params.size()) {
         error = "unknown named argument: " + name;
         return false;
@@ -626,6 +644,30 @@ bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
 bool validateNamedArgumentsAgainstParams(const std::vector<ParameterInfo> &params,
                                          const std::vector<std::optional<std::string>> &argNames,
                                          std::string &error) {
+  auto resolveNamedParamIndex = [&](const std::string &name) -> size_t {
+    for (size_t p = 0; p < params.size(); ++p) {
+      if (params[p].name == name) {
+        return p;
+      }
+    }
+    if (name == "index") {
+      bool hasIndexParam = false;
+      for (const auto &param : params) {
+        if (param.name == "index") {
+          hasIndexParam = true;
+          break;
+        }
+      }
+      if (!hasIndexParam) {
+        for (size_t p = 0; p < params.size(); ++p) {
+          if (params[p].name == "key") {
+            return p;
+          }
+        }
+      }
+    }
+    return params.size();
+  };
   if (argNames.empty()) {
     return true;
   }
@@ -634,13 +676,7 @@ bool validateNamedArgumentsAgainstParams(const std::vector<ParameterInfo> &param
   for (const auto &argName : argNames) {
     if (argName.has_value()) {
       const std::string &name = *argName;
-      size_t index = params.size();
-      for (size_t p = 0; p < params.size(); ++p) {
-        if (params[p].name == name) {
-          index = p;
-          break;
-        }
-      }
+      const size_t index = resolveNamedParamIndex(name);
       if (index >= params.size()) {
         error = "unknown named argument: " + name;
         return false;

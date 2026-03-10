@@ -2819,7 +2819,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected int") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("stdlib canonical vector helpers resolve in method-call sugar") {

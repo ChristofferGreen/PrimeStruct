@@ -696,7 +696,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
                 matchedOut = true;
                 return false;
               }
-              if (!isNamespacedVectorReceiverProbeCall(candidate)) {
+              if (!isNamespacedCollectionReceiverProbeCall(candidate)) {
                 matchedOut = false;
                 return false;
               }
