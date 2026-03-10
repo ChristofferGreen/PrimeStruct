@@ -129,8 +129,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   }
   if (name.rfind("array/", 0) == 0) {
     std::string alias = name.substr(std::string("array/").size());
-    if (alias.find('/') == std::string::npos &&
-        (alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe")) {
+    if (alias.find('/') == std::string::npos && (alias == "count" || alias == "at" || alias == "at_unsafe")) {
       return alias == targetName;
     }
   }

@@ -890,8 +890,8 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
     return true;
   }
   if (extractHelper("array/", "vector")) {
-    if (helperOut == "push" || helperOut == "pop" || helperOut == "reserve" || helperOut == "clear" ||
-        helperOut == "remove_at" || helperOut == "remove_swap") {
+    if (helperOut == "capacity" || helperOut == "push" || helperOut == "pop" || helperOut == "reserve" ||
+        helperOut == "clear" || helperOut == "remove_at" || helperOut == "remove_swap") {
       collectionOut.clear();
       helperOut.clear();
       return false;
@@ -1006,8 +1006,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   }
   if (name.rfind("array/", 0) == 0) {
     std::string alias = name.substr(std::string("array/").size());
-    if (alias.find('/') == std::string::npos &&
-        (alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe")) {
+    if (alias.find('/') == std::string::npos && (alias == "count" || alias == "at" || alias == "at_unsafe")) {
       return alias == targetName;
     }
   }

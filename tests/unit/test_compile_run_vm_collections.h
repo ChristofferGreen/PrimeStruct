@@ -70,14 +70,14 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/vector") != std::string::npos);
 }
 
-TEST_CASE("runs vm with array namespaced vector count/access aliases") {
+TEST_CASE("runs vm with array namespaced vector count/at aliases") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   /std/collections/vector/push(values, 6i32)
   [i32] countValue{/array/count(values)}
-  [i32] capacityValue{/array/capacity(values)}
+  [i32] capacityValue{/std/collections/vector/capacity(values)}
   [i32] tailValue{/array/at_unsafe(values, 2i32)}
   return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
 }
@@ -85,6 +85,22 @@ main() {
   const std::string srcPath = writeTemp("vm_array_namespaced_vector_helper_aliases.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 9);
+}
+
+TEST_CASE("rejects vm array namespaced vector capacity alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  return(/array/capacity(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_namespaced_vector_capacity_alias.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_array_namespaced_vector_capacity_alias_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects vm array namespaced vector mutator alias") {

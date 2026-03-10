@@ -1415,14 +1415,14 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/vector") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs array namespaced vector count/access aliases in C++ emitter") {
+TEST_CASE("compiles and runs array namespaced vector count/at aliases in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   /std/collections/vector/push(values, 6i32)
   [i32] countValue{/array/count(values)}
-  [i32] capacityValue{/array/capacity(values)}
+  [i32] capacityValue{/std/collections/vector/capacity(values)}
   [i32] tailValue{/array/at_unsafe(values, 2i32)}
   return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
 }
@@ -1434,6 +1434,27 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("rejects array namespaced vector capacity alias in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  return(/array/capacity(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_array_namespaced_vector_capacity_alias.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_capacity_alias_out.txt")
+          .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_capacity_alias_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects array namespaced vector mutator alias in C++ emitter") {
@@ -2667,7 +2688,7 @@ main() {
   CHECK(output.find("ps_vector_capacity(ps_wrapVector())") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps array namespaced wrapper count capacity builtin fallback") {
+TEST_CASE("C++ emitter keeps array namespaced wrapper count builtin fallback") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -2682,7 +2703,7 @@ wrapVector() {
 [effects(heap_alloc), return<int>]
 main() {
   return(plus(/array/count(wrapMap()),
-              /array/capacity(wrapVector())))
+              /std/collections/vector/capacity(wrapVector())))
 }
 )";
   const std::string srcPath =
@@ -2696,6 +2717,30 @@ main() {
   const std::string output = readFile(outPath);
   CHECK(output.find("ps_map_count(ps_wrapMap())") != std::string::npos);
   CHECK(output.find("ps_vector_capacity(ps_wrapVector())") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter rejects array namespaced wrapper capacity builtin fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/capacity(wrapVector()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_array_namespaced_wrapper_capacity_reject.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_wrapper_capacity_reject_out.txt")
+          .string();
+  const std::string cppOutPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_wrapper_capacity_reject.cpp").string();
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o " + cppOutPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps namespaced count capacity method chain fallback") {

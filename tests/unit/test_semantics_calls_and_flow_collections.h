@@ -4982,6 +4982,32 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("array namespaced vector capacity alias rejects named arguments with unknown-target diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/array/capacity([values] values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /array/capacity") != std::string::npos);
+}
+
+TEST_CASE("array namespaced vector capacity alias call is rejected") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/array/capacity(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /array/capacity") != std::string::npos);
+}
+
 TEST_CASE("namespaced vector count and capacity allow named args for user helper receiver") {
   const std::string source = R"(
 Counter {}
