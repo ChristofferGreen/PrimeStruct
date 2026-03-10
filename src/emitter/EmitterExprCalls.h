@@ -298,23 +298,71 @@
     }
     return "";
   };
-  auto resolvedTypePathForResolvedCall = [&](const std::string &resolvedPath) -> std::string {
-    auto structIt = returnStructs.find(resolvedPath);
-    if (structIt != returnStructs.end()) {
-      std::string normalized = normalizedTypePath(structIt->second);
-      if (!normalized.empty()) {
-        return normalized;
+  auto collectionHelperPathCandidates = [](const std::string &path) {
+    std::vector<std::string> candidates;
+    auto appendUnique = [&](const std::string &candidate) {
+      if (candidate.empty()) {
+        return;
+      }
+      for (const auto &existing : candidates) {
+        if (existing == candidate) {
+          return;
+        }
+      }
+      candidates.push_back(candidate);
+    };
+
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+          normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+          normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
       }
     }
-    auto kindIt = returnKinds.find(resolvedPath);
-    if (kindIt == returnKinds.end()) {
-      return "";
+
+    appendUnique(path);
+    appendUnique(normalizedPath);
+    if (normalizedPath.rfind("/array/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/array/").size());
+      appendUnique("/vector/" + suffix);
+      appendUnique("/std/collections/vector/" + suffix);
+    } else if (normalizedPath.rfind("/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
+      appendUnique("/std/collections/vector/" + suffix);
+      appendUnique("/array/" + suffix);
+    } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+      appendUnique("/vector/" + suffix);
+      appendUnique("/array/" + suffix);
+    } else if (normalizedPath.rfind("/map/", 0) == 0) {
+      appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
+    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+      appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
     }
-    if (kindIt->second == ReturnKind::String) {
-      return "/string";
+    return candidates;
+  };
+  auto resolvedTypePathForResolvedCall = [&](const std::string &resolvedPath) -> std::string {
+    for (const auto &candidate : collectionHelperPathCandidates(resolvedPath)) {
+      auto structIt = returnStructs.find(candidate);
+      if (structIt != returnStructs.end()) {
+        std::string normalized = normalizedTypePath(structIt->second);
+        if (!normalized.empty()) {
+          return normalized;
+        }
+      }
     }
-    if (kindIt->second == ReturnKind::Array) {
-      return "/array";
+    for (const auto &candidate : collectionHelperPathCandidates(resolvedPath)) {
+      auto kindIt = returnKinds.find(candidate);
+      if (kindIt == returnKinds.end()) {
+        continue;
+      }
+      if (kindIt->second == ReturnKind::String) {
+        return "/string";
+      }
+      if (kindIt->second == ReturnKind::Array) {
+        return "/array";
+      }
     }
     return "";
   };
