@@ -2217,11 +2217,20 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return;
     }
     const Expr &receiver = callExpr.args.front();
-    const std::string &methodName = callExpr.name;
+    std::string methodName = callExpr.name;
+    if (!methodName.empty() && methodName.front() == '/') {
+      methodName.erase(methodName.begin());
+    }
+    std::string namespacedCollection;
+    std::string namespacedHelper;
+    if (getNamespacedCollectionHelperName(callExpr, namespacedCollection, namespacedHelper) &&
+        !namespacedHelper.empty()) {
+      methodName = namespacedHelper;
+    }
     if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
       const std::string resolvedType = resolveCalleePath(receiver);
       if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
-        resolvedOut = resolvedType + "/" + methodName;
+        resolvedOut = preferVectorStdlibHelperPath(resolvedType + "/" + methodName);
         return;
       }
     }
@@ -2256,7 +2265,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return;
     }
     if (isPrimitiveBindingTypeName(typeName)) {
-      resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + methodName;
+      resolvedOut = preferVectorStdlibHelperPath("/" + normalizeBindingTypeName(typeName) + "/" + methodName);
       return;
     }
     std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
@@ -2266,7 +2275,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         resolvedType = importIt->second;
       }
     }
-    resolvedOut = resolvedType + "/" + methodName;
+    resolvedOut = preferVectorStdlibHelperPath(resolvedType + "/" + methodName);
   };
 
   if ((stmt.hasBodyArguments || !stmt.bodyArguments.empty()) && !isBuiltinBlockCall(stmt) && !stmt.isLambda) {
