@@ -1831,9 +1831,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (defMap_.find(removedPath) != defMap_.end()) {
         return "";
       }
-      if (defMap_.find("/std/collections/map/" + helperName) == defMap_.end()) {
-        return "";
-      }
       if (candidate.args.empty()) {
         return "";
       }

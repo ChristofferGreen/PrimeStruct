@@ -1255,9 +1255,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (defMap_.find("/" + helperName) != defMap_.end()) {
         return false;
       }
-      if (defMap_.find("/std/collections/map/" + helperName) == defMap_.end()) {
-        return false;
-      }
       if (candidate.args.empty()) {
         return false;
       }

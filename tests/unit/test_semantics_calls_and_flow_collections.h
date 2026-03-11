@@ -3058,6 +3058,32 @@ main() {
   CHECK(error.find("unknown call target: /at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("map unnamespaced at call rejects removed builtin fallback without canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /at") != std::string::npos);
+}
+
+TEST_CASE("map unnamespaced at_unsafe call rejects removed builtin fallback without canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /at_unsafe") != std::string::npos);
+}
+
 TEST_CASE("map namespaced count method rejects removed compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

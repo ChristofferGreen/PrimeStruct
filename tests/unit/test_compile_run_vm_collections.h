@@ -251,6 +251,43 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("rejects vm map unnamespaced at builtin fallback without canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(at(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_unnamespaced_at_builtin_fallback_no_canonical_reject.prime",
+                                        source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_map_unnamespaced_at_builtin_fallback_no_canonical_reject_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /at") != std::string::npos);
+}
+
+TEST_CASE("rejects vm map unnamespaced at_unsafe builtin fallback without canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_unnamespaced_at_unsafe_builtin_fallback_no_canonical_reject.prime",
+                                        source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_map_unnamespaced_at_unsafe_builtin_fallback_no_canonical_reject_out.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /at_unsafe") != std::string::npos);
+}
+
 TEST_CASE("rejects vm map namespaced count method compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
