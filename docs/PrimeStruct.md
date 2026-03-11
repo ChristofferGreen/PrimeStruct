@@ -22,7 +22,7 @@ PrimeStruct is organized into four language levels. Each higher level desugars i
 - **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution runs over that full unit; implicit-template inference may use call sites anywhere in the expanded source. The v1 toolchain prioritises fast full rebuilds over incremental compilation.
 - **Envelope stream boundary:** high-level features are lowered into the canonical envelope form, and backends consume this stable envelope stream. Emission can stream envelopes directly into IR/bytecode or native codegen without reintroducing surface syntax.
 - **Deterministic emission:** canonicalization happens once, before backend selection, so all emitters see the same fully-resolved envelopes and produce consistent results.
-- **Backend boundary policy:** all codegen modes consume canonical IR via `IrBackend` (`docs/adr/0001-backend-ir-boundary.md`).
+- **Backend boundary policy:** all codegen modes consume canonical IR via `IrBackend` (`docs/adr/0001-backend-ir-boundary.md`), including production aliases (`cpp`, `exe`, `glsl`, `spirv`) that resolve to canonical IR backend kinds before dispatch.
 
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
@@ -1252,7 +1252,7 @@ bad_use_after_take() {
   `FileOpenAppend`, `FileClose`, `FileFlush`, `FileWriteI32`, `FileWriteI64`, `FileWriteU64`, `FileWriteString`,
   `FileWriteByte`, `FileWriteNewline`, `PrintStringDynamic`, `Call`, `CallVoid`.
 - **Call-opcode status:** `Call` and `CallVoid` are serialized/validated and execute in both VM and native backends with frame/call-stack semantics. Current lowering still inlines source-level definition calls and does not emit call opcodes yet.
-- **GLSL note:** GLSL emission bypasses PSIR and lowers from the canonical AST directly; PSIR opcode validation only applies to VM/native consumers.
+- **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`; these modes emit backend output directly without requiring PSIR serialization.
 - **PSIR versioning:** current portable IR is PSIR v19 (adds per-instruction source-map metadata keyed by debug ID on top of v18’s instruction debug IDs, v17’s local debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes, v13’s float arithmetic/compare/convert opcodes, and v12’s struct field visibility/static metadata, `LoadStringByte`, `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
 - **Frames & stack:** VM/native execution starts at the entry frame and pushes/pops frames for `Call`/`CallVoid`; each frame stores locals in 16-byte slots while the operand stack stores raw `u64` values interpreted by opcode (ints, floats as bits, and indices). Indirect addresses are byte offsets into the active frame’s local slot space and must be 16-byte aligned.
 - **Module layout:** `IrModule` bundles functions, string table, and struct layouts; lowering emits entry instructions plus reachable non-entry callable function bodies so function names/metadata and executable IR survive serialization. VM/native execution starts from `entryIndex`; lowering currently still inlines source-level calls, so recursion remains rejected in lowered source programs even though callable IR call opcodes support recursive execution.

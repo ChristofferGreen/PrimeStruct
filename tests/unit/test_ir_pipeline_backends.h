@@ -123,6 +123,9 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   CHECK(source.find("inlineIrModuleCalls(ir, error)") == std::string::npos);
   CHECK(source.find("validateIrModule(ir, validationTarget, error)") == std::string::npos);
   CHECK(source.find("if (options.emitKind == \"cpp\" || options.emitKind == \"exe\")") == std::string::npos);
+  CHECK(source.find("isProductionCppOrExeEmitKind(") == std::string::npos);
+  CHECK(source.find("scanSoftwareNumericTypes(") == std::string::npos);
+  CHECK(source.find("software numeric types are not supported:") == std::string::npos);
   CHECK(source.find("emitter.emitCpp(program, options.entryPath)") == std::string::npos);
   CHECK(source.find("compileCppExecutable(") == std::string::npos);
   CHECK(source.find("#include \"primec/Emitter.h\"") == std::string::npos);
@@ -177,9 +180,12 @@ TEST_CASE("backend boundary ADR is present and referenced from design doc") {
   const std::string adr = readTextFile(adrPath);
   CHECK(adr.find("All code generation backends must consume canonical `IrModule` only.") != std::string::npos);
   CHECK(adr.find("AST-direct backend emission paths are not allowed") != std::string::npos);
+  CHECK(adr.find("Follow-up status (2026-03-11)") != std::string::npos);
+  CHECK(adr.find("production `primec --emit` aliases") != std::string::npos);
 
   const std::string design = readTextFile(designPath);
   CHECK(design.find("docs/adr/0001-backend-ir-boundary.md") != std::string::npos);
+  CHECK(design.find("including production aliases (`cpp`, `exe`, `glsl`, `spirv`)") != std::string::npos);
 }
 
 TEST_CASE("glsl and spirv ir backends use glsl ir validation target") {

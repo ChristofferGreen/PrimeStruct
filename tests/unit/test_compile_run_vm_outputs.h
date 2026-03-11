@@ -1561,6 +1561,16 @@ main() {
 }
 )",
       },
+      {
+          "lowering_software_numeric",
+          R"(
+[return<decimal>]
+main() {
+  [decimal] value{convert<decimal>(1.5f32)}
+  return(value)
+}
+)",
+      },
   };
 
   struct EmitPair {

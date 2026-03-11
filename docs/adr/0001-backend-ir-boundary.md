@@ -47,3 +47,10 @@ Costs:
 - Any proposal for AST-direct emission requires a new ADR that explicitly
   supersedes this decision.
 
+## Follow-up status (2026-03-11)
+
+- Completed: production `primec --emit` aliases (`cpp`, `exe`, `glsl`,
+  `spirv`) now resolve to canonical `IrBackend` kinds before backend lookup.
+- Completed: `primec` no longer contains production-only AST-precheck
+  branches for `cpp`/`exe`; lowering/validation/emit diagnostics now flow
+  through backend diagnostics uniformly.
