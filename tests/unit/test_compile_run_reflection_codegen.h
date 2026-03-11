@@ -209,6 +209,42 @@ main() {
   CHECK(ir.find("call /Pair/Clear(value)") != std::string::npos);
 }
 
+TEST_CASE("reflection copyfrom helper appears in ast-semantic and ir dumps") {
+  const std::string source = R"(
+[struct reflect generate(CopyFrom)]
+Pair() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<int>]
+main() {
+  [Pair mut] target{Pair([x] 9i32, [y] 8i32)}
+  [Pair] source{Pair([x] 3i32, [y] 5i32)}
+  /Pair/CopyFrom(target, source)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_copyfrom_dump.prime", source);
+  const std::string astOutPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_copyfrom_ast_semantic.txt").string();
+  const std::string irOutPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_copyfrom_ir.txt").string();
+
+  const std::string astCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(astOutPath);
+  const std::string irCmd = "./primec " + quoteShellArg(srcPath) + " --dump-stage ir > " + quoteShellArg(irOutPath);
+  CHECK(runCommand(astCmd) == 0);
+  CHECK(runCommand(irCmd) == 0);
+
+  const std::string ast = readFile(astOutPath);
+  const std::string ir = readFile(irOutPath);
+  CHECK(ast.find("/Pair/CopyFrom(") != std::string::npos);
+  CHECK(ast.find("assign(x(value), x(other))") != std::string::npos);
+  CHECK(ast.find("assign(y(value), y(other))") != std::string::npos);
+  CHECK(ir.find("call /Pair/CopyFrom(target, source)") != std::string::npos);
+}
+
 TEST_CASE("reflection codegen helper runtime stays aligned across backends") {
   const std::string source = reflectionCodegenRuntimeSource();
   const std::string srcPath = writeTemp("compile_reflection_codegen_runtime.prime", source);
@@ -346,6 +382,42 @@ main() {
   CHECK(runCommand(quoteShellArg(exePath)) == 7);
 
   const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_reflection_clear_native").string();
+  const std::string nativeCompileCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(nativeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 7);
+}
+
+TEST_CASE("reflection copyfrom helper runtime stays aligned across backends") {
+  const std::string source = R"(
+[struct reflect generate(CopyFrom, Compare)]
+Pair() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<int>]
+main() {
+  [Pair mut] target{Pair([x] 9i32, [y] 8i32)}
+  [Pair] source{Pair([x] 3i32, [y] 5i32)}
+  /Pair/CopyFrom(target, source)
+  [i32] cmp{/Pair/Compare(target, source)}
+  return(if(equal(cmp, 0i32), then() { 7i32 }, else() { 3i32 }))
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_copyfrom_runtime.prime", source);
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 7);
+
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_reflection_copyfrom_exe").string();
+  const std::string exeCompileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(exeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 7);
+
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_copyfrom_native").string();
   const std::string nativeCompileCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(nativeCompileCmd) == 0);
