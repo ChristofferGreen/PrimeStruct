@@ -1765,6 +1765,60 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    auto getMapNamespacedAccessCompatibilityPath = [&](const Expr &candidate) -> std::string {
+      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+        return "";
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      std::string helperName;
+      if (normalized == "map/at") {
+        helperName = "at";
+      } else if (normalized == "map/at_unsafe") {
+        helperName = "at_unsafe";
+      } else {
+        const std::string resolvedPath = resolveCalleePath(candidate);
+        if (resolvedPath == "/map/at") {
+          helperName = "at";
+        } else if (resolvedPath == "/map/at_unsafe") {
+          helperName = "at_unsafe";
+        } else {
+          return "";
+        }
+      }
+      const std::string removedPath = "/map/" + helperName;
+      if (defMap_.find(removedPath) != defMap_.end()) {
+        return "";
+      }
+      if (candidate.args.empty()) {
+        return "";
+      }
+      const bool hasNamedArgs = hasNamedArguments(candidate.argNames);
+      size_t receiverIndex = 0;
+      if (hasNamedArgs) {
+        bool foundValues = false;
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+              *candidate.argNames[i] == "values") {
+            receiverIndex = i;
+            foundValues = true;
+            break;
+          }
+        }
+        if (!foundValues) {
+          receiverIndex = 0;
+        }
+      }
+      if (receiverIndex >= candidate.args.size()) {
+        return "";
+      }
+      if (!resolveMapTarget(candidate.args[receiverIndex])) {
+        return "";
+      }
+      return removedPath;
+    };
     auto resolveMapKeyType = [&](const Expr &target, std::string &keyTypeOut) -> bool {
       keyTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
@@ -2389,6 +2443,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "unknown call target: /map/count";
       return false;
     }
+    const std::string removedMapAccessCompatibilityPath =
+        expr.isMethodCall ? "" : getMapNamespacedAccessCompatibilityPath(expr);
+    if (!removedMapAccessCompatibilityPath.empty()) {
+      error_ = "unknown call target: " + removedMapAccessCompatibilityPath;
+      return false;
+    }
     auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {
       std::string elemType;
       return resolveVectorTarget(targetExpr, elemType) || resolveArrayTarget(targetExpr, elemType) ||
@@ -2506,7 +2566,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         defMap_.find("/vector/" + accessHelperName) != defMap_.end();
     const bool isNamespacedMapAccessCall =
         isBuiltinAccessName && isNamespacedMapHelperCall &&
-        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
+        removedMapAccessCompatibilityPath.empty();
     auto normalizeCollectionMethodName = [](const std::string &methodName) {
       std::string normalized = methodName;
       if (!normalized.empty() && normalized.front() == '/') {

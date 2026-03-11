@@ -2934,6 +2934,43 @@ main() {
   CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
+TEST_CASE("map namespaced at call rejects removed compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/map/at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+}
+
+TEST_CASE("map namespaced at_unsafe auto inference rejects removed compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{/map/at_unsafe(values, 1i32)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/at_unsafe") != std::string::npos);
+}
+
 TEST_CASE("stdlib canonical map helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]

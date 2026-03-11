@@ -1184,6 +1184,58 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      std::string helperName;
+      if (normalized == "map/at") {
+        helperName = "at";
+      } else if (normalized == "map/at_unsafe") {
+        helperName = "at_unsafe";
+      } else {
+        const std::string resolvedPath = resolveCalleePath(candidate);
+        if (resolvedPath == "/map/at") {
+          helperName = "at";
+        } else if (resolvedPath == "/map/at_unsafe") {
+          helperName = "at_unsafe";
+        } else {
+          return false;
+        }
+      }
+      if (defMap_.find("/map/" + helperName) != defMap_.end()) {
+        return false;
+      }
+      if (candidate.args.empty()) {
+        return false;
+      }
+      const bool hasNamedArgs = hasNamedArguments(candidate.argNames);
+      size_t receiverIndex = 0;
+      if (hasNamedArgs) {
+        bool foundValues = false;
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+              *candidate.argNames[i] == "values") {
+            receiverIndex = i;
+            foundValues = true;
+            break;
+          }
+        }
+        if (!foundValues) {
+          receiverIndex = 0;
+        }
+      }
+      if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      std::string keyType;
+      std::string valueType;
+      return resolveMapTarget(candidate.args[receiverIndex], keyType, valueType);
+    };
     auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call) {
         return false;
@@ -1422,6 +1474,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall && isMapNamespacedCountCompatibilityCall(expr)) {
       return ReturnKind::Unknown;
     }
+    if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall(expr)) {
+      return ReturnKind::Unknown;
+    }
     const auto resolvedCandidates = collectionHelperPathCandidates(resolvedCallee);
     std::string resolved = resolvedCandidates.empty() ? preferVectorStdlibHelperPath(resolvedCallee)
                                                       : resolvedCandidates.front();
@@ -1643,7 +1698,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
     const bool isNamespacedMapAccessCall =
         !expr.isMethodCall && isBuiltinAccess && isNamespacedMapHelperCall &&
-        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
+        !isMapNamespacedAccessCompatibilityCall(expr);
     auto defIt = hasResolvedPath ? defMap_.find(resolved) : defMap_.end();
     const bool hasResolvedDefinition = defIt != defMap_.end();
     std::string normalizedCallName = expr.name;
