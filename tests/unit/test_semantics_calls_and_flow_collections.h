@@ -2973,7 +2973,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("array namespaced vector helper alias resolves in method-call sugar auto inference" * doctest::skip()) {
+TEST_CASE("array namespaced vector helper alias rejects method-call sugar auto inference") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -2988,11 +2988,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/count") != std::string::npos);
 }
 
-TEST_CASE("array namespaced vector helper alias method-call inference keeps mismatch diagnostics" * doctest::skip()) {
+TEST_CASE("array namespaced vector helper alias method-call inference keeps unknown-method diagnostics") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -3008,8 +3008,26 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected i32") != std::string::npos);
+  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced helper alias rejects method-call sugar auto inference") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/count(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector helper alias resolves in method-call sugar auto inference" * doctest::skip()) {

@@ -1867,6 +1867,28 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
+      auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
+        return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+               helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+               helperName == "remove_at" || helperName == "remove_swap";
+      };
+      auto explicitRemovedVectorMethodPath = [&](const std::string &rawMethodName) -> std::string {
+        std::string candidate = rawMethodName;
+        if (!candidate.empty() && candidate.front() == '/') {
+          candidate.erase(candidate.begin());
+        }
+        std::string_view helperName;
+        if (candidate.rfind("array/", 0) == 0) {
+          helperName = std::string_view(candidate).substr(std::string_view("array/").size());
+        } else if (candidate.rfind("vector/", 0) == 0) {
+          helperName = std::string_view(candidate).substr(std::string_view("vector/").size());
+        }
+        if (helperName.empty() || !isRemovedVectorCompatibilityHelper(helperName)) {
+          return "";
+        }
+        return "/" + candidate;
+      };
+      const std::string explicitRemovedMethodPath = explicitRemovedVectorMethodPath(methodName);
       std::string normalizedMethodName = methodName;
       if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
         normalizedMethodName.erase(normalizedMethodName.begin());
@@ -1954,6 +1976,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       std::string elemType;
       auto setCollectionMethodTarget = [&](const std::string &path) {
+        if (!explicitRemovedMethodPath.empty()) {
+          resolvedOut = explicitRemovedMethodPath;
+          isBuiltinOut = false;
+          return true;
+        }
         resolvedOut = preferVectorStdlibHelperPath(path);
         isBuiltinOut = defMap_.count(resolvedOut) == 0;
         return true;
