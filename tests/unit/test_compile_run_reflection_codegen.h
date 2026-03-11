@@ -445,6 +445,30 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("reflection ToString generator reports deferred diagnostic deterministically") {
+  const std::string source = R"(
+[struct reflect generate(ToString)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_tostring_deferred.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_tostring_deferred.err.txt").string();
+  const std::string cmd =
+      "./primec " + quoteShellArg(srcPath) + " --emit=ir 2> " + quoteShellArg(errPath);
+
+  CHECK(runCommand(cmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("reflection generator ToString is deferred on /Pair") != std::string::npos);
+  CHECK(error.find("use DebugPrint") != std::string::npos);
+}
+
 TEST_CASE("reflection codegen helper runtime stays aligned across backends") {
   const std::string source = reflectionCodegenRuntimeSource();
   const std::string srcPath = writeTemp("compile_reflection_codegen_runtime.prime", source);

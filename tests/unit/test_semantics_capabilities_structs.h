@@ -670,6 +670,19 @@ main() {
   CHECK(error.find("unsupported reflection generator on /main: UnknownHelper") != std::string::npos);
 }
 
+TEST_CASE("generate transform reports deferred ToString generator") {
+  const std::string source = R"(
+[struct reflect generate(ToString)]
+main() {
+  [i32] value{1i32}
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reflection generator ToString is deferred on /main") != std::string::npos);
+  CHECK(error.find("use DebugPrint") != std::string::npos);
+}
+
 TEST_CASE("generate transform rejects duplicate reflection generators") {
   const std::string source = R"(
 [struct reflect generate(Equal, Equal)]

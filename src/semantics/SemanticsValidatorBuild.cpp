@@ -463,6 +463,13 @@ bool SemanticsValidator::buildDefinitionMaps() {
         std::unordered_set<std::string> seenGenerators;
         for (const auto &generator : transform.arguments) {
           if (!isSupportedReflectionGeneratorName(generator)) {
+            if (generator == "ToString") {
+              if (addTransformDiagnostic("reflection generator ToString is deferred on " + def.fullPath +
+                                         ": dynamic string construction/runtime support is not available; use DebugPrint")) {
+                return false;
+              }
+              break;
+            }
             if (addTransformDiagnostic("unsupported reflection generator on " + def.fullPath + ": " + generator)) {
               return false;
             }
