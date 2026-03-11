@@ -277,14 +277,9 @@ bool emitConversionsAndCallsOperatorExpr(
           return true;
         }
         if (getBuiltinCollectionName(expr, builtin)) {
-          if (builtin == "array" || builtin == "vector") {
+          if (builtin == "array" || builtin == "vector" || builtin == "soa_vector") {
             if (expr.templateArgs.size() != 1) {
               error = builtin + " literal requires exactly one template argument";
-              return false;
-            }
-            LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
-            if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
-              error = "native backend only supports numeric/bool " + builtin + " literals";
               return false;
             }
             if (expr.args.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
@@ -292,26 +287,46 @@ bool emitConversionsAndCallsOperatorExpr(
               return false;
             }
 
-            const bool isVector = (builtin == "vector");
+            const bool isSoaVector = (builtin == "soa_vector");
+            const bool isVectorLike = (builtin == "vector" || isSoaVector);
+            LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
+            if (!isSoaVector &&
+                (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String)) {
+              error = "native backend only supports numeric/bool " + builtin + " literals";
+              return false;
+            }
+            if (isSoaVector && !expr.args.empty()) {
+              error = "native backend does not support non-empty soa_vector literals";
+              return false;
+            }
+
             const int32_t baseLocal = nextLocal;
-            const int32_t headerSlots = isVector ? 3 : 1;
+            const int32_t headerSlots = isVectorLike ? 3 : 1;
             const int32_t literalCount = static_cast<int32_t>(expr.args.size());
-            if (isVector && literalCount > kVectorLocalDynamicCapacityLimit) {
-              error = vectorLiteralExceedsLocalCapacityLimitMessage();
+            if (isVectorLike && literalCount > kVectorLocalDynamicCapacityLimit) {
+              if (isSoaVector) {
+                error = "soa_vector literal exceeds local capacity limit (256)";
+              } else {
+                error = vectorLiteralExceedsLocalCapacityLimitMessage();
+              }
               return false;
             }
             const int32_t storageCapacity =
-                isVector ? std::max(literalCount, kVectorLocalDynamicCapacityLimit) : literalCount;
+                isVectorLike ? std::max(literalCount, kVectorLocalDynamicCapacityLimit) : literalCount;
             const int32_t dataBaseLocal = baseLocal + headerSlots;
-            nextLocal += isVector ? headerSlots : (headerSlots + storageCapacity);
+            nextLocal += isVectorLike ? headerSlots : (headerSlots + storageCapacity);
 
             instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
             instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
-            if (isVector) {
+            if (isVectorLike) {
               instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
               instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-              instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(storageCapacity)});
-              instructions.push_back({IrOpcode::HeapAlloc, 0});
+              if (isSoaVector) {
+                instructions.push_back({IrOpcode::PushI64, 0});
+              } else {
+                instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(storageCapacity)});
+                instructions.push_back({IrOpcode::HeapAlloc, 0});
+              }
               instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
             }
 
@@ -326,7 +341,7 @@ bool emitConversionsAndCallsOperatorExpr(
                 error = builtin + " literal element type mismatch";
                 return false;
               }
-              if (isVector) {
+              if (isVectorLike) {
                 instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
                 const uint64_t offsetBytes = static_cast<uint64_t>(i) * IrSlotBytes;
                 if (offsetBytes != 0) {

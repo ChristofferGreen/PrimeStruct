@@ -145,33 +145,7 @@ TEST_CASE("ir lowerer helper rejects array namespaced vector constructor alias b
   CHECK_FALSE(primec::ir_lowerer::getBuiltinCollectionName(arrayVectorCall, builtin));
 }
 
-TEST_CASE("ir lowerer rejects soa_vector literals with deterministic diagnostic") {
-  primec::Program program;
-  primec::Definition mainDef;
-  mainDef.name = "main";
-  mainDef.fullPath = "/main";
-
-  primec::Transform returnTransform;
-  returnTransform.name = "return";
-  returnTransform.templateArgs.push_back("i32");
-  mainDef.transforms.push_back(returnTransform);
-
-  primec::Expr soaVectorLiteral;
-  soaVectorLiteral.kind = primec::Expr::Kind::Call;
-  soaVectorLiteral.name = "soa_vector";
-  soaVectorLiteral.templateArgs.push_back("i32");
-  mainDef.returnExpr = soaVectorLiteral;
-
-  program.definitions.push_back(std::move(mainDef));
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  std::string error;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error == "native backend does not support soa_vector literals");
-}
-
-TEST_CASE("semantics accepts soa_vector before lowerer rejection") {
+TEST_CASE("semantics accepts and lowerer emits empty soa_vector literals") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -189,8 +163,9 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error == "native backend does not support soa_vector literals");
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  CHECK_FALSE(module.functions.empty());
 }
 
 TEST_CASE("semantics accepts soa_vector count in non-entry helpers") {
@@ -218,6 +193,29 @@ main() {
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
   CHECK(error == "native backend entry parameter must be array<string>");
+}
+
+TEST_CASE("ir lowerer rejects non-empty soa_vector literals with deterministic diagnostic") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>(Particle(1i32))}
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "native backend does not support non-empty soa_vector literals");
 }
 
 TEST_CASE("semantics accepts soa_vector get before lowerer rejection") {

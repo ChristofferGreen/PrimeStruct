@@ -617,12 +617,12 @@ inference for both `get/ref` and single-argument field-view helper calls, plus s
 call-form single-argument SoA field helpers before expression fallback, and statement mutator helper probing for
 call-form SoA receivers so user-defined `/soa_vector/push`-style helpers bypass builtin unsupported-helper fallback).
 Lowering/runtime support remains
-incomplete; current IR lowering routes `count(...)` on `soa_vector` through the native count path for SoA bindings, while
-still emitting deterministic unsupported diagnostics for draft helper paths
-(`native backend does not support soa_vector literals`, `native backend does not support soa_vector get`,
-`native backend does not support soa_vector ref`, `native backend does not support to_soa`,
-`native backend does not support to_aos`, `native backend does not support soa_vector helper: push`,
-`native backend does not support soa_vector helper: reserve`).
+incomplete; current IR lowering routes `count(...)` on `soa_vector` through the native count path for SoA bindings,
+and empty `soa_vector<T>()` literals lower to header-only storage, while still emitting deterministic unsupported
+diagnostics for non-empty literals and draft helper paths (`native backend does not support non-empty soa_vector literals`,
+`native backend does not support soa_vector get`, `native backend does not support soa_vector ref`,
+`native backend does not support to_soa`, `native backend does not support to_aos`,
+`native backend does not support soa_vector helper: push`, `native backend does not support soa_vector helper: reserve`).
 Draft example source: `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA runtime support lands).
 
 ### 8.5 Matrix and Quaternion Types (Draft)

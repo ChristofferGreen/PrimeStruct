@@ -1571,6 +1571,19 @@ main() {
 }
 )",
       },
+      {
+          "lowering_non_empty_soa_vector_literal",
+          R"(
+Particle() {
+  [i32] x{1i32}
+}
+[return<int> effects(heap_alloc)]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>(Particle(1i32))}
+  return(0i32)
+}
+)",
+      },
   };
 
   struct EmitPair {
