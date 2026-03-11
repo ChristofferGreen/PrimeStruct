@@ -1754,6 +1754,62 @@ TEST_CASE("C++ emitter helper keeps canonical map access method unresolved witho
   CHECK(resolved.empty());
 }
 
+TEST_CASE("C++ emitter helper normalizes full-path map method aliases") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+  call.name = "/map/count";
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+  call.args.push_back(receiver);
+  call.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "map";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  std::string resolved;
+
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/map/count");
+
+  call.name = "/std/collections/map/at";
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/map/at");
+}
+
+TEST_CASE("C++ emitter helper rejects full-path map aliases without receiver type") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+  call.name = "/std/collections/map/count";
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+  call.args.push_back(receiver);
+  call.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  std::string resolved;
+
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+}
+
 TEST_CASE("C++ emitter helper rejects canonical vector alias access struct-return forwarding resolution") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;

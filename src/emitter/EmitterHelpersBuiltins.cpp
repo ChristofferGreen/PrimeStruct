@@ -801,6 +801,10 @@ bool resolveMethodCallPath(const Expr &call,
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
   } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+  } else if (normalizedMethodName.rfind("map/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
+  } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
   const Expr &receiver = call.args.front();
   auto normalizeCollectionReceiverType = [](const std::string &typePath) -> std::string {
