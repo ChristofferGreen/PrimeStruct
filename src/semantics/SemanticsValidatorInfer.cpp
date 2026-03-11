@@ -1159,6 +1159,31 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto isMapNamespacedCountCompatibilityCall = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      const bool spellsMapCount = (normalized == "map/count");
+      const bool resolvesMapCount = (resolveCalleePath(candidate) == "/map/count");
+      if (!spellsMapCount && !resolvesMapCount) {
+        return false;
+      }
+      if (defMap_.find("/map/count") != defMap_.end()) {
+        return false;
+      }
+      for (const Expr &arg : candidate.args) {
+        std::string keyType;
+        std::string valueType;
+        if (resolveMapTarget(arg, keyType, valueType)) {
+          return true;
+        }
+      }
+      return false;
+    };
     auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call) {
         return false;
@@ -1394,6 +1419,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall && isArrayNamespacedVectorCountCompatibilityCall(expr)) {
       return ReturnKind::Unknown;
     }
+    if (!expr.isMethodCall && isMapNamespacedCountCompatibilityCall(expr)) {
+      return ReturnKind::Unknown;
+    }
     const auto resolvedCandidates = collectionHelperPathCandidates(resolvedCallee);
     std::string resolved = resolvedCandidates.empty() ? preferVectorStdlibHelperPath(resolvedCallee)
                                                       : resolvedCandidates.front();
@@ -1601,7 +1629,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
         isVectorBuiltinName(expr, "count") && !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
-        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count";
+        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
+        !isMapNamespacedCountCompatibilityCall(expr);
     const bool isResolvedMapCountCall =
         !expr.isMethodCall && (resolved == "/map/count" || resolved == "/std/collections/map/count");
     const bool isNamespacedVectorCapacityCall =

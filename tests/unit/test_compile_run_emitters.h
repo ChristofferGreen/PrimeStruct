@@ -2604,6 +2604,30 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("rejects map namespaced count compatibility alias in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/map/count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_map_namespaced_count_compatibility_alias_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_map_namespaced_count_compatibility_alias_reject.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /map/count") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter resolves stdlib canonical map count helper in method-call sugar") {
   const std::string source = R"(
 [return<int>]
