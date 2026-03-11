@@ -494,6 +494,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
+  std::string normalizedTypeName = typeName;
+  if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
+    normalizedTypeName.erase(normalizedTypeName.begin());
+  }
   auto findMethodDefinitionByPath = [&](const std::string &path) -> const Definition * {
     auto defIt = defMap.find(path);
     if (defIt != defMap.end()) {
@@ -575,12 +579,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return resolvedDef;
   }
 
-  if (typeName.empty()) {
+  if (normalizedTypeName.empty()) {
     errorOut = "unknown method target for " + normalizedMethodName;
     return nullptr;
   }
 
-  const std::string resolved = "/" + typeName + "/" + normalizedMethodName;
+  const std::string resolved = "/" + normalizedTypeName + "/" + normalizedMethodName;
   const Definition *resolvedDef = findMethodDefinitionByPath(resolved);
   if (resolvedDef == nullptr) {
     errorOut = "unknown method: " + resolved;
