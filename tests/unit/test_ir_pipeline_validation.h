@@ -15537,14 +15537,31 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver struct paths fr
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.name = "Ctor";
 
-  const std::unordered_set<std::string> structNames = {"/pkg/Ctor", "/imports/Ctor"};
-  const std::unordered_map<std::string, std::string> importAliases = {{"Ctor", "/imports/Ctor"}};
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/Ctor",
+      "/imports/Ctor",
+      "/std/collections/map/at",
+      "/map/at",
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"Ctor", "/imports/Ctor"},
+      {"MapCanonicalAlias", "std/collections/map/at"},
+      {"MapCompatAlias", "map/at"},
+  };
 
   CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
             receiverCall, "/pkg/Ctor", importAliases, structNames) == "/pkg/Ctor");
 
   CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
             receiverCall, "/not-struct/Ctor", importAliases, structNames) == "/imports/Ctor");
+
+  receiverCall.name = "MapCanonicalAlias";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/not-struct/MapCanonicalAlias", importAliases, structNames) == "/std/collections/map/at");
+
+  receiverCall.name = "MapCompatAlias";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/not-struct/MapCompatAlias", importAliases, structNames) == "/map/at");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects non-struct method receiver call paths") {

@@ -94,6 +94,16 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
+std::string normalizeMapImportAliasPath(const std::string &path) {
+  if (path.empty() || path.front() == '/') {
+    return path;
+  }
+  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
+    return "/" + path;
+  }
+  return path;
+}
+
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path);
 
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path) {
@@ -465,7 +475,7 @@ std::string resolveMethodReceiverStructTypePathFromCallExpr(
   std::string resolved = resolvedReceiverPath;
   auto importIt = importAliases.find(receiverCallExpr.name);
   if (structNames.count(resolved) == 0 && importIt != importAliases.end()) {
-    resolved = importIt->second;
+    resolved = normalizeMapImportAliasPath(importIt->second);
   }
   if (structNames.count(resolved) > 0) {
     return resolved;
