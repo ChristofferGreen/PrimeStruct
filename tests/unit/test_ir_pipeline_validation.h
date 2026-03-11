@@ -1237,7 +1237,7 @@ TEST_CASE("ir lowerer inference call-return setup rejects slashless vector alias
   CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup prefers canonical return info when alias defs lack return info" * doctest::skip()) {
+TEST_CASE("ir lowerer inference call-return setup rejects canonical return-info forwarding from compatibility vector count defs") {
   primec::Definition aliasCountDef;
   aliasCountDef.fullPath = "/vector/count";
   primec::Definition canonicalCountDef;
@@ -1286,9 +1286,9 @@ TEST_CASE("ir lowerer inference call-return setup prefers canonical return info 
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+        primec::ir_lowerer::CallExpressionReturnKindResolution::MatchedButUnsupported);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(resolveMethodCalls == 0);
 }
 
 TEST_CASE("ir lowerer inference call-return setup keeps compatibility array count on definition fallback") {
@@ -15358,7 +15358,7 @@ TEST_CASE("ir lowerer setup type helper reports method target lookup diagnostics
   CHECK(error == "unknown method: /std/collections/vector/missing");
 }
 
-TEST_CASE("ir lowerer setup type helper falls back from canonical vector receiver type to aliases" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper rejects canonical vector receiver fallback to removed aliases") {
   primec::Definition vectorCountDef;
   vectorCountDef.fullPath = "/vector/count";
   primec::Definition arrayCountDef;
@@ -15370,17 +15370,18 @@ TEST_CASE("ir lowerer setup type helper falls back from canonical vector receive
         {"/vector/count", &vectorCountDef},
     };
     CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-              "count", "std/collections/vector", "", defMap, error) == &vectorCountDef);
-    CHECK(error.empty());
+              "count", "std/collections/vector", "", defMap, error) == nullptr);
+    CHECK(error == "unknown method: /std/collections/vector/count");
   }
 
   {
+    error.clear();
     const std::unordered_map<std::string, const primec::Definition *> defMap = {
         {"/array/count", &arrayCountDef},
     };
     CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-              "count", "std/collections/vector", "", defMap, error) == &arrayCountDef);
-    CHECK(error.empty());
+              "count", "std/collections/vector", "", defMap, error) == nullptr);
+    CHECK(error == "unknown method: /std/collections/vector/count");
   }
 }
 
@@ -15795,7 +15796,7 @@ TEST_CASE("ir lowerer setup type helper resolves soa_vector receiver method defi
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper resolves alias receiver call returns via canonical stdlib defs" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper rejects alias receiver call return fallback to canonical stdlib defs") {
   primec::Definition canonicalAtDef;
   canonicalAtDef.fullPath = "/std/collections/vector/at";
   primec::Transform returnMarker;
@@ -15845,11 +15846,11 @@ TEST_CASE("ir lowerer setup type helper resolves alias receiver call returns via
       [](const primec::Expr &expr) { return expr.name; },
       defMap,
       error);
-  CHECK(resolved == &markerTagDef);
-  CHECK(error.empty());
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method target for tag");
 }
 
-TEST_CASE("ir lowerer setup type helper keeps canonical diagnostics for alias receiver call returns" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for alias receiver call returns") {
   primec::Definition canonicalAtDef;
   canonicalAtDef.fullPath = "/std/collections/vector/at";
   primec::Transform returnMarker;
@@ -15896,10 +15897,10 @@ TEST_CASE("ir lowerer setup type helper keeps canonical diagnostics for alias re
             [](const primec::Expr &expr) { return expr.name; },
             defMap,
             error) == nullptr);
-  CHECK(error == "unknown method: /Marker/tag");
+  CHECK(error == "unknown method target for tag");
 }
 
-TEST_CASE("ir lowerer setup type helper falls back from alias receiver defs without returns" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper rejects alias receiver defs without canonical return fallback") {
   primec::Definition aliasAtDef;
   aliasAtDef.fullPath = "/vector/at";
   primec::Definition canonicalAtDef;
@@ -15952,11 +15953,11 @@ TEST_CASE("ir lowerer setup type helper falls back from alias receiver defs with
       [](const primec::Expr &expr) { return expr.name; },
       defMap,
       error);
-  CHECK(resolved == &markerTagDef);
-  CHECK(error.empty());
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method target for tag");
 }
 
-TEST_CASE("ir lowerer setup type helper keeps canonical diagnostics when alias receiver defs lack returns" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper keeps reject diagnostics when alias receiver defs lack returns") {
   primec::Definition aliasAtDef;
   aliasAtDef.fullPath = "/vector/at";
   primec::Definition canonicalAtDef;
@@ -16006,10 +16007,10 @@ TEST_CASE("ir lowerer setup type helper keeps canonical diagnostics when alias r
             [](const primec::Expr &expr) { return expr.name; },
             defMap,
             error) == nullptr);
-  CHECK(error == "unknown method: /Marker/tag");
+  CHECK(error == "unknown method target for tag");
 }
 
-TEST_CASE("ir lowerer setup type helper falls back to resolved receiver alias paths when expr path is unavailable" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper rejects alias receiver fallback when expr path is unavailable") {
   primec::Definition aliasAtDef;
   aliasAtDef.fullPath = "/vector/at";
   primec::Definition canonicalAtDef;
@@ -16073,11 +16074,11 @@ TEST_CASE("ir lowerer setup type helper falls back to resolved receiver alias pa
       },
       defMap,
       error);
-  CHECK(resolved == &markerTagDef);
-  CHECK(error.empty());
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method target for tag");
 }
 
-TEST_CASE("ir lowerer setup type helper keeps canonical diagnostics when expr path is unavailable" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper keeps reject diagnostics when expr path is unavailable") {
   primec::Definition aliasAtDef;
   aliasAtDef.fullPath = "/vector/at";
   primec::Definition canonicalAtDef;
@@ -16138,7 +16139,7 @@ TEST_CASE("ir lowerer setup type helper keeps canonical diagnostics when expr pa
             },
             defMap,
             error) == nullptr);
-  CHECK(error == "unknown method: /Marker/tag");
+  CHECK(error == "unknown method target for tag");
 }
 
 TEST_CASE("ir lowerer setup type helper keeps builtin count/capacity fallback when no override definition exists") {
@@ -16589,7 +16590,7 @@ TEST_CASE("ir lowerer setup type helper rejects slashless vector alias return ki
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup type helper prefers canonical return info when alias defs lack return info" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper rejects canonical return-info forwarding when compatibility defs lack return info") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition aliasCountDef;
   aliasCountDef.fullPath = "/vector/count";
@@ -16620,7 +16621,7 @@ TEST_CASE("ir lowerer setup type helper prefers canonical return info when alias
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   bool definitionMatched = false;
-  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       callExpr,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -16629,7 +16630,7 @@ TEST_CASE("ir lowerer setup type helper prefers canonical return info when alias
       kindOut,
       &definitionMatched));
   CHECK(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   definitionMatched = false;
@@ -16812,7 +16813,7 @@ TEST_CASE("ir lowerer setup type helper resolves access call method return kinds
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
-TEST_CASE("ir lowerer setup type helper normalizes namespaced vector call fallback helpers" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper rejects removed vector helper probes while keeping canonical namespaced probes") {
   primec::Definition countDef;
   countDef.fullPath = "/vector/count";
   primec::Definition atDef;
@@ -16874,7 +16875,7 @@ TEST_CASE("ir lowerer setup type helper normalizes namespaced vector call fallba
   aliasCountCall.args = {receiverExpr};
 
   int aliasCountResolveCalls = 0;
-  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       aliasCountCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -16889,9 +16890,9 @@ TEST_CASE("ir lowerer setup type helper normalizes namespaced vector call fallba
       false,
       kindOut,
       &methodResolved));
-  CHECK(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(aliasCountResolveCalls == 1);
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(aliasCountResolveCalls == 0);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   methodResolved = false;
@@ -16926,7 +16927,7 @@ TEST_CASE("ir lowerer setup type helper normalizes namespaced vector call fallba
   aliasPushCall.name = "/vector/push";
   aliasPushCall.args = {indexExpr, receiverExpr};
   int aliasPushResolveCalls = 0;
-  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       aliasPushCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -16945,9 +16946,9 @@ TEST_CASE("ir lowerer setup type helper normalizes namespaced vector call fallba
       false,
       kindOut,
       &methodResolved));
-  CHECK(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(aliasPushResolveCalls == 2);
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(aliasPushResolveCalls == 0);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   methodResolved = false;
