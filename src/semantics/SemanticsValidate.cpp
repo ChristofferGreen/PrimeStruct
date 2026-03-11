@@ -1506,7 +1506,7 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     }
 
     if (!hasExplicitType && stmt.args.size() == 1) {
-      BindingInfo inferred;
+      semantics::BindingInfo inferred;
       if (semantics::tryInferBindingTypeFromInitializer(stmt.args.front(), {}, {}, inferred, true)) {
         typeCandidate = inferred.typeName;
         if (!inferred.typeTemplateArg.empty()) {
@@ -1745,7 +1745,7 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
   auto resolveBindingCanonicalType = [&](const Definition &ownerDef,
                                          const Expr &bindingExpr,
                                          std::string &canonicalOut) -> bool {
-    BindingInfo binding;
+    semantics::BindingInfo binding;
     std::optional<std::string> restrictType;
     std::string parseError;
     if (!semantics::parseBindingInfo(bindingExpr, ownerDef.namespacePrefix, structNames, importAliases, binding,

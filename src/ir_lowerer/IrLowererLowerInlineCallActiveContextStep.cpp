@@ -34,6 +34,19 @@ bool runLowerInlineCallActiveContextStep(const LowerInlineCallActiveContextStepI
         break;
       }
     }
+    if (success && input.callee->returnExpr.has_value()) {
+      Expr returnStmt;
+      returnStmt.kind = Expr::Kind::Call;
+      returnStmt.name = "return";
+      returnStmt.namespacePrefix = input.callee->namespacePrefix;
+      returnStmt.sourceLine = input.callee->returnExpr->sourceLine;
+      returnStmt.sourceColumn = input.callee->returnExpr->sourceColumn;
+      returnStmt.args.push_back(*input.callee->returnExpr);
+      returnStmt.argNames.push_back(std::nullopt);
+      if (!input.emitInlineStatement(returnStmt)) {
+        success = false;
+      }
+    }
   }
   if (success) {
     success = input.runInlineCleanup();

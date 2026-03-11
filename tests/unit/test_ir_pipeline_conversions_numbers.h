@@ -105,7 +105,8 @@ TEST_CASE("ir lowerer accepts move builtin") {
 [return<int>]
 main() {
   [i32] value{1i32}
-  return(move(value))
+  [i32] moved{move(value)}
+  return(moved)
 }
 )";
   primec::Program program;

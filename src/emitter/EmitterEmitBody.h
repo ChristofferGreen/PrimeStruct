@@ -626,8 +626,22 @@
         for (const auto &stmt : def.statements) {
           emitStatement(stmt, 2, localTypes);
         }
+        if (def.returnExpr.has_value()) {
+          out << "    return "
+              << emitExpr(*def.returnExpr,
+                          nameMap,
+                          paramMap,
+                          structTypeMap,
+                          importAliases,
+                          localTypes,
+                          returnKinds,
+                          resultInfos,
+                          returnStructs,
+                          hasMathImport)
+              << ";\n";
+        }
       }
-      if (returnKind == ReturnKind::Void) {
+      if (!def.returnExpr.has_value() && returnKind == ReturnKind::Void) {
         out << "    return;\n";
       }
       out << "  } catch (const ps_result_unwind &ps_unwind) {\n";
@@ -642,8 +656,22 @@
         for (const auto &stmt : def.statements) {
           emitStatement(stmt, 1, localTypes);
         }
+        if (def.returnExpr.has_value()) {
+          out << "  return "
+              << emitExpr(*def.returnExpr,
+                          nameMap,
+                          paramMap,
+                          structTypeMap,
+                          importAliases,
+                          localTypes,
+                          returnKinds,
+                          resultInfos,
+                          returnStructs,
+                          hasMathImport)
+              << ";\n";
+        }
       }
-      if (returnKind == ReturnKind::Void) {
+      if (!def.returnExpr.has_value() && returnKind == ReturnKind::Void) {
         out << "  return;\n";
       }
     }

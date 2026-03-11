@@ -2006,8 +2006,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       resolvedReceiverIndex = 0;
     }
     const bool shouldProbeVectorHelperReceiver =
-        !isStdNamespacedVectorCanonicalHelperCall &&
-        (defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall);
+        (defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
+        !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(vectorHelperResolved) != defMap_.end());
     if (shouldProbeVectorHelperReceiver && !stmt.args.empty()) {
       auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
         if (candidate.kind != Expr::Kind::Name) {

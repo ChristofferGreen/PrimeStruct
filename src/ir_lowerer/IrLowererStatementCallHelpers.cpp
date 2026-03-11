@@ -628,6 +628,19 @@ EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
       return EntryCallableExecutionResult::Error;
     }
   }
+  if (!sawReturn && entryDef.returnExpr.has_value()) {
+    Expr returnStmt;
+    returnStmt.kind = Expr::Kind::Call;
+    returnStmt.name = "return";
+    returnStmt.namespacePrefix = entryDef.namespacePrefix;
+    returnStmt.sourceLine = entryDef.returnExpr->sourceLine;
+    returnStmt.sourceColumn = entryDef.returnExpr->sourceColumn;
+    returnStmt.args.push_back(*entryDef.returnExpr);
+    returnStmt.argNames.push_back(std::nullopt);
+    if (!emitStatement(returnStmt)) {
+      return EntryCallableExecutionResult::Error;
+    }
+  }
   emitCurrentFileScopeCleanup();
   popFileScope();
 

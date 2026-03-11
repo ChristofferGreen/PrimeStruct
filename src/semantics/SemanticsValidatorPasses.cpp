@@ -224,6 +224,11 @@ bool SemanticsValidator::validateDefinitions() {
     }
     const std::string resolved = resolveCalleePath(expr);
     std::string builtinName;
+    const bool isCollectionHelperBuiltin =
+        isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") || isSimpleCallName(expr, "at") ||
+        isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
+        isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
+        isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap");
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
            getBuiltinMutationName(expr, builtinName) ||
@@ -234,7 +239,7 @@ bool SemanticsValidator::validateDefinitions() {
            getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
-           isCollectionBuiltin;
+           isCollectionBuiltin || isCollectionHelperBuiltin;
   };
   auto describeReflectionCallDiagnostic = [&](const Expr &expr,
                                               const std::vector<ParameterInfo> &params,
@@ -537,8 +542,14 @@ bool SemanticsValidator::validateDefinitions() {
       }
       expireReferenceBorrowsForRemainder(defParams, locals, def.statements, stmtIndex + 1);
     }
+    if (def.returnExpr.has_value()) {
+      if (!validateExpr(defParams, locals, *def.returnExpr)) {
+        return false;
+      }
+      sawReturn = true;
+    }
     if (kind != ReturnKind::Void && !isStructDefinition(def)) {
-      bool allPathsReturn = blockAlwaysReturns(def.statements);
+      bool allPathsReturn = def.returnExpr.has_value() || blockAlwaysReturns(def.statements);
       if (!allPathsReturn) {
         if (sawReturn) {
           error_ = "not all control paths return in " + def.fullPath + " (missing return statement)";
@@ -550,7 +561,7 @@ bool SemanticsValidator::validateDefinitions() {
     }
     bool shouldCheckUninitialized = (kind == ReturnKind::Void);
     if (kind != ReturnKind::Void && !isStructDefinition(def)) {
-      shouldCheckUninitialized = blockAlwaysReturns(def.statements);
+      shouldCheckUninitialized = def.returnExpr.has_value() || blockAlwaysReturns(def.statements);
     }
     if (shouldCheckUninitialized) {
       std::optional<std::string> uninitError =
@@ -1284,6 +1295,11 @@ bool SemanticsValidator::validateExecutions() {
     }
     const std::string resolved = resolveCalleePath(expr);
     std::string builtinName;
+    const bool isCollectionHelperBuiltin =
+        isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") || isSimpleCallName(expr, "at") ||
+        isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
+        isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
+        isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap");
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
            getBuiltinMutationName(expr, builtinName) ||
@@ -1294,7 +1310,57 @@ bool SemanticsValidator::validateExecutions() {
            getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
-           isCollectionBuiltin;
+           isCollectionBuiltin || isCollectionHelperBuiltin;
+  };
+  auto describeReflectionCallDiagnostic = [&](const Expr &expr,
+                                              const std::vector<ParameterInfo> &params,
+                                              const std::unordered_map<std::string, BindingInfo> &locals,
+                                              std::string &messageOut) -> bool {
+    messageOut.clear();
+    auto isUnboundMetaReceiver = [&](const Expr &receiver) {
+      if (receiver.kind != Expr::Kind::Name || receiver.name != "meta") {
+        return false;
+      }
+      if (findParamBinding(params, receiver.name) != nullptr) {
+        return false;
+      }
+      return locals.find(receiver.name) == locals.end();
+    };
+    if (expr.isMethodCall && !expr.args.empty()) {
+      const Expr &receiver = expr.args.front();
+      if (isUnboundMetaReceiver(receiver)) {
+        if (isReflectionMetadataQueryName(expr.name)) {
+          messageOut = "reflection metadata queries are compile-time only and not yet implemented: meta." + expr.name;
+          return true;
+        }
+        if (expr.name == "object" || expr.name == "table") {
+          messageOut = "runtime reflection objects/tables are unsupported: meta." + expr.name;
+          return true;
+        }
+        messageOut = "unsupported reflection metadata query: meta." + expr.name;
+        return true;
+      }
+    }
+    const std::string resolved = resolveCalleePath(expr);
+    if (defMap_.count(resolved) > 0) {
+      return false;
+    }
+    if (isReflectionMetadataQueryPath(resolved)) {
+      messageOut = "reflection metadata queries are compile-time only and not yet implemented: " + resolved;
+      return true;
+    }
+    if (isRuntimeReflectionPath(resolved)) {
+      messageOut = "runtime reflection objects/tables are unsupported: " + resolved;
+      return true;
+    }
+    if (resolved.rfind("/meta/", 0) == 0) {
+      const std::string queryName = resolved.substr(6);
+      if (!queryName.empty() && queryName.find('/') == std::string::npos) {
+        messageOut = "unsupported reflection metadata query: " + resolved;
+        return true;
+      }
+    }
+    return false;
   };
   auto collectExecutionIntraBodyCallDiagnostics = [&](const Execution &exec,
                                                       std::vector<SemanticDiagnosticRecord> &out) {

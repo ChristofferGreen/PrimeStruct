@@ -168,7 +168,7 @@ TEST_CASE("ir lowerer rejects soa_vector literals with deterministic diagnostic"
   primec::IrModule module;
   std::string error;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error == "native backend requires an explicit return statement");
+  CHECK(error == "native backend does not support soa_vector literals");
 }
 
 TEST_CASE("semantics accepts soa_vector before lowerer rejection") {

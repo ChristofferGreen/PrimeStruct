@@ -8,9 +8,15 @@ Pair() {
   [i32] y{2i32}
 }
 
-[return<int>]
+[return<int> effects(io_out)]
 main() {
-  return(0i32)
+  [Pair] baseline{/Pair/Default()}
+  [Pair] copy{/Pair/Clone(baseline)}
+  /Pair/DebugPrint(copy)
+  [bool] equalCopy{/Pair/Equal(copy, baseline)}
+  [bool] notEqual{/Pair/NotEqual(copy, Pair([x] 9i32, [y] 2i32))}
+  [bool] isDefault{/Pair/IsDefault(baseline)}
+  return(if(and(and(equalCopy, notEqual), isDefault), then() { 0i32 }, else() { 1i32 }))
 }
 )";
 }
@@ -70,7 +76,7 @@ TEST_CASE("reflection codegen ast-semantic dump uses canonical helper order") {
   CHECK(debugPrintPos < pairStructPos);
 }
 
-TEST_CASE("reflection codegen ir dump includes generated helper definitions") {
+TEST_CASE("reflection codegen ir dump keeps generated helper call sites") {
   const std::string srcPath = writeTemp("compile_reflection_codegen_ir.prime", reflectionCodegenDumpSource());
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_reflection_codegen_ir.txt").string();
   const std::string dumpCmd = "./primec " + quoteShellArg(srcPath) + " --dump-stage ir > " + quoteShellArg(outPath);
@@ -78,12 +84,12 @@ TEST_CASE("reflection codegen ir dump includes generated helper definitions") {
   CHECK(runCommand(dumpCmd) == 0);
   const std::string ir = readFile(outPath);
 
-  const size_t equalPos = ir.find("def /Pair/Equal");
-  const size_t notEqualPos = ir.find("def /Pair/NotEqual");
-  const size_t defaultPos = ir.find("def /Pair/Default");
-  const size_t isDefaultPos = ir.find("def /Pair/IsDefault");
-  const size_t clonePos = ir.find("def /Pair/Clone");
-  const size_t debugPrintPos = ir.find("def /Pair/DebugPrint");
+  const size_t equalPos = ir.find("/Pair/Equal(copy, baseline)");
+  const size_t notEqualPos = ir.find("/Pair/NotEqual(copy, Pair([x] 9, [y] 2))");
+  const size_t defaultPos = ir.find("/Pair/Default()");
+  const size_t isDefaultPos = ir.find("/Pair/IsDefault(baseline)");
+  const size_t clonePos = ir.find("/Pair/Clone(baseline)");
+  const size_t debugPrintPos = ir.find("call /Pair/DebugPrint(copy)");
 
   REQUIRE(equalPos != std::string::npos);
   REQUIRE(notEqualPos != std::string::npos);
@@ -92,11 +98,11 @@ TEST_CASE("reflection codegen ir dump includes generated helper definitions") {
   REQUIRE(clonePos != std::string::npos);
   REQUIRE(debugPrintPos != std::string::npos);
 
-  CHECK(equalPos < notEqualPos);
-  CHECK(notEqualPos < defaultPos);
-  CHECK(defaultPos < isDefaultPos);
-  CHECK(isDefaultPos < clonePos);
+  CHECK(defaultPos < clonePos);
   CHECK(clonePos < debugPrintPos);
+  CHECK(debugPrintPos < equalPos);
+  CHECK(equalPos < notEqualPos);
+  CHECK(notEqualPos < isDefaultPos);
 }
 
 TEST_CASE("reflection compare helper appears in ast-semantic and ir dumps") {
@@ -109,7 +115,9 @@ Pair() {
 
 [return<int>]
 main() {
-  return(0i32)
+  [Pair] left{Pair([x] 1i32, [y] 2i32)}
+  [Pair] right{Pair([x] 2i32, [y] 3i32)}
+  return(/Pair/Compare(left, right))
 }
 )";
   const std::string srcPath = writeTemp("compile_reflection_compare_dump.prime", source);
@@ -127,9 +135,9 @@ main() {
   const std::string ast = readFile(astOutPath);
   const std::string ir = readFile(irOutPath);
   CHECK(ast.find("/Pair/Compare(") != std::string::npos);
-  CHECK(ast.find("less_than(left.x, right.x)") != std::string::npos);
-  CHECK(ast.find("greater_than(left.x, right.x)") != std::string::npos);
-  CHECK(ir.find("def /Pair/Compare") != std::string::npos);
+  CHECK(ast.find("less_than(x(left), x(right))") != std::string::npos);
+  CHECK(ast.find("greater_than(x(left), x(right))") != std::string::npos);
+  CHECK(ir.find("return /Pair/Compare(left, right)") != std::string::npos);
 }
 
 TEST_CASE("reflection codegen helper runtime stays aligned across backends") {

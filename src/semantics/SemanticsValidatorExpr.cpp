@@ -1380,8 +1380,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
            namespacedHelper == "remove_swap");
       size_t resolvedReceiverIndex = 0;
       const bool shouldProbeVectorHelperReceiver =
-          !isStdNamespacedVectorCanonicalHelperCall &&
-          (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall);
+          (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
+          !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(resolved) != defMap_.end());
       if (shouldProbeVectorHelperReceiver && !expr.args.empty()) {
         auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
           if (candidate.kind != Expr::Kind::Name) {
@@ -2639,32 +2639,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "unknown call target: /array/count";
       return false;
     }
-    if (!expr.isMethodCall && isMapNamespacedCountCompatibilityCall(expr)) {
-      error_ = "unknown call target: /map/count";
-      return false;
-    }
-    if (!expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr)) {
-      error_ = "unknown call target: /count";
-      return false;
-    }
-    const std::string removedUnnamespacedMapAccessBuiltinPath =
-        expr.isMethodCall ? "" : getUnnamespacedMapAccessBuiltinFallbackPath(expr);
-    if (!removedUnnamespacedMapAccessBuiltinPath.empty()) {
-      error_ = "unknown call target: " + removedUnnamespacedMapAccessBuiltinPath;
-      return false;
-    }
-    const std::string removedMapAccessCompatibilityPath =
-        expr.isMethodCall ? "" : getMapNamespacedAccessCompatibilityPath(expr);
-    if (!removedMapAccessCompatibilityPath.empty()) {
-      error_ = "unknown call target: " + removedMapAccessCompatibilityPath;
-      return false;
-    }
-    const std::string removedMapMethodCompatibilityPath =
-        expr.isMethodCall ? getMapNamespacedMethodCompatibilityPath(expr) : "";
-    if (!removedMapMethodCompatibilityPath.empty()) {
-      error_ = "unknown method: " + removedMapMethodCompatibilityPath;
-      return false;
-    }
     auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {
       std::string elemType;
       return resolveVectorTarget(targetExpr, elemType) || resolveArrayTarget(targetExpr, elemType) ||
@@ -2758,8 +2732,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
-        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
-        !isMapNamespacedCountCompatibilityCall(expr);
+        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count";
     const bool isResolvedMapCountCall =
         !expr.isMethodCall && (resolved == "/map/count" || resolved == "/std/collections/map/count");
     const bool isNamespacedVectorCapacityCall =
@@ -2782,8 +2755,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         defMap_.find("/vector/" + accessHelperName) != defMap_.end();
     const bool isNamespacedMapAccessCall =
         isBuiltinAccessName && isNamespacedMapHelperCall &&
-        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
-        removedMapAccessCompatibilityPath.empty();
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
     auto normalizeCollectionMethodName = [](const std::string &methodName) {
       std::string normalized = methodName;
       if (!normalized.empty() && normalized.front() == '/') {
