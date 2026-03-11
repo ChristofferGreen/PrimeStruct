@@ -2171,6 +2171,52 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     call.argNames.push_back(std::nullopt);
     return call;
   };
+  auto makeI32LiteralExpr = [](uint64_t value) {
+    Expr expr;
+    expr.kind = Expr::Kind::Literal;
+    expr.literalValue = value;
+    expr.intWidth = 32;
+    expr.isUnsigned = false;
+    return expr;
+  };
+  auto makeBinaryCallExpr = [](const std::string &name, Expr left, Expr right) {
+    Expr call;
+    call.kind = Expr::Kind::Call;
+    call.name = name;
+    call.args.push_back(std::move(left));
+    call.argNames.push_back(std::nullopt);
+    call.args.push_back(std::move(right));
+    call.argNames.push_back(std::nullopt);
+    return call;
+  };
+  auto makeReturnStatementExpr = [](Expr valueExpr) {
+    Expr returnCall;
+    returnCall.kind = Expr::Kind::Call;
+    returnCall.name = "return";
+    returnCall.args.push_back(std::move(valueExpr));
+    returnCall.argNames.push_back(std::nullopt);
+    return returnCall;
+  };
+  auto makeEnvelopeExpr = [](const std::string &name, std::vector<Expr> bodyArguments) {
+    Expr envelope;
+    envelope.kind = Expr::Kind::Call;
+    envelope.name = name;
+    envelope.hasBodyArguments = true;
+    envelope.bodyArguments = std::move(bodyArguments);
+    return envelope;
+  };
+  auto makeIfStatementExpr = [](Expr conditionExpr, Expr thenEnvelopeExpr, Expr elseEnvelopeExpr) {
+    Expr ifCall;
+    ifCall.kind = Expr::Kind::Call;
+    ifCall.name = "if";
+    ifCall.args.push_back(std::move(conditionExpr));
+    ifCall.argNames.push_back(std::nullopt);
+    ifCall.args.push_back(std::move(thenEnvelopeExpr));
+    ifCall.argNames.push_back(std::nullopt);
+    ifCall.args.push_back(std::move(elseEnvelopeExpr));
+    ifCall.argNames.push_back(std::nullopt);
+    return ifCall;
+  };
   auto appendPublicVisibility = [](Definition &helper) {
     Transform visibilityTransform;
     visibilityTransform.name = "public";
@@ -2219,6 +2265,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool shouldGenerateIsDefault = false;
     bool shouldGenerateClone = false;
     bool shouldGenerateDebugPrint = false;
+    bool shouldGenerateCompare = false;
     if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
@@ -2230,12 +2277,13 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         shouldGenerateIsDefault = shouldGenerateIsDefault || transformHasArgument(transform, "IsDefault");
         shouldGenerateClone = shouldGenerateClone || transformHasArgument(transform, "Clone");
         shouldGenerateDebugPrint = shouldGenerateDebugPrint || transformHasArgument(transform, "DebugPrint");
+        shouldGenerateCompare = shouldGenerateCompare || transformHasArgument(transform, "Compare");
       }
     }
 
     std::vector<std::string> fieldNames;
     if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault || shouldGenerateClone ||
-        shouldGenerateDebugPrint) {
+        shouldGenerateDebugPrint || shouldGenerateCompare) {
       fieldNames.reserve(def.statements.size());
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {
@@ -2327,6 +2375,56 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         }
         helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr("}")));
       }
+
+      rewrittenDefinitions.push_back(std::move(helper));
+      definitionPaths.insert(helperPath);
+      return true;
+    };
+    auto emitCompareHelper = [&]() -> bool {
+      const std::string helperPath = def.fullPath + "/Compare";
+      if (definitionPaths.count(helperPath) > 0) {
+        error = "generated reflection helper already exists: " + helperPath;
+        return false;
+      }
+
+      Definition helper;
+      helper.name = "Compare";
+      helper.fullPath = helperPath;
+      helper.namespacePrefix = def.fullPath;
+      helper.sourceLine = def.sourceLine;
+      helper.sourceColumn = def.sourceColumn;
+
+      appendPublicVisibility(helper);
+      Transform returnTransform;
+      returnTransform.name = "return";
+      returnTransform.templateArgs.push_back("i32");
+      helper.transforms.push_back(std::move(returnTransform));
+
+      helper.parameters.push_back(makeTypeBinding("left", def.fullPath, helper.namespacePrefix));
+      helper.parameters.push_back(makeTypeBinding("right", def.fullPath, helper.namespacePrefix));
+
+      for (const auto &fieldName : fieldNames) {
+        Expr lessThanExpr = makeFieldComparisonExpr("less_than", "left", "right", fieldName);
+        Expr lessThanResultExpr =
+            makeBinaryCallExpr("minus", makeI32LiteralExpr(0), makeI32LiteralExpr(1));
+        std::vector<Expr> lessThenBody;
+        lessThenBody.push_back(makeReturnStatementExpr(std::move(lessThanResultExpr)));
+        helper.statements.push_back(makeIfStatementExpr(
+            std::move(lessThanExpr),
+            makeEnvelopeExpr("then", std::move(lessThenBody)),
+            makeEnvelopeExpr("else", {})));
+
+        Expr greaterThanExpr = makeFieldComparisonExpr("greater_than", "left", "right", fieldName);
+        std::vector<Expr> greaterThenBody;
+        greaterThenBody.push_back(makeReturnStatementExpr(makeI32LiteralExpr(1)));
+        helper.statements.push_back(makeIfStatementExpr(
+            std::move(greaterThanExpr),
+            makeEnvelopeExpr("then", std::move(greaterThenBody)),
+            makeEnvelopeExpr("else", {})));
+      }
+
+      helper.returnExpr = makeI32LiteralExpr(0);
+      helper.hasReturnStatement = true;
 
       rewrittenDefinitions.push_back(std::move(helper));
       definitionPaths.insert(helperPath);
@@ -2454,6 +2552,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     }
     if (shouldGenerateNotEqual) {
       if (!emitComparisonHelper("NotEqual", "not_equal", "or", false)) {
+        return false;
+      }
+    }
+    if (shouldGenerateCompare) {
+      if (!emitCompareHelper()) {
         return false;
       }
     }

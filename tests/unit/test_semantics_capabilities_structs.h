@@ -1483,6 +1483,151 @@ main() {
   CHECK(error.find("generated reflection helper already exists: /Pair/DebugPrint") != std::string::npos);
 }
 
+TEST_CASE("generate Compare emits reflection helper definition") {
+  const std::string source = R"(
+[struct reflect generate(Compare)]
+Pair() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<int>]
+main() {
+  [Pair] left{Pair([x] 1i32, [y] 2i32)}
+  [Pair] right{Pair([x] 1i32, [y] 3i32)}
+  return(/Pair/Compare(left, right))
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Pair/Compare") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  REQUIRE(generated->parameters.size() == 2);
+  bool hasI32Return = false;
+  for (const auto &transform : generated->transforms) {
+    if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+        transform.templateArgs.front() == "i32") {
+      hasI32Return = true;
+    }
+  }
+  CHECK(hasI32Return);
+  CHECK(generated->hasReturnStatement);
+  REQUIRE(generated->returnExpr.has_value());
+  CHECK(generated->returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(generated->returnExpr->literalValue == 0);
+  REQUIRE(generated->statements.size() == 4);
+  REQUIRE(generated->statements[0].kind == primec::Expr::Kind::Call);
+  REQUIRE(generated->statements[0].args.size() == 3);
+  REQUIRE(generated->statements[0].args[0].kind == primec::Expr::Kind::Call);
+  CHECK(generated->statements[0].args[0].name == "less_than");
+  REQUIRE(generated->statements[1].kind == primec::Expr::Kind::Call);
+  REQUIRE(generated->statements[1].args.size() == 3);
+  REQUIRE(generated->statements[1].args[0].kind == primec::Expr::Kind::Call);
+  CHECK(generated->statements[1].args[0].name == "greater_than");
+}
+
+TEST_CASE("generate Compare for empty reflected struct returns zero") {
+  const std::string source = R"(
+[struct reflect generate(Compare)]
+Marker() {
+}
+
+[return<int>]
+main() {
+  [Marker] left{Marker()}
+  [Marker] right{Marker()}
+  return(/Marker/Compare(left, right))
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Marker/Compare") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  CHECK(generated->statements.empty());
+  REQUIRE(generated->returnExpr.has_value());
+  CHECK(generated->returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(generated->returnExpr->literalValue == 0);
+}
+
+TEST_CASE("generate Compare ignores static fields") {
+  const std::string source = R"(
+[struct reflect generate(Compare)]
+Marker() {
+  [static i32] shared{1i32}
+}
+
+[return<int>]
+main() {
+  [Marker] left{Marker()}
+  [Marker] right{Marker()}
+  return(/Marker/Compare(left, right))
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Marker/Compare") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  CHECK(generated->statements.empty());
+  REQUIRE(generated->returnExpr.has_value());
+  CHECK(generated->returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(generated->returnExpr->literalValue == 0);
+}
+
+TEST_CASE("generate Compare rejects existing helper collision") {
+  const std::string source = R"(
+[struct reflect generate(Compare)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<i32>]
+/Pair/Compare([Pair] left, [Pair] right) {
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("generated reflection helper already exists: /Pair/Compare") != std::string::npos);
+}
+
 TEST_CASE("reflection core type primitives validate") {
   const std::string source = R"(
 [struct reflect]

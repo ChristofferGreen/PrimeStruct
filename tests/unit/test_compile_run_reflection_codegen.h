@@ -99,6 +99,39 @@ TEST_CASE("reflection codegen ir dump includes generated helper definitions") {
   CHECK(clonePos < debugPrintPos);
 }
 
+TEST_CASE("reflection compare helper appears in ast-semantic and ir dumps") {
+  const std::string source = R"(
+[struct reflect generate(Compare)]
+Pair() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_compare_dump.prime", source);
+  const std::string astOutPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_compare_ast_semantic.txt").string();
+  const std::string irOutPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_compare_ir.txt").string();
+
+  const std::string astCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(astOutPath);
+  const std::string irCmd = "./primec " + quoteShellArg(srcPath) + " --dump-stage ir > " + quoteShellArg(irOutPath);
+  CHECK(runCommand(astCmd) == 0);
+  CHECK(runCommand(irCmd) == 0);
+
+  const std::string ast = readFile(astOutPath);
+  const std::string ir = readFile(irOutPath);
+  CHECK(ast.find("/Pair/Compare(") != std::string::npos);
+  CHECK(ast.find("less_than(left.x, right.x)") != std::string::npos);
+  CHECK(ast.find("greater_than(left.x, right.x)") != std::string::npos);
+  CHECK(ir.find("def /Pair/Compare") != std::string::npos);
+}
+
 TEST_CASE("reflection codegen helper runtime stays aligned across backends") {
   const std::string source = reflectionCodegenRuntimeSource();
   const std::string srcPath = writeTemp("compile_reflection_codegen_runtime.prime", source);
@@ -129,6 +162,44 @@ TEST_CASE("reflection codegen helper runtime stays aligned across backends") {
   const std::string nativeRunCmd = quoteShellArg(nativePath) + " > " + quoteShellArg(nativeOutPath);
   CHECK(runCommand(nativeRunCmd) == 7);
   CHECK(readFile(nativeOutPath) == expectedOut);
+}
+
+TEST_CASE("reflection compare helper runtime stays aligned across backends") {
+  const std::string source = R"(
+[struct reflect generate(Compare)]
+Pair() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+}
+
+[return<int>]
+main() {
+  [Pair] low{Pair([x] 1i32, [y] 2i32)}
+  [Pair] mid{Pair([x] 1i32, [y] 5i32)}
+  [Pair] high{Pair([x] 2i32, [y] 0i32)}
+  [i32 mut] score{0i32}
+  if(less_than(/Pair/Compare(low, mid), 0i32), then() { assign(score, plus(score, 1i32)) }, else() { })
+  if(greater_than(/Pair/Compare(high, mid), 0i32), then() { assign(score, plus(score, 2i32)) }, else() { })
+  if(equal(/Pair/Compare(low, low), 0i32), then() { assign(score, plus(score, 4i32)) }, else() { })
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_compare_runtime.prime", source);
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 7);
+
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_reflection_compare_exe").string();
+  const std::string exeCompileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(exeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 7);
+
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_reflection_compare_native").string();
+  const std::string nativeCompileCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(nativeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 7);
 }
 
 TEST_SUITE_END();

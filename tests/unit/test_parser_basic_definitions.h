@@ -659,6 +659,25 @@ Widget() {
   CHECK(transforms[2].arguments[5] == "DebugPrint");
 }
 
+TEST_CASE("parses reflection generate Compare helper") {
+  const std::string source = R"(
+[struct reflect generate(Compare)]
+Widget() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 3);
+  CHECK(transforms[0].name == "struct");
+  CHECK(transforms[1].name == "reflect");
+  CHECK(transforms[2].name == "generate");
+  REQUIRE(transforms[2].arguments.size() == 1);
+  CHECK(transforms[2].arguments[0] == "Compare");
+}
+
 TEST_CASE("parses transform groups") {
   const std::string source = R"(
 [text(operators, collections) semantic(return<int>, effects(io_out))]
