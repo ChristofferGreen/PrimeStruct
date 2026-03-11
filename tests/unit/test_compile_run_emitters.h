@@ -1761,6 +1761,50 @@ TEST_CASE("C++ emitter helper normalizes slashless map import receiver metadata 
       methodCall, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
 }
 
+TEST_CASE("C++ emitter helper resolves map method via import-alias return metadata") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "map_at_alias";
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  receiverCall.args.push_back(receiverName);
+  receiverCall.args.push_back(keyLiteral);
+  receiverCall.argNames.push_back(std::nullopt);
+  receiverCall.argNames.push_back(std::nullopt);
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "tag";
+  methodCall.args.push_back(receiverCall);
+  methodCall.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "map";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, std::string> importAliases;
+  importAliases.emplace("map_at_alias", "std/collections/map/at");
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  returnStructs.emplace("/std/collections/map/at", "/CanonicalMarker");
+
+  std::string resolved;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      methodCall, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/CanonicalMarker/tag");
+}
+
 TEST_CASE("C++ emitter helper keeps canonical map access method unresolved without metadata") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;

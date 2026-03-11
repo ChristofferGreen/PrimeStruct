@@ -910,13 +910,29 @@ bool resolveMethodCallPath(const Expr &call,
       }
       case Expr::Kind::Call: {
         if (!expr.isMethodCall) {
-          for (const auto &candidate : collectionHelperPathCandidates(resolveExprPath(expr))) {
+          std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolveExprPath(expr));
+          auto importIt = importAliases.find(expr.name);
+          if (importIt != importAliases.end()) {
+            for (const auto &candidate : collectionHelperPathCandidates(importIt->second)) {
+              bool seen = false;
+              for (const auto &existing : resolvedCandidates) {
+                if (existing == candidate) {
+                  seen = true;
+                  break;
+                }
+              }
+              if (!seen) {
+                resolvedCandidates.push_back(candidate);
+              }
+            }
+          }
+          for (const auto &candidate : resolvedCandidates) {
             auto structIt = returnStructs.find(candidate);
             if (structIt != returnStructs.end()) {
               return normalizeCollectionReceiverType(structIt->second);
             }
           }
-          for (const auto &candidate : collectionHelperPathCandidates(resolveExprPath(expr))) {
+          for (const auto &candidate : resolvedCandidates) {
             auto it = returnKinds.find(candidate);
             if (it == returnKinds.end()) {
               continue;
