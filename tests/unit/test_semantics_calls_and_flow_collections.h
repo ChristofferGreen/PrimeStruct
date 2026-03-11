@@ -2971,6 +2971,61 @@ main() {
   CHECK(error.find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("map namespaced count method rejects removed compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values./map/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+}
+
+TEST_CASE("map stdlib namespaced count method rejects removed compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values./std/collections/map/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+}
+
+TEST_CASE("map namespaced at_unsafe method auto inference rejects removed compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values./map/at_unsafe(1i32)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/at_unsafe") != std::string::npos);
+}
+
 TEST_CASE("stdlib canonical map helpers resolve in method-call sugar") {
   const std::string source = R"(
 [return<int>]

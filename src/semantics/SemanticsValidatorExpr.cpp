@@ -1952,22 +1952,44 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
                helperName == "remove_at" || helperName == "remove_swap";
       };
-      auto explicitRemovedVectorMethodPath = [&](const std::string &rawMethodName) -> std::string {
+      auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
+        return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
+      };
+      auto explicitRemovedCollectionMethodPath = [&](const std::string &rawMethodName) -> std::string {
         std::string candidate = rawMethodName;
         if (!candidate.empty() && candidate.front() == '/') {
           candidate.erase(candidate.begin());
         }
         std::string_view helperName;
         bool isStdNamespacedVectorHelper = false;
+        std::string compatibilityCollection;
         if (candidate.rfind("array/", 0) == 0) {
           helperName = std::string_view(candidate).substr(std::string_view("array/").size());
+          compatibilityCollection = "array";
         } else if (candidate.rfind("vector/", 0) == 0) {
           helperName = std::string_view(candidate).substr(std::string_view("vector/").size());
+          compatibilityCollection = "vector";
         } else if (candidate.rfind("std/collections/vector/", 0) == 0) {
           helperName = std::string_view(candidate).substr(std::string_view("std/collections/vector/").size());
           isStdNamespacedVectorHelper = true;
+          compatibilityCollection = "vector";
+        } else if (candidate.rfind("map/", 0) == 0) {
+          helperName = std::string_view(candidate).substr(std::string_view("map/").size());
+          compatibilityCollection = "map";
+        } else if (candidate.rfind("std/collections/map/", 0) == 0) {
+          helperName = std::string_view(candidate).substr(std::string_view("std/collections/map/").size());
+          compatibilityCollection = "map";
         }
-        if (helperName.empty() || !isRemovedVectorCompatibilityHelper(helperName)) {
+        if (helperName.empty()) {
+          return "";
+        }
+        if (compatibilityCollection == "map") {
+          if (!isRemovedMapCompatibilityHelper(helperName)) {
+            return "";
+          }
+          return "/map/" + std::string(helperName);
+        }
+        if (!isRemovedVectorCompatibilityHelper(helperName)) {
           return "";
         }
         if (isStdNamespacedVectorHelper) {
@@ -1975,7 +1997,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return "/" + candidate;
       };
-      const std::string explicitRemovedMethodPath = explicitRemovedVectorMethodPath(methodName);
+      const std::string explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName);
       std::string normalizedMethodName = methodName;
       if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
         normalizedMethodName.erase(normalizedMethodName.begin());
@@ -1986,6 +2008,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
       } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
         normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+      } else if (normalizedMethodName.rfind("map/", 0) == 0) {
+        normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
+      } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
+        normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
       }
       auto isStaticBinding = [&](const Expr &bindingExpr) -> bool {
         for (const auto &transform : bindingExpr.transforms) {

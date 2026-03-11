@@ -166,6 +166,28 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /map/at") != std::string::npos);
 }
 
+TEST_CASE("rejects vm map namespaced count method compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values./map/count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_namespaced_count_method_compatibility_alias_reject.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_map_namespaced_count_method_compatibility_alias_reject_out.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /map/count") != std::string::npos);
+}
+
 TEST_CASE("rejects vm array namespaced vector capacity alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

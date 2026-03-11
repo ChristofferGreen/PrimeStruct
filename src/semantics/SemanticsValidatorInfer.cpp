@@ -922,6 +922,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
       } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
         normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+      } else if (normalizedMethodName.rfind("map/", 0) == 0) {
+        normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
+      } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
+        normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
       }
       auto preferVectorStdlibHelperPathForCall = [&](const std::string &path) -> std::string {
         auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
@@ -1236,6 +1240,42 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string valueType;
       return resolveMapTarget(candidate.args[receiverIndex], keyType, valueType);
     };
+    auto getMapNamespacedMethodCompatibilityPath = [&](const Expr &candidate) -> std::string {
+      if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
+          candidate.args.empty()) {
+        return "";
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      std::string helperName;
+      if (normalized == "map/count") {
+        helperName = "count";
+      } else if (normalized == "map/at") {
+        helperName = "at";
+      } else if (normalized == "map/at_unsafe") {
+        helperName = "at_unsafe";
+      } else if (normalized == "std/collections/map/count") {
+        helperName = "count";
+      } else if (normalized == "std/collections/map/at") {
+        helperName = "at";
+      } else if (normalized == "std/collections/map/at_unsafe") {
+        helperName = "at_unsafe";
+      } else {
+        return "";
+      }
+      const std::string removedPath = "/map/" + helperName;
+      if (defMap_.find(removedPath) != defMap_.end()) {
+        return "";
+      }
+      std::string keyType;
+      std::string valueType;
+      if (!resolveMapTarget(candidate.args.front(), keyType, valueType)) {
+        return "";
+      }
+      return removedPath;
+    };
     auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call) {
         return false;
@@ -1475,6 +1515,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Unknown;
     }
     if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall(expr)) {
+      return ReturnKind::Unknown;
+    }
+    const std::string removedMapMethodCompatibilityPath =
+        expr.isMethodCall ? getMapNamespacedMethodCompatibilityPath(expr) : "";
+    if (!removedMapMethodCompatibilityPath.empty()) {
       return ReturnKind::Unknown;
     }
     const auto resolvedCandidates = collectionHelperPathCandidates(resolvedCallee);
