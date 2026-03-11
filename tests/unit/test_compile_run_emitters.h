@@ -803,7 +803,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs reordered namespaced vector push call shadow in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects reordered namespaced vector push call compatibility alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) { }
@@ -817,16 +817,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_reordered_namespaced_vector_push_call_shadow.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_reordered_namespaced_vector_push_call_shadow_exe")
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_reordered_namespaced_vector_push_call_shadow_err.txt")
           .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs reordered namespaced vector push call expression shadow in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects reordered namespaced vector push call expression compatibility alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -841,17 +841,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_reordered_namespaced_vector_push_call_expr_shadow.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_reordered_namespaced_vector_push_call_expr_shadow_exe")
+       "primec_cpp_reordered_namespaced_vector_push_call_expr_shadow_err.txt")
           .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs auto-inferred std namespaced vector push expression receiver precedence in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects auto-inferred std namespaced vector push compatibility receiver precedence in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -863,7 +863,7 @@ TEST_CASE("compiles and runs auto-inferred std namespaced vector push expression
   return(false)
 }
 
-[effects(heap_alloc), return<int>]
+[effects(heap_alloc), return<bool>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   [string] payload{"tag"raw_utf8}
@@ -873,14 +873,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto_exe")
+       "primec_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto_err.txt")
           .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("rejects auto-inferred std namespaced count helper compatibility receiver precedence in C++ emitter") {

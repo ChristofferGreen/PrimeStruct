@@ -5465,12 +5465,12 @@ main() {
   CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("rejects vm namespaced vector capacity named arguments" * doctest::skip()) {
+TEST_CASE("rejects vm namespaced vector capacity named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(/vector/capacity([values] values))
+  return(/std/collections/vector/capacity([values] values))
 }
 )";
   const std::string srcPath = writeTemp("vm_namespaced_vector_capacity_named_args.prime", source);
@@ -5562,7 +5562,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with reordered namespaced vector push call shadow") {
+TEST_CASE("rejects vm reordered namespaced vector push call compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -5576,8 +5576,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_reordered_namespaced_vector_push_call_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_reordered_namespaced_vector_push_call_shadow_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("runs vm with std namespaced reordered mutator call and compatibility helper shadow") {
@@ -5670,7 +5674,7 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm with reordered namespaced vector push call expression shadow" * doctest::skip()) {
+TEST_CASE("rejects vm reordered namespaced vector push call expression compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -5684,8 +5688,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_reordered_namespaced_vector_push_call_expr_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 3);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_reordered_namespaced_vector_push_call_expr_shadow_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("runs vm with named vector push expression receiver precedence") {

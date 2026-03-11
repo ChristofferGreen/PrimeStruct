@@ -6298,12 +6298,12 @@ main() {
   CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("rejects native namespaced vector capacity named arguments" * doctest::skip()) {
+TEST_CASE("rejects native namespaced vector capacity named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(/vector/capacity([values] values))
+  return(/std/collections/vector/capacity([values] values))
 }
 )";
   const std::string srcPath = writeTemp("native_namespaced_vector_capacity_named_args.prime", source);
@@ -6434,7 +6434,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native reordered namespaced vector push call shadow" * doctest::skip()) {
+TEST_CASE("rejects native reordered namespaced vector push call compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -6448,13 +6448,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_reordered_namespaced_vector_push_call_shadow.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_reordered_namespaced_vector_push_call_shadow_exe")
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_reordered_namespaced_vector_push_call_shadow_err.txt")
           .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native std namespaced reordered mutator call with compatibility helper shadow") {
@@ -6571,7 +6571,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native reordered namespaced vector push call expression shadow" * doctest::skip()) {
+TEST_CASE("rejects native reordered namespaced vector push call expression compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -6586,14 +6586,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_reordered_namespaced_vector_push_call_expr_shadow.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_reordered_namespaced_vector_push_call_expr_shadow_exe")
+       "primec_native_reordered_namespaced_vector_push_call_expr_shadow_err.txt")
           .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native named vector push expression receiver precedence") {
