@@ -2079,6 +2079,182 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
   return true;
 }
 
+bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
+  auto isStructDefinition = [](const Definition &def, bool &isExplicitOut) {
+    bool hasStructTransform = false;
+    bool hasReturnTransform = false;
+    for (const auto &transform : def.transforms) {
+      if (semantics::isStructTransformName(transform.name)) {
+        hasStructTransform = true;
+      }
+      if (transform.name == "return") {
+        hasReturnTransform = true;
+      }
+    }
+    if (hasStructTransform) {
+      isExplicitOut = true;
+      return true;
+    }
+    if (hasReturnTransform || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
+      isExplicitOut = false;
+      return false;
+    }
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        isExplicitOut = false;
+        return false;
+      }
+    }
+    isExplicitOut = false;
+    return true;
+  };
+  auto hasTransformNamed = [](const std::vector<Transform> &transforms, const std::string &name) {
+    return std::any_of(transforms.begin(), transforms.end(), [&](const Transform &transform) {
+      return transform.name == name;
+    });
+  };
+  auto transformHasArgument = [](const Transform &transform, const std::string &value) {
+    return std::any_of(transform.arguments.begin(), transform.arguments.end(), [&](const std::string &arg) {
+      return arg == value;
+    });
+  };
+
+  std::unordered_set<std::string> structNames;
+  std::unordered_set<std::string> definitionPaths;
+  structNames.reserve(program.definitions.size());
+  definitionPaths.reserve(program.definitions.size());
+  for (const auto &def : program.definitions) {
+    bool isExplicitStruct = false;
+    if (isStructDefinition(def, isExplicitStruct)) {
+      structNames.insert(def.fullPath);
+    }
+    definitionPaths.insert(def.fullPath);
+  }
+
+  auto makeTypeBinding = [](const std::string &bindingName, const std::string &typeName, const std::string &namespacePrefix) {
+    Expr binding;
+    binding.isBinding = true;
+    binding.name = bindingName;
+    binding.namespacePrefix = namespacePrefix;
+    Transform typeTransform;
+    typeTransform.name = typeName;
+    binding.transforms.push_back(std::move(typeTransform));
+    return binding;
+  };
+  auto makeNameExpr = [](const std::string &name) {
+    Expr expr;
+    expr.kind = Expr::Kind::Name;
+    expr.name = name;
+    return expr;
+  };
+  auto makeFieldAccessExpr = [&](const std::string &receiverName, const std::string &fieldName) {
+    Expr fieldAccess;
+    fieldAccess.kind = Expr::Kind::Call;
+    fieldAccess.isFieldAccess = true;
+    fieldAccess.name = fieldName;
+    fieldAccess.args.push_back(makeNameExpr(receiverName));
+    fieldAccess.argNames.push_back(std::nullopt);
+    return fieldAccess;
+  };
+  auto makeEqualFieldExpr = [&](const std::string &fieldName) {
+    Expr compare;
+    compare.kind = Expr::Kind::Call;
+    compare.name = "equal";
+    compare.args.push_back(makeFieldAccessExpr("left", fieldName));
+    compare.argNames.push_back(std::nullopt);
+    compare.args.push_back(makeFieldAccessExpr("right", fieldName));
+    compare.argNames.push_back(std::nullopt);
+    return compare;
+  };
+  auto makeAndExpr = [](Expr left, Expr right) {
+    Expr call;
+    call.kind = Expr::Kind::Call;
+    call.name = "and";
+    call.args.push_back(std::move(left));
+    call.argNames.push_back(std::nullopt);
+    call.args.push_back(std::move(right));
+    call.argNames.push_back(std::nullopt);
+    return call;
+  };
+
+  std::vector<Definition> rewrittenDefinitions;
+  rewrittenDefinitions.reserve(program.definitions.size());
+  for (auto &def : program.definitions) {
+    const bool isStruct = structNames.count(def.fullPath) > 0;
+    bool shouldGenerateEqual = false;
+    if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
+      for (const auto &transform : def.transforms) {
+        if (transform.name != "generate") {
+          continue;
+        }
+        if (transformHasArgument(transform, "Equal")) {
+          shouldGenerateEqual = true;
+          break;
+        }
+      }
+    }
+
+    if (shouldGenerateEqual) {
+      const std::string helperPath = def.fullPath + "/Equal";
+      if (definitionPaths.count(helperPath) > 0) {
+        error = "generated reflection helper already exists: " + helperPath;
+        return false;
+      }
+
+      Definition helper;
+      helper.name = "Equal";
+      helper.fullPath = helperPath;
+      helper.namespacePrefix = def.fullPath;
+      helper.sourceLine = def.sourceLine;
+      helper.sourceColumn = def.sourceColumn;
+
+      Transform returnTransform;
+      returnTransform.name = "return";
+      returnTransform.templateArgs.push_back("bool");
+      helper.transforms.push_back(std::move(returnTransform));
+
+      helper.parameters.push_back(makeTypeBinding("left", def.fullPath, helper.namespacePrefix));
+      helper.parameters.push_back(makeTypeBinding("right", def.fullPath, helper.namespacePrefix));
+
+      std::vector<std::string> fieldNames;
+      fieldNames.reserve(def.statements.size());
+      for (const auto &stmt : def.statements) {
+        if (!stmt.isBinding) {
+          continue;
+        }
+        const bool isStaticField =
+            std::any_of(stmt.transforms.begin(), stmt.transforms.end(), [](const Transform &transform) {
+              return transform.name == "static";
+            });
+        if (!isStaticField) {
+          fieldNames.push_back(stmt.name);
+        }
+      }
+
+      if (fieldNames.empty()) {
+        Expr alwaysTrue;
+        alwaysTrue.kind = Expr::Kind::BoolLiteral;
+        alwaysTrue.boolValue = true;
+        helper.returnExpr = std::move(alwaysTrue);
+      } else {
+        Expr combined = makeEqualFieldExpr(fieldNames.front());
+        for (size_t index = 1; index < fieldNames.size(); ++index) {
+          combined = makeAndExpr(std::move(combined), makeEqualFieldExpr(fieldNames[index]));
+        }
+        helper.returnExpr = std::move(combined);
+      }
+      helper.hasReturnStatement = true;
+
+      rewrittenDefinitions.push_back(std::move(helper));
+      definitionPaths.insert(helperPath);
+    }
+
+    rewrittenDefinitions.push_back(std::move(def));
+  }
+  program.definitions = std::move(rewrittenDefinitions);
+  return true;
+}
+
 bool validateExprTransforms(const Expr &expr, const std::string &context, std::string &error) {
   if (!validateTransformListContext(expr.transforms, context, false, error)) {
     return false;
@@ -2367,6 +2543,9 @@ bool Semantics::validate(Program &program,
     return false;
   }
   if (!rewriteMaybeConstructors(program, error)) {
+    return false;
+  }
+  if (!rewriteReflectionGeneratedHelpers(program, error)) {
     return false;
   }
   if (!semantics::monomorphizeTemplates(program, entryPath, error)) {

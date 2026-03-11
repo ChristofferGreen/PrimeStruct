@@ -68,7 +68,13 @@ Legend:
 - ✓ Implement trait-conformance reflection predicates used by generated helper gating: `meta.has_trait<T>(TraitName)` and `meta.has_trait<T, Elem>(Indexable)` now evaluate at compile time with deterministic trait-name/template-arity diagnostics.
 - ✓ Add deterministic reflection diagnostics for invalid targets/indices (non-reflect types, non-constant indices, out-of-range field index, and unsupported metadata queries). Field metadata queries now reject non-reflect struct targets deterministically, existing index diagnostics remain deterministic, and unknown `meta.*`/`/meta/*` query names now report explicit unsupported-query errors.
 - ✓ Guarantee reflection builtins are compile-time eliminated before IR emission; add regression tests that lock zero runtime reflection opcodes/state. IR lowering now rejects non-eliminated reserved `/meta/*` query paths before emission, and IR pipeline coverage locks that lowered reflection-query programs emit no runtime call-based reflection state.
-- ○ Implement v1 generated helpers: `Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`, and `DebugPrint`.
+- ◐ Implement v1 generated helpers: `Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`, and `DebugPrint`.
+- ✓ Implement v1 generated helper slice: `Equal` now emits `/Type/Equal([Type] left, [Type] right) -> bool` for `[reflect generate(Equal)]` structs, performs deterministic field-wise equality checks (returns `true` for zero-field structs), and rejects path collisions deterministically when `/Type/Equal` already exists.
+- ○ Implement v1 generated helper slice: `NotEqual`.
+- ○ Implement v1 generated helper slice: `Default`.
+- ○ Implement v1 generated helper slice: `IsDefault`.
+- ○ Implement v1 generated helper slice: `Clone`.
+- ○ Implement v1 generated helper slice: `DebugPrint`.
 - ○ Define deterministic helper naming + visibility contract for generated helpers (`/Type/Helper` paths, collision/override rules, and import behavior).
 - ○ Add v1 conformance coverage for reflection codegen (parse, semantics, canonical AST/IR snapshots, and backend compile-run parity).
 - ○ Implement v1.1 generated helpers: `Compare` (lexicographic for sortable fields), `Hash64`, `Clear`, and `CopyFrom`.
