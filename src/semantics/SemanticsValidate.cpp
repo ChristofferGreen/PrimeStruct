@@ -2156,13 +2156,16 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     fieldAccess.argNames.push_back(std::nullopt);
     return fieldAccess;
   };
-  auto makeFieldComparisonExpr = [&](const std::string &comparisonName, const std::string &fieldName) {
+  auto makeFieldComparisonExpr = [&](const std::string &comparisonName,
+                                     const std::string &leftReceiverName,
+                                     const std::string &rightReceiverName,
+                                     const std::string &fieldName) {
     Expr compare;
     compare.kind = Expr::Kind::Call;
     compare.name = comparisonName;
-    compare.args.push_back(makeFieldAccessExpr("left", fieldName));
+    compare.args.push_back(makeFieldAccessExpr(leftReceiverName, fieldName));
     compare.argNames.push_back(std::nullopt);
-    compare.args.push_back(makeFieldAccessExpr("right", fieldName));
+    compare.args.push_back(makeFieldAccessExpr(rightReceiverName, fieldName));
     compare.argNames.push_back(std::nullopt);
     return compare;
   };
@@ -2184,6 +2187,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool shouldGenerateEqual = false;
     bool shouldGenerateNotEqual = false;
     bool shouldGenerateDefault = false;
+    bool shouldGenerateIsDefault = false;
     if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
@@ -2192,11 +2196,12 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         shouldGenerateEqual = shouldGenerateEqual || transformHasArgument(transform, "Equal");
         shouldGenerateNotEqual = shouldGenerateNotEqual || transformHasArgument(transform, "NotEqual");
         shouldGenerateDefault = shouldGenerateDefault || transformHasArgument(transform, "Default");
+        shouldGenerateIsDefault = shouldGenerateIsDefault || transformHasArgument(transform, "IsDefault");
       }
     }
 
     std::vector<std::string> fieldNames;
-    if (shouldGenerateEqual || shouldGenerateNotEqual) {
+    if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault) {
       fieldNames.reserve(def.statements.size());
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {
@@ -2243,11 +2248,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         emptyLiteral.boolValue = emptyValue;
         helper.returnExpr = std::move(emptyLiteral);
       } else {
-        Expr combined = makeFieldComparisonExpr(comparisonName, fieldNames.front());
+        Expr combined = makeFieldComparisonExpr(comparisonName, "left", "right", fieldNames.front());
         for (size_t index = 1; index < fieldNames.size(); ++index) {
           combined = makeBinaryBoolExpr(foldOperatorName,
                                         std::move(combined),
-                                        makeFieldComparisonExpr(comparisonName, fieldNames[index]));
+                                        makeFieldComparisonExpr(comparisonName, "left", "right", fieldNames[index]));
         }
         helper.returnExpr = std::move(combined);
       }
@@ -2286,6 +2291,54 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       definitionPaths.insert(helperPath);
       return true;
     };
+    auto emitIsDefaultHelper = [&]() -> bool {
+      const std::string helperPath = def.fullPath + "/IsDefault";
+      if (definitionPaths.count(helperPath) > 0) {
+        error = "generated reflection helper already exists: " + helperPath;
+        return false;
+      }
+
+      Definition helper;
+      helper.name = "IsDefault";
+      helper.fullPath = helperPath;
+      helper.namespacePrefix = def.fullPath;
+      helper.sourceLine = def.sourceLine;
+      helper.sourceColumn = def.sourceColumn;
+
+      Transform returnTransform;
+      returnTransform.name = "return";
+      returnTransform.templateArgs.push_back("bool");
+      helper.transforms.push_back(std::move(returnTransform));
+      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix));
+
+      if (fieldNames.empty()) {
+        Expr alwaysTrue;
+        alwaysTrue.kind = Expr::Kind::BoolLiteral;
+        alwaysTrue.boolValue = true;
+        helper.returnExpr = std::move(alwaysTrue);
+      } else {
+        Expr defaultCall;
+        defaultCall.kind = Expr::Kind::Call;
+        defaultCall.name = def.fullPath;
+
+        Expr defaultValueBinding = makeTypeBinding("defaultValue", def.fullPath, helper.namespacePrefix);
+        defaultValueBinding.args.push_back(std::move(defaultCall));
+        defaultValueBinding.argNames.push_back(std::nullopt);
+        helper.statements.push_back(std::move(defaultValueBinding));
+
+        Expr combined = makeFieldComparisonExpr("equal", "value", "defaultValue", fieldNames.front());
+        for (size_t index = 1; index < fieldNames.size(); ++index) {
+          Expr compare = makeFieldComparisonExpr("equal", "value", "defaultValue", fieldNames[index]);
+          combined = makeBinaryBoolExpr("and", std::move(combined), std::move(compare));
+        }
+        helper.returnExpr = std::move(combined);
+      }
+      helper.hasReturnStatement = true;
+
+      rewrittenDefinitions.push_back(std::move(helper));
+      definitionPaths.insert(helperPath);
+      return true;
+    };
 
     if (shouldGenerateEqual) {
       if (!emitComparisonHelper("Equal", "equal", "and", true)) {
@@ -2299,6 +2352,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     }
     if (shouldGenerateDefault) {
       if (!emitDefaultHelper()) {
+        return false;
+      }
+    }
+    if (shouldGenerateIsDefault) {
+      if (!emitIsDefaultHelper()) {
         return false;
       }
     }

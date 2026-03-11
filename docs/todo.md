@@ -72,7 +72,7 @@ Legend:
 - ✓ Implement v1 generated helper slice: `Equal` now emits `/Type/Equal([Type] left, [Type] right) -> bool` for `[reflect generate(Equal)]` structs, performs deterministic field-wise equality checks (returns `true` for zero-field structs), and rejects path collisions deterministically when `/Type/Equal` already exists.
 - ✓ Implement v1 generated helper slice: `NotEqual` now emits `/Type/NotEqual([Type] left, [Type] right) -> bool` for `[reflect generate(NotEqual)]` structs, performs deterministic field-wise inequality checks (returns `false` for zero-field or static-only structs), and rejects path collisions deterministically when `/Type/NotEqual` already exists.
 - ✓ Implement v1 generated helper slice: `Default` now emits `/Type/Default() -> Type` for `[reflect generate(Default)]` structs, returns `Type()` deterministically (including static-only structs), and rejects path collisions deterministically when `/Type/Default` already exists.
-- ○ Implement v1 generated helper slice: `IsDefault`.
+- ✓ Implement v1 generated helper slice: `IsDefault` now emits `/Type/IsDefault([Type] value) -> bool` for `[reflect generate(IsDefault)]` structs, compares non-static fields against a synthesized `Type()` instance (returns `true` for zero-field or static-only structs), and rejects path collisions deterministically when `/Type/IsDefault` already exists.
 - ○ Implement v1 generated helper slice: `Clone`.
 - ○ Implement v1 generated helper slice: `DebugPrint`.
 - ○ Define deterministic helper naming + visibility contract for generated helpers (`/Type/Helper` paths, collision/override rules, and import behavior).
