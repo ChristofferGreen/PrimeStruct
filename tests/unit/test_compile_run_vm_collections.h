@@ -178,7 +178,7 @@ main() {
   CHECK(runCommand(runCmd) == 132);
 }
 
-TEST_CASE("runs vm with templated stdlib canonical vector helper method precedence") {
+TEST_CASE("rejects vm templated stdlib canonical vector helper method template args") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -197,8 +197,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_vector_template_method_helper_precedence.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 132);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_vector_template_method_helper_precedence_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector namespaced call aliases") {
@@ -228,7 +232,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("runs vm with vector namespaced templated canonical helper alias call") {
+TEST_CASE("rejects vm vector namespaced templated canonical helper alias call without alias definition") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -242,8 +246,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_namespaced_templated_canonical_alias_call.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 90);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_vector_namespaced_templated_canonical_alias_call_out.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm with vector alias implicit canonical templated forwarding on arity mismatch") {

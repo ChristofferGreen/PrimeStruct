@@ -1685,7 +1685,7 @@ main() {
   CHECK(runCommand(exePath) == 132);
 }
 
-TEST_CASE("compiles and runs templated stdlib canonical vector helper method precedence in C++ emitter") {
+TEST_CASE("rejects templated stdlib canonical vector helper method template args in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -1707,10 +1707,14 @@ main() {
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_vector_template_method_helper_precedence_exe")
           .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_vector_template_method_helper_precedence_err.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 132);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("rejects vector namespaced call aliases in C++ emitter") {
@@ -1745,7 +1749,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs vector namespaced templated canonical helper alias call in C++ emitter") {
+TEST_CASE("rejects vector namespaced templated canonical helper alias call without alias definition in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -1762,10 +1766,14 @@ main() {
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_templated_canonical_alias_call_exe")
           .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_templated_canonical_alias_call_err.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 90);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs vector alias implicit canonical templated forwarding on arity mismatch in C++ emitter") {

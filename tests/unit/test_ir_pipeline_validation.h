@@ -16483,7 +16483,7 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup type helper resolves direct definition call return kinds via canonical vector aliases" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper rejects direct definition call return kinds via removed vector aliases") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition canonicalCountDef;
   canonicalCountDef.fullPath = "/std/collections/vector/count";
@@ -16511,7 +16511,7 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   bool definitionMatched = false;
-  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       callExpr,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -16519,8 +16519,8 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
       false,
       kindOut,
       &definitionMatched));
-  CHECK(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   definitionMatched = false;
@@ -16532,11 +16532,11 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
       true,
       kindOut,
       &definitionMatched));
-  CHECK(definitionMatched);
+  CHECK_FALSE(definitionMatched);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup type helper resolves slashless vector alias return kinds via canonical paths" * doctest::skip()) {
+TEST_CASE("ir lowerer setup type helper rejects slashless vector alias return kinds without alias definitions") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition canonicalCountDef;
   canonicalCountDef.fullPath = "/std/collections/vector/count";
@@ -16564,7 +16564,7 @@ TEST_CASE("ir lowerer setup type helper resolves slashless vector alias return k
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   bool definitionMatched = false;
-  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       callExpr,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -16572,8 +16572,8 @@ TEST_CASE("ir lowerer setup type helper resolves slashless vector alias return k
       false,
       kindOut,
       &definitionMatched));
-  CHECK(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   definitionMatched = false;
@@ -16585,7 +16585,7 @@ TEST_CASE("ir lowerer setup type helper resolves slashless vector alias return k
       true,
       kindOut,
       &definitionMatched));
-  CHECK(definitionMatched);
+  CHECK_FALSE(definitionMatched);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 

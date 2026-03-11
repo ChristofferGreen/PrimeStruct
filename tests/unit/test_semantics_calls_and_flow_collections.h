@@ -3688,7 +3688,7 @@ main() {
   CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("templated stdlib canonical vector helpers resolve in method-call sugar") {
+TEST_CASE("templated stdlib canonical vector helpers reject method-call sugar template args on count") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -3700,18 +3700,18 @@ TEST_CASE("templated stdlib canonical vector helpers resolve in method-call suga
   return(plus(index, 40i32))
 }
 
-[effects(heap_alloc), return<int>]
+  [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(plus(values.count<i32>(true), values.at<i32>(2i32)))
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("templated stdlib canonical vector helpers resolve in slash-path method-call sugar") {
+TEST_CASE("templated stdlib canonical vector helpers reject slash-path method-call template args on count") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -3723,18 +3723,18 @@ TEST_CASE("templated stdlib canonical vector helpers resolve in slash-path metho
   return(plus(index, 40i32))
 }
 
-[effects(heap_alloc), return<int>]
+  [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(plus(values./vector/count<i32>(true), values./std/collections/vector/at<i32>(2i32)))
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("templated slash-path vector helper keeps canonical precedence diagnostics") {
+TEST_CASE("templated slash-path vector helper keeps template argument diagnostics") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -3749,11 +3749,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("templated stdlib canonical vector helper keeps precedence diagnostics") {
+TEST_CASE("templated stdlib canonical vector helper keeps template argument diagnostics") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -3768,8 +3767,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced call aliases forward to canonical stdlib helper precedence" * doctest::skip()) {
@@ -3814,22 +3812,22 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced call alias forwards to templated canonical helper with explicit template args") {
+TEST_CASE("vector namespaced call alias with explicit template args is rejected without alias definition") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
 
-[effects(heap_alloc), return<int>]
+  [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(/vector/count<i32>(values, true))
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced alias implicitly forwards to templated canonical helper on arity mismatch") {

@@ -424,12 +424,15 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     }
     return path;
   }
-  const std::string stdlibPath = "/std/collections/vector/" + path.substr(std::string("/vector/").size());
+  const std::string suffix = path.substr(std::string("/vector/").size());
+  if (isRemovedVectorCompatibilityHelper(suffix) && ctx.sourceDefs.count(path) == 0) {
+    return path;
+  }
+  const std::string stdlibPath = "/std/collections/vector/" + suffix;
   if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
     return stdlibPath;
   }
   if (ctx.sourceDefs.count(path) == 0 || ctx.templateDefs.count(path) == 0) {
-    const std::string suffix = path.substr(std::string("/vector/").size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
       const std::string arrayPath = "/array/" + suffix;
       if (ctx.sourceDefs.count(arrayPath) > 0 && ctx.templateDefs.count(arrayPath) > 0) {
