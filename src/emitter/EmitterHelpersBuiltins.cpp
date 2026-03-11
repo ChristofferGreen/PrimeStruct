@@ -464,6 +464,10 @@ std::string resolveExprPath(const Expr &expr) {
 std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, std::string> &nameMap) {
   std::string preferred = path;
+  if (!preferred.empty() && preferred.front() != '/' &&
+      (preferred.rfind("map/", 0) == 0 || preferred.rfind("std/collections/map/", 0) == 0)) {
+    preferred.insert(preferred.begin(), '/');
+  }
   if (preferred.rfind("/array/", 0) == 0 && nameMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {

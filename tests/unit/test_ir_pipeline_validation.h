@@ -5046,6 +5046,23 @@ TEST_CASE("emitter helpers types normalize slashless map import aliases") {
   CHECK(primec::emitter::bindingTypeToCpp("NonMapAlias", "/pkg", importAliases, structTypeMap) == "int");
 }
 
+TEST_CASE("emitter helper path preference normalizes slashless map helper candidates") {
+  const std::unordered_map<std::string, std::string> mapAliasOnlyNameMap = {
+      {"/map/count", "ps_map_count"},
+      {"/map/at", "ps_map_at"},
+  };
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("map/count", mapAliasOnlyNameMap) == "/map/count");
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("std/collections/map/at", mapAliasOnlyNameMap) == "/map/at");
+
+  const std::unordered_map<std::string, std::string> mapStdlibOnlyNameMap = {
+      {"/std/collections/map/count", "ps_std_map_count"},
+  };
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("map/count", mapStdlibOnlyNameMap) ==
+        "/std/collections/map/count");
+
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("pkg/Thing/tag", mapAliasOnlyNameMap) == "pkg/Thing/tag");
+}
+
 TEST_CASE("emitter expr control method-path step rewrites eligible method calls") {
   primec::Expr nonMethodExpr;
   nonMethodExpr.kind = primec::Expr::Kind::Call;
