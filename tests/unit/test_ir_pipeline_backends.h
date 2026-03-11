@@ -75,7 +75,7 @@ TEST_CASE("emit kind aliases resolve to canonical ir backend kinds") {
   CHECK(primec::resolveIrBackendEmitKind("unknown") == "unknown");
 }
 
-TEST_CASE("main keeps cpp/exe dedicated emit path while using ir emit alias resolver") {
+TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";
   if (!std::filesystem::exists(mainPath)) {
@@ -84,10 +84,12 @@ TEST_CASE("main keeps cpp/exe dedicated emit path while using ir emit alias reso
   REQUIRE(std::filesystem::exists(mainPath));
 
   const std::string source = readTextFile(mainPath);
-  CHECK(source.find("if ((options.emitKind == \"cpp\" || options.emitKind == \"exe\"))") != std::string::npos);
-  CHECK(source.find("if (options.emitKind == \"cpp\" || options.emitKind == \"exe\")") != std::string::npos);
-  CHECK(source.find("emitter.emitCpp(program, options.entryPath)") != std::string::npos);
   CHECK(source.find("resolveIrBackendEmitKind(options.emitKind)") != std::string::npos);
+  CHECK(source.find("findIrBackend(irBackendKind)") != std::string::npos);
+  CHECK(source.find("if (options.emitKind == \"cpp\" || options.emitKind == \"exe\")") == std::string::npos);
+  CHECK(source.find("emitter.emitCpp(program, options.entryPath)") == std::string::npos);
+  CHECK(source.find("compileCppExecutable(") == std::string::npos);
+  CHECK(source.find("#include \"primec/Emitter.h\"") == std::string::npos);
 }
 
 TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {

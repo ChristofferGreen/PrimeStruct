@@ -1,28 +1,23 @@
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
 #include "primec/EmitKind.h"
-#include "primec/Emitter.h"
-#include "primec/ExternalTooling.h"
 #include "primec/IrBackends.h"
 #include "primec/IrInliner.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrValidation.h"
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
-#include "primec/ProcessRunner.h"
 #include "primec/TransformRegistry.h"
 
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
-#include <fstream>
 #include <functional>
 #include <iostream>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 
 namespace {
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
@@ -235,20 +230,6 @@ bool ensureOutputDirectory(const std::filesystem::path &outputPath, std::string 
   std::filesystem::create_directories(parent, ec);
   if (ec) {
     error = "failed to create output directory: " + parent.string();
-    return false;
-  }
-  return true;
-}
-
-bool writeOutputText(const std::filesystem::path &outputPath, const std::string &text, std::string &error) {
-  std::ofstream out(outputPath);
-  if (!out.is_open()) {
-    error = outputPath.string();
-    return false;
-  }
-  out << text;
-  if (!out.good()) {
-    error = outputPath.string();
     return false;
   }
   return true;
@@ -529,46 +510,6 @@ int main(int argc, char **argv) {
                          2,
                          {"backend: cpp"});
     }
-  }
-
-  if (options.emitKind == "cpp" || options.emitKind == "exe") {
-    std::filesystem::path outputPath = resolveOutputPath(options);
-    options.outputPath = outputPath.string();
-    if (!ensureOutputDirectory(outputPath, error)) {
-      return emitFailure(options, primec::DiagnosticCode::OutputError, "Output error: ", error, 2);
-    }
-
-    primec::Emitter emitter;
-    const std::string cppSource = emitter.emitCpp(program, options.entryPath);
-    if (cppSource.empty()) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::EmitError,
-                         options.emitKind == "cpp" ? "C++ emit error: " : "EXE emit error: ",
-                         "emitter produced no output",
-                         2);
-    }
-
-    if (options.emitKind == "cpp") {
-      if (!writeOutputText(outputPath, cppSource, error)) {
-        return emitFailure(options, primec::DiagnosticCode::OutputError, "Failed to write output: ", error, 2);
-      }
-      return 0;
-    }
-
-    std::filesystem::path cppPath = outputPath;
-    cppPath.replace_extension(".cpp");
-    if (!writeOutputText(cppPath, cppSource, error)) {
-      return emitFailure(options, primec::DiagnosticCode::OutputError, "Failed to write output: ", error, 2);
-    }
-    const primec::ProcessRunner &processRunner = primec::systemProcessRunner();
-    if (!primec::compileCppExecutable(processRunner, cppPath, outputPath)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::EmitError,
-                         "EXE emit error: ",
-                         "Failed to compile output executable",
-                         2);
-    }
-    return 0;
   }
 
   const std::string_view irBackendKind = primec::resolveIrBackendEmitKind(options.emitKind);
