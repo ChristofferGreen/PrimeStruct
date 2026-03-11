@@ -1,6 +1,15 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
+static void expectNativeVectorCountCompatibilityTypeMismatchReject(const std::string &compileCmd) {
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_vector_count_compatibility_type_mismatch_reject_err.txt")
+                                  .string();
+  const std::string captureCmd = compileCmd + " > /dev/null 2> " + errPath;
+  CHECK(runCommand(captureCmd) != 0);
+  CHECK(readFile(errPath).find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native array literals") {
   const std::string source = R"(
 [return<int>]
@@ -735,7 +744,7 @@ main() {
   CHECK(readFile(errPath).find("argument count mismatch for /vector/count") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native vector alias implicit canonical forwarding on bool type mismatch") {
+TEST_CASE("rejects native vector alias compatibility template forwarding on bool type mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [i32] marker) {
@@ -761,11 +770,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias implicit canonical forwarding on non-bool type mismatch") {
+TEST_CASE("rejects native vector alias compatibility template forwarding on non-bool type mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [string] marker) {
@@ -791,11 +799,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias implicit canonical forwarding on struct type mismatch") {
+TEST_CASE("rejects native vector alias compatibility template forwarding on struct type mismatch") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -825,11 +832,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias canonical forwarding on constructor temporary struct mismatch") {
+TEST_CASE("rejects native vector alias compatibility template forwarding on constructor temporary struct mismatch") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -858,11 +864,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias canonical forwarding on method-call temporary struct mismatch") {
+TEST_CASE("rejects native vector alias compatibility template forwarding on method-call temporary struct mismatch") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -898,11 +903,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias canonical forwarding on chained method-call temporary struct mismatch") {
+TEST_CASE("rejects native vector alias compatibility template forwarding on chained method-call temporary struct mismatch") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -945,11 +949,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias canonical forwarding on array envelope element mismatch") {
+TEST_CASE("rejects native vector alias compatibility template forwarding on array envelope element mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [array<i32>] marker) {
@@ -976,11 +979,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias canonical forwarding on map envelope mismatch") {
+TEST_CASE("rejects native vector alias compatibility template forwarding on map envelope mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [map<i32, string>] marker) {
@@ -1007,11 +1009,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias canonical forwarding on map envelope mismatch from call return") {
+TEST_CASE("rejects native vector alias compatibility template forwarding on map envelope mismatch from call return") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i64>>]
 makeMarker() {
@@ -1042,11 +1043,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias canonical forwarding on primitive mismatch from call return") {
+TEST_CASE("rejects native vector alias compatibility template forwarding on primitive mismatch from call return") {
   const std::string source = R"(
 [return<i32>]
 makeMarker() {
@@ -1077,11 +1077,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias canonical forwarding when unknown expected meets primitive call return") {
+TEST_CASE("rejects native vector alias compatibility template forwarding when unknown expected meets primitive call return") {
   const std::string source = R"(
 Marker() {}
 
@@ -1114,11 +1113,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias canonical forwarding when unknown expected meets primitive binding") {
+TEST_CASE("rejects native vector alias compatibility template forwarding when unknown expected meets primitive binding") {
   const std::string source = R"(
 Marker() {}
 
@@ -1147,11 +1145,10 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("compiles and runs native vector alias canonical forwarding when unknown expected meets vector envelope binding") {
+TEST_CASE("rejects native vector alias compatibility template forwarding when unknown expected meets vector envelope binding") {
   const std::string source = R"(
 Marker() {}
 
@@ -1181,8 +1178,7 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
 TEST_CASE("rejects native vector helper method expression legacy alias forwarding") {

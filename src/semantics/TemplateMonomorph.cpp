@@ -803,10 +803,15 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
     // or argument counts do not match the declared /vector/count shape.
     return path;
   }
+  const bool prefersTypeMismatchFallback = shouldPreferTemplatedVectorFallbackForTypeMismatch(
+      defIt->second, expr, locals, params, allowMathBare, ctx, namespacePrefix);
+  if (path == "/vector/count" && prefersTypeMismatchFallback) {
+    // Keep diagnostics on explicit compatibility helpers when argument types
+    // mismatch the declared /vector/count shape.
+    return path;
+  }
   const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);
-  if (acceptsCallShape &&
-      !shouldPreferTemplatedVectorFallbackForTypeMismatch(
-          defIt->second, expr, locals, params, allowMathBare, ctx, namespacePrefix)) {
+  if (acceptsCallShape && !prefersTypeMismatchFallback) {
     return path;
   }
   if (preferred != path && ctx.sourceDefs.count(preferred) > 0 && ctx.templateDefs.count(preferred) > 0) {

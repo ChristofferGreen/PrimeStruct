@@ -4152,7 +4152,7 @@ main() {
   CHECK(error.find("argument count mismatch for /vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias implicitly forwards on bool type mismatch with same arity") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding on bool type mismatch with same arity") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [i32] marker) {
@@ -4171,11 +4171,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias implicitly forwards on non-bool type mismatch with same arity") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding on non-bool type mismatch with same arity") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [string] marker) {
@@ -4194,11 +4194,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias implicitly forwards on struct type mismatch with same arity") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding on struct type mismatch with same arity") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -4221,11 +4221,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced struct mismatch fallback keeps canonical diagnostics") {
+TEST_CASE("vector namespaced struct mismatch fallback keeps compatibility diagnostics") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -4251,10 +4251,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias forwards struct mismatch from constructor temporary") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding for struct mismatch from constructor temporary") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -4276,11 +4276,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced constructor temporary mismatch keeps canonical diagnostics") {
+TEST_CASE("vector namespaced constructor temporary mismatch keeps compatibility diagnostics") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -4305,10 +4305,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias forwards struct mismatch from method-call temporary") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding for struct mismatch from method-call temporary") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -4337,11 +4337,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced method-call temporary mismatch keeps canonical diagnostics") {
+TEST_CASE("vector namespaced method-call temporary mismatch keeps compatibility diagnostics") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -4373,10 +4373,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias forwards struct mismatch from chained method-call temporary") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding for struct mismatch from chained method-call temporary") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -4412,11 +4412,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced chained method-call mismatch keeps canonical diagnostics") {
+TEST_CASE("vector namespaced chained method-call mismatch keeps compatibility diagnostics") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -4454,10 +4454,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias forwards on array envelope element mismatch") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding on array envelope element mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [array<i32>] marker) {
@@ -4477,11 +4477,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced array envelope mismatch keeps canonical diagnostics") {
+TEST_CASE("vector namespaced array envelope mismatch keeps compatibility diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [array<i32>] marker) {
@@ -4503,10 +4503,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias forwards on map envelope mismatch") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding on map envelope mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [map<i32, string>] marker) {
@@ -4526,11 +4526,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced map envelope mismatch keeps canonical diagnostics") {
+TEST_CASE("vector namespaced map envelope mismatch keeps compatibility diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [map<i32, string>] marker) {
@@ -4552,10 +4552,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias forwards on map envelope mismatch from call return") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding on map envelope mismatch from call return") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i64>>]
 makeMarker() {
@@ -4579,11 +4579,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced map call-return mismatch keeps canonical diagnostics") {
+TEST_CASE("vector namespaced map call-return mismatch keeps compatibility diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i64>>]
 makeMarker() {
@@ -4609,10 +4609,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias forwards on primitive mismatch from call return") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding on primitive mismatch from call return") {
   const std::string source = R"(
 [return<i32>]
 makeMarker() {
@@ -4636,11 +4636,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced primitive call-return mismatch keeps canonical diagnostics") {
+TEST_CASE("vector namespaced primitive call-return mismatch keeps compatibility diagnostics") {
   const std::string source = R"(
 [return<i32>]
 makeMarker() {
@@ -4666,10 +4666,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias forwards when unknown expected meets primitive call return") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets primitive call return") {
   const std::string source = R"(
 Marker() {}
 
@@ -4695,11 +4695,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced unknown expected primitive call return keeps canonical diagnostics") {
+TEST_CASE("vector namespaced unknown expected primitive call return keeps compatibility diagnostics") {
   const std::string source = R"(
 Marker() {}
 
@@ -4727,10 +4727,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias forwards when unknown expected meets primitive binding") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets primitive binding") {
   const std::string source = R"(
 Marker() {}
 
@@ -4752,11 +4752,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced unknown expected primitive binding keeps canonical diagnostics") {
+TEST_CASE("vector namespaced unknown expected primitive binding keeps compatibility diagnostics") {
   const std::string source = R"(
 Marker() {}
 
@@ -4780,10 +4780,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias forwards when unknown expected meets vector envelope binding") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets vector envelope binding") {
   const std::string source = R"(
 Marker() {}
 
@@ -4805,11 +4805,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced unknown expected vector envelope keeps canonical diagnostics") {
+TEST_CASE("vector namespaced unknown expected vector envelope keeps compatibility diagnostics") {
   const std::string source = R"(
 Marker() {}
 
@@ -4833,10 +4833,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias implicit template forwarding keeps canonical diagnostics") {
+TEST_CASE("vector namespaced count alias arity fallback keeps compatibility diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -4856,11 +4856,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced non-bool mismatch fallback keeps canonical diagnostics") {
+TEST_CASE("vector namespaced non-bool mismatch fallback keeps compatibility diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [string] marker) {
@@ -4881,10 +4881,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced bool mismatch fallback keeps canonical diagnostics") {
+TEST_CASE("vector namespaced bool mismatch fallback keeps compatibility diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [i32] marker) {
@@ -4905,7 +4905,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count alias named arguments reject compatibility template forwarding") {

@@ -1,5 +1,14 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
+static void expectVmVectorCountCompatibilityTypeMismatchReject(const std::string &runCmd) {
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_vector_count_compatibility_type_mismatch_reject_out.txt")
+                                  .string();
+  const std::string captureCmd = runCmd + " > " + outPath + " 2>&1";
+  CHECK(runCommand(captureCmd) != 0);
+  CHECK(readFile(outPath).find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+}
+
 TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -497,7 +506,7 @@ main() {
   CHECK(readFile(outPath).find("argument count mismatch for /vector/count") != std::string::npos);
 }
 
-TEST_CASE("runs vm with vector alias implicit canonical forwarding on bool type mismatch") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on bool type mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [i32] marker) {
@@ -518,10 +527,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_implicit_canonical_forwarding_bool_type_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias implicit canonical forwarding on non-bool type mismatch") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on non-bool type mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [string] marker) {
@@ -542,10 +551,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_implicit_canonical_forwarding_non_bool_type_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias implicit canonical forwarding on struct type mismatch") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on struct type mismatch") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -570,10 +579,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_implicit_canonical_forwarding_struct_type_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias canonical forwarding on constructor temporary struct mismatch") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on constructor temporary struct mismatch") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -597,10 +606,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_canonical_forwarding_constructor_struct_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias canonical forwarding on method-call temporary struct mismatch") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on method-call temporary struct mismatch") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -631,10 +640,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_canonical_forwarding_method_struct_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias canonical forwarding on chained method-call temporary struct mismatch") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on chained method-call temporary struct mismatch") {
   const std::string source = R"(
 MarkerA() {}
 MarkerB() {}
@@ -672,10 +681,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_canonical_forwarding_chained_method_struct_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias canonical forwarding on array envelope element mismatch") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on array envelope element mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [array<i32>] marker) {
@@ -697,10 +706,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_canonical_forwarding_array_envelope_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias canonical forwarding on map envelope mismatch") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on map envelope mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [map<i32, string>] marker) {
@@ -722,10 +731,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_canonical_forwarding_map_envelope_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias canonical forwarding on map envelope mismatch from call return") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on map envelope mismatch from call return") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i64>>]
 makeMarker() {
@@ -751,10 +760,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_canonical_forwarding_map_call_return_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias canonical forwarding on primitive mismatch from call return") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on primitive mismatch from call return") {
   const std::string source = R"(
 [return<i32>]
 makeMarker() {
@@ -780,10 +789,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_canonical_forwarding_primitive_call_return_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias canonical forwarding when unknown expected meets primitive call return") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding when unknown expected meets primitive call return") {
   const std::string source = R"(
 Marker() {}
 
@@ -811,10 +820,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_canonical_forwarding_unknown_expected_primitive_call_return.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias canonical forwarding when unknown expected meets primitive binding") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding when unknown expected meets primitive binding") {
   const std::string source = R"(
 Marker() {}
 
@@ -838,10 +847,10 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_canonical_forwarding_unknown_expected_primitive_binding.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
-TEST_CASE("runs vm with vector alias canonical forwarding when unknown expected meets vector envelope binding") {
+TEST_CASE("rejects vm vector alias compatibility template forwarding when unknown expected meets vector envelope binding") {
   const std::string source = R"(
 Marker() {}
 
@@ -865,7 +874,7 @@ main() {
   const std::string srcPath =
       writeTemp("vm_vector_alias_canonical_forwarding_unknown_expected_vector_envelope_binding.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
 
 TEST_CASE("rejects vm vector helper method expression legacy alias forwarding") {
