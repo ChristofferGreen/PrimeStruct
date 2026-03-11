@@ -743,6 +743,48 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("generate helper pack emits canonical helper order") {
+  const std::string source = R"(
+[struct reflect generate(Clone, DebugPrint, IsDefault, Default, NotEqual, Equal)]
+Pair() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  std::vector<std::string> generatedHelpers;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath.rfind("/Pair/", 0) != 0 || def.fullPath == "/Pair") {
+      continue;
+    }
+    generatedHelpers.push_back(def.fullPath);
+    const bool hasPublicVisibility =
+        std::any_of(def.transforms.begin(), def.transforms.end(), [](const primec::Transform &transform) {
+          return transform.name == "public";
+        });
+    CHECK(hasPublicVisibility);
+  }
+
+  const std::vector<std::string> expected = {"/Pair/Equal",
+                                             "/Pair/NotEqual",
+                                             "/Pair/Default",
+                                             "/Pair/IsDefault",
+                                             "/Pair/Clone",
+                                             "/Pair/DebugPrint"};
+  CHECK(generatedHelpers == expected);
+}
+
 TEST_CASE("generate Equal emits reflection helper definition") {
   const std::string source = R"(
 [struct reflect generate(Equal)]

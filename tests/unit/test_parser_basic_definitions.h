@@ -636,6 +636,29 @@ Widget() {
   CHECK(transforms[2].arguments[1] == "DebugPrint");
 }
 
+TEST_CASE("parses reflection generate list for all v1 helpers") {
+  const std::string source = R"(
+[struct reflect generate(Equal, NotEqual, Default, IsDefault, Clone, DebugPrint)]
+Widget() {
+  [i32] value{1i32}
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 3);
+  CHECK(transforms[0].name == "struct");
+  CHECK(transforms[1].name == "reflect");
+  CHECK(transforms[2].name == "generate");
+  REQUIRE(transforms[2].arguments.size() == 6);
+  CHECK(transforms[2].arguments[0] == "Equal");
+  CHECK(transforms[2].arguments[1] == "NotEqual");
+  CHECK(transforms[2].arguments[2] == "Default");
+  CHECK(transforms[2].arguments[3] == "IsDefault");
+  CHECK(transforms[2].arguments[4] == "Clone");
+  CHECK(transforms[2].arguments[5] == "DebugPrint");
+}
+
 TEST_CASE("parses transform groups") {
   const std::string source = R"(
 [text(operators, collections) semantic(return<int>, effects(io_out))]
