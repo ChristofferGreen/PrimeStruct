@@ -554,17 +554,22 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
                             const std::vector<Expr> &,
                             const std::unordered_map<std::string, std::string> &)>
       inferStructReturnPath;
+  auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
+    return suffix != "at" && suffix != "at_unsafe";
+  };
   auto preferCollectionHelperPath = [&](const std::string &path) -> std::string {
     std::string preferred = path;
     if (preferred.rfind("/array/", 0) == 0 && defMap.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string("/array/").size());
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (defMap.count(vectorAlias) > 0) {
-        return vectorAlias;
-      }
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-      if (defMap.count(stdlibAlias) > 0) {
-        return stdlibAlias;
+      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+        const std::string vectorAlias = "/vector/" + suffix;
+        if (defMap.count(vectorAlias) > 0) {
+          return vectorAlias;
+        }
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        if (defMap.count(stdlibAlias) > 0) {
+          return stdlibAlias;
+        }
       }
     }
     if (preferred.rfind("/vector/", 0) == 0 && defMap.count(preferred) == 0) {
@@ -573,9 +578,11 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (defMap.count(stdlibAlias) > 0) {
         preferred = stdlibAlias;
       } else {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (defMap.count(arrayAlias) > 0) {
-          preferred = arrayAlias;
+        if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+          const std::string arrayAlias = "/array/" + suffix;
+          if (defMap.count(arrayAlias) > 0) {
+            preferred = arrayAlias;
+          }
         }
       }
     }
@@ -585,9 +592,11 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (defMap.count(vectorAlias) > 0) {
         preferred = vectorAlias;
       } else {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (defMap.count(arrayAlias) > 0) {
-          preferred = arrayAlias;
+        if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+          const std::string arrayAlias = "/array/" + suffix;
+          if (defMap.count(arrayAlias) > 0) {
+            preferred = arrayAlias;
+          }
         }
       }
     }
@@ -639,14 +648,24 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   auto collectionMethodPathCandidates = [](const std::string &receiverStruct,
                                            const std::string &methodName) -> std::vector<std::string> {
     if (receiverStruct == "/vector") {
-      return {"/vector/" + methodName,
-              "/std/collections/vector/" + methodName,
-              "/array/" + methodName};
+      std::vector<std::string> candidates = {
+          "/vector/" + methodName,
+          "/std/collections/vector/" + methodName,
+      };
+      if (methodName != "at" && methodName != "at_unsafe") {
+        candidates.push_back("/array/" + methodName);
+      }
+      return candidates;
     }
     if (receiverStruct == "/array") {
-      return {"/array/" + methodName,
-              "/vector/" + methodName,
-              "/std/collections/vector/" + methodName};
+      std::vector<std::string> candidates = {
+          "/array/" + methodName,
+      };
+      if (methodName != "at" && methodName != "at_unsafe") {
+        candidates.push_back("/vector/" + methodName);
+        candidates.push_back("/std/collections/vector/" + methodName);
+      }
+      return candidates;
     }
     if (receiverStruct == "/map") {
       return {"/map/" + methodName,
@@ -681,16 +700,22 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     appendUnique(normalizedPath);
     if (normalizedPath.rfind("/array/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/array/").size());
-      appendUnique("/vector/" + suffix);
-      appendUnique("/std/collections/vector/" + suffix);
+      if (suffix != "at" && suffix != "at_unsafe") {
+        appendUnique("/vector/" + suffix);
+        appendUnique("/std/collections/vector/" + suffix);
+      }
     } else if (normalizedPath.rfind("/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
       appendUnique("/std/collections/vector/" + suffix);
-      appendUnique("/array/" + suffix);
+      if (suffix != "at" && suffix != "at_unsafe") {
+        appendUnique("/array/" + suffix);
+      }
     } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
       appendUnique("/vector/" + suffix);
-      appendUnique("/array/" + suffix);
+      if (suffix != "at" && suffix != "at_unsafe") {
+        appendUnique("/array/" + suffix);
+      }
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {

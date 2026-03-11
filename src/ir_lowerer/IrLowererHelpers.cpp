@@ -45,7 +45,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   }
   if (name.rfind("array/", 0) == 0) {
     std::string alias = name.substr(std::string("array/").size());
-    if (alias.find('/') == std::string::npos && (alias == "count" || alias == "at" || alias == "at_unsafe")) {
+    if (alias.find('/') == std::string::npos && alias == "count") {
       return alias == targetName;
     }
   }
@@ -632,11 +632,6 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name.rfind("array/", 0) == 0) {
-    std::string alias = name.substr(std::string("array/").size());
-    if (alias == "at" || alias == "at_unsafe") {
-      out = alias;
-      return true;
-    }
     return false;
   }
   if (name.rfind("map/", 0) == 0) {

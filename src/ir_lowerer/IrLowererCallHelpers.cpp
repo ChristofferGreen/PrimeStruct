@@ -32,7 +32,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = normalized.substr(arrayPrefix.size());
-    if (helperNameOut == "count") {
+    if (helperNameOut == "count" || helperNameOut == "at" || helperNameOut == "at_unsafe") {
       return false;
     }
     return true;

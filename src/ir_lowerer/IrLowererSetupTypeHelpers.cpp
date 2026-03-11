@@ -7,6 +7,10 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
+  return suffix != "at" && suffix != "at_unsafe";
+}
+
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -24,7 +28,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = normalized.substr(arrayPrefix.size());
-    if (helperNameOut == "count") {
+    if (helperNameOut == "count" || helperNameOut == "at" || helperNameOut == "at_unsafe") {
       return false;
     }
     return true;
@@ -99,16 +103,22 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   appendUnique(normalizedPath);
   if (normalizedPath.rfind("/array/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
-    appendUnique("/vector/" + suffix);
-    appendUnique("/std/collections/vector/" + suffix);
+    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+      appendUnique("/vector/" + suffix);
+      appendUnique("/std/collections/vector/" + suffix);
+    }
   } else if (normalizedPath.rfind("/vector/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
     appendUnique("/std/collections/vector/" + suffix);
-    appendUnique("/array/" + suffix);
+    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+      appendUnique("/array/" + suffix);
+    }
   } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
     appendUnique("/vector/" + suffix);
-    appendUnique("/array/" + suffix);
+    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+      appendUnique("/array/" + suffix);
+    }
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
@@ -466,15 +476,17 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     if (path.rfind("/array/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/array/").size());
-      const std::string vectorAlias = "/vector/" + suffix;
-      defIt = defMap.find(vectorAlias);
-      if (defIt != defMap.end()) {
-        return defIt->second;
-      }
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-      defIt = defMap.find(stdlibAlias);
-      if (defIt != defMap.end()) {
-        return defIt->second;
+      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+        const std::string vectorAlias = "/vector/" + suffix;
+        defIt = defMap.find(vectorAlias);
+        if (defIt != defMap.end()) {
+          return defIt->second;
+        }
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        defIt = defMap.find(stdlibAlias);
+        if (defIt != defMap.end()) {
+          return defIt->second;
+        }
       }
     }
     if (path.rfind("/vector/", 0) == 0) {
@@ -484,10 +496,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       if (defIt != defMap.end()) {
         return defIt->second;
       }
-      const std::string arrayAlias = "/array/" + suffix;
-      defIt = defMap.find(arrayAlias);
-      if (defIt != defMap.end()) {
-        return defIt->second;
+      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+        const std::string arrayAlias = "/array/" + suffix;
+        defIt = defMap.find(arrayAlias);
+        if (defIt != defMap.end()) {
+          return defIt->second;
+        }
       }
     }
     if (path.rfind("/std/collections/vector/", 0) == 0) {
@@ -497,10 +511,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       if (defIt != defMap.end()) {
         return defIt->second;
       }
-      const std::string arrayAlias = "/array/" + suffix;
-      defIt = defMap.find(arrayAlias);
-      if (defIt != defMap.end()) {
-        return defIt->second;
+      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+        const std::string arrayAlias = "/array/" + suffix;
+        defIt = defMap.find(arrayAlias);
+        if (defIt != defMap.end()) {
+          return defIt->second;
+        }
       }
     }
     if (path.rfind("/map/", 0) == 0) {

@@ -1549,7 +1549,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced access defin
   CHECK(resolveMethodCalls == 1);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers compatibility array access definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup rejects vector compatibility array access fallback") {
   primec::Definition receiverAtDef;
   receiverAtDef.fullPath = "/vector/at";
   primec::Definition arrayAtDef;
@@ -1613,8 +1613,8 @@ TEST_CASE("ir lowerer inference call-return setup defers compatibility array acc
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 0);
 
   resolveReceiverHelper = false;
   resolveMethodCalls = 0;
@@ -1622,7 +1622,7 @@ TEST_CASE("ir lowerer inference call-return setup defers compatibility array acc
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(resolveMethodCalls == 0);
 }
 
 TEST_CASE("ir lowerer inference call-return setup defers namespaced at unsafe definition lookup") {

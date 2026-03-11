@@ -314,7 +314,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string preferred = path;
       if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
         const std::string suffix = preferred.substr(std::string("/array/").size());
-        if (suffix != "count") {
+        if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
           const std::string vectorAlias = "/vector/" + suffix;
           if (defMap_.count(vectorAlias) > 0) {
             return vectorAlias;
@@ -331,7 +331,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (defMap_.count(stdlibAlias) > 0) {
           preferred = stdlibAlias;
         } else {
-          if (suffix != "count") {
+          if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
             const std::string arrayAlias = "/array/" + suffix;
             if (defMap_.count(arrayAlias) > 0) {
               preferred = arrayAlias;
@@ -345,7 +345,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (defMap_.count(vectorAlias) > 0) {
           preferred = vectorAlias;
         } else {
-          if (suffix != "count") {
+          if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
             const std::string arrayAlias = "/array/" + suffix;
             if (defMap_.count(arrayAlias) > 0) {
               preferred = arrayAlias;
@@ -913,7 +913,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         std::string preferred = path;
         if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
           const std::string suffix = preferred.substr(std::string("/array/").size());
-          if (suffix != "count") {
+          if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
             const std::string vectorAlias = "/vector/" + suffix;
             if (defMap_.count(vectorAlias) > 0) {
               return vectorAlias;
@@ -930,7 +930,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           if (defMap_.count(stdlibAlias) > 0) {
             preferred = stdlibAlias;
           } else {
-            if (suffix != "count") {
+            if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
               const std::string arrayAlias = "/array/" + suffix;
               if (defMap_.count(arrayAlias) > 0) {
                 preferred = arrayAlias;
@@ -944,7 +944,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           if (defMap_.count(vectorAlias) > 0) {
             preferred = vectorAlias;
           } else {
-            if (suffix != "count") {
+            if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
               const std::string arrayAlias = "/array/" + suffix;
               if (defMap_.count(arrayAlias) > 0) {
                 preferred = arrayAlias;
@@ -1063,10 +1063,20 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         kindOut = ReturnKind::Int;
         return true;
       }
-      if (resolvedPath == "/array/at" || resolvedPath == "/array/at_unsafe" || resolvedPath == "/vector/at" ||
-          resolvedPath == "/vector/at_unsafe") {
+      if (resolvedPath == "/array/at" || resolvedPath == "/array/at_unsafe") {
         std::string elemType;
-        if (resolveArrayTarget(receiverExpr, elemType) || resolveVectorTarget(receiverExpr, elemType)) {
+        if (resolveArrayTarget(receiverExpr, elemType)) {
+          ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
+          if (kind != ReturnKind::Unknown) {
+            kindOut = kind;
+            return true;
+          }
+        }
+        return false;
+      }
+      if (resolvedPath == "/vector/at" || resolvedPath == "/vector/at_unsafe") {
+        std::string elemType;
+        if (resolveVectorTarget(receiverExpr, elemType)) {
           ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
           if (kind != ReturnKind::Unknown) {
             kindOut = kind;
@@ -1226,7 +1236,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string preferred = path;
       if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
         const std::string suffix = preferred.substr(std::string("/array/").size());
-        if (suffix != "count") {
+        if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
           const std::string vectorAlias = "/vector/" + suffix;
           if (defMap_.count(vectorAlias) > 0) {
             return vectorAlias;
@@ -1243,7 +1253,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (defMap_.count(stdlibAlias) > 0) {
           preferred = stdlibAlias;
         } else {
-          if (suffix != "count") {
+          if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
             const std::string arrayAlias = "/array/" + suffix;
             if (defMap_.count(arrayAlias) > 0) {
               preferred = arrayAlias;
@@ -1257,7 +1267,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (defMap_.count(vectorAlias) > 0) {
           preferred = vectorAlias;
         } else {
-          if (suffix != "count") {
+          if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
             const std::string arrayAlias = "/array/" + suffix;
             if (defMap_.count(arrayAlias) > 0) {
               preferred = arrayAlias;
@@ -1301,20 +1311,20 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       appendUnique(normalizedPath);
       if (normalizedPath.rfind("/array/", 0) == 0) {
         const std::string suffix = normalizedPath.substr(std::string("/array/").size());
-        if (suffix != "count") {
+        if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
           appendUnique("/vector/" + suffix);
           appendUnique("/std/collections/vector/" + suffix);
         }
       } else if (normalizedPath.rfind("/vector/", 0) == 0) {
         const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
         appendUnique("/std/collections/vector/" + suffix);
-        if (suffix != "count") {
+        if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
           appendUnique("/array/" + suffix);
         }
       } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
         const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
         appendUnique("/vector/" + suffix);
-        if (suffix != "count") {
+        if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
           appendUnique("/array/" + suffix);
         }
       } else if (normalizedPath.rfind("/map/", 0) == 0) {
@@ -2084,20 +2094,20 @@ std::string SemanticsValidator::inferStructReturnPath(
     appendUnique(normalizedPath);
     if (normalizedPath.rfind("/array/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/array/").size());
-      if (suffix != "count") {
+      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
         appendUnique("/vector/" + suffix);
         appendUnique("/std/collections/vector/" + suffix);
       }
     } else if (normalizedPath.rfind("/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
       appendUnique("/std/collections/vector/" + suffix);
-      if (suffix != "count") {
+      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
         appendUnique("/array/" + suffix);
       }
     } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
       appendUnique("/vector/" + suffix);
-      if (suffix != "count") {
+      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
         appendUnique("/array/" + suffix);
       }
     } else if (normalizedPath.rfind("/map/", 0) == 0) {

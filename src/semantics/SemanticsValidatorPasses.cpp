@@ -2511,7 +2511,7 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     std::string preferred = path;
     if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string("/array/").size());
-      if (suffix != "count") {
+      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
         const std::string vectorAlias = "/vector/" + suffix;
         if (defMap_.count(vectorAlias) > 0) {
           return vectorAlias;
@@ -2528,7 +2528,7 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
       if (defMap_.count(stdlibAlias) > 0) {
         preferred = stdlibAlias;
       } else {
-        if (suffix != "count") {
+        if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
           const std::string arrayAlias = "/array/" + suffix;
           if (defMap_.count(arrayAlias) > 0) {
             preferred = arrayAlias;
@@ -2542,7 +2542,7 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
       if (defMap_.count(vectorAlias) > 0) {
         preferred = vectorAlias;
       } else {
-        if (suffix != "count") {
+        if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
           const std::string arrayAlias = "/array/" + suffix;
           if (defMap_.count(arrayAlias) > 0) {
             preferred = arrayAlias;
@@ -2591,20 +2591,20 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     appendUnique(normalizedPath);
     if (normalizedPath.rfind("/array/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/array/").size());
-      if (suffix != "count") {
+      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
         appendUnique("/vector/" + suffix);
         appendUnique("/std/collections/vector/" + suffix);
       }
     } else if (normalizedPath.rfind("/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
       appendUnique("/std/collections/vector/" + suffix);
-      if (suffix != "count") {
+      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
         appendUnique("/array/" + suffix);
       }
     } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
       appendUnique("/vector/" + suffix);
-      if (suffix != "count") {
+      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
         appendUnique("/array/" + suffix);
       }
     } else if (normalizedPath.rfind("/map/", 0) == 0) {

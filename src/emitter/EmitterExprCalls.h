@@ -325,16 +325,22 @@
     appendUnique(normalizedPath);
     if (normalizedPath.rfind("/array/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/array/").size());
-      appendUnique("/vector/" + suffix);
-      appendUnique("/std/collections/vector/" + suffix);
+      if (suffix != "at" && suffix != "at_unsafe") {
+        appendUnique("/vector/" + suffix);
+        appendUnique("/std/collections/vector/" + suffix);
+      }
     } else if (normalizedPath.rfind("/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
       appendUnique("/std/collections/vector/" + suffix);
-      appendUnique("/array/" + suffix);
+      if (suffix != "at" && suffix != "at_unsafe") {
+        appendUnique("/array/" + suffix);
+      }
     } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
       appendUnique("/vector/" + suffix);
-      appendUnique("/array/" + suffix);
+      if (suffix != "at" && suffix != "at_unsafe") {
+        appendUnique("/array/" + suffix);
+      }
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
@@ -453,8 +459,9 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
+    const bool allowArrayNamespacedAlias = helperName != "at" && helperName != "at_unsafe";
     return normalized == std::string("vector/") + helper ||
-           normalized == std::string("array/") + helper ||
+           (allowArrayNamespacedAlias && normalized == std::string("array/") + helper) ||
            normalized == std::string("std/collections/vector/") + helper;
   };
   auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {

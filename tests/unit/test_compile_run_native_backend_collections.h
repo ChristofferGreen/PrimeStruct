@@ -208,26 +208,48 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/vector") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native array namespaced vector at aliases") {
+TEST_CASE("rejects native array namespaced vector at alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
-  /std/collections/vector/push(values, 6i32)
-  [i32] countValue{/std/collections/vector/count(values)}
-  [i32] capacityValue{/std/collections/vector/capacity(values)}
-  [i32] tailValue{/array/at_unsafe(values, 2i32)}
-  return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
+  [i32] headValue{/array/at(values, 1i32)}
+  return(headValue)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_array_namespaced_vector_helper_aliases.prime", source);
+  const std::string srcPath = writeTemp("compile_native_array_namespaced_vector_at_alias.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_array_namespaced_vector_at_alias_out.txt").string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_array_namespaced_vector_helper_aliases_exe")
+      (std::filesystem::temp_directory_path() / "primec_native_array_namespaced_vector_at_alias_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/at") != std::string::npos);
+}
+
+TEST_CASE("rejects native array namespaced vector at_unsafe alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  [i32] tailValue{/array/at_unsafe(values, 1i32)}
+  return(tailValue)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_array_namespaced_vector_at_unsafe_alias.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_array_namespaced_vector_at_unsafe_alias_out.txt")
+          .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_array_namespaced_vector_at_unsafe_alias_exe")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects native array namespaced vector count builtin alias") {

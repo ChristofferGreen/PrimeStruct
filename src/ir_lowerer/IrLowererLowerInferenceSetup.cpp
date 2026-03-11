@@ -603,9 +603,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
         normalizedName != "vector/capacity" && normalizedName != "std/collections/vector/capacity" &&
         normalizedName != "array/capacity" &&
         normalizedName != "vector/at" && normalizedName != "std/collections/vector/at" &&
-        normalizedName != "array/at" &&
         normalizedName != "vector/at_unsafe" && normalizedName != "std/collections/vector/at_unsafe" &&
-        normalizedName != "array/at_unsafe" &&
         normalizedName != "vector/push" && normalizedName != "std/collections/vector/push" &&
         normalizedName != "vector/pop" && normalizedName != "std/collections/vector/pop" &&
         normalizedName != "vector/reserve" && normalizedName != "std/collections/vector/reserve" &&
@@ -618,9 +616,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
       return false;
     }
     if (normalizedName == "vector/at" || normalizedName == "std/collections/vector/at" ||
-        normalizedName == "array/at" ||
         normalizedName == "vector/at_unsafe" || normalizedName == "std/collections/vector/at_unsafe" ||
-        normalizedName == "array/at_unsafe" ||
         normalizedName == "map/at" || normalizedName == "std/collections/map/at" ||
         normalizedName == "map/at_unsafe" || normalizedName == "std/collections/map/at_unsafe") {
       return candidate.args.size() == 2;

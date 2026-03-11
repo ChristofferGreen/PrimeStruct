@@ -27,7 +27,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = normalized.substr(arrayPrefix.size());
-    if (helperNameOut == "count") {
+    if (helperNameOut == "count" || helperNameOut == "at" || helperNameOut == "at_unsafe") {
       return false;
     }
     return true;
@@ -84,9 +84,14 @@ bool isNamespacedVectorHelperCall(const Expr &expr) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(0, 1);
   }
-  return normalized.rfind("vector/", 0) == 0 ||
-         normalized.rfind("array/", 0) == 0 ||
-         normalized.rfind("std/collections/vector/", 0) == 0;
+  if (normalized.rfind("vector/", 0) == 0 || normalized.rfind("std/collections/vector/", 0) == 0) {
+    return true;
+  }
+  if (normalized.rfind("array/", 0) == 0) {
+    const std::string helper = normalized.substr(std::string("array/").size());
+    return helper != "at" && helper != "at_unsafe";
+  }
+  return false;
 }
 
 bool isNamespacedMapHelperCall(const Expr &expr) {
