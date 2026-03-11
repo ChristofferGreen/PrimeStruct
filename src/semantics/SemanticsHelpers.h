@@ -145,6 +145,8 @@ bool validateCapabilitiesTransform(const Transform &transform, const std::string
 bool parsePositiveIntArg(const std::string &text, int &value);
 
 bool isStructTransformName(const std::string &name);
+bool isReflectionTransformName(const std::string &name);
+bool isSupportedReflectionGeneratorName(const std::string &name);
 bool validateNamedArguments(const std::vector<Expr> &args,
                             const std::vector<std::optional<std::string>> &argNames,
                             const std::string &context,

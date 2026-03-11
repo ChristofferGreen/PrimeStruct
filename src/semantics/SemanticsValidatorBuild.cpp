@@ -155,6 +155,8 @@ bool SemanticsValidator::buildDefinitionMaps() {
     bool sawVisibility = false;
     bool isPublic = false;
     bool sawStatic = false;
+    bool sawReflect = false;
+    bool sawGenerate = false;
     bool definitionTransformError = false;
     auto addTransformDiagnostic = [&](const std::string &message) -> bool {
       if (!collectTransformDiagnostics) {
@@ -418,6 +420,64 @@ bool SemanticsValidator::buildDefinitionMaps() {
           }
           break;
         }
+      } else if (transform.name == "reflect") {
+        if (sawReflect) {
+          if (addTransformDiagnostic("duplicate reflect transform on " + def.fullPath)) {
+            return false;
+          }
+          break;
+        }
+        sawReflect = true;
+        if (!transform.templateArgs.empty()) {
+          if (addTransformDiagnostic("reflect transform does not accept template arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
+        }
+        if (!transform.arguments.empty()) {
+          if (addTransformDiagnostic("reflect transform does not accept arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
+        }
+      } else if (transform.name == "generate") {
+        if (sawGenerate) {
+          if (addTransformDiagnostic("duplicate generate transform on " + def.fullPath)) {
+            return false;
+          }
+          break;
+        }
+        sawGenerate = true;
+        if (!transform.templateArgs.empty()) {
+          if (addTransformDiagnostic("generate transform does not accept template arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
+        }
+        if (transform.arguments.empty()) {
+          if (addTransformDiagnostic("generate transform requires at least one generator on " + def.fullPath)) {
+            return false;
+          }
+          break;
+        }
+        std::unordered_set<std::string> seenGenerators;
+        for (const auto &generator : transform.arguments) {
+          if (!isSupportedReflectionGeneratorName(generator)) {
+            if (addTransformDiagnostic("unsupported reflection generator on " + def.fullPath + ": " + generator)) {
+              return false;
+            }
+            break;
+          }
+          if (!seenGenerators.insert(generator).second) {
+            if (addTransformDiagnostic("duplicate reflection generator on " + def.fullPath + ": " + generator)) {
+              return false;
+            }
+            break;
+          }
+        }
+        if (definitionTransformError) {
+          break;
+        }
       } else if (isStructTransformName(transform.name)) {
         if (!transform.templateArgs.empty()) {
           if (addTransformDiagnostic("struct transform does not accept template arguments on " + def.fullPath)) {
@@ -498,6 +558,18 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     if (isStruct || isFieldOnlyStruct) {
       structNames_.insert(def.fullPath);
+    }
+    if ((sawReflect || sawGenerate) && !isStruct && !isFieldOnlyStruct) {
+      if (addTransformDiagnostic("reflection transforms are only valid on struct definitions: " + def.fullPath)) {
+        return false;
+      }
+      continue;
+    }
+    if (sawGenerate && !sawReflect) {
+      if (addTransformDiagnostic("generate transform requires reflect on " + def.fullPath)) {
+        return false;
+      }
+      continue;
     }
     if (isStruct) {
       explicitStructs.insert(def.fullPath);

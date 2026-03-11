@@ -118,6 +118,27 @@ task(1i32)
   CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
 }
 
+TEST_CASE("reflection transforms are rejected on executions") {
+  const char *reflectionTransforms[] = {"reflect", "generate(Equal)"};
+  for (const auto *reflectionTransform : reflectionTransforms) {
+    CAPTURE(reflectionTransform);
+    const std::string source =
+        std::string("[return<int>]\n"
+                    "task([i32] x) {\n"
+                    "  return(x)\n"
+                    "}\n\n"
+                    "[return<int>]\n"
+                    "main() {\n"
+                    "  return(1i32)\n"
+                    "}\n\n[") +
+        reflectionTransform + "]\n"
+                              "task(1i32)\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("reflection transforms are only valid on struct definitions") != std::string::npos);
+  }
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.semantics.builtin_calls");

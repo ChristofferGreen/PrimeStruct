@@ -60,7 +60,7 @@ Legend:
 - ✓ Add an ADR documenting backend boundary policy: all codegen consumes IR only. Added `docs/adr/0001-backend-ir-boundary.md` (accepted decision + guardrails) and linked it from `docs/PrimeStruct.md` compilation model notes.
 
 **Reflection Codegen Roadmap (March 6, 2026)**
-- ○ Add reflection syntax/validation for struct definitions: `[reflect]` plus `[generate(...)]` with deterministic diagnostics for unsupported targets/generators.
+- ✓ Add reflection syntax/validation for struct definitions: `[reflect]` plus `[generate(...)]` with deterministic diagnostics for unsupported targets/generators. Implemented parser+semantics coverage for reflection transforms, added struct-only target checks (definitions and execution rejection), and added deterministic diagnostics for `generate(...)` shape/allowlist issues (requires `[reflect]`, duplicate/unsupported generator names).
 - ○ Define baseline reflection API scope for v1: compile-time-only metadata queries with no runtime reflection objects/tables.
 - ○ Implement core reflection primitives: `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`, `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)`.
 - ○ Implement transform/trait reflection predicates for generators: `meta.has_transform<T>(name)` and trait conformance checks used by generated helper gating.

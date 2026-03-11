@@ -140,6 +140,17 @@ bool isStructTransformName(const std::string &name) {
          name == "no_padding" || name == "platform_independent_padding";
 }
 
+bool isReflectionTransformName(const std::string &name) {
+  return name == "reflect" || name == "generate";
+}
+
+bool isSupportedReflectionGeneratorName(const std::string &name) {
+  return name == "Equal" || name == "NotEqual" || name == "Default" || name == "IsDefault" ||
+         name == "Clone" || name == "DebugPrint" || name == "Compare" || name == "Hash64" ||
+         name == "Clear" || name == "CopyFrom" || name == "Validate" || name == "Serialize" ||
+         name == "Deserialize";
+}
+
 bool validateNamedArguments(const std::vector<Expr> &args,
                             const std::vector<std::optional<std::string>> &argNames,
                             const std::string &context,

@@ -598,6 +598,90 @@ main() {
   CHECK(error.find("struct transform does not accept arguments") != std::string::npos);
 }
 
+TEST_CASE("reflection transforms validate on struct definitions") {
+  const std::string source = R"(
+[struct reflect generate(Equal, DebugPrint)]
+main() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+use() {
+  [main] item{main()}
+  return(item.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/use", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reflection transforms validate on field-only structs") {
+  const std::string source = R"(
+[reflect generate(Equal)]
+main() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+use() {
+  [main] item{main()}
+  return(item.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/use", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reflect transform rejects non-struct definitions") {
+  const std::string source = R"(
+[reflect return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reflection transforms are only valid on struct definitions") != std::string::npos);
+}
+
+TEST_CASE("generate transform requires reflect") {
+  const std::string source = R"(
+[struct generate(Equal)]
+main() {
+  [i32] value{1i32}
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("generate transform requires reflect") != std::string::npos);
+}
+
+TEST_CASE("generate transform rejects unsupported reflection generators") {
+  const std::string source = R"(
+[struct reflect generate(UnknownHelper)]
+main() {
+  [i32] value{1i32}
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported reflection generator on /main: UnknownHelper") != std::string::npos);
+}
+
+TEST_CASE("generate transform rejects duplicate reflection generators") {
+  const std::string source = R"(
+[struct reflect generate(Equal, Equal)]
+main() {
+  [i32] value{1i32}
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate reflection generator on /main: Equal") != std::string::npos);
+}
+
 TEST_CASE("struct transform rejects return transform") {
   const std::string source = R"(
 [struct, return<int>]

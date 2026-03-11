@@ -160,6 +160,9 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
     } else if (isBindingQualifierName(transform.name)) {
       error_ = "binding visibility/static transforms are only valid on bindings: " + context;
       return false;
+    } else if (isReflectionTransformName(transform.name)) {
+      error_ = "reflection transforms are only valid on struct definitions: " + context;
+      return false;
     } else if (isStructTransformName(transform.name)) {
       error_ = "struct transforms are not allowed on executions: " + context;
       return false;
@@ -1453,6 +1456,9 @@ bool SemanticsValidator::validateExecutions() {
         }
       } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
         error_ = "alignment transforms are not supported on executions: " + exec.fullPath;
+        return false;
+      } else if (isReflectionTransformName(transform.name)) {
+        error_ = "reflection transforms are only valid on struct definitions: " + exec.fullPath;
         return false;
       } else if (isStructTransformName(transform.name)) {
         error_ = "struct transforms are not allowed on executions: " + exec.fullPath;
