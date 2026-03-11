@@ -472,7 +472,7 @@ std::string resolveMethodReceiverStructTypePathFromCallExpr(
     return "";
   }
 
-  std::string resolved = resolvedReceiverPath;
+  std::string resolved = normalizeMapImportAliasPath(resolvedReceiverPath);
   auto importIt = importAliases.find(receiverCallExpr.name);
   if (structNames.count(resolved) == 0 && importIt != importAliases.end()) {
     resolved = normalizeMapImportAliasPath(importIt->second);
