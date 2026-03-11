@@ -570,7 +570,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return nullptr;
   };
   if (!resolvedTypePath.empty()) {
-    const std::string resolved = resolvedTypePath + "/" + normalizedMethodName;
+    std::string normalizedResolvedTypePath = resolvedTypePath;
+    if (!normalizedResolvedTypePath.empty() && normalizedResolvedTypePath.front() != '/') {
+      normalizedResolvedTypePath.insert(normalizedResolvedTypePath.begin(), '/');
+    }
+    const std::string resolved = normalizedResolvedTypePath + "/" + normalizedMethodName;
     const Definition *resolvedDef = findMethodDefinitionByPath(resolved);
     if (resolvedDef == nullptr) {
       errorOut = "unknown method: " + resolved;

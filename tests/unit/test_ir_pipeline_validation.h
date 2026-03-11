@@ -15556,6 +15556,10 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
             "at", "/std/collections/map", "", defMap, error) == &mapAtDef);
   CHECK(error.empty());
 
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "at", "", "std/collections/map", defMap, error) == &mapAtDef);
+  CHECK(error.empty());
+
   const std::unordered_map<std::string, const primec::Definition *> canonicalMapDefMap = {
       {"/std/collections/map/at", &stdMapAtDef},
   };
@@ -15569,6 +15573,10 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "at", "/std/collections/map", "", canonicalMapDefMap, error) == &stdMapAtDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "at", "", "std/collections/map", canonicalMapDefMap, error) == &stdMapAtDef);
   CHECK(error.empty());
 }
 
@@ -15588,6 +15596,11 @@ TEST_CASE("ir lowerer setup type helper reports method target lookup diagnostics
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "missing", "", "/pkg/Ctor", defMap, error) == nullptr);
   CHECK(error == "unknown method: /pkg/Ctor/missing");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "missing", "", "std/collections/map", defMap, error) == nullptr);
+  CHECK(error == "unknown method: /std/collections/map/missing");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
