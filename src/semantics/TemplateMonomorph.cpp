@@ -1411,26 +1411,34 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   return root;
 }
 
-bool inferStdlibVectorHelperTemplateArgs(const Definition &def,
-                                         const Expr &callExpr,
-                                         const LocalTypeMap &locals,
-                                         const std::vector<ParameterInfo> &params,
-                                         const SubstMap &mapping,
-                                         const std::unordered_set<std::string> &allowedParams,
-                                         const std::string &namespacePrefix,
-                                         Context &ctx,
-                                         bool allowMathBare,
-                                         std::vector<std::string> &outArgs) {
-  if (def.fullPath.rfind("/std/collections/vector/", 0) != 0) {
+bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
+                                             const Expr &callExpr,
+                                             const LocalTypeMap &locals,
+                                             const std::vector<ParameterInfo> &params,
+                                             const SubstMap &mapping,
+                                             const std::unordered_set<std::string> &allowedParams,
+                                             const std::string &namespacePrefix,
+                                             Context &ctx,
+                                             bool allowMathBare,
+                                             std::vector<std::string> &outArgs) {
+  enum class HelperFamily { None, Vector, Map };
+  HelperFamily family = HelperFamily::None;
+  if (def.fullPath.rfind("/std/collections/vector/", 0) == 0) {
+    family = HelperFamily::Vector;
+    const std::string helperSuffix = def.fullPath.substr(std::string("/std/collections/vector/").size());
+    const std::string vectorAliasPath = "/vector/" + helperSuffix;
+    const std::string arrayAliasPath = "/array/" + helperSuffix;
+    if (ctx.sourceDefs.count(vectorAliasPath) == 0 && ctx.sourceDefs.count(arrayAliasPath) == 0) {
+      return false;
+    }
+  } else if (def.fullPath.rfind("/std/collections/map/", 0) == 0) {
+    family = HelperFamily::Map;
+  } else if (def.fullPath.rfind("/map/", 0) == 0) {
+    family = HelperFamily::Map;
+  } else {
     return false;
   }
-  const std::string helperSuffix = def.fullPath.substr(std::string("/std/collections/vector/").size());
-  const std::string vectorAliasPath = "/vector/" + helperSuffix;
-  const std::string arrayAliasPath = "/array/" + helperSuffix;
-  if (ctx.sourceDefs.count(vectorAliasPath) == 0 && ctx.sourceDefs.count(arrayAliasPath) == 0) {
-    return false;
-  }
-  if (def.templateArgs.size() != 1 || def.parameters.empty()) {
+  if (def.parameters.empty()) {
     return false;
   }
   BindingInfo receiverParamInfo;
@@ -1438,13 +1446,35 @@ bool inferStdlibVectorHelperTemplateArgs(const Definition &def,
     return false;
   }
   const std::string normalizedReceiverParamType = normalizeBindingTypeName(receiverParamInfo.typeName);
-  if (normalizedReceiverParamType != "vector" && normalizedReceiverParamType != "soa_vector") {
+  size_t expectedTemplateArgCount = 0;
+  if (family == HelperFamily::Vector) {
+    if (def.templateArgs.size() != 1) {
+      return false;
+    }
+    if (normalizedReceiverParamType != "vector" && normalizedReceiverParamType != "soa_vector") {
+      return false;
+    }
+    expectedTemplateArgCount = 1;
+  } else if (family == HelperFamily::Map) {
+    if (def.templateArgs.size() != 2) {
+      return false;
+    }
+    if (normalizedReceiverParamType != "map") {
+      return false;
+    }
+    expectedTemplateArgCount = 2;
+  } else {
     return false;
   }
   std::vector<std::string> receiverParamTemplateArgs;
   if (!splitTopLevelTemplateArgs(receiverParamInfo.typeTemplateArg, receiverParamTemplateArgs) ||
-      receiverParamTemplateArgs.size() != 1 || trimWhitespace(receiverParamTemplateArgs.front()) != def.templateArgs.front()) {
+      receiverParamTemplateArgs.size() != expectedTemplateArgCount) {
     return false;
+  }
+  for (size_t i = 0; i < expectedTemplateArgCount; ++i) {
+    if (trimWhitespace(receiverParamTemplateArgs[i]) != def.templateArgs[i]) {
+      return false;
+    }
   }
 
   std::vector<ParameterInfo> callParams;
@@ -1486,17 +1516,20 @@ bool inferStdlibVectorHelperTemplateArgs(const Definition &def,
 
   std::vector<std::string> receiverArgTemplateArgs;
   if (!splitTopLevelTemplateArgs(receiverArgTemplateArg, receiverArgTemplateArgs) ||
-      receiverArgTemplateArgs.size() != 1) {
-    return false;
-  }
-  std::string resolvedError;
-  ResolvedType resolvedArg = resolveTypeString(
-      receiverArgTemplateArgs.front(), mapping, allowedParams, namespacePrefix, ctx, resolvedError);
-  if (!resolvedError.empty() || !resolvedArg.concrete || resolvedArg.text.empty()) {
+      receiverArgTemplateArgs.size() != expectedTemplateArgCount) {
     return false;
   }
   outArgs.clear();
-  outArgs.push_back(resolvedArg.text);
+  outArgs.reserve(expectedTemplateArgCount);
+  for (const auto &receiverArgTemplate : receiverArgTemplateArgs) {
+    std::string resolvedError;
+    ResolvedType resolvedArg =
+        resolveTypeString(receiverArgTemplate, mapping, allowedParams, namespacePrefix, ctx, resolvedError);
+    if (!resolvedError.empty() || !resolvedArg.concrete || resolvedArg.text.empty()) {
+      return false;
+    }
+    outArgs.push_back(resolvedArg.text);
+  }
   return true;
 }
 
@@ -1630,16 +1663,16 @@ bool rewriteExpr(Expr &expr,
             expr.templateArgs = std::move(inferredArgs);
             allConcrete = true;
           } else if (error.empty() &&
-                     inferStdlibVectorHelperTemplateArgs(defIt->second,
-                                                         expr,
-                                                         locals,
-                                                         params,
-                                                         mapping,
-                                                         allowedParams,
-                                                         namespacePrefix,
-                                                         ctx,
-                                                         allowMathBare,
-                                                         inferredArgs)) {
+                     inferStdlibCollectionHelperTemplateArgs(defIt->second,
+                                                             expr,
+                                                             locals,
+                                                             params,
+                                                             mapping,
+                                                             allowedParams,
+                                                             namespacePrefix,
+                                                             ctx,
+                                                             allowMathBare,
+                                                             inferredArgs)) {
             expr.templateArgs = std::move(inferredArgs);
             allConcrete = true;
           } else if (!error.empty()) {
@@ -1696,16 +1729,16 @@ bool rewriteExpr(Expr &expr,
               expr.templateArgs = std::move(inferredArgs);
               allConcrete = true;
             } else if (error.empty() &&
-                       inferStdlibVectorHelperTemplateArgs(defIt->second,
-                                                           expr,
-                                                           locals,
-                                                           params,
-                                                           mapping,
-                                                           allowedParams,
-                                                           namespacePrefix,
-                                                           ctx,
-                                                           allowMathBare,
-                                                           inferredArgs)) {
+                       inferStdlibCollectionHelperTemplateArgs(defIt->second,
+                                                               expr,
+                                                               locals,
+                                                               params,
+                                                               mapping,
+                                                               allowedParams,
+                                                               namespacePrefix,
+                                                               ctx,
+                                                               allowMathBare,
+                                                               inferredArgs)) {
               expr.templateArgs = std::move(inferredArgs);
               allConcrete = true;
             } else if (!error.empty()) {
