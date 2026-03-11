@@ -5027,6 +5027,25 @@ TEST_CASE("emitter expr control call-path step rewrites non-method call names") 
       {}).has_value());
 }
 
+TEST_CASE("emitter helpers types normalize slashless map import aliases") {
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"MapCanonicalAlias", "std/collections/map/at"},
+      {"MapCompatAlias", "map/at"},
+      {"NonMapAlias", "pkg/Thing"},
+  };
+  const std::unordered_map<std::string, std::string> structTypeMap = {
+      {"/std/collections/map/at", "CanonicalMapAtType"},
+      {"/map/at", "CompatMapAtType"},
+      {"/pkg/Thing", "PkgThingType"},
+  };
+
+  CHECK(primec::emitter::bindingTypeToCpp("MapCanonicalAlias", "/pkg", importAliases, structTypeMap) ==
+        "CanonicalMapAtType");
+  CHECK(primec::emitter::bindingTypeToCpp("MapCompatAlias", "/pkg", importAliases, structTypeMap) ==
+        "CompatMapAtType");
+  CHECK(primec::emitter::bindingTypeToCpp("NonMapAlias", "/pkg", importAliases, structTypeMap) == "int");
+}
+
 TEST_CASE("emitter expr control method-path step rewrites eligible method calls") {
   primec::Expr nonMethodExpr;
   nonMethodExpr.kind = primec::Expr::Kind::Call;
