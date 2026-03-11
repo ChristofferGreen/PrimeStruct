@@ -1878,13 +1878,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           candidate.erase(candidate.begin());
         }
         std::string_view helperName;
+        bool isStdNamespacedVectorHelper = false;
         if (candidate.rfind("array/", 0) == 0) {
           helperName = std::string_view(candidate).substr(std::string_view("array/").size());
         } else if (candidate.rfind("vector/", 0) == 0) {
           helperName = std::string_view(candidate).substr(std::string_view("vector/").size());
+        } else if (candidate.rfind("std/collections/vector/", 0) == 0) {
+          helperName = std::string_view(candidate).substr(std::string_view("std/collections/vector/").size());
+          isStdNamespacedVectorHelper = true;
         }
         if (helperName.empty() || !isRemovedVectorCompatibilityHelper(helperName)) {
           return "";
+        }
+        if (isStdNamespacedVectorHelper) {
+          return "/vector/" + std::string(helperName);
         }
         return "/" + candidate;
       };
