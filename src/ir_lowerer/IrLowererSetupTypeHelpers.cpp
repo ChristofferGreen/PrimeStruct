@@ -489,6 +489,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
   } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+  } else if (normalizedMethodName.rfind("map/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
+  } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
   auto findMethodDefinitionByPath = [&](const std::string &path) -> const Definition * {
     auto defIt = defMap.find(path);
