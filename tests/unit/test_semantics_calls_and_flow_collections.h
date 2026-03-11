@@ -4129,7 +4129,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias implicitly forwards to templated canonical helper on arity mismatch") {
+TEST_CASE("vector namespaced count alias arity mismatch rejects compatibility template forwarding") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -4148,8 +4148,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced alias implicitly forwards on bool type mismatch with same arity") {

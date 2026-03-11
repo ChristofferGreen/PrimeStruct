@@ -459,6 +459,25 @@ bool definitionAcceptsCallShape(const Definition &def, const Expr &expr) {
   return buildOrderedArguments(params, expr.args, expr.argNames, ordered, error);
 }
 
+bool definitionHasArgumentCountMismatch(const Definition &def, const Expr &expr) {
+  std::vector<ParameterInfo> params;
+  params.reserve(def.parameters.size());
+  for (const auto &paramExpr : def.parameters) {
+    ParameterInfo param;
+    param.name = paramExpr.name;
+    if (paramExpr.args.size() == 1) {
+      param.defaultExpr = &paramExpr.args.front();
+    }
+    params.push_back(std::move(param));
+  }
+  std::vector<const Expr *> ordered;
+  std::string error;
+  if (buildOrderedArguments(params, expr.args, expr.argNames, ordered, error)) {
+    return false;
+  }
+  return error.find("argument count mismatch") != std::string::npos;
+}
+
 bool hasNamedCallArguments(const Expr &expr) {
   for (const auto &argName : expr.argNames) {
     if (argName.has_value()) {
@@ -778,9 +797,10 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
     return path;
   }
   const bool acceptsCallShape = definitionAcceptsCallShape(defIt->second, expr);
-  if (!acceptsCallShape && path == "/vector/count" && hasNamedCallArguments(expr)) {
+  if (!acceptsCallShape && path == "/vector/count" &&
+      (hasNamedCallArguments(expr) || definitionHasArgumentCountMismatch(defIt->second, expr))) {
     // Keep diagnostics on explicit compatibility helpers when named arguments
-    // do not match the declared /vector/count shape.
+    // or argument counts do not match the declared /vector/count shape.
     return path;
   }
   const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);

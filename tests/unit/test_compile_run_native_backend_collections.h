@@ -704,7 +704,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native vector alias implicit canonical templated forwarding on arity mismatch") {
+TEST_CASE("rejects native vector alias arity-mismatch compatibility template forwarding") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -723,15 +723,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_vector_alias_implicit_canonical_templated_forwarding_arity_mismatch.prime", source);
-  const std::string exePath =
+      writeTemp("compile_native_vector_alias_arity_mismatch_compatibility_template_forwarding_reject.prime", source);
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_vector_alias_implicit_canonical_templated_forwarding_arity_mismatch_exe")
+       "primec_native_vector_alias_arity_mismatch_compatibility_template_forwarding_reject_err.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("argument count mismatch for /vector/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native vector alias implicit canonical forwarding on bool type mismatch") {
