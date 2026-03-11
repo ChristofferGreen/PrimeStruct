@@ -472,13 +472,27 @@ std::string resolveMethodReceiverStructTypePathFromCallExpr(
     return "";
   }
 
+  auto resolveStructPathCandidates = [&](const std::string &path) -> std::string {
+    const auto candidates = collectionHelperPathCandidates(normalizeMapImportAliasPath(path));
+    for (const auto &candidate : candidates) {
+      if (structNames.count(candidate) > 0) {
+        return candidate;
+      }
+    }
+    return "";
+  };
+
   std::string resolved = normalizeMapImportAliasPath(resolvedReceiverPath);
   auto importIt = importAliases.find(receiverCallExpr.name);
-  if (structNames.count(resolved) == 0 && importIt != importAliases.end()) {
-    resolved = normalizeMapImportAliasPath(importIt->second);
+  std::string matched = resolveStructPathCandidates(resolved);
+  if (!matched.empty()) {
+    return matched;
   }
-  if (structNames.count(resolved) > 0) {
-    return resolved;
+  if (importIt != importAliases.end()) {
+    matched = resolveStructPathCandidates(importIt->second);
+    if (!matched.empty()) {
+      return matched;
+    }
   }
   return "";
 }

@@ -15604,6 +15604,21 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver struct paths fr
             receiverCall, "std/collections/map/at", importAliases, structNames) == "/std/collections/map/at");
   CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
             receiverCall, "map/at", importAliases, structNames) == "/map/at");
+
+  const std::unordered_set<std::string> canonicalOnlyStructNames = {
+      "/std/collections/map/at",
+  };
+  receiverCall.name = "MapCompatAlias";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/not-struct/MapCompatAlias", importAliases, canonicalOnlyStructNames) ==
+        "/std/collections/map/at");
+
+  const std::unordered_set<std::string> compatOnlyStructNames = {
+      "/map/at",
+  };
+  receiverCall.name = "MapCanonicalAlias";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/not-struct/MapCanonicalAlias", importAliases, compatOnlyStructNames) == "/map/at");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects non-struct method receiver call paths") {
