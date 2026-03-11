@@ -60,7 +60,7 @@ Legend:
 - ✓ Add an ADR documenting backend boundary policy: all codegen consumes IR only. Added `docs/adr/0001-backend-ir-boundary.md` (accepted decision + guardrails) and linked it from `docs/PrimeStruct.md` compilation model notes.
 
 **Architecture follow-up (IR-only backend boundary hardening)**
-- ○ Route production `--emit=cpp` and `--emit=exe` through `IrBackend` (`cpp-ir`/`exe-ir`) in `primec`, removing AST-direct emission from the default production path while preserving current output defaults.
+- ◐ Route production `--emit=cpp` and `--emit=exe` through `IrBackend` (`cpp-ir`/`exe-ir`) in `primec`, removing AST-direct emission from the default production path while preserving current output defaults. Progress: added shared emit-kind alias resolution (`cpp -> cpp-ir`, `exe -> exe-ir`, plus existing `glsl`/`spirv` aliases) in `primec::resolveIrBackendEmitKind(...)` and routed `main` backend lookup through that helper, so production alias mapping is centralized and source-locked ahead of flipping the default `cpp`/`exe` path.
 - ○ Extract shared IR preparation/execution orchestration (`lower -> ir-validate -> optional ir-inline -> revalidate -> emit`) into one helper used by both `primec` and `primevm` to remove duplicated backend flow logic.
 - ○ Expand backend parity coverage to gate the migration: add focused regressions that compare `cpp` vs `cpp-ir` and `exe` vs `exe-ir` for source output shape, runtime behavior, and diagnostics (JSON + text).
 - ○ Add a guardrail test that fails if any production `primec --emit` mode bypasses `IrBackend` or reintroduces AST-direct production emission.

@@ -7,6 +7,7 @@
 #include <string_view>
 #include <vector>
 
+#include "primec/EmitKind.h"
 #include "primec/IrBackends.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
@@ -64,7 +65,17 @@ TEST_CASE("ir backend registry reports deterministic order and lookup") {
   CHECK(primec::findIrBackend("glsl") == nullptr);
 }
 
-TEST_CASE("main routes cpp/exe through dedicated emit path") {
+TEST_CASE("emit kind aliases resolve to canonical ir backend kinds") {
+  CHECK(primec::resolveIrBackendEmitKind("cpp") == "cpp-ir");
+  CHECK(primec::resolveIrBackendEmitKind("exe") == "exe-ir");
+  CHECK(primec::resolveIrBackendEmitKind("glsl") == "glsl-ir");
+  CHECK(primec::resolveIrBackendEmitKind("spirv") == "spirv-ir");
+  CHECK(primec::resolveIrBackendEmitKind("cpp-ir") == "cpp-ir");
+  CHECK(primec::resolveIrBackendEmitKind("native") == "native");
+  CHECK(primec::resolveIrBackendEmitKind("unknown") == "unknown");
+}
+
+TEST_CASE("main keeps cpp/exe dedicated emit path while using ir emit alias resolver") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";
   if (!std::filesystem::exists(mainPath)) {
@@ -76,6 +87,7 @@ TEST_CASE("main routes cpp/exe through dedicated emit path") {
   CHECK(source.find("if ((options.emitKind == \"cpp\" || options.emitKind == \"exe\"))") != std::string::npos);
   CHECK(source.find("if (options.emitKind == \"cpp\" || options.emitKind == \"exe\")") != std::string::npos);
   CHECK(source.find("emitter.emitCpp(program, options.entryPath)") != std::string::npos);
+  CHECK(source.find("resolveIrBackendEmitKind(options.emitKind)") != std::string::npos);
 }
 
 TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {
@@ -87,10 +99,12 @@ TEST_CASE("main routes glsl and spirv through ir backends without legacy fallbac
   REQUIRE(std::filesystem::exists(mainPath));
 
   const std::string source = readTextFile(mainPath);
-  CHECK(source.find("findIrBackend(\"glsl-ir\")") != std::string::npos);
-  CHECK(source.find("findIrBackend(\"spirv-ir\")") != std::string::npos);
+  CHECK(source.find("resolveIrBackendEmitKind(options.emitKind)") != std::string::npos);
+  CHECK(source.find("findIrBackend(options.emitKind)") == std::string::npos);
   CHECK(source.find("if (options.emitKind == \"glsl\")") == std::string::npos);
   CHECK(source.find("if (options.emitKind == \"spirv\")") == std::string::npos);
+  CHECK(source.find("if (irBackend == nullptr && options.emitKind == \"glsl\")") == std::string::npos);
+  CHECK(source.find("if (irBackend == nullptr && options.emitKind == \"spirv\")") == std::string::npos);
   CHECK(source.find("if (irFailure.stage != IrBackendRunFailureStage::Emit)") == std::string::npos);
 }
 

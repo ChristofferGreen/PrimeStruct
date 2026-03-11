@@ -1,5 +1,6 @@
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
+#include "primec/EmitKind.h"
 #include "primec/Emitter.h"
 #include "primec/ExternalTooling.h"
 #include "primec/IrBackends.h"
@@ -570,12 +571,8 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  const primec::IrBackend *irBackend = primec::findIrBackend(options.emitKind);
-  if (irBackend == nullptr && options.emitKind == "glsl") {
-    irBackend = primec::findIrBackend("glsl-ir");
-  } else if (irBackend == nullptr && options.emitKind == "spirv") {
-    irBackend = primec::findIrBackend("spirv-ir");
-  }
+  const std::string_view irBackendKind = primec::resolveIrBackendEmitKind(options.emitKind);
+  const primec::IrBackend *irBackend = primec::findIrBackend(irBackendKind);
 
   if (irBackend != nullptr && irBackend->requiresOutputPath() && !options.outputPath.empty()) {
     std::filesystem::path resolved = resolveOutputPath(options);

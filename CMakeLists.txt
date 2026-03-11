@@ -11,6 +11,7 @@ add_library(primec_lib
   src/AstPrinter.cpp
   src/CompilePipeline.cpp
   src/Diagnostics.cpp
+  src/EmitKind.cpp
   src/ExternalTooling.cpp
   src/emitter/EmitterEmit.cpp
   src/emitter/EmitterEmitSetupLifecycleHelperStep.cpp
