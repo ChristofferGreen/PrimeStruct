@@ -459,6 +459,15 @@ bool definitionAcceptsCallShape(const Definition &def, const Expr &expr) {
   return buildOrderedArguments(params, expr.args, expr.argNames, ordered, error);
 }
 
+bool hasNamedCallArguments(const Expr &expr) {
+  for (const auto &argName : expr.argNames) {
+    if (argName.has_value()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind) {
   switch (expectedKind) {
     case ReturnKind::Integer:
@@ -768,8 +777,14 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
   if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
     return path;
   }
+  const bool acceptsCallShape = definitionAcceptsCallShape(defIt->second, expr);
+  if (!acceptsCallShape && path == "/vector/count" && hasNamedCallArguments(expr)) {
+    // Keep diagnostics on explicit compatibility helpers when named arguments
+    // do not match the declared /vector/count shape.
+    return path;
+  }
   const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);
-  if (definitionAcceptsCallShape(defIt->second, expr) &&
+  if (acceptsCallShape &&
       !shouldPreferTemplatedVectorFallbackForTypeMismatch(
           defIt->second, expr, locals, params, allowMathBare, ctx, namespacePrefix)) {
     return path;

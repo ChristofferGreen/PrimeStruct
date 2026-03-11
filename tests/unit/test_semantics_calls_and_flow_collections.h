@@ -4908,7 +4908,7 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias implicitly forwards with named arguments") {
+TEST_CASE("vector namespaced count alias named arguments reject compatibility template forwarding") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -4928,11 +4928,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown named argument: marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced named-arg implicit forwarding keeps canonical diagnostics") {
+TEST_CASE("vector namespaced count alias named arguments keep compatibility diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -4952,8 +4952,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("unknown named argument: marker") != std::string::npos);
 }
 
 TEST_CASE("array namespaced templated count alias is rejected") {

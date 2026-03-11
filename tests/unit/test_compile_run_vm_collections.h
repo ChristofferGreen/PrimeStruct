@@ -886,7 +886,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("runs vm with vector alias implicit canonical templated forwarding on named args") {
+TEST_CASE("rejects vm vector alias named-argument compatibility template forwarding") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -906,9 +906,13 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_vector_alias_implicit_canonical_templated_forwarding_named_args.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+      writeTemp("vm_vector_alias_named_argument_compatibility_template_forwarding_reject.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_vector_alias_named_argument_compatibility_template_forwarding_reject_out.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown named argument: marker") != std::string::npos);
 }
 
 TEST_CASE("runs vm with wrapper temporary templated vector method canonical forwarding") {

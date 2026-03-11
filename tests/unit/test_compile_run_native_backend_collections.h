@@ -1214,7 +1214,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native vector alias implicit canonical templated forwarding on named args") {
+TEST_CASE("rejects native vector alias named-argument compatibility template forwarding") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -1234,15 +1234,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_vector_alias_implicit_canonical_templated_forwarding_named_args.prime", source);
-  const std::string exePath =
+      writeTemp("compile_native_vector_alias_named_argument_compatibility_template_forwarding_reject.prime", source);
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_vector_alias_implicit_canonical_templated_forwarding_named_args_exe")
+       "primec_native_vector_alias_named_argument_compatibility_template_forwarding_reject_err.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown named argument: marker") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native wrapper temporary templated vector method canonical forwarding") {
