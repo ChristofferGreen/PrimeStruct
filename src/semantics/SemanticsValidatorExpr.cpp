@@ -2921,9 +2921,33 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
     }
+      auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
+        return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+               helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+               helperName == "remove_at" || helperName == "remove_swap";
+      };
+      auto shouldPreserveBodyArgumentTarget = [&](const std::string &path) -> bool {
+        auto helperSuffix = [](const std::string &candidate, const char *prefix) -> std::string_view {
+          const size_t prefixLen = std::char_traits<char>::length(prefix);
+          if (candidate.rfind(prefix, 0) != 0 || candidate.size() <= prefixLen) {
+            return std::string_view();
+          }
+          return std::string_view(candidate).substr(prefixLen);
+        };
+        std::string_view helper = helperSuffix(path, "/vector/");
+        if (helper.empty()) {
+          helper = helperSuffix(path, "/array/");
+        }
+        if (helper.empty()) {
+          helper = helperSuffix(path, "/std/collections/vector/");
+        }
+        return !helper.empty() && isRemovedVectorCompatibilityHelper(helper);
+      };
       if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlockCall(expr)) {
         if (!resolvedMethod) {
-          resolved = preferVectorStdlibHelperPath(resolved);
+          if (!shouldPreserveBodyArgumentTarget(resolved)) {
+            resolved = preferVectorStdlibHelperPath(resolved);
+          }
         }
         if (resolvedMethod || defMap_.find(resolved) == defMap_.end()) {
           error_ = "block arguments require a definition target: " + resolved;

@@ -3070,7 +3070,7 @@ main() {
   CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector helper alias resolves for statement body arguments" * doctest::skip()) {
+TEST_CASE("stdlib namespaced vector helper alias rejects statement body arguments") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -3082,11 +3082,11 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   values./std/collections/vector/count(true) { 1i32 }
   return(0i32)
-}
+  }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("array namespaced slash method spelling block-arg diagnostics keep divide target") {
@@ -3122,7 +3122,7 @@ main() {
   CHECK(error.find("block arguments require a definition target: /array/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced helper call form resolves for statement body arguments" * doctest::skip()) {
+TEST_CASE("vector namespaced helper call form rejects statement body arguments") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -3134,14 +3134,14 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   /vector/count(values, true) { 1i32 }
   return(0i32)
-}
+  }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib canonical vector helper call form falls back for statement body arguments" * doctest::skip()) {
+TEST_CASE("stdlib canonical vector helper call form rejects compatibility fallback for statement body arguments") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -3153,11 +3153,11 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   /std/collections/vector/count(values, true) { 1i32 }
   return(0i32)
-}
+  }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector helper call form rejects expression body arguments") {
@@ -3178,7 +3178,7 @@ main() {
   CHECK(error.find("unknown call target: /array/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced helper call form resolves for expression body arguments" * doctest::skip()) {
+TEST_CASE("vector namespaced helper call form rejects expression body arguments") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -3189,14 +3189,14 @@ TEST_CASE("vector namespaced helper call form resolves for expression body argum
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(/vector/count(values, true) { 1i32 })
-}
+  }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib canonical vector helper call-form expression body arguments keep fallback diagnostics" * doctest::skip()) {
+TEST_CASE("stdlib canonical vector helper call-form expression body arguments reject compatibility fallback") {
   const std::string source = R"(
 [return<bool>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -3207,12 +3207,12 @@ TEST_CASE("stdlib canonical vector helper call-form expression body arguments ke
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(/std/collections/vector/count(values, true) { 1i32 })
-}
+  }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected i32") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /std/collections/vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("array namespaced slash method pointer receiver diagnostics keep divide target") {

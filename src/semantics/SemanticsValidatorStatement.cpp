@@ -2227,13 +2227,41 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
     }
   }
+  auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
+    return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+           helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+           helperName == "remove_at" || helperName == "remove_swap";
+  };
+  auto shouldPreserveBodyArgumentTarget = [&](const std::string &path) -> bool {
+    auto helperSuffix = [](const std::string &candidate, const char *prefix) -> std::string_view {
+      const size_t prefixLen = std::char_traits<char>::length(prefix);
+      if (candidate.rfind(prefix, 0) != 0 || candidate.size() <= prefixLen) {
+        return std::string_view();
+      }
+      return std::string_view(candidate).substr(prefixLen);
+    };
+    std::string_view helper = helperSuffix(path, "/vector/");
+    if (helper.empty()) {
+      helper = helperSuffix(path, "/array/");
+    }
+    if (helper.empty()) {
+      helper = helperSuffix(path, "/std/collections/vector/");
+    }
+    return !helper.empty() && isRemovedVectorCompatibilityHelper(helper);
+  };
+  auto normalizeBodyArgumentTarget = [&](const std::string &path) {
+    if (shouldPreserveBodyArgumentTarget(path)) {
+      return path;
+    }
+    return preferVectorStdlibHelperPath(path);
+  };
   auto resolveBodyArgumentTarget = [&](const Expr &callExpr, std::string &resolvedOut) {
     if (!callExpr.isMethodCall) {
-      resolvedOut = preferVectorStdlibHelperPath(resolveCalleePath(callExpr));
+      resolvedOut = normalizeBodyArgumentTarget(resolveCalleePath(callExpr));
       return;
     }
     if (callExpr.args.empty()) {
-      resolvedOut = preferVectorStdlibHelperPath(resolveCalleePath(callExpr));
+      resolvedOut = normalizeBodyArgumentTarget(resolveCalleePath(callExpr));
       return;
     }
     const Expr &receiver = callExpr.args.front();
@@ -2250,7 +2278,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
       const std::string resolvedType = resolveCalleePath(receiver);
       if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
-        resolvedOut = preferVectorStdlibHelperPath(resolvedType + "/" + methodName);
+        resolvedOut = normalizeBodyArgumentTarget(resolvedType + "/" + methodName);
         return;
       }
     }
@@ -2376,11 +2404,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return;
     }
     if (typeName.empty()) {
-      resolvedOut = preferVectorStdlibHelperPath(resolveCalleePath(callExpr));
+      resolvedOut = normalizeBodyArgumentTarget(resolveCalleePath(callExpr));
       return;
     }
     if (isPrimitiveBindingTypeName(typeName)) {
-      resolvedOut = preferVectorStdlibHelperPath("/" + normalizeBindingTypeName(typeName) + "/" + methodName);
+      resolvedOut = normalizeBodyArgumentTarget("/" + normalizeBindingTypeName(typeName) + "/" + methodName);
       return;
     }
     std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
@@ -2390,7 +2418,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         resolvedType = importIt->second;
       }
     }
-    resolvedOut = preferVectorStdlibHelperPath(resolvedType + "/" + methodName);
+    resolvedOut = normalizeBodyArgumentTarget(resolvedType + "/" + methodName);
   };
 
   if ((stmt.hasBodyArguments || !stmt.bodyArguments.empty()) && !isBuiltinBlockCall(stmt) && !stmt.isLambda) {
