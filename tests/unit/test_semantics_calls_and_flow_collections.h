@@ -6667,6 +6667,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map stdlib namespaced count expression falls back to map alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/map/count(values, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map stdlib namespaced count expression fallback keeps map alias diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/map/count(values, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /map/count") != std::string::npos);
+}
+
 TEST_CASE("map stdlib namespaced count auto inference keeps receiver helper precedence for non-builtin arity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -6680,6 +6716,25 @@ TEST_CASE("map stdlib namespaced count auto inference keeps receiver helper prec
 }
 
 [effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/map/count(values, true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map stdlib namespaced count auto inference falls back to map alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   [auto] inferred{/std/collections/map/count(values, true)}
@@ -6714,6 +6769,25 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
   CHECK(error.find("expected bool") != std::string::npos);
+}
+
+TEST_CASE("map stdlib namespaced count statement falls back to map alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  /std/collections/map/count(values, true)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map stdlib namespaced count auto inference non-builtin arity falls back to canonical helper return") {

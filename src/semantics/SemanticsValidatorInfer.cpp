@@ -374,6 +374,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           preferred = stdlibAlias;
         }
       }
+      if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string mapAlias =
+            "/map/" + preferred.substr(std::string("/std/collections/map/").size());
+        if (defMap_.count(mapAlias) > 0) {
+          preferred = mapAlias;
+        }
+      }
       return preferred;
     };
     const std::string resolvedCalleePath = preferVectorStdlibHelperPathForCall(resolveCalleePath(expr));
@@ -1058,6 +1065,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             preferred = stdlibAlias;
           }
         }
+        if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+          const std::string mapAlias =
+              "/map/" + preferred.substr(std::string("/std/collections/map/").size());
+          if (defMap_.count(mapAlias) > 0) {
+            preferred = mapAlias;
+          }
+        }
         return preferred;
       };
       auto inferPointerLikeCallReturnType = [&](const Expr &receiverExpr) -> std::string {
@@ -1598,6 +1612,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             "/std/collections/map/" + preferred.substr(std::string("/map/").size());
         if (defMap_.count(stdlibAlias) > 0) {
           preferred = stdlibAlias;
+        }
+      }
+      if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string mapAlias =
+            "/map/" + preferred.substr(std::string("/std/collections/map/").size());
+        if (defMap_.count(mapAlias) > 0) {
+          preferred = mapAlias;
         }
       }
       return preferred;

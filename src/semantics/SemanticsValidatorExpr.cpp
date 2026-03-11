@@ -1358,6 +1358,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           preferred = stdlibAlias;
         }
       }
+      if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
+        const std::string mapAlias =
+            "/map/" + preferred.substr(std::string("/std/collections/map/").size());
+        if (defMap_.count(mapAlias) > 0) {
+          preferred = mapAlias;
+        }
+      }
       return preferred;
     };
     bool hasVectorHelperCallResolution = false;
