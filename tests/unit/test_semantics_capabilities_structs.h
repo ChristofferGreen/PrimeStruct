@@ -1843,6 +1843,213 @@ main() {
   CHECK(error.find("generated reflection helper already exists: /Pair/Hash64") != std::string::npos);
 }
 
+TEST_CASE("generate Clear emits reflection helper definition") {
+  const std::string source = R"(
+[struct reflect generate(Clear)]
+Pair() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<int>]
+main() {
+  [Pair mut] value{Pair([x] 9i32, [y] 8i32)}
+  /Pair/Clear(value)
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Pair/Clear") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  REQUIRE(generated->parameters.size() == 1);
+  const primec::Expr &valueParam = generated->parameters.front();
+  CHECK(valueParam.name == "value");
+  const bool hasPairType = std::any_of(valueParam.transforms.begin(),
+                                       valueParam.transforms.end(),
+                                       [](const primec::Transform &transform) {
+                                         return transform.name == "/Pair";
+                                       });
+  const bool hasMut = std::any_of(valueParam.transforms.begin(),
+                                  valueParam.transforms.end(),
+                                  [](const primec::Transform &transform) {
+                                    return transform.name == "mut";
+                                  });
+  CHECK(hasPairType);
+  CHECK(hasMut);
+
+  bool hasVoidReturn = false;
+  for (const auto &transform : generated->transforms) {
+    if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+        transform.templateArgs.front() == "void") {
+      hasVoidReturn = true;
+    }
+  }
+  CHECK(hasVoidReturn);
+  CHECK_FALSE(generated->hasReturnStatement);
+  CHECK_FALSE(generated->returnExpr.has_value());
+
+  REQUIRE(generated->statements.size() == 3);
+  const primec::Expr &defaultValueBinding = generated->statements[0];
+  CHECK(defaultValueBinding.isBinding);
+  CHECK(defaultValueBinding.name == "defaultValue");
+  REQUIRE(defaultValueBinding.args.size() == 1);
+  REQUIRE(defaultValueBinding.args.front().kind == primec::Expr::Kind::Call);
+  CHECK(defaultValueBinding.args.front().name == "/Pair");
+
+  const auto assertAssignField = [](const primec::Expr &assignExpr, const std::string &fieldName) {
+    REQUIRE(assignExpr.kind == primec::Expr::Kind::Call);
+    CHECK(assignExpr.name == "assign");
+    REQUIRE(assignExpr.args.size() == 2);
+
+    const primec::Expr &target = assignExpr.args[0];
+    REQUIRE(target.kind == primec::Expr::Kind::Call);
+    CHECK(target.isFieldAccess);
+    CHECK(target.name == fieldName);
+    REQUIRE(target.args.size() == 1);
+    REQUIRE(target.args.front().kind == primec::Expr::Kind::Name);
+    CHECK(target.args.front().name == "value");
+
+    const primec::Expr &source = assignExpr.args[1];
+    REQUIRE(source.kind == primec::Expr::Kind::Call);
+    CHECK(source.isFieldAccess);
+    CHECK(source.name == fieldName);
+    REQUIRE(source.args.size() == 1);
+    REQUIRE(source.args.front().kind == primec::Expr::Kind::Name);
+    CHECK(source.args.front().name == "defaultValue");
+  };
+
+  assertAssignField(generated->statements[1], "x");
+  assertAssignField(generated->statements[2], "y");
+}
+
+TEST_CASE("generate Clear for empty reflected struct emits no-op helper") {
+  const std::string source = R"(
+[struct reflect generate(Clear)]
+Marker() {
+}
+
+[return<int>]
+main() {
+  [Marker mut] value{Marker()}
+  /Marker/Clear(value)
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Marker/Clear") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  CHECK(generated->statements.empty());
+  CHECK_FALSE(generated->hasReturnStatement);
+  CHECK_FALSE(generated->returnExpr.has_value());
+}
+
+TEST_CASE("generate Clear ignores static fields") {
+  const std::string source = R"(
+[struct reflect generate(Clear)]
+Marker() {
+  [static i32] shared{1i32}
+}
+
+[return<int>]
+main() {
+  [Marker mut] value{Marker()}
+  /Marker/Clear(value)
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Marker/Clear") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  CHECK(generated->statements.empty());
+}
+
+TEST_CASE("generate Compare Hash64 Clear helpers keep canonical v1.1 order") {
+  const std::string source = R"(
+[struct reflect generate(Clear, Hash64, Compare)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  std::vector<std::string> generatedHelpers;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath.rfind("/Pair/", 0) != 0 || def.fullPath == "/Pair") {
+      continue;
+    }
+    generatedHelpers.push_back(def.fullPath);
+  }
+  const std::vector<std::string> expected = {"/Pair/Compare", "/Pair/Hash64", "/Pair/Clear"};
+  CHECK(generatedHelpers == expected);
+}
+
+TEST_CASE("generate Clear rejects existing helper collision") {
+  const std::string source = R"(
+[struct reflect generate(Clear)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/Pair/Clear([Pair mut] value) {
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("generated reflection helper already exists: /Pair/Clear") != std::string::npos);
+}
+
 TEST_CASE("reflection core type primitives validate") {
   const std::string source = R"(
 [struct reflect]

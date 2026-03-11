@@ -2131,7 +2131,10 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     definitionPaths.insert(def.fullPath);
   }
 
-  auto makeTypeBinding = [](const std::string &bindingName, const std::string &typeName, const std::string &namespacePrefix) {
+  auto makeTypeBinding = [](const std::string &bindingName,
+                            const std::string &typeName,
+                            const std::string &namespacePrefix,
+                            bool isMutable = false) {
     Expr binding;
     binding.isBinding = true;
     binding.name = bindingName;
@@ -2139,6 +2142,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     Transform typeTransform;
     typeTransform.name = typeName;
     binding.transforms.push_back(std::move(typeTransform));
+    if (isMutable) {
+      Transform mutTransform;
+      mutTransform.name = "mut";
+      binding.transforms.push_back(std::move(mutTransform));
+    }
     return binding;
   };
   auto makeNameExpr = [](const std::string &name) {
@@ -2275,6 +2283,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool shouldGenerateDebugPrint = false;
     bool shouldGenerateCompare = false;
     bool shouldGenerateHash64 = false;
+    bool shouldGenerateClear = false;
     if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
@@ -2288,12 +2297,13 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         shouldGenerateDebugPrint = shouldGenerateDebugPrint || transformHasArgument(transform, "DebugPrint");
         shouldGenerateCompare = shouldGenerateCompare || transformHasArgument(transform, "Compare");
         shouldGenerateHash64 = shouldGenerateHash64 || transformHasArgument(transform, "Hash64");
+        shouldGenerateClear = shouldGenerateClear || transformHasArgument(transform, "Clear");
       }
     }
 
     std::vector<std::string> fieldNames;
     if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault || shouldGenerateClone ||
-        shouldGenerateDebugPrint || shouldGenerateCompare || shouldGenerateHash64) {
+        shouldGenerateDebugPrint || shouldGenerateCompare || shouldGenerateHash64 || shouldGenerateClear) {
       fieldNames.reserve(def.statements.size());
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {
@@ -2482,6 +2492,53 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       definitionPaths.insert(helperPath);
       return true;
     };
+    auto emitClearHelper = [&]() -> bool {
+      const std::string helperPath = def.fullPath + "/Clear";
+      if (definitionPaths.count(helperPath) > 0) {
+        error = "generated reflection helper already exists: " + helperPath;
+        return false;
+      }
+
+      Definition helper;
+      helper.name = "Clear";
+      helper.fullPath = helperPath;
+      helper.namespacePrefix = def.fullPath;
+      helper.sourceLine = def.sourceLine;
+      helper.sourceColumn = def.sourceColumn;
+
+      appendPublicVisibility(helper);
+      Transform returnTransform;
+      returnTransform.name = "return";
+      returnTransform.templateArgs.push_back("void");
+      helper.transforms.push_back(std::move(returnTransform));
+      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix, true));
+
+      if (!fieldNames.empty()) {
+        Expr defaultCall;
+        defaultCall.kind = Expr::Kind::Call;
+        defaultCall.name = def.fullPath;
+
+        Expr defaultValueBinding = makeTypeBinding("defaultValue", def.fullPath, helper.namespacePrefix);
+        defaultValueBinding.args.push_back(std::move(defaultCall));
+        defaultValueBinding.argNames.push_back(std::nullopt);
+        helper.statements.push_back(std::move(defaultValueBinding));
+
+        for (const auto &fieldName : fieldNames) {
+          Expr assignExpr;
+          assignExpr.kind = Expr::Kind::Call;
+          assignExpr.name = "assign";
+          assignExpr.args.push_back(makeFieldAccessExpr("value", fieldName));
+          assignExpr.argNames.push_back(std::nullopt);
+          assignExpr.args.push_back(makeFieldAccessExpr("defaultValue", fieldName));
+          assignExpr.argNames.push_back(std::nullopt);
+          helper.statements.push_back(std::move(assignExpr));
+        }
+      }
+
+      rewrittenDefinitions.push_back(std::move(helper));
+      definitionPaths.insert(helperPath);
+      return true;
+    };
     auto emitCloneHelper = [&]() -> bool {
       const std::string helperPath = def.fullPath + "/Clone";
       if (definitionPaths.count(helperPath) > 0) {
@@ -2614,6 +2671,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     }
     if (shouldGenerateHash64) {
       if (!emitHash64Helper()) {
+        return false;
+      }
+    }
+    if (shouldGenerateClear) {
+      if (!emitClearHelper()) {
         return false;
       }
     }
