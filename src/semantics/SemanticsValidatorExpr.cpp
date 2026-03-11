@@ -2404,6 +2404,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
     const bool isNamespacedVectorHelperCall =
         isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+    const bool isStdNamespacedVectorCountCall =
+        !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
     const bool isNamespacedMapHelperCall =
         isNamespacedCollectionHelperCall && namespacedCollection == "map";
     const bool isNamespacedVectorCountCall =
@@ -2602,10 +2604,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         resolvedMethod = false;
       }
-    } else if ((isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall || isResolvedMapCountCall) &&
+    } else if (!isStdNamespacedVectorCountCall &&
+               (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall || isResolvedMapCountCall) &&
                expr.args.size() == 1 &&
                !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
-               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall ||
+               (defMap_.find(resolved) == defMap_.end() ||
+                (isNamespacedVectorCountCall && !isStdNamespacedVectorCountCall) ||
                 isNamespacedMapCountCall || isResolvedMapCountCall)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
@@ -2624,7 +2628,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (((isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall) || isNamespacedMapCountCall ||
+    } else if (!isStdNamespacedVectorCountCall &&
+               ((isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall &&
+                 !isStdNamespacedVectorCountCall) ||
+                isNamespacedMapCountCall ||
                 isResolvedMapCountCall) &&
                !expr.args.empty() && expr.args.size() != 1 && defMap_.find(resolved) != defMap_.end()) {
       usedMethodTarget = true;

@@ -914,7 +914,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs auto-inferred std namespaced count helper canonical fallback in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects auto-inferred std namespaced count helper canonical fallback in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -934,10 +934,14 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_cpp_std_namespaced_vector_count_canonical_fallback_auto_exe")
           .string();
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_std_namespaced_vector_count_canonical_fallback_auto_err.txt")
+                                  .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs std namespaced count expression receiver precedence in C++ emitter" * doctest::skip()) {
@@ -970,7 +974,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs std namespaced count expression canonical fallback in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects std namespaced count expression canonical fallback in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -989,13 +993,17 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_cpp_std_namespaced_vector_count_expr_canonical_fallback_exe")
           .string();
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_std_namespaced_vector_count_expr_canonical_fallback_err.txt")
+                                  .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs std namespaced count non-builtin compatibility fallback in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects std namespaced count non-builtin compatibility fallback in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -1012,10 +1020,14 @@ main() {
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_exe")
           .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_err.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("rejects std namespaced count non-builtin compatibility fallback type mismatch in C++ emitter") {

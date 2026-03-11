@@ -1234,6 +1234,11 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return "/" + expr.name;
   }
   if (!expr.namespacePrefix.empty()) {
+    auto isRemovedVectorCompatibilityHelper = [](const std::string &helperName) {
+      return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+             helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+             helperName == "remove_at" || helperName == "remove_swap";
+    };
     const size_t lastSlash = expr.namespacePrefix.find_last_of('/');
     const std::string_view suffix = lastSlash == std::string::npos
                                         ? std::string_view(expr.namespacePrefix)
@@ -1252,6 +1257,11 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
         break;
       }
       prefix = prefix.substr(0, slash);
+    }
+    if ((expr.namespacePrefix.rfind("/std/collections/vector", 0) == 0 ||
+         expr.namespacePrefix.rfind("std/collections/vector", 0) == 0) &&
+        isRemovedVectorCompatibilityHelper(expr.name)) {
+      return expr.namespacePrefix + "/" + expr.name;
     }
     auto it = importAliases_.find(expr.name);
     if (it != importAliases_.end()) {

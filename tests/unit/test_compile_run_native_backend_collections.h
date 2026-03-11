@@ -6722,7 +6722,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native auto-inferred std namespaced count helper canonical fallback" * doctest::skip()) {
+TEST_CASE("rejects native auto-inferred std namespaced count helper canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -6742,10 +6742,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_native_std_namespaced_vector_count_canonical_fallback_auto_exe")
           .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_std_namespaced_vector_count_canonical_fallback_auto_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native std namespaced count expression receiver precedence") {
@@ -6778,7 +6783,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native std namespaced count expression canonical fallback" * doctest::skip()) {
+TEST_CASE("rejects native std namespaced count expression canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -6797,13 +6802,18 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_native_std_namespaced_vector_count_expr_canonical_fallback_exe")
           .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_std_namespaced_vector_count_expr_canonical_fallback_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native std namespaced count non-builtin compatibility fallback" * doctest::skip()) {
+TEST_CASE("rejects native std namespaced count non-builtin compatibility fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -6821,10 +6831,14 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() /
                                "primec_native_std_namespaced_count_non_builtin_compat_fallback_exe")
                                   .string();
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_std_namespaced_count_non_builtin_compat_fallback_out.txt")
+                                  .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector namespaced count non-builtin array fallback") {

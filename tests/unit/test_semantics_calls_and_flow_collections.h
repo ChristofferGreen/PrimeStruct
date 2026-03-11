@@ -4705,7 +4705,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced templated vector count call does not fall back to array alias" * doctest::skip()) {
+TEST_CASE("stdlib namespaced templated vector count call rejects compatibility alias fallback") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -4725,11 +4725,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
-        std::string::npos);
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced templated vector count arity diagnostics keep non-templated target" * doctest::skip()) {
+TEST_CASE("stdlib namespaced templated vector count arity keeps builtin template-argument diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -4749,8 +4748,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
-        std::string::npos);
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced templated alias call forwards past non-templated compatibility helper") {
@@ -5763,7 +5761,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced count expression non-builtin arity falls back to compatibility helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced count expression rejects non-builtin compatibility arity fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -5777,8 +5775,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count expression compatibility fallback keeps return mismatch diagnostics" * doctest::skip()) {
@@ -5800,7 +5798,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced count auto inference non-builtin arity falls back to compatibility helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced count auto inference rejects non-builtin compatibility arity fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -5815,8 +5813,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count non-builtin arity rejects array helper fallback" * doctest::skip()) {

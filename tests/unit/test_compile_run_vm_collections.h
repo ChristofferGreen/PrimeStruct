@@ -5787,7 +5787,7 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("runs vm with auto-inferred std namespaced count helper canonical fallback" * doctest::skip()) {
+TEST_CASE("rejects vm auto-inferred std namespaced count helper canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -5802,8 +5802,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_vector_count_canonical_fallback_auto.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_vector_count_canonical_fallback_auto_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("runs vm with std namespaced count expression receiver precedence") {
@@ -5829,7 +5833,7 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("runs vm with std namespaced count expression canonical fallback" * doctest::skip()) {
+TEST_CASE("rejects vm std namespaced count expression canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -5843,11 +5847,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_vector_count_expr_canonical_fallback.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_vector_count_expr_canonical_fallback_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
-TEST_CASE("runs vm with std namespaced count non-builtin compatibility fallback" * doctest::skip()) {
+TEST_CASE("rejects vm std namespaced count non-builtin compatibility fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -5861,8 +5869,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_count_non_builtin_compat_fallback.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 91);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_count_non_builtin_compat_fallback_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector namespaced count non-builtin array fallback") {
