@@ -1531,6 +1531,88 @@ main() {
   }
 }
 
+TEST_CASE("cpp and exe diagnostics match cpp-ir and exe-ir (text and json)") {
+  struct DiagnosticCase {
+    const char *name;
+    const char *source;
+  };
+
+  const std::vector<DiagnosticCase> cases = {
+      {
+          "semantic_argument_mismatch",
+          R"(
+/consume([i32] value) {
+  value
+}
+[return<int>]
+main() {
+  consume(true)
+  return(0i32)
+}
+)",
+      },
+      {
+          "lowering_unsupported_lambda",
+          R"(
+[return<int>]
+main() {
+  holder{[]([i32] x) { return(x) }}
+  return(0i32)
+}
+)",
+      },
+  };
+
+  struct EmitPair {
+    const char *left;
+    const char *right;
+  };
+
+  const std::vector<EmitPair> emitPairs = {
+      {"cpp", "cpp-ir"},
+      {"exe", "exe-ir"},
+  };
+
+  for (const auto &testCase : cases) {
+    CAPTURE(testCase.name);
+    const std::string srcPath = writeTemp(std::string("compile_diagnostics_parity_") + testCase.name + ".prime",
+                                          testCase.source);
+
+    for (const auto &pair : emitPairs) {
+      CAPTURE(pair.left);
+      CAPTURE(pair.right);
+
+      const std::filesystem::path tempDir = std::filesystem::temp_directory_path();
+      const std::string leftErrPath =
+          (tempDir / (std::string("primec_diag_") + pair.left + "_" + testCase.name + ".txt")).string();
+      const std::string rightErrPath =
+          (tempDir / (std::string("primec_diag_") + pair.right + "_" + testCase.name + ".txt")).string();
+      const std::string leftJsonErrPath =
+          (tempDir / (std::string("primec_diag_json_") + pair.left + "_" + testCase.name + ".txt")).string();
+      const std::string rightJsonErrPath =
+          (tempDir / (std::string("primec_diag_json_") + pair.right + "_" + testCase.name + ".txt")).string();
+
+      const std::string leftTextCmd = "./primec --emit=" + std::string(pair.left) + " " + quoteShellArg(srcPath) +
+                                      " -o /dev/null --entry /main 2> " + quoteShellArg(leftErrPath);
+      const std::string rightTextCmd = "./primec --emit=" + std::string(pair.right) + " " + quoteShellArg(srcPath) +
+                                       " -o /dev/null --entry /main 2> " + quoteShellArg(rightErrPath);
+      CHECK(runCommand(leftTextCmd) == 2);
+      CHECK(runCommand(rightTextCmd) == 2);
+      CHECK(readFile(leftErrPath) == readFile(rightErrPath));
+
+      const std::string leftJsonCmd = "./primec --emit=" + std::string(pair.left) + " " + quoteShellArg(srcPath) +
+                                      " -o /dev/null --entry /main --emit-diagnostics 2> " +
+                                      quoteShellArg(leftJsonErrPath);
+      const std::string rightJsonCmd = "./primec --emit=" + std::string(pair.right) + " " + quoteShellArg(srcPath) +
+                                       " -o /dev/null --entry /main --emit-diagnostics 2> " +
+                                       quoteShellArg(rightJsonErrPath);
+      CHECK(runCommand(leftJsonCmd) == 2);
+      CHECK(runCommand(rightJsonCmd) == 2);
+      CHECK(readFile(leftJsonErrPath) == readFile(rightJsonErrPath));
+    }
+  }
+}
+
 TEST_CASE("compiles and runs explicit void return") {
   const std::string source = R"(
 [return<void>]

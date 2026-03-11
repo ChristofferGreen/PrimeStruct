@@ -11393,10 +11393,6 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration" * do
   CHECK(error.empty());
   CHECK_FALSE(instructions.empty());
 
-  primec::Expr soaName;
-  soaName.kind = primec::Expr::Kind::Name;
-  soaName.name = "soa";
-
   primec::Expr soaCountCall;
   soaCountCall.kind = primec::Expr::Kind::Call;
   soaCountCall.name = "count";
