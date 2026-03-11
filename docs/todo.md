@@ -59,6 +59,22 @@ Legend:
 - ✓ Convert the transform registry from static arrays to a registration API with phase metadata. `TransformRegistry` now exposes `registerTransform(...)` / `contains(...)` / `list(...)`, default transform registration is built through that API, and phase checks (`isTextTransformName`/`isSemanticTransformName`) now resolve directly from registered metadata.
 - ✓ Add an ADR documenting backend boundary policy: all codegen consumes IR only. Added `docs/adr/0001-backend-ir-boundary.md` (accepted decision + guardrails) and linked it from `docs/PrimeStruct.md` compilation model notes.
 
+**Reflection Codegen Roadmap (March 6, 2026)**
+- ○ Add reflection syntax/validation for struct definitions: `[reflect]` plus `[generate(...)]` with deterministic diagnostics for unsupported targets/generators.
+- ○ Define baseline reflection API scope for v1: compile-time-only metadata queries with no runtime reflection objects/tables.
+- ○ Implement core reflection primitives: `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`, `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)`.
+- ○ Implement transform/trait reflection predicates for generators: `meta.has_transform<T>(name)` and trait conformance checks used by generated helper gating.
+- ○ Add deterministic reflection diagnostics for invalid targets/indices (non-reflect types, non-constant indices, out-of-range field index, and unsupported metadata queries).
+- ○ Guarantee reflection builtins are compile-time eliminated before IR emission; add regression tests that lock zero runtime reflection opcodes/state.
+- ○ Implement v1 generated helpers: `Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`, and `DebugPrint`.
+- ○ Define deterministic helper naming + visibility contract for generated helpers (`/Type/Helper` paths, collision/override rules, and import behavior).
+- ○ Add v1 conformance coverage for reflection codegen (parse, semantics, canonical AST/IR snapshots, and backend compile-run parity).
+- ○ Implement v1.1 generated helpers: `Compare` (lexicographic for sortable fields), `Hash64`, `Clear`, and `CopyFrom`.
+- ○ Add deterministic field-eligibility diagnostics for generated helpers (for example unsupported field envelopes in `Compare`/`Hash64`).
+- ○ Implement v2 generated helpers: `Validate` with explicit error contract and generated field-check scaffolding hooks.
+- ○ Implement v2 generated helpers: `Serialize`/`Deserialize` with a stable format version tag and deterministic field order.
+- ○ Defer `ToString` generation until dynamic string construction/runtime support is finalized; keep `DebugPrint` as the v1 debug surface.
+
 **Pipeline & CLI**
 - ✓ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.
 - ✓ Make per-envelope transform lists drive text/semantic transforms (today text filters are global and ignore `[operators]`, `[collections]`, etc).
