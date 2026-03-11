@@ -334,6 +334,67 @@ main() {
   CHECK(error.find("/consumeSoa") != std::string::npos);
 }
 
+TEST_CASE("ecs style soa_vector update loop validates with deferred structural phase") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+}
+
+[effects(heap_alloc), return<void>]
+/simulateStep([soa_vector<Particle> mut] particles, [vector<Particle> mut] spawnQueue) {
+  [i32 mut] i{0i32}
+  while(less_than(i, count(particles))) {
+    get(particles, i)
+    assign(i, plus(i, 1i32))
+  }
+
+  [soa_vector<Particle>] stagedSpawns{to_soa(spawnQueue)}
+  reserve(particles, plus(count(particles), count(stagedSpawns)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle> mut] particles{soa_vector<Particle>()}
+  [vector<Particle> mut] spawnQueue{vector<Particle>()}
+  simulateStep(particles, spawnQueue)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("ecs style update loop still requires explicit aos to soa conversion") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+}
+
+[effects(heap_alloc), return<void>]
+/simulateStep([soa_vector<Particle> mut] particles) {
+  [i32 mut] i{0i32}
+  while(less_than(i, count(particles))) {
+    get(particles, i)
+    assign(i, plus(i, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle> mut] particles{vector<Particle>()}
+  simulateStep(particles)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("/simulateStep") != std::string::npos);
+}
+
 TEST_CASE("to_soa and to_aos reject named arguments for builtin calls") {
   const auto checkNamedArgs = [](const std::string &callExpr) {
     const std::string source =

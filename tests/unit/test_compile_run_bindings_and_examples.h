@@ -197,6 +197,9 @@ TEST_CASE("compiles examples to IR") {
     if (path.filename() == "result_helpers.prime") {
       continue;
     }
+    if (path.filename() == "soa_vector_ecs_draft.prime") {
+      continue;
+    }
     exampleFiles.push_back(path);
   }
   std::sort(exampleFiles.begin(), exampleFiles.end());
@@ -237,11 +240,12 @@ TEST_CASE("collection docs snippets stay c++ style and executable") {
 
   const std::vector<std::string> requiredPrimeStructSnippets = {
       "value.push(item)", "value.at(index)", "value[index]", "value.count()",
-      "map<string, i32>{\"a\"utf8=1i32}"};
+      "map<string, i32>{\"a\"utf8=1i32}", "to_soa(spawnQueue)",
+      "two-phase: run a stable-size update pass first"};
   const std::vector<std::string> requiredSyntaxSpecSnippets = {
       "vector<i32>{1i32, 2i32}", "vector<i32>[1i32, 2i32]",
       "map<i32, i32>{1i32=2i32, 3i32=4i32}", "value.push(item)",
-      "value.at(index)", "value[index]"};
+      "value.at(index)", "value[index]", "Structural mutation boundaries are `push`, `reserve`, `to_soa`, and `to_aos`."};
   const std::vector<std::string> requiredGuidelinesSnippets = {
       "value.push(x)", "value.at(i)", "value[i]", "value.count()",
       "[vector<i32> mut] values{vector<i32>{1, 2}}"};

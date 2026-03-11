@@ -52,6 +52,7 @@ From `build-debug/`:
 - `examples/3.Surface/features_overview.prime`: high-level tour (imports, namespace, collections, loops, operators, indexing, effects).
 - `examples/3.Surface/gpu_compute.prime`: compute kernel + `/std/gpu/dispatch` fallback in VM/native.
 - `examples/3.Surface/raytracer.prime`: simple ray tracer (reflective spheres + checkerboard) emitting PPM.
+- `examples/3.Surface/soa_vector_ecs_draft.prime`: draft ECS-style `soa_vector` update loop with deferred structural mutation notes (semantic/example-only until SoA lowering/runtime support lands).
 
 ### borrow_checker_negative
 - `examples/borrow_checker_negative/`: intentionally non-compiling borrow-checker examples.

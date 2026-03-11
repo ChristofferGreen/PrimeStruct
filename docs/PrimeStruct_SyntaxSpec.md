@@ -599,6 +599,11 @@ Draft constraints:
   pointer/reference/string/template fields unless explicitly allowed).
 - AoS/SoA conversions are explicit helpers only (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`).
 - Reallocation invalidates SoA field views/proxies.
+- Draft ownership/invalidation contract:
+  - `get(...)` is value-style element access.
+  - `ref(...)` and future field views are borrowed SoA views and are invalid after structural mutation.
+  - Structural mutation boundaries are `push`, `reserve`, `to_soa`, and `to_aos`.
+  - ECS-style updates should use a two-phase loop: stable-size read/update pass, then deferred structural writes.
 
 Current implementation status: parser/text-transform support accepts surface `soa_vector<T>{...}`/`soa_vector<T>[...]`,
 and semantic validation now accepts `soa_vector` usage when constraints hold
@@ -615,7 +620,9 @@ Lowering/runtime support remains
 incomplete; current IR lowering emits deterministic unsupported diagnostics
 (`native backend does not support soa_vector literals`, `native backend does not support soa_vector count`,
 `native backend does not support soa_vector get`, `native backend does not support soa_vector ref`,
+`native backend does not support to_soa`, `native backend does not support to_aos`,
 `native backend does not support soa_vector helper: push`, `native backend does not support soa_vector helper: reserve`).
+Draft example source: `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA runtime support lands).
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 
