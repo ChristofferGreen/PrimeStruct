@@ -1204,9 +1204,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (defMap_.find("/count") != defMap_.end()) {
         return false;
       }
-      if (defMap_.find("/std/collections/map/count") == defMap_.end()) {
-        return false;
-      }
       if (candidate.args.empty()) {
         return false;
       }

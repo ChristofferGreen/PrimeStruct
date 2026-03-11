@@ -1781,9 +1781,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (defMap_.find("/count") != defMap_.end()) {
         return false;
       }
-      if (defMap_.find("/std/collections/map/count") == defMap_.end()) {
-        return false;
-      }
       if (candidate.args.empty()) {
         return false;
       }

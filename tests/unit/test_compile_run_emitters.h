@@ -2677,6 +2677,26 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /count") != std::string::npos);
 }
 
+TEST_CASE("rejects map unnamespaced count builtin fallback without canonical helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_map_unnamespaced_count_builtin_fallback_no_canonical_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_map_unnamespaced_count_builtin_fallback_no_canonical_reject.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /count") != std::string::npos);
+}
+
 TEST_CASE("rejects map unnamespaced at builtin fallback in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -3008,6 +3008,19 @@ main() {
   CHECK(error.find("unknown call target: /count") != std::string::npos);
 }
 
+TEST_CASE("map unnamespaced count call rejects removed builtin fallback without canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /count") != std::string::npos);
+}
+
 TEST_CASE("map unnamespaced at call rejects removed builtin fallback with canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
