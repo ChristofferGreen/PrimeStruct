@@ -363,6 +363,70 @@ main() {
   CHECK(runCommand(exePath) == 77);
 }
 
+TEST_CASE("compiles and runs native stdlib map at alias fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+/map/at([map<i32, i32>] values, [i32] index) {
+  return(66i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/at(wrapMap(), 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_namespaced_map_at_alias_fallback.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_namespaced_map_at_alias_fallback_out.txt")
+                                  .string();
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_namespaced_map_at_alias_fallback_exe")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 66);
+}
+
+TEST_CASE("compiles and runs native stdlib map at unsafe alias fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(67i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/at_unsafe(wrapMap(), 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_namespaced_map_at_unsafe_alias_fallback.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_namespaced_map_at_unsafe_alias_fallback_out.txt")
+                                  .string();
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_namespaced_map_at_unsafe_alias_fallback_exe")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 67);
+}
+
 TEST_CASE("compiles native map unnamespaced count builtin fallback with canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

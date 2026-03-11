@@ -7246,6 +7246,79 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map stdlib namespaced at expression falls back to map alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(42i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/map/at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map stdlib namespaced at fallback keeps map alias diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(42i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/map/at(values, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /map/at parameter key") != std::string::npos);
+}
+
+TEST_CASE("map stdlib namespaced at_unsafe auto inference falls back to map alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/map/at_unsafe(values, 1i32)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map stdlib namespaced at_unsafe fallback keeps map alias diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(42i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/map/at_unsafe(values, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /map/at_unsafe parameter key") != std::string::npos);
+}
+
 TEST_CASE("soa access helper call-form expression infers auto binding from labeled receiver helper") {
   const std::string source = R"(
 Particle() {

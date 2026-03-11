@@ -551,6 +551,14 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         return defIt->second;
       }
     }
+    if (path.rfind("/std/collections/map/", 0) == 0) {
+      const std::string mapAlias =
+          "/map/" + path.substr(std::string("/std/collections/map/").size());
+      defIt = defMap.find(mapAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
     return nullptr;
   };
   if (!resolvedTypePath.empty()) {

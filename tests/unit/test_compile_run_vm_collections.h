@@ -197,6 +197,59 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("runs vm stdlib namespaced map at fallback to map alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+/map/at([map<i32, i32>] values, [i32] index) {
+  return(66i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/at(wrapMap(), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_namespaced_map_at_alias_fallback.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_namespaced_map_at_alias_fallback_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 66);
+  CHECK(readFile(outPath).empty());
+}
+
+TEST_CASE("runs vm stdlib namespaced map at unsafe fallback to map alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(67i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/at_unsafe(wrapMap(), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_namespaced_map_at_unsafe_alias_fallback.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_namespaced_map_at_unsafe_alias_fallback_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 67);
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("runs vm map unnamespaced count builtin fallback with canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
