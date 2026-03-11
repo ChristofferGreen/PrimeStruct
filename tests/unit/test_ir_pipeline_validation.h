@@ -8285,6 +8285,8 @@ TEST_CASE("ir lowerer call helpers resolve scoped call paths") {
   const std::unordered_map<std::string, std::string> importAliases = {
       {"foo", "/import/foo"},
       {"bar", "/import/bar"},
+      {"map_count", "std/collections/map/count"},
+      {"map_at", "map/at"},
   };
 
   primec::Expr absolute;
@@ -8313,6 +8315,15 @@ TEST_CASE("ir lowerer call helpers resolve scoped call paths") {
   primec::Expr rootFallback;
   rootFallback.name = "main";
   CHECK(primec::ir_lowerer::resolveCallPathFromScope(rootFallback, defMap, importAliases) == "/main");
+
+  primec::Expr slashlessCanonicalMapAlias;
+  slashlessCanonicalMapAlias.name = "map_count";
+  CHECK(primec::ir_lowerer::resolveCallPathFromScope(slashlessCanonicalMapAlias, defMap, importAliases) ==
+        "/std/collections/map/count");
+
+  primec::Expr slashlessMapAlias;
+  slashlessMapAlias.name = "map_at";
+  CHECK(primec::ir_lowerer::resolveCallPathFromScope(slashlessMapAlias, defMap, importAliases) == "/map/at");
 }
 
 TEST_CASE("ir lowerer call helpers build scoped call path resolver") {
@@ -8322,6 +8333,8 @@ TEST_CASE("ir lowerer call helpers build scoped call path resolver") {
   const std::unordered_map<std::string, std::string> importAliases = {
       {"foo", "/import/foo"},
       {"bar", "/import/bar"},
+      {"map_count", "std/collections/map/count"},
+      {"map_at", "map/at"},
   };
   auto resolveExprPath = primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases);
 
@@ -8334,6 +8347,31 @@ TEST_CASE("ir lowerer call helpers build scoped call path resolver") {
   namespacedAlias.name = "bar";
   namespacedAlias.namespacePrefix = "/pkg";
   CHECK(resolveExprPath(namespacedAlias) == "/import/bar");
+
+  primec::Expr slashlessCanonicalMapAlias;
+  slashlessCanonicalMapAlias.name = "map_count";
+  CHECK(resolveExprPath(slashlessCanonicalMapAlias) == "/std/collections/map/count");
+
+  primec::Expr slashlessMapAlias;
+  slashlessMapAlias.name = "map_at";
+  CHECK(resolveExprPath(slashlessMapAlias) == "/map/at");
+}
+
+TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
+  primec::Definition canonicalMapCountDef;
+  canonicalMapCountDef.fullPath = "/std/collections/map/count";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/std/collections/map/count", &canonicalMapCountDef},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"count_alias", "std/collections/map/count"},
+  };
+  const auto resolveExprPath = primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "count_alias";
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) == &canonicalMapCountDef);
 }
 
 TEST_CASE("ir lowerer call helpers resolve definition namespace prefixes") {

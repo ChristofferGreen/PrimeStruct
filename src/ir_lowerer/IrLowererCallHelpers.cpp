@@ -90,6 +90,18 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
+std::string normalizeMapImportAliasPath(const std::string &path) {
+  if (path.empty() || path.front() == '/') {
+    return path;
+  }
+  constexpr std::string_view mapPrefix = "map/";
+  constexpr std::string_view stdMapPrefix = "std/collections/map/";
+  if (path.rfind(mapPrefix, 0) == 0 || path.rfind(stdMapPrefix, 0) == 0) {
+    return "/" + path;
+  }
+  return path;
+}
+
 } // namespace
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
@@ -169,13 +181,13 @@ std::string resolveCallPathFromScope(
     }
     auto importIt = importAliases.find(expr.name);
     if (importIt != importAliases.end()) {
-      return importIt->second;
+      return normalizeMapImportAliasPath(importIt->second);
     }
     return scoped;
   }
   auto importIt = importAliases.find(expr.name);
   if (importIt != importAliases.end()) {
-    return importIt->second;
+    return normalizeMapImportAliasPath(importIt->second);
   }
   return "/" + expr.name;
 }
