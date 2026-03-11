@@ -550,11 +550,6 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     error = "native backend does not support math builtin: " + mathName;
     return NativeCallTailDispatchResult::Error;
   }
-  if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-      isSoaVectorTarget(expr.args.front(), localsIn)) {
-    error = "native backend does not support soa_vector count";
-    return NativeCallTailDispatchResult::Error;
-  }
   if ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref")) &&
       expr.args.size() == 2 &&
       isSoaVectorTarget(expr.args.front(), localsIn)) {

@@ -193,7 +193,7 @@ main() {
   CHECK(error == "native backend does not support soa_vector literals");
 }
 
-TEST_CASE("semantics accepts soa_vector count before lowerer rejection") {
+TEST_CASE("semantics accepts soa_vector count in non-entry helpers") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -11404,7 +11404,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration" * do
             locals,
             [](const primec::Expr &, std::string &) { return false; },
             [](const std::string &) { return true; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+              return primec::ir_lowerer::isArrayCountCall(callExpr, callLocals, false, "argv");
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -11423,8 +11425,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration" * do
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Error);
-  CHECK(error == "native backend does not support soa_vector count");
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
 
   primec::Expr soaVectorAliasCountCall = soaCountCall;
   soaVectorAliasCountCall.name = "/vector/count";
@@ -11435,7 +11438,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration" * do
             locals,
             [](const primec::Expr &, std::string &) { return false; },
             [](const std::string &) { return true; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+              return primec::ir_lowerer::isArrayCountCall(callExpr, callLocals, false, "argv");
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -11454,8 +11459,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration" * do
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Error);
-  CHECK(error == "native backend does not support soa_vector count");
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
 
   primec::Expr soaStdlibAliasCountCall = soaCountCall;
   soaStdlibAliasCountCall.name = "/std/collections/vector/count";
@@ -11466,7 +11472,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration" * do
             locals,
             [](const primec::Expr &, std::string &) { return false; },
             [](const std::string &) { return true; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+              return primec::ir_lowerer::isArrayCountCall(callExpr, callLocals, false, "argv");
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -11485,8 +11493,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration" * do
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Error);
-  CHECK(error == "native backend does not support soa_vector count");
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
 
   primec::Expr soaGetCall;
   soaGetCall.kind = primec::Expr::Kind::Call;
@@ -22073,6 +22082,23 @@ TEST_CASE("ir lowerer count access helpers build bundled entry count setup") {
   countEntry.args = {entryName};
   CHECK(setup.classifiers.isArrayCountCall(countEntry, locals));
 
+  primec::ir_lowerer::LocalInfo soaInfo;
+  soaInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  soaInfo.isSoaVector = true;
+  locals.emplace("soaValues", soaInfo);
+  primec::Expr soaName;
+  soaName.kind = primec::Expr::Kind::Name;
+  soaName.name = "soaValues";
+  countEntry.args = {soaName};
+  countEntry.name = "count";
+  CHECK(setup.classifiers.isArrayCountCall(countEntry, locals));
+  countEntry.name = "/vector/count";
+  CHECK(setup.classifiers.isArrayCountCall(countEntry, locals));
+  countEntry.name = "/std/collections/vector/count";
+  CHECK(setup.classifiers.isArrayCountCall(countEntry, locals));
+  countEntry.name = "/array/count";
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(countEntry, locals));
+
   primec::Expr extraParam = entryParam;
   extraParam.name = "extra";
   entryDef.parameters = {entryParam, extraParam};
@@ -22193,6 +22219,77 @@ TEST_CASE("ir lowerer count access helpers emit string count calls") {
             [&](int32_t length) { emittedLength = length; },
             error) == Result::Emitted);
   CHECK(emittedLength == 42);
+}
+
+TEST_CASE("ir lowerer call helpers lower soa_vector count calls") {
+  using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo soaInfo;
+  soaInfo.kind = LocalInfo::Kind::Value;
+  soaInfo.index = 5;
+  soaInfo.valueKind = LocalInfo::ValueKind::Unknown;
+  soaInfo.isSoaVector = true;
+  locals.emplace("soaValues", soaInfo);
+
+  primec::Expr soaName;
+  soaName.kind = primec::Expr::Kind::Name;
+  soaName.name = "soaValues";
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.name = "count";
+  countCall.args = {soaName};
+
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); };
+  auto instructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, uint64_t imm) { instructions.at(index).imm = imm; };
+  int nextLocal = 32;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+            countCall,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+              return primec::ir_lowerer::isArrayCountCall(callExpr, callLocals, false, "argv");
+            },
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+              return primec::ir_lowerer::isVectorCapacityCall(callExpr, callLocals);
+            },
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+              return primec::ir_lowerer::isStringCountCall(callExpr, callLocals);
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &emitLocals) {
+              if (expr.kind != primec::Expr::Kind::Name) {
+                return false;
+              }
+              auto it = emitLocals.find(expr.name);
+              if (it == emitLocals.end()) {
+                return false;
+              }
+              emitInstruction(primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+              return true;
+            },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return LocalInfo::ValueKind::Int32; },
+            [&]() { return nextLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() >= 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
 }
 
 TEST_CASE("ir lowerer count access helpers emit count access calls" * doctest::skip()) {

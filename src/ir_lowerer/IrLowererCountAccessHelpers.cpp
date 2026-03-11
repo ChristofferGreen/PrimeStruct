@@ -29,14 +29,14 @@ bool isExplicitArrayCountName(const Expr &expr) {
 bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
-    return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Vector;
+    return it != localsIn.end() && (it->second.kind == LocalInfo::Kind::Vector || it->second.isSoaVector);
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
     if (!getBuiltinCollectionName(target, collection)) {
       return false;
     }
-    return collection == "vector" && target.templateArgs.size() == 1;
+    return (collection == "vector" || collection == "soa_vector") && target.templateArgs.size() == 1;
   }
   return false;
 }
@@ -208,6 +208,7 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
       return it->second.referenceToArray;
     }
     return it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
+           it->second.isSoaVector ||
            it->second.kind == LocalInfo::Kind::Map;
   }
   if (target.kind == Expr::Kind::Call) {
@@ -215,7 +216,7 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     if (!getBuiltinCollectionName(target, collection)) {
       return false;
     }
-    if (collection == "array" || collection == "vector") {
+    if (collection == "array" || collection == "vector" || collection == "soa_vector") {
       return target.templateArgs.size() == 1;
     }
     if (collection == "map") {
