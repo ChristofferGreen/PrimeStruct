@@ -59,6 +59,13 @@ Legend:
 - ✓ Convert the transform registry from static arrays to a registration API with phase metadata. `TransformRegistry` now exposes `registerTransform(...)` / `contains(...)` / `list(...)`, default transform registration is built through that API, and phase checks (`isTextTransformName`/`isSemanticTransformName`) now resolve directly from registered metadata.
 - ✓ Add an ADR documenting backend boundary policy: all codegen consumes IR only. Added `docs/adr/0001-backend-ir-boundary.md` (accepted decision + guardrails) and linked it from `docs/PrimeStruct.md` compilation model notes.
 
+**Architecture follow-up (IR-only backend boundary hardening)**
+- ○ Route production `--emit=cpp` and `--emit=exe` through `IrBackend` (`cpp-ir`/`exe-ir`) in `primec`, removing AST-direct emission from the default production path while preserving current output defaults.
+- ○ Extract shared IR preparation/execution orchestration (`lower -> ir-validate -> optional ir-inline -> revalidate -> emit`) into one helper used by both `primec` and `primevm` to remove duplicated backend flow logic.
+- ○ Expand backend parity coverage to gate the migration: add focused regressions that compare `cpp` vs `cpp-ir` and `exe` vs `exe-ir` for source output shape, runtime behavior, and diagnostics (JSON + text).
+- ○ Add a guardrail test that fails if any production `primec --emit` mode bypasses `IrBackend` or reintroduces AST-direct production emission.
+- ○ Remove the legacy AST-direct production branch after parity passes are stable, then update `docs/PrimeStruct.md` and ADR follow-up notes to record the unified backend path as complete.
+
 **Reflection Codegen Roadmap (March 6, 2026)**
 - ✓ Add reflection syntax/validation for struct definitions: `[reflect]` plus `[generate(...)]` with deterministic diagnostics for unsupported targets/generators. Implemented parser+semantics coverage for reflection transforms, added struct-only target checks (definitions and execution rejection), and added deterministic diagnostics for `generate(...)` shape/allowlist issues (requires `[reflect]`, duplicate/unsupported generator names).
 - ✓ Define baseline reflection API scope for v1: compile-time-only metadata queries with no runtime reflection objects/tables. Documented v1 scope + reserved query names in `docs/PrimeStruct.md`, and added deterministic semantics diagnostics that reserve `meta.*`/`/meta/*` metadata queries as compile-time-only (not yet implemented) while explicitly rejecting runtime reflection object/table paths.
