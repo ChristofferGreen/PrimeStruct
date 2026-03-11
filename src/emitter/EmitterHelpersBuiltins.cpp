@@ -1020,6 +1020,7 @@ bool resolveMethodCallPath(const Expr &call,
       resolved = normalizedResolved;
     }
     if (hasStructPath(resolved)) {
+      resolved = normalizeResolvedPath(resolved);
       resolvedOut = resolved + "/" + normalizedMethodName;
       return true;
     }
