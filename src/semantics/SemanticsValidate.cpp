@@ -2147,6 +2147,30 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     expr.name = name;
     return expr;
   };
+  auto makeStringLiteralExpr = [](const std::string &value) {
+    Expr expr;
+    expr.kind = Expr::Kind::StringLiteral;
+    std::string encoded;
+    encoded.reserve(value.size() + 8);
+    encoded.push_back('"');
+    for (const char ch : value) {
+      if (ch == '"' || ch == '\\') {
+        encoded.push_back('\\');
+      }
+      encoded.push_back(ch);
+    }
+    encoded += "\"utf8";
+    expr.stringValue = std::move(encoded);
+    return expr;
+  };
+  auto makeCallExpr = [](const std::string &name, Expr arg) {
+    Expr call;
+    call.kind = Expr::Kind::Call;
+    call.name = name;
+    call.args.push_back(std::move(arg));
+    call.argNames.push_back(std::nullopt);
+    return call;
+  };
   auto makeFieldAccessExpr = [&](const std::string &receiverName, const std::string &fieldName) {
     Expr fieldAccess;
     fieldAccess.kind = Expr::Kind::Call;
@@ -2189,6 +2213,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool shouldGenerateDefault = false;
     bool shouldGenerateIsDefault = false;
     bool shouldGenerateClone = false;
+    bool shouldGenerateDebugPrint = false;
     if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
@@ -2199,11 +2224,13 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         shouldGenerateDefault = shouldGenerateDefault || transformHasArgument(transform, "Default");
         shouldGenerateIsDefault = shouldGenerateIsDefault || transformHasArgument(transform, "IsDefault");
         shouldGenerateClone = shouldGenerateClone || transformHasArgument(transform, "Clone");
+        shouldGenerateDebugPrint = shouldGenerateDebugPrint || transformHasArgument(transform, "DebugPrint");
       }
     }
 
     std::vector<std::string> fieldNames;
-    if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault || shouldGenerateClone) {
+    if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault || shouldGenerateClone ||
+        shouldGenerateDebugPrint) {
       fieldNames.reserve(def.statements.size());
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {
@@ -2259,6 +2286,40 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         helper.returnExpr = std::move(combined);
       }
       helper.hasReturnStatement = true;
+
+      rewrittenDefinitions.push_back(std::move(helper));
+      definitionPaths.insert(helperPath);
+      return true;
+    };
+    auto emitDebugPrintHelper = [&]() -> bool {
+      const std::string helperPath = def.fullPath + "/DebugPrint";
+      if (definitionPaths.count(helperPath) > 0) {
+        error = "generated reflection helper already exists: " + helperPath;
+        return false;
+      }
+
+      Definition helper;
+      helper.name = "DebugPrint";
+      helper.fullPath = helperPath;
+      helper.namespacePrefix = def.fullPath;
+      helper.sourceLine = def.sourceLine;
+      helper.sourceColumn = def.sourceColumn;
+
+      Transform returnTransform;
+      returnTransform.name = "return";
+      returnTransform.templateArgs.push_back("void");
+      helper.transforms.push_back(std::move(returnTransform));
+      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix));
+
+      if (fieldNames.empty()) {
+        helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr(def.fullPath + " {}")));
+      } else {
+        helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr(def.fullPath + " {")));
+        for (const auto &fieldName : fieldNames) {
+          helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr("  " + fieldName)));
+        }
+        helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr("}")));
+      }
 
       rewrittenDefinitions.push_back(std::move(helper));
       definitionPaths.insert(helperPath);
@@ -2398,6 +2459,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     }
     if (shouldGenerateClone) {
       if (!emitCloneHelper()) {
+        return false;
+      }
+    }
+    if (shouldGenerateDebugPrint) {
+      if (!emitDebugPrintHelper()) {
         return false;
       }
     }

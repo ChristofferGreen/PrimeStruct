@@ -1246,6 +1246,131 @@ main() {
   CHECK(error.find("generated reflection helper already exists: /Pair/Clone") != std::string::npos);
 }
 
+TEST_CASE("generate DebugPrint emits reflection helper definition") {
+  const std::string source = R"(
+[struct reflect generate(DebugPrint)]
+Pair() {
+  [i32] x{7i32}
+  [bool] ok{true}
+}
+
+[return<int>]
+main() {
+  [Pair] value{Pair()}
+  /Pair/DebugPrint(value)
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Pair/DebugPrint") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  REQUIRE(generated->parameters.size() == 1);
+  REQUIRE(generated->transforms.size() == 1);
+  CHECK(generated->transforms.front().name == "return");
+  REQUIRE(generated->transforms.front().templateArgs.size() == 1);
+  CHECK(generated->transforms.front().templateArgs.front() == "void");
+  CHECK_FALSE(generated->hasReturnStatement);
+  REQUIRE(generated->statements.size() == 4);
+  for (const auto &stmt : generated->statements) {
+    REQUIRE(stmt.kind == primec::Expr::Kind::Call);
+    CHECK(stmt.name == "print_line");
+    REQUIRE(stmt.args.size() == 1);
+    CHECK(stmt.args.front().kind == primec::Expr::Kind::StringLiteral);
+  }
+}
+
+TEST_CASE("generate DebugPrint supports static-only structs") {
+  const std::string source = R"(
+[struct reflect generate(DebugPrint)]
+Marker() {
+  [static i32] shared{1i32}
+}
+
+[return<int>]
+main() {
+  [Marker] value{Marker()}
+  /Marker/DebugPrint(value)
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Marker/DebugPrint") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  REQUIRE(generated->statements.size() == 1);
+  REQUIRE(generated->statements.front().kind == primec::Expr::Kind::Call);
+  CHECK(generated->statements.front().name == "print_line");
+}
+
+TEST_CASE("generate DebugPrint accepts non-printable field types") {
+  const std::string source = R"(
+[struct]
+Nested() {
+  [i32] id{1i32}
+}
+
+[struct reflect generate(DebugPrint)]
+Container() {
+  [Nested] nested{Nested()}
+}
+
+[return<int>]
+main() {
+  [Container] value{Container()}
+  /Container/DebugPrint(value)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("generate DebugPrint rejects existing helper collision") {
+  const std::string source = R"(
+[struct reflect generate(DebugPrint)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/Pair/DebugPrint([Pair] value) {
+  print_line("custom"utf8)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("generated reflection helper already exists: /Pair/DebugPrint") != std::string::npos);
+}
+
 TEST_CASE("reflection core type primitives validate") {
   const std::string source = R"(
 [struct reflect]
