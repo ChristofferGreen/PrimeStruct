@@ -1,5 +1,6 @@
 #include "primec/OptionsParser.h"
 
+#include "primec/EmitKind.h"
 #include "primec/Options.h"
 #include "primec/TransformRegistry.h"
 
@@ -416,11 +417,13 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
     if (!isPrimecMode && arg == "--emit=vm") {
       continue;
     }
-    if (isPrimecMode &&
-        (arg == "--emit=cpp" || arg == "--emit=cpp-ir" || arg == "--emit=exe" || arg == "--emit=exe-ir" ||
-         arg == "--emit=native" || arg == "--emit=ir" || arg == "--emit=vm" || arg == "--emit=glsl" ||
-         arg == "--emit=spirv" || arg == "--emit=wasm" || arg == "--emit=glsl-ir" || arg == "--emit=spirv-ir")) {
-      out.emitKind = arg.substr(std::string("--emit=").size());
+    if (isPrimecMode && arg.rfind("--emit=", 0) == 0) {
+      const std::string emitKind = arg.substr(std::string("--emit=").size());
+      if (!isPrimecEmitKind(emitKind)) {
+        error = "unknown option: " + arg;
+        return false;
+      }
+      out.emitKind = emitKind;
     } else if (arg == "--emit-diagnostics") {
       out.emitDiagnostics = true;
     } else if (!isPrimecMode && arg == "--debug-json") {

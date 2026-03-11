@@ -76,6 +76,24 @@ TEST_CASE("emit kind aliases resolve to canonical ir backend kinds") {
   CHECK(primec::resolveIrBackendEmitKind("unknown") == "unknown");
 }
 
+TEST_CASE("all production primec emit kinds route through ir backend resolution") {
+  const std::vector<std::string_view> expectedKinds = {
+      "cpp", "cpp-ir", "exe", "exe-ir", "native", "ir", "vm", "glsl", "spirv", "wasm", "glsl-ir", "spirv-ir"};
+
+  const std::span<const std::string_view> emitKinds = primec::listPrimecEmitKinds();
+  CHECK(std::vector<std::string_view>(emitKinds.begin(), emitKinds.end()) == expectedKinds);
+  CHECK(primec::primecEmitKindsUsage() == "cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir");
+
+  for (const std::string_view emitKind : emitKinds) {
+    CAPTURE(emitKind);
+    CHECK(primec::isPrimecEmitKind(emitKind));
+    const std::string_view resolvedKind = primec::resolveIrBackendEmitKind(emitKind);
+    CHECK(primec::findIrBackend(resolvedKind) != nullptr);
+  }
+
+  CHECK_FALSE(primec::isPrimecEmitKind("metal"));
+}
+
 TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved entry") {
   primec::Program program;
   primec::Options options;

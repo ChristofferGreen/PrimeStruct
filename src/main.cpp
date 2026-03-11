@@ -409,19 +409,16 @@ int main(int argc, char **argv) {
       if (!argError.empty()) {
         std::cerr << "Argument error: " << argError << "\n";
       }
-      std::cerr
-          << "Usage: primec [--emit=cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir] "
-             "<input.prime> "
-                   "[-o <output>] "
-                   "[--entry /path] [--import-path <dir>] [-I <dir>] "
-                   "[--wasm-profile wasi|browser] "
-                   "[--text-transforms <list>] [--text-transform-rules <rules>] "
-                   "[--semantic-transform-rules <rules>] [--semantic-transforms <list>] "
-                   "[--transform-list <list>] [--no-text-transforms] [--no-semantic-transforms] "
-                   "[--no-transforms] [--out-dir <dir>] [--list-transforms] [--emit-diagnostics] "
-                   "[--collect-diagnostics] "
-                   "[--default-effects <list>] [--ir-inline] "
-                   "[--dump-stage pre_ast|ast|ast-semantic|ir] [-- <program args...>]\n";
+      std::cerr << "Usage: primec [--emit=" << primec::primecEmitKindsUsage() << "] <input.prime> [-o <output>] "
+                << "[--entry /path] [--import-path <dir>] [-I <dir>] "
+                << "[--wasm-profile wasi|browser] "
+                << "[--text-transforms <list>] [--text-transform-rules <rules>] "
+                << "[--semantic-transform-rules <rules>] [--semantic-transforms <list>] "
+                << "[--transform-list <list>] [--no-text-transforms] [--no-semantic-transforms] "
+                << "[--no-transforms] [--out-dir <dir>] [--list-transforms] [--emit-diagnostics] "
+                << "[--collect-diagnostics] "
+                << "[--default-effects <list>] [--ir-inline] "
+                << "[--dump-stage pre_ast|ast|ast-semantic|ir] [-- <program args...>]\n";
     }
     return 2;
   }
