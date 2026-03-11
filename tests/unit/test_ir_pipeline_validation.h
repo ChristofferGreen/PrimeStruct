@@ -9412,7 +9412,7 @@ TEST_CASE("ir lowerer struct return path helpers infer from expressions") {
                                                           defMap).empty());
 }
 
-TEST_CASE("ir lowerer struct return helpers forward vector alias call paths" * doctest::skip()) {
+TEST_CASE("ir lowerer struct return helpers reject vector alias canonical forwarding") {
   const std::unordered_set<std::string> structNames = {
       "/pkg/Entry",
       "/pkg/Tagged",
@@ -9475,7 +9475,7 @@ TEST_CASE("ir lowerer struct return helpers forward vector alias call paths" * d
                                                           structNames,
                                                           resolveStructTypePath,
                                                           resolveStructLayoutExprPath,
-                                                          defMap) == "/pkg/Entry");
+                                                          defMap).empty());
 
   primec::Expr methodCall;
   methodCall.kind = primec::Expr::Kind::Call;
@@ -9487,7 +9487,7 @@ TEST_CASE("ir lowerer struct return helpers forward vector alias call paths" * d
                                                           structNames,
                                                           resolveStructTypePath,
                                                           resolveStructLayoutExprPath,
-                                                          defMap) == "/pkg/Tagged");
+                                                          defMap).empty());
 
   methodCall.name = "/std/collections/vector/missing";
   CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(methodCall,
@@ -9498,7 +9498,7 @@ TEST_CASE("ir lowerer struct return helpers forward vector alias call paths" * d
                                                           defMap).empty());
 }
 
-TEST_CASE("ir lowerer struct return helpers fall back from alias defs without returns" * doctest::skip()) {
+TEST_CASE("ir lowerer struct return helpers reject canonical fallback from alias defs without returns") {
   const std::unordered_set<std::string> structNames = {
       "/pkg/Entry",
   };
@@ -9557,7 +9557,7 @@ TEST_CASE("ir lowerer struct return helpers fall back from alias defs without re
                                                           structNames,
                                                           resolveStructTypePath,
                                                           resolveStructLayoutExprPath,
-                                                          defMap) == "/pkg/Entry");
+                                                          defMap).empty());
 }
 
 TEST_CASE("ir lowerer struct return helpers keep empty result when alias candidates have no struct returns") {

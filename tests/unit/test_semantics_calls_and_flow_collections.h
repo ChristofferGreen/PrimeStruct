@@ -3470,7 +3470,7 @@ main() {
   CHECK(error.find("argument type mismatch for /Reference/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access alias chained method uses canonical struct return inference" * doctest::skip()) {
+TEST_CASE("vector namespaced access alias chained method rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3493,11 +3493,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access alias chained method keeps canonical struct diagnostics" * doctest::skip()) {
+TEST_CASE("vector namespaced access alias chained method keeps removed-alias diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3521,10 +3521,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access alias field expression infers canonical struct return" * doctest::skip()) {
+TEST_CASE("vector namespaced access alias field expression rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3547,11 +3547,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown field: value") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access alias field expression keeps canonical method diagnostics" * doctest::skip()) {
+TEST_CASE("vector namespaced access alias field expression keeps removed-alias diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3580,7 +3580,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(error.find("unknown field: value") != std::string::npos);
 }
 
 TEST_CASE("vector constructor alias call infers canonical helper return kind") {
@@ -3645,7 +3645,7 @@ main() {
   CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector method alias access infers canonical struct return kind" * doctest::skip()) {
+TEST_CASE("vector method alias access rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3673,11 +3673,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("vector method alias access keeps canonical struct diagnostics" * doctest::skip()) {
+TEST_CASE("vector method alias access keeps removed-alias diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3706,7 +3706,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("templated stdlib canonical vector helpers reject method-call sugar template args on count") {

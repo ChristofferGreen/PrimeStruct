@@ -1616,7 +1616,7 @@ TEST_CASE("C++ emitter helper normalizes full-path array method aliases") {
       call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
 }
 
-TEST_CASE("C++ emitter helper prefers canonical vector access struct returns for alias receiver methods" * doctest::skip()) {
+TEST_CASE("C++ emitter helper rejects canonical vector alias access struct-return forwarding") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.name = "/vector/at";
@@ -1657,10 +1657,10 @@ TEST_CASE("C++ emitter helper prefers canonical vector access struct returns for
   std::string resolved;
   CHECK(primec::emitter::resolveMethodCallPath(
       methodCall, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/Marker/tag");
+  CHECK(resolved == "/i32/tag");
 }
 
-TEST_CASE("C++ emitter helper falls back to vector element method targets without canonical struct metadata" * doctest::skip()) {
+TEST_CASE("C++ emitter helper keeps vector element method targets without canonical metadata") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.name = "/vector/at";
@@ -2939,7 +2939,7 @@ main() {
   CHECK(output.find("ps_i32_tag(ps_string_at_unsafe(ps_wrapText(), 0))") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter forwards vector alias access struct method chains to canonical helpers" * doctest::skip()) {
+TEST_CASE("rejects vector alias access struct method chain canonical forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -2963,22 +2963,18 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_access_struct_method_chain_canonical_forwarding.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_cpp_vector_alias_access_struct_method_chain_canonical_forwarding.cpp")
-          .string();
+      writeTemp("compile_cpp_vector_alias_access_struct_method_chain_canonical_forwarding_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_vector_alias_access_struct_method_chain_canonical_forwarding_reject.err")
+                                  .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_std_collections_vector_at(") != std::string::npos);
-  const size_t firstTag = output.find("ps_Marker_tag(");
-  CHECK(firstTag != std::string::npos);
-  CHECK(output.find("ps_Marker_tag(", firstTag + 1) != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical diagnostics for vector alias access struct method chains" * doctest::skip()) {
+TEST_CASE("rejects vector alias access struct method chain canonical diagnostics forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3009,10 +3005,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter forwards vector alias access through auto wrapper canonical struct returns" * doctest::skip()) {
+TEST_CASE("rejects vector alias access auto wrapper canonical struct-return forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3045,17 +3041,18 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_access_auto_wrapper_canonical_struct_return.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_vector_alias_access_auto_wrapper_canonical_struct_return_exe")
+      writeTemp("compile_cpp_vector_alias_access_auto_wrapper_canonical_struct_return_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_vector_alias_access_auto_wrapper_canonical_struct_return_reject.err")
                                   .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 42);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical diagnostics for vector alias access auto wrapper method chains" * doctest::skip()) {
+TEST_CASE("rejects vector alias access auto wrapper canonical diagnostics forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3096,7 +3093,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter forwards explicit-template vector count wrappers through canonical return kinds") {
@@ -3514,7 +3511,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps vector alias access count fallback through canonical wrapper return metadata" * doctest::skip()) {
+TEST_CASE("rejects vector alias access count canonical wrapper return forwarding in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapValues() {
@@ -3532,18 +3529,18 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_access_count_canonical_wrapper_return_fallback.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_vector_alias_access_count_canonical_wrapper_return_fallback.cpp")
+      writeTemp("compile_cpp_vector_alias_access_count_canonical_wrapper_return_forwarding_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_vector_alias_access_count_canonical_wrapper_return_forwarding_reject.err")
                                   .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_string_count(ps_std_collections_vector_at(ps_wrapValues(), 0))") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("rejects vector alias access count with canonical non-string wrapper return in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects vector alias access count with canonical non-string wrapper return in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapValues() {

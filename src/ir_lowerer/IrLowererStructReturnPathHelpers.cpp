@@ -68,11 +68,14 @@ std::string normalizeCollectionMethodName(std::string methodName) {
 std::vector<std::string> collectionMethodPathCandidates(const std::string &receiverStruct,
                                                         const std::string &methodName) {
   if (receiverStruct == "/vector") {
-    std::vector<std::string> candidates = {
-        "/vector/" + methodName,
-        "/std/collections/vector/" + methodName,
-    };
-    if (allowsArrayVectorCompatibilitySuffix(methodName)) {
+    std::vector<std::string> candidates = {"/vector/" + methodName};
+    const bool blocksRemovedVectorAliasStructReturnForwarding =
+        methodName == "at" || methodName == "at_unsafe";
+    if (!blocksRemovedVectorAliasStructReturnForwarding) {
+      candidates.push_back("/std/collections/vector/" + methodName);
+    }
+    if (allowsArrayVectorCompatibilitySuffix(methodName) &&
+        !blocksRemovedVectorAliasStructReturnForwarding) {
       candidates.push_back("/array/" + methodName);
     }
     return candidates;

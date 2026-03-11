@@ -2257,11 +2257,15 @@ std::string SemanticsValidator::inferStructReturnPath(
           !namespacedHelper.empty()) {
         methodName = namespacedHelper;
       }
+      const bool blocksRemovedVectorAliasStructReturnForwarding =
+          methodName == "at" || methodName == "at_unsafe";
       std::vector<std::string> methodCandidates;
       if (receiverStruct == "/vector") {
-        methodCandidates = {"/vector/" + methodName,
-                            "/std/collections/vector/" + methodName};
-        if (methodName != "count") {
+        methodCandidates = {"/vector/" + methodName};
+        if (!blocksRemovedVectorAliasStructReturnForwarding) {
+          methodCandidates.push_back("/std/collections/vector/" + methodName);
+        }
+        if (methodName != "count" && !blocksRemovedVectorAliasStructReturnForwarding) {
           methodCandidates.push_back("/array/" + methodName);
         }
       } else if (receiverStruct == "/array") {
