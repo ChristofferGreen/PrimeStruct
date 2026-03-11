@@ -3001,7 +3001,7 @@ main() {
   CHECK(output.find("ps_vector_capacity(ps_wrapVector())") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps namespaced wrapper count capacity builtin fallback" * doctest::skip()) {
+TEST_CASE("rejects namespaced wrapper count capacity compatibility fallback in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -3019,16 +3019,16 @@ main() {
               /vector/capacity(wrapVector())))
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_namespaced_wrapper_count_capacity_builtin_fallback.prime", source);
+  const std::string srcPath =
+      writeTemp("compile_cpp_namespaced_wrapper_count_capacity_compatibility_fallback_reject.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_namespaced_wrapper_count_capacity_builtin_fallback.cpp")
+                               "primec_cpp_namespaced_wrapper_count_capacity_compatibility_fallback_reject_out.txt")
                                   .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_map_count(ps_wrapMap())") != std::string::npos);
-  CHECK(output.find("ps_vector_capacity(ps_wrapVector())") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps array namespaced wrapper count builtin fallback") {
@@ -3086,7 +3086,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps namespaced count capacity method chain fallback" * doctest::skip()) {
+TEST_CASE("rejects namespaced count capacity method chain compatibility fallback in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -3103,19 +3103,19 @@ main() {
               /vector/capacity(values).tag()))
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_namespaced_count_capacity_method_chain_fallback.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_namespaced_count_capacity_method_chain_fallback.cpp")
-          .string();
+  const std::string srcPath =
+      writeTemp("compile_cpp_namespaced_count_capacity_method_chain_compatibility_fallback_reject.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_namespaced_count_capacity_method_chain_compatibility_fallback_reject_out.txt")
+                                  .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_i32_tag(ps_string_count(") != std::string::npos);
-  CHECK(output.find("ps_i32_tag(ps_vector_capacity(") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps namespaced access method chain fallback" * doctest::skip()) {
+TEST_CASE("rejects namespaced access method chain compatibility fallback in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -3131,16 +3131,20 @@ main() {
               /vector/at_unsafe(values, 1i32).tag()))
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_namespaced_access_method_chain_fallback.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_namespaced_access_method_chain_fallback_exe").string();
+  const std::string srcPath =
+      writeTemp("compile_cpp_namespaced_access_method_chain_compatibility_fallback_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_namespaced_access_method_chain_compatibility_fallback_reject.err")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps namespaced wrapper string access method chain fallback" * doctest::skip()) {
+TEST_CASE("rejects namespaced wrapper string access method chain compatibility fallback in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -3161,16 +3165,17 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_namespaced_wrapper_string_access_method_chain_fallback.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_namespaced_wrapper_string_access_method_chain_fallback.cpp")
-                                  .string();
+      writeTemp("compile_cpp_namespaced_wrapper_string_access_method_chain_compatibility_fallback_reject.prime",
+                source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_namespaced_wrapper_string_access_method_chain_compatibility_fallback_reject_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_i32_tag(ps_string_at(ps_wrapText(), 1))") != std::string::npos);
-  CHECK(output.find("ps_i32_tag(ps_string_at_unsafe(ps_wrapText(), 0))") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias access struct method chain canonical forwarding in C++ emitter") {
