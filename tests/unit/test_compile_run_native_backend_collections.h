@@ -336,6 +336,33 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
+TEST_CASE("compiles and runs native stdlib map constructor alias fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/map<T, U>([T] key, [U] value) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/map<i32, i32>(1i32, 2i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_namespaced_map_constructor_alias_fallback.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_namespaced_map_constructor_alias_fallback_out.txt")
+                                  .string();
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_namespaced_map_constructor_alias_fallback_exe")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 77);
+}
+
 TEST_CASE("compiles native map unnamespaced count builtin fallback with canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

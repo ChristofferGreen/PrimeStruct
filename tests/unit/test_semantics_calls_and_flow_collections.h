@@ -3166,6 +3166,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced map constructor template call resolves map alias helper fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/map<T, U>([T] key, [U] value) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/map<i32, i32>(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced map constructor fallback keeps map alias diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/map([i32] key) {
+  return(key)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/map(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /map/map") != std::string::npos);
+}
+
 TEST_CASE("map unnamespaced count call resolves builtin fallback with canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

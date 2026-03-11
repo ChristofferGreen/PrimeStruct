@@ -175,6 +175,28 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("runs vm stdlib namespaced map constructor fallback to map alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/map<T, U>([T] key, [U] value) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/map<i32, i32>(1i32, 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_namespaced_map_constructor_alias_fallback.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_namespaced_map_constructor_alias_fallback_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 77);
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("runs vm map unnamespaced count builtin fallback with canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
