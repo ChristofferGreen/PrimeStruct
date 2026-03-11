@@ -140,6 +140,40 @@ main() {
   CHECK(ir.find("return /Pair/Compare(left, right)") != std::string::npos);
 }
 
+TEST_CASE("reflection hash64 helper appears in ast-semantic and ir dumps") {
+  const std::string source = R"(
+[struct reflect generate(Hash64)]
+Pair() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<u64>]
+main() {
+  [Pair] value{Pair([x] 1i32, [y] 2i32)}
+  return(/Pair/Hash64(value))
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_hash64_dump.prime", source);
+  const std::string astOutPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_hash64_ast_semantic.txt").string();
+  const std::string irOutPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_hash64_ir.txt").string();
+
+  const std::string astCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(astOutPath);
+  const std::string irCmd = "./primec " + quoteShellArg(srcPath) + " --dump-stage ir > " + quoteShellArg(irOutPath);
+  CHECK(runCommand(astCmd) == 0);
+  CHECK(runCommand(irCmd) == 0);
+
+  const std::string ast = readFile(astOutPath);
+  const std::string ir = readFile(irOutPath);
+  CHECK(ast.find("/Pair/Hash64(") != std::string::npos);
+  CHECK(ast.find("convert<u64>(x(value))") != std::string::npos);
+  CHECK(ast.find("convert<u64>(y(value))") != std::string::npos);
+  CHECK(ir.find("return /Pair/Hash64(value)") != std::string::npos);
+}
+
 TEST_CASE("reflection codegen helper runtime stays aligned across backends") {
   const std::string source = reflectionCodegenRuntimeSource();
   const std::string srcPath = writeTemp("compile_reflection_codegen_runtime.prime", source);
@@ -204,6 +238,45 @@ main() {
   CHECK(runCommand(quoteShellArg(exePath)) == 7);
 
   const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_reflection_compare_native").string();
+  const std::string nativeCompileCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(nativeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 7);
+}
+
+TEST_CASE("reflection hash64 helper runtime stays aligned across backends") {
+  const std::string source = R"(
+[struct reflect generate(Hash64)]
+Pair() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+}
+
+[return<int>]
+main() {
+  [Pair] first{Pair([x] 3i32, [y] 5i32)}
+  [Pair] same{Pair([x] 3i32, [y] 5i32)}
+  [Pair] swapped{Pair([x] 5i32, [y] 3i32)}
+  [u64] firstHash{/Pair/Hash64(first)}
+  [u64] sameHash{/Pair/Hash64(same)}
+  [u64] swappedHash{/Pair/Hash64(swapped)}
+  [bool] sameOk{equal(firstHash, sameHash)}
+  [bool] orderOk{not_equal(firstHash, swappedHash)}
+  return(if(and(sameOk, orderOk), then() { 7i32 }, else() { 3i32 }))
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_hash64_runtime.prime", source);
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 7);
+
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_reflection_hash64_exe").string();
+  const std::string exeCompileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(exeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 7);
+
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_reflection_hash64_native").string();
   const std::string nativeCompileCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(nativeCompileCmd) == 0);

@@ -2179,6 +2179,14 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     expr.isUnsigned = false;
     return expr;
   };
+  auto makeU64LiteralExpr = [](uint64_t value) {
+    Expr expr;
+    expr.kind = Expr::Kind::Literal;
+    expr.literalValue = value;
+    expr.intWidth = 64;
+    expr.isUnsigned = true;
+    return expr;
+  };
   auto makeBinaryCallExpr = [](const std::string &name, Expr left, Expr right) {
     Expr call;
     call.kind = Expr::Kind::Call;
@@ -2266,6 +2274,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool shouldGenerateClone = false;
     bool shouldGenerateDebugPrint = false;
     bool shouldGenerateCompare = false;
+    bool shouldGenerateHash64 = false;
     if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
@@ -2278,12 +2287,13 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         shouldGenerateClone = shouldGenerateClone || transformHasArgument(transform, "Clone");
         shouldGenerateDebugPrint = shouldGenerateDebugPrint || transformHasArgument(transform, "DebugPrint");
         shouldGenerateCompare = shouldGenerateCompare || transformHasArgument(transform, "Compare");
+        shouldGenerateHash64 = shouldGenerateHash64 || transformHasArgument(transform, "Hash64");
       }
     }
 
     std::vector<std::string> fieldNames;
     if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault || shouldGenerateClone ||
-        shouldGenerateDebugPrint || shouldGenerateCompare) {
+        shouldGenerateDebugPrint || shouldGenerateCompare || shouldGenerateHash64) {
       fieldNames.reserve(def.statements.size());
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {
@@ -2430,6 +2440,48 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       definitionPaths.insert(helperPath);
       return true;
     };
+    auto emitHash64Helper = [&]() -> bool {
+      const std::string helperPath = def.fullPath + "/Hash64";
+      if (definitionPaths.count(helperPath) > 0) {
+        error = "generated reflection helper already exists: " + helperPath;
+        return false;
+      }
+
+      Definition helper;
+      helper.name = "Hash64";
+      helper.fullPath = helperPath;
+      helper.namespacePrefix = def.fullPath;
+      helper.sourceLine = def.sourceLine;
+      helper.sourceColumn = def.sourceColumn;
+
+      appendPublicVisibility(helper);
+      Transform returnTransform;
+      returnTransform.name = "return";
+      returnTransform.templateArgs.push_back("u64");
+      helper.transforms.push_back(std::move(returnTransform));
+      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix));
+
+      Expr combined = makeU64LiteralExpr(1469598103934665603ULL);
+      for (const auto &fieldName : fieldNames) {
+        Expr convertFieldExpr;
+        convertFieldExpr.kind = Expr::Kind::Call;
+        convertFieldExpr.name = "convert";
+        convertFieldExpr.templateArgs.push_back("u64");
+        convertFieldExpr.args.push_back(makeFieldAccessExpr("value", fieldName));
+        convertFieldExpr.argNames.push_back(std::nullopt);
+
+        combined = makeBinaryCallExpr(
+            "plus",
+            makeBinaryCallExpr("multiply", std::move(combined), makeU64LiteralExpr(1099511628211ULL)),
+            std::move(convertFieldExpr));
+      }
+      helper.returnExpr = std::move(combined);
+      helper.hasReturnStatement = true;
+
+      rewrittenDefinitions.push_back(std::move(helper));
+      definitionPaths.insert(helperPath);
+      return true;
+    };
     auto emitCloneHelper = [&]() -> bool {
       const std::string helperPath = def.fullPath + "/Clone";
       if (definitionPaths.count(helperPath) > 0) {
@@ -2557,6 +2609,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     }
     if (shouldGenerateCompare) {
       if (!emitCompareHelper()) {
+        return false;
+      }
+    }
+    if (shouldGenerateHash64) {
+      if (!emitHash64Helper()) {
         return false;
       }
     }
