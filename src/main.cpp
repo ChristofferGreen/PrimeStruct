@@ -235,6 +235,10 @@ bool ensureOutputDirectory(const std::filesystem::path &outputPath, std::string 
   return true;
 }
 
+bool isProductionCppOrExeEmitKind(std::string_view emitKind) {
+  return emitKind == "cpp" || emitKind == "exe";
+}
+
 std::string transformAvailability(const primec::TransformInfo &info) {
   std::string availability;
   if (info.availableInPrimec) {
@@ -501,7 +505,7 @@ int main(int argc, char **argv) {
 
   primec::Program &program = pipelineOutput.program;
 
-  if ((options.emitKind == "cpp" || options.emitKind == "exe")) {
+  if (isProductionCppOrExeEmitKind(options.emitKind)) {
     if (auto softwareType = scanSoftwareNumericTypes(program)) {
       return emitFailure(options,
                          primec::DiagnosticCode::EmitError,

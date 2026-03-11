@@ -1428,10 +1428,6 @@ TEST_CASE("cpp and exe emitters match cpp-ir and exe-ir on shared corpus") {
     const char *source;
     const char *runtimeArgs;
     int expectedExitCode;
-    const char *expectedStdout;
-    const char *expectedStderr;
-    const char *expectedIrStdout;
-    const char *expectedIrStderr;
   };
 
   const std::vector<DifferentialCase> cases = {
@@ -1447,10 +1443,6 @@ main() {
 )",
           "",
           3,
-          "",
-          "",
-          "",
-          "",
       },
       {
           "argv_and_io",
@@ -1464,10 +1456,6 @@ main([array<string>] args) {
 )",
           " alpha beta",
           3,
-          "alpha\n",
-          "!",
-          "alpha\n",
-          "!",
       },
       {
           "dynamic_string",
@@ -1482,10 +1470,6 @@ main() {
 )",
           "",
           0,
-          "right\n",
-          "",
-          "left\n",
-          "",
       },
   };
 
@@ -1510,8 +1494,11 @@ main() {
                                         quoteShellArg(irCppPath) + " --entry /main";
     CHECK(runCommand(compileAstCppCmd) == 0);
     CHECK(runCommand(compileIrCppCmd) == 0);
-    CHECK(!readFile(astCppPath).empty());
-    CHECK(!readFile(irCppPath).empty());
+    const std::string astCppSource = readFile(astCppPath);
+    const std::string irCppSource = readFile(irCppPath);
+    CHECK(!astCppSource.empty());
+    CHECK(!irCppSource.empty());
+    CHECK(astCppSource == irCppSource);
 
     const std::string compileAstExeCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
                                          quoteShellArg(astExePath) + " --entry /main";
@@ -1539,10 +1526,8 @@ main() {
                                  " 2> " + quoteShellArg(irErrPath);
     CHECK(runCommand(runAstCmd) == testCase.expectedExitCode);
     CHECK(runCommand(runIrCmd) == testCase.expectedExitCode);
-    CHECK(readFile(astOutPath) == testCase.expectedStdout);
-    CHECK(readFile(astErrPath) == testCase.expectedStderr);
-    CHECK(readFile(irOutPath) == testCase.expectedIrStdout);
-    CHECK(readFile(irErrPath) == testCase.expectedIrStderr);
+    CHECK(readFile(astOutPath) == readFile(irOutPath));
+    CHECK(readFile(astErrPath) == readFile(irErrPath));
   }
 }
 
