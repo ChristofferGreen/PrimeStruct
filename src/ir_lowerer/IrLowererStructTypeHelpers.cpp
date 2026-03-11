@@ -9,6 +9,20 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+std::string normalizeMapImportAliasPath(const std::string &path) {
+  if (path.empty() || path.front() == '/') {
+    return path;
+  }
+  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
+    return "/" + path;
+  }
+  return path;
+}
+
+} // namespace
+
 std::string joinTemplateArgsText(const std::vector<std::string> &args) {
   std::string out;
   for (size_t i = 0; i < args.size(); ++i) {
@@ -200,9 +214,12 @@ bool resolveStructTypePathFromScope(
     }
   }
   auto importIt = importAliases.find(typeName);
-  if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
-    resolvedOut = importIt->second;
-    return true;
+  if (importIt != importAliases.end()) {
+    const std::string normalizedAlias = normalizeMapImportAliasPath(importIt->second);
+    if (structNames.count(normalizedAlias) > 0) {
+      resolvedOut = normalizedAlias;
+      return true;
+    }
   }
   std::string root = "/" + typeName;
   if (structNames.count(root) > 0) {
@@ -226,7 +243,7 @@ std::string resolveStructTypePathCandidateFromScope(
   }
   auto importIt = importAliases.find(typeName);
   if (importIt != importAliases.end()) {
-    return importIt->second;
+    return normalizeMapImportAliasPath(importIt->second);
   }
   return resolved;
 }
@@ -265,7 +282,7 @@ std::string resolveStructLayoutExprPathFromScope(
     }
     auto importIt = importAliases.find(expr.name);
     if (importIt != importAliases.end()) {
-      return importIt->second;
+      return normalizeMapImportAliasPath(importIt->second);
     }
     return expr.namespacePrefix + "/" + expr.name;
   }
@@ -275,7 +292,7 @@ std::string resolveStructLayoutExprPathFromScope(
   }
   auto importIt = importAliases.find(expr.name);
   if (importIt != importAliases.end()) {
-    return importIt->second;
+    return normalizeMapImportAliasPath(importIt->second);
   }
   return root;
 }

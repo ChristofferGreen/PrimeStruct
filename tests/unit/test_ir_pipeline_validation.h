@@ -8845,6 +8845,8 @@ TEST_CASE("ir lowerer struct type helpers resolve setup import paths") {
   const std::unordered_map<std::string, std::string> importAliases = {
       {"AliasFoo", "/alias/Foo"},
       {"Thing", "/pkg/Thing"},
+      {"MapCountAlias", "std/collections/map/count"},
+      {"MapAtAlias", "map/at"},
   };
 
   CHECK(primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
@@ -8909,6 +8911,19 @@ TEST_CASE("ir lowerer struct type helpers resolve setup import paths") {
   slashExpr.name = "pkg/Thing";
   CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
             slashExpr, defMap, importAliases) == "/pkg/Thing");
+
+  primec::Expr slashlessCanonicalMapAliasExpr;
+  slashlessCanonicalMapAliasExpr.kind = primec::Expr::Kind::Name;
+  slashlessCanonicalMapAliasExpr.name = "MapCountAlias";
+  CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
+            slashlessCanonicalMapAliasExpr, defMap, importAliases) == "/std/collections/map/count");
+
+  primec::Expr slashlessMapAliasExpr;
+  slashlessMapAliasExpr.kind = primec::Expr::Kind::Name;
+  slashlessMapAliasExpr.name = "MapAtAlias";
+  slashlessMapAliasExpr.namespacePrefix = "/pkg";
+  CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
+            slashlessMapAliasExpr, defMap, importAliases) == "/map/at");
 }
 
 TEST_CASE("ir lowerer struct field binding helpers resolve envelope values") {
