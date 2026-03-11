@@ -2171,6 +2171,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     call.argNames.push_back(std::nullopt);
     return call;
   };
+  auto appendPublicVisibility = [](Definition &helper) {
+    Transform visibilityTransform;
+    visibilityTransform.name = "public";
+    helper.transforms.push_back(std::move(visibilityTransform));
+  };
   auto makeFieldAccessExpr = [&](const std::string &receiverName, const std::string &fieldName) {
     Expr fieldAccess;
     fieldAccess.kind = Expr::Kind::Call;
@@ -2263,6 +2268,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       helper.sourceLine = def.sourceLine;
       helper.sourceColumn = def.sourceColumn;
 
+      appendPublicVisibility(helper);
       Transform returnTransform;
       returnTransform.name = "return";
       returnTransform.templateArgs.push_back("bool");
@@ -2305,6 +2311,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       helper.sourceLine = def.sourceLine;
       helper.sourceColumn = def.sourceColumn;
 
+      appendPublicVisibility(helper);
       Transform returnTransform;
       returnTransform.name = "return";
       returnTransform.templateArgs.push_back("void");
@@ -2339,6 +2346,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       helper.sourceLine = def.sourceLine;
       helper.sourceColumn = def.sourceColumn;
 
+      appendPublicVisibility(helper);
       Transform returnTransform;
       returnTransform.name = "return";
       returnTransform.templateArgs.push_back(def.fullPath);
@@ -2373,6 +2381,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       helper.sourceLine = def.sourceLine;
       helper.sourceColumn = def.sourceColumn;
 
+      appendPublicVisibility(helper);
       Transform returnTransform;
       returnTransform.name = "return";
       returnTransform.templateArgs.push_back(def.fullPath);
@@ -2402,6 +2411,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       helper.sourceLine = def.sourceLine;
       helper.sourceColumn = def.sourceColumn;
 
+      appendPublicVisibility(helper);
       Transform returnTransform;
       returnTransform.name = "return";
       returnTransform.templateArgs.push_back("bool");

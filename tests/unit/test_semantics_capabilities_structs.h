@@ -682,6 +682,67 @@ main() {
   CHECK(error.find("duplicate reflection generator on /main: Equal") != std::string::npos);
 }
 
+TEST_CASE("generated reflection helpers are public") {
+  const std::string source = R"(
+[struct reflect generate(Equal, Default)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<bool>]
+main() {
+  [Pair] left{/Pair/Default()}
+  [Pair] right{/Pair/Default()}
+  return(/Pair/Equal(left, right))
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  for (const auto *helperPath : {"/Pair/Equal", "/Pair/Default"}) {
+    CAPTURE(helperPath);
+    const primec::Definition *generated = nullptr;
+    for (const auto &def : program.definitions) {
+      if (def.fullPath == helperPath) {
+        generated = &def;
+        break;
+      }
+    }
+    REQUIRE(generated != nullptr);
+    bool hasPublic = false;
+    for (const auto &transform : generated->transforms) {
+      if (transform.name == "public") {
+        hasPublic = true;
+      }
+      CHECK(transform.name != "private");
+    }
+    CHECK(hasPublic);
+  }
+}
+
+TEST_CASE("generated reflection helpers are importable via wildcard") {
+  const std::string source = R"(
+import /Pair/*
+
+[struct reflect generate(Equal, Default)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<bool>]
+main() {
+  return(Equal(Default(), Default()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("generate Equal emits reflection helper definition") {
   const std::string source = R"(
 [struct reflect generate(Equal)]
@@ -1277,10 +1338,19 @@ main() {
   }
   REQUIRE(generated != nullptr);
   REQUIRE(generated->parameters.size() == 1);
-  REQUIRE(generated->transforms.size() == 1);
-  CHECK(generated->transforms.front().name == "return");
-  REQUIRE(generated->transforms.front().templateArgs.size() == 1);
-  CHECK(generated->transforms.front().templateArgs.front() == "void");
+  bool hasPublic = false;
+  bool hasVoidReturn = false;
+  for (const auto &transform : generated->transforms) {
+    if (transform.name == "public") {
+      hasPublic = true;
+    }
+    if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+        transform.templateArgs.front() == "void") {
+      hasVoidReturn = true;
+    }
+  }
+  CHECK(hasPublic);
+  CHECK(hasVoidReturn);
   CHECK_FALSE(generated->hasReturnStatement);
   REQUIRE(generated->statements.size() == 4);
   for (const auto &stmt : generated->statements) {
