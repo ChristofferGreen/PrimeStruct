@@ -4995,6 +4995,31 @@ TEST_CASE("emitter expr control call-path step rewrites non-method call names") 
   REQUIRE(aliasPath.has_value());
   CHECK(*aliasPath == "/pkg/Vec3");
 
+  const auto slashlessCanonicalMapAliasPath =
+      primec::emitter::runEmitterExprControlCallPathStep(
+          bareExpr,
+          "Vec3",
+          {},
+          {{"Vec3", "std/collections/map/count"}});
+  REQUIRE(slashlessCanonicalMapAliasPath.has_value());
+  CHECK(*slashlessCanonicalMapAliasPath == "/std/collections/map/count");
+
+  const auto slashlessMapAliasPath = primec::emitter::runEmitterExprControlCallPathStep(
+      bareExpr,
+      "Vec3",
+      {},
+      {{"Vec3", "map/at"}});
+  REQUIRE(slashlessMapAliasPath.has_value());
+  CHECK(*slashlessMapAliasPath == "/map/at");
+
+  const auto slashlessNonMapAliasPath = primec::emitter::runEmitterExprControlCallPathStep(
+      bareExpr,
+      "Vec3",
+      {},
+      {{"Vec3", "pkg/Vec3"}});
+  REQUIRE(slashlessNonMapAliasPath.has_value());
+  CHECK(*slashlessNonMapAliasPath == "pkg/Vec3");
+
   CHECK_FALSE(primec::emitter::runEmitterExprControlCallPathStep(
       bareExpr,
       "Vec3",

@@ -2,6 +2,20 @@
 
 namespace primec::emitter {
 
+namespace {
+
+std::string normalizeMapImportAliasPath(const std::string &path) {
+  if (path.empty() || path.front() == '/') {
+    return path;
+  }
+  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
+    return "/" + path;
+  }
+  return path;
+}
+
+} // namespace
+
 std::optional<std::string> runEmitterExprControlCallPathStep(
     const Expr &expr,
     const std::string &resolvedPath,
@@ -16,7 +30,7 @@ std::optional<std::string> runEmitterExprControlCallPathStep(
   if (!expr.namespacePrefix.empty()) {
     const auto importIt = importAliases.find(expr.name);
     if (importIt != importAliases.end()) {
-      return importIt->second;
+      return normalizeMapImportAliasPath(importIt->second);
     }
     return std::nullopt;
   }
@@ -26,7 +40,7 @@ std::optional<std::string> runEmitterExprControlCallPathStep(
   }
   const auto importIt = importAliases.find(expr.name);
   if (importIt != importAliases.end()) {
-    return importIt->second;
+    return normalizeMapImportAliasPath(importIt->second);
   }
   return std::nullopt;
 }
