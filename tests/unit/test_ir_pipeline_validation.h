@@ -16119,6 +16119,86 @@ TEST_CASE("ir lowerer setup type helper resolves method call definitions from ex
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper resolves declared receiver aliases through slashless map imports") {
+  primec::Definition wrapMapDef;
+  wrapMapDef.fullPath = "/pkg/wrapMap";
+  wrapMapDef.namespacePrefix = "/pkg";
+  primec::Transform returnAlias;
+  returnAlias.name = "return";
+  returnAlias.templateArgs = {"MapAtAlias"};
+  wrapMapDef.transforms.push_back(returnAlias);
+
+  primec::Definition mapTagDef;
+  mapTagDef.fullPath = "/map/at/tag";
+
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"MapAtAlias", "std/collections/map/at"},
+  };
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "wrapMap";
+  receiverCall.namespacePrefix = "/pkg";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  const auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "wrapMap") {
+      return std::string("/pkg/wrapMap");
+    }
+    if (!expr.name.empty() && expr.name.front() == '/') {
+      return expr.name;
+    }
+    return std::string("/") + expr.name;
+  };
+
+  std::string error;
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {wrapMapDef.fullPath, &wrapMapDef},
+      {mapTagDef.fullPath, &mapTagDef},
+  };
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      importAliases,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      resolveExprPath,
+      defMap,
+      error);
+  CHECK(resolved == &mapTagDef);
+  CHECK(error.empty());
+
+  const std::unordered_map<std::string, const primec::Definition *> missingMethodDefMap = {
+      {wrapMapDef.fullPath, &wrapMapDef},
+  };
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            importAliases,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            resolveExprPath,
+            missingMethodDefMap,
+            error) == nullptr);
+  CHECK(error == "unknown method: /std/collections/map/at/tag");
+}
+
 TEST_CASE("ir lowerer setup type helper resolves struct receiver method definitions from expressions") {
   primec::Definition structMethodDef;
   structMethodDef.fullPath = "/pkg/Ctor/length";

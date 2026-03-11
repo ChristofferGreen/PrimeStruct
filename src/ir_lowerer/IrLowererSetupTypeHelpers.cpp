@@ -989,6 +989,26 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   std::string lookupError;
   const Definition *resolvedDef = resolveMethodDefinitionFromReceiverTarget(
       callExpr.name, typeName, resolvedTypePath, defMap, lookupError);
+  auto resolveMethodDefinitionFromTypeNameWithAliasFallback = [&](const std::string &receiverTypeName,
+                                                                  std::string &errorOutRef) -> const Definition * {
+    if (receiverTypeName.empty()) {
+      return nullptr;
+    }
+    const Definition *resolved = resolveMethodDefinitionFromReceiverTarget(
+        callExpr.name, receiverTypeName, "", defMap, errorOutRef);
+    if (resolved != nullptr) {
+      return resolved;
+    }
+    auto aliasIt = importAliases.find(receiverTypeName);
+    if (aliasIt == importAliases.end()) {
+      return nullptr;
+    }
+    const std::string aliasTypeName = normalizeMapImportAliasPath(aliasIt->second);
+    if (aliasTypeName.empty()) {
+      return nullptr;
+    }
+    return resolveMethodDefinitionFromReceiverTarget(callExpr.name, aliasTypeName, "", defMap, errorOutRef);
+  };
   if (resolvedDef == nullptr && typeName.empty() && resolvedTypePath.empty() &&
       receiver->kind == Expr::Kind::Call) {
     std::string nestedError = lookupError;
@@ -1005,7 +1025,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                                                               nestedError);
     if (receiverMethodDef != nullptr && inferReceiverTypeFromDeclaredReturn(*receiverMethodDef, typeName)) {
       lookupError.clear();
-      resolvedDef = resolveMethodDefinitionFromReceiverTarget(callExpr.name, typeName, "", defMap, lookupError);
+      resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(typeName, lookupError);
     } else {
       std::vector<std::string> receiverPaths = collectionHelperPathCandidates(resolveExprPath(*receiver));
       auto appendUniqueReceiverPath = [&](const std::string &candidate) {
@@ -1034,7 +1054,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           continue;
         }
         lookupError.clear();
-        resolvedDef = resolveMethodDefinitionFromReceiverTarget(callExpr.name, typeName, "", defMap, lookupError);
+        resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(typeName, lookupError);
         break;
       }
     }
