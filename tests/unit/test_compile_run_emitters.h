@@ -1041,7 +1041,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs vector namespaced count non-builtin array fallback in C++ emitter") {
+TEST_CASE("rejects vector namespaced count non-builtin array fallback in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -1054,14 +1054,14 @@ main() {
   return(/vector/count(values, true))
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_count_non_builtin_array_fallback.prime", source);
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_namespaced_count_non_builtin_array_fallback_rejected.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_non_builtin_array_fallback_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 31);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("compiles and runs std namespaced capacity expression receiver precedence in C++ emitter") {
@@ -2311,7 +2311,7 @@ main() {
   CHECK(runCommand(exePath) == 90);
 }
 
-TEST_CASE("compiles and runs array alias templated forwarding to canonical vector helper in C++ emitter") {
+TEST_CASE("rejects array alias templated forwarding to canonical vector helper in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /array/count([vector<i32>] values) {
@@ -2329,16 +2329,15 @@ main() {
   return(/array/count<i32>(values, true))
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_array_alias_templated_vector_forwarding.prime", source);
+  const std::string srcPath = writeTemp("compile_cpp_array_alias_templated_vector_forwarding_rejected.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_array_alias_templated_vector_forwarding_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 90);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs stdlib templated vector call fallback to array alias in C++ emitter") {
+TEST_CASE("rejects stdlib templated vector count fallback to array alias in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -2356,14 +2355,14 @@ main() {
   return(/std/collections/vector/count<i32>(values, true))
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_stdlib_templated_vector_call_array_fallback.prime", source);
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_templated_vector_call_array_fallback_rejected.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_templated_vector_call_array_fallback_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 90);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("compiles and runs vector alias templated forwarding past non-templated compatibility helper in C++ emitter") {

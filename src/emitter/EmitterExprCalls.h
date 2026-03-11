@@ -430,14 +430,17 @@
   };
   auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
     std::string helperName = helper == nullptr ? std::string() : std::string(helper);
-    if (helperName == "count" && candidate.kind == Expr::Kind::Call && candidate.args.size() == 1 &&
-        !candidate.name.empty()) {
+    if (helperName == "count" && candidate.kind == Expr::Kind::Call && !candidate.name.empty()) {
       std::string normalized = candidate.name;
       if (!normalized.empty() && normalized.front() == '/') {
         normalized.erase(normalized.begin());
       }
-      if (normalized == "array/count" && isResolvedVectorTarget(candidate.args.front())) {
-        return false;
+      if (normalized == "array/count") {
+        for (const Expr &arg : candidate.args) {
+          if (isResolvedVectorTarget(arg)) {
+            return false;
+          }
+        }
       }
     }
     if (isSimpleCallName(candidate, helper)) {

@@ -1298,13 +1298,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string preferred = path;
       if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
         const std::string suffix = preferred.substr(std::string("/array/").size());
-        const std::string vectorAlias = "/vector/" + suffix;
-        if (defMap_.count(vectorAlias) > 0) {
-          return vectorAlias;
-        }
-        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-        if (defMap_.count(stdlibAlias) > 0) {
-          return stdlibAlias;
+        if (suffix != "count") {
+          const std::string vectorAlias = "/vector/" + suffix;
+          if (defMap_.count(vectorAlias) > 0) {
+            return vectorAlias;
+          }
+          const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+          if (defMap_.count(stdlibAlias) > 0) {
+            return stdlibAlias;
+          }
         }
       }
       if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
@@ -1313,9 +1315,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (defMap_.count(stdlibAlias) > 0) {
           preferred = stdlibAlias;
         } else {
-          const std::string arrayAlias = "/array/" + suffix;
-          if (defMap_.count(arrayAlias) > 0) {
-            preferred = arrayAlias;
+          if (suffix != "count") {
+            const std::string arrayAlias = "/array/" + suffix;
+            if (defMap_.count(arrayAlias) > 0) {
+              preferred = arrayAlias;
+            }
           }
         }
       }
@@ -1325,9 +1329,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (defMap_.count(vectorAlias) > 0) {
           preferred = vectorAlias;
         } else {
-          const std::string arrayAlias = "/array/" + suffix;
-          if (defMap_.count(arrayAlias) > 0) {
-            preferred = arrayAlias;
+          if (suffix != "count") {
+            const std::string arrayAlias = "/array/" + suffix;
+            if (defMap_.count(arrayAlias) > 0) {
+              preferred = arrayAlias;
+            }
           }
         }
       }
@@ -1693,19 +1699,26 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
-    auto isArrayNamespacedVectorCountBuiltinCall = [&](const Expr &candidate) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.name.empty() || candidate.args.size() != 1) {
+    auto isArrayNamespacedVectorCountCompatibilityCall = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
         return false;
       }
       std::string normalized = candidate.name;
       if (!normalized.empty() && normalized.front() == '/') {
         normalized.erase(normalized.begin());
       }
-      if (normalized != "array/count") {
+      const bool spellsArrayCount = (normalized == "array/count");
+      const bool resolvesArrayCount = (resolveCalleePath(candidate) == "/array/count");
+      if (!spellsArrayCount && !resolvesArrayCount) {
         return false;
       }
-      std::string elemType;
-      return resolveVectorTarget(candidate.args.front(), elemType);
+      for (const Expr &arg : candidate.args) {
+        std::string elemType;
+        if (resolveVectorTarget(arg, elemType)) {
+          return true;
+        }
+      }
+      return false;
     };
     auto resolveMapKeyType = [&](const Expr &target, std::string &keyTypeOut) -> bool {
       keyTypeOut.clear();
@@ -2289,6 +2302,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       hasMethodReceiverIndex = true;
       methodReceiverIndex = vectorHelperCallReceiverIndex;
     }
+    if (!expr.isMethodCall && isArrayNamespacedVectorCountCompatibilityCall(expr)) {
+      error_ = "unknown call target: /array/count";
+      return false;
+    }
     auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {
       std::string elemType;
       return resolveVectorTarget(targetExpr, elemType) || resolveArrayTarget(targetExpr, elemType) ||
@@ -2378,7 +2395,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isNamespacedVectorCountCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
         isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-        !isArrayNamespacedVectorCountBuiltinCall(expr);
+        !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count";
     const bool isResolvedMapCountCall =
@@ -2437,16 +2454,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         appendUnique(path);
         if (path.rfind("/array/", 0) == 0) {
           const std::string suffix = path.substr(std::string("/array/").size());
-          appendUnique("/vector/" + suffix);
-          appendUnique("/std/collections/vector/" + suffix);
+          if (suffix != "count") {
+            appendUnique("/vector/" + suffix);
+            appendUnique("/std/collections/vector/" + suffix);
+          }
         } else if (path.rfind("/vector/", 0) == 0) {
           const std::string suffix = path.substr(std::string("/vector/").size());
           appendUnique("/std/collections/vector/" + suffix);
-          appendUnique("/array/" + suffix);
+          if (suffix != "count") {
+            appendUnique("/array/" + suffix);
+          }
         } else if (path.rfind("/std/collections/vector/", 0) == 0) {
           const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
           appendUnique("/vector/" + suffix);
-          appendUnique("/array/" + suffix);
+          if (suffix != "count") {
+            appendUnique("/array/" + suffix);
+          }
         } else if (path.rfind("/map/", 0) == 0) {
           appendUnique("/std/collections/map/" + path.substr(std::string("/map/").size()));
         } else if (path.rfind("/std/collections/map/", 0) == 0) {
@@ -2553,7 +2576,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     } else if ((isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall || isResolvedMapCountCall) &&
                expr.args.size() == 1 &&
-               !isArrayNamespacedVectorCountBuiltinCall(expr) &&
+               !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
                (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall ||
                 isNamespacedMapCountCall || isResolvedMapCountCall)) {
       usedMethodTarget = true;
@@ -3581,6 +3604,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (!isVectorBuiltinName(expr, helperName)) {
             return false;
           }
+          if (std::string(helperName) == "count" &&
+              isArrayNamespacedVectorCountCompatibilityCall(expr)) {
+            return false;
+          }
           if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
             for (const auto &receiverCandidate : expr.args) {
               bool isBuiltinMethod = false;
@@ -4077,7 +4104,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
       if (!resolvedMethod && isVectorBuiltinName(expr, "count") &&
-          !isArrayNamespacedVectorCountBuiltinCall(expr) && it == defMap_.end()) {
+          !isArrayNamespacedVectorCountCompatibilityCall(expr) && it == defMap_.end()) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;

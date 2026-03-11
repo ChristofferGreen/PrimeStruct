@@ -52,6 +52,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = normalized.substr(arrayPrefix.size());
+    if (helperNameOut == "count") {
+      return false;
+    }
     return true;
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {

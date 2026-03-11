@@ -334,13 +334,15 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     std::string preferred = path;
     if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string("/array/").size());
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (defMap_.count(vectorAlias) > 0) {
-        return vectorAlias;
-      }
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-      if (defMap_.count(stdlibAlias) > 0) {
-        return stdlibAlias;
+      if (suffix != "count") {
+        const std::string vectorAlias = "/vector/" + suffix;
+        if (defMap_.count(vectorAlias) > 0) {
+          return vectorAlias;
+        }
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        if (defMap_.count(stdlibAlias) > 0) {
+          return stdlibAlias;
+        }
       }
     }
     if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
@@ -349,9 +351,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (defMap_.count(stdlibAlias) > 0) {
         preferred = stdlibAlias;
       } else {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (defMap_.count(arrayAlias) > 0) {
-          preferred = arrayAlias;
+        if (suffix != "count") {
+          const std::string arrayAlias = "/array/" + suffix;
+          if (defMap_.count(arrayAlias) > 0) {
+            preferred = arrayAlias;
+          }
         }
       }
     }
@@ -361,9 +365,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (defMap_.count(vectorAlias) > 0) {
         preferred = vectorAlias;
       } else {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (defMap_.count(arrayAlias) > 0) {
-          preferred = arrayAlias;
+        if (suffix != "count") {
+          const std::string arrayAlias = "/array/" + suffix;
+          if (defMap_.count(arrayAlias) > 0) {
+            preferred = arrayAlias;
+          }
         }
       }
     }
@@ -2254,16 +2260,22 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         appendUnique(path);
         if (path.rfind("/array/", 0) == 0) {
           const std::string suffix = path.substr(std::string("/array/").size());
-          appendUnique("/vector/" + suffix);
-          appendUnique("/std/collections/vector/" + suffix);
+          if (suffix != "count") {
+            appendUnique("/vector/" + suffix);
+            appendUnique("/std/collections/vector/" + suffix);
+          }
         } else if (path.rfind("/vector/", 0) == 0) {
           const std::string suffix = path.substr(std::string("/vector/").size());
           appendUnique("/std/collections/vector/" + suffix);
-          appendUnique("/array/" + suffix);
+          if (suffix != "count") {
+            appendUnique("/array/" + suffix);
+          }
         } else if (path.rfind("/std/collections/vector/", 0) == 0) {
           const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
           appendUnique("/vector/" + suffix);
-          appendUnique("/array/" + suffix);
+          if (suffix != "count") {
+            appendUnique("/array/" + suffix);
+          }
         } else if (path.rfind("/map/", 0) == 0) {
           appendUnique("/std/collections/map/" + path.substr(std::string("/map/").size()));
         } else if (path.rfind("/std/collections/map/", 0) == 0) {

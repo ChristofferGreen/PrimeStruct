@@ -971,7 +971,7 @@ main() {
   CHECK(runCommand(exePath) == 90);
 }
 
-TEST_CASE("compiles and runs native array alias templated forwarding to canonical vector helper") {
+TEST_CASE("rejects native array alias templated forwarding to canonical vector helper") {
   const std::string source = R"(
 [return<int>]
 /array/count([vector<i32>] values) {
@@ -989,16 +989,16 @@ main() {
   return(/array/count<i32>(values, true))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_array_alias_templated_vector_forwarding.prime", source);
+  const std::string srcPath =
+      writeTemp("compile_native_array_alias_templated_vector_forwarding_rejected.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_array_alias_templated_vector_forwarding_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 90);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib templated vector call fallback to array alias") {
+TEST_CASE("rejects native stdlib templated vector count fallback to array alias") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -1017,14 +1017,13 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_stdlib_templated_vector_call_array_fallback.prime", source);
+      writeTemp("compile_native_stdlib_templated_vector_call_array_fallback_rejected.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() /
                                "primec_native_stdlib_templated_vector_call_array_fallback_exe")
                                   .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 90);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("compiles and runs native vector alias templated forwarding past non-templated compatibility helper") {
@@ -6781,7 +6780,7 @@ main() {
   CHECK(runCommand(exePath) == 91);
 }
 
-TEST_CASE("compiles and runs native vector namespaced count non-builtin array fallback") {
+TEST_CASE("rejects native vector namespaced count non-builtin array fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -6795,14 +6794,13 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_vector_namespaced_count_non_builtin_array_fallback.prime", source);
+      writeTemp("compile_native_vector_namespaced_count_non_builtin_array_fallback_rejected.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() /
                                "primec_native_vector_namespaced_count_non_builtin_array_fallback_exe")
                                   .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 31);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("compiles and runs native std namespaced capacity expression receiver precedence") {

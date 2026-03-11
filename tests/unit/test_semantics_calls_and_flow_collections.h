@@ -3052,7 +3052,7 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
-TEST_CASE("array namespaced vector helper alias resolves for statement body arguments") {
+TEST_CASE("array namespaced slash method spelling rejects statement body arguments") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -3067,8 +3067,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector helper alias resolves for statement body arguments") {
@@ -3090,7 +3090,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("array namespaced vector helper alias block-arg diagnostics use normalized method target") {
+TEST_CASE("array namespaced slash method spelling block-arg diagnostics keep divide target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3101,10 +3101,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /vector/count") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
-TEST_CASE("array namespaced vector helper alias call form resolves for statement body arguments") {
+TEST_CASE("array namespaced vector helper call form rejects statement body arguments") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -3119,8 +3119,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /array/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced helper call form resolves for statement body arguments") {
@@ -3161,7 +3161,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("array namespaced vector helper alias call form resolves for expression body arguments") {
+TEST_CASE("array namespaced vector helper call form rejects expression body arguments") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -3175,8 +3175,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /array/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced helper call form resolves for expression body arguments") {
@@ -3216,7 +3216,7 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
-TEST_CASE("array namespaced method body-arg diagnostics normalize pointer receiver target") {
+TEST_CASE("array namespaced slash method pointer receiver diagnostics keep divide target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -3228,7 +3228,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced method body-arg diagnostics normalize pointer receiver target") {
@@ -3274,7 +3274,7 @@ main() {
   CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
 }
 
-TEST_CASE("array namespaced method body-arg diagnostics normalize reference receiver target") {
+TEST_CASE("array namespaced slash method reference receiver diagnostics keep divide target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -3286,7 +3286,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize reference receiver target") {
@@ -3303,7 +3303,7 @@ main() {
   CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
 }
 
-TEST_CASE("array namespaced method body-arg diagnostics normalize temporary pointer receiver target") {
+TEST_CASE("array namespaced slash method temporary pointer diagnostics keep divide target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -3314,7 +3314,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize temporary pointer receiver target") {
@@ -4660,7 +4660,7 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("array namespaced alias forwards templated vector helper to canonical stdlib path") {
+TEST_CASE("array namespaced templated count alias is rejected") {
   const std::string source = R"(
 [return<int>]
 /array/count([vector<i32>] values) {
@@ -4679,11 +4679,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /array/count") !=
+        std::string::npos);
 }
 
-TEST_CASE("array namespaced templated alias keeps canonical helper diagnostics") {
+TEST_CASE("array namespaced templated count alias missing marker is rejected") {
   const std::string source = R"(
 [return<int>]
 /array/count([vector<i32>] values) {
@@ -4703,11 +4704,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("template arguments are only supported on templated definitions: /array/count") !=
+        std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced templated vector call falls back to array templated alias") {
+TEST_CASE("stdlib namespaced templated vector count call does not fall back to array alias") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -4726,11 +4727,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced templated vector call array fallback keeps array diagnostics") {
+TEST_CASE("stdlib namespaced templated vector count arity diagnostics keep non-templated target") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -4750,8 +4752,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
-  CHECK(error.find("/array/count") != std::string::npos);
+  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector namespaced templated alias call forwards past non-templated compatibility helper") {
@@ -4943,7 +4945,7 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("array namespaced vector count builtin alias named-argument diagnostics remain deterministic") {
+TEST_CASE("array namespaced vector count call rejects named arguments via unknown target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -4953,7 +4955,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /array/count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector count builtin alias call is rejected") {
@@ -5820,7 +5822,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector namespaced count non-builtin arity falls back to array helper return") {
+TEST_CASE("vector namespaced count non-builtin arity rejects array helper fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -5834,11 +5836,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count array fallback keeps return mismatch diagnostics") {
+TEST_CASE("vector namespaced count non-builtin arity diagnostics report builtin mismatch") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -5853,11 +5855,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count auto inference non-builtin arity falls back to array helper return") {
+TEST_CASE("vector namespaced count auto inference non-builtin arity rejects array helper fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -5872,8 +5873,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count expression keeps receiver helper precedence for non-builtin arity") {

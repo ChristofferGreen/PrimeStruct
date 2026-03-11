@@ -690,7 +690,7 @@ main() {
   CHECK(runCommand(runCmd) == 90);
 }
 
-TEST_CASE("runs vm with array alias templated forwarding to canonical vector helper") {
+TEST_CASE("rejects vm array alias templated forwarding to canonical vector helper") {
   const std::string source = R"(
 [return<int>]
 /array/count([vector<i32>] values) {
@@ -708,12 +708,12 @@ main() {
   return(/array/count<i32>(values, true))
 }
 )";
-  const std::string srcPath = writeTemp("vm_array_alias_templated_vector_forwarding.prime", source);
+  const std::string srcPath = writeTemp("vm_array_alias_templated_vector_forwarding_rejected.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 90);
+  CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with stdlib templated vector call fallback to array alias") {
+TEST_CASE("rejects vm stdlib templated vector count fallback to array alias") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -731,9 +731,9 @@ main() {
   return(/std/collections/vector/count<i32>(values, true))
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_templated_vector_call_array_fallback.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_templated_vector_call_array_fallback_rejected.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 90);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with vector alias templated forwarding past non-templated compatibility helper") {
@@ -5825,7 +5825,7 @@ main() {
   CHECK(runCommand(runCmd) == 91);
 }
 
-TEST_CASE("runs vm with vector namespaced count non-builtin array fallback") {
+TEST_CASE("rejects vm vector namespaced count non-builtin array fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -5838,9 +5838,9 @@ main() {
   return(/vector/count(values, true))
 }
 )";
-  const std::string srcPath = writeTemp("vm_vector_namespaced_count_non_builtin_array_fallback.prime", source);
+  const std::string srcPath = writeTemp("vm_vector_namespaced_count_non_builtin_array_fallback_rejected.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 31);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with std namespaced capacity expression receiver precedence") {

@@ -322,13 +322,15 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   std::string preferred = path;
   if (preferred.rfind("/array/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
-    const std::string vectorAlias = "/vector/" + suffix;
-    if (defs.count(vectorAlias) > 0) {
-      return vectorAlias;
-    }
-    const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-    if (defs.count(stdlibAlias) > 0) {
-      return stdlibAlias;
+    if (suffix != "count") {
+      const std::string vectorAlias = "/vector/" + suffix;
+      if (defs.count(vectorAlias) > 0) {
+        return vectorAlias;
+      }
+      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      if (defs.count(stdlibAlias) > 0) {
+        return stdlibAlias;
+      }
     }
   }
   if (preferred.rfind("/vector/", 0) == 0 && defs.count(preferred) == 0) {
@@ -337,9 +339,11 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
     if (defs.count(stdlibAlias) > 0) {
       preferred = stdlibAlias;
     } else {
-      const std::string arrayAlias = "/array/" + suffix;
-      if (defs.count(arrayAlias) > 0) {
-        preferred = arrayAlias;
+      if (suffix != "count") {
+        const std::string arrayAlias = "/array/" + suffix;
+        if (defs.count(arrayAlias) > 0) {
+          preferred = arrayAlias;
+        }
       }
     }
   }
@@ -349,9 +353,11 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
     if (defs.count(vectorAlias) > 0) {
       preferred = vectorAlias;
     } else {
-      const std::string arrayAlias = "/array/" + suffix;
-      if (defs.count(arrayAlias) > 0) {
-        preferred = arrayAlias;
+      if (suffix != "count") {
+        const std::string arrayAlias = "/array/" + suffix;
+        if (defs.count(arrayAlias) > 0) {
+          preferred = arrayAlias;
+        }
       }
     }
   }
@@ -368,13 +374,15 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
 std::string preferVectorStdlibTemplatePath(const std::string &path, const Context &ctx) {
   if (path.rfind("/array/", 0) == 0) {
     const std::string suffix = path.substr(std::string("/array/").size());
-    const std::string stdlibPath = "/std/collections/vector/" + suffix;
-    if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
-      return stdlibPath;
-    }
-    const std::string vectorPath = "/vector/" + suffix;
-    if (ctx.sourceDefs.count(vectorPath) > 0 && ctx.templateDefs.count(vectorPath) > 0) {
-      return vectorPath;
+    if (suffix != "count") {
+      const std::string stdlibPath = "/std/collections/vector/" + suffix;
+      if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
+        return stdlibPath;
+      }
+      const std::string vectorPath = "/vector/" + suffix;
+      if (ctx.sourceDefs.count(vectorPath) > 0 && ctx.templateDefs.count(vectorPath) > 0) {
+        return vectorPath;
+      }
     }
     return path;
   }
@@ -384,9 +392,11 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     if (ctx.sourceDefs.count(vectorPath) > 0 && ctx.templateDefs.count(vectorPath) > 0) {
       return vectorPath;
     }
-    const std::string arrayPath = "/array/" + suffix;
-    if (ctx.sourceDefs.count(arrayPath) > 0 && ctx.templateDefs.count(arrayPath) > 0) {
-      return arrayPath;
+    if (suffix != "count") {
+      const std::string arrayPath = "/array/" + suffix;
+      if (ctx.sourceDefs.count(arrayPath) > 0 && ctx.templateDefs.count(arrayPath) > 0) {
+        return arrayPath;
+      }
     }
     return path;
   }
@@ -404,9 +414,12 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     return stdlibPath;
   }
   if (ctx.sourceDefs.count(path) == 0 || ctx.templateDefs.count(path) == 0) {
-    const std::string arrayPath = "/array/" + path.substr(std::string("/vector/").size());
-    if (ctx.sourceDefs.count(arrayPath) > 0 && ctx.templateDefs.count(arrayPath) > 0) {
-      return arrayPath;
+    const std::string suffix = path.substr(std::string("/vector/").size());
+    if (suffix != "count") {
+      const std::string arrayPath = "/array/" + suffix;
+      if (ctx.sourceDefs.count(arrayPath) > 0 && ctx.templateDefs.count(arrayPath) > 0) {
+        return arrayPath;
+      }
     }
   }
   return path;

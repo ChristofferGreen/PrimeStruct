@@ -119,7 +119,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("omitted initializer accepts effect-free Create with vector alias call helper fallback") {
+TEST_CASE("omitted initializer rejects effect-free Create with vector alias call helper fallback") {
   const std::string source = R"(
 [return<i32>]
 /std/collections/vector/count([array<i32>] values, [bool] marker) {
@@ -144,11 +144,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
-TEST_CASE("omitted initializer accepts effect-free Create with vector alias method helper fallback") {
+TEST_CASE("omitted initializer rejects effect-free Create with vector alias method helper fallback") {
   const std::string source = R"(
 [return<i32>]
 /std/collections/vector/count([array<i32>] values, [bool] marker) {
@@ -173,8 +173,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("omitted initializer accepts effect-free Create with explicit-template vector alias call fallback") {
@@ -212,7 +212,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("omitted initializer accepts effect-free Create with explicit-template vector alias method fallback") {
+TEST_CASE("omitted initializer rejects effect-free Create with explicit-template vector alias method fallback") {
   const std::string source = R"(
 [effects(io_out), return<i32>]
 /vector/count([array<i32>] values, [bool] marker) {
@@ -243,8 +243,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("explicit-template vector alias fallback keeps mismatch diagnostics in Create") {

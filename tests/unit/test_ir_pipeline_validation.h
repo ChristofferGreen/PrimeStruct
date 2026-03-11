@@ -1291,7 +1291,7 @@ TEST_CASE("ir lowerer inference call-return setup prefers canonical return info 
   CHECK(resolveMethodCalls == 1);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers compatibility array count definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup keeps compatibility array count on definition fallback") {
   primec::Definition receiverCountDef;
   receiverCountDef.fullPath = "/vector/count";
   primec::Definition arrayCountDef;
@@ -1351,7 +1351,7 @@ TEST_CASE("ir lowerer inference call-return setup defers compatibility array cou
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
   CHECK(resolveMethodCalls == 1);
 
   resolveReceiverHelper = false;

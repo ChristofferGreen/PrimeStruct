@@ -890,8 +890,8 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
     return true;
   }
   if (extractHelper("array/", "vector")) {
-    if (helperOut == "capacity" || helperOut == "push" || helperOut == "pop" || helperOut == "reserve" ||
-        helperOut == "clear" || helperOut == "remove_at" || helperOut == "remove_swap") {
+    if (helperOut == "count" || helperOut == "capacity" || helperOut == "push" || helperOut == "pop" ||
+        helperOut == "reserve" || helperOut == "clear" || helperOut == "remove_at" || helperOut == "remove_swap") {
       collectionOut.clear();
       helperOut.clear();
       return false;
