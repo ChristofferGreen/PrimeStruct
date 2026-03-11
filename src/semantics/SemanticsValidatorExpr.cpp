@@ -2576,6 +2576,29 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     };
 
+    auto isUnboundMetaReceiver = [&](const Expr &receiver) {
+      if (receiver.kind != Expr::Kind::Name || receiver.name != "meta") {
+        return false;
+      }
+      if (findParamBinding(params, receiver.name) != nullptr) {
+        return false;
+      }
+      return locals.find(receiver.name) == locals.end();
+    };
+    auto describeMethodReflectionTarget = [&](const Expr &callExpr) -> std::string {
+      if (!callExpr.isMethodCall || callExpr.args.empty()) {
+        return "";
+      }
+      const Expr &receiver = callExpr.args.front();
+      if (!isUnboundMetaReceiver(receiver)) {
+        return "";
+      }
+      if (isReflectionMetadataQueryName(callExpr.name) || callExpr.name == "object" || callExpr.name == "table") {
+        return "meta." + callExpr.name;
+      }
+      return "";
+    };
+
     std::string resolved = resolveCalleePath(expr);
     bool resolvedMethod = false;
     bool usedMethodTarget = false;
@@ -2586,6 +2609,25 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = vectorHelperCallReceiverIndex;
+    }
+    const std::string methodReflectionTarget = describeMethodReflectionTarget(expr);
+    if (!methodReflectionTarget.empty()) {
+      if (methodReflectionTarget == "meta.object" || methodReflectionTarget == "meta.table") {
+        error_ = "runtime reflection objects/tables are unsupported: " + methodReflectionTarget;
+      } else {
+        error_ = "reflection metadata queries are compile-time only and not yet implemented: " + methodReflectionTarget;
+      }
+      return false;
+    }
+    if (defMap_.count(resolved) == 0) {
+      if (isReflectionMetadataQueryPath(resolved)) {
+        error_ = "reflection metadata queries are compile-time only and not yet implemented: " + resolved;
+        return false;
+      }
+      if (isRuntimeReflectionPath(resolved)) {
+        error_ = "runtime reflection objects/tables are unsupported: " + resolved;
+        return false;
+      }
     }
     if (!expr.isMethodCall && isArrayNamespacedVectorCountCompatibilityCall(expr)) {
       error_ = "unknown call target: /array/count";

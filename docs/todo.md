@@ -61,7 +61,7 @@ Legend:
 
 **Reflection Codegen Roadmap (March 6, 2026)**
 - ✓ Add reflection syntax/validation for struct definitions: `[reflect]` plus `[generate(...)]` with deterministic diagnostics for unsupported targets/generators. Implemented parser+semantics coverage for reflection transforms, added struct-only target checks (definitions and execution rejection), and added deterministic diagnostics for `generate(...)` shape/allowlist issues (requires `[reflect]`, duplicate/unsupported generator names).
-- ○ Define baseline reflection API scope for v1: compile-time-only metadata queries with no runtime reflection objects/tables.
+- ✓ Define baseline reflection API scope for v1: compile-time-only metadata queries with no runtime reflection objects/tables. Documented v1 scope + reserved query names in `docs/PrimeStruct.md`, and added deterministic semantics diagnostics that reserve `meta.*`/`/meta/*` metadata queries as compile-time-only (not yet implemented) while explicitly rejecting runtime reflection object/table paths.
 - ○ Implement core reflection primitives: `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`, `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)`.
 - ○ Implement transform/trait reflection predicates for generators: `meta.has_transform<T>(name)` and trait conformance checks used by generated helper gating.
 - ○ Add deterministic reflection diagnostics for invalid targets/indices (non-reflect types, non-constant indices, out-of-range field index, and unsupported metadata queries).

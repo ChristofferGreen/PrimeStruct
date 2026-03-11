@@ -682,6 +682,54 @@ main() {
   CHECK(error.find("duplicate reflection generator on /main: Equal") != std::string::npos);
 }
 
+TEST_CASE("reflection metadata query reports compile-time-only scope") {
+  const std::string source = R"(
+[struct reflect]
+Item() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  meta.type_name<Item>()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reflection metadata queries are compile-time only and not yet implemented: meta.type_name") !=
+        std::string::npos);
+}
+
+TEST_CASE("meta path query reports compile-time-only scope") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  /meta/type_name<i32>()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reflection metadata queries are compile-time only and not yet implemented: /meta/type_name") !=
+        std::string::npos);
+}
+
+TEST_CASE("runtime reflection object paths are rejected") {
+  const char *runtimeTargets[] = {"/meta/object", "/meta/table"};
+  for (const auto *runtimeTarget : runtimeTargets) {
+    CAPTURE(runtimeTarget);
+    const std::string source =
+        std::string("[return<int>]\n"
+                    "main() {\n  ") +
+        runtimeTarget + "()\n  return(0i32)\n}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("runtime reflection objects/tables are unsupported: " + std::string(runtimeTarget)) !=
+          std::string::npos);
+  }
+}
+
 TEST_CASE("struct transform rejects return transform") {
   const std::string source = R"(
 [struct, return<int>]

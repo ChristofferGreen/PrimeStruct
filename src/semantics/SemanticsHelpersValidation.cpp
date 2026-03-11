@@ -3,6 +3,7 @@
 #include <cctype>
 #include <functional>
 #include <limits>
+#include <string_view>
 
 namespace primec::semantics {
 
@@ -149,6 +150,29 @@ bool isSupportedReflectionGeneratorName(const std::string &name) {
          name == "Clone" || name == "DebugPrint" || name == "Compare" || name == "Hash64" ||
          name == "Clear" || name == "CopyFrom" || name == "Validate" || name == "Serialize" ||
          name == "Deserialize";
+}
+
+bool isReflectionMetadataQueryName(const std::string &name) {
+  return name == "type_name" || name == "type_kind" || name == "is_struct" || name == "field_count" ||
+         name == "field_name" || name == "field_type" || name == "field_visibility" ||
+         name == "has_transform";
+}
+
+bool isReflectionMetadataQueryPath(const std::string &path) {
+  constexpr std::string_view prefix = "/meta/";
+  if (path.rfind(prefix, 0) != 0) {
+    return false;
+  }
+  const std::string queryName = path.substr(prefix.size());
+  if (queryName.empty() || queryName.find('/') != std::string::npos) {
+    return false;
+  }
+  return isReflectionMetadataQueryName(queryName);
+}
+
+bool isRuntimeReflectionPath(const std::string &path) {
+  return path == "/meta/object" || path == "/meta/table" || path.rfind("/meta/object/", 0) == 0 ||
+         path.rfind("/meta/table/", 0) == 0;
 }
 
 bool validateNamedArguments(const std::vector<Expr> &args,

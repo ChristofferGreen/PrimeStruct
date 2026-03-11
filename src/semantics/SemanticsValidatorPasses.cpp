@@ -236,6 +236,47 @@ bool SemanticsValidator::validateDefinitions() {
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
            isCollectionBuiltin;
   };
+  auto describeReflectionCallDiagnostic = [&](const Expr &expr,
+                                              const std::vector<ParameterInfo> &params,
+                                              const std::unordered_map<std::string, BindingInfo> &locals,
+                                              std::string &messageOut) -> bool {
+    messageOut.clear();
+    auto isUnboundMetaReceiver = [&](const Expr &receiver) {
+      if (receiver.kind != Expr::Kind::Name || receiver.name != "meta") {
+        return false;
+      }
+      if (findParamBinding(params, receiver.name) != nullptr) {
+        return false;
+      }
+      return locals.find(receiver.name) == locals.end();
+    };
+    if (expr.isMethodCall && !expr.args.empty()) {
+      const Expr &receiver = expr.args.front();
+      if (isUnboundMetaReceiver(receiver)) {
+        if (isReflectionMetadataQueryName(expr.name)) {
+          messageOut = "reflection metadata queries are compile-time only and not yet implemented: meta." + expr.name;
+          return true;
+        }
+        if (expr.name == "object" || expr.name == "table") {
+          messageOut = "runtime reflection objects/tables are unsupported: meta." + expr.name;
+          return true;
+        }
+      }
+    }
+    const std::string resolved = resolveCalleePath(expr);
+    if (defMap_.count(resolved) > 0) {
+      return false;
+    }
+    if (isReflectionMetadataQueryPath(resolved)) {
+      messageOut = "reflection metadata queries are compile-time only and not yet implemented: " + resolved;
+      return true;
+    }
+    if (isRuntimeReflectionPath(resolved)) {
+      messageOut = "runtime reflection objects/tables are unsupported: " + resolved;
+      return true;
+    }
+    return false;
+  };
   auto collectDefinitionIntraBodyCallDiagnostics = [&](const Definition &def,
                                                         std::vector<SemanticDiagnosticRecord> &out) {
     const auto &definitionParams = paramsByDef_[def.fullPath];
@@ -373,6 +414,11 @@ bool SemanticsValidator::validateDefinitions() {
           effectScope.emplace(*this, std::move(executionEffects));
         }
         if (!expr.isBinding && !expr.name.empty() && !isBuiltinCall(expr)) {
+          std::string reflectionDiagnostic;
+          if (describeReflectionCallDiagnostic(expr, definitionParams, definitionLocals, reflectionDiagnostic)) {
+            appendDefinitionRecord(expr, std::move(reflectionDiagnostic));
+            return;
+          }
           const std::string resolved = resolveCalleePath(expr);
           if (defMap_.count(resolved) == 0) {
             appendDefinitionRecord(expr, "unknown call target: " + expr.name);
@@ -1374,6 +1420,11 @@ bool SemanticsValidator::validateExecutions() {
           effectScope.emplace(*this, std::move(executionEffects));
         }
         if (!expr.isBinding && !expr.name.empty() && !isBuiltinCall(expr)) {
+          std::string reflectionDiagnostic;
+          if (describeReflectionCallDiagnostic(expr, executionParams, executionLocals, reflectionDiagnostic)) {
+            appendExecutionRecord(expr, std::move(reflectionDiagnostic));
+            return;
+          }
           const std::string resolved = resolveCalleePath(expr);
           if (defMap_.count(resolved) == 0) {
             appendExecutionRecord(expr, "unknown call target: " + expr.name);
