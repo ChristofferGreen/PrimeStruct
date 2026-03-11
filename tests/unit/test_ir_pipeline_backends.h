@@ -9,6 +9,7 @@
 
 #include "primec/EmitKind.h"
 #include "primec/IrBackends.h"
+#include "primec/IrPreparation.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
 
@@ -75,6 +76,19 @@ TEST_CASE("emit kind aliases resolve to canonical ir backend kinds") {
   CHECK(primec::resolveIrBackendEmitKind("unknown") == "unknown");
 }
 
+TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved entry") {
+  primec::Program program;
+  primec::Options options;
+  options.entryPath = "/missing";
+  options.inlineIrCalls = true;
+
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  CHECK_FALSE(primec::prepareIrModule(program, options, primec::IrValidationTarget::Vm, ir, failure));
+  CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(!failure.message.empty());
+}
+
 TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";
@@ -86,10 +100,30 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   const std::string source = readTextFile(mainPath);
   CHECK(source.find("resolveIrBackendEmitKind(options.emitKind)") != std::string::npos);
   CHECK(source.find("findIrBackend(irBackendKind)") != std::string::npos);
+  CHECK(source.find("prepareIrModule(program, options, validationTarget, ir, prepFailure)") != std::string::npos);
+  CHECK(source.find("IrLowerer lowerer") == std::string::npos);
+  CHECK(source.find("inlineIrModuleCalls(ir, error)") == std::string::npos);
+  CHECK(source.find("validateIrModule(ir, validationTarget, error)") == std::string::npos);
   CHECK(source.find("if (options.emitKind == \"cpp\" || options.emitKind == \"exe\")") == std::string::npos);
   CHECK(source.find("emitter.emitCpp(program, options.entryPath)") == std::string::npos);
   CHECK(source.find("compileCppExecutable(") == std::string::npos);
   CHECK(source.find("#include \"primec/Emitter.h\"") == std::string::npos);
+}
+
+TEST_CASE("primevm uses shared ir preparation helper") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path mainPath = cwd / "src" / "primevm_main.cpp";
+  if (!std::filesystem::exists(mainPath)) {
+    mainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
+  }
+  REQUIRE(std::filesystem::exists(mainPath));
+
+  const std::string source = readTextFile(mainPath);
+  CHECK(source.find("prepareIrModule(program, options, primec::IrValidationTarget::Vm, ir, irFailure)") !=
+        std::string::npos);
+  CHECK(source.find("IrLowerer lowerer") == std::string::npos);
+  CHECK(source.find("inlineIrModuleCalls(ir, error)") == std::string::npos);
+  CHECK(source.find("validateIrModule(ir, primec::IrValidationTarget::Vm, error)") == std::string::npos);
 }
 
 TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {

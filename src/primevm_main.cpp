@@ -1,8 +1,6 @@
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
-#include "primec/IrInliner.h"
-#include "primec/IrLowerer.h"
-#include "primec/IrValidation.h"
+#include "primec/IrPreparation.h"
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
 #include "primec/TransformRegistry.h"
@@ -534,48 +532,40 @@ int main(int argc, char **argv) {
 
   primec::Program &program = pipelineOutput.program;
 
-  primec::IrLowerer lowerer;
   primec::IrModule ir;
-  if (!lowerer.lower(program,
-                     options.entryPath,
-                     options.defaultEffects,
-                     options.entryDefaultEffects,
-                     ir,
-                     error)) {
-    std::string vmError = error;
-    replaceAll(vmError, "native backend", "vm backend");
-    return emitFailure(options,
-                       primec::DiagnosticCode::LoweringError,
-                       "VM lowering error: ",
-                       vmError,
-                       2,
-                       {"backend: vm"});
-  }
-  if (!primec::validateIrModule(ir, primec::IrValidationTarget::Vm, error)) {
-    return emitFailure(options,
-                       primec::DiagnosticCode::LoweringError,
-                       "VM IR validation error: ",
-                       error,
-                       2,
-                       {"backend: vm", "stage: ir-validate"});
-  }
-  if (options.inlineIrCalls) {
-    if (!primec::inlineIrModuleCalls(ir, error)) {
+  primec::IrPreparationFailure irFailure;
+  if (!primec::prepareIrModule(program, options, primec::IrValidationTarget::Vm, ir, irFailure)) {
+    if (irFailure.stage == primec::IrPreparationFailureStage::Lowering) {
+      replaceAll(irFailure.message, "native backend", "vm backend");
       return emitFailure(options,
                          primec::DiagnosticCode::LoweringError,
-                         "VM IR inlining error: ",
-                         error,
+                         "VM lowering error: ",
+                         irFailure.message,
                          2,
-                         {"backend: vm", "stage: ir-inline"});
+                         {"backend: vm"});
     }
-    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Vm, error)) {
+    if (irFailure.stage == primec::IrPreparationFailureStage::Validation) {
       return emitFailure(options,
                          primec::DiagnosticCode::LoweringError,
                          "VM IR validation error: ",
-                         error,
+                         irFailure.message,
                          2,
                          {"backend: vm", "stage: ir-validate"});
     }
+    if (irFailure.stage == primec::IrPreparationFailureStage::Inlining) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::LoweringError,
+                         "VM IR inlining error: ",
+                         irFailure.message,
+                         2,
+                         {"backend: vm", "stage: ir-inline"});
+    }
+    return emitFailure(options,
+                       primec::DiagnosticCode::LoweringError,
+                       "VM lowering error: ",
+                       irFailure.message,
+                       2,
+                       {"backend: vm"});
   }
 
   primec::Vm vm;

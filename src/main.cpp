@@ -2,9 +2,7 @@
 #include "primec/Diagnostics.h"
 #include "primec/EmitKind.h"
 #include "primec/IrBackends.h"
-#include "primec/IrInliner.h"
-#include "primec/IrLowerer.h"
-#include "primec/IrValidation.h"
+#include "primec/IrPreparation.h"
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
 #include "primec/TransformRegistry.h"
@@ -297,41 +295,30 @@ bool runIrBackend(const primec::IrBackend &backend,
   failure = {};
   const primec::IrBackendDiagnostics &diagnostics = backend.diagnostics();
 
-  std::string error;
-  primec::IrLowerer lowerer;
-  primec::IrModule ir;
-  if (!lowerer.lower(program,
-                     options.entryPath,
-                     options.defaultEffects,
-                     options.entryDefaultEffects,
-                     ir,
-                     error)) {
-    backend.normalizeLoweringError(error);
-    failure.stage = IrBackendRunFailureStage::Lowering;
-    failure.message = std::move(error);
-    return false;
-  }
-
   const primec::IrValidationTarget validationTarget = backend.validationTarget(options);
-  if (!primec::validateIrModule(ir, validationTarget, error)) {
-    failure.stage = IrBackendRunFailureStage::Validation;
-    failure.message = std::move(error);
+  primec::IrModule ir;
+  primec::IrPreparationFailure prepFailure;
+  if (!primec::prepareIrModule(program, options, validationTarget, ir, prepFailure)) {
+    switch (prepFailure.stage) {
+      case primec::IrPreparationFailureStage::Lowering:
+        backend.normalizeLoweringError(prepFailure.message);
+        failure.stage = IrBackendRunFailureStage::Lowering;
+        break;
+      case primec::IrPreparationFailureStage::Validation:
+        failure.stage = IrBackendRunFailureStage::Validation;
+        break;
+      case primec::IrPreparationFailureStage::Inlining:
+        failure.stage = IrBackendRunFailureStage::Inlining;
+        break;
+      default:
+        failure.stage = IrBackendRunFailureStage::Lowering;
+        break;
+    }
+    failure.message = std::move(prepFailure.message);
     return false;
   }
 
-  if (options.inlineIrCalls) {
-    if (!primec::inlineIrModuleCalls(ir, error)) {
-      failure.stage = IrBackendRunFailureStage::Inlining;
-      failure.message = std::move(error);
-      return false;
-    }
-    if (!primec::validateIrModule(ir, validationTarget, error)) {
-      failure.stage = IrBackendRunFailureStage::Validation;
-      failure.message = std::move(error);
-      return false;
-    }
-  }
-
+  std::string error;
   primec::IrBackendEmitOptions emitOptions;
   emitOptions.outputPath = options.outputPath;
   emitOptions.inputPath = options.inputPath;

@@ -66,6 +66,7 @@ add_library(primec_lib
   src/ImportResolver.cpp
   src/IrBackends.cpp
   src/IrInliner.cpp
+  src/IrPreparation.cpp
   src/IrToCppEmitter.cpp
   src/IrToGlslEmitter.cpp
   src/ir_lowerer/IrLowererCallHelpers.cpp
