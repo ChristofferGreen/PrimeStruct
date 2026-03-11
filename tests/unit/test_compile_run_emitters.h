@@ -883,7 +883,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs auto-inferred std namespaced count helper receiver precedence in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects auto-inferred std namespaced count helper compatibility receiver precedence in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -895,7 +895,7 @@ TEST_CASE("compiles and runs auto-inferred std namespaced count helper receiver 
   return(false)
 }
 
-[effects(heap_alloc), return<int>]
+[effects(heap_alloc), return<bool>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   [auto] inferred{/std/collections/vector/count(values)}
@@ -908,10 +908,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_cpp_std_namespaced_vector_count_receiver_precedence_auto_exe")
           .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_std_namespaced_vector_count_receiver_precedence_auto_err.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("rejects auto-inferred std namespaced count helper canonical fallback in C++ emitter") {
@@ -944,7 +949,7 @@ main() {
   CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs std namespaced count expression receiver precedence in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects std namespaced count expression compatibility receiver precedence in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -956,7 +961,7 @@ TEST_CASE("compiles and runs std namespaced count expression receiver precedence
   return(false)
 }
 
-[effects(heap_alloc), return<int>]
+[effects(heap_alloc), return<bool>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/count(values))
@@ -968,10 +973,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_cpp_std_namespaced_vector_count_expr_receiver_precedence_exe")
           .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_std_namespaced_vector_count_expr_receiver_precedence_err.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("rejects std namespaced count expression canonical fallback in C++ emitter") {
@@ -1076,7 +1086,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs std namespaced capacity expression receiver precedence in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects std namespaced capacity expression compatibility receiver precedence in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -1088,7 +1098,7 @@ TEST_CASE("compiles and runs std namespaced capacity expression receiver precede
   return(false)
 }
 
-[effects(heap_alloc), return<int>]
+[effects(heap_alloc), return<bool>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/capacity(values))
@@ -1100,10 +1110,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_cpp_std_namespaced_vector_capacity_expr_receiver_precedence_exe")
           .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_std_namespaced_vector_capacity_expr_receiver_precedence_err.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("rejects std namespaced capacity expression canonical fallback in C++ emitter") {
@@ -1200,7 +1215,7 @@ main() {
   CHECK(runCommand(exePath) == 91);
 }
 
-TEST_CASE("compiles and runs auto-inferred std namespaced access helper receiver precedence in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects auto-inferred std namespaced access helper compatibility receiver precedence in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -1212,7 +1227,7 @@ TEST_CASE("compiles and runs auto-inferred std namespaced access helper receiver
   return(false)
 }
 
-[effects(heap_alloc), return<int>]
+[effects(heap_alloc), return<bool>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   [auto] inferred{/std/collections/vector/at([index] 0i32, [values] values)}
@@ -1225,10 +1240,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto_exe")
           .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto_err.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("rejects auto-inferred std namespaced access helper canonical fallback in C++ emitter") {

@@ -1372,8 +1372,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
       const bool isNamespacedVectorHelperCall =
           isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+      const bool isStdNamespacedVectorCanonicalHelperCall =
+          !expr.isMethodCall && resolved.rfind("/std/collections/vector/", 0) == 0 &&
+          (namespacedHelper == "count" || namespacedHelper == "capacity" || namespacedHelper == "at" ||
+           namespacedHelper == "at_unsafe");
       size_t resolvedReceiverIndex = 0;
-      if ((defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
+      if ((defMap_.find(resolved) == defMap_.end() ||
+           (isNamespacedVectorHelperCall && !isStdNamespacedVectorCanonicalHelperCall)) &&
           !expr.args.empty()) {
         auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
           if (candidate.kind != Expr::Kind::Name) {
@@ -2419,11 +2424,21 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
         isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1;
+    const bool isStdNamespacedVectorCapacityCall =
+        !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
+    const bool shouldSkipStdCapacityMethodFallback =
+        isStdNamespacedVectorCapacityCall && defMap_.find("/vector/capacity") != defMap_.end();
     const bool isBuiltinAccessName =
         !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
     const bool isNamespacedVectorAccessCall =
         isBuiltinAccessName && isNamespacedVectorHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
+    const bool isStdNamespacedVectorAccessCall =
+        isBuiltinAccessName && !expr.isMethodCall &&
+        resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
+    const bool shouldSkipStdAccessMethodFallback =
+        isStdNamespacedVectorAccessCall && !accessHelperName.empty() &&
+        defMap_.find("/vector/" + accessHelperName) != defMap_.end();
     const bool isNamespacedMapAccessCall =
         isBuiltinAccessName && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
@@ -2649,7 +2664,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (isVectorBuiltinName(expr, "capacity") && isNamespacedVectorHelperCall && !expr.args.empty() &&
+    } else if (!shouldSkipStdCapacityMethodFallback &&
+               isVectorBuiltinName(expr, "capacity") && isNamespacedVectorHelperCall && !expr.args.empty() &&
                expr.args.size() != 1 && defMap_.find(resolved) != defMap_.end()) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
@@ -2666,7 +2682,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+    } else if (!shouldSkipStdCapacityMethodFallback &&
+               isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
                (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
@@ -2691,7 +2708,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
     } else if (isBuiltinAccessName &&
-               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorAccessCall ||
+               (defMap_.find(resolved) == defMap_.end() ||
+                (isNamespacedVectorAccessCall && !shouldSkipStdAccessMethodFallback) ||
                 isNamespacedMapAccessCall)) {
       std::vector<size_t> receiverIndices;
       auto appendReceiverIndex = [&](size_t index) {

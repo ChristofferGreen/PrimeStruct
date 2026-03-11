@@ -1234,20 +1234,24 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return "/" + expr.name;
   }
   if (!expr.namespacePrefix.empty()) {
+    std::string normalizedPrefix = expr.namespacePrefix;
+    if (!normalizedPrefix.empty() && normalizedPrefix.front() != '/') {
+      normalizedPrefix.insert(normalizedPrefix.begin(), '/');
+    }
     auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
       return helperName == "count" || helperName == "capacity" || helperName == "at" ||
              helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
              helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
              helperName == "remove_swap";
     };
-    const size_t lastSlash = expr.namespacePrefix.find_last_of('/');
+    const size_t lastSlash = normalizedPrefix.find_last_of('/');
     const std::string_view suffix = lastSlash == std::string::npos
-                                        ? std::string_view(expr.namespacePrefix)
-                                        : std::string_view(expr.namespacePrefix).substr(lastSlash + 1);
-    if (suffix == expr.name && defMap_.count(expr.namespacePrefix) > 0) {
-      return expr.namespacePrefix;
+                                        ? std::string_view(normalizedPrefix)
+                                        : std::string_view(normalizedPrefix).substr(lastSlash + 1);
+    if (suffix == expr.name && defMap_.count(normalizedPrefix) > 0) {
+      return normalizedPrefix;
     }
-    std::string prefix = expr.namespacePrefix;
+    std::string prefix = normalizedPrefix;
     while (!prefix.empty()) {
       std::string candidate = prefix + "/" + expr.name;
       if (defMap_.count(candidate) > 0) {
@@ -1259,16 +1263,15 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       }
       prefix = prefix.substr(0, slash);
     }
-    if ((expr.namespacePrefix.rfind("/std/collections/vector", 0) == 0 ||
-         expr.namespacePrefix.rfind("std/collections/vector", 0) == 0) &&
+    if (normalizedPrefix.rfind("/std/collections/vector", 0) == 0 &&
         isRemovedVectorCompatibilityHelper(expr.name)) {
-      return expr.namespacePrefix + "/" + expr.name;
+      return normalizedPrefix + "/" + expr.name;
     }
     auto it = importAliases_.find(expr.name);
     if (it != importAliases_.end()) {
       return it->second;
     }
-    return expr.namespacePrefix + "/" + expr.name;
+    return normalizedPrefix + "/" + expr.name;
   }
   std::string root = "/" + expr.name;
   if (defMap_.count(root) > 0) {
