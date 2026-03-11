@@ -3232,7 +3232,7 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
-TEST_CASE("stdlib canonical vector helpers resolve in method-call sugar" * doctest::skip()) {
+TEST_CASE("rejects stdlib canonical vector helper method-precedence forwarding in method-call sugar") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -3251,8 +3251,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector helper alias rejects method-call sugar auto inference") {

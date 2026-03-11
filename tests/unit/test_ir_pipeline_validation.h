@@ -1135,7 +1135,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced count defini
   CHECK(resolveMethodCalls == 1);
 }
 
-TEST_CASE("ir lowerer inference call-return setup forwards vector alias count to canonical stdlib definition" * doctest::skip()) {
+TEST_CASE("ir lowerer inference call-return setup rejects vector alias count without compatibility definition") {
   primec::Definition canonicalCountDef;
   canonicalCountDef.fullPath = "/std/collections/vector/count";
   std::unordered_map<std::string, const primec::Definition *> defMap = {
@@ -1181,12 +1181,12 @@ TEST_CASE("ir lowerer inference call-return setup forwards vector alias count to
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup forwards slashless vector alias count to canonical stdlib definition" * doctest::skip()) {
+TEST_CASE("ir lowerer inference call-return setup rejects slashless vector alias count without compatibility definition") {
   primec::Definition canonicalCountDef;
   canonicalCountDef.fullPath = "/std/collections/vector/count";
   std::unordered_map<std::string, const primec::Definition *> defMap = {
@@ -1232,9 +1232,9 @@ TEST_CASE("ir lowerer inference call-return setup forwards slashless vector alia
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(resolveMethodCalls == 0);
 }
 
 TEST_CASE("ir lowerer inference call-return setup prefers canonical return info when alias defs lack return info" * doctest::skip()) {
