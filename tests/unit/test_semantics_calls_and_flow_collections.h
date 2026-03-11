@@ -2971,6 +2971,43 @@ main() {
   CHECK(error.find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("map unnamespaced count call rejects removed builtin fallback with canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /count") != std::string::npos);
+}
+
+TEST_CASE("map unnamespaced count auto inference rejects removed builtin fallback with canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /count") != std::string::npos);
+}
+
 TEST_CASE("map namespaced count method rejects removed compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -329,6 +329,34 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /map/at") != std::string::npos);
 }
 
+TEST_CASE("rejects native map unnamespaced count builtin fallback with canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_map_unnamespaced_count_builtin_fallback_reject.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_map_unnamespaced_count_builtin_fallback_reject_out.txt")
+                                  .string();
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_map_unnamespaced_count_builtin_fallback_reject_exe")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /count") != std::string::npos);
+}
+
 TEST_CASE("rejects native map namespaced count method compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

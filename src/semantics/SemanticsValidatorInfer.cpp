@@ -1188,6 +1188,50 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto isUnnamespacedMapCountBuiltinFallbackCall = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      const bool spellsCount = (normalized == "count");
+      const bool resolvesCount = (resolveCalleePath(candidate) == "/count");
+      if (!spellsCount && !resolvesCount) {
+        return false;
+      }
+      if (defMap_.find("/count") != defMap_.end()) {
+        return false;
+      }
+      if (defMap_.find("/std/collections/map/count") == defMap_.end()) {
+        return false;
+      }
+      if (candidate.args.empty()) {
+        return false;
+      }
+      size_t receiverIndex = 0;
+      if (hasNamedArguments(candidate.argNames)) {
+        bool foundValues = false;
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+              *candidate.argNames[i] == "values") {
+            receiverIndex = i;
+            foundValues = true;
+            break;
+          }
+        }
+        if (!foundValues) {
+          receiverIndex = 0;
+        }
+      }
+      if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      std::string keyType;
+      std::string valueType;
+      return resolveMapTarget(candidate.args[receiverIndex], keyType, valueType);
+    };
     auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
         return false;
@@ -1512,6 +1556,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Unknown;
     }
     if (!expr.isMethodCall && isMapNamespacedCountCompatibilityCall(expr)) {
+      return ReturnKind::Unknown;
+    }
+    if (!expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr)) {
       return ReturnKind::Unknown;
     }
     if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall(expr)) {
