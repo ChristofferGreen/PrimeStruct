@@ -4955,6 +4955,216 @@ main() {
   CHECK(error.find("unknown named argument: marker") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced capacity alias arity mismatch rejects compatibility template forwarding") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/capacity(values, true), values.capacity(true)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity alias type mismatch rejects compatibility template forwarding") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([vector<i32>] values, [i32] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/capacity(values, true), values.capacity(true)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/capacity parameter marker") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity alias named arguments reject compatibility template forwarding") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity<T>([vector<T>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/capacity([values] values, [marker] true),
+              values.capacity([marker] true)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown named argument: marker") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced at alias arity mismatch rejects compatibility template forwarding") {
+  const std::string source = R"(
+[return<int>]
+/vector/at([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/at<T>([vector<T>] values, [i32] index) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/at(values, 0i32), values.at(0i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /vector/at") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced at alias type mismatch rejects compatibility template forwarding") {
+  const std::string source = R"(
+[return<int>]
+/vector/at([vector<i32>] values, [string] index) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/at<T>([vector<T>] values, [i32] index) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/at(values, 0i32), values.at(0i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/at parameter index") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced at alias named arguments reject compatibility template forwarding") {
+  const std::string source = R"(
+[return<int>]
+/vector/at([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/at<T>([vector<T>] values, [i32] index) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/at([values] values, [index] 0i32),
+              values.at([index] 0i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown named argument: index") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced at_unsafe alias arity mismatch rejects compatibility template forwarding") {
+  const std::string source = R"(
+[return<int>]
+/vector/at_unsafe([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/at_unsafe<T>([vector<T>] values, [i32] index) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/at_unsafe(values, 0i32), values.at_unsafe(0i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /vector/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced at_unsafe alias type mismatch rejects compatibility template forwarding") {
+  const std::string source = R"(
+[return<int>]
+/vector/at_unsafe([vector<i32>] values, [string] index) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/at_unsafe<T>([vector<T>] values, [i32] index) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/at_unsafe(values, 0i32), values.at_unsafe(0i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/at_unsafe parameter index") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced at_unsafe alias named arguments reject compatibility template forwarding") {
+  const std::string source = R"(
+[return<int>]
+/vector/at_unsafe([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/at_unsafe<T>([vector<T>] values, [i32] index) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/at_unsafe([values] values, [index] 0i32),
+              values.at_unsafe([index] 0i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown named argument: index") != std::string::npos);
+}
+
 TEST_CASE("array namespaced templated count alias is rejected") {
   const std::string source = R"(
 [return<int>]
