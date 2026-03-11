@@ -2894,6 +2894,86 @@ main() {
   CHECK(runCommand(exePath) == 91);
 }
 
+TEST_CASE("C++ emitter prefers map alias for stdlib namespaced map access helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(41i32)
+}
+
+[return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(7i32)
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(42i32)
+}
+
+[return<int>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(8i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(/std/collections/map/at(wrapMap(), 1i32),
+              /std/collections/map/at_unsafe(wrapMap(), 1i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_namespaced_map_access_alias_precedence.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_stdlib_namespaced_map_access_alias_precedence_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 83);
+}
+
+TEST_CASE("C++ emitter keeps map alias diagnostics for stdlib namespaced map at") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[return<int>]
+/map/at([map<i32, i32>] values, [bool] key) {
+  return(41i32)
+}
+
+[return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/at(wrapMap(), 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_namespaced_map_at_alias_precedence_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_stdlib_namespaced_map_at_alias_precedence_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /map/at parameter key") != std::string::npos);
+}
+
 TEST_CASE("rejects stdlib namespaced vector capacity on map target in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

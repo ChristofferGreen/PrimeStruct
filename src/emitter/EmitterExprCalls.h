@@ -478,6 +478,20 @@
            normalized == std::string("std/collections/vector/") + helper;
   };
   auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/' &&
+        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+      normalizedPath.insert(normalizedPath.begin(), '/');
+    }
+    if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+      const std::string helper = normalizedPath.substr(std::string("/std/collections/map/").size());
+      if (helper == "count" || helper == "at" || helper == "at_unsafe") {
+        const std::string aliasPath = "/map/" + helper;
+        if (nameMap.count(aliasPath) > 0) {
+          return aliasPath;
+        }
+      }
+    }
     std::string firstExisting;
     for (const auto &candidate : collectionHelperPathCandidates(path)) {
       if (nameMap.count(candidate) == 0) {
