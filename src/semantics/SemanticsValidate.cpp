@@ -2188,6 +2188,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool shouldGenerateNotEqual = false;
     bool shouldGenerateDefault = false;
     bool shouldGenerateIsDefault = false;
+    bool shouldGenerateClone = false;
     if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
@@ -2197,11 +2198,12 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         shouldGenerateNotEqual = shouldGenerateNotEqual || transformHasArgument(transform, "NotEqual");
         shouldGenerateDefault = shouldGenerateDefault || transformHasArgument(transform, "Default");
         shouldGenerateIsDefault = shouldGenerateIsDefault || transformHasArgument(transform, "IsDefault");
+        shouldGenerateClone = shouldGenerateClone || transformHasArgument(transform, "Clone");
       }
     }
 
     std::vector<std::string> fieldNames;
-    if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault) {
+    if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault || shouldGenerateClone) {
       fieldNames.reserve(def.statements.size());
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {
@@ -2256,6 +2258,40 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         }
         helper.returnExpr = std::move(combined);
       }
+      helper.hasReturnStatement = true;
+
+      rewrittenDefinitions.push_back(std::move(helper));
+      definitionPaths.insert(helperPath);
+      return true;
+    };
+    auto emitCloneHelper = [&]() -> bool {
+      const std::string helperPath = def.fullPath + "/Clone";
+      if (definitionPaths.count(helperPath) > 0) {
+        error = "generated reflection helper already exists: " + helperPath;
+        return false;
+      }
+
+      Definition helper;
+      helper.name = "Clone";
+      helper.fullPath = helperPath;
+      helper.namespacePrefix = def.fullPath;
+      helper.sourceLine = def.sourceLine;
+      helper.sourceColumn = def.sourceColumn;
+
+      Transform returnTransform;
+      returnTransform.name = "return";
+      returnTransform.templateArgs.push_back(def.fullPath);
+      helper.transforms.push_back(std::move(returnTransform));
+      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix));
+
+      Expr cloneCall;
+      cloneCall.kind = Expr::Kind::Call;
+      cloneCall.name = def.fullPath;
+      for (const auto &fieldName : fieldNames) {
+        cloneCall.args.push_back(makeFieldAccessExpr("value", fieldName));
+        cloneCall.argNames.push_back(std::nullopt);
+      }
+      helper.returnExpr = std::move(cloneCall);
       helper.hasReturnStatement = true;
 
       rewrittenDefinitions.push_back(std::move(helper));
@@ -2357,6 +2393,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     }
     if (shouldGenerateIsDefault) {
       if (!emitIsDefaultHelper()) {
+        return false;
+      }
+    }
+    if (shouldGenerateClone) {
+      if (!emitCloneHelper()) {
         return false;
       }
     }

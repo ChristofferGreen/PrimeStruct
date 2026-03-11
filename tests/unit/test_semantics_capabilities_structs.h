@@ -1145,6 +1145,107 @@ main() {
   CHECK(error.find("generated reflection helper already exists: /Pair/IsDefault") != std::string::npos);
 }
 
+TEST_CASE("generate Clone emits reflection helper definition") {
+  const std::string source = R"(
+[struct reflect generate(Clone)]
+Pair() {
+  [i32] x{7i32}
+  [bool] ok{true}
+}
+
+[return<int>]
+main() {
+  [Pair] value{Pair()}
+  [Pair] copy{/Pair/Clone(value)}
+  return(copy.x)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Pair/Clone") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  REQUIRE(generated->parameters.size() == 1);
+  CHECK(generated->hasReturnStatement);
+  REQUIRE(generated->returnExpr.has_value());
+  const primec::Expr &returnExpr = *generated->returnExpr;
+  REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.name == "/Pair");
+  REQUIRE(returnExpr.args.size() == 2);
+  CHECK(returnExpr.args[0].kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.args[1].kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.args[0].isFieldAccess);
+  CHECK(returnExpr.args[1].isFieldAccess);
+}
+
+TEST_CASE("generate Clone supports static-only structs") {
+  const std::string source = R"(
+[struct reflect generate(Clone)]
+Marker() {
+  [static i32] shared{1i32}
+}
+
+[return<int>]
+main() {
+  [Marker] value{Marker()}
+  [Marker] copy{/Marker/Clone(value)}
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Marker/Clone") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  REQUIRE(generated->returnExpr.has_value());
+  const primec::Expr &returnExpr = *generated->returnExpr;
+  REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.name == "/Marker");
+  CHECK(returnExpr.args.empty());
+}
+
+TEST_CASE("generate Clone rejects existing helper collision") {
+  const std::string source = R"(
+[struct reflect generate(Clone)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<Pair>]
+/Pair/Clone([Pair] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("generated reflection helper already exists: /Pair/Clone") != std::string::npos);
+}
+
 TEST_CASE("reflection core type primitives validate") {
   const std::string source = R"(
 [struct reflect]
