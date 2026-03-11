@@ -929,7 +929,7 @@ main() {
   CHECK(readFile(outPath).find("unknown named argument: marker") != std::string::npos);
 }
 
-TEST_CASE("runs vm with wrapper temporary templated vector method canonical forwarding") {
+TEST_CASE("rejects vm wrapper temporary templated vector method compatibility template forwarding") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -951,9 +951,17 @@ main() {
   return(wrapValues().count<i32>(true))
 }
 )";
-  const std::string srcPath = writeTemp("vm_wrapper_temp_templated_vector_method_canonical_forwarding.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 90);
+  const std::string srcPath =
+      writeTemp("vm_wrapper_temp_templated_vector_method_compatibility_forwarding_reject.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_wrapper_temp_templated_vector_method_compatibility_forwarding_reject_out.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  const std::string diagnostics = readFile(outPath);
+  CHECK((diagnostics.find("count does not accept template arguments") != std::string::npos ||
+         diagnostics.find("template arguments are only supported on templated definitions: /vector/count") !=
+             std::string::npos));
 }
 
 TEST_CASE("rejects vm array alias templated forwarding to canonical vector helper") {
@@ -1002,7 +1010,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with vector alias templated forwarding past non-templated compatibility helper") {
+TEST_CASE("rejects vm vector alias templated forwarding past non-templated compatibility helper") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -1020,9 +1028,17 @@ main() {
   return(plus(/vector/count<i32>(values, true), values.count<i32>(true)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_vector_templated_alias_forwarding_non_template_compat.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 180);
+  const std::string srcPath =
+      writeTemp("vm_vector_templated_alias_forwarding_non_template_compat_reject.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_vector_templated_alias_forwarding_non_template_compat_reject_out.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  const std::string diagnostics = readFile(outPath);
+  CHECK((diagnostics.find("count does not accept template arguments") != std::string::npos ||
+         diagnostics.find("template arguments are only supported on templated definitions: /vector/count") !=
+             std::string::npos));
 }
 
 TEST_CASE("rejects vm vector namespaced mutator alias") {
