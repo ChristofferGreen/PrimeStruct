@@ -986,11 +986,24 @@ bool resolveMethodCallPath(const Expr &call,
     typeName = it->second.typeName;
   } else if (receiver.kind == Expr::Kind::Call && !receiver.isMethodCall && !receiver.isBinding) {
     std::string resolved = resolveExprPath(receiver);
+    auto normalizeResolvedPath = [](std::string path) {
+      if (!path.empty() && path.front() != '/') {
+        path.insert(path.begin(), '/');
+      }
+      return path;
+    };
+    auto hasStructPath = [&](const std::string &path) {
+      return structTypeMap.count(path) > 0;
+    };
     auto importIt = importAliases.find(receiver.name);
-    if (structTypeMap.count(resolved) == 0 && importIt != importAliases.end()) {
+    if (!hasStructPath(resolved) && importIt != importAliases.end()) {
       resolved = importIt->second;
     }
-    if (structTypeMap.count(resolved) > 0) {
+    const std::string normalizedResolved = normalizeResolvedPath(resolved);
+    if (!hasStructPath(resolved) && hasStructPath(normalizedResolved)) {
+      resolved = normalizedResolved;
+    }
+    if (hasStructPath(resolved)) {
       resolvedOut = resolved + "/" + normalizedMethodName;
       return true;
     }
