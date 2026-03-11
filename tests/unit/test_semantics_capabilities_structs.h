@@ -1843,6 +1843,61 @@ main() {
   CHECK(error.find("generated reflection helper already exists: /Pair/Hash64") != std::string::npos);
 }
 
+TEST_CASE("generate Compare rejects unsupported field envelope deterministically") {
+  const std::string source = R"(
+[struct reflect generate(Compare)]
+Pair() {
+  [array<i32>] values{array<i32>(1i32)}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("generated reflection helper /Pair/Compare does not support field envelope: values (array<i32>)") !=
+        std::string::npos);
+}
+
+TEST_CASE("generate Hash64 rejects unsupported field envelope deterministically") {
+  const std::string source = R"(
+[struct reflect generate(Hash64)]
+Pair() {
+  [string] label{"x"utf8}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("generated reflection helper /Pair/Hash64 does not support field envelope: label (string)") !=
+        std::string::npos);
+}
+
+TEST_CASE("generate Compare unsupported field diagnostics keep source order") {
+  const std::string source = R"(
+[struct reflect generate(Compare)]
+Pair() {
+  [array<i32>] first{array<i32>(1i32)}
+  [vector<i32>] second{vector<i32>(2i32)}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("generated reflection helper /Pair/Compare does not support field envelope: first (array<i32>)") !=
+        std::string::npos);
+}
+
 TEST_CASE("generate Clear emits reflection helper definition") {
   const std::string source = R"(
 [struct reflect generate(Clear)]

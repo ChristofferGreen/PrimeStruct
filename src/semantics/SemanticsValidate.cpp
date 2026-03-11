@@ -2270,6 +2270,36 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     call.argNames.push_back(std::nullopt);
     return call;
   };
+  auto bindingTypeFromField = [](const Expr &fieldBindingExpr, bool &ambiguousOut) -> std::string {
+    ambiguousOut = false;
+    std::optional<std::string> typeName;
+    for (const auto &transform : fieldBindingExpr.transforms) {
+      if (isNonTypeTransformName(transform.name)) {
+        continue;
+      }
+      const std::string candidateType = formatTransformType(transform);
+      if (typeName.has_value()) {
+        ambiguousOut = true;
+        return {};
+      }
+      typeName = candidateType;
+    }
+    if (!typeName.has_value()) {
+      return "int";
+    }
+    return *typeName;
+  };
+  auto isCompareEligibleFieldType = [](const std::string &fieldTypeName) {
+    const std::string normalized = normalizeBindingTypeName(fieldTypeName);
+    return normalized == "int" || normalized == "i32" || normalized == "i64" || normalized == "u64" ||
+           normalized == "bool" || normalized == "float" || normalized == "f32" || normalized == "f64" ||
+           normalized == "string" || normalized == "integer" || normalized == "decimal";
+  };
+  auto isHash64EligibleFieldType = [](const std::string &fieldTypeName) {
+    const std::string normalized = normalizeBindingTypeName(fieldTypeName);
+    return normalized == "int" || normalized == "i32" || normalized == "i64" || normalized == "u64" ||
+           normalized == "bool" || normalized == "float" || normalized == "f32" || normalized == "f64";
+  };
 
   std::vector<Definition> rewrittenDefinitions;
   rewrittenDefinitions.reserve(program.definitions.size());
@@ -2304,10 +2334,12 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     }
 
     std::vector<std::string> fieldNames;
+    std::unordered_map<std::string, std::string> fieldTypeNames;
     if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault || shouldGenerateClone ||
         shouldGenerateDebugPrint || shouldGenerateCompare || shouldGenerateHash64 || shouldGenerateClear ||
         shouldGenerateCopyFrom) {
       fieldNames.reserve(def.statements.size());
+      fieldTypeNames.reserve(def.statements.size());
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {
           continue;
@@ -2318,8 +2350,36 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
             });
         if (!isStaticField) {
           fieldNames.push_back(stmt.name);
+          bool ambiguousFieldType = false;
+          const std::string fieldTypeName = bindingTypeFromField(stmt, ambiguousFieldType);
+          if (!ambiguousFieldType && !fieldTypeName.empty()) {
+            fieldTypeNames.emplace(stmt.name, fieldTypeName);
+          }
         }
       }
+    }
+    auto ensureGeneratedHelperFieldEligibility = [&](const std::string &helperName,
+                                                     const std::function<bool(const std::string &)> &isEligible) -> bool {
+      const std::string helperPath = def.fullPath + "/" + helperName;
+      for (const auto &fieldName : fieldNames) {
+        const auto typeIt = fieldTypeNames.find(fieldName);
+        if (typeIt == fieldTypeNames.end()) {
+          continue;
+        }
+        if (isEligible(typeIt->second)) {
+          continue;
+        }
+        error = "generated reflection helper " + helperPath + " does not support field envelope: " +
+                fieldName + " (" + typeIt->second + ")";
+        return false;
+      }
+      return true;
+    };
+    if (shouldGenerateCompare && !ensureGeneratedHelperFieldEligibility("Compare", isCompareEligibleFieldType)) {
+      return false;
+    }
+    if (shouldGenerateHash64 && !ensureGeneratedHelperFieldEligibility("Hash64", isHash64EligibleFieldType)) {
+      return false;
     }
 
     auto emitComparisonHelper = [&](const std::string &helperName,

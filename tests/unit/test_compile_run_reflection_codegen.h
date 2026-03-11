@@ -174,6 +174,54 @@ main() {
   CHECK(ir.find("return /Pair/Hash64(value)") != std::string::npos);
 }
 
+TEST_CASE("reflection compare helper rejects unsupported field envelope deterministically") {
+  const std::string source = R"(
+[struct reflect generate(Compare)]
+Pair() {
+  [array<i32>] values{array<i32>(1i32)}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_compare_ineligible_field.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_compare_ineligible_field.err.txt").string();
+  const std::string cmd =
+      "./primec " + quoteShellArg(srcPath) + " --emit=ir 2> " + quoteShellArg(errPath);
+
+  CHECK(runCommand(cmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("generated reflection helper /Pair/Compare does not support field envelope: values (array<i32>)") !=
+        std::string::npos);
+}
+
+TEST_CASE("reflection hash64 helper rejects unsupported field envelope deterministically") {
+  const std::string source = R"(
+[struct reflect generate(Hash64)]
+Pair() {
+  [string] label{"x"utf8}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_hash64_ineligible_field.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_hash64_ineligible_field.err.txt").string();
+  const std::string cmd =
+      "./primec " + quoteShellArg(srcPath) + " --emit=ir 2> " + quoteShellArg(errPath);
+
+  CHECK(runCommand(cmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("generated reflection helper /Pair/Hash64 does not support field envelope: label (string)") !=
+        std::string::npos);
+}
+
 TEST_CASE("reflection clear helper appears in ast-semantic and ir dumps") {
   const std::string source = R"(
 [struct reflect generate(Clear)]
