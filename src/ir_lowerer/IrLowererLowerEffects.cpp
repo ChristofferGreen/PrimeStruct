@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <functional>
+#include <string_view>
 
 #include "IrLowererHelpers.h"
 #include "primec/Ir.h"
@@ -11,6 +12,29 @@ namespace {
 
 bool isSoftwareNumericName(const std::string &name) {
   return name == "integer" || name == "decimal" || name == "complex";
+}
+
+bool isReflectionMetadataQueryName(const std::string &name) {
+  return name == "type_name" || name == "type_kind" || name == "is_struct" || name == "field_count" ||
+         name == "field_name" || name == "field_type" || name == "field_visibility" ||
+         name == "has_transform" || name == "has_trait";
+}
+
+bool isReflectionMetadataQueryPath(const std::string &path) {
+  constexpr std::string_view prefix = "/meta/";
+  if (path.rfind(prefix, 0) != 0) {
+    return false;
+  }
+  const std::string queryName = path.substr(prefix.size());
+  if (queryName.empty() || queryName.find('/') != std::string::npos) {
+    return false;
+  }
+  return isReflectionMetadataQueryName(queryName);
+}
+
+bool isRuntimeReflectionPath(const std::string &path) {
+  return path == "/meta/object" || path == "/meta/table" || path.rfind("/meta/object/", 0) == 0 ||
+         path.rfind("/meta/table/", 0) == 0;
 }
 
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
@@ -121,6 +145,26 @@ std::string scanExprForSoftwareNumeric(const Expr &expr) {
   return {};
 }
 
+std::string scanExprForRuntimeReflectionQuery(const Expr &expr) {
+  if (expr.kind == Expr::Kind::Call &&
+      (isReflectionMetadataQueryPath(expr.name) || isRuntimeReflectionPath(expr.name))) {
+    return expr.name;
+  }
+  for (const auto &arg : expr.args) {
+    std::string found = scanExprForRuntimeReflectionQuery(arg);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  for (const auto &arg : expr.bodyArguments) {
+    std::string found = scanExprForRuntimeReflectionQuery(arg);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  return {};
+}
+
 } // namespace
 
 bool findEntryDefinition(const Program &program,
@@ -188,6 +232,71 @@ bool validateNoSoftwareNumericTypes(const Program &program, std::string &error) 
       found = scanExprForSoftwareNumeric(arg);
       if (!found.empty()) {
         error = "native backend does not support software numeric types: " + found;
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool validateNoRuntimeReflectionQueries(const Program &program, std::string &error) {
+  for (const auto &def : program.definitions) {
+    for (const auto &param : def.parameters) {
+      const std::string found = scanExprForRuntimeReflectionQuery(param);
+      if (!found.empty()) {
+        if (isRuntimeReflectionPath(found)) {
+          error = "runtime reflection objects/tables are unsupported: " + found;
+        } else {
+          error = "native backend requires compile-time reflection query elimination before IR emission: " + found;
+        }
+        return false;
+      }
+    }
+    for (const auto &stmt : def.statements) {
+      const std::string found = scanExprForRuntimeReflectionQuery(stmt);
+      if (!found.empty()) {
+        if (isRuntimeReflectionPath(found)) {
+          error = "runtime reflection objects/tables are unsupported: " + found;
+        } else {
+          error = "native backend requires compile-time reflection query elimination before IR emission: " + found;
+        }
+        return false;
+      }
+    }
+    if (def.returnExpr.has_value()) {
+      const std::string found = scanExprForRuntimeReflectionQuery(*def.returnExpr);
+      if (!found.empty()) {
+        if (isRuntimeReflectionPath(found)) {
+          error = "runtime reflection objects/tables are unsupported: " + found;
+        } else {
+          error = "native backend requires compile-time reflection query elimination before IR emission: " + found;
+        }
+        return false;
+      }
+    }
+  }
+
+  for (const auto &exec : program.executions) {
+    for (const auto &arg : exec.arguments) {
+      const std::string found = scanExprForRuntimeReflectionQuery(arg);
+      if (!found.empty()) {
+        if (isRuntimeReflectionPath(found)) {
+          error = "runtime reflection objects/tables are unsupported: " + found;
+        } else {
+          error = "native backend requires compile-time reflection query elimination before IR emission: " + found;
+        }
+        return false;
+      }
+    }
+    for (const auto &arg : exec.bodyArguments) {
+      const std::string found = scanExprForRuntimeReflectionQuery(arg);
+      if (!found.empty()) {
+        if (isRuntimeReflectionPath(found)) {
+          error = "runtime reflection objects/tables are unsupported: " + found;
+        } else {
+          error = "native backend requires compile-time reflection query elimination before IR emission: " + found;
+        }
         return false;
       }
     }

@@ -67,7 +67,7 @@ Legend:
 - ✓ Implement transform reflection predicate for generators: `meta.has_transform<T>(name)` compile-time evaluation (method/path forms) with deterministic argument-shape diagnostics.
 - ✓ Implement trait-conformance reflection predicates used by generated helper gating: `meta.has_trait<T>(TraitName)` and `meta.has_trait<T, Elem>(Indexable)` now evaluate at compile time with deterministic trait-name/template-arity diagnostics.
 - ✓ Add deterministic reflection diagnostics for invalid targets/indices (non-reflect types, non-constant indices, out-of-range field index, and unsupported metadata queries). Field metadata queries now reject non-reflect struct targets deterministically, existing index diagnostics remain deterministic, and unknown `meta.*`/`/meta/*` query names now report explicit unsupported-query errors.
-- ○ Guarantee reflection builtins are compile-time eliminated before IR emission; add regression tests that lock zero runtime reflection opcodes/state.
+- ✓ Guarantee reflection builtins are compile-time eliminated before IR emission; add regression tests that lock zero runtime reflection opcodes/state. IR lowering now rejects non-eliminated reserved `/meta/*` query paths before emission, and IR pipeline coverage locks that lowered reflection-query programs emit no runtime call-based reflection state.
 - ○ Implement v1 generated helpers: `Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`, and `DebugPrint`.
 - ○ Define deterministic helper naming + visibility contract for generated helpers (`/Type/Helper` paths, collision/override rules, and import behavior).
 - ○ Add v1 conformance coverage for reflection codegen (parse, semantics, canonical AST/IR snapshots, and backend compile-run parity).

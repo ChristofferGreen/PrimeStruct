@@ -15,6 +15,7 @@ bool findEntryDefinition(const Program &program,
                          std::string &error);
 
 bool validateNoSoftwareNumericTypes(const Program &program, std::string &error);
+bool validateNoRuntimeReflectionQueries(const Program &program, std::string &error);
 
 bool effectBitForName(const std::string &name, uint64_t &outBit);
 bool isSupportedEffect(const std::string &name);

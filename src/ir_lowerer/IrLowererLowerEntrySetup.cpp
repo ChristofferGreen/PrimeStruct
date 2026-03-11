@@ -22,6 +22,9 @@ bool runLowerEntrySetup(const Program &program,
   if (!validateNoSoftwareNumericTypes(program, error)) {
     return false;
   }
+  if (!validateNoRuntimeReflectionQueries(program, error)) {
+    return false;
+  }
   if (!validateProgramEffects(program, entryPath, defaultEffects, entryDefaultEffects, error)) {
     return false;
   }

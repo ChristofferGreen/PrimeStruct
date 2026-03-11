@@ -31,6 +31,68 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer rejects non-eliminated reflection query paths") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  /meta/type_name<i32>()
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  REQUIRE(parser.parse(program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "native backend requires compile-time reflection query elimination before IR emission: /meta/type_name");
+}
+
+TEST_CASE("ir lowerer reflection queries leave no runtime call state") {
+  const std::string source = R"(
+[struct reflect]
+Item() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [string] typeName{meta.type_name<Item>()}
+  [string] fieldName{meta.field_name<Item>(0i32)}
+  [bool] hasReflect{meta.has_transform<Item>(reflect)}
+  [bool] hasComparable{meta.has_trait<i32>(Comparable)}
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  REQUIRE(module.entryIndex >= 0);
+  REQUIRE(static_cast<size_t>(module.entryIndex) < module.functions.size());
+  const auto &entryFunction = module.functions[static_cast<size_t>(module.entryIndex)];
+  for (const auto &instruction : entryFunction.instructions) {
+    CHECK(instruction.op != primec::IrOpcode::Call);
+    CHECK(instruction.op != primec::IrOpcode::CallVoid);
+  }
+  for (const auto &function : module.functions) {
+    CHECK(function.name.rfind("/meta/", 0) != 0);
+  }
+  for (const auto &entry : module.stringTable) {
+    CHECK(entry.rfind("/meta/", 0) != 0);
+  }
+}
+
 TEST_CASE("ir lowerer effects unit resolves entry and non-entry defaults") {
   const std::vector<primec::Transform> transforms;
   const std::vector<std::string> defaultEffects = {"io_out"};
