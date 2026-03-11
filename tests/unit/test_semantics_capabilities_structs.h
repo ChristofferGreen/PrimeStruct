@@ -682,7 +682,7 @@ main() {
   CHECK(error.find("duplicate reflection generator on /main: Equal") != std::string::npos);
 }
 
-TEST_CASE("reflection metadata query reports compile-time-only scope") {
+TEST_CASE("reflection core type primitives validate") {
   const std::string source = R"(
 [struct reflect]
 Item() {
@@ -691,27 +691,62 @@ Item() {
 
 [return<int>]
 main() {
-  meta.type_name<Item>()
+  [string] typeName{meta.type_name<Item>()}
+  [string] typeKind{meta.type_kind<Item>()}
+  [bool] isStructType{meta.is_struct<Item>()}
+  [i32] fieldCount{meta.field_count<Item>()}
   return(0i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reflection metadata queries are compile-time only and not yet implemented: meta.type_name") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("meta path query reports compile-time-only scope") {
+TEST_CASE("meta path core type primitives validate") {
   const std::string source = R"(
 [return<int>]
 main() {
-  /meta/type_name<i32>()
+  [string] typeName{/meta/type_name<i32>()}
+  [string] typeKind{/meta/type_kind<i32>()}
+  [bool] isStructType{/meta/is_struct<i32>()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("field_count rejects non-struct type targets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] fieldCount{meta.field_count<i32>()}
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reflection metadata queries are compile-time only and not yet implemented: /meta/type_name") !=
+  CHECK(error.find("meta.field_count requires struct type argument: i32") != std::string::npos);
+}
+
+TEST_CASE("field metadata queries remain compile-time-only") {
+  const std::string source = R"(
+[struct reflect]
+Item() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  meta.field_name<Item>(0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reflection metadata queries are compile-time only and not yet implemented: meta.field_name") !=
         std::string::npos);
 }
 

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <sstream>
@@ -1285,6 +1286,357 @@ bool rewriteMaybeConstructors(Program &program, std::string &error) {
   return true;
 }
 
+bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
+  std::unordered_set<std::string> structNames;
+  std::unordered_map<std::string, size_t> structFieldCounts;
+  std::unordered_set<std::string> publicDefinitions;
+  auto isDefinitionPublic = [](const Definition &def) -> bool {
+    bool sawVisibility = false;
+    bool isPublic = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "public" && transform.name != "private") {
+        continue;
+      }
+      if (sawVisibility) {
+        return false;
+      }
+      sawVisibility = true;
+      isPublic = (transform.name == "public");
+    }
+    return isPublic;
+  };
+
+  for (const auto &def : program.definitions) {
+    bool hasStructTransform = false;
+    bool hasReturnTransform = false;
+    for (const auto &transform : def.transforms) {
+      if (semantics::isStructTransformName(transform.name)) {
+        hasStructTransform = true;
+      }
+      if (transform.name == "return") {
+        hasReturnTransform = true;
+      }
+    }
+    bool fieldOnlyStruct = false;
+    if (!hasStructTransform && !hasReturnTransform && def.parameters.empty() && !def.hasReturnStatement &&
+        !def.returnExpr.has_value()) {
+      fieldOnlyStruct = true;
+      for (const auto &stmt : def.statements) {
+        if (!stmt.isBinding) {
+          fieldOnlyStruct = false;
+          break;
+        }
+      }
+    }
+    if (hasStructTransform || fieldOnlyStruct) {
+      structNames.insert(def.fullPath);
+      size_t fieldCount = 0;
+      for (const auto &stmt : def.statements) {
+        if (stmt.isBinding) {
+          ++fieldCount;
+        }
+      }
+      structFieldCounts.emplace(def.fullPath, fieldCount);
+    }
+    if (isDefinitionPublic(def)) {
+      publicDefinitions.insert(def.fullPath);
+    }
+  }
+
+  std::unordered_map<std::string, std::string> importAliases;
+  for (const auto &importPath : program.imports) {
+    if (importPath.empty() || importPath[0] != '/') {
+      continue;
+    }
+    bool isWildcard = false;
+    std::string prefix;
+    if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+      isWildcard = true;
+      prefix = importPath.substr(0, importPath.size() - 2);
+    } else if (importPath.find('/', 1) == std::string::npos) {
+      isWildcard = true;
+      prefix = importPath;
+    }
+    if (isWildcard) {
+      const std::string scopedPrefix = prefix + "/";
+      for (const auto &def : program.definitions) {
+        if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
+          continue;
+        }
+        const std::string remainder = def.fullPath.substr(scopedPrefix.size());
+        if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        if (publicDefinitions.count(def.fullPath) == 0) {
+          continue;
+        }
+        importAliases.emplace(remainder, def.fullPath);
+      }
+      continue;
+    }
+    const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
+    if (remainder.empty()) {
+      continue;
+    }
+    if (publicDefinitions.count(importPath) == 0) {
+      continue;
+    }
+    importAliases.emplace(remainder, importPath);
+  }
+
+  auto trim = [](const std::string &text) -> std::string {
+    const size_t start = text.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos) {
+      return {};
+    }
+    const size_t end = text.find_last_not_of(" \t\r\n");
+    return text.substr(start, end - start + 1);
+  };
+  auto escapeStringLiteral = [](const std::string &text) {
+    std::string escaped;
+    escaped.reserve(text.size() + 8);
+    escaped.push_back('"');
+    for (char c : text) {
+      if (c == '"' || c == '\\') {
+        escaped.push_back('\\');
+      }
+      escaped.push_back(c);
+    }
+    escaped += "\"utf8";
+    return escaped;
+  };
+
+  std::function<bool(const std::string &, const std::string &, std::string &, std::string &)> canonicalizeTypeName;
+  canonicalizeTypeName = [&](const std::string &typeName,
+                             const std::string &namespacePrefix,
+                             std::string &canonicalOut,
+                             std::string &structPathOut) {
+    canonicalOut.clear();
+    structPathOut.clear();
+    const std::string trimmed = trim(typeName);
+    if (trimmed.empty()) {
+      error = "reflection query requires a type argument";
+      return false;
+    }
+    if (trimmed == "Self" && structNames.count(namespacePrefix) > 0) {
+      canonicalOut = namespacePrefix;
+      structPathOut = namespacePrefix;
+      return true;
+    }
+
+    const std::string normalized = semantics::normalizeBindingTypeName(trimmed);
+    std::string resolvedStruct = semantics::resolveStructTypePath(normalized, namespacePrefix, structNames);
+    if (resolvedStruct.empty()) {
+      auto importIt = importAliases.find(normalized);
+      if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
+        resolvedStruct = importIt->second;
+      }
+    }
+    if (!resolvedStruct.empty()) {
+      canonicalOut = resolvedStruct;
+      structPathOut = resolvedStruct;
+      return true;
+    }
+
+    std::string base;
+    std::string arg;
+    if (!semantics::splitTemplateTypeName(normalized, base, arg)) {
+      canonicalOut = normalized;
+      return true;
+    }
+
+    std::vector<std::string> args;
+    if (!semantics::splitTopLevelTemplateArgs(arg, args) || args.empty()) {
+      canonicalOut = normalized;
+      return true;
+    }
+
+    std::string canonicalBase;
+    std::string baseStructPath;
+    if (!canonicalizeTypeName(base, namespacePrefix, canonicalBase, baseStructPath)) {
+      return false;
+    }
+    std::vector<std::string> canonicalArgs;
+    canonicalArgs.reserve(args.size());
+    for (const auto &nestedArg : args) {
+      std::string canonicalArg;
+      std::string nestedStructPath;
+      if (!canonicalizeTypeName(nestedArg, namespacePrefix, canonicalArg, nestedStructPath)) {
+        return false;
+      }
+      canonicalArgs.push_back(std::move(canonicalArg));
+    }
+    canonicalOut = canonicalBase + "<" + semantics::joinTemplateArgs(canonicalArgs) + ">";
+    return true;
+  };
+
+  auto typeKindForCanonical = [](const std::string &canonicalType, const std::string &structPath) {
+    if (!structPath.empty()) {
+      return std::string("struct");
+    }
+    std::string base;
+    std::string arg;
+    if (semantics::splitTemplateTypeName(canonicalType, base, arg)) {
+      const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
+      if (normalizedBase == "array" || normalizedBase == "vector" || normalizedBase == "map" ||
+          normalizedBase == "soa_vector" || normalizedBase == "Result") {
+        return normalizedBase;
+      }
+      if (normalizedBase == "Pointer") {
+        return std::string("pointer");
+      }
+      if (normalizedBase == "Reference") {
+        return std::string("reference");
+      }
+      if (normalizedBase == "Buffer") {
+        return std::string("buffer");
+      }
+      if (normalizedBase == "uninitialized") {
+        return std::string("uninitialized");
+      }
+      return std::string("template");
+    }
+    const std::string normalized = semantics::normalizeBindingTypeName(canonicalType);
+    if (normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "integer") {
+      return std::string("integer");
+    }
+    if (normalized == "f32" || normalized == "f64") {
+      return std::string("float");
+    }
+    if (normalized == "decimal") {
+      return std::string("decimal");
+    }
+    if (normalized == "complex") {
+      return std::string("complex");
+    }
+    if (normalized == "bool") {
+      return std::string("bool");
+    }
+    if (normalized == "string") {
+      return std::string("string");
+    }
+    return std::string("type");
+  };
+
+  auto rewriteExpr = [&](auto &self, Expr &expr) -> bool {
+    for (auto &arg : expr.args) {
+      if (!self(self, arg)) {
+        return false;
+      }
+    }
+    for (auto &arg : expr.bodyArguments) {
+      if (!self(self, arg)) {
+        return false;
+      }
+    }
+    if (expr.kind != Expr::Kind::Call || expr.isBinding) {
+      return true;
+    }
+
+    std::string queryName;
+    if (expr.isMethodCall) {
+      if (expr.args.empty() || expr.args.front().kind != Expr::Kind::Name || expr.args.front().name != "meta") {
+        return true;
+      }
+      queryName = expr.name;
+    } else if (expr.name.rfind("/meta/", 0) == 0) {
+      queryName = expr.name.substr(6);
+    } else {
+      return true;
+    }
+
+    if (queryName != "type_name" && queryName != "type_kind" && queryName != "is_struct" &&
+        queryName != "field_count") {
+      return true;
+    }
+
+    const size_t expectedArgs = expr.isMethodCall ? 1u : 0u;
+    if (expr.args.size() != expectedArgs) {
+      error = "meta." + queryName + " does not accept call arguments";
+      return false;
+    }
+    if (semantics::hasNamedArguments(expr.argNames)) {
+      error = "meta." + queryName + " does not accept named arguments";
+      return false;
+    }
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      error = "meta." + queryName + " does not accept block arguments";
+      return false;
+    }
+    if (expr.templateArgs.size() != 1) {
+      error = "meta." + queryName + " requires exactly one template argument";
+      return false;
+    }
+
+    std::string canonicalType;
+    std::string structPath;
+    if (!canonicalizeTypeName(expr.templateArgs.front(), expr.namespacePrefix, canonicalType, structPath)) {
+      return false;
+    }
+
+    Expr rewritten;
+    rewritten.sourceLine = expr.sourceLine;
+    rewritten.sourceColumn = expr.sourceColumn;
+    if (queryName == "type_name") {
+      rewritten.kind = Expr::Kind::StringLiteral;
+      rewritten.stringValue = escapeStringLiteral(canonicalType);
+    } else if (queryName == "type_kind") {
+      rewritten.kind = Expr::Kind::StringLiteral;
+      rewritten.stringValue = escapeStringLiteral(typeKindForCanonical(canonicalType, structPath));
+    } else if (queryName == "is_struct") {
+      rewritten.kind = Expr::Kind::BoolLiteral;
+      rewritten.boolValue = !structPath.empty();
+    } else {
+      if (structPath.empty()) {
+        error = "meta.field_count requires struct type argument: " + canonicalType;
+        return false;
+      }
+      size_t fieldCount = 0;
+      auto fieldCountIt = structFieldCounts.find(structPath);
+      if (fieldCountIt != structFieldCounts.end()) {
+        fieldCount = fieldCountIt->second;
+      }
+      rewritten.kind = Expr::Kind::Literal;
+      rewritten.intWidth = 32;
+      rewritten.isUnsigned = false;
+      rewritten.literalValue = static_cast<uint64_t>(fieldCount);
+    }
+    expr = std::move(rewritten);
+    return true;
+  };
+
+  for (auto &def : program.definitions) {
+    for (auto &param : def.parameters) {
+      if (!rewriteExpr(rewriteExpr, param)) {
+        return false;
+      }
+    }
+    for (auto &stmt : def.statements) {
+      if (!rewriteExpr(rewriteExpr, stmt)) {
+        return false;
+      }
+    }
+    if (def.returnExpr.has_value()) {
+      if (!rewriteExpr(rewriteExpr, *def.returnExpr)) {
+        return false;
+      }
+    }
+  }
+  for (auto &exec : program.executions) {
+    for (auto &arg : exec.arguments) {
+      if (!rewriteExpr(rewriteExpr, arg)) {
+        return false;
+      }
+    }
+    for (auto &arg : exec.bodyArguments) {
+      if (!rewriteExpr(rewriteExpr, arg)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 bool validateExprTransforms(const Expr &expr, const std::string &context, std::string &error) {
   if (!validateTransformListContext(expr.transforms, context, false, error)) {
     return false;
@@ -1576,6 +1928,9 @@ bool Semantics::validate(Program &program,
     return false;
   }
   if (!semantics::monomorphizeTemplates(program, entryPath, error)) {
+    return false;
+  }
+  if (!rewriteReflectionMetadataQueries(program, error)) {
     return false;
   }
   if (!rewriteConvertConstructors(program, error)) {
