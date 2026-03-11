@@ -1,6 +1,7 @@
 #include "primec/Semantics.h"
 
 #include "SemanticsValidator.h"
+#include "primec/StringLiteral.h"
 #include "primec/TransformRegistry.h"
 
 #include <algorithm>
@@ -1295,6 +1296,7 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
 
   std::unordered_set<std::string> structNames;
   std::unordered_map<std::string, std::vector<FieldMetadata>> structFieldMetadata;
+  std::unordered_map<std::string, const Definition *> definitionByPath;
   std::unordered_set<std::string> publicDefinitions;
   auto isDefinitionPublic = [](const Definition &def) -> bool {
     bool sawVisibility = false;
@@ -1313,6 +1315,7 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
   };
 
   for (const auto &def : program.definitions) {
+    definitionByPath.emplace(def.fullPath, &def);
     bool hasStructTransform = false;
     bool hasReturnTransform = false;
     for (const auto &transform : def.transforms) {
@@ -1619,6 +1622,66 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     indexOut = static_cast<size_t>(value);
     return true;
   };
+  auto resolveDefinitionTarget = [&](const std::string &canonicalType,
+                                     const std::string &structPath,
+                                     const std::string &namespacePrefix) -> const Definition * {
+    auto findByPath = [&](const std::string &path) -> const Definition * {
+      auto it = definitionByPath.find(path);
+      return it == definitionByPath.end() ? nullptr : it->second;
+    };
+    if (!structPath.empty()) {
+      return findByPath(structPath);
+    }
+    if (canonicalType.empty() || canonicalType.find('<') != std::string::npos) {
+      return nullptr;
+    }
+    if (canonicalType[0] == '/') {
+      return findByPath(canonicalType);
+    }
+    if (!namespacePrefix.empty()) {
+      std::string prefix = namespacePrefix;
+      while (!prefix.empty()) {
+        const std::string candidate = prefix + "/" + canonicalType;
+        if (const Definition *resolved = findByPath(candidate)) {
+          return resolved;
+        }
+        const size_t slash = prefix.find_last_of('/');
+        if (slash == std::string::npos) {
+          break;
+        }
+        prefix = prefix.substr(0, slash);
+      }
+    }
+    auto importIt = importAliases.find(canonicalType);
+    if (importIt != importAliases.end()) {
+      if (const Definition *resolved = findByPath(importIt->second)) {
+        return resolved;
+      }
+    }
+    return findByPath("/" + canonicalType);
+  };
+  auto parseTransformQueryName = [&](const Expr &argExpr, std::string &nameOut) {
+    if (argExpr.kind == Expr::Kind::Name) {
+      nameOut = argExpr.name;
+      return true;
+    }
+    if (argExpr.kind != Expr::Kind::StringLiteral) {
+      error = "meta.has_transform requires constant string or identifier argument";
+      return false;
+    }
+    ParsedStringLiteral parsed;
+    std::string parseError;
+    if (!parseStringLiteralToken(argExpr.stringValue, parsed, parseError)) {
+      error = "meta.has_transform requires utf8/ascii string literal argument";
+      return false;
+    }
+    nameOut = parsed.decoded;
+    if (nameOut.empty()) {
+      error = "meta.has_transform requires non-empty transform name";
+      return false;
+    }
+    return true;
+  };
 
   auto rewriteExpr = [&](auto &self, Expr &expr) -> bool {
     for (auto &arg : expr.args) {
@@ -1649,15 +1712,23 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
 
     if (queryName != "type_name" && queryName != "type_kind" && queryName != "is_struct" &&
         queryName != "field_count" && queryName != "field_name" && queryName != "field_type" &&
-        queryName != "field_visibility") {
+        queryName != "field_visibility" && queryName != "has_transform") {
       return true;
     }
 
+    const bool needsTransformName = queryName == "has_transform";
     const bool needsFieldIndex =
         queryName == "field_name" || queryName == "field_type" || queryName == "field_visibility";
-    const size_t expectedArgs = expr.isMethodCall ? (needsFieldIndex ? 2u : 1u) : (needsFieldIndex ? 1u : 0u);
+    const size_t expectedArgs =
+        expr.isMethodCall ? (needsFieldIndex || needsTransformName ? 2u : 1u) : (needsFieldIndex || needsTransformName ? 1u : 0u);
     if (expr.args.size() != expectedArgs) {
-      error = "meta." + queryName + " does not accept call arguments";
+      if (needsFieldIndex) {
+        error = "meta." + queryName + " requires exactly one index argument";
+      } else if (needsTransformName) {
+        error = "meta.has_transform requires exactly one transform-name argument";
+      } else {
+        error = "meta." + queryName + " does not accept call arguments";
+      }
       return false;
     }
     if (semantics::hasNamedArguments(expr.argNames)) {
@@ -1705,6 +1776,23 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
       rewritten.intWidth = 32;
       rewritten.isUnsigned = false;
       rewritten.literalValue = static_cast<uint64_t>(fieldCount);
+    } else if (queryName == "has_transform") {
+      const size_t nameArg = expr.isMethodCall ? 1u : 0u;
+      std::string transformName;
+      if (!parseTransformQueryName(expr.args[nameArg], transformName)) {
+        return false;
+      }
+      bool hasTransform = false;
+      if (const Definition *targetDef = resolveDefinitionTarget(canonicalType, structPath, expr.namespacePrefix)) {
+        for (const auto &transform : targetDef->transforms) {
+          if (transform.name == transformName) {
+            hasTransform = true;
+            break;
+          }
+        }
+      }
+      rewritten.kind = Expr::Kind::BoolLiteral;
+      rewritten.boolValue = hasTransform;
     } else {
       if (structPath.empty()) {
         error = "meta." + queryName + " requires struct type argument: " + canonicalType;

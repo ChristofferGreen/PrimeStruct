@@ -804,7 +804,33 @@ main() {
   CHECK(error.find("meta.field_name requires struct type argument: i32") != std::string::npos);
 }
 
-TEST_CASE("has_transform query remains compile-time-only") {
+TEST_CASE("has_transform query validates") {
+  const std::string source = R"(
+[struct reflect]
+Item() {
+  [i32] x{1i32}
+}
+
+[public return<int>]
+Helper() {
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  [bool] itemHasReflect{meta.has_transform<Item>("reflect"utf8)}
+  [bool] itemHasGenerate{meta.has_transform<Item>("generate"utf8)}
+  [bool] helperIsPublic{meta.has_transform<Helper>(public)}
+  [bool] helperIsCompute{/meta/has_transform<Helper>("compute"utf8)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("has_transform rejects non-constant transform-name argument") {
   const std::string source = R"(
 [struct reflect]
 Item() {
@@ -813,14 +839,31 @@ Item() {
 
 [return<int>]
 main() {
-  meta.has_transform<Item>("reflect"utf8)
+  [bool] has{meta.has_transform<Item>(plus(1i32, 2i32))}
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reflection metadata queries are compile-time only and not yet implemented: meta.has_transform") !=
-        std::string::npos);
+  CHECK(error.find("meta.has_transform requires constant string or identifier argument") != std::string::npos);
+}
+
+TEST_CASE("has_transform rejects invalid argument count") {
+  const std::string source = R"(
+[struct reflect]
+Item() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [bool] has{meta.has_transform<Item>()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.has_transform requires exactly one transform-name argument") != std::string::npos);
 }
 
 TEST_CASE("runtime reflection object paths are rejected") {

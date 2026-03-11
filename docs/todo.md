@@ -64,7 +64,8 @@ Legend:
 - ✓ Define baseline reflection API scope for v1: compile-time-only metadata queries with no runtime reflection objects/tables. Documented v1 scope + reserved query names in `docs/PrimeStruct.md`, and added deterministic semantics diagnostics that reserve `meta.*`/`/meta/*` metadata queries as compile-time-only (not yet implemented) while explicitly rejecting runtime reflection object/table paths.
 - ✓ Implement core reflection primitives: `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`, `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)`. Implemented compile-time evaluation for all listed primitives with deterministic diagnostics for invalid call shape, non-struct targets, non-constant indices, and out-of-range field indices.
 - ✓ Complete remaining core reflection field-metadata primitives: `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)` compile-time evaluation.
-- ○ Implement transform/trait reflection predicates for generators: `meta.has_transform<T>(name)` and trait conformance checks used by generated helper gating.
+- ✓ Implement transform reflection predicate for generators: `meta.has_transform<T>(name)` compile-time evaluation (method/path forms) with deterministic argument-shape diagnostics.
+- ○ Implement trait-conformance reflection predicates used by generated helper gating.
 - ○ Add deterministic reflection diagnostics for invalid targets/indices (non-reflect types, non-constant indices, out-of-range field index, and unsupported metadata queries).
 - ○ Guarantee reflection builtins are compile-time eliminated before IR emission; add regression tests that lock zero runtime reflection opcodes/state.
 - ○ Implement v1 generated helpers: `Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`, and `DebugPrint`.
