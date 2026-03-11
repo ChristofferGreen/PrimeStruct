@@ -1055,6 +1055,7 @@ bool resolveMethodCallPath(const Expr &call,
     resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;
     return true;
   }
+  typeName = normalizeMapImportAliasPath(typeName);
   std::string resolvedType = resolveTypePath(typeName, call.namespacePrefix);
   if (returnKinds.count(resolvedType) == 0) {
     auto importIt = importAliases.find(typeName);

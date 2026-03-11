@@ -1979,6 +1979,19 @@ TEST_CASE("C++ emitter helper normalizes slashless map type import alias method 
       call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
   CHECK(resolved == "/std/collections/map/at/tag");
 
+  receiverInfo.typeName = "std/collections/map/at";
+  localTypes["value"] = receiverInfo;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/std/collections/map/at/tag");
+
+  returnKinds.emplace("/map/at", primec::emitter::ReturnKind::Int);
+  receiverInfo.typeName = "map/at";
+  localTypes["value"] = receiverInfo;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/map/at/tag");
+
   receiverInfo.typeName = "ThingAlias";
   localTypes["value"] = receiverInfo;
   CHECK(primec::emitter::resolveMethodCallPath(
