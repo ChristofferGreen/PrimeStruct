@@ -6457,7 +6457,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native std namespaced reordered mutator call with compatibility helper shadow") {
+TEST_CASE("rejects native std namespaced reordered mutator compatibility helper shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -6472,14 +6472,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_std_namespaced_reordered_mutator_compat_shadow.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_std_namespaced_reordered_mutator_compat_shadow_exe")
+       "primec_native_std_namespaced_reordered_mutator_compat_shadow_err.txt")
           .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("push requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user vector push bool positional call shadow") {

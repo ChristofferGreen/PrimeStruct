@@ -380,7 +380,7 @@ main() {
   CHECK(output.find("ps_vector_push(values, 5)") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs lambda std namespaced reordered mutator call with compatibility helper in C++ emitter") {
+TEST_CASE("rejects lambda std namespaced reordered mutator compatibility helper in C++ emitter") {
   const std::string source = R"(
 /vector/push([vector<i32> mut] values, [i32] value) { }
 
@@ -396,14 +396,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_lambda_std_namespaced_reordered_mutator_compat_helper.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_lambda_std_namespaced_reordered_mutator_compat_helper_exe")
+       "primec_cpp_lambda_std_namespaced_reordered_mutator_compat_helper_err.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("push requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lambda mutator bool positional call resolves user helper") {
@@ -713,7 +714,7 @@ main() {
   CHECK(output.find("ps_vector_push(values, 2)") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs std namespaced reordered mutator call with compatibility helper in C++ emitter") {
+TEST_CASE("rejects std namespaced reordered mutator compatibility helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /vector/push([vector<i32> mut] values, [i32] value) { }
@@ -727,14 +728,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_reordered_mutator_compat_helper.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_std_namespaced_reordered_mutator_compat_helper_exe")
+       "primec_cpp_std_namespaced_reordered_mutator_compat_helper_err.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("push requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs user vector mutator named call shadow in C++ emitter") {

@@ -1375,11 +1375,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       const bool isStdNamespacedVectorCanonicalHelperCall =
           !expr.isMethodCall && resolved.rfind("/std/collections/vector/", 0) == 0 &&
           (namespacedHelper == "count" || namespacedHelper == "capacity" || namespacedHelper == "at" ||
-           namespacedHelper == "at_unsafe");
+           namespacedHelper == "at_unsafe" || namespacedHelper == "push" || namespacedHelper == "pop" ||
+           namespacedHelper == "reserve" || namespacedHelper == "clear" || namespacedHelper == "remove_at" ||
+           namespacedHelper == "remove_swap");
       size_t resolvedReceiverIndex = 0;
-      if ((defMap_.find(resolved) == defMap_.end() ||
-           (isNamespacedVectorHelperCall && !isStdNamespacedVectorCanonicalHelperCall)) &&
-          !expr.args.empty()) {
+      const bool shouldProbeVectorHelperReceiver =
+          !isStdNamespacedVectorCanonicalHelperCall &&
+          (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall);
+      if (shouldProbeVectorHelperReceiver && !expr.args.empty()) {
         auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
           if (candidate.kind != Expr::Kind::Name) {
             return false;

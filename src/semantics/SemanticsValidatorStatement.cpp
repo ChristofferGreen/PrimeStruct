@@ -1987,6 +1987,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         getNamespacedCollectionHelperName(stmt, namespacedCollection, namespacedHelper);
     const bool isNamespacedVectorHelperCall =
         isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+    const bool isStdNamespacedVectorCanonicalHelperCall =
+        !stmt.isMethodCall && vectorHelperResolved.rfind("/std/collections/vector/", 0) == 0 &&
+        (namespacedHelper == "count" || namespacedHelper == "capacity" || namespacedHelper == "at" ||
+         namespacedHelper == "at_unsafe" || namespacedHelper == "push" || namespacedHelper == "pop" ||
+         namespacedHelper == "reserve" || namespacedHelper == "clear" || namespacedHelper == "remove_at" ||
+         namespacedHelper == "remove_swap");
     const bool isUserMethodTarget =
         stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
         vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
@@ -1999,8 +2005,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       hasResolvedReceiverIndex = true;
       resolvedReceiverIndex = 0;
     }
-    if ((defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
-        !stmt.args.empty()) {
+    const bool shouldProbeVectorHelperReceiver =
+        !isStdNamespacedVectorCanonicalHelperCall &&
+        (defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall);
+    if (shouldProbeVectorHelperReceiver && !stmt.args.empty()) {
       auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
         if (candidate.kind != Expr::Kind::Name) {
           return false;

@@ -5584,7 +5584,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("runs vm with std namespaced reordered mutator call and compatibility helper shadow") {
+TEST_CASE("rejects vm std namespaced reordered mutator compatibility helper shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -5598,8 +5598,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_reordered_mutator_compat_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_reordered_mutator_compat_shadow_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("push requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("runs vm with user vector push bool positional call shadow") {

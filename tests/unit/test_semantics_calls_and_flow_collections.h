@@ -2688,7 +2688,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced helper reordered expression resolves canonical stdlib helper" * doctest::skip()) {
+TEST_CASE("stdlib namespaced helper reordered expression rejects compatibility receiver fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -2702,11 +2702,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/push") != std::string::npos);
+  CHECK(error.find("parameter values") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced helper reordered expression mismatch keeps canonical diagnostics" * doctest::skip()) {
+TEST_CASE("stdlib namespaced helper reordered expression keeps compatibility reject diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -2722,8 +2724,8 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("expected i32 got bool") != std::string::npos);
   CHECK(error.find("/std/collections/vector/push") != std::string::npos);
+  CHECK(error.find("parameter values") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced helper reordered statement is rejected even with canonical stdlib helper") {
@@ -2744,7 +2746,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced helper reordered statement resolves canonical stdlib helper" * doctest::skip()) {
+TEST_CASE("stdlib namespaced helper reordered statement rejects compatibility receiver fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -2758,11 +2760,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/vector/push") != std::string::npos);
+  CHECK(error.find("parameter values") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced helper reordered statement mismatch keeps canonical diagnostics" * doctest::skip()) {
+TEST_CASE("stdlib namespaced helper reordered statement keeps compatibility reject diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -2778,8 +2782,8 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("expected i32 got bool") != std::string::npos);
   CHECK(error.find("/std/collections/vector/push") != std::string::npos);
+  CHECK(error.find("parameter values") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector constructor is treated as builtin collection") {
