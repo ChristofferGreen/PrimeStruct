@@ -950,6 +950,99 @@ main() {
   CHECK(error.find("generated reflection helper already exists: /Pair/NotEqual") != std::string::npos);
 }
 
+TEST_CASE("generate Default emits reflection helper definition") {
+  const std::string source = R"(
+[struct reflect generate(Default)]
+Pair() {
+  [i32] x{7i32}
+  [bool] ok{true}
+}
+
+[return<int>]
+main() {
+  [Pair] value{/Pair/Default()}
+  return(value.x)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Pair/Default") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  CHECK(generated->parameters.empty());
+  CHECK(generated->hasReturnStatement);
+  REQUIRE(generated->returnExpr.has_value());
+  const primec::Expr &returnExpr = *generated->returnExpr;
+  REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.name == "/Pair");
+}
+
+TEST_CASE("generate Default supports static-only structs") {
+  const std::string source = R"(
+[struct reflect generate(Default)]
+Marker() {
+  [static i32] shared{1i32}
+}
+
+[return<int>]
+main() {
+  [Marker] value{/Marker/Default()}
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Marker/Default") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  REQUIRE(generated->returnExpr.has_value());
+  const primec::Expr &returnExpr = *generated->returnExpr;
+  REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.name == "/Marker");
+}
+
+TEST_CASE("generate Default rejects existing helper collision") {
+  const std::string source = R"(
+[struct reflect generate(Default)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<Pair>]
+/Pair/Default() {
+  return(Pair())
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("generated reflection helper already exists: /Pair/Default") != std::string::npos);
+}
+
 TEST_CASE("reflection core type primitives validate") {
   const std::string source = R"(
 [struct reflect]

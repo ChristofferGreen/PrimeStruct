@@ -2183,6 +2183,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     const bool isStruct = structNames.count(def.fullPath) > 0;
     bool shouldGenerateEqual = false;
     bool shouldGenerateNotEqual = false;
+    bool shouldGenerateDefault = false;
     if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
@@ -2190,6 +2191,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         }
         shouldGenerateEqual = shouldGenerateEqual || transformHasArgument(transform, "Equal");
         shouldGenerateNotEqual = shouldGenerateNotEqual || transformHasArgument(transform, "NotEqual");
+        shouldGenerateDefault = shouldGenerateDefault || transformHasArgument(transform, "Default");
       }
     }
 
@@ -2255,6 +2257,35 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       definitionPaths.insert(helperPath);
       return true;
     };
+    auto emitDefaultHelper = [&]() -> bool {
+      const std::string helperPath = def.fullPath + "/Default";
+      if (definitionPaths.count(helperPath) > 0) {
+        error = "generated reflection helper already exists: " + helperPath;
+        return false;
+      }
+
+      Definition helper;
+      helper.name = "Default";
+      helper.fullPath = helperPath;
+      helper.namespacePrefix = def.fullPath;
+      helper.sourceLine = def.sourceLine;
+      helper.sourceColumn = def.sourceColumn;
+
+      Transform returnTransform;
+      returnTransform.name = "return";
+      returnTransform.templateArgs.push_back(def.fullPath);
+      helper.transforms.push_back(std::move(returnTransform));
+
+      Expr defaultCall;
+      defaultCall.kind = Expr::Kind::Call;
+      defaultCall.name = def.fullPath;
+      helper.returnExpr = std::move(defaultCall);
+      helper.hasReturnStatement = true;
+
+      rewrittenDefinitions.push_back(std::move(helper));
+      definitionPaths.insert(helperPath);
+      return true;
+    };
 
     if (shouldGenerateEqual) {
       if (!emitComparisonHelper("Equal", "equal", "and", true)) {
@@ -2263,6 +2294,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     }
     if (shouldGenerateNotEqual) {
       if (!emitComparisonHelper("NotEqual", "not_equal", "or", false)) {
+        return false;
+      }
+    }
+    if (shouldGenerateDefault) {
+      if (!emitDefaultHelper()) {
         return false;
       }
     }
