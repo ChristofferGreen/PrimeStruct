@@ -731,6 +731,25 @@ main() {
   CHECK(error.find("meta.field_count requires struct type argument: i32") != std::string::npos);
 }
 
+TEST_CASE("field_count rejects non-reflect struct targets") {
+  const std::string source = R"(
+[struct]
+Item() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  [i32] fieldCount{meta.field_count<Item>()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.field_count requires reflect-enabled struct type argument: /Item") !=
+        std::string::npos);
+}
+
 TEST_CASE("field metadata core primitives validate") {
   const std::string source = R"(
 [struct reflect]
@@ -802,6 +821,24 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("meta.field_name requires struct type argument: i32") != std::string::npos);
+}
+
+TEST_CASE("field metadata queries reject non-reflect struct targets") {
+  const std::string source = R"(
+[struct]
+Item() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [string] name{meta.field_name<Item>(0i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.field_name requires reflect-enabled struct type argument: /Item") != std::string::npos);
 }
 
 TEST_CASE("has_transform query validates") {
@@ -960,6 +997,33 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("meta.has_trait Indexable requires type and element template arguments") !=
         std::string::npos);
+}
+
+TEST_CASE("unsupported reflection metadata queries are rejected") {
+  struct Scenario {
+    const char *label;
+    const char *query;
+    const char *expected;
+  };
+  const Scenario scenarios[] = {
+      {"method", "meta.missing<Item>()", "unsupported reflection metadata query: meta.missing"},
+      {"path", "/meta/missing<Item>()", "unsupported reflection metadata query: /meta/missing"},
+  };
+  for (const auto &scenario : scenarios) {
+    CAPTURE(scenario.label);
+    const std::string source =
+        std::string("[struct reflect]\n"
+                    "Item() {\n"
+                    "  [i32] value{1i32}\n"
+                    "}\n\n"
+                    "[return<int>]\n"
+                    "main() {\n"
+                    "  [bool] has{") +
+        scenario.query + "}\n  return(0i32)\n}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find(scenario.expected) != std::string::npos);
+  }
 }
 
 TEST_CASE("runtime reflection object paths are rejected") {

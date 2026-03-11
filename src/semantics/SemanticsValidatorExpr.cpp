@@ -2593,10 +2593,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (!isUnboundMetaReceiver(receiver)) {
         return "";
       }
-      if (isReflectionMetadataQueryName(callExpr.name) || callExpr.name == "object" || callExpr.name == "table") {
-        return "meta." + callExpr.name;
-      }
-      return "";
+      return "meta." + callExpr.name;
     };
 
     std::string resolved = resolveCalleePath(expr);
@@ -2614,8 +2611,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (!methodReflectionTarget.empty()) {
       if (methodReflectionTarget == "meta.object" || methodReflectionTarget == "meta.table") {
         error_ = "runtime reflection objects/tables are unsupported: " + methodReflectionTarget;
-      } else {
+      } else if (isReflectionMetadataQueryName(expr.name)) {
         error_ = "reflection metadata queries are compile-time only and not yet implemented: " + methodReflectionTarget;
+      } else {
+        error_ = "unsupported reflection metadata query: " + methodReflectionTarget;
       }
       return false;
     }
@@ -2627,6 +2626,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (isRuntimeReflectionPath(resolved)) {
         error_ = "runtime reflection objects/tables are unsupported: " + resolved;
         return false;
+      }
+      if (resolved.rfind("/meta/", 0) == 0) {
+        const std::string queryName = resolved.substr(6);
+        if (!queryName.empty() && queryName.find('/') == std::string::npos) {
+          error_ = "unsupported reflection metadata query: " + resolved;
+          return false;
+        }
       }
     }
     if (!expr.isMethodCall && isArrayNamespacedVectorCountCompatibilityCall(expr)) {

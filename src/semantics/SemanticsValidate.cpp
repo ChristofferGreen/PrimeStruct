@@ -1295,6 +1295,7 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
   };
 
   std::unordered_set<std::string> structNames;
+  std::unordered_set<std::string> reflectedStructNames;
   std::unordered_map<std::string, std::vector<FieldMetadata>> structFieldMetadata;
   std::unordered_map<std::string, const Definition *> definitionByPath;
   std::unordered_set<std::string> publicDefinitions;
@@ -1339,6 +1340,11 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     }
     if (hasStructTransform || fieldOnlyStruct) {
       structNames.insert(def.fullPath);
+      if (std::any_of(def.transforms.begin(), def.transforms.end(), [](const Transform &transform) {
+            return transform.name == "reflect";
+          })) {
+        reflectedStructNames.insert(def.fullPath);
+      }
     }
     if (isDefinitionPublic(def)) {
       publicDefinitions.insert(def.fullPath);
@@ -1938,6 +1944,10 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
         error = "meta.field_count requires struct type argument: " + canonicalType;
         return false;
       }
+      if (reflectedStructNames.count(structPath) == 0) {
+        error = "meta.field_count requires reflect-enabled struct type argument: " + canonicalType;
+        return false;
+      }
       size_t fieldCount = 0;
       auto fieldMetaIt = structFieldMetadata.find(structPath);
       if (fieldMetaIt != structFieldMetadata.end()) {
@@ -2006,6 +2016,10 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     } else {
       if (structPath.empty()) {
         error = "meta." + queryName + " requires struct type argument: " + canonicalType;
+        return false;
+      }
+      if (reflectedStructNames.count(structPath) == 0) {
+        error = "meta." + queryName + " requires reflect-enabled struct type argument: " + canonicalType;
         return false;
       }
       const size_t indexArg = expr.isMethodCall ? 1u : 0u;

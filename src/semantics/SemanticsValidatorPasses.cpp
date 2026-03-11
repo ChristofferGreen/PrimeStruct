@@ -261,6 +261,8 @@ bool SemanticsValidator::validateDefinitions() {
           messageOut = "runtime reflection objects/tables are unsupported: meta." + expr.name;
           return true;
         }
+        messageOut = "unsupported reflection metadata query: meta." + expr.name;
+        return true;
       }
     }
     const std::string resolved = resolveCalleePath(expr);
@@ -274,6 +276,13 @@ bool SemanticsValidator::validateDefinitions() {
     if (isRuntimeReflectionPath(resolved)) {
       messageOut = "runtime reflection objects/tables are unsupported: " + resolved;
       return true;
+    }
+    if (resolved.rfind("/meta/", 0) == 0) {
+      const std::string queryName = resolved.substr(6);
+      if (!queryName.empty() && queryName.find('/') == std::string::npos) {
+        messageOut = "unsupported reflection metadata query: " + resolved;
+        return true;
+      }
     }
     return false;
   };
