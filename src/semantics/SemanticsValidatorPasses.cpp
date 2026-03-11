@@ -2508,10 +2508,20 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     return {receiverPath + "/" + methodName};
   };
   auto preferCollectionHelperPath = [&](const std::string &path) -> std::string {
+    auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
+      return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
+             suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
+             suffix != "remove_at" && suffix != "remove_swap";
+    };
+    auto allowsVectorStdlibCompatibilitySuffix = [](const std::string &suffix) {
+      return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
+             suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
+             suffix != "remove_at" && suffix != "remove_swap";
+    };
     std::string preferred = path;
     if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string("/array/").size());
-      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
+      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         const std::string vectorAlias = "/vector/" + suffix;
         if (defMap_.count(vectorAlias) > 0) {
           return vectorAlias;
@@ -2524,28 +2534,32 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     }
     if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string("/vector/").size());
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-      if (defMap_.count(stdlibAlias) > 0) {
-        preferred = stdlibAlias;
-      } else {
-        if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
-          const std::string arrayAlias = "/array/" + suffix;
-          if (defMap_.count(arrayAlias) > 0) {
-            preferred = arrayAlias;
+      if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        if (defMap_.count(stdlibAlias) > 0) {
+          preferred = stdlibAlias;
+        } else {
+          if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+            const std::string arrayAlias = "/array/" + suffix;
+            if (defMap_.count(arrayAlias) > 0) {
+              preferred = arrayAlias;
+            }
           }
         }
       }
     }
     if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (defMap_.count(vectorAlias) > 0) {
-        preferred = vectorAlias;
-      } else {
-        if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
-          const std::string arrayAlias = "/array/" + suffix;
-          if (defMap_.count(arrayAlias) > 0) {
-            preferred = arrayAlias;
+      if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
+        const std::string vectorAlias = "/vector/" + suffix;
+        if (defMap_.count(vectorAlias) > 0) {
+          preferred = vectorAlias;
+        } else {
+          if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+            const std::string arrayAlias = "/array/" + suffix;
+            if (defMap_.count(arrayAlias) > 0) {
+              preferred = arrayAlias;
+            }
           }
         }
       }
@@ -2565,6 +2579,16 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     return preferred;
   };
   auto collectionHelperPathCandidates = [&](const std::string &path) {
+    auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
+      return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
+             suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
+             suffix != "remove_at" && suffix != "remove_swap";
+    };
+    auto allowsVectorStdlibCompatibilitySuffix = [](const std::string &suffix) {
+      return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
+             suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
+             suffix != "remove_at" && suffix != "remove_swap";
+    };
     std::vector<std::string> candidates;
     auto appendUnique = [&](const std::string &candidate) {
       if (candidate.empty()) {
@@ -2591,20 +2615,24 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     appendUnique(normalizedPath);
     if (normalizedPath.rfind("/array/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/array/").size());
-      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
+      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         appendUnique("/vector/" + suffix);
         appendUnique("/std/collections/vector/" + suffix);
       }
     } else if (normalizedPath.rfind("/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
-      appendUnique("/std/collections/vector/" + suffix);
-      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
+      if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
+        appendUnique("/std/collections/vector/" + suffix);
+      }
+      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         appendUnique("/array/" + suffix);
       }
     } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
-      appendUnique("/vector/" + suffix);
-      if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
+      if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
+        appendUnique("/vector/" + suffix);
+      }
+      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         appendUnique("/array/" + suffix);
       }
     } else if (normalizedPath.rfind("/map/", 0) == 0) {

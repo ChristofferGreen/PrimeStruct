@@ -8,7 +8,21 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
-  return suffix != "at" && suffix != "at_unsafe";
+  return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
+         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
+         suffix != "remove_at" && suffix != "remove_swap";
+}
+
+bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
+  return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
+         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
+         suffix != "remove_at" && suffix != "remove_swap";
+}
+
+bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
+  return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+         helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+         helperName == "remove_at" || helperName == "remove_swap";
 }
 
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
@@ -24,6 +38,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = normalized.substr(vectorPrefix.size());
+    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
+      return false;
+    }
     return true;
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
@@ -109,13 +126,17 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     }
   } else if (normalizedPath.rfind("/vector/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
-    appendUnique("/std/collections/vector/" + suffix);
+    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
+      appendUnique("/std/collections/vector/" + suffix);
+    }
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique("/array/" + suffix);
     }
   } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
-    appendUnique("/vector/" + suffix);
+    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
+      appendUnique("/vector/" + suffix);
+    }
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique("/array/" + suffix);
     }
@@ -491,10 +512,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     if (path.rfind("/vector/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/vector/").size());
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-      defIt = defMap.find(stdlibAlias);
-      if (defIt != defMap.end()) {
-        return defIt->second;
+      if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
+        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        defIt = defMap.find(stdlibAlias);
+        if (defIt != defMap.end()) {
+          return defIt->second;
+        }
       }
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         const std::string arrayAlias = "/array/" + suffix;
@@ -506,10 +529,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     if (path.rfind("/std/collections/vector/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
-      const std::string vectorAlias = "/vector/" + suffix;
-      defIt = defMap.find(vectorAlias);
-      if (defIt != defMap.end()) {
-        return defIt->second;
+      if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
+        const std::string vectorAlias = "/vector/" + suffix;
+        defIt = defMap.find(vectorAlias);
+        if (defIt != defMap.end()) {
+          return defIt->second;
+        }
       }
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         const std::string arrayAlias = "/array/" + suffix;

@@ -10,6 +10,12 @@ namespace primec::emitter {
 
 namespace {
 
+bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
+  return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+         helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+         helperName == "remove_at" || helperName == "remove_swap";
+}
+
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -23,6 +29,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = normalized.substr(vectorPrefix.size());
+    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
+      return false;
+    }
     return true;
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
@@ -85,7 +94,10 @@ bool isNamespacedVectorHelperCall(const Expr &expr) {
     normalized.erase(0, 1);
   }
   if (normalized.rfind("vector/", 0) == 0 || normalized.rfind("std/collections/vector/", 0) == 0) {
-    return true;
+    const size_t prefixLen = normalized.rfind("vector/", 0) == 0 ? std::string("vector/").size()
+                                                                  : std::string("std/collections/vector/").size();
+    const std::string helper = normalized.substr(prefixLen);
+    return !isRemovedVectorCompatibilityHelper(helper);
   }
   if (normalized.rfind("array/", 0) == 0) {
     const std::string helper = normalized.substr(std::string("array/").size());

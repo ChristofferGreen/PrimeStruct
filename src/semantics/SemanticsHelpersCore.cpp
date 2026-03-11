@@ -815,14 +815,6 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
-  if (name.rfind("vector/", 0) == 0) {
-    std::string alias = name.substr(std::string("vector/").size());
-    if (alias == "at" || alias == "at_unsafe") {
-      out = alias;
-      return true;
-    }
-    return false;
-  }
   if (name.rfind("std/collections/vector/", 0) == 0) {
     std::string alias = name.substr(std::string("std/collections/vector/").size());
     if (alias == "at" || alias == "at_unsafe") {
@@ -880,8 +872,22 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
     return !helperOut.empty();
   };
 
-  if (extractHelper("vector/", "vector") || extractHelper("std/collections/vector/", "vector") ||
-      extractHelper("map/", "map") || extractHelper("std/collections/map/", "map")) {
+  auto isRemovedVectorCompatibilityHelper = [](const std::string &helper) {
+    return helper == "count" || helper == "capacity" || helper == "at" || helper == "at_unsafe" ||
+           helper == "push" || helper == "pop" || helper == "reserve" || helper == "clear" ||
+           helper == "remove_at" || helper == "remove_swap";
+  };
+
+  if (extractHelper("vector/", "vector")) {
+    if (isRemovedVectorCompatibilityHelper(helperOut)) {
+      collectionOut.clear();
+      helperOut.clear();
+      return false;
+    }
+    return true;
+  }
+  if (extractHelper("std/collections/vector/", "vector") || extractHelper("map/", "map") ||
+      extractHelper("std/collections/map/", "map")) {
     return true;
   }
   if (extractHelper("array/", "vector")) {
@@ -984,10 +990,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   }
   if (name.rfind("vector/", 0) == 0) {
     std::string alias = name.substr(std::string("vector/").size());
-    if (alias.find('/') == std::string::npos &&
-        (alias == "vector" || alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" ||
-         alias == "push" || alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||
-         alias == "remove_swap")) {
+    if (alias.find('/') == std::string::npos && alias == "vector") {
       return alias == targetName;
     }
   }

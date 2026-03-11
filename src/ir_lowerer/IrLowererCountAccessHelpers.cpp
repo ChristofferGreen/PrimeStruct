@@ -9,6 +9,12 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
+  return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+         helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+         helperName == "remove_at" || helperName == "remove_swap";
+}
+
 bool isExplicitArrayCountName(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -48,6 +54,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = normalized.substr(vectorPrefix.size());
+    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
+      return false;
+    }
     return true;
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
