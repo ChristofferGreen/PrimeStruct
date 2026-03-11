@@ -357,6 +357,94 @@ main() {
   CHECK(error.find("generated reflection helper already exists: /Pair/ValidateField_x") != std::string::npos);
 }
 
+TEST_CASE("reflection serialize and deserialize helpers appear in ast-semantic and ir dumps") {
+  const std::string source = R"(
+[struct reflect generate(Serialize, Deserialize)]
+Pair() {
+  [i32] x{1i32}
+  [bool] ok{true}
+}
+
+[return<int>]
+main() {
+  [Pair] input{Pair([x] 7i32, [ok] true)}
+  [array<u64>] payload{/Pair/Serialize(input)}
+  [Pair mut] output{Pair([x] 0i32, [ok] false)}
+  /Pair/Deserialize(output, payload)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_serialize_deserialize_dump.prime", source);
+  const std::string astOutPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_serialize_deserialize_ast_semantic.txt").string();
+  const std::string irOutPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_serialize_deserialize_ir.txt").string();
+
+  const std::string astCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(astOutPath);
+  const std::string irCmd = "./primec " + quoteShellArg(srcPath) + " --dump-stage ir > " + quoteShellArg(irOutPath);
+  CHECK(runCommand(astCmd) == 0);
+  CHECK(runCommand(irCmd) == 0);
+
+  const std::string ast = readFile(astOutPath);
+  const std::string ir = readFile(irOutPath);
+  CHECK(ast.find("/Pair/Serialize(") != std::string::npos);
+  CHECK(ast.find("/Pair/Deserialize(") != std::string::npos);
+  CHECK(ast.find("array<u64>(1u64") != std::string::npos);
+  CHECK(ast.find("convert<u64>(x(value))") != std::string::npos);
+  CHECK(ast.find("assign(x(value), convert<i32>(at(payload, 1i32)))") != std::string::npos);
+  CHECK(ir.find("call /Pair/Serialize(input)") != std::string::npos);
+  CHECK(ir.find("call /Pair/Deserialize(output, payload)") != std::string::npos);
+}
+
+TEST_CASE("reflection serialize helper rejects unsupported field envelope deterministically") {
+  const std::string source = R"(
+[struct reflect generate(Serialize)]
+Pair() {
+  [string] label{"x"utf8}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_serialize_ineligible_field.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_serialize_ineligible_field.err.txt").string();
+  const std::string cmd =
+      "./primec " + quoteShellArg(srcPath) + " --emit=ir 2> " + quoteShellArg(errPath);
+
+  CHECK(runCommand(cmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("generated reflection helper /Pair/Serialize does not support field envelope: label (string)") !=
+        std::string::npos);
+}
+
+TEST_CASE("reflection deserialize helper rejects unsupported field envelope deterministically") {
+  const std::string source = R"(
+[struct reflect generate(Deserialize)]
+Pair() {
+  [string] label{"x"utf8}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_deserialize_ineligible_field.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_deserialize_ineligible_field.err.txt").string();
+  const std::string cmd =
+      "./primec " + quoteShellArg(srcPath) + " --emit=ir 2> " + quoteShellArg(errPath);
+
+  CHECK(runCommand(cmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("generated reflection helper /Pair/Deserialize does not support field envelope: label (string)") !=
+        std::string::npos);
+}
+
 TEST_CASE("reflection codegen helper runtime stays aligned across backends") {
   const std::string source = reflectionCodegenRuntimeSource();
   const std::string srcPath = writeTemp("compile_reflection_codegen_runtime.prime", source);
@@ -564,6 +652,44 @@ main() {
 
   const std::string nativePath =
       (std::filesystem::temp_directory_path() / "primec_reflection_validate_native").string();
+  const std::string nativeCompileCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(nativeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 7);
+}
+
+TEST_CASE("reflection serialize and deserialize helpers runtime stay aligned across backends") {
+  const std::string source = R"(
+[struct reflect generate(Serialize, Deserialize, Compare)]
+Pair() {
+  [i32] x{0i32}
+  [bool] ok{false}
+}
+
+[return<int>]
+main() {
+  [Pair] input{Pair([x] 9i32, [ok] true)}
+  [array<u64>] payload{/Pair/Serialize(input)}
+  [Pair mut] output{Pair([x] 0i32, [ok] false)}
+  /Pair/Deserialize(output, payload)
+  [i32] cmp{/Pair/Compare(input, output)}
+  return(if(equal(cmp, 0i32), then() { 7i32 }, else() { 3i32 }))
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_serialize_deserialize_runtime.prime", source);
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 7);
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_serialize_deserialize_exe").string();
+  const std::string exeCompileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(exeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 7);
+
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_serialize_deserialize_native").string();
   const std::string nativeCompileCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(nativeCompileCmd) == 0);
