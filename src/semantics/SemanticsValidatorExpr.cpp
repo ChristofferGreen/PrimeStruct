@@ -1819,6 +1819,40 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return removedPath;
     };
+    auto getMapNamespacedMethodCompatibilityPath = [&](const Expr &candidate) -> std::string {
+      if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
+          candidate.args.empty()) {
+        return "";
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      std::string helperName;
+      if (normalized == "map/count") {
+        helperName = "count";
+      } else if (normalized == "map/at") {
+        helperName = "at";
+      } else if (normalized == "map/at_unsafe") {
+        helperName = "at_unsafe";
+      } else if (normalized == "std/collections/map/count") {
+        helperName = "count";
+      } else if (normalized == "std/collections/map/at") {
+        helperName = "at";
+      } else if (normalized == "std/collections/map/at_unsafe") {
+        helperName = "at_unsafe";
+      } else {
+        return "";
+      }
+      const std::string removedPath = "/map/" + helperName;
+      if (defMap_.find(removedPath) != defMap_.end()) {
+        return "";
+      }
+      if (!resolveMapTarget(candidate.args.front())) {
+        return "";
+      }
+      return removedPath;
+    };
     auto resolveMapKeyType = [&](const Expr &target, std::string &keyTypeOut) -> bool {
       keyTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
@@ -2473,6 +2507,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         expr.isMethodCall ? "" : getMapNamespacedAccessCompatibilityPath(expr);
     if (!removedMapAccessCompatibilityPath.empty()) {
       error_ = "unknown call target: " + removedMapAccessCompatibilityPath;
+      return false;
+    }
+    const std::string removedMapMethodCompatibilityPath =
+        expr.isMethodCall ? getMapNamespacedMethodCompatibilityPath(expr) : "";
+    if (!removedMapMethodCompatibilityPath.empty()) {
+      error_ = "unknown method: " + removedMapMethodCompatibilityPath;
       return false;
     }
     auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {

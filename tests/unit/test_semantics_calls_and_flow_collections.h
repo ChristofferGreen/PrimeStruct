@@ -3007,6 +3007,24 @@ main() {
   CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
+TEST_CASE("map namespaced at method rejects removed compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values./map/at(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/at") != std::string::npos);
+}
+
 TEST_CASE("map namespaced at_unsafe method auto inference rejects removed compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -3019,6 +3037,24 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
   [auto] inferred{values./map/at_unsafe(1i32)}
   return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("map stdlib namespaced at_unsafe method rejects removed compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values./std/collections/map/at_unsafe(1i32))
 }
 )";
   std::string error;
