@@ -41,7 +41,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = normalized.substr(arrayPrefix.size());
-    if (helperNameOut == "count" || helperNameOut == "at" || helperNameOut == "at_unsafe") {
+    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }
     return true;
@@ -51,18 +51,6 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     return true;
   }
   return false;
-}
-
-bool isArrayNamespacedVectorMutatorAlias(const Expr &expr, const std::string &helperName) {
-  if (helperName != "push" && helperName != "pop" && helperName != "reserve" && helperName != "clear" &&
-      helperName != "remove_at" && helperName != "remove_swap") {
-    return false;
-  }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized[0] == '/') {
-    normalized.erase(0, 1);
-  }
-  return normalized.rfind("array/", 0) == 0;
 }
 
 bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
@@ -91,10 +79,7 @@ bool isVectorBuiltinName(const Expr &expr, const char *name) {
     return true;
   }
   std::string aliasName;
-  if (!resolveVectorHelperAliasName(expr, aliasName) || aliasName != name) {
-    return false;
-  }
-  return !isArrayNamespacedVectorMutatorAlias(expr, aliasName);
+  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
 bool isMapBuiltinName(const Expr &expr, const char *name) {

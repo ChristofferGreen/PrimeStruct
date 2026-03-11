@@ -17225,6 +17225,28 @@ TEST_CASE("ir lowerer setup type helper rejects removed vector helper probes whi
   CHECK(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
   CHECK(canonicalCapacityResolveCalls == 1);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  methodResolved = false;
+  primec::Expr removedArrayCapacityCall;
+  removedArrayCapacityCall.kind = primec::Expr::Kind::Call;
+  removedArrayCapacityCall.name = "/array/capacity";
+  removedArrayCapacityCall.args = {receiverExpr};
+  int removedArrayCapacityResolveCalls = 0;
+  CHECK_FALSE(primec::ir_lowerer::resolveCapacityMethodCallReturnKind(
+      removedArrayCapacityCall,
+      {},
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++removedArrayCapacityResolveCalls;
+        return &capacityDef;
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved));
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(removedArrayCapacityResolveCalls == 0);
 }
 
 TEST_CASE("ir lowerer setup type helper normalizes namespaced map call fallback helpers") {
@@ -22102,6 +22124,29 @@ TEST_CASE("ir lowerer count access helpers build bundled entry count setup") {
   entryDef.parameters = {entryParam, extraParam};
   CHECK_FALSE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, setup, error));
   CHECK(error == "native backend only supports a single array<string> entry parameter");
+}
+
+TEST_CASE("ir lowerer count access helpers reject removed /array/capacity alias") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo vecInfo;
+  vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("values", vecInfo);
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr capacityCall;
+  capacityCall.kind = primec::Expr::Kind::Call;
+  capacityCall.name = "capacity";
+  capacityCall.args = {valuesName};
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+
+  capacityCall.name = "/std/collections/vector/capacity";
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+
+  capacityCall.name = "/array/capacity";
+  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 }
 
 TEST_CASE("ir lowerer count access helpers classify capacity and string count" * doctest::skip()) {
