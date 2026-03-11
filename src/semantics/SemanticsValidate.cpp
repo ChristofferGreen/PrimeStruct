@@ -2156,20 +2156,20 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     fieldAccess.argNames.push_back(std::nullopt);
     return fieldAccess;
   };
-  auto makeEqualFieldExpr = [&](const std::string &fieldName) {
+  auto makeFieldComparisonExpr = [&](const std::string &comparisonName, const std::string &fieldName) {
     Expr compare;
     compare.kind = Expr::Kind::Call;
-    compare.name = "equal";
+    compare.name = comparisonName;
     compare.args.push_back(makeFieldAccessExpr("left", fieldName));
     compare.argNames.push_back(std::nullopt);
     compare.args.push_back(makeFieldAccessExpr("right", fieldName));
     compare.argNames.push_back(std::nullopt);
     return compare;
   };
-  auto makeAndExpr = [](Expr left, Expr right) {
+  auto makeBinaryBoolExpr = [](const std::string &operatorName, Expr left, Expr right) {
     Expr call;
     call.kind = Expr::Kind::Call;
-    call.name = "and";
+    call.name = operatorName;
     call.args.push_back(std::move(left));
     call.argNames.push_back(std::nullopt);
     call.args.push_back(std::move(right));
@@ -2182,41 +2182,19 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
   for (auto &def : program.definitions) {
     const bool isStruct = structNames.count(def.fullPath) > 0;
     bool shouldGenerateEqual = false;
+    bool shouldGenerateNotEqual = false;
     if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
           continue;
         }
-        if (transformHasArgument(transform, "Equal")) {
-          shouldGenerateEqual = true;
-          break;
-        }
+        shouldGenerateEqual = shouldGenerateEqual || transformHasArgument(transform, "Equal");
+        shouldGenerateNotEqual = shouldGenerateNotEqual || transformHasArgument(transform, "NotEqual");
       }
     }
 
-    if (shouldGenerateEqual) {
-      const std::string helperPath = def.fullPath + "/Equal";
-      if (definitionPaths.count(helperPath) > 0) {
-        error = "generated reflection helper already exists: " + helperPath;
-        return false;
-      }
-
-      Definition helper;
-      helper.name = "Equal";
-      helper.fullPath = helperPath;
-      helper.namespacePrefix = def.fullPath;
-      helper.sourceLine = def.sourceLine;
-      helper.sourceColumn = def.sourceColumn;
-
-      Transform returnTransform;
-      returnTransform.name = "return";
-      returnTransform.templateArgs.push_back("bool");
-      helper.transforms.push_back(std::move(returnTransform));
-
-      helper.parameters.push_back(makeTypeBinding("left", def.fullPath, helper.namespacePrefix));
-      helper.parameters.push_back(makeTypeBinding("right", def.fullPath, helper.namespacePrefix));
-
-      std::vector<std::string> fieldNames;
+    std::vector<std::string> fieldNames;
+    if (shouldGenerateEqual || shouldGenerateNotEqual) {
       fieldNames.reserve(def.statements.size());
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {
@@ -2230,16 +2208,44 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
           fieldNames.push_back(stmt.name);
         }
       }
+    }
+
+    auto emitComparisonHelper = [&](const std::string &helperName,
+                                    const std::string &comparisonName,
+                                    const std::string &foldOperatorName,
+                                    bool emptyValue) -> bool {
+      const std::string helperPath = def.fullPath + "/" + helperName;
+      if (definitionPaths.count(helperPath) > 0) {
+        error = "generated reflection helper already exists: " + helperPath;
+        return false;
+      }
+
+      Definition helper;
+      helper.name = helperName;
+      helper.fullPath = helperPath;
+      helper.namespacePrefix = def.fullPath;
+      helper.sourceLine = def.sourceLine;
+      helper.sourceColumn = def.sourceColumn;
+
+      Transform returnTransform;
+      returnTransform.name = "return";
+      returnTransform.templateArgs.push_back("bool");
+      helper.transforms.push_back(std::move(returnTransform));
+
+      helper.parameters.push_back(makeTypeBinding("left", def.fullPath, helper.namespacePrefix));
+      helper.parameters.push_back(makeTypeBinding("right", def.fullPath, helper.namespacePrefix));
 
       if (fieldNames.empty()) {
-        Expr alwaysTrue;
-        alwaysTrue.kind = Expr::Kind::BoolLiteral;
-        alwaysTrue.boolValue = true;
-        helper.returnExpr = std::move(alwaysTrue);
+        Expr emptyLiteral;
+        emptyLiteral.kind = Expr::Kind::BoolLiteral;
+        emptyLiteral.boolValue = emptyValue;
+        helper.returnExpr = std::move(emptyLiteral);
       } else {
-        Expr combined = makeEqualFieldExpr(fieldNames.front());
+        Expr combined = makeFieldComparisonExpr(comparisonName, fieldNames.front());
         for (size_t index = 1; index < fieldNames.size(); ++index) {
-          combined = makeAndExpr(std::move(combined), makeEqualFieldExpr(fieldNames[index]));
+          combined = makeBinaryBoolExpr(foldOperatorName,
+                                        std::move(combined),
+                                        makeFieldComparisonExpr(comparisonName, fieldNames[index]));
         }
         helper.returnExpr = std::move(combined);
       }
@@ -2247,6 +2253,18 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
 
       rewrittenDefinitions.push_back(std::move(helper));
       definitionPaths.insert(helperPath);
+      return true;
+    };
+
+    if (shouldGenerateEqual) {
+      if (!emitComparisonHelper("Equal", "equal", "and", true)) {
+        return false;
+      }
+    }
+    if (shouldGenerateNotEqual) {
+      if (!emitComparisonHelper("NotEqual", "not_equal", "or", false)) {
+        return false;
+      }
     }
 
     rewrittenDefinitions.push_back(std::move(def));

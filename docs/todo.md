@@ -70,7 +70,7 @@ Legend:
 - ✓ Guarantee reflection builtins are compile-time eliminated before IR emission; add regression tests that lock zero runtime reflection opcodes/state. IR lowering now rejects non-eliminated reserved `/meta/*` query paths before emission, and IR pipeline coverage locks that lowered reflection-query programs emit no runtime call-based reflection state.
 - ◐ Implement v1 generated helpers: `Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`, and `DebugPrint`.
 - ✓ Implement v1 generated helper slice: `Equal` now emits `/Type/Equal([Type] left, [Type] right) -> bool` for `[reflect generate(Equal)]` structs, performs deterministic field-wise equality checks (returns `true` for zero-field structs), and rejects path collisions deterministically when `/Type/Equal` already exists.
-- ○ Implement v1 generated helper slice: `NotEqual`.
+- ✓ Implement v1 generated helper slice: `NotEqual` now emits `/Type/NotEqual([Type] left, [Type] right) -> bool` for `[reflect generate(NotEqual)]` structs, performs deterministic field-wise inequality checks (returns `false` for zero-field or static-only structs), and rejects path collisions deterministically when `/Type/NotEqual` already exists.
 - ○ Implement v1 generated helper slice: `Default`.
 - ○ Implement v1 generated helper slice: `IsDefault`.
 - ○ Implement v1 generated helper slice: `Clone`.

@@ -816,6 +816,140 @@ main() {
   CHECK(error.find("generated reflection helper already exists: /Pair/Equal") != std::string::npos);
 }
 
+TEST_CASE("generate NotEqual emits reflection helper definition") {
+  const std::string source = R"(
+[struct reflect generate(NotEqual)]
+Pair() {
+  [i32] x{1i32}
+  [bool] ok{true}
+}
+
+[return<bool>]
+main() {
+  [Pair] left{Pair()}
+  [Pair] right{Pair()}
+  return(/Pair/NotEqual(left, right))
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Pair/NotEqual") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  REQUIRE(generated->parameters.size() == 2);
+  CHECK(generated->hasReturnStatement);
+  REQUIRE(generated->returnExpr.has_value());
+  const primec::Expr &returnExpr = *generated->returnExpr;
+  REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.name == "or");
+  REQUIRE(returnExpr.args.size() == 2);
+  CHECK(returnExpr.args[0].kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.args[1].kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.args[0].name == "not_equal");
+  CHECK(returnExpr.args[1].name == "not_equal");
+}
+
+TEST_CASE("generate NotEqual for empty reflected struct returns false") {
+  const std::string source = R"(
+[struct reflect generate(NotEqual)]
+Marker() {
+}
+
+[return<bool>]
+main() {
+  [Marker] left{Marker()}
+  [Marker] right{Marker()}
+  return(/Marker/NotEqual(left, right))
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Marker/NotEqual") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  REQUIRE(generated->returnExpr.has_value());
+  const primec::Expr &returnExpr = *generated->returnExpr;
+  REQUIRE(returnExpr.kind == primec::Expr::Kind::BoolLiteral);
+  CHECK_FALSE(returnExpr.boolValue);
+}
+
+TEST_CASE("generate NotEqual ignores static fields") {
+  const std::string source = R"(
+[struct reflect generate(NotEqual)]
+Marker() {
+  [static i32] shared{1i32}
+}
+
+[return<bool>]
+main() {
+  [Marker] left{Marker()}
+  [Marker] right{Marker()}
+  return(/Marker/NotEqual(left, right))
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Marker/NotEqual") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
+  REQUIRE(generated->returnExpr.has_value());
+  const primec::Expr &returnExpr = *generated->returnExpr;
+  REQUIRE(returnExpr.kind == primec::Expr::Kind::BoolLiteral);
+  CHECK_FALSE(returnExpr.boolValue);
+}
+
+TEST_CASE("generate NotEqual rejects existing helper collision") {
+  const std::string source = R"(
+[struct reflect generate(NotEqual)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<bool>]
+/Pair/NotEqual([Pair] left, [Pair] right) {
+  return(false)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("generated reflection helper already exists: /Pair/NotEqual") != std::string::npos);
+}
+
 TEST_CASE("reflection core type primitives validate") {
   const std::string source = R"(
 [struct reflect]
