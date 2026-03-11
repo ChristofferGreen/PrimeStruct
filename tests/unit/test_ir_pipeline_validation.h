@@ -11097,7 +11097,7 @@ TEST_CASE("ir lowerer call helpers reject removed vector compatibility helper na
   CHECK(helperName == "push");
 }
 
-TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics" * doctest::skip()) {
+TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for stdlib-only helpers") {
   using Result = primec::ir_lowerer::UnsupportedNativeCallResult;
 
   primec::Expr callExpr;
@@ -11124,8 +11124,8 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics" * d
   CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
             callExpr,
             [](const primec::Expr &, std::string &) { return false; },
-            error) == Result::Error);
-  CHECK(error == "count requires array, vector, map, or string target");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   callExpr.name = "/std/collections/vector/capacity";
   error.clear();

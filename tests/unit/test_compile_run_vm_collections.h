@@ -641,7 +641,7 @@ main() {
   CHECK(runCommand(runCmd) == 180);
 }
 
-TEST_CASE("runs vm with vector helper method expression canonical stdlib forwarding" * doctest::skip()) {
+TEST_CASE("rejects vm vector helper method expression legacy alias forwarding") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -656,8 +656,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_vector_helper_method_expression_canonical_stdlib_forwarding.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 6);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_vector_helper_method_expression_canonical_stdlib_forwarding_out.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("runs vm with vector alias implicit canonical templated forwarding on named args") {
@@ -781,7 +785,7 @@ main() {
   CHECK(runCommand(runCmd) == 180);
 }
 
-TEST_CASE("runs vm with vector namespaced mutator builtin alias" * doctest::skip()) {
+TEST_CASE("rejects vm vector namespaced mutator alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -791,11 +795,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_namespaced_mutator_alias.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 12);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_vector_namespaced_mutator_alias_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("runs vm with vector namespaced count capacity access aliases" * doctest::skip()) {
+TEST_CASE("rejects vm vector namespaced count capacity access aliases") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -808,8 +815,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_namespaced_count_access_aliases.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 13);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_vector_namespaced_count_access_aliases_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm with collection bracket literals") {

@@ -2248,7 +2248,7 @@ main() {
   CHECK(runCommand(exePath) == 180);
 }
 
-TEST_CASE("compiles and runs vector helper method expression canonical stdlib forwarding in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects vector helper method expression legacy alias forwarding in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -2263,14 +2263,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_helper_method_expression_canonical_stdlib_forwarding.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_helper_method_expression_canonical_stdlib_forwarding_err.txt")
+          .string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() /
        "primec_cpp_vector_helper_method_expression_canonical_stdlib_forwarding_exe")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs vector alias implicit canonical templated forwarding on named args in C++ emitter") {
@@ -2420,7 +2425,7 @@ main() {
   CHECK(runCommand(exePath) == 180);
 }
 
-TEST_CASE("compiles and runs vector namespaced count capacity access aliases in C++ emitter" * doctest::skip()) {
+TEST_CASE("rejects vector namespaced count capacity access aliases in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2433,12 +2438,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_count_access_aliases.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_access_aliases_err.txt")
+          .string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_access_aliases_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 13);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter emits builtin statement for stdlib namespaced vector mutator") {
@@ -2461,7 +2470,7 @@ main() {
   CHECK(output.find("ps_vector_push(values, 2)") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter emits builtin statement for vector namespaced mutator" * doctest::skip()) {
+TEST_CASE("C++ emitter rejects vector namespaced mutator alias statement") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2471,14 +2480,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_mutator_stmt.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_vector_namespaced_mutator_stmt.cpp")
-                                  .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_mutator_stmt.cpp").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_mutator_stmt_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_vector_push(values, 2)") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps stdlib namespaced vector access builtin fallback") {

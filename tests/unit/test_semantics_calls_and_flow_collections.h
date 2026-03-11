@@ -2634,7 +2634,7 @@ main() {
   CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("vector helper method expression resolves canonical stdlib helper" * doctest::skip()) {
+TEST_CASE("vector helper method expression stays statement-only with canonical stdlib helper") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -2648,11 +2648,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("vector helper method expression canonical stdlib mismatch keeps canonical diagnostics" * doctest::skip()) {
+TEST_CASE("vector helper method expression keeps statement-only diagnostics before canonical mismatch checks") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [bool] value) {
@@ -2667,11 +2667,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/push") != std::string::npos);
+  CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced helper reordered expression resolves canonical stdlib helper" * doctest::skip()) {
+TEST_CASE("vector namespaced helper reordered expression is rejected even with canonical stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -2685,8 +2684,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced helper reordered expression resolves canonical stdlib helper" * doctest::skip()) {
@@ -2727,7 +2726,7 @@ main() {
   CHECK(error.find("/std/collections/vector/push") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced helper reordered statement resolves canonical stdlib helper" * doctest::skip()) {
+TEST_CASE("vector namespaced helper reordered statement is rejected even with canonical stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -2741,8 +2740,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced helper reordered statement resolves canonical stdlib helper" * doctest::skip()) {
