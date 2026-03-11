@@ -1232,6 +1232,60 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string valueType;
       return resolveMapTarget(candidate.args[receiverIndex], keyType, valueType);
     };
+    auto isUnnamespacedMapAccessBuiltinFallbackCall = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      std::string helperName;
+      if (normalized == "at") {
+        helperName = "at";
+      } else if (normalized == "at_unsafe") {
+        helperName = "at_unsafe";
+      } else {
+        const std::string resolvedPath = resolveCalleePath(candidate);
+        if (resolvedPath == "/at") {
+          helperName = "at";
+        } else if (resolvedPath == "/at_unsafe") {
+          helperName = "at_unsafe";
+        } else {
+          return false;
+        }
+      }
+      if (defMap_.find("/" + helperName) != defMap_.end()) {
+        return false;
+      }
+      if (defMap_.find("/std/collections/map/" + helperName) == defMap_.end()) {
+        return false;
+      }
+      if (candidate.args.empty()) {
+        return false;
+      }
+      size_t receiverIndex = 0;
+      if (hasNamedArguments(candidate.argNames)) {
+        bool foundValues = false;
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+              *candidate.argNames[i] == "values") {
+            receiverIndex = i;
+            foundValues = true;
+            break;
+          }
+        }
+        if (!foundValues) {
+          receiverIndex = 0;
+        }
+      }
+      if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      std::string keyType;
+      std::string valueType;
+      return resolveMapTarget(candidate.args[receiverIndex], keyType, valueType);
+    };
     auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
         return false;
@@ -1559,6 +1613,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Unknown;
     }
     if (!expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr)) {
+      return ReturnKind::Unknown;
+    }
+    if (!expr.isMethodCall && isUnnamespacedMapAccessBuiltinFallbackCall(expr)) {
       return ReturnKind::Unknown;
     }
     if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall(expr)) {

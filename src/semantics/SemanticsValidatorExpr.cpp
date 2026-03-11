@@ -1807,6 +1807,62 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return resolveMapTarget(candidate.args[receiverIndex]);
     };
+    auto getUnnamespacedMapAccessBuiltinFallbackPath = [&](const Expr &candidate) -> std::string {
+      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+        return "";
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      std::string helperName;
+      if (normalized == "at") {
+        helperName = "at";
+      } else if (normalized == "at_unsafe") {
+        helperName = "at_unsafe";
+      } else {
+        const std::string resolvedPath = resolveCalleePath(candidate);
+        if (resolvedPath == "/at") {
+          helperName = "at";
+        } else if (resolvedPath == "/at_unsafe") {
+          helperName = "at_unsafe";
+        } else {
+          return "";
+        }
+      }
+      const std::string removedPath = "/" + helperName;
+      if (defMap_.find(removedPath) != defMap_.end()) {
+        return "";
+      }
+      if (defMap_.find("/std/collections/map/" + helperName) == defMap_.end()) {
+        return "";
+      }
+      if (candidate.args.empty()) {
+        return "";
+      }
+      size_t receiverIndex = 0;
+      if (hasNamedArguments(candidate.argNames)) {
+        bool foundValues = false;
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+              *candidate.argNames[i] == "values") {
+            receiverIndex = i;
+            foundValues = true;
+            break;
+          }
+        }
+        if (!foundValues) {
+          receiverIndex = 0;
+        }
+      }
+      if (receiverIndex >= candidate.args.size()) {
+        return "";
+      }
+      if (!resolveMapTarget(candidate.args[receiverIndex])) {
+        return "";
+      }
+      return removedPath;
+    };
     auto getMapNamespacedAccessCompatibilityPath = [&](const Expr &candidate) -> std::string {
       if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
         return "";
@@ -2547,6 +2603,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     if (!expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr)) {
       error_ = "unknown call target: /count";
+      return false;
+    }
+    const std::string removedUnnamespacedMapAccessBuiltinPath =
+        expr.isMethodCall ? "" : getUnnamespacedMapAccessBuiltinFallbackPath(expr);
+    if (!removedUnnamespacedMapAccessBuiltinPath.empty()) {
+      error_ = "unknown call target: " + removedUnnamespacedMapAccessBuiltinPath;
       return false;
     }
     const std::string removedMapAccessCompatibilityPath =
