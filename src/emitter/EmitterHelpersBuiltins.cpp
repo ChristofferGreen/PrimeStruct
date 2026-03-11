@@ -994,6 +994,15 @@ bool resolveMethodCallPath(const Expr &call,
     return "";
   };
   std::string typeName;
+  auto normalizeMapImportAliasPath = [](const std::string &path) {
+    if (path.empty() || path.front() == '/') {
+      return path;
+    }
+    if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
+      return "/" + path;
+    }
+    return path;
+  };
   if (receiver.kind == Expr::Kind::Name) {
     auto it = localTypes.find(receiver.name);
     if (it == localTypes.end()) {
@@ -1050,7 +1059,7 @@ bool resolveMethodCallPath(const Expr &call,
   if (returnKinds.count(resolvedType) == 0) {
     auto importIt = importAliases.find(typeName);
     if (importIt != importAliases.end()) {
-      resolvedType = importIt->second;
+      resolvedType = normalizeMapImportAliasPath(importIt->second);
     }
   }
   resolvedOut = resolvedType + "/" + normalizedMethodName;

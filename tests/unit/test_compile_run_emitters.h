@@ -1947,6 +1947,45 @@ TEST_CASE("C++ emitter helper rejects full-path map aliases without receiver typ
       call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
 }
 
+TEST_CASE("C++ emitter helper normalizes slashless map type import alias method targets") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+  call.name = "tag";
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "value";
+  call.args.push_back(receiver);
+  call.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "MapAtAlias";
+  localTypes.emplace("value", receiverInfo);
+
+  std::unordered_map<std::string, std::string> importAliases = {
+      {"MapAtAlias", "std/collections/map/at"},
+      {"ThingAlias", "pkg/Thing"},
+  };
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds = {
+      {"/std/collections/map/at", primec::emitter::ReturnKind::Int},
+  };
+  std::unordered_map<std::string, std::string> returnStructs;
+  std::string resolved;
+
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/std/collections/map/at/tag");
+
+  receiverInfo.typeName = "ThingAlias";
+  localTypes["value"] = receiverInfo;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "pkg/Thing/tag");
+}
+
 TEST_CASE("C++ emitter helper rejects canonical vector alias access struct-return forwarding resolution") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
