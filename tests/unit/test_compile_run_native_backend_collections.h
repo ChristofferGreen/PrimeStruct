@@ -6894,7 +6894,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native std namespaced capacity expression canonical fallback" * doctest::skip()) {
+TEST_CASE("rejects native std namespaced capacity expression canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
@@ -6913,10 +6913,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_native_std_namespaced_vector_capacity_expr_canonical_fallback_exe")
           .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_std_namespaced_vector_capacity_expr_canonical_fallback_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native auto-inferred named access helper receiver precedence") {
@@ -6982,7 +6987,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native auto-inferred std namespaced access helper canonical fallback" * doctest::skip()) {
+TEST_CASE("rejects native auto-inferred std namespaced access helper canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
@@ -7003,10 +7008,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_native_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_exe")
           .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user vector pop call shadow") {

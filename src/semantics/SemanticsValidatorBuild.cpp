@@ -1234,10 +1234,11 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return "/" + expr.name;
   }
   if (!expr.namespacePrefix.empty()) {
-    auto isRemovedVectorCompatibilityHelper = [](const std::string &helperName) {
-      return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
-             helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
-             helperName == "remove_at" || helperName == "remove_swap";
+    auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
+      return helperName == "count" || helperName == "capacity" || helperName == "at" ||
+             helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
+             helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
+             helperName == "remove_swap";
     };
     const size_t lastSlash = expr.namespacePrefix.find_last_of('/');
     const std::string_view suffix = lastSlash == std::string::npos

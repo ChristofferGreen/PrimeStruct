@@ -5918,7 +5918,7 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("runs vm with std namespaced capacity expression canonical fallback" * doctest::skip()) {
+TEST_CASE("rejects vm std namespaced capacity expression canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
@@ -5932,8 +5932,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_vector_capacity_expr_canonical_fallback.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_vector_capacity_expr_canonical_fallback_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("runs vm with auto-inferred named access helper receiver precedence") {
@@ -5986,7 +5990,7 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("runs vm with auto-inferred std namespaced access helper canonical fallback" * doctest::skip()) {
+TEST_CASE("rejects vm auto-inferred std namespaced access helper canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
@@ -6002,8 +6006,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("runs vm with user vector pop call shadow") {

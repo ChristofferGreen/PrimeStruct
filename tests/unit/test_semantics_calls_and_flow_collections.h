@@ -6052,7 +6052,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced capacity expression falls back to canonical helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced capacity expression rejects canonical helper fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
@@ -6066,8 +6066,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced capacity expression keeps receiver helper precedence for non-builtin arity") {
@@ -6117,7 +6118,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced capacity expression non-builtin arity falls back to canonical helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced capacity expression rejects non-builtin compatibility arity fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
@@ -6131,8 +6132,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin capacity") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced access expression keeps receiver helper precedence") {
@@ -6182,7 +6183,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced access expression falls back to canonical helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced access expression rejects canonical helper fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
@@ -6196,8 +6197,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced access expression keeps helper precedence for non-builtin arity") {
@@ -6247,7 +6249,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced access expression non-builtin arity falls back to canonical helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced access expression rejects non-builtin compatibility arity fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values) {
@@ -6261,8 +6263,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin at") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity auto inference keeps non-vector target diagnostics") {
@@ -6353,7 +6355,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced access helper auto inference falls back to canonical helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced access helper auto inference rejects canonical helper fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
@@ -6368,8 +6370,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced access helper auto inference keeps receiver helper precedence") {
