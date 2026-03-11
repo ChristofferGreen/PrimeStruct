@@ -2195,6 +2195,12 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     expr.isUnsigned = true;
     return expr;
   };
+  auto makeBoolLiteralExpr = [](bool value) {
+    Expr expr;
+    expr.kind = Expr::Kind::BoolLiteral;
+    expr.boolValue = value;
+    return expr;
+  };
   auto makeBinaryCallExpr = [](const std::string &name, Expr left, Expr right) {
     Expr call;
     call.kind = Expr::Kind::Call;
@@ -2315,6 +2321,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool shouldGenerateHash64 = false;
     bool shouldGenerateClear = false;
     bool shouldGenerateCopyFrom = false;
+    bool shouldGenerateValidate = false;
     if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
@@ -2330,6 +2337,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         shouldGenerateHash64 = shouldGenerateHash64 || transformHasArgument(transform, "Hash64");
         shouldGenerateClear = shouldGenerateClear || transformHasArgument(transform, "Clear");
         shouldGenerateCopyFrom = shouldGenerateCopyFrom || transformHasArgument(transform, "CopyFrom");
+        shouldGenerateValidate = shouldGenerateValidate || transformHasArgument(transform, "Validate");
       }
     }
 
@@ -2337,7 +2345,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     std::unordered_map<std::string, std::string> fieldTypeNames;
     if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault || shouldGenerateClone ||
         shouldGenerateDebugPrint || shouldGenerateCompare || shouldGenerateHash64 || shouldGenerateClear ||
-        shouldGenerateCopyFrom) {
+        shouldGenerateCopyFrom || shouldGenerateValidate) {
       fieldNames.reserve(def.statements.size());
       fieldTypeNames.reserve(def.statements.size());
       for (const auto &stmt : def.statements) {
@@ -2639,6 +2647,90 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       definitionPaths.insert(helperPath);
       return true;
     };
+    auto emitValidateHelper = [&]() -> bool {
+      const std::string helperPath = def.fullPath + "/Validate";
+      if (definitionPaths.count(helperPath) > 0) {
+        error = "generated reflection helper already exists: " + helperPath;
+        return false;
+      }
+
+      std::vector<std::string> fieldHookPaths;
+      fieldHookPaths.reserve(fieldNames.size());
+      for (const auto &fieldName : fieldNames) {
+        const std::string hookPath = def.fullPath + "/ValidateField_" + fieldName;
+        if (definitionPaths.count(hookPath) > 0) {
+          error = "generated reflection helper already exists: " + hookPath;
+          return false;
+        }
+        fieldHookPaths.push_back(hookPath);
+      }
+
+      for (size_t fieldIndex = 0; fieldIndex < fieldNames.size(); ++fieldIndex) {
+        Definition hook;
+        hook.name = "ValidateField_" + fieldNames[fieldIndex];
+        hook.fullPath = fieldHookPaths[fieldIndex];
+        hook.namespacePrefix = def.fullPath;
+        hook.sourceLine = def.sourceLine;
+        hook.sourceColumn = def.sourceColumn;
+
+        appendPublicVisibility(hook);
+        Transform returnTransform;
+        returnTransform.name = "return";
+        returnTransform.templateArgs.push_back("bool");
+        hook.transforms.push_back(std::move(returnTransform));
+        hook.parameters.push_back(makeTypeBinding("value", def.fullPath, hook.namespacePrefix));
+        hook.returnExpr = makeBoolLiteralExpr(true);
+        hook.hasReturnStatement = true;
+
+        rewrittenDefinitions.push_back(std::move(hook));
+        definitionPaths.insert(fieldHookPaths[fieldIndex]);
+      }
+
+      Definition helper;
+      helper.name = "Validate";
+      helper.fullPath = helperPath;
+      helper.namespacePrefix = def.fullPath;
+      helper.sourceLine = def.sourceLine;
+      helper.sourceColumn = def.sourceColumn;
+
+      appendPublicVisibility(helper);
+      Transform returnTransform;
+      returnTransform.name = "return";
+      returnTransform.templateArgs.push_back("Result<FileError>");
+      helper.transforms.push_back(std::move(returnTransform));
+      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix));
+
+      for (size_t fieldIndex = 0; fieldIndex < fieldHookPaths.size(); ++fieldIndex) {
+        Expr checkCall;
+        checkCall.kind = Expr::Kind::Call;
+        checkCall.name = fieldHookPaths[fieldIndex];
+        checkCall.args.push_back(makeNameExpr("value"));
+        checkCall.argNames.push_back(std::nullopt);
+
+        Expr conditionExpr;
+        conditionExpr.kind = Expr::Kind::Call;
+        conditionExpr.name = "not";
+        conditionExpr.args.push_back(std::move(checkCall));
+        conditionExpr.argNames.push_back(std::nullopt);
+
+        std::vector<Expr> thenBody;
+        thenBody.push_back(makeReturnStatementExpr(makeI32LiteralExpr(fieldIndex + 1)));
+        helper.statements.push_back(makeIfStatementExpr(
+            std::move(conditionExpr),
+            makeEnvelopeExpr("then", std::move(thenBody)),
+            makeEnvelopeExpr("else", {})));
+      }
+
+      Expr okResultCall;
+      okResultCall.kind = Expr::Kind::Call;
+      okResultCall.name = "Result.ok";
+      helper.returnExpr = std::move(okResultCall);
+      helper.hasReturnStatement = true;
+
+      rewrittenDefinitions.push_back(std::move(helper));
+      definitionPaths.insert(helperPath);
+      return true;
+    };
     auto emitCloneHelper = [&]() -> bool {
       const std::string helperPath = def.fullPath + "/Clone";
       if (definitionPaths.count(helperPath) > 0) {
@@ -2781,6 +2873,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     }
     if (shouldGenerateCopyFrom) {
       if (!emitCopyFromHelper()) {
+        return false;
+      }
+    }
+    if (shouldGenerateValidate) {
+      if (!emitValidateHelper()) {
         return false;
       }
     }

@@ -293,6 +293,70 @@ main() {
   CHECK(ir.find("call /Pair/CopyFrom(target, source)") != std::string::npos);
 }
 
+TEST_CASE("reflection validate helper appears in ast-semantic and ir dumps") {
+  const std::string source = R"(
+[struct reflect generate(Validate)]
+Pair() {
+  [i32] x{1i32}
+  [bool] ok{true}
+}
+
+[return<int>]
+main() {
+  [Pair] value{Pair([x] 9i32, [ok] true)}
+  /Pair/Validate(value)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_validate_dump.prime", source);
+  const std::string astOutPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_validate_ast_semantic.txt").string();
+  const std::string irOutPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_validate_ir.txt").string();
+
+  const std::string astCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(astOutPath);
+  const std::string irCmd = "./primec " + quoteShellArg(srcPath) + " --dump-stage ir > " + quoteShellArg(irOutPath);
+  CHECK(runCommand(astCmd) == 0);
+  CHECK(runCommand(irCmd) == 0);
+
+  const std::string ast = readFile(astOutPath);
+  const std::string ir = readFile(irOutPath);
+  CHECK(ast.find("/Pair/ValidateField_x(") != std::string::npos);
+  CHECK(ast.find("/Pair/ValidateField_ok(") != std::string::npos);
+  CHECK(ast.find("not(/Pair/ValidateField_x(value))") != std::string::npos);
+  CHECK(ast.find("return(Result.ok())") != std::string::npos);
+  CHECK(ir.find("call /Pair/Validate(value)") != std::string::npos);
+}
+
+TEST_CASE("reflection validate helper rejects field hook collisions deterministically") {
+  const std::string source = R"(
+[struct reflect generate(Validate)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<bool>]
+/Pair/ValidateField_x([Pair] value) {
+  return(true)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_validate_hook_collision.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_validate_hook_collision.err.txt").string();
+  const std::string cmd =
+      "./primec " + quoteShellArg(srcPath) + " --emit=ir 2> " + quoteShellArg(errPath);
+
+  CHECK(runCommand(cmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("generated reflection helper already exists: /Pair/ValidateField_x") != std::string::npos);
+}
+
 TEST_CASE("reflection codegen helper runtime stays aligned across backends") {
   const std::string source = reflectionCodegenRuntimeSource();
   const std::string srcPath = writeTemp("compile_reflection_codegen_runtime.prime", source);
@@ -466,6 +530,40 @@ main() {
 
   const std::string nativePath =
       (std::filesystem::temp_directory_path() / "primec_reflection_copyfrom_native").string();
+  const std::string nativeCompileCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(nativeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 7);
+}
+
+TEST_CASE("reflection validate helper runtime stays aligned across backends") {
+  const std::string source = R"(
+[struct reflect generate(Validate)]
+Pair() {
+  [i32] x{0i32}
+  [bool] ok{true}
+}
+
+[return<int>]
+main() {
+  [Pair] value{Pair([x] 3i32, [ok] true)}
+  /Pair/Validate(value)
+  return(7i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_validate_runtime.prime", source);
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 7);
+
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_reflection_validate_exe").string();
+  const std::string exeCompileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(exeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 7);
+
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_reflection_validate_native").string();
   const std::string nativeCompileCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(nativeCompileCmd) == 0);
