@@ -731,22 +731,95 @@ main() {
   CHECK(error.find("meta.field_count requires struct type argument: i32") != std::string::npos);
 }
 
-TEST_CASE("field metadata queries remain compile-time-only") {
+TEST_CASE("field metadata core primitives validate") {
   const std::string source = R"(
 [struct reflect]
 Item() {
-  [i32] value{1i32}
+  [i32] x{1i32}
+  [private string] label{"a"utf8}
 }
 
 [return<int>]
 main() {
-  meta.field_name<Item>(0i32)
+  [string] firstName{meta.field_name<Item>(0i32)}
+  [string] firstType{meta.field_type<Item>(0i32)}
+  [string] firstVisibility{meta.field_visibility<Item>(0i32)}
+  [string] secondName{/meta/field_name<Item>(1i32)}
+  [string] secondType{/meta/field_type<Item>(1i32)}
+  [string] secondVisibility{/meta/field_visibility<Item>(1i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("field metadata queries reject non-constant index") {
+  const std::string source = R"(
+[struct reflect]
+Item() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [string] name{meta.field_name<Item>(plus(0i32, 0i32))}
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reflection metadata queries are compile-time only and not yet implemented: meta.field_name") !=
+  CHECK(error.find("meta.field_name requires constant integer index argument") != std::string::npos);
+}
+
+TEST_CASE("field metadata queries reject out-of-range index") {
+  const std::string source = R"(
+[struct reflect]
+Item() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [string] name{meta.field_name<Item>(1i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.field_name field index out of range for /Item: 1") != std::string::npos);
+}
+
+TEST_CASE("field metadata queries reject non-struct type targets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] name{meta.field_name<i32>(0i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.field_name requires struct type argument: i32") != std::string::npos);
+}
+
+TEST_CASE("has_transform query remains compile-time-only") {
+  const std::string source = R"(
+[struct reflect]
+Item() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  meta.has_transform<Item>("reflect"utf8)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reflection metadata queries are compile-time only and not yet implemented: meta.has_transform") !=
         std::string::npos);
 }
 

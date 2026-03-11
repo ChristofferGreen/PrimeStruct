@@ -1287,8 +1287,14 @@ bool rewriteMaybeConstructors(Program &program, std::string &error) {
 }
 
 bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
+  struct FieldMetadata {
+    std::string name;
+    std::string typeName;
+    std::string visibility;
+  };
+
   std::unordered_set<std::string> structNames;
-  std::unordered_map<std::string, size_t> structFieldCounts;
+  std::unordered_map<std::string, std::vector<FieldMetadata>> structFieldMetadata;
   std::unordered_set<std::string> publicDefinitions;
   auto isDefinitionPublic = [](const Definition &def) -> bool {
     bool sawVisibility = false;
@@ -1330,13 +1336,6 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     }
     if (hasStructTransform || fieldOnlyStruct) {
       structNames.insert(def.fullPath);
-      size_t fieldCount = 0;
-      for (const auto &stmt : def.statements) {
-        if (stmt.isBinding) {
-          ++fieldCount;
-        }
-      }
-      structFieldCounts.emplace(def.fullPath, fieldCount);
     }
     if (isDefinitionPublic(def)) {
       publicDefinitions.insert(def.fullPath);
@@ -1470,6 +1469,83 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     return true;
   };
 
+  auto resolveFieldTypeName = [&](const Definition &def, const Expr &stmt) {
+    std::string typeCandidate;
+    bool hasExplicitType = false;
+    for (const auto &transform : stmt.transforms) {
+      if (transform.name == "effects" || transform.name == "capabilities") {
+        continue;
+      }
+      if (transform.name == "restrict" && transform.templateArgs.size() == 1) {
+        typeCandidate = transform.templateArgs.front();
+        hasExplicitType = true;
+        continue;
+      }
+      if (semantics::isBindingAuxTransformName(transform.name)) {
+        continue;
+      }
+      if (!transform.arguments.empty()) {
+        continue;
+      }
+      if (!transform.templateArgs.empty()) {
+        typeCandidate = transform.name + "<" + semantics::joinTemplateArgs(transform.templateArgs) + ">";
+      } else {
+        typeCandidate = transform.name;
+      }
+      hasExplicitType = true;
+      break;
+    }
+
+    if (!hasExplicitType && stmt.args.size() == 1) {
+      BindingInfo inferred;
+      if (semantics::tryInferBindingTypeFromInitializer(stmt.args.front(), {}, {}, inferred, true)) {
+        typeCandidate = inferred.typeName;
+        if (!inferred.typeTemplateArg.empty()) {
+          typeCandidate += "<" + inferred.typeTemplateArg + ">";
+        }
+      }
+    }
+    if (typeCandidate.empty()) {
+      typeCandidate = "int";
+    }
+
+    std::string canonicalType;
+    std::string ignoredStructPath;
+    if (canonicalizeTypeName(typeCandidate, def.namespacePrefix, canonicalType, ignoredStructPath)) {
+      return canonicalType;
+    }
+    return semantics::normalizeBindingTypeName(typeCandidate);
+  };
+
+  for (const auto &def : program.definitions) {
+    if (structNames.count(def.fullPath) == 0) {
+      continue;
+    }
+    std::vector<FieldMetadata> fields;
+    fields.reserve(def.statements.size());
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        continue;
+      }
+      FieldMetadata field;
+      field.name = stmt.name;
+      field.typeName = resolveFieldTypeName(def, stmt);
+      field.visibility = "public";
+      for (const auto &transform : stmt.transforms) {
+        if (transform.name == "private") {
+          field.visibility = "private";
+          break;
+        }
+        if (transform.name == "public") {
+          field.visibility = "public";
+          break;
+        }
+      }
+      fields.push_back(std::move(field));
+    }
+    structFieldMetadata.emplace(def.fullPath, std::move(fields));
+  }
+
   auto typeKindForCanonical = [](const std::string &canonicalType, const std::string &structPath) {
     if (!structPath.empty()) {
       return std::string("struct");
@@ -1517,6 +1593,32 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     }
     return std::string("type");
   };
+  auto parseFieldIndex = [&](const Expr &indexExpr, const std::string &queryName, size_t &indexOut) {
+    if (indexExpr.kind != Expr::Kind::Literal) {
+      error = "meta." + queryName + " requires constant integer index argument";
+      return false;
+    }
+    if (indexExpr.isUnsigned) {
+      indexOut = static_cast<size_t>(indexExpr.literalValue);
+      return true;
+    }
+    if (indexExpr.intWidth == 64) {
+      const int64_t value = static_cast<int64_t>(indexExpr.literalValue);
+      if (value < 0) {
+        error = "meta." + queryName + " requires non-negative field index";
+        return false;
+      }
+      indexOut = static_cast<size_t>(value);
+      return true;
+    }
+    const int32_t value = static_cast<int32_t>(static_cast<uint32_t>(indexExpr.literalValue));
+    if (value < 0) {
+      error = "meta." + queryName + " requires non-negative field index";
+      return false;
+    }
+    indexOut = static_cast<size_t>(value);
+    return true;
+  };
 
   auto rewriteExpr = [&](auto &self, Expr &expr) -> bool {
     for (auto &arg : expr.args) {
@@ -1546,11 +1648,14 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     }
 
     if (queryName != "type_name" && queryName != "type_kind" && queryName != "is_struct" &&
-        queryName != "field_count") {
+        queryName != "field_count" && queryName != "field_name" && queryName != "field_type" &&
+        queryName != "field_visibility") {
       return true;
     }
 
-    const size_t expectedArgs = expr.isMethodCall ? 1u : 0u;
+    const bool needsFieldIndex =
+        queryName == "field_name" || queryName == "field_type" || queryName == "field_visibility";
+    const size_t expectedArgs = expr.isMethodCall ? (needsFieldIndex ? 2u : 1u) : (needsFieldIndex ? 1u : 0u);
     if (expr.args.size() != expectedArgs) {
       error = "meta." + queryName + " does not accept call arguments";
       return false;
@@ -1586,20 +1691,45 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     } else if (queryName == "is_struct") {
       rewritten.kind = Expr::Kind::BoolLiteral;
       rewritten.boolValue = !structPath.empty();
-    } else {
+    } else if (queryName == "field_count") {
       if (structPath.empty()) {
         error = "meta.field_count requires struct type argument: " + canonicalType;
         return false;
       }
       size_t fieldCount = 0;
-      auto fieldCountIt = structFieldCounts.find(structPath);
-      if (fieldCountIt != structFieldCounts.end()) {
-        fieldCount = fieldCountIt->second;
+      auto fieldMetaIt = structFieldMetadata.find(structPath);
+      if (fieldMetaIt != structFieldMetadata.end()) {
+        fieldCount = fieldMetaIt->second.size();
       }
       rewritten.kind = Expr::Kind::Literal;
       rewritten.intWidth = 32;
       rewritten.isUnsigned = false;
       rewritten.literalValue = static_cast<uint64_t>(fieldCount);
+    } else {
+      if (structPath.empty()) {
+        error = "meta." + queryName + " requires struct type argument: " + canonicalType;
+        return false;
+      }
+      const size_t indexArg = expr.isMethodCall ? 1u : 0u;
+      size_t fieldIndex = 0;
+      if (!parseFieldIndex(expr.args[indexArg], queryName, fieldIndex)) {
+        return false;
+      }
+      auto fieldMetaIt = structFieldMetadata.find(structPath);
+      if (fieldMetaIt == structFieldMetadata.end() || fieldIndex >= fieldMetaIt->second.size()) {
+        error = "meta." + queryName + " field index out of range for " + structPath + ": " +
+                std::to_string(fieldIndex);
+        return false;
+      }
+      const FieldMetadata &field = fieldMetaIt->second[fieldIndex];
+      rewritten.kind = Expr::Kind::StringLiteral;
+      if (queryName == "field_name") {
+        rewritten.stringValue = escapeStringLiteral(field.name);
+      } else if (queryName == "field_type") {
+        rewritten.stringValue = escapeStringLiteral(field.typeName);
+      } else {
+        rewritten.stringValue = escapeStringLiteral(field.visibility);
+      }
     }
     expr = std::move(rewritten);
     return true;
