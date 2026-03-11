@@ -6736,7 +6736,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /map/count parameter marker") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /map/count") != std::string::npos);
+  CHECK(error.find("parameter marker") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count auto inference keeps receiver helper precedence for non-builtin arity") {

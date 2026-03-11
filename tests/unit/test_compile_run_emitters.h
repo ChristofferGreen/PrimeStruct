@@ -3110,7 +3110,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /map/count parameter marker") != std::string::npos);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("argument type mismatch for /map/count") != std::string::npos);
+  CHECK(diagnostics.find("parameter marker") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs map namespaced at compatibility alias in C++ emitter") {

@@ -1496,12 +1496,27 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
     return false;
   }
 
+  std::string receiverArgType;
+  std::string receiverArgTemplateArg;
   BindingInfo receiverArgInfo;
-  if (!inferBindingTypeForMonomorph(*orderedArgs.front(), params, locals, allowMathBare, ctx, receiverArgInfo)) {
-    return false;
+  if (inferBindingTypeForMonomorph(*orderedArgs.front(), params, locals, allowMathBare, ctx, receiverArgInfo)) {
+    receiverArgType = normalizeBindingTypeName(receiverArgInfo.typeName);
+    receiverArgTemplateArg = receiverArgInfo.typeTemplateArg;
+  } else {
+    const std::string inferredReceiverTypeText =
+        inferExprTypeTextForTemplatedVectorFallback(*orderedArgs.front(), locals, namespacePrefix, ctx);
+    if (inferredReceiverTypeText.empty()) {
+      return false;
+    }
+    std::string receiverBase;
+    std::string receiverArgText;
+    if (!splitTemplateTypeName(normalizeBindingTypeName(inferredReceiverTypeText), receiverBase, receiverArgText) ||
+        receiverBase.empty()) {
+      return false;
+    }
+    receiverArgType = normalizeBindingTypeName(receiverBase);
+    receiverArgTemplateArg = receiverArgText;
   }
-  std::string receiverArgType = normalizeBindingTypeName(receiverArgInfo.typeName);
-  std::string receiverArgTemplateArg = receiverArgInfo.typeTemplateArg;
   if ((receiverArgType == "Reference" || receiverArgType == "Pointer") && !receiverArgTemplateArg.empty()) {
     std::string pointeeBase;
     std::string pointeeArgText;

@@ -72,6 +72,7 @@
 #include "src/emitter/EmitterExprControlMethodPathStep.h"
 #include "src/emitter/EmitterExprControlStringLiteralStep.h"
 #include "src/emitter/EmitterExprControlNameStep.h"
+#include "src/emitter/EmitterHelpers.h"
 #include "src/ir_lowerer/IrLowererCallHelpers.h"
 #include "src/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "src/ir_lowerer/IrLowererBindingTypeHelpers.h"
