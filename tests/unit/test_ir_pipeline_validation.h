@@ -274,6 +274,52 @@ main() {
   CHECK(error == "native backend entry parameter must be array<string>");
 }
 
+TEST_CASE("semantics accepts to_soa before lowerer rejection") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  to_soa(values)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "native backend does not support to_soa");
+}
+
+TEST_CASE("semantics accepts to_aos before lowerer rejection") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  to_aos(to_soa(values))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "native backend does not support to_aos");
+}
+
 TEST_CASE("semantics rejects soa_vector field-view before lowerer") {
   const std::string source = R"(
 Particle() {
@@ -11264,6 +11310,10 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration" * do
   idxName.kind = primec::Expr::Kind::Name;
   idxName.name = "idx";
 
+  primec::Expr soaName;
+  soaName.kind = primec::Expr::Kind::Name;
+  soaName.name = "soa";
+
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
     instructions.push_back({op, imm});
@@ -11654,9 +11704,30 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
   arrayInfo.valueKind = LocalInfo::ValueKind::Int32;
   locals.emplace("arr", arrayInfo);
 
+  LocalInfo vectorInfo;
+  vectorInfo.kind = LocalInfo::Kind::Vector;
+  vectorInfo.index = 11;
+  vectorInfo.valueKind = LocalInfo::ValueKind::Unknown;
+  locals.emplace("vec", vectorInfo);
+
+  LocalInfo soaInfo;
+  soaInfo.kind = LocalInfo::Kind::Value;
+  soaInfo.index = 12;
+  soaInfo.valueKind = LocalInfo::ValueKind::Unknown;
+  soaInfo.isSoaVector = true;
+  locals.emplace("soa", soaInfo);
+
   primec::Expr arrName;
   arrName.kind = primec::Expr::Kind::Name;
   arrName.name = "arr";
+
+  primec::Expr vecName;
+  vecName.kind = primec::Expr::Kind::Name;
+  vecName.name = "vec";
+
+  primec::Expr soaName;
+  soaName.kind = primec::Expr::Kind::Name;
+  soaName.name = "soa";
 
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
@@ -11769,6 +11840,72 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
             error) == NativeResult::Emitted);
   CHECK(error.empty());
   CHECK_FALSE(instructions.empty());
+
+  primec::Expr toSoaExpr;
+  toSoaExpr.kind = primec::Expr::Kind::Call;
+  toSoaExpr.name = "to_soa";
+  toSoaExpr.args = {vecName};
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
+            toSoaExpr,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextTempLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == NativeResult::Error);
+  CHECK(error == "native backend does not support to_soa");
+
+  primec::Expr toAosExpr;
+  toAosExpr.kind = primec::Expr::Kind::Call;
+  toAosExpr.name = "to_aos";
+  toAosExpr.args = {soaName};
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
+            toAosExpr,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextTempLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == NativeResult::Error);
+  CHECK(error == "native backend does not support to_aos");
 }
 
 TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {

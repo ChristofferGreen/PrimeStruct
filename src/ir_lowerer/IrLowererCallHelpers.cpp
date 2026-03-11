@@ -218,6 +218,26 @@ bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
   return definitionReturnsVoid && isTailCallCandidateFn(lastStmt);
 }
 
+bool isVectorTarget(const Expr &expr, const LocalMap &localsIn);
+bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
+
+bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.name);
+    return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Vector;
+  }
+  if (expr.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(expr, collection) && collection == "vector") {
+      return true;
+    }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "to_aos") && expr.args.size() == 1) {
+      return isSoaVectorTarget(expr.args.front(), localsIn);
+    }
+  }
+  return false;
+}
+
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
@@ -225,7 +245,12 @@ bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   }
   if (expr.kind == Expr::Kind::Call) {
     std::string collection;
-    return getBuiltinCollectionName(expr, collection) && collection == "soa_vector";
+    if (getBuiltinCollectionName(expr, collection) && collection == "soa_vector") {
+      return true;
+    }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "to_soa") && expr.args.size() == 1) {
+      return isVectorTarget(expr.args.front(), localsIn);
+    }
   }
   return false;
 }
@@ -534,6 +559,16 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       expr.args.size() == 2 &&
       isSoaVectorTarget(expr.args.front(), localsIn)) {
     error = std::string("native backend does not support soa_vector ") + expr.name;
+    return NativeCallTailDispatchResult::Error;
+  }
+  if (isSimpleCallName(expr, "to_soa") && expr.args.size() == 1 &&
+      isVectorTarget(expr.args.front(), localsIn)) {
+    error = "native backend does not support to_soa";
+    return NativeCallTailDispatchResult::Error;
+  }
+  if (isSimpleCallName(expr, "to_aos") && expr.args.size() == 1 &&
+      isSoaVectorTarget(expr.args.front(), localsIn)) {
+    error = "native backend does not support to_aos";
     return NativeCallTailDispatchResult::Error;
   }
 

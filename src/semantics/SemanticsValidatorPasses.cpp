@@ -228,7 +228,8 @@ bool SemanticsValidator::validateDefinitions() {
         isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") || isSimpleCallName(expr, "at") ||
         isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
-        isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap");
+        isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
+        isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos");
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
            getBuiltinMutationName(expr, builtinName) ||
@@ -1299,7 +1300,8 @@ bool SemanticsValidator::validateExecutions() {
         isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") || isSimpleCallName(expr, "at") ||
         isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
-        isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap");
+        isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
+        isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos");
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
            getBuiltinMutationName(expr, builtinName) ||

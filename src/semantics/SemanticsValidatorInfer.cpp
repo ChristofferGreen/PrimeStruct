@@ -515,6 +515,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (typePath == "/vector" || typePath == "vector") {
         return "/vector";
       }
+      if (typePath == "/soa_vector" || typePath == "soa_vector") {
+        return "/soa_vector";
+      }
       if (typePath == "/map" || typePath == "map") {
         return "/map";
       }
@@ -531,7 +534,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       const std::string resolvedTarget = resolveCalleePath(target);
       std::string collection;
       if (defMap_.find(resolvedTarget) == defMap_.end() && getBuiltinCollectionName(target, collection)) {
-        if ((collection == "array" || collection == "vector") && target.templateArgs.size() == 1) {
+        if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+            target.templateArgs.size() == 1) {
           typePathOut = "/" + collection;
           return true;
         }
@@ -677,6 +681,67 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           }
           return true;
         }
+        if (!target.isMethodCall && isSimpleCallName(target, "to_aos") && target.args.size() == 1) {
+          std::string sourceElemType;
+          const Expr &source = target.args.front();
+          if (source.kind == Expr::Kind::Name) {
+            if (const BindingInfo *paramBinding = findParamBinding(params, source.name)) {
+              if (paramBinding->typeName != "soa_vector" || paramBinding->typeTemplateArg.empty()) {
+                return false;
+              }
+              sourceElemType = paramBinding->typeTemplateArg;
+            } else {
+              auto it = locals.find(source.name);
+              if (it == locals.end() || it->second.typeName != "soa_vector" || it->second.typeTemplateArg.empty()) {
+                return false;
+              }
+              sourceElemType = it->second.typeTemplateArg;
+            }
+          } else if (source.kind == Expr::Kind::Call) {
+            std::string sourceCollection;
+            if (defMap_.find(resolveCalleePath(source)) == defMap_.end() &&
+                getBuiltinCollectionName(source, sourceCollection) && sourceCollection == "soa_vector") {
+              if (source.templateArgs.size() == 1) {
+                sourceElemType = source.templateArgs.front();
+              }
+            } else if (!source.isMethodCall && isSimpleCallName(source, "to_soa") && source.args.size() == 1) {
+              const Expr &vectorSource = source.args.front();
+              if (vectorSource.kind == Expr::Kind::Name) {
+                if (const BindingInfo *paramBinding = findParamBinding(params, vectorSource.name)) {
+                  if (paramBinding->typeName != "vector" || paramBinding->typeTemplateArg.empty()) {
+                    return false;
+                  }
+                  sourceElemType = paramBinding->typeTemplateArg;
+                } else {
+                  auto sourceIt = locals.find(vectorSource.name);
+                  if (sourceIt == locals.end() || sourceIt->second.typeName != "vector" ||
+                      sourceIt->second.typeTemplateArg.empty()) {
+                    return false;
+                  }
+                  sourceElemType = sourceIt->second.typeTemplateArg;
+                }
+              } else if (vectorSource.kind == Expr::Kind::Call) {
+                std::string vectorCollectionTypePath;
+                if (!resolveCallCollectionTypePath(vectorSource, vectorCollectionTypePath) ||
+                    vectorCollectionTypePath != "/vector") {
+                  return false;
+                }
+                std::vector<std::string> vectorArgs;
+                if (resolveCallCollectionTemplateArgs(vectorSource, "vector", vectorArgs) && vectorArgs.size() == 1) {
+                  sourceElemType = vectorArgs.front();
+                }
+              } else {
+                return false;
+              }
+            } else {
+              return false;
+            }
+          } else {
+            return false;
+          }
+          elemType = sourceElemType;
+          return true;
+        }
       }
       return false;
     };
@@ -700,15 +765,17 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return false;
       }
       if (target.kind == Expr::Kind::Call) {
-        std::string collection;
-        if (defMap_.find(resolveCalleePath(target)) != defMap_.end() ||
-            !getBuiltinCollectionName(target, collection) || collection != "soa_vector") {
-          return false;
+        std::string collectionTypePath;
+        if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/soa_vector") {
+          std::vector<std::string> args;
+          if (resolveCallCollectionTemplateArgs(target, "soa_vector", args) && args.size() == 1) {
+            elemType = args.front();
+          }
+          return true;
         }
-        if (target.templateArgs.size() == 1) {
-          elemType = target.templateArgs.front();
+        if (!target.isMethodCall && isSimpleCallName(target, "to_soa") && target.args.size() == 1) {
+          return resolveVectorTarget(target.args.front(), elemType);
         }
-        return true;
       }
       return false;
     };
@@ -1955,6 +2022,19 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string elemType;
       if (resolveVectorTarget(expr.args.front(), elemType)) {
         return ReturnKind::Int;
+      }
+    }
+    if (!expr.isMethodCall && (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
+        expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
+      std::string elemType;
+      if (isSimpleCallName(expr, "to_soa")) {
+        if (resolveVectorTarget(expr.args.front(), elemType)) {
+          return ReturnKind::Array;
+        }
+      } else {
+        if (resolveSoaVectorTarget(expr.args.front(), elemType)) {
+          return ReturnKind::Array;
+        }
       }
     }
     const bool isBuiltinGet = isSimpleCallName(expr, "get");

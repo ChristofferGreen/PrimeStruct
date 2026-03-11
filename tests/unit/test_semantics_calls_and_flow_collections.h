@@ -222,6 +222,140 @@ main() {
   CHECK(error.find("ref requires soa_vector target") != std::string::npos);
 }
 
+TEST_CASE("to_soa helper validates on vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  to_soa(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("to_aos helper validates on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  to_aos(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("to_soa and to_aos helpers compose for explicit conversion") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  return(count(to_aos(to_soa(values))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("to_soa helper rejects non-vector target") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  to_soa(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("to_soa requires vector target") != std::string::npos);
+}
+
+TEST_CASE("to_aos helper rejects non-soa target") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  to_aos(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("to_aos requires soa_vector target") != std::string::npos);
+}
+
+TEST_CASE("aos and soa containers do not implicitly convert") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/consumeSoa([soa_vector<Particle>] values) {
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  return(consumeSoa(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("/consumeSoa") != std::string::npos);
+}
+
+TEST_CASE("to_soa and to_aos reject named arguments for builtin calls") {
+  const auto checkNamedArgs = [](const std::string &callExpr) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [vector<Particle>] values{vector<Particle>()}\n"
+        "  [soa_vector<Particle>] packed{soa_vector<Particle>()}\n"
+        "  " + callExpr + "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  };
+
+  checkNamedArgs("to_soa([values] values)");
+  checkNamedArgs("to_aos([values] packed)");
+}
+
 TEST_CASE("soa_vector get and ref reject named arguments for builtin calls") {
   const auto checkNamedArgs = [](const std::string &callExpr) {
     const std::string source =
