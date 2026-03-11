@@ -65,7 +65,7 @@ Legend:
 - ✓ Implement core reflection primitives: `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`, `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)`. Implemented compile-time evaluation for all listed primitives with deterministic diagnostics for invalid call shape, non-struct targets, non-constant indices, and out-of-range field indices.
 - ✓ Complete remaining core reflection field-metadata primitives: `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)` compile-time evaluation.
 - ✓ Implement transform reflection predicate for generators: `meta.has_transform<T>(name)` compile-time evaluation (method/path forms) with deterministic argument-shape diagnostics.
-- ○ Implement trait-conformance reflection predicates used by generated helper gating.
+- ✓ Implement trait-conformance reflection predicates used by generated helper gating: `meta.has_trait<T>(TraitName)` and `meta.has_trait<T, Elem>(Indexable)` now evaluate at compile time with deterministic trait-name/template-arity diagnostics.
 - ○ Add deterministic reflection diagnostics for invalid targets/indices (non-reflect types, non-constant indices, out-of-range field index, and unsupported metadata queries).
 - ○ Guarantee reflection builtins are compile-time eliminated before IR emission; add regression tests that lock zero runtime reflection opcodes/state.
 - ○ Implement v1 generated helpers: `Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`, and `DebugPrint`.

@@ -866,6 +866,102 @@ main() {
   CHECK(error.find("meta.has_transform requires exactly one transform-name argument") != std::string::npos);
 }
 
+TEST_CASE("has_trait query validates") {
+  const std::string source = R"(
+[struct]
+Vec2() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+}
+
+[return<Vec2>]
+/Vec2/plus([Vec2] left, [Vec2] right) {
+  return(Vec2())
+}
+
+[return<Vec2>]
+/Vec2/multiply([Vec2] left, [Vec2] right) {
+  return(Vec2())
+}
+
+[return<bool>]
+/Vec2/equal([Vec2] left, [Vec2] right) {
+  return(true)
+}
+
+[return<bool>]
+/Vec2/less_than([Vec2] left, [Vec2] right) {
+  return(false)
+}
+
+[return<i32>]
+/Vec2/count([Vec2] value) {
+  return(2i32)
+}
+
+[return<i32>]
+/Vec2/at([Vec2] value, [i32] index) {
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  [bool] vecAdditive{meta.has_trait<Vec2>(Additive)}
+  [bool] vecMultiplicative{meta.has_trait<Vec2>("Multiplicative"utf8)}
+  [bool] vecComparable{meta.has_trait<Vec2>(Comparable)}
+  [bool] vecIndexable{meta.has_trait<Vec2, i32>(Indexable)}
+  [bool] i32Comparable{meta.has_trait<i32>(Comparable)}
+  [bool] i32Additive{/meta/has_trait<i32>(Additive)}
+  [bool] arrayIndexable{meta.has_trait<array<i32>, i32>("Indexable"utf8)}
+  [bool] stringIndexable{/meta/has_trait<string, i32>(Indexable)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("has_trait rejects non-constant trait-name argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [bool] has{meta.has_trait<i32>(plus(1i32, 2i32))}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.has_trait requires constant string or identifier argument") != std::string::npos);
+}
+
+TEST_CASE("has_trait rejects unsupported trait name") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [bool] has{meta.has_trait<i32>(Hash)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.has_trait does not support trait: Hash") != std::string::npos);
+}
+
+TEST_CASE("has_trait rejects invalid template argument count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [bool] has{meta.has_trait<i32>(Indexable)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.has_trait Indexable requires type and element template arguments") !=
+        std::string::npos);
+}
+
 TEST_CASE("runtime reflection object paths are rejected") {
   const char *runtimeTargets[] = {"/meta/object", "/meta/table"};
   for (const auto *runtimeTarget : runtimeTargets) {

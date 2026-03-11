@@ -1660,27 +1660,189 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     }
     return findByPath("/" + canonicalType);
   };
-  auto parseTransformQueryName = [&](const Expr &argExpr, std::string &nameOut) {
+  auto parseNamedQueryName = [&](const Expr &argExpr,
+                                 const std::string &queryName,
+                                 const std::string &nameLabel,
+                                 std::string &nameOut) {
     if (argExpr.kind == Expr::Kind::Name) {
       nameOut = argExpr.name;
       return true;
     }
     if (argExpr.kind != Expr::Kind::StringLiteral) {
-      error = "meta.has_transform requires constant string or identifier argument";
+      error = "meta." + queryName + " requires constant string or identifier argument";
       return false;
     }
     ParsedStringLiteral parsed;
     std::string parseError;
     if (!parseStringLiteralToken(argExpr.stringValue, parsed, parseError)) {
-      error = "meta.has_transform requires utf8/ascii string literal argument";
+      error = "meta." + queryName + " requires utf8/ascii string literal argument";
       return false;
     }
     nameOut = parsed.decoded;
     if (nameOut.empty()) {
-      error = "meta.has_transform requires non-empty transform name";
+      error = "meta." + queryName + " requires non-empty " + nameLabel + " name";
       return false;
     }
     return true;
+  };
+  auto typePathForCanonical = [&](const std::string &canonicalType, const std::string &structPath) {
+    if (!structPath.empty()) {
+      return structPath;
+    }
+    if (!canonicalType.empty() && canonicalType.front() == '/') {
+      return canonicalType;
+    }
+    return std::string("/") + canonicalType;
+  };
+  auto isNumericTraitType = [&](const std::string &canonicalType) {
+    if (canonicalType.empty() || canonicalType.find('<') != std::string::npos) {
+      return false;
+    }
+    const std::string normalized = semantics::normalizeBindingTypeName(canonicalType);
+    return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "f32" ||
+           normalized == "f64" || normalized == "integer" || normalized == "decimal" ||
+           normalized == "complex";
+  };
+  auto isComparableBuiltinTraitType = [&](const std::string &canonicalType) {
+    if (canonicalType.empty() || canonicalType.find('<') != std::string::npos) {
+      return false;
+    }
+    const std::string normalized = semantics::normalizeBindingTypeName(canonicalType);
+    if (normalized == "complex") {
+      return false;
+    }
+    if (isNumericTraitType(canonicalType)) {
+      return true;
+    }
+    return normalized == "bool" || normalized == "string";
+  };
+  auto isIndexableBuiltinTraitType = [&](const std::string &canonicalType, const std::string &elemCanonicalType) {
+    const std::string normalized = semantics::normalizeBindingTypeName(canonicalType);
+    if (normalized == "string") {
+      return elemCanonicalType == "i32";
+    }
+    std::string base;
+    std::string arg;
+    if (!semantics::splitTemplateTypeName(canonicalType, base, arg)) {
+      return false;
+    }
+    const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
+    if (normalizedBase != "array" && normalizedBase != "vector") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!semantics::splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+      return false;
+    }
+    return args.front() == elemCanonicalType;
+  };
+  auto resolveBindingCanonicalType = [&](const Definition &ownerDef,
+                                         const Expr &bindingExpr,
+                                         std::string &canonicalOut) -> bool {
+    BindingInfo binding;
+    std::optional<std::string> restrictType;
+    std::string parseError;
+    if (!semantics::parseBindingInfo(bindingExpr, ownerDef.namespacePrefix, structNames, importAliases, binding,
+                                     restrictType, parseError)) {
+      return false;
+    }
+    std::string typeName = binding.typeName;
+    if (!binding.typeTemplateArg.empty()) {
+      typeName += "<" + binding.typeTemplateArg + ">";
+    }
+    if (typeName.empty()) {
+      return false;
+    }
+    std::string ignoredStructPath;
+    return canonicalizeTypeName(typeName, ownerDef.namespacePrefix, canonicalOut, ignoredStructPath);
+  };
+  auto resolveDefinitionReturnCanonicalType = [&](const Definition &definition, std::string &canonicalOut) -> bool {
+    for (const auto &transform : definition.transforms) {
+      if (transform.name != "return") {
+        continue;
+      }
+      if (transform.templateArgs.size() != 1 || transform.templateArgs.front() == "auto") {
+        return false;
+      }
+      std::string ignoredStructPath;
+      return canonicalizeTypeName(transform.templateArgs.front(), definition.namespacePrefix, canonicalOut,
+                                  ignoredStructPath);
+    }
+    return false;
+  };
+  auto definitionMatchesSignature = [&](const std::string &functionPath,
+                                        const std::vector<std::string> &expectedParamTypes,
+                                        const std::string &expectedReturnType) -> bool {
+    auto defIt = definitionByPath.find(functionPath);
+    if (defIt == definitionByPath.end()) {
+      return false;
+    }
+    const Definition &definition = *defIt->second;
+    if (definition.parameters.size() != expectedParamTypes.size()) {
+      return false;
+    }
+    for (size_t index = 0; index < expectedParamTypes.size(); ++index) {
+      std::string canonicalParamType;
+      if (!resolveBindingCanonicalType(definition, definition.parameters[index], canonicalParamType)) {
+        return false;
+      }
+      if (canonicalParamType != expectedParamTypes[index]) {
+        return false;
+      }
+    }
+    std::string canonicalReturnType;
+    if (!resolveDefinitionReturnCanonicalType(definition, canonicalReturnType)) {
+      return false;
+    }
+    return canonicalReturnType == expectedReturnType;
+  };
+  auto hasTraitConformance = [&](const std::string &traitName,
+                                 const std::string &canonicalType,
+                                 const std::string &structPath,
+                                 const std::optional<std::string> &elemCanonicalType) {
+    if (traitName == "Additive") {
+      if (isNumericTraitType(canonicalType)) {
+        return true;
+      }
+      const std::string basePath = typePathForCanonical(canonicalType, structPath);
+      std::vector<std::string> params = {canonicalType, canonicalType};
+      return definitionMatchesSignature(basePath + "/plus", params, canonicalType);
+    }
+    if (traitName == "Multiplicative") {
+      if (isNumericTraitType(canonicalType)) {
+        return true;
+      }
+      const std::string basePath = typePathForCanonical(canonicalType, structPath);
+      std::vector<std::string> params = {canonicalType, canonicalType};
+      return definitionMatchesSignature(basePath + "/multiply", params, canonicalType);
+    }
+    if (traitName == "Comparable") {
+      if (isComparableBuiltinTraitType(canonicalType)) {
+        return true;
+      }
+      const std::string basePath = typePathForCanonical(canonicalType, structPath);
+      std::vector<std::string> params = {canonicalType, canonicalType};
+      if (!definitionMatchesSignature(basePath + "/equal", params, "bool")) {
+        return false;
+      }
+      return definitionMatchesSignature(basePath + "/less_than", params, "bool");
+    }
+    if (traitName == "Indexable") {
+      if (!elemCanonicalType.has_value()) {
+        return false;
+      }
+      if (isIndexableBuiltinTraitType(canonicalType, *elemCanonicalType)) {
+        return true;
+      }
+      const std::string basePath = typePathForCanonical(canonicalType, structPath);
+      std::vector<std::string> countParams = {canonicalType};
+      if (!definitionMatchesSignature(basePath + "/count", countParams, "i32")) {
+        return false;
+      }
+      std::vector<std::string> atParams = {canonicalType, "i32"};
+      return definitionMatchesSignature(basePath + "/at", atParams, *elemCanonicalType);
+    }
+    return false;
   };
 
   auto rewriteExpr = [&](auto &self, Expr &expr) -> bool {
@@ -1712,20 +1874,24 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
 
     if (queryName != "type_name" && queryName != "type_kind" && queryName != "is_struct" &&
         queryName != "field_count" && queryName != "field_name" && queryName != "field_type" &&
-        queryName != "field_visibility" && queryName != "has_transform") {
+        queryName != "field_visibility" && queryName != "has_transform" && queryName != "has_trait") {
       return true;
     }
 
     const bool needsTransformName = queryName == "has_transform";
+    const bool needsTraitName = queryName == "has_trait";
     const bool needsFieldIndex =
         queryName == "field_name" || queryName == "field_type" || queryName == "field_visibility";
     const size_t expectedArgs =
-        expr.isMethodCall ? (needsFieldIndex || needsTransformName ? 2u : 1u) : (needsFieldIndex || needsTransformName ? 1u : 0u);
+        expr.isMethodCall ? (needsFieldIndex || needsTransformName || needsTraitName ? 2u : 1u)
+                          : (needsFieldIndex || needsTransformName || needsTraitName ? 1u : 0u);
     if (expr.args.size() != expectedArgs) {
       if (needsFieldIndex) {
         error = "meta." + queryName + " requires exactly one index argument";
       } else if (needsTransformName) {
         error = "meta.has_transform requires exactly one transform-name argument";
+      } else if (needsTraitName) {
+        error = "meta.has_trait requires exactly one trait-name argument";
       } else {
         error = "meta." + queryName + " does not accept call arguments";
       }
@@ -1739,7 +1905,12 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
       error = "meta." + queryName + " does not accept block arguments";
       return false;
     }
-    if (expr.templateArgs.size() != 1) {
+    if (queryName == "has_trait") {
+      if (expr.templateArgs.empty() || expr.templateArgs.size() > 2) {
+        error = "meta.has_trait requires one or two template arguments";
+        return false;
+      }
+    } else if (expr.templateArgs.size() != 1) {
       error = "meta." + queryName + " requires exactly one template argument";
       return false;
     }
@@ -1779,7 +1950,7 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     } else if (queryName == "has_transform") {
       const size_t nameArg = expr.isMethodCall ? 1u : 0u;
       std::string transformName;
-      if (!parseTransformQueryName(expr.args[nameArg], transformName)) {
+      if (!parseNamedQueryName(expr.args[nameArg], "has_transform", "transform", transformName)) {
         return false;
       }
       bool hasTransform = false;
@@ -1793,6 +1964,45 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
       }
       rewritten.kind = Expr::Kind::BoolLiteral;
       rewritten.boolValue = hasTransform;
+    } else if (queryName == "has_trait") {
+      const size_t nameArg = expr.isMethodCall ? 1u : 0u;
+      std::string traitName;
+      if (!parseNamedQueryName(expr.args[nameArg], "has_trait", "trait", traitName)) {
+        return false;
+      }
+      traitName = trim(traitName);
+      if (traitName.empty()) {
+        error = "meta.has_trait requires non-empty trait name";
+        return false;
+      }
+      const bool isAdditive = traitName == "Additive";
+      const bool isMultiplicative = traitName == "Multiplicative";
+      const bool isComparable = traitName == "Comparable";
+      const bool isIndexable = traitName == "Indexable";
+      if (!isAdditive && !isMultiplicative && !isComparable && !isIndexable) {
+        error = "meta.has_trait does not support trait: " + traitName;
+        return false;
+      }
+      if (isIndexable) {
+        if (expr.templateArgs.size() != 2) {
+          error = "meta.has_trait Indexable requires type and element template arguments";
+          return false;
+        }
+      } else if (expr.templateArgs.size() != 1) {
+        error = "meta.has_trait " + traitName + " requires exactly one type template argument";
+        return false;
+      }
+      std::optional<std::string> elemCanonicalType;
+      if (isIndexable) {
+        std::string elemStructPath;
+        std::string elemCanonical;
+        if (!canonicalizeTypeName(expr.templateArgs[1], expr.namespacePrefix, elemCanonical, elemStructPath)) {
+          return false;
+        }
+        elemCanonicalType = std::move(elemCanonical);
+      }
+      rewritten.kind = Expr::Kind::BoolLiteral;
+      rewritten.boolValue = hasTraitConformance(traitName, canonicalType, structPath, elemCanonicalType);
     } else {
       if (structPath.empty()) {
         error = "meta." + queryName + " requires struct type argument: " + canonicalType;

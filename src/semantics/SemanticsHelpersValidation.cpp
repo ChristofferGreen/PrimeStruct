@@ -154,8 +154,8 @@ bool isSupportedReflectionGeneratorName(const std::string &name) {
 
 bool isReflectionMetadataQueryName(const std::string &name) {
   return name == "type_name" || name == "type_kind" || name == "is_struct" || name == "field_count" ||
-         name == "field_name" || name == "field_type" || name == "field_visibility" ||
-         name == "has_transform";
+         name == "field_name" || name == "field_type" || name == "field_visibility" || name == "has_transform" ||
+         name == "has_trait";
 }
 
 bool isReflectionMetadataQueryPath(const std::string &path) {
