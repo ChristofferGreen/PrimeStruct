@@ -34,6 +34,7 @@ LocalInfo::ValueKind valueKindFromTypeName(const std::string &name);
 LocalInfo::ValueKind combineNumericKinds(LocalInfo::ValueKind left, LocalInfo::ValueKind right);
 LocalInfo::ValueKind comparisonKind(LocalInfo::ValueKind left, LocalInfo::ValueKind right);
 std::string typeNameForValueKind(LocalInfo::ValueKind kind);
+std::string normalizeDeclaredCollectionTypeBase(const std::string &base);
 bool inferDeclaredReturnCollection(const Definition &definition,
                                    std::string &collectionNameOut,
                                    std::vector<std::string> &collectionArgsOut);

@@ -202,6 +202,63 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("runs vm canonical map access helpers on wrapper slash return receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(42i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(plus(at(wrapValues(), 1i32), wrapValues().at(1i32)),
+              plus(at_unsafe(wrapValues(), 1i32), wrapValues().at_unsafe(1i32))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_canonical_map_access_helpers_wrapper_slash_return_receiver.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_canonical_map_access_helpers_wrapper_slash_return_receiver_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 166);
+  CHECK(readFile(outPath).empty());
+}
+
+TEST_CASE("rejects vm canonical map access helper key mismatch on wrapper slash return receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapValues().at(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_canonical_map_access_helper_key_mismatch_wrapper_slash_return_receiver.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_canonical_map_access_helper_key_mismatch_wrapper_slash_return_receiver_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
+}
+
 TEST_CASE("runs vm stdlib namespaced map constructor fallback to map alias helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

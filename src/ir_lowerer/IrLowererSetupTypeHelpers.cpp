@@ -283,6 +283,13 @@ std::string typeNameForValueKind(LocalInfo::ValueKind kind) {
   }
 }
 
+std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
+  if (base == "/map" || base == "std/collections/map" || base == "/std/collections/map") {
+    return "map";
+  }
+  return base;
+}
+
 bool inferDeclaredReturnCollection(const Definition &definition,
                                    std::string &collectionNameOut,
                                    std::vector<std::string> &collectionArgsOut) {
@@ -297,6 +304,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     if (!splitTemplateTypeName(transform.templateArgs.front(), base, argText)) {
       return false;
     }
+    base = normalizeDeclaredCollectionTypeBase(base);
     if (!splitTemplateArgs(argText, collectionArgsOut)) {
       return false;
     }
