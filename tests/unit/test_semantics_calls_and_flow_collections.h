@@ -7315,6 +7315,53 @@ main() {
   CHECK(error.find("if branches must return compatible types") != std::string::npos);
 }
 
+TEST_CASE("wrapper-returned canonical map access count call auto inference keeps string helper shadow") {
+  const std::string source = R"(
+[return<bool>]
+/string/count([string] values) {
+  return(false)
+}
+
+[return</std/collections/map<i32, string>>]
+wrapMap() {
+  return(map<i32, string>(1i32, "hello"utf8))
+}
+
+[return<bool>]
+main() {
+  [auto] inferred{count(wrapMap()[1i32])}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper-returned canonical map access count call auto inference keeps string helper mismatch diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/string/count([string] values) {
+  return(false)
+}
+
+[return</std/collections/map<i32, string>>]
+wrapMap() {
+  return(map<i32, string>(1i32, "hello"utf8))
+}
+
+[return<int>]
+main() {
+  [auto] inferred{count(wrapMap()[1i32])}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
+}
+
 TEST_CASE("map stdlib namespaced count expression inferred template fallback keeps alias diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

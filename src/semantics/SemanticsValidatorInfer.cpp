@@ -851,6 +851,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           if (resolveArrayTarget(target.args.front(), elemType) && elemType == "string") {
             return true;
           }
+          std::string keyType;
+          std::string valueType;
+          if (resolveMapTarget(target.args.front(), keyType, valueType) &&
+              normalizeBindingTypeName(valueType) == "string") {
+            return true;
+          }
         }
       }
       return false;
