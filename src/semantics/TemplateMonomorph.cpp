@@ -501,9 +501,10 @@ bool hasNamedCallArguments(const Expr &expr) {
   return false;
 }
 
-bool isVectorCompatibilityTemplateFallbackPath(const std::string &path) {
+bool isCollectionCompatibilityTemplateFallbackPath(const std::string &path) {
   return path == "/vector/count" || path == "/vector/capacity" || path == "/vector/at" ||
-         path == "/vector/at_unsafe";
+         path == "/vector/at_unsafe" || path == "/map/map" || path == "/map/count" || path == "/map/at" ||
+         path == "/map/at_unsafe";
 }
 
 bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind) {
@@ -816,7 +817,7 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
     return path;
   }
   const bool acceptsCallShape = definitionAcceptsCallShape(defIt->second, expr);
-  if (!acceptsCallShape && isVectorCompatibilityTemplateFallbackPath(path) &&
+  if (!acceptsCallShape && isCollectionCompatibilityTemplateFallbackPath(path) &&
       (hasNamedCallArguments(expr) || definitionHasArgumentCountMismatch(defIt->second, expr))) {
     // Keep diagnostics on explicit compatibility helpers when named arguments
     // or argument counts do not match the declared helper shape.
@@ -824,7 +825,7 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
   }
   const bool prefersTypeMismatchFallback = shouldPreferTemplatedVectorFallbackForTypeMismatch(
       defIt->second, expr, locals, params, allowMathBare, ctx, namespacePrefix);
-  if (isVectorCompatibilityTemplateFallbackPath(path) && prefersTypeMismatchFallback) {
+  if (isCollectionCompatibilityTemplateFallbackPath(path) && prefersTypeMismatchFallback) {
     // Keep diagnostics on explicit compatibility helpers when argument types
     // mismatch the declared helper shape.
     return path;
