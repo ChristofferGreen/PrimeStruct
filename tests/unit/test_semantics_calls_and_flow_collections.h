@@ -3687,6 +3687,25 @@ main() {
   CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced capacity alias rejects method-call sugar auto inference") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/capacity(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector helper alias rejects method-call sugar auto inference") {
   const std::string source = R"(
 [return<bool>]
@@ -3704,6 +3723,25 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector access alias rejects method-call sugar auto inference") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/at([vector<i32>] values, [bool] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./std/collections/vector/at(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector helper alias method-call inference keeps unknown-method diagnostics") {
