@@ -5537,6 +5537,25 @@ main() {
   CHECK(runCommand(runCmd) == 95);
 }
 
+TEST_CASE("runs vm with user string count method shadow on canonical map reference access") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  [Reference</std/collections/map<i32, string>>] ref{location(values)}
+  return(ref[1i32].count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_string_count_method_shadow_map_reference_access.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 91);
+}
+
 TEST_CASE("runs vm with user vector count method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

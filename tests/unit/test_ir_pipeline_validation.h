@@ -24166,6 +24166,38 @@ TEST_CASE("ir lowerer setup inference helper resolves reordered positional acces
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
 }
 
+TEST_CASE("ir lowerer setup inference helper resolves string map reference access kinds") {
+  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo mapRefInfo;
+  mapRefInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  mapRefInfo.referenceToMap = true;
+  mapRefInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  locals.emplace("values", mapRefInfo);
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 1;
+
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.args = {valuesExpr, indexExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+}
+
 TEST_CASE("ir lowerer setup inference helper resolves reordered named access kinds") {
   using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
 

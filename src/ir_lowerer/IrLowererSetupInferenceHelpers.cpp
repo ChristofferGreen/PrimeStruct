@@ -304,8 +304,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
       if (it != localsIn.end() &&
           ((it->second.kind == LocalInfo::Kind::Map) ||
            (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap)) &&
-          it->second.mapValueKind != LocalInfo::ValueKind::Unknown &&
-          it->second.mapValueKind != LocalInfo::ValueKind::String) {
+          it->second.mapValueKind != LocalInfo::ValueKind::Unknown) {
         kindOut = it->second.mapValueKind;
         return ArrayMapAccessElementKindResolution::Resolved;
       }
@@ -313,7 +312,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
       std::string collection;
       if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
         const LocalInfo::ValueKind valueKind = valueKindFromTypeName(target.templateArgs[1]);
-        if (valueKind != LocalInfo::ValueKind::Unknown && valueKind != LocalInfo::ValueKind::String) {
+        if (valueKind != LocalInfo::ValueKind::Unknown) {
           kindOut = valueKind;
           return ArrayMapAccessElementKindResolution::Resolved;
         }
