@@ -852,10 +852,6 @@ bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
     error = "native backend requires typed map bindings for " + accessName;
     return false;
   }
-  if (targetInfo.mapValueKind == LocalInfo::ValueKind::String) {
-    error = "native backend only supports numeric/bool map values";
-    return false;
-  }
   return true;
 }
 

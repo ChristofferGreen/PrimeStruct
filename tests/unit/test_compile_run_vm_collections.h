@@ -5556,6 +5556,30 @@ main() {
   CHECK(runCommand(runCmd) == 91);
 }
 
+TEST_CASE("vm keeps non-string diagnostics on canonical map reference access count shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{location(values)}
+  return(ref[1i32].count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_string_count_method_shadow_map_reference_access_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_user_string_count_method_shadow_map_reference_access_diag.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("runs vm with user vector count method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

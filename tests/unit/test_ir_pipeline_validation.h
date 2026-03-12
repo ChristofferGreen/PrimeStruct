@@ -12102,9 +12102,9 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   stringValue.isMapTarget = true;
   stringValue.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   stringValue.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
-  error.clear();
-  CHECK_FALSE(primec::ir_lowerer::validateMapAccessTargetInfo(stringValue, "at", error));
-  CHECK(error == "native backend only supports numeric/bool map values");
+  error = "stale";
+  CHECK(primec::ir_lowerer::validateMapAccessTargetInfo(stringValue, "at", error));
+  CHECK(error == "stale");
 }
 
 TEST_CASE("ir lowerer call helpers resolve and validate array vector access targets") {

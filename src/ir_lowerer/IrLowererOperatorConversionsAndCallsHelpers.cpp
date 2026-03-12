@@ -378,8 +378,7 @@ bool emitConversionsAndCallsOperatorExpr(
 
             LocalInfo::ValueKind keyKind = valueKindFromTypeName(expr.templateArgs[0]);
             LocalInfo::ValueKind valueKind = valueKindFromTypeName(expr.templateArgs[1]);
-            if (keyKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::Unknown ||
-                valueKind == LocalInfo::ValueKind::String) {
+            if (keyKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::Unknown) {
               error = "native backend only supports numeric/bool map values";
               return false;
             }
@@ -410,6 +409,26 @@ bool emitConversionsAndCallsOperatorExpr(
                 const LocalInfo::ValueKind keyArgKind = inferExprKind(arg, localsIn);
                 if (keyArgKind != LocalInfo::ValueKind::String) {
                   error = "map literal key type mismatch";
+                  return false;
+                }
+                if (!emitExpr(arg, localsIn)) {
+                  return false;
+                }
+                instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(slot)});
+                continue;
+              }
+
+              if (i % 2 == 1 && valueKind == LocalInfo::ValueKind::String) {
+                int32_t stringIndex = -1;
+                size_t length = 0;
+                if (resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
+                  instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+                  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(slot)});
+                  continue;
+                }
+                const LocalInfo::ValueKind valueArgKind = inferExprKind(arg, localsIn);
+                if (valueArgKind != LocalInfo::ValueKind::String) {
+                  error = "map literal value type mismatch";
                   return false;
                 }
                 if (!emitExpr(arg, localsIn)) {
