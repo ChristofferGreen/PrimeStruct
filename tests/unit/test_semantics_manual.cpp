@@ -1604,6 +1604,39 @@ TEST_CASE("uninitialized not allowed as user template arg") {
         std::string::npos);
 }
 
+TEST_CASE("uninitialized canonical map template arg keeps map key value diagnostics") {
+  primec::Program program;
+  primec::Transform canonicalMapTransform;
+  canonicalMapTransform.name = "/std/collections/map";
+  canonicalMapTransform.templateArgs = {"i32", "uninitialized<i32>"};
+
+  primec::Expr init = makeCall("map");
+  init.templateArgs = {"i32", "uninitialized<i32>"};
+  primec::Expr binding = makeBinding("value", {canonicalMapTransform}, {init});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("uninitialized storage is not allowed in map key/value types") != std::string::npos);
+}
+
+TEST_CASE("canonical map template arg without uninitialized validates") {
+  primec::Program program;
+  primec::Transform canonicalMapTransform;
+  canonicalMapTransform.name = "/std/collections/map";
+  canonicalMapTransform.templateArgs = {"i32", "i32"};
+
+  primec::Expr init = makeCall("map");
+  init.templateArgs = {"i32", "i32"};
+  primec::Expr binding = makeBinding("value", {canonicalMapTransform}, {init});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
 TEST_CASE("uninitialized struct fields are allowed") {
   primec::Program program;
   primec::Expr fieldInit = makeCall("uninitialized");

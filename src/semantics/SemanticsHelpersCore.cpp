@@ -1575,13 +1575,15 @@ bool parseBindingInfo(const Expr &expr,
     };
     return contains(text);
   };
-  if (typeHasTemplate && (typeName == "array" || typeName == "vector" || typeName == "Buffer")) {
+  const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
+  if (typeHasTemplate &&
+      (normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "Buffer")) {
     if (containsUninitializedType(info.typeTemplateArg)) {
-      error = "uninitialized storage is not allowed in " + typeName + " element types";
+      error = "uninitialized storage is not allowed in " + normalizedTypeName + " element types";
       return false;
     }
   }
-  if (typeHasTemplate && typeName == "map") {
+  if (typeHasTemplate && normalizedTypeName == "map") {
     std::vector<std::string> args;
     if (!splitTopLevelTemplateArgs(info.typeTemplateArg, args) || args.size() != 2) {
       error = "map requires exactly two template arguments";
@@ -1592,9 +1594,10 @@ bool parseBindingInfo(const Expr &expr,
       return false;
     }
   }
-  if (typeHasTemplate && typeName != "Pointer" && typeName != "Reference" && typeName != "uninitialized" &&
-      typeName != "array" && typeName != "vector" && typeName != "map" && typeName != "Buffer" &&
-      typeName != "Result") {
+  if (typeHasTemplate && normalizedTypeName != "Pointer" && normalizedTypeName != "Reference" &&
+      normalizedTypeName != "uninitialized" && normalizedTypeName != "array" &&
+      normalizedTypeName != "vector" && normalizedTypeName != "map" && normalizedTypeName != "Buffer" &&
+      normalizedTypeName != "Result") {
     if (containsUninitializedType(info.typeTemplateArg)) {
       error = "uninitialized storage is not allowed as template argument to user-defined types";
       return false;
