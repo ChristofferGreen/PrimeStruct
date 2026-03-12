@@ -107,10 +107,28 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         return extractMapKeyValueTypes(it->second, ignoredKeyType, valueTypeOut);
       }
       if (target.kind == Expr::Kind::Call) {
-        std::string collection;
-        if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
+        auto defIt = defMap_.find(resolveCalleePath(target));
+        if (defIt != defMap_.end() && defIt->second) {
+          for (const auto &transform : defIt->second->transforms) {
+            if (transform.name != "return" || transform.templateArgs.size() != 1) {
+              continue;
+            }
+            std::string base;
+            std::string arg;
+            const std::string normalizedReturn = normalizeBindingTypeName(transform.templateArgs.front());
+            if (!splitTemplateTypeName(normalizedReturn, base, arg) || base != "map") {
+              return false;
+            }
+            std::vector<std::string> args;
+            if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
+              return false;
+            }
+            valueTypeOut = args[1];
+            return true;
+          }
           return false;
         }
+        std::string collection;
         if (!getBuiltinCollectionName(target, collection) || collection != "map" || target.templateArgs.size() != 2) {
           return false;
         }
