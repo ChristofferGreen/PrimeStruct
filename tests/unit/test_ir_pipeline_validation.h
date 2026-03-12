@@ -166,6 +166,54 @@ TEST_CASE("shared simple-call helpers reject removed array count alias") {
   CHECK_FALSE(primec::emitter::isSimpleCallName(removedAliasCall, "count"));
 }
 
+TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(/std/collections/vector/count(values))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::Emitter emitter;
+  const std::string cpp = emitter.emitCpp(program, "/main");
+  CHECK(cpp.find("ps_array_count(") != std::string::npos);
+}
+
+TEST_CASE("emitter cpp rejects removed array count builtin fallback") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(count(values))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  bool rewroteAlias = false;
+  for (auto &def : program.definitions) {
+    if (def.fullPath != "/main" || !def.returnExpr.has_value()) {
+      continue;
+    }
+    def.returnExpr->name = "/array/count";
+    rewroteAlias = true;
+    break;
+  }
+  REQUIRE(rewroteAlias);
+
+  primec::Emitter emitter;
+  const std::string cpp = emitter.emitCpp(program, "/main");
+  CHECK(cpp.find("ps_array_count(") == std::string::npos);
+  CHECK(cpp.find("return 0;") != std::string::npos);
+}
+
 TEST_CASE("semantics accepts and lowerer emits empty soa_vector literals") {
   const std::string source = R"(
 Particle() {

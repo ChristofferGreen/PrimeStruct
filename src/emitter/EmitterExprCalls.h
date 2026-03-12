@@ -449,20 +449,6 @@
     return 0;
   };
   auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
-    std::string helperName = helper == nullptr ? std::string() : std::string(helper);
-    if (helperName == "count" && candidate.kind == Expr::Kind::Call && !candidate.name.empty()) {
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      if (normalized == "array/count") {
-        for (const Expr &arg : candidate.args) {
-          if (isResolvedVectorTarget(arg)) {
-            return false;
-          }
-        }
-      }
-    }
     if (isSimpleCallName(candidate, helper)) {
       return true;
     }
@@ -473,9 +459,7 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    const bool allowArrayNamespacedAlias = helperName != "at" && helperName != "at_unsafe";
-    return (allowArrayNamespacedAlias && normalized == std::string("array/") + helper) ||
-           normalized == std::string("std/collections/vector/") + helper;
+    return normalized == std::string("std/collections/vector/") + helper;
   };
   auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {
     std::string normalizedPath = path;
