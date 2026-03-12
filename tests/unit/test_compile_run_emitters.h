@@ -3442,6 +3442,33 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps canonical map return arity diagnostics for stdlib envelopes") {
+  const std::string source = R"(
+[return</std/collections/map<string>>]
+wrapMap([string] key, [i32] value) {
+  return(map<string, i32>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] values{wrapMap("only"raw_utf8, 3i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_canonical_map_return_arity_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_stdlib_canonical_map_return_arity_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("map return type requires exactly two template arguments on /wrapMap") !=
+        std::string::npos);
+}
+
 TEST_CASE("C++ emitter supports explicit canonical map typed bindings for builtin helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -478,7 +478,7 @@ ReturnKind getReturnKind(const Definition &def,
           return ReturnKind::Unknown;
         }
         nextKind = ReturnKind::Array;
-      } else if (splitTemplateTypeName(typeName, base, arg) && base == "map") {
+      } else if (splitTemplateTypeName(typeName, base, arg) && normalizeBindingTypeName(base) == "map") {
         std::vector<std::string> args;
         if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
           error = "map return type requires exactly two template arguments on " + def.fullPath;

@@ -48,6 +48,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical stdlib map returns are allowed") {
+  const std::string source = R"(
+[effects(heap_alloc), return</std/collections/map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(map<K, V>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] pairs{wrapMap<string, i32>("only"raw_utf8, 3i32)}
+  return(count(pairs))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector return rejects wrong template arity") {
   const std::string source = R"(
 [return<vector<i32, i32>>]
@@ -63,6 +81,18 @@ main() {
 TEST_CASE("map return rejects wrong template arity") {
   const std::string source = R"(
 [return<map<string>>]
+main() {
+  return(map<string, i32>("only"raw_utf8, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map return type requires exactly two template arguments") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib map return rejects wrong template arity") {
+  const std::string source = R"(
+[return</std/collections/map<string>>]
 main() {
   return(map<string, i32>("only"raw_utf8, 1i32))
 }
