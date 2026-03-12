@@ -79,6 +79,7 @@ bool isMapCountCall(const Expr &call, const std::unordered_map<std::string, Bind
 bool isStringCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isVectorCapacityCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool resolveMethodCallPath(const Expr &call,
+                           const std::unordered_map<std::string, const Definition *> &defMap,
                            const std::unordered_map<std::string, BindingInfo> &localTypes,
                            const std::unordered_map<std::string, std::string> &importAliases,
                            const std::unordered_map<std::string, std::string> &structTypeMap,

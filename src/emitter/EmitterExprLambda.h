@@ -57,7 +57,8 @@ std::string Emitter::emitExpr(const Expr &expr,
       std::string resolved = resolveExprPath(candidate);
       if (candidate.isMethodCall) {
         std::string methodPath;
-        if (resolveMethodCallPath(candidate, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
+        if (resolveMethodCallPath(
+                candidate, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
           resolved = methodPath;
         }
         if (resolved.rfind("/file/", 0) == 0) {
@@ -534,7 +535,7 @@ std::string Emitter::emitExpr(const Expr &expr,
           Expr helperCall = stmt;
           if (stmt.isMethodCall) {
             if (resolveMethodCallPath(
-                    stmt, activeTypes, importAliases, structTypeMap, returnKinds, returnStructs, helperPath)) {
+                    stmt, defMap, activeTypes, importAliases, structTypeMap, returnKinds, returnStructs, helperPath)) {
               helperPath = preferVectorStdlibHelperPath(helperPath, nameMap);
               hasUserVectorHelper = nameMap.find(helperPath) != nameMap.end();
             }
@@ -595,7 +596,14 @@ std::string Emitter::emitExpr(const Expr &expr,
                 std::swap(methodCandidate.argNames[0], methodCandidate.argNames[receiverIndex]);
               }
               const bool resolvedMethodPath = resolveMethodCallPath(
-                  methodCandidate, activeTypes, importAliases, structTypeMap, returnKinds, returnStructs, helperPath);
+                  methodCandidate,
+                  defMap,
+                  activeTypes,
+                  importAliases,
+                  structTypeMap,
+                  returnKinds,
+                  returnStructs,
+                  helperPath);
               if (resolvedMethodPath) {
                 helperPath = preferVectorStdlibHelperPath(helperPath, nameMap);
               }

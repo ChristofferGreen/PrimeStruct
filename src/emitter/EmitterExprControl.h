@@ -46,6 +46,7 @@
           },
           [&](std::string &methodPathOut) {
             return resolveMethodCallPath(expr,
+                                         defMap,
                                          localTypes,
                                          importAliases,
                                          structTypeMap,
@@ -76,6 +77,7 @@
           },
           [&](const Expr &methodExpr, std::string &methodPathOut) {
             return resolveMethodCallPath(methodExpr,
+                                         defMap,
                                          localTypes,
                                          importAliases,
                                          structTypeMap,

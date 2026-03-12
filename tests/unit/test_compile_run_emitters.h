@@ -4505,6 +4505,55 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("C++ emitter treats wrapper-returned canonical map string access as string receiver") {
+  const std::string source = R"(
+[return</std/collections/map<i32, string>>]
+wrapMap() {
+  return(map<i32, string>(1i32, "hello"utf8))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapMap()[1i32].count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_canonical_map_string_receiver.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_canonical_map_string_receiver_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
+TEST_CASE("C++ emitter keeps non-string diagnostics on wrapper-returned canonical map access receivers") {
+  const std::string source = R"(
+[return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapMap()[1i32].count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_canonical_map_string_receiver_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_canonical_map_string_receiver_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter keeps stdlib namespaced vector string access count fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

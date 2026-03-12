@@ -27,6 +27,7 @@ bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
 bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::string &typeOut);
 bool inferCollectionElementTypeNameFromExpr(const Expr &expr,
                                             const std::unordered_map<std::string, BindingInfo> &localTypes,
+                                            const std::function<bool(const Expr &, std::string &)> &resolveCallElementTypeName,
                                             std::string &typeOut);
 
 bool getBuiltinOperator(const Expr &expr, char &out) {
@@ -727,6 +728,7 @@ bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::
 
 bool inferCollectionElementTypeNameFromExpr(const Expr &expr,
                                             const std::unordered_map<std::string, BindingInfo> &localTypes,
+                                            const std::function<bool(const Expr &, std::string &)> &resolveCallElementTypeName,
                                             std::string &typeOut) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localTypes.find(expr.name);
@@ -736,6 +738,9 @@ bool inferCollectionElementTypeNameFromExpr(const Expr &expr,
     return inferCollectionElementTypeNameFromBinding(it->second, typeOut);
   }
   if (expr.kind == Expr::Kind::Call) {
+    if (resolveCallElementTypeName && resolveCallElementTypeName(expr, typeOut)) {
+      return true;
+    }
     std::string collectionName;
     if (!getBuiltinCollectionName(expr, collectionName)) {
       return false;
@@ -754,7 +759,8 @@ bool inferCollectionElementTypeNameFromExpr(const Expr &expr,
 
 std::string inferAccessCallTypeName(const Expr &call,
                                     const std::unordered_map<std::string, BindingInfo> &localTypes,
-                                    const std::function<std::string(const Expr &)> &inferPrimitiveTypeName) {
+                                    const std::function<std::string(const Expr &)> &inferPrimitiveTypeName,
+                                    const std::function<bool(const Expr &, std::string &)> &resolveCallElementTypeName) {
   if (!(isSimpleCallName(call, "at") || isSimpleCallName(call, "at_unsafe")) || call.args.size() != 2) {
     return "";
   }
@@ -773,13 +779,14 @@ std::string inferAccessCallTypeName(const Expr &call,
     }
   }
   std::string elementType;
-  if (inferCollectionElementTypeNameFromExpr(receiver, localTypes, elementType)) {
+  if (inferCollectionElementTypeNameFromExpr(receiver, localTypes, resolveCallElementTypeName, elementType)) {
     return elementType;
   }
   return "";
 }
 
 bool resolveMethodCallPath(const Expr &call,
+                           const std::unordered_map<std::string, const Definition *> &defMap,
                            const std::unordered_map<std::string, BindingInfo> &localTypes,
                            const std::unordered_map<std::string, std::string> &importAliases,
                            const std::unordered_map<std::string, std::string> &structTypeMap,
@@ -886,6 +893,61 @@ bool resolveMethodCallPath(const Expr &call,
     return candidates;
   };
   std::function<std::string(const Expr &)> inferPrimitiveTypeName;
+  auto resolveCollectionElementTypeFromCall = [&](const Expr &candidate, std::string &typeOut) -> bool {
+    typeOut.clear();
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
+      return false;
+    }
+
+    std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolveExprPath(candidate));
+    auto importIt = importAliases.find(candidate.name);
+    if (importIt != importAliases.end()) {
+      for (const auto &aliasCandidate : collectionHelperPathCandidates(importIt->second)) {
+        bool seen = false;
+        for (const auto &existing : resolvedCandidates) {
+          if (existing == aliasCandidate) {
+            seen = true;
+            break;
+          }
+        }
+        if (!seen) {
+          resolvedCandidates.push_back(aliasCandidate);
+        }
+      }
+    }
+
+    for (const auto &path : resolvedCandidates) {
+      auto defIt = defMap.find(path);
+      if (defIt == defMap.end() || defIt->second == nullptr) {
+        continue;
+      }
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string base;
+        std::string arg;
+        const std::string normalizedReturn = normalizeBindingTypeName(transform.templateArgs.front());
+        if (!splitTemplateTypeName(normalizedReturn, base, arg)) {
+          return false;
+        }
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args)) {
+          return false;
+        }
+        if ((base == "array" || base == "vector") && args.size() == 1) {
+          typeOut = normalizeBindingTypeName(args.front());
+          return true;
+        }
+        if (base == "map" && args.size() == 2) {
+          typeOut = normalizeBindingTypeName(args[1]);
+          return true;
+        }
+        return false;
+      }
+    }
+    return false;
+  };
   inferPrimitiveTypeName = [&](const Expr &expr) -> std::string {
     switch (expr.kind) {
       case Expr::Kind::Literal:
@@ -965,7 +1027,8 @@ bool resolveMethodCallPath(const Expr &call,
         if (isVectorCapacityCall(expr, localTypes)) {
           return "i32";
         }
-        const std::string accessTypeName = inferAccessCallTypeName(expr, localTypes, inferPrimitiveTypeName);
+        const std::string accessTypeName =
+            inferAccessCallTypeName(expr, localTypes, inferPrimitiveTypeName, resolveCollectionElementTypeFromCall);
         if (!accessTypeName.empty()) {
           return accessTypeName;
         }
@@ -973,7 +1036,8 @@ bool resolveMethodCallPath(const Expr &call,
           return "";
         }
         std::string methodPath;
-        if (resolveMethodCallPath(expr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
+        if (resolveMethodCallPath(
+                expr, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
           auto structIt = returnStructs.find(methodPath);
           if (structIt != returnStructs.end()) {
             return normalizeCollectionReceiverType(structIt->second);

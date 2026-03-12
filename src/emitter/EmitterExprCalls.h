@@ -413,7 +413,7 @@
     }
     std::string methodPath;
     if (!resolveMethodCallPath(
-            targetExpr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
+            targetExpr, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
       return "";
     }
     return resolvedTypePathForResolvedCall(methodPath);
