@@ -1432,16 +1432,17 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
-      if ((transform.name == "array" || transform.name == "vector" || transform.name == "Buffer") &&
+      const std::string normalizedTypeName = normalizeBindingTypeName(transform.name);
+      if ((normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "Buffer") &&
           transform.templateArgs.size() != 1) {
-        if (transform.name == "array" && transform.templateArgs.size() > 1) {
+        if (normalizedTypeName == "array" && transform.templateArgs.size() > 1) {
           error = "array<T, N> is unsupported; use array<T> (runtime-count array)";
           return false;
         }
-        error = transform.name + " requires exactly one template argument";
+        error = normalizedTypeName + " requires exactly one template argument";
         return false;
       }
-      if (transform.name == "map" && transform.templateArgs.size() != 2) {
+      if (normalizedTypeName == "map" && transform.templateArgs.size() != 2) {
         error = "map requires exactly two template arguments";
         return false;
       }

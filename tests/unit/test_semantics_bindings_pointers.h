@@ -65,6 +65,19 @@ main() {
   CHECK(error.find("map requires exactly two template arguments") != std::string::npos);
 }
 
+TEST_CASE("binding canonical map type requires two template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [/std/collections/map<i32>] value{map<i32, i32>(1i32, 2i32)}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map requires exactly two template arguments") != std::string::npos);
+}
+
 TEST_CASE("pointer bindings require template arguments") {
   const std::string source = R"(
 [return<int>]
