@@ -660,6 +660,11 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
         stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
         break;
       }
+      case IrOpcode::LoadStringLength: {
+        size_t fixupIndex = emitter.emitLoadStringLengthPlaceholder(stringOffsetTableSize);
+        stringTableFixups.push_back(fixupIndex);
+        break;
+      }
       default:
         error = "unsupported IR opcode for native backend";
         return false;

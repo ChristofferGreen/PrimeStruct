@@ -4450,12 +4450,35 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_count_builtin_fallback.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_inferred_wrapper_string_count_builtin_fallback.cpp")
-                                  .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_inferred_wrapper_string_count_builtin_fallback_exe")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("C++ emitter runs builtin count on canonical map reference string access") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  [Reference</std/collections/map<i32, string>>] ref{location(values)}
+  return(count(/std/collections/map/at(ref, 1i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_builtin_count_canonical_map_reference_string_access.prime",
+                                        source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_builtin_count_canonical_map_reference_string_access_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
 }
 
 TEST_CASE("C++ emitter keeps stdlib namespaced vector string access count fallback") {

@@ -959,6 +959,17 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::LoadStringLength:
+      emitStackUnderflowGuard(1, "string length");
+      out << "        uint64_t stringLengthIndex = stack[--sp];\n";
+      out << "        if (stringLengthIndex >= ps_string_table_count) {\n";
+      out << "          std::cerr << \"invalid string index in IR\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(ps_string_table_lengths[stringLengthIndex]);\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::ReturnI32:
       emitStackUnderflowGuard(1, "return");
       out << "        return static_cast<int64_t>(static_cast<int32_t>(stack[--sp]));\n";
@@ -1155,6 +1166,15 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   }
   body << "};\n\n";
   body << "static constexpr std::size_t ps_string_table_count = " << module.stringTable.size() << "u;\n\n";
+  body << "static constexpr std::size_t ps_string_table_lengths[] = {\n";
+  if (module.stringTable.empty()) {
+    body << "  0u,\n";
+  } else {
+    for (const std::string &text : module.stringTable) {
+      body << "  " << text.size() << "u,\n";
+    }
+  }
+  body << "};\n\n";
   body << "static constexpr uint64_t ps_heap_address_tag = 1ull << 63;\n\n";
 
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {

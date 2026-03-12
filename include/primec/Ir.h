@@ -56,6 +56,7 @@ enum class IrOpcode : uint8_t {
   PrintArgv,
   PrintArgvUnsafe,
   LoadStringByte,
+  LoadStringLength,
   FileOpenRead,
   FileOpenWrite,
   FileOpenAppend,

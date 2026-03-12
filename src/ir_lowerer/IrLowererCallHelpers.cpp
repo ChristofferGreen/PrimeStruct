@@ -584,6 +584,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
             targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo);
         return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
       },
+      inferExprKind,
       resolveStringTableTarget,
       emitExpr,
       emitInstruction,

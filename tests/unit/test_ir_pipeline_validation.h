@@ -22563,6 +22563,47 @@ TEST_CASE("ir lowerer count access helpers emit string count calls") {
   CHECK(emittedLength == 42);
 }
 
+TEST_CASE("ir lowerer count access helpers emit dynamic string count calls") {
+  using Result = primec::ir_lowerer::CountAccessCallEmitResult;
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Call;
+  targetExpr.name = "at";
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "count";
+  callExpr.args = {targetExpr};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int emitExprCalls = 0;
+
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::String;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              instructions.push_back({primec::IrOpcode::PushI64, 3});
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+}
+
 TEST_CASE("ir lowerer call helpers lower soa_vector count calls") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;

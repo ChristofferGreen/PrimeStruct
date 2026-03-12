@@ -83,6 +83,7 @@ bool isGlslOpcodeAllowed(IrOpcode op) {
     case IrOpcode::PrintArgv:
     case IrOpcode::PrintArgvUnsafe:
     case IrOpcode::LoadStringByte:
+    case IrOpcode::LoadStringLength:
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
@@ -444,6 +445,8 @@ bool validateFunction(const IrModule &module,
                                  error)) {
           return false;
         }
+        break;
+      case IrOpcode::LoadStringLength:
         break;
       default:
         break;

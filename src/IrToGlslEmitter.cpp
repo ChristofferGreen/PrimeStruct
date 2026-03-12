@@ -634,6 +634,20 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::LoadStringLength:
+      out << "        uint stringLengthIndex = uint(stack[--sp]);\n";
+      out << "        int stringLength = 0;\n";
+      out << "        switch (stringLengthIndex) {\n";
+      for (size_t stringIndex = 0; stringIndex < stringTable.size(); ++stringIndex) {
+        out << "          case " << stringIndex << "u: stringLength = "
+            << stringTable[stringIndex].size() << "; break;\n";
+      }
+      out << "          default: stringLength = 0; break;\n";
+      out << "        }\n";
+      out << "        stack[sp++] = stringLength;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::Jump:
       if (instruction.imm > instructionCount) {
         error = "IrToGlslEmitter jump target out of range at instruction " + std::to_string(index);

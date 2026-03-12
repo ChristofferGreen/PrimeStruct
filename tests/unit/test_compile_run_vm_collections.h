@@ -5556,6 +5556,20 @@ main() {
   CHECK(runCommand(runCmd) == 91);
 }
 
+TEST_CASE("runs vm builtin count on canonical map reference string access") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  [Reference</std/collections/map<i32, string>>] ref{location(values)}
+  return(count(/std/collections/map/at(ref, 1i32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_builtin_count_canonical_map_reference_string_access.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
+}
+
 TEST_CASE("vm keeps non-string diagnostics on canonical map reference access count shadow") {
   const std::string source = R"(
 [return<int>]

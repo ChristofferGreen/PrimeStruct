@@ -711,6 +711,19 @@ class Arm64Emitter {
     return fixupIndex;
   }
 
+  size_t emitLoadStringLengthPlaceholder(uint64_t offsetTableSize) {
+    emitPopReg(0);
+    size_t fixupIndex = emitAdrPlaceholder(1);
+    emitMovImm64(2, offsetTableSize);
+    emitAddReg(2, 1, 2);
+    emitMovImm64(3, 8);
+    emitMulReg(3, 0, 3);
+    emitAddReg(2, 2, 3);
+    emit(encodeLdrRegBase(4, 2, 0));
+    emitPushReg(4);
+    return fixupIndex;
+  }
+
   void emitPrintArgv(uint32_t argcLocalIndex,
                      uint32_t argvLocalIndex,
                      uint32_t scratchOffset,

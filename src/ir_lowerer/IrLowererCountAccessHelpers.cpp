@@ -297,6 +297,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsNameFn,
     const std::function<bool(const Expr &, const LocalMap &)> &isDynamicCollectionCountTargetFn,
     const std::function<bool(const Expr &, const LocalMap &)> &isDynamicVectorCapacityTargetFn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -357,6 +358,15 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
 
+  if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
+      inferExprKind && inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::LoadStringLength, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
+
   return CountAccessCallEmitResult::NotHandled;
 }
 
@@ -378,8 +388,37 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       isVectorCapacityCallFn,
       isStringCountCallFn,
       isEntryArgsNameFn,
+      [](const Expr &, const LocalMap &) { return false; },
+      [](const Expr &, const LocalMap &) { return false; },
+      [](const Expr &, const LocalMap &) { return LocalInfo::ValueKind::Unknown; },
+      resolveStringTableTarget,
+      emitExpr,
+      emitInstruction,
+      error);
+}
+
+CountAccessCallEmitResult tryEmitCountAccessCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsNameFn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error) {
+  return tryEmitCountAccessCall(
+      expr,
+      localsIn,
+      isArrayCountCallFn,
+      isVectorCapacityCallFn,
+      isStringCountCallFn,
+      isEntryArgsNameFn,
       {},
       {},
+      inferExprKind,
       resolveStringTableTarget,
       emitExpr,
       emitInstruction,

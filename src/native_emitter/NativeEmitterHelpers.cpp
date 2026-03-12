@@ -132,6 +132,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "PrintArgvUnsafe";
       case IrOpcode::LoadStringByte:
         return "LoadStringByte";
+      case IrOpcode::LoadStringLength:
+        return "LoadStringLength";
       case IrOpcode::FileOpenRead:
         return "FileOpenRead";
       case IrOpcode::FileOpenWrite:
@@ -348,6 +350,7 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       case IrOpcode::PrintArgvUnsafe:
         return -1;
       case IrOpcode::LoadStringByte:
+      case IrOpcode::LoadStringLength:
         return 0;
       case IrOpcode::FileOpenRead:
       case IrOpcode::FileOpenWrite:

@@ -1194,6 +1194,22 @@ bool executeImpl(const IrModule &module,
         ip += 1;
         break;
       }
+      case IrOpcode::LoadStringLength: {
+        if (stack.empty()) {
+          error = "IR stack underflow on string index";
+          return false;
+        }
+        const uint64_t stringIndex = stack.back();
+        stack.pop_back();
+        if (stringIndex >= module.stringTable.size()) {
+          error = "invalid string index in IR";
+          return false;
+        }
+        stack.push_back(
+            static_cast<uint64_t>(module.stringTable[static_cast<size_t>(stringIndex)].size()));
+        ip += 1;
+        break;
+      }
       default:
         error = "unknown IR opcode";
         return false;
@@ -2544,6 +2560,22 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       const uint8_t byte = static_cast<uint8_t>(text[index]);
       stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(byte))));
+      ip += 1;
+      return finishStep(StepOutcome::Continue);
+    }
+    case IrOpcode::LoadStringLength: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on string index";
+        return finishFault();
+      }
+      const uint64_t stringIndex = stack_.back();
+      stack_.pop_back();
+      if (stringIndex >= module_->stringTable.size()) {
+        error = "invalid string index in IR";
+        return finishFault();
+      }
+      stack_.push_back(
+          static_cast<uint64_t>(module_->stringTable[static_cast<size_t>(stringIndex)].size()));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
