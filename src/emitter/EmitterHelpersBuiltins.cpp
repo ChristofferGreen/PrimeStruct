@@ -24,6 +24,11 @@ bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
 
 } // namespace
 
+bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::string &typeOut);
+bool inferCollectionElementTypeNameFromExpr(const Expr &expr,
+                                            const std::unordered_map<std::string, BindingInfo> &localTypes,
+                                            std::string &typeOut);
+
 bool getBuiltinOperator(const Expr &expr, char &out) {
   if (expr.name.empty()) {
     return false;
@@ -627,21 +632,10 @@ bool isStringValue(const Expr &target, const std::unordered_map<std::string, Bin
   }
   if (target.kind == Expr::Kind::Call) {
     if ((isSimpleCallName(target, "at") || isSimpleCallName(target, "at_unsafe")) && target.args.size() == 2) {
-      const Expr &receiver = target.args.front();
-      if (receiver.kind == Expr::Kind::Name) {
-        auto it = localTypes.find(receiver.name);
-        if (it != localTypes.end() &&
-            (it->second.typeName == "array" || it->second.typeName == "vector") &&
-            it->second.typeTemplateArg == "string") {
-          return true;
-        }
-      }
-      if (receiver.kind == Expr::Kind::Call) {
-        std::string collection;
-        if (getBuiltinCollectionName(receiver, collection) && (collection == "array" || collection == "vector") &&
-            receiver.templateArgs.size() == 1 && receiver.templateArgs.front() == "string") {
-          return true;
-        }
+      std::string elementType;
+      if (inferCollectionElementTypeNameFromExpr(target.args.front(), localTypes, elementType) &&
+          normalizeBindingTypeName(elementType) == "string") {
+        return true;
       }
     }
   }

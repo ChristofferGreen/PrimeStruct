@@ -3032,6 +3032,47 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("C++ emitter treats canonical map reference string access as string receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  [Reference</std/collections/map<i32, string>>] ref{location(values)}
+  return(ref[1i32].count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_canonical_map_reference_string_receiver.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_map_reference_string_receiver_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
+TEST_CASE("C++ emitter keeps non-string diagnostics on canonical map reference access receivers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{location(values)}
+  return(ref[1i32].count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_canonical_map_reference_string_receiver_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_map_reference_string_receiver_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs map namespaced count compatibility alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
