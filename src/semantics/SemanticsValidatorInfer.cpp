@@ -2623,6 +2623,10 @@ std::string SemanticsValidator::inferStructReturnPath(
         return "";
       }
       std::string methodName = expr.name;
+      std::string rawMethodName = expr.name;
+      if (!rawMethodName.empty() && rawMethodName.front() == '/') {
+        rawMethodName.erase(rawMethodName.begin());
+      }
       if (!methodName.empty() && methodName.front() == '/') {
         methodName.erase(methodName.begin());
       }
@@ -2634,6 +2638,9 @@ std::string SemanticsValidator::inferStructReturnPath(
       }
       const bool blocksRemovedVectorAliasStructReturnForwarding =
           methodName == "at" || methodName == "at_unsafe";
+      const bool isExplicitRemovedMapAliasStructReturnMethod =
+          rawMethodName == "map/at" || rawMethodName == "map/at_unsafe" ||
+          rawMethodName == "std/collections/map/at" || rawMethodName == "std/collections/map/at_unsafe";
       std::vector<std::string> methodCandidates;
       if (receiverStruct == "/vector") {
         methodCandidates = {"/vector/" + methodName};
@@ -2650,8 +2657,10 @@ std::string SemanticsValidator::inferStructReturnPath(
           methodCandidates.push_back("/std/collections/vector/" + methodName);
         }
       } else if (receiverStruct == "/map") {
-        methodCandidates = {"/map/" + methodName,
-                            "/std/collections/map/" + methodName};
+        methodCandidates = {"/map/" + methodName};
+        if (!isExplicitRemovedMapAliasStructReturnMethod) {
+          methodCandidates.push_back("/std/collections/map/" + methodName);
+        }
       } else {
         methodCandidates = {receiverStruct + "/" + methodName};
       }

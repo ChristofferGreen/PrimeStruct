@@ -4368,6 +4368,70 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
+TEST_CASE("map method access keeps canonical struct-return forwarding") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[return<auto>]
+project([map<i32, i32>] values) {
+  return(values.at(2i32).tag())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(project(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map method alias access rejects canonical struct-return forwarding") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[return<auto>]
+project([map<i32, i32>] values) {
+  return(values./std/collections/map/at(2i32).tag())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(project(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/at") != std::string::npos);
+}
+
 TEST_CASE("vector method alias access keeps removed-alias diagnostics") {
   const std::string source = R"(
 Marker {
