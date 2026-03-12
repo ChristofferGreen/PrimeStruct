@@ -4,6 +4,7 @@
 #include <cctype>
 #include <limits>
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
@@ -13,6 +14,10 @@ namespace primec::ir_lowerer {
 namespace {
 
 std::string normalizeLayoutTypeName(const std::string &name) {
+  const std::string normalizedCollectionName = normalizeCollectionBindingTypeName(name);
+  if (normalizedCollectionName != name) {
+    return normalizedCollectionName;
+  }
   if (name == "int") {
     return "i32";
   }
@@ -47,7 +52,7 @@ bool classifyBindingTypeLayoutInternal(const LayoutFieldBinding &binding,
     structTypeNameOut.clear();
     return true;
   }
-  if (binding.typeName == "uninitialized") {
+  if (normalized == "uninitialized") {
     if (binding.typeTemplateArg.empty()) {
       errorOut = "uninitialized requires a template argument for layout";
       return false;
@@ -64,12 +69,12 @@ bool classifyBindingTypeLayoutInternal(const LayoutFieldBinding &binding,
     }
     return classifyBindingTypeLayoutInternal(unwrapped, layoutOut, structTypeNameOut, errorOut);
   }
-  if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
+  if (normalized == "Pointer" || normalized == "Reference") {
     layoutOut = {8u, 8u};
     structTypeNameOut.clear();
     return true;
   }
-  if (binding.typeName == "array" || binding.typeName == "vector" || binding.typeName == "map") {
+  if (normalized == "array" || normalized == "vector" || normalized == "map") {
     layoutOut = {8u, 8u};
     structTypeNameOut.clear();
     return true;

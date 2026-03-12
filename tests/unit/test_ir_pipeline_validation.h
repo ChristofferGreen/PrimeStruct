@@ -9080,6 +9080,15 @@ TEST_CASE("ir lowerer struct field binding helpers extract explicit envelopes") 
   CHECK(binding.typeName == "array");
   CHECK(binding.typeTemplateArg == "f32");
 
+  primec::Expr canonicalMapExpr;
+  primec::Transform canonicalMapTransform;
+  canonicalMapTransform.name = "/std/collections/map";
+  canonicalMapTransform.templateArgs = {"i32", "bool"};
+  canonicalMapExpr.transforms = {publicTransform, canonicalMapTransform};
+  CHECK(primec::ir_lowerer::extractExplicitLayoutFieldBinding(canonicalMapExpr, binding));
+  CHECK(binding.typeName == "map");
+  CHECK(binding.typeTemplateArg == "i32, bool");
+
   primec::Expr qualifierOnlyExpr;
   primec::Transform alignTransform;
   alignTransform.name = "align_bytes";
@@ -9937,6 +9946,24 @@ TEST_CASE("ir lowerer struct layout helpers classify binding type layout") {
   uninitStruct.typeTemplateArg = "Thing";
   CHECK(primec::ir_lowerer::classifyBindingTypeLayout(uninitStruct, layout, structTypeName, error));
   CHECK(structTypeName == "Thing");
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LayoutFieldBinding canonicalMap;
+  canonicalMap.typeName = "/std/collections/map";
+  canonicalMap.typeTemplateArg = "i32, bool";
+  CHECK(primec::ir_lowerer::classifyBindingTypeLayout(canonicalMap, layout, structTypeName, error));
+  CHECK(layout.sizeBytes == 8u);
+  CHECK(layout.alignmentBytes == 8u);
+  CHECK(structTypeName.empty());
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LayoutFieldBinding uninitCanonicalMap;
+  uninitCanonicalMap.typeName = "uninitialized";
+  uninitCanonicalMap.typeTemplateArg = "/std/collections/map<i32, bool>";
+  CHECK(primec::ir_lowerer::classifyBindingTypeLayout(uninitCanonicalMap, layout, structTypeName, error));
+  CHECK(layout.sizeBytes == 8u);
+  CHECK(layout.alignmentBytes == 8u);
+  CHECK(structTypeName.empty());
   CHECK(error.empty());
 
   primec::ir_lowerer::LayoutFieldBinding missingTemplate;
@@ -20314,6 +20341,13 @@ TEST_CASE("ir lowerer uninitialized type helpers classify supported types") {
   CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 
+  REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo(
+      "/std/collections/map<i32, bool>", "/pkg", resolveStruct, info, error));
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Map);
+  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
   REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("Pointer<i32>", "/pkg", resolveStruct, info, error));
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
@@ -20362,6 +20396,11 @@ TEST_CASE("ir lowerer uninitialized type helpers report diagnostics") {
   CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfo(
       "map<i32, string>", "/pkg", resolveStruct, info, error));
   CHECK(error == "native backend only supports numeric/bool map values for uninitialized storage");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfo(
+      "/std/collections/map<i32>", "/pkg", resolveStruct, info, error));
+  CHECK(error == "native backend requires map to have exactly two template arguments");
 
   error.clear();
   CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfo(

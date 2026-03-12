@@ -2,8 +2,9 @@
 
 #include <vector>
 
-#include "IrLowererHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
+#include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -269,6 +270,7 @@ bool resolveUninitializedTypeInfo(const std::string &typeText,
   std::string base;
   std::string argText;
   if (splitTemplateTypeName(typeText, base, argText)) {
+    base = normalizeCollectionBindingTypeName(base);
     if (base == "array" || base == "vector") {
       std::vector<std::string> args;
       if (!splitTemplateArgs(argText, args) || args.size() != 1) {

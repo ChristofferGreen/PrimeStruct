@@ -29,6 +29,7 @@ IsBindingTypeFn makeIsFileErrorBindingType();
 BindingValueKindFromTransformsFn makeBindingValueKindFromTransforms();
 SetReferenceArrayInfoFn makeSetReferenceArrayInfoFromTransforms();
 
+std::string normalizeCollectionBindingTypeName(const std::string &name);
 LocalInfo::Kind bindingKindFromTransforms(const Expr &expr);
 bool isStringTypeName(const std::string &name);
 bool isStringBindingType(const Expr &expr);

@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererStructLayoutHelpers.h"
@@ -45,7 +46,7 @@ bool extractExplicitLayoutFieldBinding(const Expr &expr, LayoutFieldBinding &bin
     if (!transform.arguments.empty()) {
       continue;
     }
-    bindingOut.typeName = transform.name;
+    bindingOut.typeName = normalizeCollectionBindingTypeName(transform.name);
     if (!transform.templateArgs.empty()) {
       bindingOut.typeTemplateArg = joinTemplateArgsText(transform.templateArgs);
     } else {

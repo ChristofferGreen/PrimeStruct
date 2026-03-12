@@ -7,16 +7,12 @@
 
 namespace primec::ir_lowerer {
 
-namespace {
-
 std::string normalizeCollectionBindingTypeName(const std::string &name) {
   if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
     return "map";
   }
   return name;
 }
-
-} // namespace
 
 BindingTypeAdapters makeBindingTypeAdapters() {
   BindingTypeAdapters adapters;
