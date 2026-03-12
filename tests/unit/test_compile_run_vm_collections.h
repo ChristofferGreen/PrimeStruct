@@ -5307,6 +5307,35 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("rejects vm canonical implicit-template map count call with canonical argument-shape diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(false)
+}
+
+[return<int>]
+/map/count<K, V>([map<K, V>] values) {
+  return(96i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/map/count(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_canonical_map_count_implicit_template_arg_shape_canonical_diag_reject.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_canonical_map_count_implicit_template_arg_shape_canonical_diag_reject_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("runs vm with user string count call shadow") {
   const std::string source = R"(
 [return<int>]

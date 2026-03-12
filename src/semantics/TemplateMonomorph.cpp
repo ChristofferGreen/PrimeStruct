@@ -837,18 +837,20 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
   if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
     return path;
   }
+  const bool preserveCompatibilityTemplatePath = isCollectionCompatibilityTemplateFallbackPath(path);
+  const bool preserveCanonicalMapTemplatePath = shouldPreserveCanonicalMapTemplatePath(path, ctx);
   const bool acceptsCallShape = definitionAcceptsCallShape(defIt->second, expr);
-  if (!acceptsCallShape && isCollectionCompatibilityTemplateFallbackPath(path) &&
+  if (!acceptsCallShape && (preserveCompatibilityTemplatePath || preserveCanonicalMapTemplatePath) &&
       (hasNamedCallArguments(expr) || definitionHasArgumentCountMismatch(defIt->second, expr))) {
-    // Keep diagnostics on explicit compatibility helpers when named arguments
-    // or argument counts do not match the declared helper shape.
+    // Keep diagnostics on explicit compatibility helpers and canonical map
+    // helpers when named arguments or argument counts do not match.
     return path;
   }
   const bool prefersTypeMismatchFallback = shouldPreferTemplatedVectorFallbackForTypeMismatch(
       defIt->second, expr, locals, params, allowMathBare, ctx, namespacePrefix);
-  if (isCollectionCompatibilityTemplateFallbackPath(path) && prefersTypeMismatchFallback) {
-    // Keep diagnostics on explicit compatibility helpers when argument types
-    // mismatch the declared helper shape.
+  if ((preserveCompatibilityTemplatePath || preserveCanonicalMapTemplatePath) && prefersTypeMismatchFallback) {
+    // Keep diagnostics on explicit compatibility helpers and canonical map
+    // helpers when argument types mismatch the declared helper shape.
     return path;
   }
   const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);

@@ -6877,6 +6877,29 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("map canonical implicit-template count call keeps canonical non-templated diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+/map/count<K, V>([map<K, V>] values) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/map/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("map stdlib namespaced count expression inferred template fallback keeps alias diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
