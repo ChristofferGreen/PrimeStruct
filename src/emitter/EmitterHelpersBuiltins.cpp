@@ -790,6 +790,46 @@ bool resolveMethodCallPath(const Expr &call,
   if (!call.isMethodCall || call.args.empty()) {
     return false;
   }
+  auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
+    return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+           helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+           helperName == "remove_at" || helperName == "remove_swap";
+  };
+  auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
+    return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
+  };
+  auto isRemovedCollectionMethodAlias = [&](const std::string &rawMethodName) {
+    std::string candidate = rawMethodName;
+    if (!candidate.empty() && candidate.front() == '/') {
+      candidate.erase(candidate.begin());
+    }
+    std::string_view helperName;
+    if (candidate.rfind("array/", 0) == 0) {
+      helperName = std::string_view(candidate).substr(std::string_view("array/").size());
+      return isRemovedVectorCompatibilityHelper(helperName);
+    }
+    if (candidate.rfind("vector/", 0) == 0) {
+      helperName = std::string_view(candidate).substr(std::string_view("vector/").size());
+      return isRemovedVectorCompatibilityHelper(helperName);
+    }
+    if (candidate.rfind("std/collections/vector/", 0) == 0) {
+      helperName = std::string_view(candidate).substr(std::string_view("std/collections/vector/").size());
+      return isRemovedVectorCompatibilityHelper(helperName);
+    }
+    if (candidate.rfind("map/", 0) == 0) {
+      helperName = std::string_view(candidate).substr(std::string_view("map/").size());
+      return isRemovedMapCompatibilityHelper(helperName);
+    }
+    if (candidate.rfind("std/collections/map/", 0) == 0) {
+      helperName = std::string_view(candidate).substr(std::string_view("std/collections/map/").size());
+      return isRemovedMapCompatibilityHelper(helperName);
+    }
+    return false;
+  };
+  if (isRemovedCollectionMethodAlias(call.name)) {
+    resolvedOut.clear();
+    return false;
+  }
   std::string normalizedMethodName = call.name;
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());

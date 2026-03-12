@@ -1625,11 +1625,11 @@ TEST_CASE("C++ emitter helper rejects array namespaced vector constructor alias 
   CHECK_FALSE(primec::emitter::getBuiltinCollectionName(call, builtin));
 }
 
-TEST_CASE("C++ emitter helper normalizes full-path array method aliases") {
+TEST_CASE("C++ emitter helper resolves bare vector count methods") {
   primec::Expr call;
   call.kind = primec::Expr::Kind::Call;
   call.isMethodCall = true;
-  call.name = "/array/count";
+  call.name = "count";
 
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;
@@ -1654,6 +1654,46 @@ TEST_CASE("C++ emitter helper normalizes full-path array method aliases") {
   localTypes.clear();
   CHECK_FALSE(primec::emitter::resolveMethodCallPath(
       call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+}
+
+TEST_CASE("C++ emitter helper rejects removed full-path vector method aliases") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+  call.args.push_back(receiver);
+  call.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  std::string resolved = "/stale/path";
+
+  call.name = "/array/count";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved.empty());
+
+  resolved = "/stale/path";
+  call.name = "/vector/count";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved.empty());
+
+  resolved = "/stale/path";
+  call.name = "/std/collections/vector/count";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved.empty());
 }
 
 TEST_CASE("C++ emitter helper prefers map alias receiver metadata for canonical namespaced access") {
@@ -1922,11 +1962,10 @@ TEST_CASE("C++ emitter helper keeps canonical map access method unresolved witho
   CHECK(resolved.empty());
 }
 
-TEST_CASE("C++ emitter helper normalizes full-path map method aliases") {
+TEST_CASE("C++ emitter helper rejects removed full-path map method aliases") {
   primec::Expr call;
   call.kind = primec::Expr::Kind::Call;
   call.isMethodCall = true;
-  call.name = "/map/count";
 
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;
@@ -1943,16 +1982,18 @@ TEST_CASE("C++ emitter helper normalizes full-path map method aliases") {
   std::unordered_map<std::string, std::string> structTypeMap;
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs;
-  std::string resolved;
+  std::string resolved = "/stale/path";
 
-  CHECK(primec::emitter::resolveMethodCallPath(
+  call.name = "/map/count";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
       call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/map/count");
+  CHECK(resolved.empty());
 
+  resolved = "/stale/path";
   call.name = "/std/collections/map/at";
-  CHECK(primec::emitter::resolveMethodCallPath(
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
       call, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/map/at");
+  CHECK(resolved.empty());
 }
 
 TEST_CASE("C++ emitter helper rejects full-path map aliases without receiver type") {
