@@ -507,6 +507,11 @@ bool isCollectionCompatibilityTemplateFallbackPath(const std::string &path) {
          path == "/map/at_unsafe";
 }
 
+bool shouldPreserveCompatibilityTemplatePath(const std::string &path, const Context &ctx) {
+  return isCollectionCompatibilityTemplateFallbackPath(path) && ctx.sourceDefs.count(path) > 0 &&
+         ctx.templateDefs.count(path) == 0;
+}
+
 bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind) {
   switch (expectedKind) {
     case ReturnKind::Integer:
@@ -1642,10 +1647,12 @@ bool rewriteExpr(Expr &expr,
     }
     const bool resolvedWasTemplate = ctx.templateDefs.count(resolvedPath) > 0;
     if (!expr.templateArgs.empty() && !resolvedWasTemplate) {
-      const std::string templatePreferredPath = preferVectorStdlibTemplatePath(resolvedPath, ctx);
-      if (templatePreferredPath != resolvedPath) {
-        resolvedPath = templatePreferredPath;
-        expr.name = templatePreferredPath;
+      if (!shouldPreserveCompatibilityTemplatePath(resolvedPath, ctx)) {
+        const std::string templatePreferredPath = preferVectorStdlibTemplatePath(resolvedPath, ctx);
+        if (templatePreferredPath != resolvedPath) {
+          resolvedPath = templatePreferredPath;
+          expr.name = templatePreferredPath;
+        }
       }
     }
     if (expr.templateArgs.empty()) {
@@ -1716,7 +1723,9 @@ bool rewriteExpr(Expr &expr,
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
       const bool methodWasTemplate = ctx.templateDefs.count(methodPath) > 0;
       if (!expr.templateArgs.empty() && !methodWasTemplate) {
-        methodPath = preferVectorStdlibTemplatePath(methodPath, ctx);
+        if (!shouldPreserveCompatibilityTemplatePath(methodPath, ctx)) {
+          methodPath = preferVectorStdlibTemplatePath(methodPath, ctx);
+        }
       }
       if (expr.templateArgs.empty()) {
         methodPath =

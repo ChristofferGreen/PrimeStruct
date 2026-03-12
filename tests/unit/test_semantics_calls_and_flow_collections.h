@@ -6784,6 +6784,75 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map compatibility explicit-template count call keeps alias precedence with canonical templated helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/map/count<i32, i32>(values, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map compatibility explicit-template count call keeps non-templated alias diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/map/count<i32, i32>(values, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /map/count") != std::string::npos);
+}
+
+TEST_CASE("map compatibility explicit-template count method keeps non-templated alias diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values.count<i32, i32>(true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /map/count") != std::string::npos);
+}
+
 TEST_CASE("map stdlib namespaced count expression inferred template fallback keeps alias diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

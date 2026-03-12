@@ -5194,6 +5194,89 @@ main() {
   CHECK(readFile(outPath).find("argument count mismatch for /map/count") != std::string::npos);
 }
 
+TEST_CASE("runs vm map compatibility explicit-template count call with canonical templated helper present") {
+  const std::string source = R"(
+[return<int>]
+/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(96i32)
+}
+
+[return<bool>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(false)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/map/count<i32, i32>(values, true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_map_count_explicit_template_alias_precedence_with_canonical_templated_helper.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 96);
+}
+
+TEST_CASE("rejects vm map compatibility explicit-template count call with non-templated alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(96i32)
+}
+
+[return<bool>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(false)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/map/count<i32, i32>(values, true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_map_count_explicit_template_non_templated_alias_reject.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_map_count_explicit_template_non_templated_alias_reject_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("template arguments are only supported on templated definitions: /map/count") !=
+        std::string::npos);
+}
+
+TEST_CASE("rejects vm map compatibility explicit-template count method with non-templated alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(96i32)
+}
+
+[return<bool>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(false)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values.count<i32, i32>(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_map_count_explicit_template_method_non_templated_alias_reject.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_map_count_explicit_template_method_non_templated_alias_reject_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("template arguments are only supported on templated definitions: /map/count") !=
+        std::string::npos);
+}
+
 TEST_CASE("runs vm with user string count call shadow") {
   const std::string source = R"(
 [return<int>]
