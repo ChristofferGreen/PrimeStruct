@@ -145,6 +145,27 @@ TEST_CASE("ir lowerer helper rejects array namespaced vector constructor alias b
   CHECK_FALSE(primec::ir_lowerer::getBuiltinCollectionName(arrayVectorCall, builtin));
 }
 
+TEST_CASE("shared simple-call helpers reject removed array count alias") {
+  primec::Expr bareCountCall;
+  bareCountCall.kind = primec::Expr::Kind::Call;
+  bareCountCall.name = "count";
+  CHECK(primec::semantics::isSimpleCallName(bareCountCall, "count"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(bareCountCall, "count"));
+  CHECK(primec::emitter::isSimpleCallName(bareCountCall, "count"));
+
+  primec::Expr canonicalCountCall = bareCountCall;
+  canonicalCountCall.name = "/std/collections/vector/count";
+  CHECK(primec::semantics::isSimpleCallName(canonicalCountCall, "count"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(canonicalCountCall, "count"));
+  CHECK(primec::emitter::isSimpleCallName(canonicalCountCall, "count"));
+
+  primec::Expr removedAliasCall = bareCountCall;
+  removedAliasCall.name = "/array/count";
+  CHECK_FALSE(primec::semantics::isSimpleCallName(removedAliasCall, "count"));
+  CHECK_FALSE(primec::ir_lowerer::isSimpleCallName(removedAliasCall, "count"));
+  CHECK_FALSE(primec::emitter::isSimpleCallName(removedAliasCall, "count"));
+}
+
 TEST_CASE("semantics accepts and lowerer emits empty soa_vector literals") {
   const std::string source = R"(
 Particle() {

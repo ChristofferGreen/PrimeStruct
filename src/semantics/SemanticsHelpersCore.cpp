@@ -1050,12 +1050,6 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
       return alias == targetName;
     }
   }
-  if (name.rfind("array/", 0) == 0) {
-    std::string alias = name.substr(std::string("array/").size());
-    if (alias.find('/') == std::string::npos && alias == "count") {
-      return alias == targetName;
-    }
-  }
   if (name.rfind("map/", 0) == 0) {
     std::string alias = name.substr(std::string("map/").size());
     if (alias.find('/') == std::string::npos &&
