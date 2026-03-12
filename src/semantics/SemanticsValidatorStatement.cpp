@@ -1911,14 +1911,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         return isStringTypeName(binding.typeTemplateArg);
       };
       auto isStringMapBinding = [&](const BindingInfo &binding) -> bool {
-        if (normalizeBindingTypeName(binding.typeName) != "map") {
+        std::string keyType;
+        std::string valueType;
+        if (!extractMapKeyValueTypes(binding, keyType, valueType)) {
           return false;
         }
-        std::vector<std::string> parts;
-        if (!splitTopLevelTemplateArgs(binding.typeTemplateArg, parts) || parts.size() != 2) {
-          return false;
-        }
-        return isStringTypeName(parts[1]);
+        return isStringTypeName(valueType);
       };
       auto isStringCollectionTarget = [&](const Expr &target) -> bool {
         if (target.kind == Expr::Kind::Name) {

@@ -7125,6 +7125,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical map reference parameter keeps print statement string validation") {
+  const std::string source = R"(
+[effects(io_out), return<int>]
+showValue([Reference</std/collections/map<i32, string>>] values) {
+  print_line(values[1i32])
+  return(0i32)
+}
+
+[effects(io_out), return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  [Reference</std/collections/map<i32, string>>] ref{location(values)}
+  return(showValue(ref))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("explicit canonical map parameter keeps pathspace string diagnostics") {
   const std::string source = R"(
 [effects(pathspace_take), return<int>]
@@ -7136,6 +7156,26 @@ useValue([/std/collections/map<i32, i32>] values) {
 [effects(pathspace_take), return<int>]
 main() {
   return(useValue(map<i32, i32>(1i32, 4i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("take requires string path argument") != std::string::npos);
+}
+
+TEST_CASE("canonical map reference parameter keeps pathspace string diagnostics") {
+  const std::string source = R"(
+[effects(pathspace_take), return<int>]
+useValue([Reference</std/collections/map<i32, i32>>] values) {
+  take(values[1i32])
+  return(0i32)
+}
+
+[effects(pathspace_take), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{location(values)}
+  return(useValue(ref))
 }
 )";
   std::string error;
