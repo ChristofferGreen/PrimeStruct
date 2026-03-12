@@ -15902,10 +15902,6 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/array/count", "vector", "", defMap, error) == &vectorCountDef);
-  CHECK(error.empty());
-
-  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "/std/collections/vector/count", "vector", "", defMap, error) == &vectorCountDef);
   CHECK(error.empty());
 
@@ -15955,6 +15951,41 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "at", "", "std/collections/map", canonicalMapDefMap, error) == &stdMapAtDef);
   CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper rejects removed slash-path vector helpers on vector receivers") {
+  primec::Definition arrayCountDef;
+  arrayCountDef.fullPath = "/array/count";
+  primec::Definition vectorCountDef;
+  vectorCountDef.fullPath = "/vector/count";
+  primec::Definition stdCountDef;
+  stdCountDef.fullPath = "/std/collections/vector/count";
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/array/count", &arrayCountDef},
+      {"/vector/count", &vectorCountDef},
+      {"/std/collections/vector/count", &stdCountDef},
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "/array/count", "vector", "", defMap, error) == nullptr);
+  CHECK(error == "unknown method: /vector/count");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "/vector/count", "vector", "", defMap, error) == nullptr);
+  CHECK(error == "unknown method: /vector/count");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "/std/collections/vector/count", "vector", "", defMap, error) == nullptr);
+  CHECK(error == "unknown method: /vector/count");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "/std/collections/vector/count", "std/collections/vector", "", defMap, error) == nullptr);
+  CHECK(error == "unknown method: /std/collections/vector/count");
 }
 
 TEST_CASE("ir lowerer setup type helper reports method target lookup diagnostics") {
@@ -16357,6 +16388,53 @@ TEST_CASE("ir lowerer setup type helper resolves method call definitions from ex
       error);
   CHECK(resolved == &arrayCountDef);
   CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper rejects removed slash-path vector methods from expressions") {
+  primec::Definition arrayCountDef;
+  arrayCountDef.fullPath = "/array/count";
+  primec::Definition vectorCountDef;
+  vectorCountDef.fullPath = "/vector/count";
+  primec::Definition stdCountDef;
+  stdCountDef.fullPath = "/std/collections/vector/count";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/array/count", &arrayCountDef},
+      {"/vector/count", &vectorCountDef},
+      {"/std/collections/vector/count", &stdCountDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "/array/count";
+  methodCall.isMethodCall = true;
+  methodCall.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo itemsLocal;
+  itemsLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("items", itemsLocal);
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method: /vector/count");
 }
 
 TEST_CASE("ir lowerer setup type helper resolves declared receiver aliases through slashless map imports") {

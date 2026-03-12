@@ -78,6 +78,29 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   return false;
 }
 
+bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
+  if (methodName.empty()) {
+    return false;
+  }
+  std::string normalized = methodName;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  const std::string vectorPrefix = "vector/";
+  const std::string arrayPrefix = "array/";
+  const std::string stdVectorPrefix = "std/collections/vector/";
+  if (normalized.rfind(vectorPrefix, 0) == 0) {
+    return isRemovedVectorCompatibilityHelper(normalized.substr(vectorPrefix.size()));
+  }
+  if (normalized.rfind(arrayPrefix, 0) == 0) {
+    return isRemovedVectorCompatibilityHelper(normalized.substr(arrayPrefix.size()));
+  }
+  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
+    return isRemovedVectorCompatibilityHelper(normalized.substr(stdVectorPrefix.size()));
+  }
+  return false;
+}
+
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
   if (isSimpleCallName(expr, name)) {
     return true;
@@ -531,6 +554,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::string &resolvedTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
+  const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(methodName);
   std::string normalizedMethodName = methodName;
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
@@ -550,6 +574,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.erase(normalizedTypeName.begin());
   }
+  auto isVectorReceiverTarget = [&](const std::string &candidate) {
+    return candidate == "vector" || candidate == "std/collections/vector";
+  };
   auto findMethodDefinitionByPath = [&](const std::string &path) -> const Definition * {
     auto defIt = defMap.find(path);
     if (defIt != defMap.end()) {
@@ -627,6 +654,14 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       normalizedResolvedTypePath.insert(normalizedResolvedTypePath.begin(), '/');
     }
     const std::string resolved = normalizedResolvedTypePath + "/" + normalizedMethodName;
+    std::string resolvedTypeWithoutSlash = normalizedResolvedTypePath;
+    if (!resolvedTypeWithoutSlash.empty() && resolvedTypeWithoutSlash.front() == '/') {
+      resolvedTypeWithoutSlash.erase(resolvedTypeWithoutSlash.begin());
+    }
+    if (isExplicitRemovedVectorMethodAlias && isVectorReceiverTarget(resolvedTypeWithoutSlash)) {
+      errorOut = "unknown method: " + resolved;
+      return nullptr;
+    }
     const Definition *resolvedDef = findMethodDefinitionByPath(resolved);
     if (resolvedDef == nullptr) {
       errorOut = "unknown method: " + resolved;
@@ -641,6 +676,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   }
 
   const std::string resolved = "/" + normalizedTypeName + "/" + normalizedMethodName;
+  if (isExplicitRemovedVectorMethodAlias && isVectorReceiverTarget(normalizedTypeName)) {
+    errorOut = "unknown method: " + resolved;
+    return nullptr;
+  }
   const Definition *resolvedDef = findMethodDefinitionByPath(resolved);
   if (resolvedDef == nullptr) {
     errorOut = "unknown method: " + resolved;
