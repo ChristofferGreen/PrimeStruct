@@ -720,7 +720,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::Jump:
-      if (instruction.imm >= instructionCount) {
+      if (instruction.imm > instructionCount) {
         error = "IrToCppEmitter jump target out of range at instruction " + std::to_string(index);
         return false;
       }
@@ -728,7 +728,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::JumpIfZero:
-      if (instruction.imm >= instructionCount) {
+      if (instruction.imm > instructionCount) {
         error = "IrToCppEmitter jump target out of range at instruction " + std::to_string(index);
         return false;
       }

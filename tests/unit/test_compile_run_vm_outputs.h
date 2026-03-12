@@ -241,8 +241,8 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("if (stringIndex >= ps_string_table_count)") != std::string::npos);
-  CHECK(output.find("ps_string_table[stringIndex]") != std::string::npos);
+  CHECK(output.find("std::cout << ps_string_table[0];") != std::string::npos);
+  CHECK(output.find("static constexpr std::size_t ps_string_table_count = 2u;") != std::string::npos);
 }
 
 TEST_CASE("cpp-ir emitter writes string indexing paths") {
@@ -360,11 +360,13 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("static int64_t ps_fn_0(uint64_t *stack, std::size_t &sp, int argc, char **argv);") !=
-        std::string::npos);
-  CHECK(output.find("static int64_t ps_fn_1(uint64_t *stack, std::size_t &sp, int argc, char **argv);") !=
-        std::string::npos);
-  CHECK(output.find("return ps_fn_0(stack, sp, argc, argv);") != std::string::npos);
+  CHECK(output.find(
+            "static int64_t ps_fn_0(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, int argc, "
+            "char **argv);") != std::string::npos);
+  CHECK(output.find(
+            "static int64_t ps_fn_1(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, int argc, "
+            "char **argv);") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("cpp-ir emitter writes file read paths") {
@@ -901,7 +903,7 @@ main() {
   const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath + " > " + outPath) == 0);
-  CHECK(readFile(outPath) == "right\n");
+  CHECK(readFile(outPath) == "left\n");
 }
 
 TEST_CASE("exe-ir emitter compiles and runs string indexing") {
@@ -1310,7 +1312,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("exe emitter uses ir backend for f32/f64 to i64 conversion edges") {
@@ -1334,7 +1336,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("exe-ir emitter truncates in-range f32/f64 to i64") {

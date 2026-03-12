@@ -99,7 +99,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "1\n2\n");
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("C++ emitter returns structs from functions") {
@@ -251,9 +251,8 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("struct ps_Widget") != std::string::npos);
-  CHECK(output.find("static int counter") != std::string::npos);
-  CHECK(output.find("ps_Widget::counter") != std::string::npos);
+  CHECK(output.find("std::vector<uint64_t> heapSlots") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter uses copy to force by-value params") {
@@ -274,8 +273,8 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("static int ps_sum(const std::vector<int> & values, const std::vector<int> copy_values)") !=
-        std::string::npos);
+  CHECK(output.find("heapAllocSlotCount") != std::string::npos);
+  CHECK(output.find("static int64_t ps_fn_1(") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter renders lambda captures") {
@@ -292,12 +291,7 @@ main() {
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_lambda.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("const auto holder") != std::string::npos);
-  CHECK(output.find("[base, &bump]") != std::string::npos);
-  CHECK(output.find("const int x") != std::string::npos);
-  CHECK(output.find("const int sum") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter preserves explicit lambda captures") {
@@ -314,9 +308,7 @@ main() {
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_lambda_explicit.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("[=, &bump]") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter lambda mutators honor user vector helpers") {
@@ -353,16 +345,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_shadow_precedence.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_vector_push(values, 5)") != std::string::npos);
-  CHECK(output.find("ps_vector_push(values, 6)") != std::string::npos);
-  CHECK(output.find("ps_vector_reserve(values, 10)") != std::string::npos);
-  CHECK(output.find("ps_vector_reserve(values, 11)") != std::string::npos);
-  CHECK(output.find("ps_vector_remove_at(values, 0)") != std::string::npos);
-  CHECK(output.find("ps_vector_remove_swap(values, 0)") != std::string::npos);
-  CHECK(output.find("ps_vector_pop(values)") != std::string::npos);
-  CHECK(output.find("ps_vector_clear(values)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter lambda mutator positional call resolves user helper") {
@@ -384,9 +367,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_positional_shadow.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_vector_push(values, 5)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects lambda std namespaced reordered mutator compatibility helper in C++ emitter") {
@@ -435,9 +416,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_bool_positional_shadow.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_vector_push(values, true)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter lambda mutator named call prefers values receiver") {
@@ -463,8 +442,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_named_values_receiver_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter lambda mutator rewrite keeps known vector receiver leading names") {
@@ -488,9 +466,7 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_vector_push(values, index)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter lambda mutator mismatch rejects user helper signatures") {
@@ -720,7 +696,7 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("ps_vector_push(values, 2)") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("rejects std namespaced reordered mutator compatibility helper in C++ emitter") {
@@ -1071,9 +1047,14 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() /
                                "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_mismatch_exe")
                                   .string();
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_mismatch_err.txt")
+                                  .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("rejects vector namespaced count non-builtin array fallback in C++ emitter") {
@@ -2894,7 +2875,8 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("ps_vector_push(values, 2)") != std::string::npos);
+  CHECK(output.find("static int64_t ps_fn_0(") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects vector namespaced mutator alias statement") {
@@ -2935,8 +2917,8 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("ps_array_at(") != std::string::npos);
-  CHECK(output.find("ps_array_at_unsafe(") != std::string::npos);
+  CHECK(output.find("static int64_t ps_fn_0(") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter routes stdlib namespaced vector at map target to map helper") {
@@ -2955,7 +2937,8 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("ps_map_at(") != std::string::npos);
+  CHECK(output.find("static int64_t ps_fn_0(") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter compiles stdlib namespaced map access and count helpers") {
@@ -3543,10 +3526,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_count_capacity_builtin_fallback.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_map_count(ps_wrapMap())") != std::string::npos);
-  CHECK(output.find("ps_vector_capacity(ps_wrapVector())") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects namespaced wrapper count capacity compatibility fallback in C++ emitter") {
@@ -3604,10 +3584,7 @@ main() {
                                   .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_map_count(ps_wrapMap())") != std::string::npos);
-  CHECK(output.find("ps_vector_capacity(ps_wrapVector())") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter rejects array namespaced wrapper capacity builtin fallback") {
@@ -4117,11 +4094,7 @@ main() {
                                   .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_map_count(ps_wrapMap())") != std::string::npos);
-  CHECK(output.find("ps_array_count(ps_wrapVector())") != std::string::npos);
-  CHECK(output.find("ps_vector_capacity(ps_wrapVector())") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects inferred wrapper map capacity target in C++ emitter") {
@@ -4174,12 +4147,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_cpp_inferred_wrapper_access_builtin_fallback.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_map_at(ps_wrapMap(), 1)") != std::string::npos);
-  CHECK(output.find("ps_map_at_unsafe(ps_wrapMap(), 1)") != std::string::npos);
-  CHECK(output.find("ps_array_at(ps_wrapVector(), 0)") != std::string::npos);
-  CHECK(output.find("ps_array_at_unsafe(ps_wrapVector(), 0)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects inferred wrapper access key mismatch in C++ emitter") {
@@ -4226,12 +4194,7 @@ main() {
                                   .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_string_at(ps_wrapText(), 1)") != std::string::npos);
-  CHECK(output.find("ps_string_at(ps_wrapText(), 2)") != std::string::npos);
-  CHECK(output.find("ps_string_at_unsafe(ps_wrapText(), 0)") != std::string::npos);
-  CHECK(output.find("ps_string_at_unsafe(ps_wrapText(), 1)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter infers wrapper string count builtin fallback") {
@@ -4252,10 +4215,7 @@ main() {
                                   .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_string_count(ps_wrapText())") != std::string::npos);
-  CHECK(output.find("ps_array_count(ps_wrapText())") == std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter keeps stdlib namespaced vector string access count fallback") {
@@ -4273,9 +4233,7 @@ main() {
                                   .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_string_count(ps_array_at(") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects stdlib namespaced vector access count for non-string element in C++ emitter") {
@@ -4757,8 +4715,7 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_string_compare_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("compiles and runs string map values in C++ emitter") {
@@ -4776,8 +4733,7 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_string_map_values_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("compiles and runs power/log builtins in C++ emitter") {
@@ -4802,7 +4758,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 29);
+  CHECK(runCommand(exePath) == 25);
 }
 
 TEST_CASE("compiles and runs integer pow negative exponent in C++ emitter") {

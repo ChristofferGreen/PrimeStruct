@@ -2401,8 +2401,11 @@ main() {
   CHECK(validateHelper->hasReturnStatement);
   REQUIRE(validateHelper->returnExpr.has_value());
   CHECK(validateHelper->returnExpr->kind == primec::Expr::Kind::Call);
-  CHECK(validateHelper->returnExpr->name == "Result.ok");
-  CHECK(validateHelper->returnExpr->args.empty());
+  CHECK(validateHelper->returnExpr->isMethodCall);
+  CHECK(validateHelper->returnExpr->name == "ok");
+  REQUIRE(validateHelper->returnExpr->args.size() == 1);
+  CHECK(validateHelper->returnExpr->args.front().kind == primec::Expr::Kind::Name);
+  CHECK(validateHelper->returnExpr->args.front().name == "Result");
 
   REQUIRE(validateHelper->statements.size() == 2);
   const auto assertValidateGuard = [](const primec::Expr &guardStmt,
@@ -2499,8 +2502,11 @@ main() {
   CHECK(validateHelper->hasReturnStatement);
   REQUIRE(validateHelper->returnExpr.has_value());
   CHECK(validateHelper->returnExpr->kind == primec::Expr::Kind::Call);
-  CHECK(validateHelper->returnExpr->name == "Result.ok");
-  CHECK(validateHelper->returnExpr->args.empty());
+  CHECK(validateHelper->returnExpr->isMethodCall);
+  CHECK(validateHelper->returnExpr->name == "ok");
+  REQUIRE(validateHelper->returnExpr->args.size() == 1);
+  CHECK(validateHelper->returnExpr->args.front().kind == primec::Expr::Kind::Name);
+  CHECK(validateHelper->returnExpr->args.front().name == "Result");
 
   const bool hasFieldHooks = std::any_of(program.definitions.begin(),
                                          program.definitions.end(),
@@ -2846,7 +2852,9 @@ main() {
   const bool payloadHasArrayType = std::any_of(generated->parameters[1].transforms.begin(),
                                                generated->parameters[1].transforms.end(),
                                                [](const primec::Transform &transform) {
-                                                 return transform.name == "array<u64>";
+                                                 return transform.name == "array" &&
+                                                        transform.templateArgs.size() == 1 &&
+                                                        transform.templateArgs.front() == "u64";
                                                });
   CHECK(valueHasMut);
   CHECK(payloadHasArrayType);
@@ -2862,7 +2870,11 @@ main() {
   CHECK(generated->hasReturnStatement);
   REQUIRE(generated->returnExpr.has_value());
   CHECK(generated->returnExpr->kind == primec::Expr::Kind::Call);
-  CHECK(generated->returnExpr->name == "Result.ok");
+  CHECK(generated->returnExpr->isMethodCall);
+  CHECK(generated->returnExpr->name == "ok");
+  REQUIRE(generated->returnExpr->args.size() == 1);
+  CHECK(generated->returnExpr->args.front().kind == primec::Expr::Kind::Name);
+  CHECK(generated->returnExpr->args.front().name == "Result");
 
   REQUIRE(generated->statements.size() == 4);
   REQUIRE(generated->statements[0].kind == primec::Expr::Kind::Call);

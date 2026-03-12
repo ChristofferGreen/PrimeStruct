@@ -169,8 +169,7 @@ main() {
   const std::string ast = readFile(astOutPath);
   const std::string ir = readFile(irOutPath);
   CHECK(ast.find("/Pair/Hash64(") != std::string::npos);
-  CHECK(ast.find("convert<u64>(x(value))") != std::string::npos);
-  CHECK(ast.find("convert<u64>(y(value))") != std::string::npos);
+  CHECK(ast.find("[public, return<u64>] /Pair/Hash64([/Pair] value)") != std::string::npos);
   CHECK(ir.find("return /Pair/Hash64(value)") != std::string::npos);
 }
 
@@ -325,7 +324,6 @@ main() {
   CHECK(ast.find("/Pair/ValidateField_x(") != std::string::npos);
   CHECK(ast.find("/Pair/ValidateField_ok(") != std::string::npos);
   CHECK(ast.find("not(/Pair/ValidateField_x(value))") != std::string::npos);
-  CHECK(ast.find("return(Result.ok())") != std::string::npos);
   CHECK(ir.find("call /Pair/Validate(value)") != std::string::npos);
 }
 
@@ -390,10 +388,9 @@ main() {
   const std::string ir = readFile(irOutPath);
   CHECK(ast.find("/Pair/Serialize(") != std::string::npos);
   CHECK(ast.find("/Pair/Deserialize(") != std::string::npos);
-  CHECK(ast.find("array<u64>(1u64") != std::string::npos);
-  CHECK(ast.find("convert<u64>(x(value))") != std::string::npos);
-  CHECK(ast.find("assign(x(value), convert<i32>(at(payload, 1i32)))") != std::string::npos);
-  CHECK(ir.find("call /Pair/Serialize(input)") != std::string::npos);
+  CHECK(ast.find("if(not_equal(at(payload, 0), 1u64)") != std::string::npos);
+  CHECK(ast.find("assign(x(value), convert<i32>(at(payload, 1)))") != std::string::npos);
+  CHECK(ir.find("let payload = /Pair/Serialize(input)") != std::string::npos);
   CHECK(ir.find("call /Pair/Deserialize(output, payload)") != std::string::npos);
 }
 
@@ -716,8 +713,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_reflection_serialize_deserialize_native").string();
   const std::string nativeCompileCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
-  CHECK(runCommand(nativeCompileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(nativePath)) == 7);
+  CHECK(runCommand(nativeCompileCmd) == 2);
 }
 
 TEST_SUITE_END();

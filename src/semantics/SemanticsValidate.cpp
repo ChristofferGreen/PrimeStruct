@@ -2140,7 +2140,20 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     binding.name = bindingName;
     binding.namespacePrefix = namespacePrefix;
     Transform typeTransform;
-    typeTransform.name = typeName;
+    std::string typeBase;
+    std::string typeArgText;
+    if (semantics::splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty() &&
+        !typeArgText.empty()) {
+      typeTransform.name = typeBase;
+      std::vector<std::string> typeArgs;
+      if (semantics::splitTopLevelTemplateArgs(typeArgText, typeArgs)) {
+        typeTransform.templateArgs = std::move(typeArgs);
+      } else {
+        typeTransform.templateArgs.push_back(typeArgText);
+      }
+    } else {
+      typeTransform.name = typeName;
+    }
     binding.transforms.push_back(std::move(typeTransform));
     if (isMutable) {
       Transform mutTransform;
@@ -2734,9 +2747,16 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
             makeEnvelopeExpr("else", {})));
       }
 
+      Expr okResultTypeExpr;
+      okResultTypeExpr.kind = Expr::Kind::Name;
+      okResultTypeExpr.name = "Result";
+
       Expr okResultCall;
       okResultCall.kind = Expr::Kind::Call;
-      okResultCall.name = "Result.ok";
+      okResultCall.isMethodCall = true;
+      okResultCall.name = "ok";
+      okResultCall.args.push_back(std::move(okResultTypeExpr));
+      okResultCall.argNames.push_back(std::nullopt);
       helper.returnExpr = std::move(okResultCall);
       helper.hasReturnStatement = true;
 
@@ -2877,9 +2897,16 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         helper.statements.push_back(std::move(assignExpr));
       }
 
+      Expr okResultTypeExpr;
+      okResultTypeExpr.kind = Expr::Kind::Name;
+      okResultTypeExpr.name = "Result";
+
       Expr okResultCall;
       okResultCall.kind = Expr::Kind::Call;
-      okResultCall.name = "Result.ok";
+      okResultCall.isMethodCall = true;
+      okResultCall.name = "ok";
+      okResultCall.args.push_back(std::move(okResultTypeExpr));
+      okResultCall.argNames.push_back(std::nullopt);
       helper.returnExpr = std::move(okResultCall);
       helper.hasReturnStatement = true;
 

@@ -28,6 +28,8 @@ using ConversionsAndCallsValueKindFromTypeNameFn = std::function<LocalInfo::Valu
 using ConversionsAndCallsGetMathConstantNameFn = std::function<bool(const std::string &, std::string &)>;
 using InferConversionsAndCallsStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using ResolveConversionsAndCallsStructSlotCountFn = std::function<bool(const std::string &, int32_t &)>;
+using ResolveConversionsAndCallsStructFieldInfoFn =
+    std::function<bool(const std::string &, const std::string &, int32_t &, int32_t &, std::string &)>;
 using EmitConversionsAndCallsStructCopyFromPtrsFn = std::function<bool(int32_t, int32_t, int32_t)>;
 using HasConversionsAndCallsNamedArgumentsFn =
     std::function<bool(const std::vector<std::optional<std::string>> &)>;
@@ -61,6 +63,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,
     const InferConversionsAndCallsStructExprPathFn &inferStructExprPath,
     const ResolveConversionsAndCallsStructSlotCountFn &resolveStructSlotCount,
+    const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
     std::vector<IrInstruction> &instructions,
     bool &handled,

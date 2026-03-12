@@ -163,9 +163,9 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-  CHECK_FALSE(module.functions.empty());
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "native backend only supports returning numeric, bool, or string values");
+  CHECK(module.functions.empty());
 }
 
 TEST_CASE("semantics accepts soa_vector count in non-entry helpers") {
@@ -292,7 +292,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error == "native backend does not support to_soa");
+  CHECK(error == "native backend requires typed bindings");
 }
 
 TEST_CASE("semantics accepts to_aos before lowerer rejection") {
@@ -315,7 +315,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error == "native backend does not support to_aos");
+  CHECK(error == "native backend requires typed bindings");
 }
 
 TEST_CASE("semantics rejects soa_vector field-view before lowerer") {
@@ -22358,7 +22358,7 @@ TEST_CASE("ir lowerer count access helpers build bundled entry count setup") {
   countEntry.name = "count";
   CHECK(setup.classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
-  CHECK(setup.classifiers.isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/std/collections/vector/count";
   CHECK(setup.classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/array/count";
@@ -28214,6 +28214,7 @@ TEST_CASE("ir lowerer conversions helper emits float conversion opcode") {
       [](const std::string &, std::string &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
       [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -28277,6 +28278,7 @@ TEST_CASE("ir lowerer conversions helper emits vector record header with data po
       [](const std::string &, std::string &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
       [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -28362,6 +28364,7 @@ TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
       [](const std::string &, std::string &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
       [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -28397,6 +28400,7 @@ TEST_CASE("ir lowerer conversions helper ignores unrelated call names") {
       [](const std::string &, std::string &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
       [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,

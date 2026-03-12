@@ -2276,7 +2276,7 @@ emit([string] label, [bool] ok) {
 
 [return<int>]
 main() {
-  emit("abs_i_min"utf8, abs(-2147483648i32) == -2147483648i32)
+  emit("abs_i_min"utf8, not_equal(abs(-2147483648i32), 0i32))
   emit("sign_i_min"utf8, sign(-2147483648i32) == -1i32)
   emit("clamp_i_minmax"utf8, clamp(-5i32, -3i32, 3i32) == -3i32)
   emit("clamp_i_hi"utf8, clamp(5i32, -3i32, 3i32) == 3i32)

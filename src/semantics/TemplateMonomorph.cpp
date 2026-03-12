@@ -1128,7 +1128,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       ++positionalIndex;
     }
     if (positionalIndex >= orderedArgs.size()) {
-      error = "argument count mismatch";
+      error = "argument count mismatch for " + def.fullPath;
       return false;
     }
     orderedArgs[positionalIndex] = &callExpr.args[i];

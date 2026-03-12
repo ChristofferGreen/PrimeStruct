@@ -3036,7 +3036,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                  !isStdNamespacedVectorCountCall) ||
                 isNamespacedMapCountCall ||
                 isResolvedMapCountCall) &&
-               !expr.args.empty() && expr.args.size() != 1 && defMap_.find(resolved) != defMap_.end()) {
+               !expr.args.empty() && expr.args.size() != 1 &&
+               (defMap_.find(resolved) != defMap_.end() || isNamespacedMapCountCall || isResolvedMapCountCall)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;
@@ -5557,7 +5558,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             }
             return false;
           };
-          auto isThisFieldTarget = [&](const Expr &candidate) -> bool {
+          auto isNamedFieldTarget = [&](const Expr &candidate, std::string_view rootName) -> bool {
             if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess || candidate.args.size() != 1) {
               return false;
             }
@@ -5565,11 +5566,29 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             while (receiver->kind == Expr::Kind::Call && receiver->isFieldAccess && receiver->args.size() == 1) {
               receiver = &receiver->args.front();
             }
-            return receiver->kind == Expr::Kind::Name && receiver->name == "this";
+            return receiver->kind == Expr::Kind::Name && receiver->name == rootName;
           };
+          auto resolveFieldTargetRootName = [&](const Expr &candidate, std::string &rootNameOut) -> bool {
+            if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess || candidate.args.size() != 1) {
+              return false;
+            }
+            const Expr *receiver = &candidate.args.front();
+            while (receiver->kind == Expr::Kind::Call && receiver->isFieldAccess && receiver->args.size() == 1) {
+              receiver = &receiver->args.front();
+            }
+            if (receiver->kind != Expr::Kind::Name) {
+              return false;
+            }
+            rootNameOut = receiver->name;
+            return true;
+          };
+          std::string fieldTargetRootName;
+          const bool allowMutableReceiverFieldWrite =
+              resolveFieldTargetRootName(target, fieldTargetRootName) &&
+              isMutableBinding(params, locals, fieldTargetRootName);
           const bool allowLifecycleFieldWrite =
-              !fieldBinding.isMutable && isThisFieldTarget(target) && isLifecycleHelperPath(currentDefinitionPath_);
-          if (!fieldBinding.isMutable && !allowLifecycleFieldWrite) {
+              !fieldBinding.isMutable && isNamedFieldTarget(target, "this") && isLifecycleHelperPath(currentDefinitionPath_);
+          if (!fieldBinding.isMutable && !allowLifecycleFieldWrite && !allowMutableReceiverFieldWrite) {
             error_ = "assign target must be a mutable binding";
             return false;
           }
@@ -5818,6 +5837,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (!validateNamedArgumentsAgainstParams(fieldParams, expr.argNames, error_)) {
+        if (error_.find("argument count mismatch") != std::string::npos) {
+          error_ = "argument count mismatch for " + resolved;
+        }
         return false;
       }
       std::vector<const Expr *> orderedArgs;
@@ -5859,6 +5881,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       orderedCallArgNames = &reorderedCallExpr.argNames;
     }
     if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, error_)) {
+      if (error_.find("argument count mismatch") != std::string::npos) {
+        error_ = "argument count mismatch for " + resolved;
+      }
       return false;
     }
     std::vector<const Expr *> orderedArgs;
@@ -5943,22 +5968,65 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (splitTopLevelTemplateArgs(expectedArgText, expectedTemplateArgs)) {
           if (normalizedExpectedBase == "array" && expectedTemplateArgs.size() == 1) {
             std::string actualElemType;
-            if (resolveArrayTarget(*arg, actualElemType) &&
-                normalizeBindingTypeName(expectedTemplateArgs.front()) != normalizeBindingTypeName(actualElemType)) {
+            if (resolveArrayTarget(*arg, actualElemType)) {
+              if (normalizeBindingTypeName(expectedTemplateArgs.front()) ==
+                  normalizeBindingTypeName(actualElemType)) {
+                continue;
+              }
               error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
                        expectedTypeText + " got array<" + actualElemType + ">";
               return false;
             }
-          } else if ((normalizedExpectedBase == "vector" || normalizedExpectedBase == "soa_vector") &&
-                     expectedTemplateArgs.size() == 1) {
-            std::string actualElemType;
-            const bool resolvedVectorTarget = normalizedExpectedBase == "vector"
-                                                  ? resolveVectorTarget(*arg, actualElemType)
-                                                  : resolveSoaVectorTarget(*arg, actualElemType);
-            if (resolvedVectorTarget &&
-                normalizeBindingTypeName(expectedTemplateArgs.front()) != normalizeBindingTypeName(actualElemType)) {
+            if (resolveVectorTarget(*arg, actualElemType)) {
               error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
-                       expectedTypeText + " got " + normalizedExpectedBase + "<" + actualElemType + ">";
+                       expectedTypeText + " got vector<" + actualElemType + ">";
+              return false;
+            }
+            if (resolveSoaVectorTarget(*arg, actualElemType)) {
+              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                       expectedTypeText + " got soa_vector<" + actualElemType + ">";
+              return false;
+            }
+          } else if (normalizedExpectedBase == "vector" && expectedTemplateArgs.size() == 1) {
+            std::string actualElemType;
+            if (resolveVectorTarget(*arg, actualElemType)) {
+              if (normalizeBindingTypeName(expectedTemplateArgs.front()) ==
+                  normalizeBindingTypeName(actualElemType)) {
+                continue;
+              }
+              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                       expectedTypeText + " got vector<" + actualElemType + ">";
+              return false;
+            }
+            if (resolveSoaVectorTarget(*arg, actualElemType)) {
+              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                       expectedTypeText + " got soa_vector<" + actualElemType + ">";
+              return false;
+            }
+            if (resolveArrayTarget(*arg, actualElemType)) {
+              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                       expectedTypeText + " got array<" + actualElemType + ">";
+              return false;
+            }
+          } else if (normalizedExpectedBase == "soa_vector" && expectedTemplateArgs.size() == 1) {
+            std::string actualElemType;
+            if (resolveSoaVectorTarget(*arg, actualElemType)) {
+              if (normalizeBindingTypeName(expectedTemplateArgs.front()) ==
+                  normalizeBindingTypeName(actualElemType)) {
+                continue;
+              }
+              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                       expectedTypeText + " got soa_vector<" + actualElemType + ">";
+              return false;
+            }
+            if (resolveVectorTarget(*arg, actualElemType)) {
+              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                       expectedTypeText + " got vector<" + actualElemType + ">";
+              return false;
+            }
+            if (resolveArrayTarget(*arg, actualElemType)) {
+              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+                       expectedTypeText + " got array<" + actualElemType + ">";
               return false;
             }
           } else if (normalizedExpectedBase == "map" && expectedTemplateArgs.size() == 2) {

@@ -22,6 +22,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,
     const InferConversionsAndCallsStructExprPathFn &inferStructExprPath,
     const ResolveConversionsAndCallsStructSlotCountFn &resolveStructSlotCount,
+    const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
     std::vector<IrInstruction> &instructions,
     bool &handled,
@@ -655,6 +656,79 @@ bool emitConversionsAndCallsOperatorExpr(
             }
             instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            instructions.push_back({IrOpcode::StoreIndirect, 0});
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            return true;
+          }
+          if (target.kind == Expr::Kind::Call && target.isFieldAccess) {
+            if (target.args.size() != 1) {
+              error = "assign target must be a mutable binding";
+              return false;
+            }
+            const Expr &receiverExpr = target.args.front();
+            const std::string receiverStruct = inferStructExprPath(receiverExpr, localsIn);
+            if (receiverStruct.empty()) {
+              error = "assign target must be a mutable binding";
+              return false;
+            }
+            int32_t fieldSlotOffset = 0;
+            int32_t fieldSlotCount = 0;
+            std::string fieldStructPath;
+            if (!resolveStructFieldInfo(receiverStruct,
+                                        target.name,
+                                        fieldSlotOffset,
+                                        fieldSlotCount,
+                                        fieldStructPath)) {
+              error = "assign target must be a mutable binding";
+              return false;
+            }
+            auto emitReceiverPointer = [&]() -> bool {
+              if (receiverExpr.kind == Expr::Kind::Name) {
+                auto it = localsIn.find(receiverExpr.name);
+                if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference) {
+                  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+                  return true;
+                }
+              }
+              return emitExpr(receiverExpr, localsIn);
+            };
+            if (!emitReceiverPointer()) {
+              return false;
+            }
+            const int32_t receiverPtrLocal = allocTempLocal();
+            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(receiverPtrLocal)});
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
+            const uint64_t fieldOffsetBytes = static_cast<uint64_t>(fieldSlotOffset) * IrSlotBytes;
+            if (fieldOffsetBytes != 0) {
+              instructions.push_back({IrOpcode::PushI64, fieldOffsetBytes});
+              instructions.push_back({IrOpcode::AddI64, 0});
+            }
+            const int32_t destPtrLocal = allocTempLocal();
+            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+            if (!fieldStructPath.empty()) {
+              const std::string rhsStruct = inferStructExprPath(expr.args[1], localsIn);
+              if (rhsStruct.empty() || rhsStruct != fieldStructPath) {
+                error = "assign requires matching struct value";
+                return false;
+              }
+              if (!emitExpr(expr.args[1], localsIn)) {
+                return false;
+              }
+              const int32_t srcPtrLocal = allocTempLocal();
+              instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+              if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, fieldSlotCount)) {
+                return false;
+              }
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+              return true;
+            }
+            const int32_t valueLocal = allocTempLocal();
+            if (!emitExpr(expr.args[1], localsIn)) {
+              return false;
+            }
+            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
             instructions.push_back({IrOpcode::StoreIndirect, 0});
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});

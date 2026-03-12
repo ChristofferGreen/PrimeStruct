@@ -48,6 +48,41 @@ bool emitInlineDefinitionCallParameters(
       continue;
     }
 
+    if (paramInfo.kind == LocalInfo::Kind::Value && paramInfo.isMutable && !paramInfo.structTypeName.empty()) {
+      if (!orderedArg) {
+        error = "argument count mismatch";
+        return false;
+      }
+      std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
+      if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
+        error = "struct parameter type mismatch";
+        return false;
+      }
+      const Expr &argExpr = *orderedArg;
+      auto emitStructPointer = [&](const Expr &arg) -> bool {
+        if (arg.kind == Expr::Kind::Name) {
+          auto it = callerLocals.find(arg.name);
+          if (it != callerLocals.end()) {
+            if (it->second.kind == LocalInfo::Kind::Reference) {
+              emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+              return true;
+            }
+            if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
+              emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+              return true;
+            }
+          }
+        }
+        return emitExpr(arg, callerLocals);
+      };
+      if (!emitStructPointer(argExpr)) {
+        return false;
+      }
+      calleeLocals.emplace(param.name, paramInfo);
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
+      continue;
+    }
+
     if (paramInfo.kind == LocalInfo::Kind::Value && !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
         error = "argument count mismatch";
