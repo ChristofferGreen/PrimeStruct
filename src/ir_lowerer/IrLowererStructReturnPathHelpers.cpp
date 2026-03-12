@@ -66,7 +66,8 @@ std::string normalizeCollectionMethodName(std::string methodName) {
 }
 
 std::vector<std::string> collectionMethodPathCandidates(const std::string &receiverStruct,
-                                                        const std::string &methodName) {
+                                                        const std::string &methodName,
+                                                        const std::string &rawMethodName) {
   if (receiverStruct == "/vector") {
     std::vector<std::string> candidates = {"/vector/" + methodName};
     const bool blocksRemovedVectorAliasStructReturnForwarding =
@@ -91,8 +92,14 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
     return candidates;
   }
   if (receiverStruct == "/map") {
-    return {"/map/" + methodName,
-            "/std/collections/map/" + methodName};
+    std::vector<std::string> candidates = {"/map/" + methodName};
+    const bool blocksRemovedMapAliasStructReturnForwarding =
+        rawMethodName == "map/at" || rawMethodName == "map/at_unsafe" ||
+        rawMethodName == "std/collections/map/at" || rawMethodName == "std/collections/map/at_unsafe";
+    if (!blocksRemovedMapAliasStructReturnForwarding) {
+      candidates.push_back("/std/collections/map/" + methodName);
+    }
+    return candidates;
   }
   return {receiverStruct + "/" + methodName};
 }
@@ -390,8 +397,13 @@ std::string inferStructReturnPathFromExprInternal(
     if (receiverStruct.empty()) {
       return "";
     }
+    std::string rawMethodName = expr.name;
+    if (!rawMethodName.empty() && rawMethodName.front() == '/') {
+      rawMethodName.erase(rawMethodName.begin());
+    }
     const std::string methodName = normalizeCollectionMethodName(expr.name);
-    const std::vector<std::string> candidates = collectionMethodPathCandidates(receiverStruct, methodName);
+    const std::vector<std::string> candidates =
+        collectionMethodPathCandidates(receiverStruct, methodName, rawMethodName);
     for (const auto &candidate : candidates) {
       if (const std::string inferred = inferStructReturnPathFromDefinitionInternal(
               candidate, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);
