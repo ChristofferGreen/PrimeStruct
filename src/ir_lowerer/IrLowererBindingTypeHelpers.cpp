@@ -7,6 +7,17 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+std::string normalizeCollectionBindingTypeName(const std::string &name) {
+  if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
+    return "map";
+  }
+  return name;
+}
+
+} // namespace
+
 BindingTypeAdapters makeBindingTypeAdapters() {
   BindingTypeAdapters adapters;
   adapters.bindingKind = makeBindingKindFromTransforms();
@@ -49,22 +60,23 @@ SetReferenceArrayInfoFn makeSetReferenceArrayInfoFromTransforms() {
 
 LocalInfo::Kind bindingKindFromTransforms(const Expr &expr) {
   for (const auto &transform : expr.transforms) {
-    if (transform.name == "Reference") {
+    const std::string normalizedName = normalizeCollectionBindingTypeName(transform.name);
+    if (normalizedName == "Reference") {
       return LocalInfo::Kind::Reference;
     }
-    if (transform.name == "Pointer") {
+    if (normalizedName == "Pointer") {
       return LocalInfo::Kind::Pointer;
     }
-    if (transform.name == "array") {
+    if (normalizedName == "array") {
       return LocalInfo::Kind::Array;
     }
-    if (transform.name == "vector") {
+    if (normalizedName == "vector") {
       return LocalInfo::Kind::Vector;
     }
-    if (transform.name == "map") {
+    if (normalizedName == "map") {
       return LocalInfo::Kind::Map;
     }
-    if (transform.name == "Buffer") {
+    if (normalizedName == "Buffer") {
       return LocalInfo::Kind::Buffer;
     }
   }
@@ -108,25 +120,26 @@ LocalInfo::ValueKind bindingValueKindFromTransforms(const Expr &expr, LocalInfo:
     if (isBindingQualifierName(transform.name)) {
       continue;
     }
-    if (transform.name == "Pointer" || transform.name == "Reference") {
+    const std::string normalizedName = normalizeCollectionBindingTypeName(transform.name);
+    if (normalizedName == "Pointer" || normalizedName == "Reference") {
       if (transform.templateArgs.size() == 1) {
         return valueKindFromTypeName(transform.templateArgs.front());
       }
       return LocalInfo::ValueKind::Unknown;
     }
-    if (transform.name == "array" || transform.name == "vector" || transform.name == "Buffer") {
+    if (normalizedName == "array" || normalizedName == "vector" || normalizedName == "Buffer") {
       if (transform.templateArgs.size() == 1) {
         return valueKindFromTypeName(transform.templateArgs.front());
       }
       return LocalInfo::ValueKind::Unknown;
     }
-    if (transform.name == "map") {
+    if (normalizedName == "map") {
       if (transform.templateArgs.size() == 2) {
         return valueKindFromTypeName(transform.templateArgs[1]);
       }
       return LocalInfo::ValueKind::Unknown;
     }
-    if (transform.name == "Result") {
+    if (normalizedName == "Result") {
       if (transform.templateArgs.size() == 1) {
         return LocalInfo::ValueKind::Int32;
       }
@@ -135,10 +148,10 @@ LocalInfo::ValueKind bindingValueKindFromTransforms(const Expr &expr, LocalInfo:
       }
       return LocalInfo::ValueKind::Unknown;
     }
-    if (transform.name == "File") {
+    if (normalizedName == "File") {
       return LocalInfo::ValueKind::Int64;
     }
-    LocalInfo::ValueKind kindValue = valueKindFromTypeName(transform.name);
+    LocalInfo::ValueKind kindValue = valueKindFromTypeName(normalizedName);
     if (kindValue != LocalInfo::ValueKind::Unknown) {
       return kindValue;
     }

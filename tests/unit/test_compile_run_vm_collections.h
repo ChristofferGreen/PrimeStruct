@@ -259,6 +259,44 @@ main() {
   CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
 }
 
+TEST_CASE("runs vm explicit canonical map typed bindings with builtin helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(plus(plus(count(values), values.at(1i32)), values.at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_explicit_canonical_map_typed_binding_builtin_helpers.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_explicit_canonical_map_typed_binding_builtin_helpers_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 11);
+  CHECK(readFile(outPath).empty());
+}
+
+TEST_CASE("rejects vm explicit canonical map typed binding key mismatch") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.at(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_explicit_canonical_map_typed_binding_builtin_helpers_diag.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_explicit_canonical_map_typed_binding_builtin_helpers_diag_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
+}
+
 TEST_CASE("runs vm stdlib namespaced map constructor fallback to map alias helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -54,7 +54,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   if (info.kind == LocalInfo::Kind::Map) {
     if (hasExplicitType) {
       for (const auto &transform : stmt.transforms) {
-        if (transform.name == "map" && transform.templateArgs.size() == 2) {
+        const std::string normalizedName = normalizeDeclaredCollectionTypeBase(transform.name);
+        if (normalizedName == "map" && transform.templateArgs.size() == 2) {
           info.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
           info.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
           break;
@@ -138,7 +139,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
 
   if (infoOut.kind == LocalInfo::Kind::Map) {
     for (const auto &transform : param.transforms) {
-      if (transform.name == "map" && transform.templateArgs.size() == 2) {
+      const std::string normalizedName = normalizeDeclaredCollectionTypeBase(transform.name);
+      if (normalizedName == "map" && transform.templateArgs.size() == 2) {
         infoOut.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
         infoOut.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
         break;

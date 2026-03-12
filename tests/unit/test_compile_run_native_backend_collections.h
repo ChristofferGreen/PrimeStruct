@@ -433,6 +433,50 @@ main() {
   CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
 }
 
+TEST_CASE("compiles and runs native explicit canonical map typed bindings with builtin helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(plus(plus(count(values), values.at(1i32)), values.at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_explicit_canonical_map_typed_binding_builtin_helpers.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_explicit_canonical_map_typed_binding_builtin_helpers_out.txt")
+                                  .string();
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_explicit_canonical_map_typed_binding_builtin_helpers_exe")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(exePath) == 11);
+}
+
+TEST_CASE("rejects native explicit canonical map typed binding key mismatch") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.at(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_explicit_canonical_map_typed_binding_builtin_helpers_diag.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_explicit_canonical_map_typed_binding_builtin_helpers_diag_out.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native stdlib map constructor alias fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
