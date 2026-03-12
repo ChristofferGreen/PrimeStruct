@@ -139,8 +139,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return refKind;
         }
       }
-      if ((paramBinding->typeName == "array" || paramBinding->typeName == "vector" ||
-           paramBinding->typeName == "soa_vector" || paramBinding->typeName == "map") &&
+      const std::string normalizedTypeName = normalizeBindingTypeName(paramBinding->typeName);
+      if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
+           normalizedTypeName == "soa_vector" || normalizedTypeName == "map") &&
           !paramBinding->typeTemplateArg.empty()) {
         return ReturnKind::Array;
       }
@@ -159,8 +160,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return refKind;
       }
     }
-    if ((it->second.typeName == "array" || it->second.typeName == "vector" ||
-         it->second.typeName == "soa_vector" || it->second.typeName == "map") &&
+    const std::string normalizedTypeName = normalizeBindingTypeName(it->second.typeName);
+    if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
+         normalizedTypeName == "soa_vector" || normalizedTypeName == "map") &&
         !it->second.typeTemplateArg.empty()) {
       return ReturnKind::Array;
     }
@@ -846,7 +848,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       valueTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          if (paramBinding->typeName != "map") {
+          if (normalizeBindingTypeName(paramBinding->typeName) != "map") {
             return false;
           }
           std::vector<std::string> parts;
@@ -858,7 +860,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return true;
         }
         auto it = locals.find(target.name);
-        if (it == locals.end() || it->second.typeName != "map") {
+        if (it == locals.end() || normalizeBindingTypeName(it->second.typeName) != "map") {
           return false;
         }
         std::vector<std::string> parts;

@@ -7039,6 +7039,43 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("explicit canonical map parameter keeps builtin helper validation") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+sumValues([/std/collections/map<i32, i32>] values) {
+  [auto] first{values.at(1i32)}
+  [auto] second{values.at_unsafe(2i32)}
+  [auto] total{count(values)}
+  return(plus(plus(total, first), plus(second, values[1i32])))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(sumValues(map<i32, i32>(1i32, 4i32, 2i32, 5i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit canonical map parameter keeps builtin key diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+sumValues([/std/collections/map<i32, i32>] values) {
+  return(values.at(true))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(sumValues(map<i32, i32>(1i32, 4i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires map key type i32") != std::string::npos);
+}
+
 TEST_CASE("map stdlib namespaced count expression inferred template fallback keeps alias diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

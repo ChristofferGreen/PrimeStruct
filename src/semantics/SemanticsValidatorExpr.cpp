@@ -830,7 +830,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             if (binding->typeName == "array" || binding->typeName == "vector") {
               return normalizeBindingTypeName(binding->typeTemplateArg) == "string";
             }
-            if (binding->typeName == "map") {
+            if (normalizeBindingTypeName(binding->typeName) == "map") {
               std::vector<std::string> parts;
               if (!splitTopLevelTemplateArgs(binding->typeTemplateArg, parts) || parts.size() != 2) {
                 return false;
@@ -1781,10 +1781,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto resolveMapTarget = [&](const Expr &target) -> bool {
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          return paramBinding->typeName == "map";
+          return normalizeBindingTypeName(paramBinding->typeName) == "map";
         }
         auto it = locals.find(target.name);
-        return it != locals.end() && it->second.typeName == "map";
+        return it != locals.end() && normalizeBindingTypeName(it->second.typeName) == "map";
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collectionTypePath;
@@ -2023,7 +2023,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       keyTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          if (paramBinding->typeName != "map") {
+          if (normalizeBindingTypeName(paramBinding->typeName) != "map") {
             return false;
           }
           std::vector<std::string> parts;
@@ -2034,7 +2034,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return true;
         }
         auto it = locals.find(target.name);
-        if (it == locals.end() || it->second.typeName != "map") {
+        if (it == locals.end() || normalizeBindingTypeName(it->second.typeName) != "map") {
           return false;
         }
         std::vector<std::string> parts;
@@ -2061,7 +2061,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       valueTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          if (paramBinding->typeName != "map") {
+          if (normalizeBindingTypeName(paramBinding->typeName) != "map") {
             return false;
           }
           std::vector<std::string> parts;
@@ -2072,7 +2072,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return true;
         }
         auto it = locals.find(target.name);
-        if (it == locals.end() || it->second.typeName != "map") {
+        if (it == locals.end() || normalizeBindingTypeName(it->second.typeName) != "map") {
           return false;
         }
         std::vector<std::string> parts;
