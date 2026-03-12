@@ -3311,6 +3311,66 @@ main() {
   CHECK(runCommand(exePath) == 91);
 }
 
+TEST_CASE("C++ emitter resolves canonical map count helper on wrapper slash return method sugar") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(92i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapValues().count(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_canonical_map_count_wrapper_slash_return_method_sugar.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_stdlib_canonical_map_count_wrapper_slash_return_method_sugar_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 92);
+}
+
+TEST_CASE("C++ emitter keeps canonical map count diagnostics on wrapper slash return method sugar") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(92i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapValues().count(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_canonical_map_count_wrapper_slash_return_method_sugar_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_stdlib_canonical_map_count_wrapper_slash_return_method_sugar_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/count parameter marker") !=
+        std::string::npos);
+}
+
 TEST_CASE("C++ emitter prefers map alias for stdlib namespaced map access helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]

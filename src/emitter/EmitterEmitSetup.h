@@ -240,6 +240,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     if (!splitTopLevelTemplateArgs(arg, args)) {
       return "";
     }
+    if (base == "/std/collections/map" || base == "std/collections/map") {
+      base = "map";
+    }
     if ((base == "array" || base == "vector") && args.size() == 1) {
       return "/" + base;
     }
