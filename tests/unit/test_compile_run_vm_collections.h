@@ -5277,6 +5277,36 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("rejects vm canonical explicit-template map count call with non-templated canonical helper") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(false)
+}
+
+[return<int>]
+/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(96i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/map/count<i32, i32>(values, true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_canonical_map_count_explicit_template_non_templated_canonical_reject.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_canonical_map_count_explicit_template_non_templated_canonical_reject_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("template arguments are only supported on templated definitions: /std/collections/map/count") !=
+        std::string::npos);
+}
+
 TEST_CASE("runs vm with user string count call shadow") {
   const std::string source = R"(
 [return<int>]

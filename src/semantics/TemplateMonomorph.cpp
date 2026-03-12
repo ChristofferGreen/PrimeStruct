@@ -512,6 +512,22 @@ bool shouldPreserveCompatibilityTemplatePath(const std::string &path, const Cont
          ctx.templateDefs.count(path) == 0;
 }
 
+bool shouldPreserveCanonicalMapTemplatePath(const std::string &path, const Context &ctx) {
+  constexpr std::string_view canonicalMapPrefix = "/std/collections/map/";
+  if (path.rfind(canonicalMapPrefix, 0) != 0) {
+    return false;
+  }
+  if (ctx.sourceDefs.count(path) == 0 || ctx.templateDefs.count(path) > 0) {
+    return false;
+  }
+  const std::string helper = path.substr(canonicalMapPrefix.size());
+  if (helper != "map" && helper != "count" && helper != "at" && helper != "at_unsafe") {
+    return false;
+  }
+  const std::string compatibilityPath = "/map/" + helper;
+  return ctx.sourceDefs.count(compatibilityPath) > 0;
+}
+
 bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind) {
   switch (expectedKind) {
     case ReturnKind::Integer:
@@ -1647,7 +1663,8 @@ bool rewriteExpr(Expr &expr,
     }
     const bool resolvedWasTemplate = ctx.templateDefs.count(resolvedPath) > 0;
     if (!expr.templateArgs.empty() && !resolvedWasTemplate) {
-      if (!shouldPreserveCompatibilityTemplatePath(resolvedPath, ctx)) {
+      if (!shouldPreserveCompatibilityTemplatePath(resolvedPath, ctx) &&
+          !shouldPreserveCanonicalMapTemplatePath(resolvedPath, ctx)) {
         const std::string templatePreferredPath = preferVectorStdlibTemplatePath(resolvedPath, ctx);
         if (templatePreferredPath != resolvedPath) {
           resolvedPath = templatePreferredPath;
@@ -1723,7 +1740,8 @@ bool rewriteExpr(Expr &expr,
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
       const bool methodWasTemplate = ctx.templateDefs.count(methodPath) > 0;
       if (!expr.templateArgs.empty() && !methodWasTemplate) {
-        if (!shouldPreserveCompatibilityTemplatePath(methodPath, ctx)) {
+        if (!shouldPreserveCompatibilityTemplatePath(methodPath, ctx) &&
+            !shouldPreserveCanonicalMapTemplatePath(methodPath, ctx)) {
           methodPath = preferVectorStdlibTemplatePath(methodPath, ctx);
         }
       }
