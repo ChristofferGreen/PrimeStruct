@@ -73,6 +73,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
                                  bool requireArrayReturn,
                                  LocalInfo::ValueKind &kindOut,
                                  bool *methodResolvedOut = nullptr);
+bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut);
 bool resolveDefinitionCallReturnKind(const Expr &callExpr,
                                      const std::unordered_map<std::string, const Definition *> &defMap,
                                      const ResolveReceiverExprPathFn &resolveExprPath,

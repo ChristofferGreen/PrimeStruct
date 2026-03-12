@@ -598,44 +598,31 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalizedName = candidate.name;
-    if (!normalizedName.empty() && normalizedName.front() == '/') {
-      normalizedName.erase(normalizedName.begin());
-    }
-    if (normalizedName != "vector/count" && normalizedName != "std/collections/vector/count" &&
-        normalizedName != "array/count" &&
-        normalizedName != "vector/capacity" && normalizedName != "std/collections/vector/capacity" &&
-        normalizedName != "array/capacity" &&
-        normalizedName != "vector/at" && normalizedName != "std/collections/vector/at" &&
-        normalizedName != "vector/at_unsafe" && normalizedName != "std/collections/vector/at_unsafe" &&
-        normalizedName != "vector/push" && normalizedName != "std/collections/vector/push" &&
-        normalizedName != "vector/pop" && normalizedName != "std/collections/vector/pop" &&
-        normalizedName != "vector/reserve" && normalizedName != "std/collections/vector/reserve" &&
-        normalizedName != "vector/clear" && normalizedName != "std/collections/vector/clear" &&
-        normalizedName != "vector/remove_at" && normalizedName != "std/collections/vector/remove_at" &&
-        normalizedName != "vector/remove_swap" && normalizedName != "std/collections/vector/remove_swap" &&
-        normalizedName != "map/count" && normalizedName != "std/collections/map/count" &&
-        normalizedName != "map/at" && normalizedName != "std/collections/map/at" &&
-        normalizedName != "map/at_unsafe" && normalizedName != "std/collections/map/at_unsafe") {
+    std::string collectionName;
+    std::string helperName;
+    if (!getNamespacedCollectionHelperName(candidate, collectionName, helperName)) {
       return false;
     }
-    if (normalizedName == "vector/at" || normalizedName == "std/collections/vector/at" ||
-        normalizedName == "vector/at_unsafe" || normalizedName == "std/collections/vector/at_unsafe" ||
-        normalizedName == "map/at" || normalizedName == "std/collections/map/at" ||
-        normalizedName == "map/at_unsafe" || normalizedName == "std/collections/map/at_unsafe") {
+    if (collectionName == "vector") {
+      if (helperName == "at" || helperName == "at_unsafe" || helperName == "push" || helperName == "reserve" ||
+          helperName == "remove_at" || helperName == "remove_swap") {
+        return candidate.args.size() == 2;
+      }
+      if (helperName == "count" || helperName == "capacity" || helperName == "pop" || helperName == "clear") {
+        return candidate.args.size() == 1;
+      }
+      return false;
+    }
+    if (collectionName != "map") {
+      return false;
+    }
+    if (helperName == "at" || helperName == "at_unsafe") {
       return candidate.args.size() == 2;
     }
-    if (normalizedName == "vector/push" || normalizedName == "std/collections/vector/push" ||
-        normalizedName == "vector/reserve" || normalizedName == "std/collections/vector/reserve" ||
-        normalizedName == "vector/remove_at" || normalizedName == "std/collections/vector/remove_at" ||
-        normalizedName == "vector/remove_swap" || normalizedName == "std/collections/vector/remove_swap") {
-      return candidate.args.size() == 2;
-    }
-    if (normalizedName == "vector/pop" || normalizedName == "std/collections/vector/pop" ||
-        normalizedName == "vector/clear" || normalizedName == "std/collections/vector/clear") {
+    if (helperName == "count") {
       return candidate.args.size() == 1;
     }
-    return candidate.args.size() == 1;
+    return false;
   };
   auto resolveDefinitionCallReturnKindForCandidate =
       [defMap, resolveExprPath, &stateInOut](const Expr &candidate,

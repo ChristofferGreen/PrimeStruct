@@ -1466,25 +1466,18 @@ TEST_CASE("ir lowerer inference call-return setup rejects canonical return-info 
   CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup keeps compatibility array count on definition fallback") {
-  primec::Definition receiverCountDef;
-  receiverCountDef.fullPath = "/vector/count";
+TEST_CASE("ir lowerer inference call-return setup treats removed array count aliases as direct definitions") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {"/array/count", &arrayCountDef},
   };
 
-  bool resolveReceiverHelper = true;
   int resolveMethodCalls = 0;
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   state.getReturnInfo = [](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
     out.returnsVoid = false;
     out.returnsArray = false;
-    if (path == "/vector/count") {
-      out.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-      return true;
-    }
     if (path == "/array/count") {
       out.kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
       return true;
@@ -1492,16 +1485,10 @@ TEST_CASE("ir lowerer inference call-return setup keeps compatibility array coun
     return false;
   };
   state.resolveMethodCallDefinition =
-      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-    ++resolveMethodCalls;
-    if (!resolveReceiverHelper || !methodExpr.isMethodCall || methodExpr.name != "count" || methodExpr.args.empty()) {
-      return nullptr;
-    }
-    if (methodExpr.args.front().kind == primec::Expr::Kind::Name && methodExpr.args.front().name == "values") {
-      return &receiverCountDef;
-    }
-    return nullptr;
-  };
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++resolveMethodCalls;
+        return nullptr;
+      };
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
@@ -1527,18 +1514,10 @@ TEST_CASE("ir lowerer inference call-return setup keeps compatibility array coun
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
-
-  resolveReceiverHelper = false;
-  resolveMethodCalls = 0;
-  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup keeps unresolved compatibility array count without definitions") {
+TEST_CASE("ir lowerer inference call-return setup keeps removed array count aliases unresolved without definitions") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   int resolveMethodCalls = 0;
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
@@ -1573,7 +1552,96 @@ TEST_CASE("ir lowerer inference call-return setup keeps unresolved compatibility
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(resolveMethodCalls == 0);
+}
+
+TEST_CASE("ir lowerer inference call-return setup treats removed array capacity aliases as direct definitions") {
+  primec::Definition arrayCapacityDef;
+  arrayCapacityDef.fullPath = "/array/capacity";
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/array/capacity", &arrayCapacityDef},
+  };
+
+  int resolveMethodCalls = 0;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.getReturnInfo = [](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    out.returnsVoid = false;
+    out.returnsArray = false;
+    if (path == "/array/capacity") {
+      out.kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
+      return true;
+    }
+    return false;
+  };
+  state.resolveMethodCallDefinition =
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++resolveMethodCalls;
+        return nullptr;
+      };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/array/capacity";
+  callExpr.args = {receiverExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 0);
+}
+
+TEST_CASE("ir lowerer inference call-return setup keeps removed array capacity aliases unresolved without definitions") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  int resolveMethodCalls = 0;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  state.resolveMethodCallDefinition =
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++resolveMethodCalls;
+        return nullptr;
+      };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/array/capacity";
+  callExpr.args = {receiverExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(resolveMethodCalls == 0);
 }
 
 TEST_CASE("ir lowerer inference call-return setup defers namespaced capacity definition lookup") {
