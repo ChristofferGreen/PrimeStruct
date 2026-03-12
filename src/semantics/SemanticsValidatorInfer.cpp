@@ -1760,6 +1760,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::String;
       }
     }
+    if (expr.isMethodCall) {
+      const std::string removedMapMethodPath = getMapNamespacedMethodCompatibilityPath(expr);
+      if (!removedMapMethodPath.empty()) {
+        error_ = "unknown method: " + removedMapMethodPath;
+        return ReturnKind::Unknown;
+      }
+    }
     if (expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         !isArrayNamespacedVectorCountCompatibilityCall(expr)) {
       std::string elemType;

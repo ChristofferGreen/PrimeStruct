@@ -2978,6 +2978,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     };
     if (expr.isMethodCall) {
+      const std::string removedMapMethodPath = getMapNamespacedMethodCompatibilityPath(expr);
+      if (!removedMapMethodPath.empty()) {
+        error_ = "unknown method: " + removedMapMethodPath;
+        return false;
+      }
       if (!hasVectorHelperCallResolution) {
         if (expr.args.empty()) {
           error_ = "method call missing receiver";

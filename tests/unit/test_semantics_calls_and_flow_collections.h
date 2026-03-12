@@ -3376,7 +3376,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count method keeps slash-path rejection diagnostics") {
@@ -3394,7 +3394,26 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+}
+
+TEST_CASE("map stdlib namespaced count method auto inference keeps stable slash-path diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values./std/collections/map/count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
 TEST_CASE("map namespaced at method keeps slash-path rejection diagnostics") {
@@ -3412,7 +3431,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /map/at") != std::string::npos);
 }
 
 TEST_CASE("map namespaced at_unsafe method auto inference keeps slash-path rejection diagnostics") {
@@ -3431,7 +3450,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced at_unsafe method keeps slash-path rejection diagnostics") {
@@ -3449,7 +3468,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("stdlib canonical map helpers resolve in method-call sugar") {
