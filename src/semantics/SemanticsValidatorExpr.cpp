@@ -830,12 +830,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             if (binding->typeName == "array" || binding->typeName == "vector") {
               return normalizeBindingTypeName(binding->typeTemplateArg) == "string";
             }
-            if (normalizeBindingTypeName(binding->typeName) == "map") {
-              std::vector<std::string> parts;
-              if (!splitTopLevelTemplateArgs(binding->typeTemplateArg, parts) || parts.size() != 2) {
-                return false;
-              }
-              return normalizeBindingTypeName(parts[1]) == "string";
+            std::string keyType;
+            std::string valueType;
+            if (extractMapKeyValueTypes(*binding, keyType, valueType)) {
+              return normalizeBindingTypeName(valueType) == "string";
             }
             return false;
           }

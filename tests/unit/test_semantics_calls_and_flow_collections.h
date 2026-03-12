@@ -7145,6 +7145,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical map reference parameter keeps if string branch compatibility") {
+  const std::string source = R"(
+[return<int>]
+showValue([Reference</std/collections/map<i32, string>>] values) {
+  [string] message{if(true, then(){ values[1i32] }, else(){ "fallback"utf8 })}
+  return(count(message))
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  [Reference</std/collections/map<i32, string>>] ref{location(values)}
+  return(showValue(ref))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("explicit canonical map parameter keeps pathspace string diagnostics") {
   const std::string source = R"(
 [effects(pathspace_take), return<int>]
@@ -7181,6 +7201,26 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("take requires string path argument") != std::string::npos);
+}
+
+TEST_CASE("canonical map reference parameter keeps if string branch diagnostics") {
+  const std::string source = R"(
+[return<int>]
+showValue([Reference</std/collections/map<i32, i32>>] values) {
+  [string] message{if(true, then(){ values[1i32] }, else(){ "fallback"utf8 })}
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{location(values)}
+  return(showValue(ref))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if branches must return compatible types") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count expression inferred template fallback keeps alias diagnostics") {
