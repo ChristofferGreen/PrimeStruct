@@ -598,14 +598,14 @@ bool isMapValue(const Expr &target, const std::unordered_map<std::string, Bindin
     if (it == localTypes.end()) {
       return false;
     }
-    if (it->second.typeName == "map") {
+    if (normalizeBindingTypeName(it->second.typeName) == "map") {
       return true;
     }
-    if (it->second.typeName == "Reference") {
+    if (normalizeBindingTypeName(it->second.typeName) == "Reference") {
       std::string base;
       std::string arg;
       if (splitTemplateTypeName(it->second.typeTemplateArg, base, arg)) {
-        return base == "map";
+        return normalizeBindingTypeName(base) == "map";
       }
     }
     return false;

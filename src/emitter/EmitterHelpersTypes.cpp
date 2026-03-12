@@ -79,6 +79,18 @@ std::string normalizeBindingTypeName(const std::string &name) {
   if (name == "float") {
     return "f32";
   }
+  if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
+    return "map";
+  }
+  if (name.rfind("/map<", 0) == 0) {
+    return name.substr(1);
+  }
+  if (name.rfind("std/collections/map<", 0) == 0) {
+    return "map" + name.substr(std::string("std/collections/map").size());
+  }
+  if (name.rfind("/std/collections/map<", 0) == 0) {
+    return "map" + name.substr(std::string("/std/collections/map").size());
+  }
   return name;
 }
 
@@ -223,9 +235,9 @@ BindingInfo getBindingInfo(const Expr &expr) {
         continue;
       }
       if (transform.templateArgs.empty()) {
-        info.typeName = transform.name;
+        info.typeName = normalizeBindingTypeName(transform.name);
       } else if (info.typeName.empty()) {
-        info.typeName = transform.name;
+        info.typeName = normalizeBindingTypeName(transform.name);
         info.typeTemplateArg = joinTemplateArgs(transform.templateArgs);
       }
     }
@@ -269,19 +281,20 @@ BindingInfo getBindingInfo(const Expr &expr) {
 }
 
 bool isReferenceCandidate(const BindingInfo &info) {
-  if (info.typeName == "File" || info.typeName == "Result" || info.typeName == "FileError") {
+  const std::string typeName = normalizeBindingTypeName(info.typeName);
+  if (typeName == "File" || typeName == "Result" || typeName == "FileError") {
     return false;
   }
-  if (info.typeName == "Reference" || info.typeName == "Pointer") {
+  if (typeName == "Reference" || typeName == "Pointer") {
     return false;
   }
-  if (info.typeName == "array" || info.typeName == "vector" || info.typeName == "map") {
+  if (typeName == "array" || typeName == "vector" || typeName == "map") {
     return true;
   }
-  if (info.typeName == "string") {
+  if (typeName == "string") {
     return false;
   }
-  if (isPrimitiveBindingTypeName(info.typeName)) {
+  if (isPrimitiveBindingTypeName(typeName)) {
     return false;
   }
   return true;
@@ -290,31 +303,54 @@ bool isReferenceCandidate(const BindingInfo &info) {
 std::string bindingTypeToCpp(const BindingInfo &info);
 
 std::string bindingTypeToCpp(const std::string &typeName) {
-  if (typeName == "i32" || typeName == "int") {
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(typeName, base, arg)) {
+    base = normalizeBindingTypeName(base);
+    if (base == "array" || base == "vector") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+        std::string elemType = bindingTypeToCpp(args[0]);
+        return "std::vector<" + elemType + ">";
+      }
+      return "std::vector<int>";
+    }
+    if (base == "map") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
+        std::string keyType = bindingTypeToCpp(args[0]);
+        std::string valueType = bindingTypeToCpp(args[1]);
+        return "std::unordered_map<" + keyType + ", " + valueType + ">";
+      }
+      return "std::unordered_map<int, int>";
+    }
+  }
+  const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
+  if (normalizedTypeName == "i32" || normalizedTypeName == "int") {
     return "int";
   }
-  if (typeName == "i64") {
+  if (normalizedTypeName == "i64") {
     return "int64_t";
   }
-  if (typeName == "u64") {
+  if (normalizedTypeName == "u64") {
     return "uint64_t";
   }
-  if (typeName == "bool") {
+  if (normalizedTypeName == "bool") {
     return "bool";
   }
-  if (typeName == "float" || typeName == "f32") {
+  if (normalizedTypeName == "float" || normalizedTypeName == "f32") {
     return "float";
   }
-  if (typeName == "f64") {
+  if (normalizedTypeName == "f64") {
     return "double";
   }
-  if (typeName == "string") {
+  if (normalizedTypeName == "string") {
     return "std::string_view";
   }
-  if (typeName == "File") {
+  if (normalizedTypeName == "File") {
     return "ps_file_handle";
   }
-  if (typeName == "FileError") {
+  if (normalizedTypeName == "FileError") {
     return "uint32_t";
   }
   return "int";
@@ -395,6 +431,7 @@ std::string bindingTypeToCpp(const std::string &typeName,
   std::string base;
   std::string arg;
   if (splitTemplateTypeName(typeName, base, arg)) {
+    base = normalizeBindingTypeName(base);
     if (base == "array" || base == "vector") {
       std::vector<std::string> args;
       if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
@@ -448,24 +485,25 @@ std::string bindingTypeToCpp(const std::string &typeName,
 }
 
 std::string bindingTypeToCpp(const BindingInfo &info) {
-  if (info.typeName == "array" || info.typeName == "vector") {
+  const std::string typeName = normalizeBindingTypeName(info.typeName);
+  if (typeName == "array" || typeName == "vector") {
     std::string elemType = bindingTypeToCpp(info.typeTemplateArg);
     return "std::vector<" + elemType + ">";
   }
-  if (info.typeName == "File") {
+  if (typeName == "File") {
     return "ps_file_handle";
   }
-  if (info.typeName == "FileError") {
+  if (typeName == "FileError") {
     return "uint32_t";
   }
-  if (info.typeName == "Result") {
+  if (typeName == "Result") {
     std::vector<std::string> args;
     if (splitTopLevelTemplateArgs(info.typeTemplateArg, args)) {
       return (args.size() == 2) ? "uint64_t" : "uint32_t";
     }
     return "uint32_t";
   }
-  if (info.typeName == "map") {
+  if (typeName == "map") {
     std::vector<std::string> parts;
     if (splitTopLevelTemplateArgs(info.typeTemplateArg, parts) && parts.size() == 2) {
       std::string keyType = bindingTypeToCpp(parts[0]);
@@ -474,46 +512,47 @@ std::string bindingTypeToCpp(const BindingInfo &info) {
     }
     return "std::unordered_map<int, int>";
   }
-  if (info.typeName == "Pointer") {
+  if (typeName == "Pointer") {
     std::string base = bindingTypeToCpp(info.typeTemplateArg);
     if (base.empty()) {
       base = "void";
     }
     return base + " *";
   }
-  if (info.typeName == "Reference") {
+  if (typeName == "Reference") {
     std::string base = bindingTypeToCpp(info.typeTemplateArg);
     if (base.empty()) {
       base = "void";
     }
     return base + " &";
   }
-  return bindingTypeToCpp(info.typeName);
+  return bindingTypeToCpp(typeName);
 }
 
 std::string bindingTypeToCpp(const BindingInfo &info,
                              const std::string &namespacePrefix,
                              const std::unordered_map<std::string, std::string> &importAliases,
                              const std::unordered_map<std::string, std::string> &structTypeMap) {
-  if (info.typeName == "array" || info.typeName == "vector") {
+  const std::string typeName = normalizeBindingTypeName(info.typeName);
+  if (typeName == "array" || typeName == "vector") {
     std::string elemType =
         bindingTypeToCpp(info.typeTemplateArg, namespacePrefix, importAliases, structTypeMap);
     return "std::vector<" + elemType + ">";
   }
-  if (info.typeName == "File") {
+  if (typeName == "File") {
     return "ps_file_handle";
   }
-  if (info.typeName == "FileError") {
+  if (typeName == "FileError") {
     return "uint32_t";
   }
-  if (info.typeName == "Result") {
+  if (typeName == "Result") {
     std::vector<std::string> args;
     if (splitTopLevelTemplateArgs(info.typeTemplateArg, args)) {
       return (args.size() == 2) ? "uint64_t" : "uint32_t";
     }
     return "uint32_t";
   }
-  if (info.typeName == "map") {
+  if (typeName == "map") {
     std::vector<std::string> parts;
     if (splitTopLevelTemplateArgs(info.typeTemplateArg, parts) && parts.size() == 2) {
       std::string keyType = bindingTypeToCpp(parts[0], namespacePrefix, importAliases, structTypeMap);
@@ -522,21 +561,21 @@ std::string bindingTypeToCpp(const BindingInfo &info,
     }
     return "std::unordered_map<int, int>";
   }
-  if (info.typeName == "Pointer") {
+  if (typeName == "Pointer") {
     std::string base = bindingTypeToCpp(info.typeTemplateArg, namespacePrefix, importAliases, structTypeMap);
     if (base.empty()) {
       base = "void";
     }
     return base + " *";
   }
-  if (info.typeName == "Reference") {
+  if (typeName == "Reference") {
     std::string base = bindingTypeToCpp(info.typeTemplateArg, namespacePrefix, importAliases, structTypeMap);
     if (base.empty()) {
       base = "void";
     }
     return base + " &";
   }
-  return bindingTypeToCpp(info.typeName, namespacePrefix, importAliases, structTypeMap);
+  return bindingTypeToCpp(typeName, namespacePrefix, importAliases, structTypeMap);
 }
 
 std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix) {
