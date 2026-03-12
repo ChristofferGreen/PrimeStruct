@@ -15902,23 +15902,11 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/std/collections/vector/count", "vector", "", defMap, error) == &vectorCountDef);
-  CHECK(error.empty());
-
-  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "count", "std/collections/vector", "", defMap, error) == &stdCountDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "at", "std/collections/map", "", defMap, error) == &mapAtDef);
-  CHECK(error.empty());
-
-  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/map/at", "map", "", defMap, error) == &mapAtDef);
-  CHECK(error.empty());
-
-  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/std/collections/map/at", "map", "", defMap, error) == &mapAtDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
@@ -15938,10 +15926,6 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   };
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "at", "std/collections/map", "", canonicalMapDefMap, error) == &stdMapAtDef);
-  CHECK(error.empty());
-
-  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/std/collections/map/at", "map", "", canonicalMapDefMap, error) == &stdMapAtDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
@@ -15986,6 +15970,33 @@ TEST_CASE("ir lowerer setup type helper rejects removed slash-path vector helper
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "/std/collections/vector/count", "std/collections/vector", "", defMap, error) == nullptr);
   CHECK(error == "unknown method: /std/collections/vector/count");
+}
+
+TEST_CASE("ir lowerer setup type helper rejects slash-path map helpers on map receivers") {
+  primec::Definition mapAtDef;
+  mapAtDef.fullPath = "/map/at";
+  primec::Definition stdMapAtDef;
+  stdMapAtDef.fullPath = "/std/collections/map/at";
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/map/at", &mapAtDef},
+      {"/std/collections/map/at", &stdMapAtDef},
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "/map/at", "map", "", defMap, error) == nullptr);
+  CHECK(error == "unknown method: /map/at");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "/std/collections/map/at", "map", "", defMap, error) == nullptr);
+  CHECK(error == "unknown method: /map/at");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "/std/collections/map/at", "std/collections/map", "", defMap, error) == nullptr);
+  CHECK(error == "unknown method: /std/collections/map/at");
 }
 
 TEST_CASE("ir lowerer setup type helper reports method target lookup diagnostics") {
@@ -16435,6 +16446,55 @@ TEST_CASE("ir lowerer setup type helper rejects removed slash-path vector method
       error);
   CHECK(resolved == nullptr);
   CHECK(error == "unknown method: /vector/count");
+}
+
+TEST_CASE("ir lowerer setup type helper rejects slash-path map methods from expressions") {
+  primec::Definition mapAtDef;
+  mapAtDef.fullPath = "/map/at";
+  primec::Definition stdMapAtDef;
+  stdMapAtDef.fullPath = "/std/collections/map/at";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/map/at", &mapAtDef},
+      {"/std/collections/map/at", &stdMapAtDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "/map/at";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverExpr, indexExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  locals.emplace("values", valuesLocal);
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method: /map/at");
 }
 
 TEST_CASE("ir lowerer setup type helper resolves declared receiver aliases through slashless map imports") {
