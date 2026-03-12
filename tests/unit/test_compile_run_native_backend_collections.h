@@ -6144,6 +6144,35 @@ main() {
   CHECK(readFile(outPath).find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
+TEST_CASE("compiles and runs native canonical implicit-template map count call with wrapper slash return envelope") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(96i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(/std/collections/map/count(wrapValues(), true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_map_count_implicit_template_wrapper_slash_return_envelope.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_canonical_map_count_implicit_template_wrapper_slash_return_envelope_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 96);
+}
+
 TEST_CASE("compiles and runs native user string count call shadow") {
   const std::string source = R"(
 [return<int>]

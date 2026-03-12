@@ -528,6 +528,20 @@ bool shouldPreserveCanonicalMapTemplatePath(const std::string &path, const Conte
   return ctx.sourceDefs.count(compatibilityPath) > 0;
 }
 
+std::string normalizeCollectionReceiverTypeName(std::string value) {
+  value = normalizeBindingTypeName(value);
+  if (!value.empty() && value.front() == '/') {
+    value.erase(value.begin());
+  }
+  if (value == "std/collections/vector") {
+    return "vector";
+  }
+  if (value == "std/collections/map") {
+    return "map";
+  }
+  return value;
+}
+
 bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind) {
   switch (expectedKind) {
     case ReturnKind::Integer:
@@ -875,19 +889,6 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (!methodName.empty() && methodName.front() == '/') {
     methodName.erase(methodName.begin());
   }
-  auto normalizeCollectionReceiverTypeName = [](std::string value) -> std::string {
-    value = normalizeBindingTypeName(value);
-    if (!value.empty() && value.front() == '/') {
-      value.erase(value.begin());
-    }
-    if (value == "std/collections/vector") {
-      return "vector";
-    }
-    if (value == "std/collections/map") {
-      return "map";
-    }
-    return value;
-  };
   auto normalizeCollectionMethodName = [](const std::string &receiverTypeName,
                                           std::string candidate) -> std::string {
     if (receiverTypeName == "array" || receiverTypeName == "vector" || receiverTypeName == "soa_vector") {
@@ -1483,7 +1484,7 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
   if (!extractExplicitBindingType(def.parameters.front(), receiverParamInfo)) {
     return false;
   }
-  const std::string normalizedReceiverParamType = normalizeBindingTypeName(receiverParamInfo.typeName);
+  const std::string normalizedReceiverParamType = normalizeCollectionReceiverTypeName(receiverParamInfo.typeName);
   size_t expectedTemplateArgCount = 0;
   if (family == HelperFamily::Vector) {
     if (def.templateArgs.size() != 1) {
@@ -1538,7 +1539,7 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
   std::string receiverArgTemplateArg;
   BindingInfo receiverArgInfo;
   if (inferBindingTypeForMonomorph(*orderedArgs.front(), params, locals, allowMathBare, ctx, receiverArgInfo)) {
-    receiverArgType = normalizeBindingTypeName(receiverArgInfo.typeName);
+    receiverArgType = normalizeCollectionReceiverTypeName(receiverArgInfo.typeName);
     receiverArgTemplateArg = receiverArgInfo.typeTemplateArg;
   } else {
     const std::string inferredReceiverTypeText =
@@ -1548,18 +1549,19 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
     }
     std::string receiverBase;
     std::string receiverArgText;
-    if (!splitTemplateTypeName(normalizeBindingTypeName(inferredReceiverTypeText), receiverBase, receiverArgText) ||
+    if (!splitTemplateTypeName(normalizeCollectionReceiverTypeName(inferredReceiverTypeText), receiverBase,
+                               receiverArgText) ||
         receiverBase.empty()) {
       return false;
     }
-    receiverArgType = normalizeBindingTypeName(receiverBase);
+    receiverArgType = normalizeCollectionReceiverTypeName(receiverBase);
     receiverArgTemplateArg = receiverArgText;
   }
   if ((receiverArgType == "Reference" || receiverArgType == "Pointer") && !receiverArgTemplateArg.empty()) {
     std::string pointeeBase;
     std::string pointeeArgText;
     if (splitTemplateTypeName(receiverArgTemplateArg, pointeeBase, pointeeArgText)) {
-      receiverArgType = normalizeBindingTypeName(pointeeBase);
+      receiverArgType = normalizeCollectionReceiverTypeName(pointeeBase);
       receiverArgTemplateArg = pointeeArgText;
     }
   }
