@@ -1598,11 +1598,44 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     const std::unordered_map<std::string, BindingInfo> &locals,
     BindingInfo &bindingOut) {
   if (tryInferBindingTypeFromInitializer(initializer, params, locals, bindingOut, hasAnyMathImport())) {
-    if (initializer.kind == Expr::Kind::Call &&
-        defMap_.find(resolveCalleePath(initializer)) != defMap_.end()) {
+    auto inferDeclaredCollectionBinding = [&](const Definition &definition) -> bool {
+      for (const auto &transform : definition.transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        const std::string normalizedReturnType = normalizeBindingTypeName(transform.templateArgs.front());
+        std::string base;
+        std::string argText;
+        if (!splitTemplateTypeName(normalizedReturnType, base, argText)) {
+          return false;
+        }
+        base = normalizeBindingTypeName(base);
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(argText, args)) {
+          return false;
+        }
+        if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+          bindingOut.typeName = base;
+          bindingOut.typeTemplateArg = argText;
+          return true;
+        }
+        if (base == "map" && args.size() == 2) {
+          bindingOut.typeName = base;
+          bindingOut.typeTemplateArg = argText;
+          return true;
+        }
+        return false;
+      }
+      return false;
+    };
+    auto defIt = initializer.kind == Expr::Kind::Call ? defMap_.find(resolveCalleePath(initializer)) : defMap_.end();
+    if (initializer.kind == Expr::Kind::Call && defIt != defMap_.end()) {
       ReturnKind resolvedKind = inferExprReturnKind(initializer, params, locals);
       if (resolvedKind != ReturnKind::Unknown && resolvedKind != ReturnKind::Void) {
         if (resolvedKind == ReturnKind::Array) {
+          if (inferDeclaredCollectionBinding(*defIt->second)) {
+            return true;
+          }
           std::string inferredStruct = inferStructReturnPath(initializer, params, locals);
           if (!inferredStruct.empty()) {
             bindingOut.typeName = inferredStruct;

@@ -6988,6 +6988,43 @@ main() {
   CHECK(error.find("argument type mismatch for /std/collections/map/count") != std::string::npos);
 }
 
+TEST_CASE("map canonical wrapper auto local preserves collection template info") {
+  const std::string source = R"(
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(1i32, 4i32, 2i32, 5i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] values{wrapValues()}
+  return(plus(plus(count(values), values.at(1i32)),
+              plus(values.at_unsafe(2i32), values[1i32])))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map canonical wrapper auto local keeps builtin count diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] values{wrapValues()}
+  return(count(values, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+}
+
 TEST_CASE("map stdlib namespaced count expression inferred template fallback keeps alias diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

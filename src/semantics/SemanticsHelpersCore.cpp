@@ -79,6 +79,18 @@ std::string normalizeBindingTypeName(const std::string &name) {
   if (name == "array") {
     return "array";
   }
+  if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
+    return "map";
+  }
+  if (name.rfind("/map<", 0) == 0) {
+    return name.substr(1);
+  }
+  if (name.rfind("std/collections/map<", 0) == 0) {
+    return "map" + name.substr(std::string("std/collections/map").size());
+  }
+  if (name.rfind("/std/collections/map<", 0) == 0) {
+    return "map" + name.substr(std::string("/std/collections/map").size());
+  }
   return name;
 }
 
