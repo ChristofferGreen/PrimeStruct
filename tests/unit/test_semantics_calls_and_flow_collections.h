@@ -3183,6 +3183,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced map constructor template fallback rejects non-templated map alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/map([i32] key, [i32] value) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/map<i32, i32>(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /map/map") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map constructor fallback keeps map alias diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

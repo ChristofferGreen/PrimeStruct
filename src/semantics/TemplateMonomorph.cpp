@@ -1655,8 +1655,6 @@ bool rewriteExpr(Expr &expr,
         expr.name = implicitTemplatePreferredPath;
       }
     }
-    std::string builtinCollectionName;
-    const bool builtinCollectionCall = getBuiltinCollectionName(expr, builtinCollectionName);
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
     const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
     if (isTemplateDef) {
@@ -1707,7 +1705,7 @@ bool rewriteExpr(Expr &expr,
         expr.name = specializedPath;
         expr.templateArgs.clear();
       }
-    } else if (isKnownDef && !expr.templateArgs.empty() && !builtinCollectionCall) {
+    } else if (isKnownDef && !expr.templateArgs.empty()) {
       error = "template arguments are only supported on templated definitions: " + resolvedPath;
       return false;
     }
