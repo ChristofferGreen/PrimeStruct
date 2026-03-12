@@ -3092,6 +3092,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("collected diagnostics ignore builtin canonical map helper calls") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [i32] aliasCount{/map/count(values)}
+  [i32] canonicalCount{/std/collections/map/count(values)}
+  [i32] first{/std/collections/map/at(values, 1i32)}
+  return(plus(plus(aliasCount, canonicalCount), first))
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK(validateProgramCollectingDiagnostics(source, "/main", error, diagnosticInfo));
+  CHECK(error.empty());
+  CHECK(diagnosticInfo.records.empty());
+}
+
+TEST_CASE("collected diagnostics keep unknown target for unsupported canonical map helper calls") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/std/collections/map/missing(values))
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramCollectingDiagnostics(source, "/main", error, diagnosticInfo));
+  CHECK(error.find("unknown call target: /std/collections/map/missing") != std::string::npos);
+  REQUIRE(diagnosticInfo.records.size() == 1);
+  CHECK(diagnosticInfo.records.front().message.find("unknown call target: /std/collections/map/missing") !=
+        std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map helpers accept canonical map references") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

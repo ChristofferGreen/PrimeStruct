@@ -69,6 +69,28 @@ execute_repeat([count] 2i32)
   CHECK(error.empty());
 }
 
+TEST_CASE("execution collected diagnostics ignore builtin canonical map helper arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] count) {
+  return()
+}
+
+[effects(heap_alloc)]
+execute_repeat(/std/collections/map/count(map<i32, i32>(1i32, 2i32)))
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK(validateProgramCollectingDiagnostics(source, "/main", error, diagnosticInfo));
+  CHECK(error.empty());
+  CHECK(diagnosticInfo.records.empty());
+}
+
 TEST_CASE("execution rejects unknown named argument") {
   const std::string source = R"(
 [return<int>]

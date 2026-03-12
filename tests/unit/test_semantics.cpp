@@ -48,6 +48,17 @@ bool validateProgramWithDefaults(const std::string &source,
                                  std::string &error) {
   return validateProgramWithDefaults(source, entry, defaultEffects, defaultEffects, error);
 }
+
+bool validateProgramCollectingDiagnostics(const std::string &source,
+                                          const std::string &entry,
+                                          std::string &error,
+                                          primec::SemanticDiagnosticInfo &diagnosticInfo) {
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  diagnosticInfo = {};
+  return semantics.validate(program, entry, error, defaults, defaults, {}, &diagnosticInfo, true);
+}
 } // namespace
 
 #include "test_semantics_entry_entry.h"

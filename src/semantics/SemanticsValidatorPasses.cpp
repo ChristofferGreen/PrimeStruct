@@ -17,6 +17,13 @@ struct HelperSuffixInfo {
   std::string_view placement;
 };
 
+bool isBuiltinCollectionHelperName(std::string_view helperName) {
+  return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+         helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+         helperName == "remove_at" || helperName == "remove_swap" || helperName == "to_soa" ||
+         helperName == "to_aos";
+}
+
 bool isLifecycleHelperName(const std::string &fullPath) {
   static const std::array<HelperSuffixInfo, 10> suffixes = {{
       {"Create", ""},
@@ -224,12 +231,16 @@ bool SemanticsValidator::validateDefinitions() {
     }
     const std::string resolved = resolveCalleePath(expr);
     std::string builtinName;
+    std::string namespacedCollection;
+    std::string namespacedHelper;
     const bool isCollectionHelperBuiltin =
         isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") || isSimpleCallName(expr, "at") ||
         isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
         isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
-        isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos");
+        isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
+        (getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
+         isBuiltinCollectionHelperName(namespacedHelper));
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
            getBuiltinMutationName(expr, builtinName) ||
@@ -1296,12 +1307,16 @@ bool SemanticsValidator::validateExecutions() {
     }
     const std::string resolved = resolveCalleePath(expr);
     std::string builtinName;
+    std::string namespacedCollection;
+    std::string namespacedHelper;
     const bool isCollectionHelperBuiltin =
         isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") || isSimpleCallName(expr, "at") ||
         isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
         isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
-        isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos");
+        isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
+        (getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
+         isBuiltinCollectionHelperName(namespacedHelper));
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
            getBuiltinMutationName(expr, builtinName) ||
