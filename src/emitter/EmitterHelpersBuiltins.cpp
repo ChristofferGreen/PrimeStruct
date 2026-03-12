@@ -1132,8 +1132,9 @@ std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector
     }
   };
   auto isCollectionBindingType = [](const std::string &typeName) {
-    return typeName == "array" || typeName == "vector" || typeName == "map" || typeName == "string" ||
-           typeName == "soa_vector";
+    const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
+    return normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "map" ||
+           normalizedTypeName == "string" || normalizedTypeName == "soa_vector";
   };
   if (!hasNamedArguments(expr.argNames) && expr.args.size() == 2 && params.size() == 2 &&
       params[0].name == "values" && isCollectionBindingType(getBindingInfo(params[0]).typeName)) {

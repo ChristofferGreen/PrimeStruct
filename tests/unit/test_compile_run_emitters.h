@@ -1344,6 +1344,56 @@ main() {
   CHECK(runCommand(exePath) == 85);
 }
 
+TEST_CASE("C++ emitter reorders canonical map access positional args") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/at([/std/collections/map<string, i32>] values, [string] key) {
+  return(86i32)
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(/std/collections/map/at("only"raw_utf8, values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_canonical_map_access_positional_reorder.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_map_access_positional_reorder_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 86);
+}
+
+TEST_CASE("C++ emitter keeps canonical map access key diagnostics on positional reorder") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/at([/std/collections/map<string, i32>] values, [string] key) {
+  return(86i32)
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(/std/collections/map/at(1i32, values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_canonical_map_access_positional_reorder_diag.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_map_access_positional_reorder_diag_exe")
+          .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_map_access_positional_reorder_diag_err.txt")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
+}
+
 TEST_CASE("C++ emitter access rewrite keeps known collection receiver leading names") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
