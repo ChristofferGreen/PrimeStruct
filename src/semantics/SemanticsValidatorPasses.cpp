@@ -1993,15 +1993,15 @@ bool SemanticsValidator::validateStructLayouts() {
       layoutOut = {8u, 8u};
       return true;
     }
-    if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
+    if (normalized == "Pointer" || normalized == "Reference") {
       layoutOut = {8u, 8u};
       return true;
     }
-    if (binding.typeName == "array" || binding.typeName == "vector" || binding.typeName == "map") {
+    if (normalized == "array" || normalized == "vector" || normalized == "map") {
       layoutOut = {8u, 8u};
       return true;
     }
-    if (binding.typeName == "uninitialized") {
+    if (normalized == "uninitialized") {
       if (binding.typeTemplateArg.empty()) {
         error_ = "uninitialized requires exactly one template argument";
         return false;

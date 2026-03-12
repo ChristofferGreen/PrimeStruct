@@ -445,6 +445,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct layout accepts explicit canonical map field") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [bool] ready{true}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("no_padding keeps canonical map field padding diagnostics") {
+  const std::string source = R"(
+[no_padding]
+Thing() {
+  [bool] ready{true}
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("no_padding disallows alignment padding on field /Thing/values") != std::string::npos);
+}
+
 TEST_CASE("struct alignment rejects smaller field requirement") {
   const std::string source = R"(
 [struct]
