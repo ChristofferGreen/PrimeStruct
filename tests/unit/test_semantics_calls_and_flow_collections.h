@@ -7076,6 +7076,42 @@ main() {
   CHECK(error.find("at requires map key type i32") != std::string::npos);
 }
 
+TEST_CASE("explicit canonical map parameter keeps print statement string validation") {
+  const std::string source = R"(
+[effects(io_out), return<int>]
+showValue([/std/collections/map<i32, string>] values) {
+  print_line(values[1i32])
+  return(0i32)
+}
+
+[effects(io_out), return<int>]
+main() {
+  return(showValue(map<i32, string>(1i32, "hello"utf8)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit canonical map parameter keeps pathspace string diagnostics") {
+  const std::string source = R"(
+[effects(pathspace_take), return<int>]
+useValue([/std/collections/map<i32, i32>] values) {
+  take(values[1i32])
+  return(0i32)
+}
+
+[effects(pathspace_take), return<int>]
+main() {
+  return(useValue(map<i32, i32>(1i32, 4i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("take requires string path argument") != std::string::npos);
+}
+
 TEST_CASE("map stdlib namespaced count expression inferred template fallback keeps alias diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
