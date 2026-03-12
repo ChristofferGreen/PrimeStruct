@@ -317,6 +317,8 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
   }
   if (!runLowerInferenceExprKindCallFallbackSetup(
           {
+              .defMap = input.defMap,
+              .resolveExprPath = input.resolveExprPath,
               .isArrayCountCall = input.isArrayCountCall,
               .isStringCountCall = input.isStringCountCall,
               .isVectorCapacityCall = input.isVectorCapacityCall,
@@ -1090,9 +1092,53 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
   const auto isStringCountCall = input.isStringCountCall;
   const auto isVectorCapacityCall = input.isVectorCapacityCall;
   const auto isEntryArgsName = input.isEntryArgsName;
+  const auto *defMap = input.defMap;
+  const auto resolveExprPath = input.resolveExprPath;
+
+  const auto resolveCallMapAccessValueKind =
+      [defMap, resolveExprPath, &stateInOut](const Expr &candidate,
+                                             const LocalMap &candidateLocals,
+                                             LocalInfo::ValueKind &kindOut) {
+        kindOut = LocalInfo::ValueKind::Unknown;
+        if (candidate.kind != Expr::Kind::Call) {
+          return false;
+        }
+
+        const Definition *callee = nullptr;
+        if (candidate.isMethodCall) {
+          if (!stateInOut.resolveMethodCallDefinition) {
+            return false;
+          }
+          callee = stateInOut.resolveMethodCallDefinition(candidate, candidateLocals);
+        } else if (defMap != nullptr && resolveExprPath) {
+          const std::string path = resolveExprPath(candidate);
+          auto it = defMap->find(path);
+          if (it != defMap->end()) {
+            callee = it->second;
+          }
+        }
+        if (callee == nullptr) {
+          return false;
+        }
+
+        std::string collectionName;
+        std::vector<std::string> collectionArgs;
+        if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) || collectionName != "map" ||
+            collectionArgs.size() != 2) {
+          return false;
+        }
+
+        kindOut = valueKindFromTypeName(collectionArgs.back());
+        return true;
+      };
 
   stateInOut.inferCallExprCountAccessGpuFallbackKind =
-      [isArrayCountCall, isStringCountCall, isVectorCapacityCall, isEntryArgsName, &stateInOut](
+      [isArrayCountCall,
+       isStringCountCall,
+       isVectorCapacityCall,
+       isEntryArgsName,
+       resolveCallMapAccessValueKind,
+       &stateInOut](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         kindOut = LocalInfo::ValueKind::Unknown;
 
@@ -1121,7 +1167,10 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                 [&](const Expr &candidate, const LocalMap &candidateLocals) {
                   return isEntryArgsName(candidate, candidateLocals);
                 },
-                accessElementKind) == ArrayMapAccessElementKindResolution::Resolved) {
+                accessElementKind,
+                [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &candidateKindOut) {
+                  return resolveCallMapAccessValueKind(candidate, candidateLocals, candidateKindOut);
+                }) == ArrayMapAccessElementKindResolution::Resolved) {
           kindOut = accessElementKind;
           return true;
         }

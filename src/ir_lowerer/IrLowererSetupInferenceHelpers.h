@@ -17,6 +17,8 @@ using ResolveSetupInferenceArrayReturnKindFn =
     std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)>;
 using ResolveSetupInferenceCallReturnKindFn =
     std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &, bool &)>;
+using ResolveSetupInferenceCallCollectionAccessValueKindFn =
+    std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)>;
 using IsSetupInferenceEntryArgsNameFn = std::function<bool(const Expr &, const LocalMap &)>;
 using IsSetupInferenceBindingMutableFn = std::function<bool(const Expr &)>;
 using SetupInferenceBindingKindFn = std::function<LocalInfo::Kind(const Expr &)>;
@@ -99,7 +101,9 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     const Expr &expr,
     const LocalMap &localsIn,
     const IsSetupInferenceEntryArgsNameFn &isEntryArgsName,
-    LocalInfo::ValueKind &kindOut);
+    LocalInfo::ValueKind &kindOut,
+    const ResolveSetupInferenceCallCollectionAccessValueKindFn &resolveCallCollectionAccessValueKind =
+        ResolveSetupInferenceCallCollectionAccessValueKindFn{});
 LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
     const std::vector<Expr> &bodyExpressions,
     const LocalMap &localsBase,

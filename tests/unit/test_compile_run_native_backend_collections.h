@@ -6394,6 +6394,30 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs native builtin count on wrapper-returned canonical map string access") {
+  const std::string source = R"(
+[return</std/collections/map<i32, string>>]
+wrapMap() {
+  return(map<i32, string>(1i32, "hello"utf8))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(/std/collections/map/at(wrapMap(), 1i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_builtin_count_wrapper_canonical_map_string_access.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_builtin_count_wrapper_canonical_map_string_access_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("native keeps non-string diagnostics on canonical map reference access count shadow") {
   const std::string source = R"(
 [return<int>]

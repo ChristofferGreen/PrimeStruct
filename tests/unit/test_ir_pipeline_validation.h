@@ -24428,6 +24428,40 @@ TEST_CASE("ir lowerer setup inference helper handles invalid access kinds") {
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical map access kinds") {
+  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+
+  primec::Expr wrapMapCall;
+  wrapMapCall.kind = primec::Expr::Kind::Call;
+  wrapMapCall.name = "wrapMap";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 1;
+
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "/std/collections/map/at";
+  accessExpr.args = {wrapMapCall, indexExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut,
+            [](const primec::Expr &candidate,
+               const primec::ir_lowerer::LocalMap &,
+               primec::ir_lowerer::LocalInfo::ValueKind &candidateKindOut) {
+              if (candidate.kind != primec::Expr::Kind::Call || candidate.name != "wrapMap") {
+                return false;
+              }
+              candidateKindOut = primec::ir_lowerer::LocalInfo::ValueKind::String;
+              return true;
+            }) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+}
+
 TEST_CASE("ir lowerer setup inference helper infers body value kinds with locals scaffolding") {
   primec::Expr bindingExpr;
   bindingExpr.isBinding = true;

@@ -5570,6 +5570,23 @@ main() {
   CHECK(runCommand(runCmd) == 5);
 }
 
+TEST_CASE("runs vm builtin count on wrapper-returned canonical map string access") {
+  const std::string source = R"(
+[return</std/collections/map<i32, string>>]
+wrapMap() {
+  return(map<i32, string>(1i32, "hello"utf8))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(/std/collections/map/at(wrapMap(), 1i32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_builtin_count_wrapper_canonical_map_string_access.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
+}
+
 TEST_CASE("vm keeps non-string diagnostics on canonical map reference access count shadow") {
   const std::string source = R"(
 [return<int>]

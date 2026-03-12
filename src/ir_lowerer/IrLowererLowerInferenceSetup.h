@@ -81,6 +81,9 @@ struct LowerInferenceExprKindCallReturnSetupInput {
   IsStringCountCallFn isStringCountCall;
 };
 struct LowerInferenceExprKindCallFallbackSetupInput {
+  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+
+  ResolveExprPathFn resolveExprPath;
   IsArrayCountCallFn isArrayCountCall;
   IsStringCountCallFn isStringCountCall;
   IsVectorCapacityCallFn isVectorCapacityCall;

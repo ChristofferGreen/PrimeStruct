@@ -203,7 +203,8 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     const Expr &expr,
     const LocalMap &localsIn,
     const IsSetupInferenceEntryArgsNameFn &isEntryArgsName,
-    LocalInfo::ValueKind &kindOut) {
+    LocalInfo::ValueKind &kindOut,
+    const ResolveSetupInferenceCallCollectionAccessValueKindFn &resolveCallCollectionAccessValueKind) {
   kindOut = LocalInfo::ValueKind::Unknown;
 
   std::string accessName;
@@ -316,6 +317,12 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
           kindOut = valueKind;
           return ArrayMapAccessElementKindResolution::Resolved;
         }
+      }
+      LocalInfo::ValueKind callValueKind = LocalInfo::ValueKind::Unknown;
+      if (resolveCallCollectionAccessValueKind &&
+          resolveCallCollectionAccessValueKind(target, localsIn, callValueKind)) {
+        kindOut = callValueKind;
+        return ArrayMapAccessElementKindResolution::Resolved;
       }
     }
 
