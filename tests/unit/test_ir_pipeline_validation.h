@@ -5118,6 +5118,67 @@ TEST_CASE("emitter expr control method-path step rewrites eligible method calls"
   CHECK_FALSE(primec::emitter::runEmitterExprControlMethodPathStep(methodExpr, {}, {}, {}, {}, {}).has_value());
 }
 
+TEST_CASE("emitter count rewrite keeps canonical vector capacity helpers") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr capacityExpr;
+  capacityExpr.kind = primec::Expr::Kind::Call;
+  capacityExpr.name = "/std/collections/vector/capacity";
+  capacityExpr.args = {receiverExpr};
+
+  int resolveCalls = 0;
+  auto resolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      capacityExpr,
+      "/std/collections/vector/capacity",
+      {},
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        ++resolveCalls;
+        CHECK(methodCandidate.isMethodCall);
+        CHECK(methodCandidate.name == "capacity");
+        REQUIRE(methodCandidate.args.size() == 1);
+        CHECK(methodCandidate.args.front().kind == primec::Expr::Kind::Name);
+        CHECK(methodCandidate.args.front().name == "values");
+        pathOut = "/vector/capacity";
+        return true;
+      });
+  REQUIRE(resolvedPath.has_value());
+  CHECK(*resolvedPath == "/vector/capacity");
+  CHECK(resolveCalls == 1);
+}
+
+TEST_CASE("emitter count rewrite rejects removed array capacity alias") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr capacityExpr;
+  capacityExpr.kind = primec::Expr::Kind::Call;
+  capacityExpr.name = "/array/capacity";
+  capacityExpr.args = {receiverExpr};
+
+  int resolveCalls = 0;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
+                  capacityExpr,
+                  "/array/capacity",
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  [&](const primec::Expr &, std::string &) {
+                    ++resolveCalls;
+                    return true;
+                  })
+                  .has_value());
+  CHECK(resolveCalls == 0);
+}
+
 TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls" * doctest::skip()) {
   primec::Expr methodExpr;
   methodExpr.kind = primec::Expr::Kind::Call;

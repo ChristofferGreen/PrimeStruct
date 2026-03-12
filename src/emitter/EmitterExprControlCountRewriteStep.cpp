@@ -36,7 +36,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = normalized.substr(arrayPrefix.size());
-    if (helperNameOut == "count" || helperNameOut == "at" || helperNameOut == "at_unsafe") {
+    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }
     return true;
@@ -101,7 +101,7 @@ bool isNamespacedVectorHelperCall(const Expr &expr) {
   }
   if (normalized.rfind("array/", 0) == 0) {
     const std::string helper = normalized.substr(std::string("array/").size());
-    return helper != "at" && helper != "at_unsafe";
+    return !isRemovedVectorCompatibilityHelper(helper);
   }
   return false;
 }
