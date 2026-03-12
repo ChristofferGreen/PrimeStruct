@@ -447,5 +447,3 @@ unused()
 }
 
 TEST_SUITE_END();
-
-TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");

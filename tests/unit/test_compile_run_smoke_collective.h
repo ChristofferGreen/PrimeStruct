@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("compiles and runs import after definitions") {
   const std::string source = R"(
 namespace util {
@@ -424,6 +426,7 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
+
 TEST_CASE("compiles and runs map indexing") {
   const std::string source = R"(
 [return<int>]
@@ -590,3 +593,5 @@ main() {
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 4);
 }
+
+TEST_SUITE_END();

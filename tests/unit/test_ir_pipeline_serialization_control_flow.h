@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.serialization");
+
 TEST_CASE("ir lowers if/else to jumps") {
   const std::string source = R"(
 [return<int>]
@@ -3435,3 +3437,5 @@ main() {
   CHECK(error.empty());
   CHECK(result == 9);
 }
+
+TEST_SUITE_END();

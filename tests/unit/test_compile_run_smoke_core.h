@@ -2570,3 +2570,5 @@ main() {
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 0);
 }
+
+TEST_SUITE_END();

@@ -6882,3 +6882,5 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 3);
 }
+
+TEST_SUITE_END();

@@ -562,7 +562,7 @@ main() {
   checkMathConformance(source, "math_conformance_roots");
 }
 
-TEST_CASE("math conformance trig quadrants") {
+TEST_CASE("math conformance trig quadrants axes") {
   const std::string source = R"(
 import /std/math/*
 
@@ -607,6 +607,37 @@ main() {
   emit("cos_two_pi"utf8, near(cos(two_pi), 1.0f32, 0.02f32))
 
   emit("tan_quarter_pi"utf8, abs(tan(quarter_pi) - 1.0f32) < 0.02f32)
+  return(0i32)
+}
+)";
+  checkMathConformance(source, "math_conformance_trig_quadrants_axes");
+}
+
+TEST_CASE("math conformance trig quadrants symmetries") {
+  const std::string source = R"(
+import /std/math/*
+
+[int]
+pass([bool] ok) {
+  if(ok) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+
+[effects(io_out)]
+emit([string] label, [bool] ok) {
+  print(label)
+  print(" "utf8)
+  print_line(pass(ok))
+}
+
+[return<int>]
+main() {
+  [f32] pi_f{convert<f32>(pi)}
+  [f32] half_pi{pi_f / 2.0f32}
+  [f32] three_half_pi{pi_f * 1.5f32}
 
   [f32] x{0.7f32}
   emit("sin_sym"utf8, abs(sin(-x) + sin(x)) < 0.002f32)
@@ -620,14 +651,67 @@ main() {
   emit("sin_small_angle"utf8, abs(sin(small) - small) < 0.0002f32)
   emit("tan_identity"utf8, abs(tan(0.3f32) - sin(0.3f32) / cos(0.3f32)) < 0.02f32)
   [f32] eps{0.001f32}
-  emit("sin_cross_zero"utf8, sin(eps) > 0.0f32 && sin(-eps) < 0.0f32)
   emit("cos_cross_half_pi"utf8, cos(half_pi - eps) > 0.0f32 && cos(half_pi + eps) < 0.0f32)
-  emit("sin_cross_pi"utf8, sin(pi_f - eps) > 0.0f32 && sin(pi_f + eps) < 0.0f32)
   emit("cos_cross_three_half_pi"utf8, cos(three_half_pi - eps) < 0.0f32 && cos(three_half_pi + eps) > 0.0f32)
   return(0i32)
 }
 )";
-  checkMathConformance(source, "math_conformance_trig_quadrants");
+  checkMathConformance(source, "math_conformance_trig_quadrants_symmetry");
+}
+
+TEST_CASE("math conformance trig quadrants range reduction") {
+  const std::string source = R"(
+import /std/math/*
+
+[int]
+pass([bool] ok) {
+  if(ok) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+
+[effects(io_out)]
+emit([string] label, [bool] ok) {
+  print(label)
+  print(" "utf8)
+  print_line(pass(ok))
+}
+
+[return<int>]
+main() {
+  [f32] pi_f{convert<f32>(pi)}
+  [f32] tau_f{pi_f * 2.0f32}
+  [f32] eps{0.001f32}
+
+  emit("sin_cross_zero"utf8, sin(eps) > 0.0f32 && sin(-eps) < 0.0f32)
+  emit("sin_cross_pi"utf8, sin(pi_f - eps) > 0.0f32 && sin(pi_f + eps) < 0.0f32)
+
+  [array<f32>] large_angles{array<f32>(10.0f32, 20.0f32, 100.0f32, 1000.0f32, 10000.0f32)}
+  [int mut] idx{0}
+  [int mut] ok_sin{1}
+  [int mut] ok_cos{1}
+  while(idx < large_angles.count()) {
+    [f32] x{large_angles[idx]}
+    [f32] cycles{floor(x / tau_f)}
+    [f32] reduced{x - cycles * tau_f}
+    if(abs(sin(x) - sin(reduced)) > 0.1f32) {
+      ok_sin = 0
+    } else {
+    }
+    if(abs(cos(x) - cos(reduced)) > 0.1f32) {
+      ok_cos = 0
+    } else {
+    }
+    idx = idx + 1
+  }
+  emit("sin_range_reduce"utf8, ok_sin == 1)
+  emit("cos_range_reduce"utf8, ok_cos == 1)
+  return(0i32)
+}
+)";
+  checkMathConformance(source, "math_conformance_trig_quadrants_range_reduce");
 }
 
 TEST_CASE("math conformance float helpers parse tokens") {
@@ -1531,7 +1615,7 @@ main() {
   checkMathConformance(source, "math_conformance_grid");
 }
 
-TEST_CASE("math conformance float baseline samples") {
+TEST_CASE("math conformance float baseline trigonometric samples") {
   const std::string source = R"(
 import /std/math/*
 
@@ -1555,6 +1639,30 @@ main() {
   emit("asin_0_5"utf8, asin(0.5f32))
   emit("acos_0_5"utf8, acos(0.5f32))
   emit("atan_0_5"utf8, atan(0.5f32))
+  return(0i32)
+}
+)";
+  checkMathConformanceFloats(source, "math_conformance_float_samples_trig", 25.0, 5e-4);
+}
+
+TEST_CASE("math conformance float baseline transcendental samples") {
+  const std::string source = R"(
+import /std/math/*
+
+[effects(io_out)]
+emit([string] label, [f32] value) {
+  print(label)
+  print(" "utf8)
+  print_line(scaled(value))
+}
+
+[i64]
+scaled([f32] value) {
+  return(convert<i64>(round(value * 10000.0f32)))
+}
+
+[return<int>]
+main() {
   emit("sinh_1"utf8, sinh(1.0f32))
   emit("cosh_1"utf8, cosh(1.0f32))
   emit("tanh_1"utf8, tanh(1.0f32))
@@ -1562,6 +1670,30 @@ main() {
   emit("log_2"utf8, log(2.0f32))
   emit("exp2_3"utf8, exp2(3.0f32))
   emit("log2_8"utf8, log2(8.0f32))
+  return(0i32)
+}
+)";
+  checkMathConformanceFloats(source, "math_conformance_float_samples_transcendental", 25.0, 5e-4);
+}
+
+TEST_CASE("math conformance float baseline composition samples") {
+  const std::string source = R"(
+import /std/math/*
+
+[effects(io_out)]
+emit([string] label, [f32] value) {
+  print(label)
+  print(" "utf8)
+  print_line(scaled(value))
+}
+
+[i64]
+scaled([f32] value) {
+  return(convert<i64>(round(value * 10000.0f32)))
+}
+
+[return<int>]
+main() {
   emit("sqrt_2"utf8, sqrt(2.0f32))
   emit("cbrt_27"utf8, cbrt(27.0f32))
   emit("hypot_3_4"utf8, hypot(3.0f32, 4.0f32))
@@ -1570,10 +1702,10 @@ main() {
   return(0i32)
 }
 )";
-  checkMathConformanceFloats(source, "math_conformance_float_samples", 25.0, 5e-4);
+  checkMathConformanceFloats(source, "math_conformance_float_samples_composition", 25.0, 5e-4);
 }
 
-TEST_CASE("math conformance float grids") {
+TEST_CASE("math conformance float grid sin") {
   const std::string source = R"(
 import /std/math/*
 
@@ -1598,7 +1730,30 @@ main() {
   emit("sin_0_5"utf8, sin(0.5f32))
   emit("sin_1"utf8, sin(1.0f32))
   emit("sin_3"utf8, sin(3.0f32))
+  return(0i32)
+}
+)";
+  checkMathConformanceFloats(source, "math_conformance_float_grid_sin", 25.0, 5e-4);
+}
 
+TEST_CASE("math conformance float grid cos") {
+  const std::string source = R"(
+import /std/math/*
+
+[effects(io_out)]
+emit([string] label, [f32] value) {
+  print(label)
+  print(" "utf8)
+  print_line(scaled(value))
+}
+
+[i64]
+scaled([f32] value) {
+  return(convert<i64>(round(value * 10000.0f32)))
+}
+
+[return<int>]
+main() {
   emit("cos_-3"utf8, cos(-3.0f32))
   emit("cos_-1"utf8, cos(-1.0f32))
   emit("cos_-0_5"utf8, cos(-0.5f32))
@@ -1606,7 +1761,30 @@ main() {
   emit("cos_0_5"utf8, cos(0.5f32))
   emit("cos_1"utf8, cos(1.0f32))
   emit("cos_3"utf8, cos(3.0f32))
+  return(0i32)
+}
+)";
+  checkMathConformanceFloats(source, "math_conformance_float_grid_cos", 25.0, 5e-4);
+}
 
+TEST_CASE("math conformance float grid exp_log") {
+  const std::string source = R"(
+import /std/math/*
+
+[effects(io_out)]
+emit([string] label, [f32] value) {
+  print(label)
+  print(" "utf8)
+  print_line(scaled(value))
+}
+
+[i64]
+scaled([f32] value) {
+  return(convert<i64>(round(value * 10000.0f32)))
+}
+
+[return<int>]
+main() {
   emit("exp_-2"utf8, exp(-2.0f32))
   emit("exp_-1"utf8, exp(-1.0f32))
   emit("exp_0"utf8, exp(0.0f32))
@@ -1618,14 +1796,37 @@ main() {
   emit("log_1"utf8, log(1.0f32))
   emit("log_2"utf8, log(2.0f32))
   emit("log_4"utf8, log(4.0f32))
+  return(0i32)
+}
+)";
+  checkMathConformanceFloats(source, "math_conformance_float_grid_exp_log", 25.0, 5e-4);
+}
 
+TEST_CASE("math conformance float grid hypot") {
+  const std::string source = R"(
+import /std/math/*
+
+[effects(io_out)]
+emit([string] label, [f32] value) {
+  print(label)
+  print(" "utf8)
+  print_line(scaled(value))
+}
+
+[i64]
+scaled([f32] value) {
+  return(convert<i64>(round(value * 10000.0f32)))
+}
+
+[return<int>]
+main() {
   emit("hypot_3_4"utf8, hypot(3.0f32, 4.0f32))
   emit("hypot_5_12"utf8, hypot(5.0f32, 12.0f32))
   emit("hypot_1_2"utf8, hypot(1.0f32, 2.0f32))
   return(0i32)
 }
 )";
-  checkMathConformanceFloats(source, "math_conformance_float_grid", 25.0, 5e-4);
+  checkMathConformanceFloats(source, "math_conformance_float_grid_hypot", 25.0, 5e-4);
 }
 
 TEST_CASE("math conformance native approximation limits") {

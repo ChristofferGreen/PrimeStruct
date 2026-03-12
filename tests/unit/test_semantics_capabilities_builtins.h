@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.semantics.struct_transforms");
+
 TEST_CASE("struct transforms are rejected on executions") {
   const std::string source = R"(
 [return<int>]
@@ -578,3 +580,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

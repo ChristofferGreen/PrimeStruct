@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.imports");
+
 TEST_CASE("compiles and runs collection literals in C++ emitter") {
   const std::string source = R"(
 [return<int>]
@@ -321,3 +323,5 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 1);
 }
+
+TEST_SUITE_END();

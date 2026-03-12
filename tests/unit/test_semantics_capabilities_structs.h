@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.semantics.effects");
+
 TEST_CASE("execution effects transform validates") {
   const std::string source = R"(
 [return<int>]
@@ -3547,3 +3549,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("recursive struct layout not supported") != std::string::npos);
 }
+
+TEST_SUITE_END();

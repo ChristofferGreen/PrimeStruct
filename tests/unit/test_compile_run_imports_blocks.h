@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.imports");
+
 TEST_CASE("compiles and runs import inside namespace") {
   const std::string libPath =
       writeTemp("compile_namespace_lib.prime", "[return<int>]\nhelper(){ return(9i32) }\n");
@@ -483,3 +485,5 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
 }
+
+TEST_SUITE_END();

@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.imports");
+
 TEST_CASE("compiles and runs versioned import expansion with relative import entry") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_relative";
@@ -858,3 +860,5 @@ TEST_CASE("conformance: versioned import directory expansion order is determinis
   CHECK(bPos != std::string::npos);
   CHECK(aPos < bPos);
 }
+
+TEST_SUITE_END();

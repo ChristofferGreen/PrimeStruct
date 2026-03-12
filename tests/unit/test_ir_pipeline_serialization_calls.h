@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.serialization");
+
 TEST_CASE("ir lowers definition call by inlining") {
   const std::string source = R"(
 [return<int>]
@@ -679,3 +681,5 @@ TEST_CASE("ir and semantics agree on unresolved auto return_expr") {
   CHECK_FALSE(lowerer.lower(lowerProgram, "/main", {}, {}, module, lowerError));
   CHECK(lowerError.find("unable to infer return type on /pick") != std::string::npos);
 }
+
+TEST_SUITE_END();

@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+
 TEST_CASE("runs vm with math abs/sign/min/max") {
   const std::string source = R"(
 import /std/math/*
@@ -356,3 +358,5 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 3);
 }
+
+TEST_SUITE_END();

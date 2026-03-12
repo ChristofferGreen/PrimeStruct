@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+
 TEST_CASE("writes serialized ir output") {
   const std::string source = R"(
 [return<int>]

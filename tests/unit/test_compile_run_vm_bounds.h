@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+
 TEST_CASE("vm array access checks bounds") {
   const std::string source = R"(
 [return<int>]
@@ -328,3 +330,5 @@ main([array<string>] args) {
   CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
         std::string::npos);
 }
+
+TEST_SUITE_END();

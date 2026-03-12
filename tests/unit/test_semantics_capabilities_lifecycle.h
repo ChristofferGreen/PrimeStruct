@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.semantics.struct_transforms");
+
 TEST_CASE("struct definitions reject non-binding statements") {
   const std::string source = R"(
 [struct]
@@ -422,3 +424,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

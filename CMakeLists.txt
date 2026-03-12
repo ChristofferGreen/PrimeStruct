@@ -296,7 +296,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   function(addPrimeStructDoctestSuite suite)
     set(options)
-    set(oneValueArgs TIMEOUT LABEL SHARD_NAME FIRST LAST)
+    set(oneValueArgs TIMEOUT LABEL SHARD_NAME FIRST LAST SOURCE_FILE TEST_CASE TEST_CASE_EXCLUDE)
     cmake_parse_arguments(PrimeStructSuite "${options}" "${oneValueArgs}" "" ${ARGN})
     if (NOT PrimeStructSuite_TIMEOUT)
       set(PrimeStructSuite_TIMEOUT 300)
@@ -305,10 +305,24 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     if (PrimeStructSuite_SHARD_NAME)
-      set(testName "${testName}_${PrimeStructSuite_SHARD_NAME}")
+      set(shardId "${PrimeStructSuite_SHARD_NAME}")
+    elseif (PrimeStructSuite_FIRST AND PrimeStructSuite_LAST)
+      set(shardId "cases${PrimeStructSuite_FIRST}_${PrimeStructSuite_LAST}")
+    endif()
+    if (shardId)
+      set(testName "${testName}_${shardId}")
     endif()
 
     set(commandArgs "--test-suite=${suite}")
+    if (PrimeStructSuite_SOURCE_FILE)
+      list(APPEND commandArgs "--source-file=${PrimeStructSuite_SOURCE_FILE}")
+    endif()
+    if (PrimeStructSuite_TEST_CASE)
+      list(APPEND commandArgs "--test-case=${PrimeStructSuite_TEST_CASE}")
+    endif()
+    if (PrimeStructSuite_TEST_CASE_EXCLUDE)
+      list(APPEND commandArgs "--test-case-exclude=${PrimeStructSuite_TEST_CASE_EXCLUDE}")
+    endif()
     if (PrimeStructSuite_FIRST AND PrimeStructSuite_LAST)
       list(APPEND commandArgs "--order-by=file"
                               "--first=${PrimeStructSuite_FIRST}"
@@ -350,49 +364,226 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   foreach(suite IN LISTS PrimeStructCompileRunSuites)
     if (suite STREQUAL "primestruct.compile.run.smoke")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice01" FIRST 1 LAST 37)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice02" FIRST 38 LAST 73)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice03" FIRST 74 LAST 109)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 1 LAST 31)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 32 LAST 62)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "collective_paths_core"
+                                 SOURCE_FILE "*test_compile_run_smoke_collective.h" FIRST 1 LAST 11)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "collective_paths_extended"
+                                 SOURCE_FILE "*test_compile_run_smoke_collective.h" FIRST 12 LAST 22)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "argv_and_cli"
+                                 SOURCE_FILE "*test_compile_run_smoke_argv.h")
     elseif(suite STREQUAL "primestruct.compile.run.vm.collections")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice01" FIRST 1 LAST 84)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice02" FIRST 85 LAST 167)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice03" FIRST 168 LAST 250)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice04" FIRST 251 LAST 333)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice05" FIRST 334 LAST 416)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice06" FIRST 417 LAST 500)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "bounds_and_safety"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.h")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "map_helpers"
+                                 SOURCE_FILE "*test_compile_run_vm_maps.h")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "math_helpers"
+                                 SOURCE_FILE "*test_compile_run_vm_math.h")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_basics"
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.h" FIRST 1 LAST 22)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_emitters"
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.h" FIRST 23 LAST 44)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_exe_backend"
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.h" FIRST 45 LAST 66)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_argv_arrays"
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.h" FIRST 67 LAST 88)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "alias_and_basics"
+                                 SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 1 LAST 60)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "templated_wrapper_parity"
+                                 SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 61 LAST 138)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "stdlib_collection_shims"
+                                 SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 139 LAST 254)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "user_shadow_and_receiver_precedence"
+                                 SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 255 LAST 331)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "growth_limits_and_syntax"
+                                 SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 332 LAST 352)
     elseif(suite STREQUAL "primestruct.compile.run.emitters.cpp")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice01" FIRST 1 LAST 45)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice02" FIRST 46 LAST 89)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice03" FIRST 90 LAST 133)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice04" FIRST 134 LAST 177)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "lambda_and_mutator_resolution"
+                                 SOURCE_FILE "*test_compile_run_emitters.h" FIRST 1 LAST 45)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "collection_access_and_alias_forwarding"
+                                 SOURCE_FILE "*test_compile_run_emitters.h" FIRST 46 LAST 100)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "map_wrapper_and_fallback_inference"
+                                 SOURCE_FILE "*test_compile_run_emitters.h" FIRST 101 LAST 160)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "numeric_math_and_control_flow_core"
+                                 SOURCE_FILE "*test_compile_run_emitters.h" FIRST 161 LAST 176)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "numeric_math_and_control_flow_loops"
+                                 SOURCE_FILE "*test_compile_run_emitters.h" FIRST 177 LAST 192)
     elseif(suite STREQUAL "primestruct.compile.run.math_conformance")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance" SHARD_NAME "slice01" FIRST 1 LAST 11)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance" SHARD_NAME "slice02" FIRST 12 LAST 21)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance" SHARD_NAME "slice03" FIRST 22 LAST 31)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance" SHARD_NAME "slice04" FIRST 32 LAST 42)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "harness_and_docs"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 1 LAST 4)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "scalar_basics"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 5 LAST 8)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "trig_quadrant_axes"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 9 LAST 9)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "trig_quadrant_symmetries"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 10 LAST 10)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "trig_quadrant_range_reduction"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 11 LAST 11)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float_parser_helpers"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 12 LAST 13)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "trig_basics"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 14 LAST 14)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "inverse_trig_and_atan2"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 15 LAST 15)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "hyperbolic"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 16 LAST 16)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "inverse_hyperbolic"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 17 LAST 17)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "exp_and_log"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 18 LAST 18)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "exp_log_domains"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 19 LAST 19)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float64_basics"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 20 LAST 20)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float64_inverse_trig_logs"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 21 LAST 21)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float64_hyperbolic"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 22 LAST 22)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float64_grids"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 23 LAST 23)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float64_rounding"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 24 LAST 24)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "roots_rounding_and_misc"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 25 LAST 27)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "stress_grid"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 28 LAST 28)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float_baseline_trigonometric"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 29 LAST 29)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float_baseline_transcendental"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 30 LAST 30)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float_baseline_composition"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 31 LAST 31)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float_grid_sin"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 32 LAST 32)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float_grid_cos"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 33 LAST 33)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float_grid_exp_log"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 34 LAST 34)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "float_grid_hypot"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 35 LAST 35)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "native_approximation_limits"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 36 LAST 36)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "heavy_trig_workload"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 37 LAST 37)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "heavy_exp_log_workload"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 38 LAST 38)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "array_dense_and_deterministic"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 39 LAST 41)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "deterministic_and_conversions"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 42 LAST 44)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
+                                 SHARD_NAME "policy_and_edge_cases"
+                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 45 LAST 49)
     elseif(suite STREQUAL "primestruct.compile.run.native_backend.collections")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice01" FIRST 1 LAST 63)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice02" FIRST 64 LAST 126)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice03" FIRST 127 LAST 189)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice04" FIRST 190 LAST 252)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice05" FIRST 253 LAST 315)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice06" FIRST 316 LAST 377)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_aliases_and_wrappers"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 FIRST 1 LAST 63)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "templated_wrapper_parity"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 FIRST 64 LAST 141)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "stdlib_collection_shims"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 FIRST 142 LAST 180)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "stdlib_collection_shims_extended"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 FIRST 181 LAST 218)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "stdlib_collection_shims_accessors"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 FIRST 219 LAST 257)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "user_shadow_and_receiver_precedence_core"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 FIRST 258 LAST 296)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "user_shadow_and_receiver_precedence_advanced"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 FIRST 297 LAST 335)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "growth_limits_and_map_access"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 FIRST 336 LAST 380)
     elseif(suite STREQUAL "primestruct.compile.run.native_backend.math_numeric")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice01" FIRST 1 LAST 22)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice02" FIRST 23 LAST 44)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "math_builtins"
+                                 SOURCE_FILE "*test_compile_run_native_backend_math_numeric.h"
+                                 FIRST 1 LAST 22)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "numeric_and_boolean_flow"
+                                 SOURCE_FILE "*test_compile_run_native_backend_math_numeric.h"
+                                 FIRST 23 LAST 34)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "conversions_and_rejections"
+                                 SOURCE_FILE "*test_compile_run_native_backend_math_numeric.h"
+                                 FIRST 35 LAST 44)
     elseif(suite STREQUAL "primestruct.compile.run.imports")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice01" FIRST 1 LAST 23)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice02" FIRST 24 LAST 45)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice03" FIRST 46 LAST 67)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "versioned_import_resolution"
+                                 SOURCE_FILE "*test_compile_run_imports_versions.h")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "block_and_operator_rewrites"
+                                 SOURCE_FILE "*test_compile_run_imports_blocks.h")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "operations_and_collections"
+                                 SOURCE_FILE "*test_compile_run_imports_operations.h")
     elseif(suite STREQUAL "primestruct.compile.run.text_filters")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice01" FIRST 1 LAST 30)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice02" FIRST 31 LAST 60)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice03" FIRST 61 LAST 90)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice04" FIRST 91 LAST 119)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "flag_and_transform_basics"
+                                 SOURCE_FILE "*test_compile_run_text_filters_core.h" FIRST 1 LAST 28)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "semantic_transform_rules"
+                                 SOURCE_FILE "*test_compile_run_text_filters_core.h" FIRST 29 LAST 53)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "text_transform_rules"
+                                 SOURCE_FILE "*test_compile_run_text_filters_core.h" FIRST 54 LAST 84)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "misc_language_and_diagnostics_basics"
+                                 SOURCE_FILE "*test_compile_run_text_filters_misc.h" FIRST 1 LAST 18)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "misc_language_and_diagnostics_extended"
+                                 SOURCE_FILE "*test_compile_run_text_filters_misc.h" FIRST 19 LAST 35)
     elseif(suite STREQUAL "primestruct.compile.run.examples")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice01" FIRST 1 LAST 23)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice02" FIRST 24 LAST 46)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "slice03" FIRST 47 LAST 68)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "spinning_cube_pipeline_and_scripts"
+                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
+                                 FIRST 1 LAST 23)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "spinning_cube_argument_validation"
+                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
+                                 FIRST 24 LAST 47)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "native_window_launcher_and_preflight"
+                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
+                                 FIRST 48 LAST 62)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
+                                 SHARD_NAME "metal_pipeline_and_borrow_checker"
+                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
+                                 FIRST 63 LAST 68)
     else()
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900)
     endif()

@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.serialization");
+
 
 TEST_CASE("ir serialize roundtrip and vm execution") {
   const std::string source = R"(
@@ -734,3 +736,5 @@ main() {
   CHECK(blueField->isStatic == true);
   CHECK(redField->isStatic == true);
 }
+
+TEST_SUITE_END();

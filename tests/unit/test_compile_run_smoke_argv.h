@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("compiles and runs binding inference from if expression feeding method call") {
   const std::string source = R"(
 namespace i64 {
