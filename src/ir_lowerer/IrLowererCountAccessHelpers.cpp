@@ -205,7 +205,7 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
       return false;
     }
     if (it->second.kind == LocalInfo::Kind::Reference) {
-      return it->second.referenceToArray;
+      return it->second.referenceToArray || it->second.referenceToMap;
     }
     return it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
            it->second.isSoaVector ||

@@ -3092,6 +3092,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced map helpers accept canonical map references") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{location(values)}
+  [i32] c{/std/collections/map/count(ref)}
+  [i32] first{/std/collections/map/at(ref, 1i32)}
+  [i32] second{/std/collections/map/at_unsafe(ref, 2i32)}
+  return(plus(c, plus(first, second)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced map helpers keep canonical key diagnostics on map references") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{location(values)}
+  return(/std/collections/map/at(ref, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires map key type i32") != std::string::npos);
+}
+
 TEST_CASE("map namespaced count call resolves compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

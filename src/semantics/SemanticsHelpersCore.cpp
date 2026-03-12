@@ -94,6 +94,40 @@ std::string normalizeBindingTypeName(const std::string &name) {
   return name;
 }
 
+bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut) {
+  keyTypeOut.clear();
+  valueTypeOut.clear();
+
+  std::string typeName = normalizeBindingTypeName(binding.typeName);
+  std::string argsText = binding.typeTemplateArg;
+  if (typeName == "Reference") {
+    if (binding.typeTemplateArg.empty()) {
+      return false;
+    }
+    std::string base;
+    if (!splitTemplateTypeName(binding.typeTemplateArg, base, argsText) ||
+        normalizeBindingTypeName(base) != "map") {
+      return false;
+    }
+    typeName = "map";
+  }
+
+  std::string base;
+  if (typeName != "map") {
+    if (!splitTemplateTypeName(typeName, base, argsText) || normalizeBindingTypeName(base) != "map") {
+      return false;
+    }
+  }
+
+  std::vector<std::string> parts;
+  if (!splitTopLevelTemplateArgs(argsText, parts) || parts.size() != 2) {
+    return false;
+  }
+  keyTypeOut = parts[0];
+  valueTypeOut = parts[1];
+  return true;
+}
+
 std::string joinTemplateArgs(const std::vector<std::string> &args) {
   std::string out;
   for (size_t i = 0; i < args.size(); ++i) {
@@ -1631,9 +1665,16 @@ bool parseBindingInfo(const Expr &expr,
     if (!isPrimitiveBindingTypeName(normalizedTarget) && !isStructTypeName(normalizedTarget)) {
       std::string base;
       std::string arg;
-      if (splitTemplateTypeName(info.typeTemplateArg, base, arg) && base == "array") {
+      if (splitTemplateTypeName(info.typeTemplateArg, base, arg) && normalizeBindingTypeName(base) == "array") {
         std::vector<std::string> args;
         if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+          error = "unsupported reference target type: " + info.typeTemplateArg;
+          return false;
+        }
+      } else if (splitTemplateTypeName(info.typeTemplateArg, base, arg) &&
+                 normalizeBindingTypeName(base) == "map") {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
           error = "unsupported reference target type: " + info.typeTemplateArg;
           return false;
         }

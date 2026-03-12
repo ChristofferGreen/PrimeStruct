@@ -96,26 +96,15 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       valueTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(paramsIn, target.name)) {
-          if (normalizeBindingTypeName(paramBinding->typeName) != "map") {
-            return false;
-          }
-          std::vector<std::string> parts;
-          if (!splitTopLevelTemplateArgs(paramBinding->typeTemplateArg, parts) || parts.size() != 2) {
-            return false;
-          }
-          valueTypeOut = parts[1];
-          return true;
+          std::string ignoredKeyType;
+          return extractMapKeyValueTypes(*paramBinding, ignoredKeyType, valueTypeOut);
         }
         auto it = localsIn.find(target.name);
-        if (it == localsIn.end() || normalizeBindingTypeName(it->second.typeName) != "map") {
+        if (it == localsIn.end()) {
           return false;
         }
-        std::vector<std::string> parts;
-        if (!splitTopLevelTemplateArgs(it->second.typeTemplateArg, parts) || parts.size() != 2) {
-          return false;
-        }
-        valueTypeOut = parts[1];
-        return true;
+        std::string ignoredKeyType;
+        return extractMapKeyValueTypes(it->second, ignoredKeyType, valueTypeOut);
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;

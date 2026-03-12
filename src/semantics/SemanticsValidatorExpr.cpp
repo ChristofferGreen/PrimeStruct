@@ -1781,10 +1781,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto resolveMapTarget = [&](const Expr &target) -> bool {
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          return normalizeBindingTypeName(paramBinding->typeName) == "map";
+          std::string keyType;
+          std::string valueType;
+          return extractMapKeyValueTypes(*paramBinding, keyType, valueType);
         }
         auto it = locals.find(target.name);
-        return it != locals.end() && normalizeBindingTypeName(it->second.typeName) == "map";
+        if (it == locals.end()) {
+          return false;
+        }
+        std::string keyType;
+        std::string valueType;
+        return extractMapKeyValueTypes(it->second, keyType, valueType);
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collectionTypePath;
@@ -2023,26 +2030,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       keyTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          if (normalizeBindingTypeName(paramBinding->typeName) != "map") {
-            return false;
-          }
-          std::vector<std::string> parts;
-          if (!splitTopLevelTemplateArgs(paramBinding->typeTemplateArg, parts) || parts.size() != 2) {
-            return false;
-          }
-          keyTypeOut = parts[0];
-          return true;
+          std::string valueType;
+          return extractMapKeyValueTypes(*paramBinding, keyTypeOut, valueType);
         }
         auto it = locals.find(target.name);
-        if (it == locals.end() || normalizeBindingTypeName(it->second.typeName) != "map") {
+        if (it == locals.end()) {
           return false;
         }
-        std::vector<std::string> parts;
-        if (!splitTopLevelTemplateArgs(it->second.typeTemplateArg, parts) || parts.size() != 2) {
-          return false;
-        }
-        keyTypeOut = parts[0];
-        return true;
+        std::string valueType;
+        return extractMapKeyValueTypes(it->second, keyTypeOut, valueType);
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collectionTypePath;
@@ -2061,26 +2057,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       valueTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          if (normalizeBindingTypeName(paramBinding->typeName) != "map") {
-            return false;
-          }
-          std::vector<std::string> parts;
-          if (!splitTopLevelTemplateArgs(paramBinding->typeTemplateArg, parts) || parts.size() != 2) {
-            return false;
-          }
-          valueTypeOut = parts[1];
-          return true;
+          std::string keyType;
+          return extractMapKeyValueTypes(*paramBinding, keyType, valueTypeOut);
         }
         auto it = locals.find(target.name);
-        if (it == locals.end() || normalizeBindingTypeName(it->second.typeName) != "map") {
+        if (it == locals.end()) {
           return false;
         }
-        std::vector<std::string> parts;
-        if (!splitTopLevelTemplateArgs(it->second.typeTemplateArg, parts) || parts.size() != 2) {
-          return false;
-        }
-        valueTypeOut = parts[1];
-        return true;
+        std::string keyType;
+        return extractMapKeyValueTypes(it->second, keyType, valueTypeOut);
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collectionTypePath;

@@ -40,7 +40,8 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
       return LocalInfo::ValueKind::Unknown;
     }
     if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
-      if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
+      if (it->second.kind == LocalInfo::Kind::Reference &&
+          (it->second.referenceToArray || it->second.referenceToMap)) {
         return LocalInfo::ValueKind::Unknown;
       }
       return it->second.valueKind;
@@ -53,7 +54,8 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
       if (target.kind == Expr::Kind::Name) {
         auto it = localsIn.find(target.name);
         if (it != localsIn.end()) {
-          if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
+          if (it->second.kind == LocalInfo::Kind::Reference &&
+              (it->second.referenceToArray || it->second.referenceToMap)) {
             return LocalInfo::ValueKind::Unknown;
           }
           return it->second.valueKind;
@@ -230,7 +232,8 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     }
     const LocalInfo &info = it->second;
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
-           (info.kind == LocalInfo::Kind::Reference && info.referenceToArray) || info.isSoaVector ||
+           (info.kind == LocalInfo::Kind::Reference && (info.referenceToArray || info.referenceToMap)) ||
+           info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
   };
 
@@ -298,7 +301,9 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
 
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
-      if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map &&
+      if (it != localsIn.end() &&
+          ((it->second.kind == LocalInfo::Kind::Map) ||
+           (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap)) &&
           it->second.mapValueKind != LocalInfo::ValueKind::Unknown &&
           it->second.mapValueKind != LocalInfo::ValueKind::String) {
         kindOut = it->second.mapValueKind;

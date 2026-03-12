@@ -76,9 +76,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     std::string base;
     std::string arg;
-    if (splitTemplateTypeName(templateArg, base, arg) && base == "array") {
+    if (splitTemplateTypeName(templateArg, base, arg) && normalizeBindingTypeName(base) == "array") {
       std::vector<std::string> args;
       if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+        return ReturnKind::Array;
+      }
+    }
+    if (splitTemplateTypeName(templateArg, base, arg) && normalizeBindingTypeName(base) == "map") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
         return ReturnKind::Array;
       }
     }
@@ -97,9 +103,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     std::string base;
     std::string arg;
-    if (splitTemplateTypeName(templateArg, base, arg) && base == "array") {
+    if (splitTemplateTypeName(templateArg, base, arg) && normalizeBindingTypeName(base) == "array") {
       std::vector<std::string> args;
       if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+        return ReturnKind::Array;
+      }
+    }
+    if (splitTemplateTypeName(templateArg, base, arg) && normalizeBindingTypeName(base) == "map") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
         return ReturnKind::Array;
       }
     }
@@ -848,28 +860,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       valueTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          if (normalizeBindingTypeName(paramBinding->typeName) != "map") {
-            return false;
-          }
-          std::vector<std::string> parts;
-          if (!splitTopLevelTemplateArgs(paramBinding->typeTemplateArg, parts) || parts.size() != 2) {
-            return false;
-          }
-          keyTypeOut = parts[0];
-          valueTypeOut = parts[1];
-          return true;
+          return extractMapKeyValueTypes(*paramBinding, keyTypeOut, valueTypeOut);
         }
         auto it = locals.find(target.name);
-        if (it == locals.end() || normalizeBindingTypeName(it->second.typeName) != "map") {
+        if (it == locals.end()) {
           return false;
         }
-        std::vector<std::string> parts;
-        if (!splitTopLevelTemplateArgs(it->second.typeTemplateArg, parts) || parts.size() != 2) {
-          return false;
-        }
-        keyTypeOut = parts[0];
-        valueTypeOut = parts[1];
-        return true;
+        return extractMapKeyValueTypes(it->second, keyTypeOut, valueTypeOut);
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collectionTypePath;

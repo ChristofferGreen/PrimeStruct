@@ -419,11 +419,12 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     typeNameOut = "soa_vector";
     return true;
   }
-  if (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToArray) {
+  if (localInfo.kind == LocalInfo::Kind::Reference &&
+      (localInfo.referenceToArray || localInfo.referenceToMap)) {
     if (!localInfo.structTypeName.empty()) {
       resolvedTypePathOut = localInfo.structTypeName;
     } else {
-      typeNameOut = "array";
+      typeNameOut = localInfo.referenceToMap ? "map" : "array";
     }
     return true;
   }
@@ -789,7 +790,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
     const LocalInfo &info = it->second;
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
-           (info.kind == LocalInfo::Kind::Reference && info.referenceToArray) || info.isSoaVector ||
+           (info.kind == LocalInfo::Kind::Reference && (info.referenceToArray || info.referenceToMap)) ||
+           info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
   };
   auto isKnownVectorMutatorReceiverExpr = [&](const Expr &candidate) -> bool {

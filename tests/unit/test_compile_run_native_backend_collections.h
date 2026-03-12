@@ -336,6 +336,29 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
+TEST_CASE("compiles native stdlib namespaced map helpers on canonical map references") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{location(values)}
+  [i32] c{/std/collections/map/count(ref)}
+  [i32] first{/std/collections/map/at(ref, 1i32)}
+  [i32] second{/std/collections/map/at_unsafe(ref, 2i32)}
+  return(plus(c, plus(first, second)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_map_reference_helpers.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_map_reference_helpers_out.txt").string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_map_reference_helpers_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 0);
+}
+
 TEST_CASE("compiles and runs native canonical map method with slash return type receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

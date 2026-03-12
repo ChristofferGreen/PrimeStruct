@@ -72,6 +72,7 @@ bool isPrimitiveBindingTypeName(const std::string &name);
 bool isSoftwareNumericTypeName(const std::string &name);
 std::optional<std::string> findSoftwareNumericType(const std::string &typeName);
 std::string normalizeBindingTypeName(const std::string &name);
+bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut);
 std::string joinTemplateArgs(const std::vector<std::string> &args);
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);

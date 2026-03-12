@@ -24,6 +24,7 @@ struct LocalInfo {
   int32_t stringIndex = -1;
   bool argvChecked = true;
   bool referenceToArray = false;
+  bool referenceToMap = false;
   bool isUninitializedStorage = false;
   bool isSoaVector = false;
 };

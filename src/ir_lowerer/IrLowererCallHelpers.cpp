@@ -450,7 +450,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             info.kind == LocalInfo::Kind::Map) {
           return true;
         }
-        if (info.kind == LocalInfo::Kind::Reference && info.referenceToArray) {
+        if (info.kind == LocalInfo::Kind::Reference && (info.referenceToArray || info.referenceToMap)) {
           return true;
         }
         return info.valueKind == LocalInfo::ValueKind::String;
@@ -809,7 +809,9 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
   MapAccessTargetInfo info;
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
-    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
+    if (it != localsIn.end() &&
+        (it->second.kind == LocalInfo::Kind::Map ||
+         (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap))) {
       info.isMapTarget = true;
       info.mapKeyKind = it->second.mapKeyKind;
       info.mapValueKind = it->second.mapValueKind;

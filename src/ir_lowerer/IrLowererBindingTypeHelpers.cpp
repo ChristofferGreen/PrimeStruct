@@ -168,12 +168,28 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
     }
     std::string base;
     std::string arg;
-    if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "array") {
+    if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg)) {
       return;
     }
-    info.referenceToArray = true;
-    if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-      info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+    base = normalizeCollectionBindingTypeName(base);
+    if (base == "array") {
+      info.referenceToArray = true;
+      if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+        info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+      }
+      return;
+    }
+    if (base == "map") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
+        return;
+      }
+      info.referenceToMap = true;
+      info.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+      info.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+      if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+        info.valueKind = info.mapValueKind;
+      }
     }
     return;
   }
