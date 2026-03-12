@@ -336,6 +336,40 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
+TEST_CASE("compiles and runs native canonical map method with slash return type receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(73i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+makeValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(makeValues().count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_map_method_slash_return_type_receiver.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_canonical_map_method_slash_return_type_receiver_out.txt")
+          .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_canonical_map_method_slash_return_type_receiver_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 73);
+}
+
 TEST_CASE("compiles and runs native stdlib map constructor alias fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

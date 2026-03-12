@@ -175,6 +175,33 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("runs vm canonical map method with slash return type receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(73i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+makeValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(makeValues().count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_canonical_map_method_slash_return_type_receiver.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_canonical_map_method_slash_return_type_receiver_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 73);
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("runs vm stdlib namespaced map constructor fallback to map alias helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

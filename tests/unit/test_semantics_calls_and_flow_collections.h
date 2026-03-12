@@ -3439,6 +3439,50 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib canonical map helper resolves method-call sugar for slash return type") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(73i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+makeValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(makeValues().count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map slash return type keeps canonical method diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(73i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+makeValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(makeValues().count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("stdlib canonical map count method auto inference falls back to canonical helper return") {
   const std::string source = R"(
 [return<bool>]

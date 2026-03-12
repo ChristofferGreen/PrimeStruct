@@ -875,6 +875,19 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (!methodName.empty() && methodName.front() == '/') {
     methodName.erase(methodName.begin());
   }
+  auto normalizeCollectionReceiverTypeName = [](std::string value) -> std::string {
+    value = normalizeBindingTypeName(value);
+    if (!value.empty() && value.front() == '/') {
+      value.erase(value.begin());
+    }
+    if (value == "std/collections/vector") {
+      return "vector";
+    }
+    if (value == "std/collections/map") {
+      return "map";
+    }
+    return value;
+  };
   auto normalizeCollectionMethodName = [](const std::string &receiverTypeName,
                                           std::string candidate) -> std::string {
     if (receiverTypeName == "array" || receiverTypeName == "vector" || receiverTypeName == "soa_vector") {
@@ -961,6 +974,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty()) {
     typeName = typeBase;
   }
+  typeName = normalizeCollectionReceiverTypeName(typeName);
   const std::string normalizedMethodName = normalizeCollectionMethodName(typeName, methodName);
   if (isPrimitiveBindingTypeName(typeName)) {
     pathOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;
