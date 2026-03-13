@@ -28018,7 +28018,7 @@ TEST_CASE("ir lowerer statement call helper validates dispatch diagnostics") {
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer statement call helper emits direct calls" * doctest::skip()) {
+TEST_CASE("ir lowerer statement call helper emits direct calls") {
   using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
 
   primec::Expr methodStmt;
