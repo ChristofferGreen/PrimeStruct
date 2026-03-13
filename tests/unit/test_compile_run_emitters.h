@@ -2112,6 +2112,51 @@ main() {
   CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("rejects removed vector access alias named arguments in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/vector/at([values] values, [index] 0i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_removed_vector_access_alias_named_args.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_removed_vector_access_alias_named_args_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_removed_vector_access_alias_named_args_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("rejects removed vector access alias at_unsafe named arguments in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/vector/at_unsafe([values] values, [index] 0i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_removed_vector_access_alias_at_unsafe_named_args.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_removed_vector_access_alias_at_unsafe_named_args_exe")
+          .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_removed_vector_access_alias_at_unsafe_named_args_err.txt")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs user vector access positional call shadow in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

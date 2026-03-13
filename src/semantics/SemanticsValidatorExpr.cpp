@@ -5523,7 +5523,51 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
+      auto getRemovedVectorAccessBuiltinName = [&](const Expr &candidate, std::string &helperOut) -> bool {
+        helperOut.clear();
+        if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+          return false;
+        }
+        std::string normalized = candidate.name;
+        if (!normalized.empty() && normalized.front() == '/') {
+          normalized.erase(normalized.begin());
+        }
+        if (normalized == "vector/at") {
+          helperOut = "at";
+          return true;
+        }
+        if (normalized == "vector/at_unsafe") {
+          helperOut = "at_unsafe";
+          return true;
+        }
+        return false;
+      };
+      if (!resolvedMethod && it == defMap_.end()) {
+        std::string removedVectorAccessBuiltinName;
+        if (getRemovedVectorAccessBuiltinName(expr, removedVectorAccessBuiltinName)) {
+          if (hasNamedArguments(expr.argNames)) {
+            error_ = "named arguments not supported for builtin calls";
+            return false;
+          }
+          if (!expr.templateArgs.empty()) {
+            error_ = removedVectorAccessBuiltinName + " does not accept template arguments";
+            return false;
+          }
+          if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+            error_ = removedVectorAccessBuiltinName + " does not accept block arguments";
+            return false;
+          }
+          if (expr.args.size() != 2) {
+            error_ = "argument count mismatch for builtin " + removedVectorAccessBuiltinName;
+            return false;
+          }
+        }
+      }
       if (getBuiltinArrayAccessName(expr, builtinName)) {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
         if (!expr.templateArgs.empty()) {
           error_ = builtinName + " does not accept template arguments";
           return false;

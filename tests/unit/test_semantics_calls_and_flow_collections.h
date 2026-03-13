@@ -6939,12 +6939,25 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access helper rejects named arguments" * doctest::skip()) {
+TEST_CASE("vector namespaced access helper rejects named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 5i32)}
   return(/vector/at([values] values, [index] 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced at_unsafe helper rejects named arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/vector/at_unsafe([values] values, [index] 0i32))
 }
 )";
   std::string error;
