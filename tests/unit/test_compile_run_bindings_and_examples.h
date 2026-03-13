@@ -4277,6 +4277,73 @@ TEST_CASE("software renderer command list docs stay source locked") {
         std::string::npos);
 }
 
+TEST_CASE("image api docs and stdlib stay source locked") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path imageStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "image" / "image.prime";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(imageStdlibPath)) {
+    imageStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "image" / "image.prime";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(imageStdlibPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string imageStdlib = readFile(imageStdlibPath.string());
+
+  CHECK(primeStructDoc.find("the shared image file-I/O API currently lives under `/std/image/*`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`ppm.read(width, height, pixels, path) -> Result<ImageError>`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`ppm.write(path, width, height, pixels) -> Result<ImageError>`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`png.read(width, height, pixels, path) -> Result<ImageError>`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`png.write(path, width, height, pixels) -> Result<ImageError>`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`pixels` is a flat `vector<i32>` in RGB byte order") != std::string::npos);
+  CHECK(primeStructDoc.find("requires `effects(file_write)` for both read and write calls") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`ppm.read`, `ppm.write`, `png.read`, and `png.write` deterministically return unsupported `ImageError` values in VM/native/Wasm/C++ emitter flows") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`ImageError.why()` currently returns `image_read_unsupported` or `image_write_unsupported`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("print_line(Result.why(ppm.read(width, height, pixels, \"input.ppm\"utf8)))") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("print_line(Result.why(png.write(\"output.png\"utf8, width, height, pixels)))") !=
+        std::string::npos);
+
+  CHECK(imageStdlib.find("[public struct]\n  ImageError()") != std::string::npos);
+  CHECK(imageStdlib.find("return(1i32)") != std::string::npos);
+  CHECK(imageStdlib.find("return(2i32)") != std::string::npos);
+  CHECK(imageStdlib.find("\"image_read_unsupported\"utf8") != std::string::npos);
+  CHECK(imageStdlib.find("\"image_write_unsupported\"utf8") != std::string::npos);
+  CHECK(imageStdlib.find("namespace ppm") != std::string::npos);
+  CHECK(imageStdlib.find("namespace png") != std::string::npos);
+  CHECK(imageStdlib.find("[public return<Result<ImageError>> effects(file_write)]\n    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path)") !=
+        std::string::npos);
+  CHECK(imageStdlib.find("[public return<Result<ImageError>> effects(file_write)]\n    write([string] path, [i32] width, [i32] height, [vector<i32>] pixels)") !=
+        std::string::npos);
+
+  const size_t ppmStart = imageStdlib.find("namespace ppm");
+  const size_t pngStart = imageStdlib.find("namespace png");
+  REQUIRE(ppmStart != std::string::npos);
+  REQUIRE(pngStart != std::string::npos);
+  REQUIRE(pngStart > ppmStart);
+  const std::string ppmBody = imageStdlib.substr(ppmStart, pngStart - ppmStart);
+  CHECK(ppmBody.find("return(unsupported_read())") != std::string::npos);
+  CHECK(ppmBody.find("return(unsupported_write())") != std::string::npos);
+  CHECK(ppmBody.find("return(1i32)") == std::string::npos);
+  CHECK(ppmBody.find("return(2i32)") == std::string::npos);
+
+  const std::string pngBody = imageStdlib.substr(pngStart);
+  CHECK(pngBody.find("return(unsupported_read())") != std::string::npos);
+  CHECK(pngBody.find("return(unsupported_write())") != std::string::npos);
+  CHECK(pngBody.find("return(1i32)") == std::string::npos);
+  CHECK(pngBody.find("return(2i32)") == std::string::npos);
+}
+
 TEST_CASE("software renderer composite widgets stay source locked to basic widgets") {
   std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
   if (!std::filesystem::exists(uiStdlibPath)) {

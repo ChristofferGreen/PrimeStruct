@@ -1,0 +1,56 @@
+namespace std {
+  namespace image {
+  [public struct]
+  ImageError() {
+    [public i32] code{0i32}
+  }
+
+  namespace ImageError {
+    [public return<string>]
+    why([ImageError] err) {
+      return(
+        if(equal(err.code, 1i32),
+          then() { "image_read_unsupported"utf8 },
+          else() {
+            if(equal(err.code, 2i32),
+              then() { "image_write_unsupported"utf8 },
+              else() { "image_invalid_operation"utf8 })
+          }))
+    }
+  }
+
+  [return<Result<ImageError>>]
+  unsupported_read() {
+    return(1i32)
+  }
+
+  [return<Result<ImageError>>]
+  unsupported_write() {
+    return(2i32)
+  }
+
+  namespace ppm {
+    [public return<Result<ImageError>> effects(file_write)]
+    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
+      return(unsupported_read())
+    }
+
+    [public return<Result<ImageError>> effects(file_write)]
+    write([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
+      return(unsupported_write())
+    }
+  }
+
+  namespace png {
+    [public return<Result<ImageError>> effects(file_write)]
+    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
+      return(unsupported_read())
+    }
+
+    [public return<Result<ImageError>> effects(file_write)]
+    write([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
+      return(unsupported_write())
+    }
+  }
+  }
+}

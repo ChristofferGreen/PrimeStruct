@@ -9,6 +9,9 @@ Archived from `docs/todo.md` on March 13, 2026.
 - ✓ Fix failing `PrimeStruct_primestruct_compile_run_native_backend_core` and `PrimeStruct_primestruct_compile_run_native_backend_math_numeric` by restoring explicit-binding numeric compatibility for float/software-numeric initializers in semantics and by flushing native value-stack cache at control-flow merge targets; added focused semantics/native regression tests.
 - ✓ Fix failing compile-run suites (`smoke`, `glsl`, `text_filters`, `examples`) by aligning regression expectations with current backend contracts, correcting outdated fixture sources/options, and pruning temporarily unstable aggregate suites so `./scripts/compile.sh` returns green.
 
+**Backends & IR**
+- ✓ Define the shared language-level `/std/image/*` file-I/O API and the deterministic unsupported-diagnostic contract for backends that cannot do image file I/O. Testing: added `stdlib/std/image/image.prime` with shared `ppm`/`png` read-write signatures plus deterministic unsupported `ImageError` codes/strings, compile-run coverage across VM/native/C++ emitter paths that locks the current unsupported behavior, and doc/source-lock coverage on the published `/std/image/*` API contract.
+
 **Architecture follow-up (callable IR decoupling)**
 - ✓ Add PSIR `Call`/`Return` function-call opcodes and update `docs/PrimeStruct.md` IR spec.
 - ✓ Refactor IR lowerer to emit full function tables instead of a single inlined entry function.

@@ -695,6 +695,35 @@ sum_two_files([string] a, [string] b) {
   }
   ```
 
+### Image File I/O (draft)
+- **Shared stdlib surface:** the shared image file-I/O API currently lives under `/std/image/*`.
+- **Current prototype surface:**
+  - `ImageError`
+  - `ppm.read(width, height, pixels, path) -> Result<ImageError>`
+  - `ppm.write(path, width, height, pixels) -> Result<ImageError>`
+  - `png.read(width, height, pixels, path) -> Result<ImageError>`
+  - `png.write(path, width, height, pixels) -> Result<ImageError>`
+- **Buffer contract:** `width` and `height` are `i32` out-parameters, and `pixels` is a flat `vector<i32>` in RGB byte order (`r, g, b, r, g, b, ...`).
+- **Current effect requirement:** image file I/O currently follows `File<...>` behavior and therefore requires `effects(file_write)` for both read and write calls.
+- **Current unsupported contract:** until backend image file-I/O support lands, `ppm.read`, `ppm.write`, `png.read`, and `png.write` deterministically return unsupported `ImageError` values in VM/native/Wasm/C++ emitter flows instead of ad-hoc compile-time or runtime failures.
+- **Error strings:** `ImageError.why()` currently returns `image_read_unsupported` or `image_write_unsupported`.
+- **Example:**
+  ```
+  import /std/image/*
+
+  [effects(heap_alloc, io_out, file_write), return<int>]
+  main() {
+    [i32 mut] width{0i32}
+    [i32 mut] height{0i32}
+    [vector<i32> mut] pixels{vector<i32>()}
+    print_line(Result.why(ppm.read(width, height, pixels, "input.ppm"utf8)))
+    print_line(Result.why(ppm.write("output.ppm"utf8, width, height, pixels)))
+    print_line(Result.why(png.read(width, height, pixels, "input.png"utf8)))
+    print_line(Result.why(png.write("output.png"utf8, width, height, pixels)))
+    return(plus(width, height))
+  }
+  ```
+
 ## Runtime Stack Model
 - **Frames:** VM and native execution both support dynamic call frames for `Call`/`CallVoid` when callable IR opcodes are present. Lowering still inlines source-level definition calls, so entry-lowered source programs typically use one frame unless callable IR is emitted directly. Locals live in fixed 16-byte slots; `location(...)` yields a byte offset into this slot space and `dereference` uses `LoadIndirect`/`StoreIndirect`.
 - **Deterministic evaluation:** arguments evaluate left-to-right; boolean `and`/`or` short-circuit; `return(value)` unwinds the current definition. In value blocks, `return(value)` exits the block and yields its value. Implicit `return(void)` fires if a definition body reaches the end.

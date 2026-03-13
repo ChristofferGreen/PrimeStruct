@@ -232,6 +232,38 @@ main() {
   CHECK(readFile(outPath) == "custom error\n");
 }
 
+TEST_CASE("C++ emitter supports image api unsupported contract deterministically") {
+  const std::string source = R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  print_line(Result.why(ppm.read(width, height, pixels, "input.ppm"utf8)))
+  print_line(Result.why(ppm.write("output.ppm"utf8, width, height, pixels)))
+  print_line(Result.why(png.read(width, height, pixels, "input.png"utf8)))
+  print_line(Result.why(png.write("output.png"utf8, width, height, pixels)))
+  return(plus(width, height))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_image_api_unsupported.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_image_api_unsupported").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_image_api_unsupported.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) ==
+        "image_read_unsupported\n"
+        "image_write_unsupported\n"
+        "image_read_unsupported\n"
+        "image_write_unsupported\n");
+}
+
 TEST_CASE("C++ emitter runs software renderer command serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
