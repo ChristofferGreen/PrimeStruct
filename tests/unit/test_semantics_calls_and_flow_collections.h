@@ -2108,6 +2108,43 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pop rejects non-drop-trivial vector element types") {
+  const std::string source = R"(
+[struct]
+Owned() {
+  [i32] value{1i32}
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Owned> mut] values{vector<Owned>(Owned())}
+  pop(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pop requires drop-trivial vector element type until container drop semantics are implemented: Owned") !=
+        std::string::npos);
+}
+
+TEST_CASE("pop allows drop-trivial string vector elements") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<string> mut] values{vector<string>("left"raw_utf8, "right"raw_utf8)}
+  pop(values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("pop rejects block arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -2212,6 +2249,34 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("clear rejects vector elements with nested drop requirements") {
+  const std::string source = R"(
+[struct]
+Owned() {
+  [i32] value{1i32}
+
+  Destroy() {
+  }
+}
+
+[struct]
+Wrapper() {
+  [Owned] value{Owned()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper())}
+  clear(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("clear requires drop-trivial vector element type until container drop semantics are implemented: Wrapper") !=
+        std::string::npos);
 }
 
 TEST_CASE("clear call keeps user-defined vector helper precedence") {
