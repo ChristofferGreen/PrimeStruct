@@ -115,8 +115,20 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
         if (!splitTemplateArgs(arg, args) || args.size() != 1) {
           return false;
         }
-        currentType = trimTemplateTypeText(args.front());
-        continue;
+        const std::string innerType = trimTemplateTypeText(args.front());
+        std::string innerBase;
+        std::string innerArg;
+        if (splitTemplateTypeName(innerType, innerBase, innerArg)) {
+          innerBase = normalizeDeclaredCollectionTypeBase(innerBase);
+          if (innerBase == "array" || innerBase == "vector" || innerBase == "map" || innerBase == "soa_vector") {
+            currentType = innerType;
+            continue;
+          }
+        }
+        info.returnsArray = false;
+        info.kind = LocalInfo::ValueKind::Int64;
+        info.returnsVoid = false;
+        return true;
       }
       return false;
     }

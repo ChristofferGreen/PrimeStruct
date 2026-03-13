@@ -2634,6 +2634,57 @@ TEST_CASE("ir lowerer inference return-info setup handles declared return transf
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer inference return-info setup treats pointerish returns as address-like i64") {
+  auto checkReturnType = [](const std::string &returnType) {
+    primec::Definition definition;
+    definition.fullPath = "/pointerish";
+    primec::Transform returnTransform;
+    returnTransform.name = "return";
+    returnTransform.templateArgs = {returnType};
+    definition.transforms.push_back(returnTransform);
+
+    primec::ir_lowerer::ReturnInfo info;
+    std::string error;
+    CHECK(primec::ir_lowerer::runLowerInferenceReturnInfoSetup(
+        {
+            .resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; },
+            .resolveStructArrayInfoFromPath =
+                [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
+            .isBindingMutable = [](const primec::Expr &) { return false; },
+            .bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+            .hasExplicitBindingTypeTransform = [](const primec::Expr &) { return true; },
+            .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            .isFileErrorBinding = [](const primec::Expr &) { return false; },
+            .setReferenceArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+            .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+            .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+            .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return std::string{};
+            },
+            .isStringBinding = [](const primec::Expr &) { return false; },
+            .inferArrayElementKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            .lowerMatchToIf = [](const primec::Expr &, primec::Expr &, std::string &) { return true; },
+        },
+        definition,
+        info,
+        error));
+    CHECK(error.empty());
+    CHECK_FALSE(info.returnsVoid);
+    CHECK_FALSE(info.returnsArray);
+    CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  };
+
+  checkReturnType("Pointer<i32>");
+  checkReturnType("Reference<i32>");
+}
+
 TEST_CASE("ir lowerer inference return-info setup infers auto returns") {
   primec::Definition definition;
   definition.fullPath = "/auto";

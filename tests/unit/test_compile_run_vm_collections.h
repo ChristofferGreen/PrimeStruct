@@ -1,3 +1,4 @@
+#include "test_compile_run_checked_pointer_conformance_helpers.h"
 #include "test_compile_run_map_conformance_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
@@ -1587,6 +1588,12 @@ TEST_CASE("runs vm shared map conformance harness for stdlib and experimental he
     expectMapHelperSurfaceConformance("vm", "/std/collections/experimental_map/*");
     expectMapExtendedConstructorConformance("vm", "/std/collections/experimental_map/*");
   }
+}
+
+TEST_CASE("runs vm checked pointer conformance harness for imported .prime helpers") {
+  expectCheckedPointerHelperSurfaceConformance("vm");
+  expectCheckedPointerGrowthConformance("vm");
+  expectCheckedPointerOutOfBoundsConformance("vm");
 }
 
 TEST_CASE("runs vm with templated stdlib vector wrapper temporary call forms") {
