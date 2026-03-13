@@ -1,4 +1,6 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+#include "test_compile_run_map_conformance_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
 static void expectNativeVectorCountCompatibilityTypeMismatchReject(const std::string &compileCmd) {
@@ -1935,62 +1937,16 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native experimental stdlib map helper surface") {
-  const std::string source = R"(
-import /std/collections/experimental_map/*
+TEST_CASE("compiles and runs native shared map conformance harness for stdlib and experimental helpers") {
+  SUBCASE("stdlib") {
+    expectMapHelperSurfaceConformance("native", "/std/collections/*");
+    expectMapExtendedConstructorConformance("native", "/std/collections/*");
+  }
 
-[return<map<K, V>>]
-wrapMap<K, V>([K] leftKey, [V] leftValue, [K] rightKey, [V] rightValue) {
-  return(mapPair<K, V>(leftKey, leftValue, rightKey, rightValue))
-}
-
-[return<int>]
-main() {
-  [map<string, i32>] pairs{wrapMap<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  return(plus(plus(mapCount<string, i32>(pairs), mapAt<string, i32>(pairs, "left"raw_utf8)),
-              mapAtUnsafe<string, i32>(pairs, "right"raw_utf8)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_experimental_stdlib_map_helpers.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_experimental_stdlib_map_helpers_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 13);
-}
-
-TEST_CASE("compiles and runs native experimental stdlib map extended constructor parity") {
-  const std::string source = R"(
-import /std/collections/experimental_map/*
-
-[return<map<K, V>>]
-wrapMap<K, V>() {
-  return(mapOct<K, V>(
-      "a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32, "d"raw_utf8, 4i32,
-      "e"raw_utf8, 5i32, "f"raw_utf8, 6i32, "g"raw_utf8, 7i32, "h"raw_utf8, 8i32))
-}
-
-[return<int>]
-main() {
-  [map<string, i32>] direct{mapTriple<string, i32>("left"raw_utf8, 10i32, "mid"raw_utf8, 20i32, "right"raw_utf8, 30i32)}
-  [map<string, i32>] wrapped{wrapMap<string, i32>()}
-  [i32] directTotal{plus(mapCount<string, i32>(direct), plus(mapAt<string, i32>(direct, "left"raw_utf8),
-                                                            mapAtUnsafe<string, i32>(direct, "right"raw_utf8)))}
-  [i32] wrappedTotal{plus(mapCount<string, i32>(wrapped), plus(mapAt<string, i32>(wrapped, "c"raw_utf8),
-                                                               mapAtUnsafe<string, i32>(wrapped, "h"raw_utf8)))}
-  return(plus(directTotal, wrappedTotal))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_experimental_stdlib_map_extended_ctor_parity.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_experimental_stdlib_map_extended_ctor_parity_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 62);
+  SUBCASE("experimental") {
+    expectMapHelperSurfaceConformance("native", "/std/collections/experimental_map/*");
+    expectMapExtendedConstructorConformance("native", "/std/collections/experimental_map/*");
+  }
 }
 
 TEST_CASE("compiles and runs native templated stdlib vector wrapper temporary call forms") {
