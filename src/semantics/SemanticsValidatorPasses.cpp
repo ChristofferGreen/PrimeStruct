@@ -2693,6 +2693,10 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
               "/std/collections/vector/" + methodName};
     }
     if (receiverPath == "/map") {
+      if (methodName == "count" || methodName == "at" || methodName == "at_unsafe") {
+        return {"/std/collections/map/" + methodName,
+                "/map/" + methodName};
+      }
       return {"/map/" + methodName,
               "/std/collections/map/" + methodName};
     }
