@@ -181,9 +181,15 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `LayoutTree.append_root_column(...)`
      - `LayoutTree.append_column(...)`
      - `LayoutTree.append_leaf(...)`
+     - `LayoutTree.append_label(...)`
+     - `LayoutTree.append_button(...)`
+     - `LayoutTree.append_input(...)`
      - `LayoutTree.measure()`
      - `LayoutTree.arrange(x, y, width, height)`
      - `LayoutTree.serialize() -> vector<i32>`
+     - `CommandList.draw_label(...)`
+     - `CommandList.draw_button(...)`
+     - `CommandList.draw_input(...)`
    - Rounded rectangles are expressed through SDF-style primitives.
    - Renders into a software color buffer (or shared surface view).
    - Current host bridge prototype: the native window host and macOS Metal host
@@ -215,6 +221,19 @@ The following architecture is planned but not locked as part of the v1 contract:
        the child measured height as the arranged height.
 3. Basic widget layer:
    - Small primitive controls built on top of layout + draw commands.
+   - Current prototype contract:
+     - `append_label(...)` creates a leaf whose measured width is
+       `count(text) * ceil(text_size / 2)` and whose measured height is
+       `text_size`.
+     - `append_button(...)` creates a leaf whose measured size is the label
+       text metrics plus `2 * padding` in both dimensions.
+     - `append_input(...)` creates a leaf whose measured height matches the
+       button formula and whose measured width is `max(min_width,
+       text_width + 2 * padding)`.
+     - `draw_label(...)` emits one `draw_text` command at the arranged node
+       origin.
+     - `draw_button(...)` emits one rounded rect followed by one text command.
+     - `draw_input(...)` emits one rounded rect followed by one text command.
 4. Composite widget layer:
    - Higher-level widgets composed from basic widgets only.
 5. Presentation and backend adapters:
@@ -308,6 +327,47 @@ main() {
   tree.arrange(10i32, 20i32, 50i32, 40i32)
   [vector<i32>] words{tree.serialize()}
   return(tree.node_count())
+}
+```
+
+Basic control example:
+
+```prime
+import /std/ui/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 2i32, 0i32, 0i32)}
+  [i32] title{layout.append_label(root, 10i32, "Hi"utf8)}
+  [i32] action{layout.append_button(root, 10i32, 3i32, "Go"utf8)}
+  [i32] field{layout.append_input(root, 10i32, 2i32, 18i32, "abc"utf8)}
+  layout.measure()
+  layout.arrange(5i32, 6i32, 30i32, 46i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.draw_label(layout, title, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "Hi"utf8)
+  commands.draw_button(
+    layout,
+    action,
+    10i32,
+    3i32,
+    4i32,
+    Rgba8([r] 10i32, [g] 20i32, [b] 30i32, [a] 255i32),
+    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    "Go"utf8
+  )
+  commands.draw_input(
+    layout,
+    field,
+    10i32,
+    2i32,
+    3i32,
+    Rgba8([r] 40i32, [g] 50i32, [b] 60i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 210i32, [b] 220i32, [a] 255i32),
+    "abc"utf8
+  )
+  return(commands.command_count())
 }
 ```
 

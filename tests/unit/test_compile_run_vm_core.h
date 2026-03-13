@@ -340,6 +340,66 @@ main() {
   CHECK(readFile(outPath) == "1,1,2,-1,11,13,3,5,11,13\n");
 }
 
+TEST_CASE("runs vm basic widget controls through layout deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 2i32, 0i32, 0i32)}
+  [i32] title{layout.append_label(root, 10i32, "Hi"utf8)}
+  [i32] action{layout.append_button(root, 10i32, 3i32, "Go"utf8)}
+  [i32] field{layout.append_input(root, 10i32, 2i32, 18i32, "abc"utf8)}
+  layout.measure()
+  layout.arrange(5i32, 6i32, 30i32, 46i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.draw_label(layout, title, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "Hi"utf8)
+  commands.draw_button(
+    layout,
+    action,
+    10i32,
+    3i32,
+    4i32,
+    Rgba8([r] 10i32, [g] 20i32, [b] 30i32, [a] 255i32),
+    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    "Go"utf8
+  )
+  commands.draw_input(
+    layout,
+    field,
+    10i32,
+    2i32,
+    3i32,
+    Rgba8([r] 40i32, [g] 50i32, [b] 60i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 210i32, [b] 220i32, [a] 255i32),
+    "abc"utf8
+  )
+  dump_words(commands.serialize())
+  return(plus(layout.node_count(), commands.command_count()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_ui_basic_widget_controls.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_basic_widget_controls.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 9);
+  CHECK(readFile(outPath) ==
+        "1,5,1,10,6,7,10,1,2,3,255,2,72,105,2,9,6,19,28,16,4,10,20,30,255,1,10,9,22,10,250,251,252,255,2,71,111,2,9,6,37,28,14,3,40,50,60,255,1,11,8,39,10,200,210,220,255,3,97,98,99\n");
+}
+
 TEST_CASE("runs vm with literal method call") {
   const std::string source = R"(
 namespace i32 {

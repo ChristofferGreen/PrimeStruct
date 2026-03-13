@@ -4140,9 +4140,15 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`LayoutTree.append_root_column(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_column(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_leaf(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.append_label(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.append_button(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.append_input(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.measure()`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.arrange(x, y, width, height)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.serialize() -> vector<i32>`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.draw_label(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.draw_button(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.draw_input(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("First word: format version (`1`)") != std::string::npos);
   CHECK(graphicsDoc.find("`1` = `draw_text`") != std::string::npos);
   CHECK(graphicsDoc.find("`2` = `draw_rounded_rect`") != std::string::npos);
@@ -4154,14 +4160,25 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`arrange(x, y, width, height)` assigns the root rectangle") != std::string::npos);
   CHECK(graphicsDoc.find("`1` = `leaf`") != std::string::npos);
   CHECK(graphicsDoc.find("`2` = `column`") != std::string::npos);
+  CHECK(graphicsDoc.find("`append_label(...)` creates a leaf whose measured width is") != std::string::npos);
+  CHECK(graphicsDoc.find("`append_button(...)` creates a leaf whose measured size is the label") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`append_input(...)` creates a leaf whose measured height matches the") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`draw_button(...)` emits one rounded rect followed by one text command") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`draw_input(...)` emits one rounded rect followed by one text command") !=
+        std::string::npos);
   CHECK(graphicsDoc.find("can upload a deterministic BGRA8 software surface into a shared Metal") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`--software-surface-demo`") != std::string::npos);
   CHECK(graphicsDoc.find("[CommandList mut] commands{CommandList()}") != std::string::npos);
   CHECK(graphicsDoc.find("tree.append_root_column(2i32, 3i32, 10i32, 4i32)") != std::string::npos);
-  CHECK(specDoc.find("the first `/std/ui/*` foundation now includes deterministic command-list rendering plus a two-pass layout tree contract") !=
+  CHECK(graphicsDoc.find("layout.append_label(root, 10i32, \"Hi\"utf8)") != std::string::npos);
+  CHECK(graphicsDoc.find("commands.draw_button(") != std::string::npos);
+  CHECK(specDoc.find("the first `/std/ui/*` foundation now includes deterministic command-list rendering, a two-pass layout tree contract, and basic control emission") !=
         std::string::npos);
-  CHECK(specDoc.find("`LayoutTree`, `append_root_column`, `append_column`, `append_leaf`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
+  CHECK(specDoc.find("`draw_label`, `draw_button`, `draw_input`, `LayoutTree`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
   CHECK(specDoc.find("blit a deterministic BGRA8 software surface through the native window presenter") !=
         std::string::npos);
 }

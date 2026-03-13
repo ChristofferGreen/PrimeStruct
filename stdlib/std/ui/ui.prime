@@ -31,6 +31,21 @@ namespace std {
     [vector<i32> mut] rectHeights{vector<i32>()}
   }
 
+  [return<i32>]
+  widget_text_advance([i32] textSizePx) {
+    return(max(1i32, divide(plus(textSizePx, 1i32), 2i32)))
+  }
+
+  [return<i32>]
+  widget_text_width([i32] textSizePx, [string] text) {
+    return(multiply(widget_text_advance(textSizePx), count(text)))
+  }
+
+  [return<i32>]
+  widget_text_height([i32] textSizePx) {
+    return(max(1i32, textSizePx))
+  }
+
   namespace CommandList {
     [effects(heap_alloc), return<void>]
     append_word([CommandList mut] self, [i32] value) {
@@ -73,6 +88,51 @@ namespace std {
         self.append_word(text[index])
       }
       assign(self.commandCount, plus(self.commandCount, 1i32))
+    }
+
+    [public effects(heap_alloc), return<void>]
+    draw_label(
+        [CommandList mut] self,
+        [LayoutTree] layout,
+        [i32] nodeId,
+        [i32] textSizePx,
+        [Rgba8] textColor,
+        [string] text) {
+      self.draw_text(layout.rect_x(nodeId), layout.rect_y(nodeId), textSizePx, textColor, text)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    draw_button(
+        [CommandList mut] self,
+        [LayoutTree] layout,
+        [i32] nodeId,
+        [i32] textSizePx,
+        [i32] paddingPx,
+        [i32] radiusPx,
+        [Rgba8] fill,
+        [Rgba8] textColor,
+        [string] text) {
+      [i32] x{layout.rect_x(nodeId)}
+      [i32] y{layout.rect_y(nodeId)}
+      self.draw_rounded_rect(x, y, layout.rect_width(nodeId), layout.rect_height(nodeId), radiusPx, fill)
+      self.draw_text(plus(x, paddingPx), plus(y, paddingPx), textSizePx, textColor, text)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    draw_input(
+        [CommandList mut] self,
+        [LayoutTree] layout,
+        [i32] nodeId,
+        [i32] textSizePx,
+        [i32] paddingPx,
+        [i32] radiusPx,
+        [Rgba8] fill,
+        [Rgba8] textColor,
+        [string] text) {
+      [i32] x{layout.rect_x(nodeId)}
+      [i32] y{layout.rect_y(nodeId)}
+      self.draw_rounded_rect(x, y, layout.rect_width(nodeId), layout.rect_height(nodeId), radiusPx, fill)
+      self.draw_text(plus(x, paddingPx), plus(y, paddingPx), textSizePx, textColor, text)
     }
 
     [public effects(heap_alloc), return<void>]
@@ -168,6 +228,31 @@ namespace std {
     [public effects(heap_alloc), return<i32>]
     append_leaf([LayoutTree mut] self, [i32] parentIndex, [i32] minWidth, [i32] minHeight) {
       return(self.append_node(1i32, parentIndex, 0i32, 0i32, minWidth, minHeight))
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    append_label([LayoutTree mut] self, [i32] parentIndex, [i32] textSizePx, [string] text) {
+      return(self.append_leaf(parentIndex, widget_text_width(textSizePx, text), widget_text_height(textSizePx)))
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    append_button([LayoutTree mut] self, [i32] parentIndex, [i32] textSizePx, [i32] paddingPx, [string] text) {
+      return(self.append_leaf(
+        parentIndex,
+        plus(widget_text_width(textSizePx, text), multiply(paddingPx, 2i32)),
+        plus(widget_text_height(textSizePx), multiply(paddingPx, 2i32))
+      ))
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    append_input(
+        [LayoutTree mut] self, [i32] parentIndex, [i32] textSizePx, [i32] paddingPx, [i32] minWidth, [string] text) {
+      [i32] contentWidth{plus(widget_text_width(textSizePx, text), multiply(paddingPx, 2i32))}
+      return(self.append_leaf(
+        parentIndex,
+        max(minWidth, contentWidth),
+        plus(widget_text_height(textSizePx), multiply(paddingPx, 2i32))
+      ))
     }
 
     [public return<i32>]
