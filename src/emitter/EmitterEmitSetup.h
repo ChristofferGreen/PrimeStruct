@@ -750,6 +750,35 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     return candidates;
   };
+  auto pruneMapAccessStructReturnCompatibilityCandidates = [&](const std::string &path,
+                                                               std::vector<std::string> &candidates) {
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("map/", 0) == 0 || normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+    auto eraseCandidate = [&](const std::string &candidate) {
+      for (auto it = candidates.begin(); it != candidates.end();) {
+        if (*it == candidate) {
+          it = candidates.erase(it);
+        } else {
+          ++it;
+        }
+      }
+    };
+    if (normalizedPath.rfind("/map/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/map/").size());
+      if (suffix == "at" || suffix == "at_unsafe") {
+        eraseCandidate("/std/collections/map/" + suffix);
+      }
+    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
+      if (suffix == "at" || suffix == "at_unsafe") {
+        eraseCandidate("/map/" + suffix);
+      }
+    }
+  };
 
   inferExprReturnKind = [&](const Expr &expr,
                             const std::vector<Expr> &params,
@@ -1121,7 +1150,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         }
       }
 
-      const auto resolvedCandidates = collectionHelperPathCandidates(resolveExprPath(expr));
+      const std::string resolvedExprPath = resolveExprPath(expr);
+      auto resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
+      pruneMapAccessStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
       for (const auto &candidate : resolvedCandidates) {
         auto it = returnStructs.find(candidate);
         if (it != returnStructs.end()) {

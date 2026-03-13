@@ -926,6 +926,35 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return candidates;
   };
+  auto pruneMapAccessStructReturnCompatibilityCandidates = [](const std::string &path,
+                                                              std::vector<std::string> &candidates) {
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("map/", 0) == 0 || normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+    auto eraseCandidate = [&](const std::string &candidate) {
+      for (auto it = candidates.begin(); it != candidates.end();) {
+        if (*it == candidate) {
+          it = candidates.erase(it);
+        } else {
+          ++it;
+        }
+      }
+    };
+    if (normalizedPath.rfind("/map/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/map/").size());
+      if (suffix == "at" || suffix == "at_unsafe") {
+        eraseCandidate("/std/collections/map/" + suffix);
+      }
+    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
+      if (suffix == "at" || suffix == "at_unsafe") {
+        eraseCandidate("/map/" + suffix);
+      }
+    }
+  };
   std::function<std::string(const Expr &)> inferPrimitiveTypeName;
   auto resolveCollectionElementTypeFromCall = [&](const Expr &candidate, std::string &typeOut) -> bool {
     typeOut.clear();
@@ -933,7 +962,9 @@ bool resolveMethodCallPath(const Expr &call,
       return false;
     }
 
-    std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolveExprPath(candidate));
+    const std::string resolvedExprPath = resolveExprPath(candidate);
+    std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
+    pruneMapAccessStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
     auto importIt = importAliases.find(candidate.name);
     if (importIt != importAliases.end()) {
       for (const auto &aliasCandidate : collectionHelperPathCandidates(importIt->second)) {
@@ -1004,7 +1035,9 @@ bool resolveMethodCallPath(const Expr &call,
       }
       case Expr::Kind::Call: {
         if (!expr.isMethodCall) {
-          std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolveExprPath(expr));
+          const std::string resolvedExprPath = resolveExprPath(expr);
+          std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
+          pruneMapAccessStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
           auto importIt = importAliases.find(expr.name);
           if (importIt != importAliases.end()) {
             for (const auto &candidate : collectionHelperPathCandidates(importIt->second)) {

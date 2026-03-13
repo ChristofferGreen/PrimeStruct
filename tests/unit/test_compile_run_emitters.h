@@ -4170,6 +4170,108 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
+TEST_CASE("keeps canonical map access struct method chain forwarding in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/std/collections/map/at(values, 2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_map_access_struct_method_chain_forwarding.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_canonical_map_access_struct_method_chain_forwarding.out")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(outPath) == 2);
+}
+
+TEST_CASE("rejects map access compatibility call struct method chain canonical forwarding in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/map/at(values, 2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_map_access_alias_struct_method_chain_canonical_forwarding_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_map_access_alias_struct_method_chain_canonical_forwarding_reject.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
+}
+
+TEST_CASE("rejects map access compatibility call struct method chain canonical diagnostics forwarding in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self, [bool] marker) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/map/at(values, 2i32).tag(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_map_access_alias_struct_method_chain_canonical_diagnostic.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_map_access_alias_struct_method_chain_canonical_diagnostic.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
+}
+
 TEST_CASE("rejects vector alias access auto wrapper canonical struct-return forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {

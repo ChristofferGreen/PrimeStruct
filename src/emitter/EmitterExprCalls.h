@@ -362,8 +362,39 @@
     }
     return candidates;
   };
+  auto pruneMapAccessStructReturnCompatibilityCandidates = [](const std::string &path,
+                                                              std::vector<std::string> &candidates) {
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("map/", 0) == 0 || normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+    auto eraseCandidate = [&](const std::string &candidate) {
+      for (auto it = candidates.begin(); it != candidates.end();) {
+        if (*it == candidate) {
+          it = candidates.erase(it);
+        } else {
+          ++it;
+        }
+      }
+    };
+    if (normalizedPath.rfind("/map/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/map/").size());
+      if (suffix == "at" || suffix == "at_unsafe") {
+        eraseCandidate("/std/collections/map/" + suffix);
+      }
+    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
+      if (suffix == "at" || suffix == "at_unsafe") {
+        eraseCandidate("/map/" + suffix);
+      }
+    }
+  };
   auto resolvedTypePathForResolvedCall = [&](const std::string &resolvedPath) -> std::string {
-    for (const auto &candidate : collectionHelperPathCandidates(resolvedPath)) {
+    auto resolvedCandidates = collectionHelperPathCandidates(resolvedPath);
+    pruneMapAccessStructReturnCompatibilityCandidates(resolvedPath, resolvedCandidates);
+    for (const auto &candidate : resolvedCandidates) {
       auto structIt = returnStructs.find(candidate);
       if (structIt != returnStructs.end()) {
         std::string normalized = normalizedTypePath(structIt->second);
@@ -372,7 +403,7 @@
         }
       }
     }
-    for (const auto &candidate : collectionHelperPathCandidates(resolvedPath)) {
+    for (const auto &candidate : resolvedCandidates) {
       auto kindIt = returnKinds.find(candidate);
       if (kindIt == returnKinds.end()) {
         continue;
