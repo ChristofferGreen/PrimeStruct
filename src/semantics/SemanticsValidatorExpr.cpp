@@ -838,7 +838,31 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
           if (collectionExpr.kind == Expr::Kind::Call) {
-            std::vector<std::string> args;
+            auto returnsStringCollection = [&](const std::string &typeName) -> bool {
+              std::string normalizedType = normalizeBindingTypeName(typeName);
+              while (true) {
+                std::string base;
+                std::string arg;
+                if (!splitTemplateTypeName(normalizedType, base, arg)) {
+                  return normalizedType == "string";
+                }
+                std::vector<std::string> args;
+                if (!splitTopLevelTemplateArgs(arg, args)) {
+                  return false;
+                }
+                if ((base == "array" || base == "vector") && args.size() == 1) {
+                  return normalizeBindingTypeName(args.front()) == "string";
+                }
+                if (base == "map" && args.size() == 2) {
+                  return normalizeBindingTypeName(args[1]) == "string";
+                }
+                if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
+                  normalizedType = normalizeBindingTypeName(args.front());
+                  continue;
+                }
+                return false;
+              }
+            };
             auto defIt = defMap_.find(resolveCalleePath(collectionExpr));
             if (defIt == defMap_.end() || !defIt->second) {
               std::string collection;
@@ -857,22 +881,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               if (transform.name != "return" || transform.templateArgs.size() != 1) {
                 continue;
               }
-              std::string base;
-              std::string arg;
-              const std::string normalizedReturn = normalizeBindingTypeName(transform.templateArgs.front());
-              if (!splitTemplateTypeName(normalizedReturn, base, arg)) {
-                return false;
-              }
-              if (!splitTopLevelTemplateArgs(arg, args)) {
-                return false;
-              }
-              if ((base == "array" || base == "vector") && args.size() == 1) {
-                return normalizeBindingTypeName(args.front()) == "string";
-              }
-              if (base == "map" && args.size() == 2) {
-                return normalizeBindingTypeName(args[1]) == "string";
-              }
-              return false;
+              return returnsStringCollection(transform.templateArgs.front());
             }
           }
           return false;

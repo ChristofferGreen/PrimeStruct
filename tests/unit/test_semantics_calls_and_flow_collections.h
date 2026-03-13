@@ -8306,6 +8306,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("wrapper-returned referenced canonical map keeps if string branch compatibility") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, string>>>]
+borrowMap([Reference</std/collections/map<i32, string>>] values) {
+  return(values)
+}
+
+[return<int>]
+showValue() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  [string] message{if(true, then(){ borrowMap(location(values))[1i32] }, else(){ "fallback"utf8 })}
+  return(count(message))
+}
+
+[return<int>]
+main() {
+  return(showValue())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("explicit canonical map parameter keeps pathspace string diagnostics") {
   const std::string source = R"(
 [effects(pathspace_take), return<int>]
@@ -8421,6 +8445,30 @@ wrapMap() {
 [return<int>]
 showValue() {
   [string] message{if(true, then(){ wrapMap()[1i32] }, else(){ "fallback"utf8 })}
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  return(showValue())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if branches must return compatible types") != std::string::npos);
+}
+
+TEST_CASE("wrapper-returned referenced canonical map keeps if string branch diagnostics") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[return<int>]
+showValue() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [string] message{if(true, then(){ borrowMap(location(values))[1i32] }, else(){ "fallback"utf8 })}
   return(0i32)
 }
 
