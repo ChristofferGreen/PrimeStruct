@@ -398,15 +398,17 @@ bool SemanticsValidator::validateDefinitions() {
              message.rfind("duplicate capabilities transform on ", 0) == 0;
     };
     auto collectResolvedCallArgumentDiagnostic = [&](const Expr &expr, const std::string &resolved) -> bool {
+      const std::string diagnosticResolved = diagnosticCallTargetPath(resolved);
       auto appendArgumentTypeMismatch = [&](const std::string &paramName,
                                             const std::string &expectedType,
                                             const std::string &actualType) {
         appendDefinitionRecord(expr,
-                               "argument type mismatch for " + resolved + " parameter " + paramName + ": expected " +
+                               "argument type mismatch for " + diagnosticResolved + " parameter " + paramName +
+                                   ": expected " +
                                    expectedType + " got " + actualType);
       };
       std::string message;
-      if (!validateNamedArguments(expr.args, expr.argNames, resolved, message)) {
+      if (!validateNamedArguments(expr.args, expr.argNames, diagnosticResolved, message)) {
         appendDefinitionRecord(expr, std::move(message));
         return true;
       }
@@ -426,7 +428,7 @@ bool SemanticsValidator::validateDefinitions() {
       std::string orderError;
       if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, orderError)) {
         if (orderError.find("argument count mismatch") != std::string::npos) {
-          message = "argument count mismatch for " + resolved;
+          message = "argument count mismatch for " + diagnosticResolved;
         } else {
           message = std::move(orderError);
         }
@@ -1472,15 +1474,17 @@ bool SemanticsValidator::validateExecutions() {
              message.rfind("duplicate capabilities transform on ", 0) == 0;
     };
     auto collectResolvedCallArgumentDiagnostic = [&](const Expr &expr, const std::string &resolved) -> bool {
+      const std::string diagnosticResolved = diagnosticCallTargetPath(resolved);
       auto appendArgumentTypeMismatch = [&](const std::string &paramName,
                                             const std::string &expectedType,
                                             const std::string &actualType) {
         appendExecutionRecord(expr,
-                              "argument type mismatch for " + resolved + " parameter " + paramName + ": expected " +
+                              "argument type mismatch for " + diagnosticResolved + " parameter " + paramName +
+                                  ": expected " +
                                   expectedType + " got " + actualType);
       };
       std::string message;
-      if (!validateNamedArguments(expr.args, expr.argNames, resolved, message)) {
+      if (!validateNamedArguments(expr.args, expr.argNames, diagnosticResolved, message)) {
         appendExecutionRecord(expr, std::move(message));
         return true;
       }
@@ -1500,7 +1504,7 @@ bool SemanticsValidator::validateExecutions() {
       std::string orderError;
       if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, orderError)) {
         if (orderError.find("argument count mismatch") != std::string::npos) {
-          message = "argument count mismatch for " + resolved;
+          message = "argument count mismatch for " + diagnosticResolved;
         } else {
           message = std::move(orderError);
         }

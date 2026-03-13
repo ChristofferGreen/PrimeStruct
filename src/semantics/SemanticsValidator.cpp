@@ -63,6 +63,30 @@ std::string SemanticsValidator::formatUnknownCallTarget(const Expr &expr) const 
   return resolved.empty() ? expr.name : resolved;
 }
 
+std::string SemanticsValidator::diagnosticCallTargetPath(const std::string &path) const {
+  if (path.empty()) {
+    return path;
+  }
+  if (path.rfind("/std/collections/map/count__t", 0) == 0) {
+    return "/std/collections/map/count";
+  }
+  if (path.rfind("/map/count__t", 0) == 0) {
+    return "/map/count";
+  }
+  const size_t lastSlash = path.find_last_of('/');
+  const size_t nameStart = lastSlash == std::string::npos ? 0 : lastSlash + 1;
+  const size_t suffix = path.find("__t", nameStart);
+  if (suffix == std::string::npos) {
+    return path;
+  }
+  const std::string basePath = path.substr(0, suffix);
+  auto it = defMap_.find(basePath);
+  if (it == defMap_.end() || it->second == nullptr || it->second->templateArgs.empty()) {
+    return path;
+  }
+  return basePath;
+}
+
 SemanticsValidator::ValidationContext
 SemanticsValidator::buildDefinitionValidationContext(const Definition &def) const {
   ValidationContext context;

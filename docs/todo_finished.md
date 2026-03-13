@@ -797,3 +797,4 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ For `tools/PrimeStructc`, decide whether to support template codegen or explicitly lock it to a minimal subset.
 - ✓ For `tools/PrimeStructc`, decide whether to honor import `version="..."` (or document that it is ignored).
 - ✓ Refresh README once the spec stabilizes (current status, backend support, and roadmap).
+- ✓ Map stdlib-forwarding slice: normalize templated wrapper method-sugar canonical `count` diagnostics across semantics and C++ emitter flows. Wrapper-returned canonical map envelopes calling templated `/std/collections/map/count<K, V>` now keep canonical `argument type mismatch for /std/collections/map/count ...` diagnostics instead of leaking monomorphized `__t...` specialization paths, with focused semantics and C++ emitter regressions.

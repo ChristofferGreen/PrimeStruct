@@ -6349,6 +6349,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     const auto &calleeParams = paramsByDef_[resolved];
+    const std::string diagnosticResolved = diagnosticCallTargetPath(resolved);
     if (calleeParams.empty() && structNames_.count(resolved) > 0) {
       std::vector<ParameterInfo> fieldParams;
       fieldParams.reserve(it->second->statements.size());
@@ -6385,7 +6386,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (!validateNamedArgumentsAgainstParams(fieldParams, expr.argNames, error_)) {
         if (error_.find("argument count mismatch") != std::string::npos) {
-          error_ = "argument count mismatch for " + resolved;
+          error_ = "argument count mismatch for " + diagnosticResolved;
         }
         return false;
       }
@@ -6393,7 +6394,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string orderError;
       if (!buildOrderedArguments(fieldParams, expr.args, expr.argNames, orderedArgs, orderError)) {
         if (orderError.find("argument count mismatch") != std::string::npos) {
-          error_ = "argument count mismatch for " + resolved;
+          error_ = "argument count mismatch for " + diagnosticResolved;
         } else {
           error_ = orderError;
         }
@@ -6429,7 +6430,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, error_)) {
       if (error_.find("argument count mismatch") != std::string::npos) {
-        error_ = "argument count mismatch for " + resolved;
+        error_ = "argument count mismatch for " + diagnosticResolved;
       }
       return false;
     }
@@ -6437,7 +6438,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     std::string orderError;
     if (!buildOrderedArguments(calleeParams, *orderedCallArgs, *orderedCallArgNames, orderedArgs, orderError)) {
       if (orderError.find("argument count mismatch") != std::string::npos) {
-        error_ = "argument count mismatch for " + resolved;
+        error_ = "argument count mismatch for " + diagnosticResolved;
       } else {
         error_ = orderError;
       }
@@ -6497,13 +6498,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (isStringTypeName(expectedTypeName)) {
         if (!isStringExpr(*arg)) {
-          error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected string";
+          error_ =
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name + ": expected string";
           return false;
         }
         continue;
       }
       if (isStringExpr(*arg)) {
-        error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+        error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name + ": expected " +
                  expectedTypeText;
         return false;
       }
@@ -6520,17 +6522,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                   normalizeBindingTypeName(actualElemType)) {
                 continue;
               }
-              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                       ": expected " +
                        expectedTypeText + " got array<" + actualElemType + ">";
               return false;
             }
             if (resolveVectorTarget(*arg, actualElemType)) {
-              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                       ": expected " +
                        expectedTypeText + " got vector<" + actualElemType + ">";
               return false;
             }
             if (resolveSoaVectorTarget(*arg, actualElemType)) {
-              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                       ": expected " +
                        expectedTypeText + " got soa_vector<" + actualElemType + ">";
               return false;
             }
@@ -6541,17 +6546,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                   normalizeBindingTypeName(actualElemType)) {
                 continue;
               }
-              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                       ": expected " +
                        expectedTypeText + " got vector<" + actualElemType + ">";
               return false;
             }
             if (resolveSoaVectorTarget(*arg, actualElemType)) {
-              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                       ": expected " +
                        expectedTypeText + " got soa_vector<" + actualElemType + ">";
               return false;
             }
             if (resolveArrayTarget(*arg, actualElemType)) {
-              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                       ": expected " +
                        expectedTypeText + " got array<" + actualElemType + ">";
               return false;
             }
@@ -6562,17 +6570,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                   normalizeBindingTypeName(actualElemType)) {
                 continue;
               }
-              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                       ": expected " +
                        expectedTypeText + " got soa_vector<" + actualElemType + ">";
               return false;
             }
             if (resolveVectorTarget(*arg, actualElemType)) {
-              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                       ": expected " +
                        expectedTypeText + " got vector<" + actualElemType + ">";
               return false;
             }
             if (resolveArrayTarget(*arg, actualElemType)) {
-              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                       ": expected " +
                        expectedTypeText + " got array<" + actualElemType + ">";
               return false;
             }
@@ -6582,7 +6593,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             if (resolveMapKeyType(*arg, actualKeyType) && resolveMapValueType(*arg, actualValueType) &&
                 (normalizeBindingTypeName(expectedTemplateArgs[0]) != normalizeBindingTypeName(actualKeyType) ||
                  normalizeBindingTypeName(expectedTemplateArgs[1]) != normalizeBindingTypeName(actualValueType))) {
-              error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                       ": expected " +
                        expectedTypeText + " got map<" + actualKeyType + ", " + actualValueType + ">";
               return false;
             }
@@ -6599,7 +6611,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           continue;
         }
         if (actualKind != ReturnKind::Unknown && actualKind != expectedKind) {
-          error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                   ": expected " +
                    typeNameForReturnKind(expectedKind) + " got " + typeNameForReturnKind(actualKind);
           return false;
         }
@@ -6611,7 +6624,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       const std::string actualStructPath = inferStructReturnPath(*arg, params, locals);
       if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
-        error_ = "argument type mismatch for " + resolved + " parameter " + param.name + ": expected " +
+        error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                 ": expected " +
                  expectedStructPath + " got " + actualStructPath;
         return false;
       }

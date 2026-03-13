@@ -4514,6 +4514,30 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("templated canonical map count wrapper method sugar keeps canonical diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  return(wrapValues().count(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/map/count parameter marker") !=
+        std::string::npos);
+  CHECK(error.find("/std/collections/map/count__t") == std::string::npos);
+}
+
 TEST_CASE("bare map helper statement body arguments still validate") {
   const std::string source = R"(
 [return<int>]
