@@ -127,12 +127,16 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
   }
   bool isMathQualified = false;
   bool isGpuQualified = false;
+  bool isMemoryQualified = false;
   if (candidate.rfind("std/math/", 0) == 0) {
     candidate.erase(0, 9);
     isMathQualified = true;
   } else if (candidate.rfind("std/gpu/", 0) == 0) {
     candidate.erase(0, 8);
     isGpuQualified = true;
+  } else if (candidate.rfind("std/intrinsics/memory/", 0) == 0) {
+    candidate.erase(0, 22);
+    isMemoryQualified = true;
   } else if (candidate.find('/') != std::string::npos) {
     return false;
   }
@@ -156,6 +160,10 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
   if (isGpuQualified && !isGpuBuiltin) {
     return false;
   }
+  bool isMemoryBuiltin = candidate == "alloc" || candidate == "free" || candidate == "realloc";
+  if (isMemoryQualified && !isMemoryBuiltin) {
+    return false;
+  }
   return candidate == "assign" || candidate == "plus" || candidate == "minus" || candidate == "multiply" ||
          candidate == "divide" || candidate == "negate" || candidate == "greater_than" || candidate == "less_than" ||
          candidate == "greater_equal" || candidate == "less_equal" || candidate == "equal" || candidate == "not_equal" ||
@@ -171,7 +179,7 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
          candidate == "location" || candidate == "dereference" || candidate == "block" || candidate == "print" ||
          candidate == "print_line" || candidate == "print_error" || candidate == "print_line_error" ||
          candidate == "notify" || candidate == "insert" || candidate == "take" ||
-         (isGpuBuiltin && isGpuQualified);
+         (isGpuBuiltin && isGpuQualified) || (isMemoryBuiltin && isMemoryQualified);
 }
 
 bool isHexDigitChar(char c) {

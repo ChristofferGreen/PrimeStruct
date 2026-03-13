@@ -4638,7 +4638,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             getBuiltinSaturateName(expr, builtinName, allowMathBareName(expr.name)) ||
             getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
             getBuiltinGpuName(expr, builtinName) ||
-            getBuiltinPointerName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
+            getBuiltinPointerName(expr, builtinName) || getBuiltinMemoryName(expr, builtinName) ||
+            getBuiltinConvertName(expr, builtinName) ||
             isLegacyCollectionBuiltinCall() || isLegacyArrayAccessBuiltinCall() ||
             isAssignCall(expr) || isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) ||
             isForCall(expr) ||
@@ -5696,6 +5697,86 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         if (!validateExpr(params, locals, expr.args.front())) {
           return false;
+        }
+        return true;
+      }
+      if (getBuiltinMemoryName(expr, builtinName)) {
+        auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {
+          Expr bindingExpr;
+          bindingExpr.kind = Expr::Kind::Call;
+          bindingExpr.name = "__memory_target";
+          bindingExpr.namespacePrefix = expr.namespacePrefix;
+          Transform pointerTransform;
+          pointerTransform.name = "Pointer";
+          pointerTransform.templateArgs.push_back(targetType);
+          bindingExpr.transforms.push_back(std::move(pointerTransform));
+          BindingInfo bindingInfo;
+          std::optional<std::string> restrictType;
+          std::string parseError;
+          if (!parseBindingInfo(bindingExpr, expr.namespacePrefix, structNames_, importAliases_, bindingInfo,
+                                restrictType, parseError)) {
+            error_ = parseError;
+            return false;
+          }
+          return true;
+        };
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = builtinName + " does not accept block arguments";
+          return false;
+        }
+        if (builtinName == "alloc") {
+          if (expr.templateArgs.size() != 1) {
+            error_ = "alloc requires exactly one template argument";
+            return false;
+          }
+          if (expr.args.size() != 1) {
+            error_ = "argument count mismatch for builtin alloc";
+            return false;
+          }
+          if (!validateMemoryTargetType(expr.templateArgs.front())) {
+            return false;
+          }
+          if (activeEffects_.count("heap_alloc") == 0) {
+            error_ = "alloc requires heap_alloc effect";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          if (!isIntegerExpr(expr.args.front(), params, locals)) {
+            error_ = "alloc requires integer element count";
+            return false;
+          }
+          return true;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = builtinName + " does not accept template arguments";
+          return false;
+        }
+        const size_t expectedArgs = builtinName == "free" ? 1 : 2;
+        if (expr.args.size() != expectedArgs) {
+          error_ = "argument count mismatch for builtin " + builtinName;
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        if (!isPointerExpr(expr.args.front(), params, locals)) {
+          error_ = builtinName + " requires pointer target";
+          return false;
+        }
+        if (activeEffects_.count("heap_alloc") == 0) {
+          error_ = builtinName + " requires heap_alloc effect";
+          return false;
+        }
+        if (builtinName == "realloc") {
+          if (!validateExpr(params, locals, expr.args[1])) {
+            return false;
+          }
+          if (!isIntegerExpr(expr.args[1], params, locals)) {
+            error_ = "realloc requires integer element count";
+            return false;
+          }
         }
         return true;
       }

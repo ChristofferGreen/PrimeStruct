@@ -1058,6 +1058,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             return returnKindForTypeName(it->second.typeName);
           }
         }
+        if (getBuiltinMemoryName(pointerExpr, pointerName)) {
+          if (pointerName == "alloc" && pointerExpr.templateArgs.size() == 1 && pointerExpr.args.size() == 1) {
+            return referenceTargetKind(pointerExpr.templateArgs.front(), pointerExpr.namespacePrefix);
+          }
+          if (pointerName == "realloc" && pointerExpr.args.size() == 2) {
+            return pointerTargetKind(pointerExpr.args.front());
+          }
+        }
         std::string opName;
         if (getBuiltinOperatorName(pointerExpr, opName) && (opName == "plus" || opName == "minus") &&
             pointerExpr.args.size() == 2) {
@@ -2576,6 +2584,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (targetKind != ReturnKind::Unknown) {
           return targetKind;
         }
+      }
+      return ReturnKind::Unknown;
+    }
+    if (getBuiltinMemoryName(expr, builtinName)) {
+      if (builtinName == "free") {
+        return ReturnKind::Void;
       }
       return ReturnKind::Unknown;
     }

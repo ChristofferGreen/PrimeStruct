@@ -99,6 +99,7 @@ bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare);
 bool isBuiltinMathConstant(const std::string &name, bool allowBare);
 bool getBuiltinGpuName(const Expr &expr, std::string &out);
+bool getBuiltinMemoryName(const Expr &expr, std::string &out);
 bool getBuiltinPointerName(const Expr &expr, std::string &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);

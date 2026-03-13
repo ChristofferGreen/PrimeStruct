@@ -314,6 +314,7 @@ bool SemanticsValidator::validateDefinitions() {
            getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
+           getBuiltinMemoryName(expr, builtinName) ||
            isCollectionBuiltin || isCollectionHelperBuiltin;
   };
   auto describeReflectionCallDiagnostic = [&](const Expr &expr,
@@ -1391,6 +1392,7 @@ bool SemanticsValidator::validateExecutions() {
            getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
+           getBuiltinMemoryName(expr, builtinName) ||
            isCollectionBuiltin || isCollectionHelperBuiltin;
   };
   auto describeReflectionCallDiagnostic = [&](const Expr &expr,

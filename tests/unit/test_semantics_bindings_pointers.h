@@ -39,6 +39,75 @@ main() {
   CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
+TEST_CASE("memory intrinsics validate with heap_alloc effect") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(4i32)}
+  assign(dereference(ptr), 7i32)
+  [mut] grown{/std/intrinsics/memory/realloc(ptr, 8i32)}
+  /std/intrinsics/memory/free(grown)
+  return(7i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("alloc requires heap_alloc effect") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [Pointer<i32>] ptr{/std/intrinsics/memory/alloc<i32>(4i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("alloc requires heap_alloc effect") != std::string::npos);
+}
+
+TEST_CASE("alloc rejects unsupported pointer target type") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<array<i32>>] ptr{/std/intrinsics/memory/alloc<array<i32>>(1i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported pointer target type: array<i32>") != std::string::npos);
+}
+
+TEST_CASE("realloc requires pointer target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  /std/intrinsics/memory/realloc(1i32, 2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("realloc requires pointer target") != std::string::npos);
+}
+
+TEST_CASE("free rejects template arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<i32>] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  /std/intrinsics/memory/free<i32>(ptr)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("free does not accept template arguments") != std::string::npos);
+}
+
 TEST_CASE("binding array type requires one template argument") {
   const std::string source = R"(
 [return<int>]

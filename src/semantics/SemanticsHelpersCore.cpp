@@ -605,6 +605,7 @@ namespace {
 
 bool parseMathName(const std::string &name, std::string &out, bool allowBare);
 bool parseGpuName(const std::string &name, std::string &out);
+bool parseMemoryName(const std::string &name, std::string &out);
 
 } // namespace
 
@@ -637,6 +638,10 @@ bool isRootBuiltinName(const std::string &name) {
   std::string gpuName;
   if (parseGpuName(normalized, gpuName)) {
     return gpuName == "global_id_x" || gpuName == "global_id_y" || gpuName == "global_id_z";
+  }
+  std::string memoryName;
+  if (parseMemoryName(normalized, memoryName)) {
+    return memoryName == "alloc" || memoryName == "free" || memoryName == "realloc";
   }
   bool isStdGpuQualified = false;
   if (normalized.rfind("std/gpu/", 0) == 0) {
@@ -743,6 +748,21 @@ bool parseGpuName(const std::string &name, std::string &out) {
   return false;
 }
 
+bool parseMemoryName(const std::string &name, std::string &out) {
+  if (name.empty()) {
+    return false;
+  }
+  std::string normalized = name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  if (normalized.rfind("std/intrinsics/memory/", 0) == 0) {
+    out = normalized.substr(22);
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare) {
@@ -773,6 +793,13 @@ bool getBuiltinGpuName(const Expr &expr, std::string &out) {
     return false;
   }
   return out == "global_id_x" || out == "global_id_y" || out == "global_id_z";
+}
+
+bool getBuiltinMemoryName(const Expr &expr, std::string &out) {
+  if (!parseMemoryName(expr.name, out)) {
+    return false;
+  }
+  return out == "alloc" || out == "free" || out == "realloc";
 }
 
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {
@@ -997,6 +1024,14 @@ bool isPointerExpr(const Expr &expr,
   if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {
     return true;
   }
+  if (getBuiltinMemoryName(expr, builtinName)) {
+    if (builtinName == "alloc") {
+      return expr.templateArgs.size() == 1 && expr.args.size() == 1;
+    }
+    if (builtinName == "realloc" && expr.args.size() == 2) {
+      return isPointerExpr(expr.args.front(), params, locals);
+    }
+  }
   if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
       expr.args.size() == 2) {
     return isPointerExpr(expr.args[0], params, locals) && !isPointerExpr(expr.args[1], params, locals);
@@ -1017,6 +1052,14 @@ bool isPointerLikeExpr(const Expr &expr,
   std::string builtinName;
   if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {
     return true;
+  }
+  if (getBuiltinMemoryName(expr, builtinName)) {
+    if (builtinName == "alloc") {
+      return expr.templateArgs.size() == 1 && expr.args.size() == 1;
+    }
+    if (builtinName == "realloc" && expr.args.size() == 2) {
+      return isPointerExpr(expr.args.front(), params, locals);
+    }
   }
   if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
       expr.args.size() == 2) {

@@ -22,6 +22,14 @@ TEST_CASE("parser helper validates gpu builtin qualification") {
   CHECK_FALSE(primec::parser::isBuiltinName("std/gpu/not_builtin", false));
 }
 
+TEST_CASE("parser helper validates memory intrinsic qualification") {
+  CHECK(primec::parser::isBuiltinName("/std/intrinsics/memory/alloc", false));
+  CHECK(primec::parser::isBuiltinName("std/intrinsics/memory/free", false));
+  CHECK(primec::parser::isBuiltinName("/std/intrinsics/memory/realloc", false));
+  CHECK_FALSE(primec::parser::isBuiltinName("alloc", false));
+  CHECK_FALSE(primec::parser::isBuiltinName("std/intrinsics/memory/not_builtin", false));
+}
+
 TEST_CASE("parser helper rejects cross-qualified builtin names") {
   CHECK_FALSE(primec::parser::isBuiltinName("/std/math/assign", false));
   CHECK_FALSE(primec::parser::isBuiltinName("/std/gpu/sin", false));

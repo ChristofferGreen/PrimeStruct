@@ -1745,6 +1745,100 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     }
     return false;
   };
+  auto inferBuiltinPointerBinding = [&](const Expr &expr) -> bool {
+    std::function<bool(const Expr &, std::string &)> resolvePointerTargetType;
+    resolvePointerTargetType = [&](const Expr &candidate, std::string &targetOut) -> bool {
+      if (candidate.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+          if ((paramBinding->typeName == "Pointer" || paramBinding->typeName == "Reference") &&
+              !paramBinding->typeTemplateArg.empty()) {
+            targetOut = paramBinding->typeTemplateArg;
+            return true;
+          }
+          return false;
+        }
+        auto it = locals.find(candidate.name);
+        if (it == locals.end()) {
+          return false;
+        }
+        if ((it->second.typeName == "Pointer" || it->second.typeName == "Reference") &&
+            !it->second.typeTemplateArg.empty()) {
+          targetOut = it->second.typeTemplateArg;
+          return true;
+        }
+        return false;
+      }
+      if (candidate.kind != Expr::Kind::Call) {
+        return false;
+      }
+      std::string builtinName;
+      if (getBuiltinPointerName(candidate, builtinName) && builtinName == "location" && candidate.args.size() == 1) {
+        const Expr &target = candidate.args.front();
+        if (target.kind != Expr::Kind::Name) {
+          return false;
+        }
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
+            targetOut = paramBinding->typeTemplateArg;
+          } else {
+            targetOut = paramBinding->typeName;
+          }
+          return true;
+        }
+        auto it = locals.find(target.name);
+        if (it == locals.end()) {
+          return false;
+        }
+        if (it->second.typeName == "Reference" && !it->second.typeTemplateArg.empty()) {
+          targetOut = it->second.typeTemplateArg;
+        } else {
+          targetOut = it->second.typeName;
+        }
+        return true;
+      }
+      if (getBuiltinMemoryName(candidate, builtinName)) {
+        if (builtinName == "alloc" && candidate.templateArgs.size() == 1 && candidate.args.size() == 1) {
+          targetOut = candidate.templateArgs.front();
+          return true;
+        }
+        if (builtinName == "realloc" && candidate.args.size() == 2) {
+          return resolvePointerTargetType(candidate.args.front(), targetOut);
+        }
+      }
+      std::string opName;
+      if (getBuiltinOperatorName(candidate, opName) && (opName == "plus" || opName == "minus") &&
+          candidate.args.size() == 2) {
+        if (isPointerLikeExpr(candidate.args[1], params, locals)) {
+          return false;
+        }
+        return resolvePointerTargetType(candidate.args.front(), targetOut);
+      }
+      return false;
+    };
+    if (expr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string builtinName;
+    if (!getBuiltinMemoryName(expr, builtinName)) {
+      return false;
+    }
+    std::string targetType;
+    if (builtinName == "alloc") {
+      if (expr.templateArgs.size() != 1 || expr.args.size() != 1) {
+        return false;
+      }
+      targetType = expr.templateArgs.front();
+    } else if (builtinName == "realloc") {
+      if (expr.args.size() != 2 || !resolvePointerTargetType(expr.args.front(), targetType)) {
+        return false;
+      }
+    } else {
+      return false;
+    }
+    bindingOut.typeName = "Pointer";
+    bindingOut.typeTemplateArg = targetType;
+    return true;
+  };
   auto inferDeclaredCollectionBinding = [&](const Definition &definition) -> bool {
     auto isSupportedCollectionType = [&](const std::string &typeName) -> bool {
       std::string base;
@@ -1835,12 +1929,18 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     if (inferBuiltinCollectionValueBinding(initializer)) {
       return true;
     }
+    if (inferBuiltinPointerBinding(initializer)) {
+      return true;
+    }
     return true;
   }
   if (inferCallInitializerBinding()) {
     return true;
   }
   if (inferBuiltinCollectionValueBinding(initializer)) {
+    return true;
+  }
+  if (inferBuiltinPointerBinding(initializer)) {
     return true;
   }
   ReturnKind kind = inferExprReturnKind(initializer, params, locals);
