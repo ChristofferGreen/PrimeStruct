@@ -15,6 +15,14 @@ struct Vertex {
   simd_float4 color;
 };
 
+enum class GfxErrorCode {
+  DeviceCreateFailed,
+  MeshCreateFailed,
+  PipelineCreateFailed,
+  FrameAcquireFailed,
+  QueueSubmitFailed,
+};
+
 constexpr Vertex TriangleVertices[3] = {
     {{-0.6f, -0.5f, 0.0f}, {0.95f, 0.20f, 0.20f, 1.0f}},
     {{0.6f, -0.5f, 0.0f}, {0.20f, 0.80f, 1.00f, 1.0f}},
@@ -28,6 +36,32 @@ bool hasArgument(int argc, char **argv, const std::string &flag) {
     }
   }
   return false;
+}
+
+const char *deducedGfxProfileName() {
+  return "metal-osx";
+}
+
+const char *gfxErrorCodeName(GfxErrorCode code) {
+  switch (code) {
+    case GfxErrorCode::DeviceCreateFailed:
+      return "device_create_failed";
+    case GfxErrorCode::MeshCreateFailed:
+      return "mesh_create_failed";
+    case GfxErrorCode::PipelineCreateFailed:
+      return "pipeline_create_failed";
+    case GfxErrorCode::FrameAcquireFailed:
+      return "frame_acquire_failed";
+    case GfxErrorCode::QueueSubmitFailed:
+      return "queue_submit_failed";
+  }
+  return "device_create_failed";
+}
+
+void emitGfxError(std::ostream &out, GfxErrorCode code, const std::string &why) {
+  out << "gfx_profile=" << deducedGfxProfileName() << "\n";
+  out << "gfx_error_code=" << gfxErrorCodeName(code) << "\n";
+  out << "gfx_error_why=" << why << "\n";
 }
 
 struct CubeSimulationState {
@@ -173,7 +207,7 @@ int main(int argc, char **argv) {
   @autoreleasepool {
     id<MTLDevice> device = MTLCreateSystemDefaultDevice();
     if (device == nil) {
-      std::cerr << "failed to create Metal device\n";
+      emitGfxError(std::cerr, GfxErrorCode::DeviceCreateFailed, "failed to create Metal device");
       return 70;
     }
 
@@ -182,15 +216,16 @@ int main(int argc, char **argv) {
     NSURL *libraryUrl = [NSURL fileURLWithPath:libraryPath];
     id<MTLLibrary> library = [device newLibraryWithURL:libraryUrl error:&error];
     if (library == nil) {
-      std::cerr << "failed to load metallib: "
-                << (error == nil ? "unknown" : error.localizedDescription.UTF8String) << "\n";
+      const std::string why =
+          "failed to load metallib: " + std::string(error == nil ? "unknown" : error.localizedDescription.UTF8String);
+      emitGfxError(std::cerr, GfxErrorCode::PipelineCreateFailed, why);
       return 71;
     }
 
     id<MTLFunction> vertexFn = [library newFunctionWithName:@"cubeVertexMain"];
     id<MTLFunction> fragmentFn = [library newFunctionWithName:@"cubeFragmentMain"];
     if (vertexFn == nil || fragmentFn == nil) {
-      std::cerr << "missing cube shader entrypoints\n";
+      emitGfxError(std::cerr, GfxErrorCode::PipelineCreateFailed, "missing cube shader entrypoints");
       return 72;
     }
 
@@ -213,14 +248,15 @@ int main(int argc, char **argv) {
     id<MTLRenderPipelineState> pipeline =
         [device newRenderPipelineStateWithDescriptor:pipelineDesc error:&error];
     if (pipeline == nil) {
-      std::cerr << "failed to create render pipeline: "
-                << (error == nil ? "unknown" : error.localizedDescription.UTF8String) << "\n";
+      const std::string why = "failed to create render pipeline: " +
+                              std::string(error == nil ? "unknown" : error.localizedDescription.UTF8String);
+      emitGfxError(std::cerr, GfxErrorCode::PipelineCreateFailed, why);
       return 73;
     }
 
     id<MTLCommandQueue> queue = [device newCommandQueue];
     if (queue == nil) {
-      std::cerr << "failed to create command queue\n";
+      emitGfxError(std::cerr, GfxErrorCode::DeviceCreateFailed, "failed to create command queue");
       return 74;
     }
 
@@ -234,7 +270,7 @@ int main(int argc, char **argv) {
 
     id<MTLTexture> target = [device newTextureWithDescriptor:targetDesc];
     if (target == nil) {
-      std::cerr << "failed to create render target texture\n";
+      emitGfxError(std::cerr, GfxErrorCode::FrameAcquireFailed, "failed to create render target texture");
       return 75;
     }
 
@@ -243,7 +279,7 @@ int main(int argc, char **argv) {
                             length:sizeof(TriangleVertices)
                            options:MTLResourceStorageModeShared];
     if (vertexBuffer == nil) {
-      std::cerr << "failed to create vertex buffer\n";
+      emitGfxError(std::cerr, GfxErrorCode::MeshCreateFailed, "failed to create vertex buffer");
       return 76;
     }
 
@@ -254,9 +290,13 @@ int main(int argc, char **argv) {
     pass.colorAttachments[0].clearColor = MTLClearColorMake(0.03, 0.04, 0.06, 1.0);
 
     id<MTLCommandBuffer> commandBuffer = [queue commandBuffer];
+    if (commandBuffer == nil) {
+      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, "failed to create command buffer");
+      return 77;
+    }
     id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
     if (encoder == nil) {
-      std::cerr << "failed to create render command encoder\n";
+      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, "failed to create render command encoder");
       return 77;
     }
 
@@ -268,10 +308,15 @@ int main(int argc, char **argv) {
     [commandBuffer commit];
     [commandBuffer waitUntilCompleted];
     if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
-      std::cerr << "render command buffer failed\n";
+      NSError *commandBufferError = commandBuffer.error;
+      const std::string why = "render command buffer failed: " +
+                              std::string(commandBufferError == nil ? "unknown"
+                                                                    : commandBufferError.localizedDescription.UTF8String);
+      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, why);
       return 78;
     }
 
+    std::cout << "gfx_profile=" << deducedGfxProfileName() << "\n";
     std::cout << "frame_rendered=1\n";
     return 0;
   }

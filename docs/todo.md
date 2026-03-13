@@ -128,7 +128,6 @@ Type-resolution graph rollout note: keep the graph migration blocked on the rema
 - ○ Add GLSL reject/diagnostic coverage for image file I/O.
 
 **Web + Native + Metal 3D Target (Spinning Cube)**
-- ○ Implement profile-deduced device creation and deterministic `GfxError` code mapping for the v1 spinning-cube path.
 - ○ Lock `/std/gfx/VertexColored` wire layout across lowering/backends and add source-lock coverage on the canonical spinning-cube snippets.
 - ○ Implement `?` fallible flow for the v1 graphics path with compile-run coverage on canonical sample snippets.
 - ○ Implement `on_error<...>` fallible flow for the v1 graphics path with compile-run coverage on canonical sample snippets.

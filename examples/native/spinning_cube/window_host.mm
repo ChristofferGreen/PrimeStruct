@@ -57,6 +57,19 @@ fragment float4 windowFragmentMain(VertexOut in [[stage_in]]) {
 constexpr int SimulationStreamFieldsPerFrame = 4;
 constexpr int SimulationFixedStepMillis = 16;
 
+enum class GfxErrorCode {
+  None,
+  WindowCreateFailed,
+  DeviceCreateFailed,
+  SwapchainCreateFailed,
+  MeshCreateFailed,
+  PipelineCreateFailed,
+  MaterialCreateFailed,
+  FrameAcquireFailed,
+  QueueSubmitFailed,
+  FramePresentFailed,
+};
+
 enum class StartupFailureStage {
   SimulationStreamLoad,
   GpuDeviceAcquisition,
@@ -100,6 +113,36 @@ int startupStageExitCode(StartupFailureStage stage) {
       return 74;
   }
   return 78;
+}
+
+const char *deducedGfxProfileName() {
+  return "native-desktop";
+}
+
+const char *gfxErrorCodeName(GfxErrorCode code) {
+  switch (code) {
+    case GfxErrorCode::None:
+      return "";
+    case GfxErrorCode::WindowCreateFailed:
+      return "window_create_failed";
+    case GfxErrorCode::DeviceCreateFailed:
+      return "device_create_failed";
+    case GfxErrorCode::SwapchainCreateFailed:
+      return "swapchain_create_failed";
+    case GfxErrorCode::MeshCreateFailed:
+      return "mesh_create_failed";
+    case GfxErrorCode::PipelineCreateFailed:
+      return "pipeline_create_failed";
+    case GfxErrorCode::MaterialCreateFailed:
+      return "material_create_failed";
+    case GfxErrorCode::FrameAcquireFailed:
+      return "frame_acquire_failed";
+    case GfxErrorCode::QueueSubmitFailed:
+      return "queue_submit_failed";
+    case GfxErrorCode::FramePresentFailed:
+      return "frame_present_failed";
+  }
+  return "";
 }
 
 int gExitCode = 0;
@@ -313,8 +356,14 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 - (instancetype)initWithMaxFrames:(int)maxFrames
                 cubeSimulationPath:(const std::string &)cubeSimulationPath
                simulationSmokeMode:(bool)simulationSmokeMode;
-- (void)failStartupStage:(StartupFailureStage)stage reason:(const char *)reason details:(const char *)details;
-- (void)failRuntimeCode:(int)code reason:(const char *)reason details:(const char *)details;
+- (void)failStartupStage:(StartupFailureStage)stage
+                  reason:(const char *)reason
+                 details:(const char *)details
+            gfxErrorCode:(GfxErrorCode)gfxErrorCode;
+- (void)failRuntimeCode:(int)code
+                 reason:(const char *)reason
+                details:(const char *)details
+           gfxErrorCode:(GfxErrorCode)gfxErrorCode;
 - (void)handleEscapeKey;
 - (void)renderFrame:(NSTimer *)timer;
 @end
@@ -379,25 +428,45 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   return self;
 }
 
-- (void)failStartupStage:(StartupFailureStage)stage reason:(const char *)reason details:(const char *)details {
+- (void)failStartupStage:(StartupFailureStage)stage
+                  reason:(const char *)reason
+                 details:(const char *)details
+            gfxErrorCode:(GfxErrorCode)gfxErrorCode {
   const int exitCode = startupStageExitCode(stage);
   std::cerr << "startup_failure=1\n";
+  std::cerr << "gfx_profile=" << deducedGfxProfileName() << "\n";
   std::cerr << "startup_failure_stage=" << startupStageName(stage) << "\n";
   std::cerr << "startup_failure_reason=" << reason << "\n";
   std::cerr << "startup_failure_exit_code=" << exitCode << "\n";
+  if (gfxErrorCode != GfxErrorCode::None) {
+    std::cerr << "gfx_error_code=" << gfxErrorCodeName(gfxErrorCode) << "\n";
+  }
   if (details != nullptr && details[0] != '\0') {
     std::cerr << "startup_failure_detail=" << details << "\n";
+    if (gfxErrorCode != GfxErrorCode::None) {
+      std::cerr << "gfx_error_why=" << details << "\n";
+    }
   }
   gExitCode = exitCode;
   [NSApp terminate:nil];
 }
 
-- (void)failRuntimeCode:(int)code reason:(const char *)reason details:(const char *)details {
+- (void)failRuntimeCode:(int)code
+                 reason:(const char *)reason
+                details:(const char *)details
+           gfxErrorCode:(GfxErrorCode)gfxErrorCode {
   std::cerr << "runtime_failure=1\n";
+  std::cerr << "gfx_profile=" << deducedGfxProfileName() << "\n";
   std::cerr << "runtime_failure_reason=" << reason << "\n";
   std::cerr << "runtime_failure_exit_code=" << code << "\n";
+  if (gfxErrorCode != GfxErrorCode::None) {
+    std::cerr << "gfx_error_code=" << gfxErrorCodeName(gfxErrorCode) << "\n";
+  }
   if (details != nullptr && details[0] != '\0') {
     std::cerr << "runtime_failure_detail=" << details << "\n";
+    if (gfxErrorCode != GfxErrorCode::None) {
+      std::cerr << "gfx_error_why=" << details << "\n";
+    }
   }
   gExitCode = code;
   [NSApp terminate:nil];
@@ -426,7 +495,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   if (!loadSimulationFrames(_cubeSimulationPath, _simulationFrames, simulationError)) {
     [self failStartupStage:StartupFailureStage::SimulationStreamLoad
                     reason:"simulation_stream_load_failed"
-                   details:simulationError.c_str()];
+                   details:simulationError.c_str()
+              gfxErrorCode:GfxErrorCode::None];
     return;
   }
 
@@ -449,7 +519,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   if (_device == nil) {
     [self failStartupStage:StartupFailureStage::GpuDeviceAcquisition
                     reason:"metal_device_creation_failed"
-                   details:"failed to create Metal device"];
+                   details:"failed to create Metal device"
+              gfxErrorCode:GfxErrorCode::DeviceCreateFailed];
     return;
   }
 
@@ -457,7 +528,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   if (_queue == nil) {
     [self failStartupStage:StartupFailureStage::GpuDeviceAcquisition
                     reason:"command_queue_creation_failed"
-                   details:"failed to create command queue"];
+                   details:"failed to create command queue"
+              gfxErrorCode:GfxErrorCode::DeviceCreateFailed];
     return;
   }
 
@@ -468,7 +540,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     const char *details = libraryError == nil ? "unknown" : libraryError.localizedDescription.UTF8String;
     [self failStartupStage:StartupFailureStage::ShaderLoad
                     reason:"shader_library_compile_failed"
-                   details:details];
+                   details:details
+              gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
     return;
   }
   std::cout << "shader_library_ready=1\n";
@@ -478,7 +551,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   if (vertexFn == nil || fragmentFn == nil) {
     [self failStartupStage:StartupFailureStage::ShaderLoad
                     reason:"shader_entrypoint_missing"
-                   details:"missing window host shader entrypoints"];
+                   details:"missing window host shader entrypoints"
+              gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
     return;
   }
 
@@ -506,7 +580,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     const char *details = pipelineError == nil ? "unknown" : pipelineError.localizedDescription.UTF8String;
     [self failStartupStage:StartupFailureStage::PipelineSetup
                     reason:"render_pipeline_creation_failed"
-                   details:details];
+                   details:details
+              gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
     return;
   }
 
@@ -517,7 +592,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   if (_depthState == nil) {
     [self failStartupStage:StartupFailureStage::PipelineSetup
                     reason:"depth_state_creation_failed"
-                   details:"failed to create depth state"];
+                   details:"failed to create depth state"
+              gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
     return;
   }
 
@@ -527,7 +603,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   if (_vertexBuffer == nil) {
     [self failStartupStage:StartupFailureStage::PipelineSetup
                     reason:"vertex_buffer_creation_failed"
-                   details:"failed to create vertex buffer"];
+                   details:"failed to create vertex buffer"
+              gfxErrorCode:GfxErrorCode::MeshCreateFailed];
     return;
   }
 
@@ -537,7 +614,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   if (_indexBuffer == nil) {
     [self failStartupStage:StartupFailureStage::PipelineSetup
                     reason:"index_buffer_creation_failed"
-                   details:"failed to create index buffer"];
+                   details:"failed to create index buffer"
+              gfxErrorCode:GfxErrorCode::MeshCreateFailed];
     return;
   }
 
@@ -545,7 +623,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   if (_uniformBuffer == nil) {
     [self failStartupStage:StartupFailureStage::PipelineSetup
                     reason:"uniform_buffer_creation_failed"
-                   details:"failed to create uniform buffer"];
+                   details:"failed to create uniform buffer"
+              gfxErrorCode:GfxErrorCode::MaterialCreateFailed];
     return;
   }
 
@@ -563,7 +642,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   if (_window == nil) {
     [self failStartupStage:StartupFailureStage::WindowCreation
                     reason:"window_creation_failed"
-                   details:"failed to create native window"];
+                   details:"failed to create native window"
+              gfxErrorCode:GfxErrorCode::WindowCreateFailed];
     return;
   }
   _window.hostDelegate = self;
@@ -571,7 +651,22 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   _window.delegate = self;
 
   NSView *contentView = _window.contentView;
+  if (contentView == nil) {
+    [self failStartupStage:StartupFailureStage::WindowCreation
+                    reason:"window_content_view_missing"
+                   details:"native window content view was unavailable"
+              gfxErrorCode:GfxErrorCode::WindowCreateFailed];
+    return;
+  }
+
   _metalLayer = [CAMetalLayer layer];
+  if (_metalLayer == nil) {
+    [self failStartupStage:StartupFailureStage::WindowCreation
+                    reason:"swapchain_layer_creation_failed"
+                   details:"failed to create CAMetalLayer swapchain"
+              gfxErrorCode:GfxErrorCode::SwapchainCreateFailed];
+    return;
+  }
   _metalLayer.device = _device;
   _metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
   _metalLayer.frame = contentView.bounds;
@@ -617,15 +712,30 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
       if (!_firstFrameSubmitted) {
         [self failStartupStage:StartupFailureStage::FirstFrameSubmission
                         reason:"depth_texture_creation_failed"
-                       details:"failed to create depth texture"];
+                       details:"failed to create depth texture"
+                  gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
       } else {
-        [self failRuntimeCode:80 reason:"depth_texture_creation_failed" details:"failed to create depth texture"];
+        [self failRuntimeCode:80
+                       reason:"depth_texture_creation_failed"
+                      details:"failed to create depth texture"
+                 gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
       }
       return;
     }
 
     id<CAMetalDrawable> drawable = [_metalLayer nextDrawable];
     if (drawable == nil) {
+      if (!_firstFrameSubmitted) {
+        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
+                        reason:"frame_drawable_acquisition_failed"
+                       details:"failed to acquire drawable from CAMetalLayer"
+                  gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
+      } else {
+        [self failRuntimeCode:82
+                       reason:"frame_drawable_acquisition_failed"
+                      details:"failed to acquire drawable from CAMetalLayer"
+                 gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
+      }
       return;
     }
 
@@ -666,16 +776,32 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     pass.depthAttachment.clearDepth = 1.0;
 
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
+    if (commandBuffer == nil) {
+      if (!_firstFrameSubmitted) {
+        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
+                        reason:"command_buffer_creation_failed"
+                       details:"failed to create command buffer"
+                  gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
+      } else {
+        [self failRuntimeCode:83
+                       reason:"command_buffer_creation_failed"
+                      details:"failed to create command buffer"
+                 gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
+      }
+      return;
+    }
     id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
     if (encoder == nil) {
       if (!_firstFrameSubmitted) {
         [self failStartupStage:StartupFailureStage::FirstFrameSubmission
                         reason:"render_encoder_creation_failed"
-                       details:"failed to create render command encoder"];
+                       details:"failed to create render command encoder"
+                  gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
       } else {
         [self failRuntimeCode:81
                      reason:"render_encoder_creation_failed"
-                    details:"failed to create render command encoder"];
+                    details:"failed to create render command encoder"
+               gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
       }
       return;
     }
@@ -695,6 +821,18 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     [commandBuffer commit];
 
     if (!_firstFrameSubmitted) {
+      [commandBuffer waitUntilCompleted];
+      if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
+        NSError *commandBufferError = commandBuffer.error;
+        const char *details = commandBufferError == nil ? "first frame command buffer did not complete"
+                                                        : commandBufferError.localizedDescription.UTF8String;
+        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
+                        reason:"first_frame_submit_failed"
+                       details:details
+                  gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
+        return;
+      }
+      std::cout << "gfx_profile=" << deducedGfxProfileName() << "\n";
       std::cout << "startup_success=1\n";
       _firstFrameSubmitted = true;
     }

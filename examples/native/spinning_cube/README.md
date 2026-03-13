@@ -45,6 +45,7 @@ The window host now renders an indexed cube mesh each frame and updates
 transform uniforms from the deterministic fixed-step simulation stream.
 
 Expected diagnostics include:
+- `gfx_profile=native-desktop`
 - `simulation_stream_loaded=1`
 - `simulation_fixed_step_millis=16`
 - `shader_library_ready=1`
@@ -64,6 +65,9 @@ Close handling diagnostics:
 
 Startup failure diagnostics:
 - `startup_failure=1`
+- `gfx_profile=native-desktop`
 - `startup_failure_stage=<simulation_stream_load|gpu_device_acquisition|shader_load|pipeline_setup|window_creation|first_frame_submission>`
 - `startup_failure_reason=<stable_reason_token>`
 - `startup_failure_exit_code=<stable_stage_code>`
+- `gfx_error_code=<window_create_failed|device_create_failed|swapchain_create_failed|mesh_create_failed|pipeline_create_failed|material_create_failed|frame_acquire_failed|queue_submit_failed>` for graphics-related failures
+- `gfx_error_why=<human_readable_details>` for graphics-related failures

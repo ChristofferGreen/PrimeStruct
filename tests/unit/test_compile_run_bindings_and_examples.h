@@ -759,9 +759,20 @@ TEST_CASE("spinning cube native window host locks indexed cube pipeline resource
   CHECK(hostSource.find("handleEscapeKey") != std::string::npos);
   CHECK(hostSource.find("startup_success=1") != std::string::npos);
   CHECK(hostSource.find("startup_failure=1") != std::string::npos);
+  CHECK(hostSource.find("gfx_profile=native-desktop") != std::string::npos);
+  CHECK(hostSource.find("gfx_error_code=") != std::string::npos);
+  CHECK(hostSource.find("gfx_error_why=") != std::string::npos);
   CHECK(hostSource.find("startup_failure_stage=") != std::string::npos);
   CHECK(hostSource.find("startup_failure_reason=") != std::string::npos);
   CHECK(hostSource.find("startup_failure_exit_code=") != std::string::npos);
+  CHECK(hostSource.find("window_create_failed") != std::string::npos);
+  CHECK(hostSource.find("device_create_failed") != std::string::npos);
+  CHECK(hostSource.find("swapchain_create_failed") != std::string::npos);
+  CHECK(hostSource.find("mesh_create_failed") != std::string::npos);
+  CHECK(hostSource.find("pipeline_create_failed") != std::string::npos);
+  CHECK(hostSource.find("material_create_failed") != std::string::npos);
+  CHECK(hostSource.find("frame_acquire_failed") != std::string::npos);
+  CHECK(hostSource.find("queue_submit_failed") != std::string::npos);
   CHECK(hostSource.find("startup_failure_stage=first_frame_submission") != std::string::npos);
   CHECK(hostSource.find("startup_failure_stage=window_creation") != std::string::npos);
   CHECK(hostSource.find("startup_failure_stage=pipeline_setup") != std::string::npos);
@@ -804,6 +815,7 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(hostSource.find("--simulation-smoke") != std::string::npos);
   CHECK(hostSource.find("simulation_stream_loaded=1") != std::string::npos);
   CHECK(hostSource.find("simulation_fixed_step_millis=16") != std::string::npos);
+  CHECK(hostSource.find("gfx_profile=native-desktop") != std::string::npos);
   CHECK(hostSource.find("shader_library_ready=1") != std::string::npos);
   CHECK(hostSource.find("vertex_buffer_ready=1") != std::string::npos);
   CHECK(hostSource.find("index_buffer_ready=1") != std::string::npos);
@@ -813,6 +825,8 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(hostSource.find("startup_failure_stage=") != std::string::npos);
   CHECK(hostSource.find("startup_failure_reason=") != std::string::npos);
   CHECK(hostSource.find("startup_failure_exit_code=") != std::string::npos);
+  CHECK(hostSource.find("gfx_error_code=") != std::string::npos);
+  CHECK(hostSource.find("gfx_error_why=") != std::string::npos);
   CHECK(hostSource.find("exit_reason=max_frames") != std::string::npos);
   CHECK(hostSource.find("exit_reason=window_close") != std::string::npos);
   CHECK(hostSource.find("exit_reason=esc_key") != std::string::npos);
@@ -897,6 +911,7 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(readFile(badStreamOutPath.string()).empty());
   const std::string badStreamErr = readFile(badStreamErrPath.string());
   CHECK(badStreamErr.find("startup_failure=1") != std::string::npos);
+  CHECK(badStreamErr.find("gfx_profile=native-desktop") != std::string::npos);
   CHECK(badStreamErr.find("startup_failure_stage=simulation_stream_load") != std::string::npos);
   CHECK(badStreamErr.find("startup_failure_reason=simulation_stream_load_failed") != std::string::npos);
   CHECK(badStreamErr.find("startup_failure_exit_code=69") != std::string::npos);
@@ -1577,15 +1592,17 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "Conformance wrappers (`cubeNativeAbiConformance*`) lock deterministic ABI",
       "Rendering: submits indexed cube draw calls each frame with transform",
       "uniforms updated from the deterministic simulation stream.",
-      "Diagnostics: prints `simulation_stream_loaded=1`,",
+      "Diagnostics: prints `gfx_profile=native-desktop`,",
+      "`simulation_stream_loaded=1`,",
       "`simulation_fixed_step_millis=16`, `shader_library_ready=1`,",
       "`vertex_buffer_ready=1`, `index_buffer_ready=1`,",
       "`uniform_buffer_ready=1`, `window_created=1`,",
       "`swapchain_layer_created=1`, `pipeline_ready=1`, `startup_success=1`,",
       "`frame_rendered=1`, and `exit_reason=max_frames`.",
       "Failure diagnostics: startup-stage failures print deterministic",
-      "`startup_failure_stage`, `startup_failure_reason`, and",
-      "`startup_failure_exit_code` fields before exit.",
+      "`gfx_profile`, `startup_failure_stage`, `startup_failure_reason`,",
+      "`startup_failure_exit_code`, and graphics-path `gfx_error_code` /",
+      "`gfx_error_why` fields before exit.",
       "For a visible rotating window today, use the browser path (`index.html` + `main.js`).",
       "shared-source `/main` is still unsupported for native emit until",
       "Diagnostics: prints `native host verified cube simulation output`.",
@@ -3902,6 +3919,14 @@ TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiri
   REQUIRE(std::filesystem::exists(metalHostPath));
 
   const std::string source = readFile(metalHostPath.string());
+  CHECK(source.find("gfx_profile=metal-osx") != std::string::npos);
+  CHECK(source.find("gfx_error_code=") != std::string::npos);
+  CHECK(source.find("gfx_error_why=") != std::string::npos);
+  CHECK(source.find("device_create_failed") != std::string::npos);
+  CHECK(source.find("mesh_create_failed") != std::string::npos);
+  CHECK(source.find("pipeline_create_failed") != std::string::npos);
+  CHECK(source.find("frame_acquire_failed") != std::string::npos);
+  CHECK(source.find("queue_submit_failed") != std::string::npos);
   CHECK(source.find("newLibraryWithURL") != std::string::npos);
   CHECK(source.find("newLibraryWithFile") == std::string::npos);
   CHECK(source.find("MTLVertexDescriptor *vertexDesc = [[MTLVertexDescriptor alloc] init];") != std::string::npos);
@@ -3953,7 +3978,9 @@ TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {
   const std::string hostStdout = readFile(hostStdoutPath.string());
   const std::string hostStderr = readFile(hostStderrPath.string());
   CHECK(hostStdout.empty());
-  CHECK(hostStderr.find("failed to load metallib:") != std::string::npos);
+  CHECK(hostStderr.find("gfx_profile=metal-osx") != std::string::npos);
+  CHECK(hostStderr.find("gfx_error_code=pipeline_create_failed") != std::string::npos);
+  CHECK(hostStderr.find("gfx_error_why=failed to load metallib:") != std::string::npos);
 }
 
 TEST_CASE("spinning cube metal host pipeline creation regression stays fixed") {
@@ -4018,6 +4045,7 @@ TEST_CASE("spinning cube metal host pipeline creation regression stays fixed") {
 
   const std::string hostStdout = readFile(hostStdoutPath.string());
   const std::string hostStderr = readFile(hostStderrPath.string());
+  CHECK(hostStdout.find("gfx_profile=metal-osx") != std::string::npos);
   CHECK(hostStdout.find("frame_rendered=1") != std::string::npos);
   CHECK(hostStderr.find("failed to create render pipeline:") == std::string::npos);
   CHECK(hostStderr.find("Vertex function has input attributes but no vertex descriptor was set.") == std::string::npos);
@@ -4083,6 +4111,7 @@ TEST_CASE("spinning cube metal full-path smoke renders frame") {
                                  quoteShellArg(hostStderrPath.string());
   CHECK(runCommand(runHostCmd) == 0);
   const std::string hostStdout = readFile(hostStdoutPath.string());
+  CHECK(hostStdout.find("gfx_profile=metal-osx") != std::string::npos);
   CHECK(hostStdout.find("frame_rendered=1") != std::string::npos);
 }
 

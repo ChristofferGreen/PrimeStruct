@@ -18,7 +18,13 @@ spinning-cube sample.
 4. Run host smoke:
    - `./metal_host ./cube.metallib`
 
-The host prints `frame_rendered=1` and exits 0 when frame submission completes.
+The host prints `gfx_profile=metal-osx` and `frame_rendered=1` and exits 0
+when frame submission completes.
+
+Failure diagnostics print deterministic:
+- `gfx_profile=metal-osx`
+- `gfx_error_code=<device_create_failed|mesh_create_failed|pipeline_create_failed|frame_acquire_failed|queue_submit_failed>`
+- `gfx_error_why=<human_readable_details>`
 
 ## Parity Helpers
 - `./metal_host --snapshot-code 120` prints the fixed-step snapshot code.
