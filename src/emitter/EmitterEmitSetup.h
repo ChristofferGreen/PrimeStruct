@@ -660,7 +660,8 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     return methodName;
   };
   auto collectionMethodPathCandidates = [&](const std::string &receiverStruct,
-                                            const std::string &methodName) -> std::vector<std::string> {
+                                            const std::string &methodName,
+                                            const std::string &rawMethodName) -> std::vector<std::string> {
     if (receiverStruct == "/vector") {
       std::vector<std::string> candidates = {
           "/vector/" + methodName,
@@ -682,8 +683,16 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       return candidates;
     }
     if (receiverStruct == "/map") {
-      return {"/map/" + methodName,
-              "/std/collections/map/" + methodName};
+      std::vector<std::string> candidates = {
+          "/map/" + methodName,
+      };
+      const bool blocksRemovedMapAliasStructReturnForwarding =
+          rawMethodName == "map/at" || rawMethodName == "map/at_unsafe" ||
+          rawMethodName == "std/collections/map/at" || rawMethodName == "std/collections/map/at_unsafe";
+      if (!blocksRemovedMapAliasStructReturnForwarding) {
+        candidates.push_back("/std/collections/map/" + methodName);
+      }
+      return candidates;
     }
     return {receiverStruct + "/" + methodName};
   };
@@ -1054,8 +1063,12 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         if (receiverStruct.empty()) {
           return "";
         }
+        std::string rawMethodName = expr.name;
+        if (!rawMethodName.empty() && rawMethodName.front() == '/') {
+          rawMethodName.erase(rawMethodName.begin());
+        }
         const std::string methodName = normalizeCollectionMethodName(receiverStruct, expr.name);
-        const auto candidates = collectionMethodPathCandidates(receiverStruct, methodName);
+        const auto candidates = collectionMethodPathCandidates(receiverStruct, methodName, rawMethodName);
         for (const auto &candidate : candidates) {
           auto it = returnStructs.find(candidate);
           if (it != returnStructs.end()) {
