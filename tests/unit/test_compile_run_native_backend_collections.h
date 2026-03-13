@@ -6327,6 +6327,33 @@ main() {
   CHECK(runCommand(exePath) == 169);
 }
 
+TEST_CASE("rejects native slashless canonical unknown map helper with canonical diagnostics") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(std/collections/map/missing(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_slashless_canonical_unknown_map_helper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_slashless_canonical_unknown_map_helper_out.txt")
+          .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_slashless_canonical_unknown_map_helper_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string diagnostics = readFile(outPath);
+  CHECK(diagnostics.find("unknown call target: /std/collections/map/missing") != std::string::npos);
+  CHECK(diagnostics.find("unknown call target: std/collections/map/missing") == std::string::npos);
+}
+
 TEST_CASE("compiles and runs native canonical map access string shadow before compatibility aliases") {
   const std::string source = R"(
 [return<int>]

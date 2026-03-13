@@ -7,10 +7,22 @@
 #include <cctype>
 #include <functional>
 #include <limits>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
 namespace primec::semantics {
+
+namespace {
+
+bool isSlashlessMapHelperName(std::string_view name) {
+  if (!name.empty() && name.front() == '/') {
+    name.remove_prefix(1);
+  }
+  return name.rfind("map/", 0) == 0 || name.rfind("std/collections/map/", 0) == 0;
+}
+
+} // namespace
 
 SemanticsValidator::SemanticsValidator(const Program &program,
                                        const std::string &entryPath,
@@ -41,6 +53,14 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       }
     }
   }
+}
+
+std::string SemanticsValidator::formatUnknownCallTarget(const Expr &expr) const {
+  if (!isSlashlessMapHelperName(expr.name)) {
+    return expr.name;
+  }
+  const std::string resolved = resolveCalleePath(expr);
+  return resolved.empty() ? expr.name : resolved;
 }
 
 SemanticsValidator::ValidationContext

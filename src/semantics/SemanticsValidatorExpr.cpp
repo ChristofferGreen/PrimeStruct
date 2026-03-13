@@ -6264,7 +6264,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return true;
         }
       }
-      error_ = "unknown call target: " + expr.name;
+      error_ = "unknown call target: " + formatUnknownCallTarget(expr);
       return false;
     }
     const auto &calleeParams = paramsByDef_[resolved];

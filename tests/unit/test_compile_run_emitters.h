@@ -4910,6 +4910,29 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("C++ emitter rejects slashless canonical unknown map helper with canonical diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(std/collections/map/missing(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_slashless_canonical_unknown_map_helper.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_slashless_canonical_unknown_map_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("unknown call target: /std/collections/map/missing") != std::string::npos);
+  CHECK(diagnostics.find("unknown call target: std/collections/map/missing") == std::string::npos);
+}
+
 TEST_CASE("C++ emitter keeps canonical direct-call map access string receivers") {
   const std::string source = R"(
 [return<int>]

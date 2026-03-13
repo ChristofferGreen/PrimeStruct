@@ -43,6 +43,7 @@ private:
   bool isOutsideEffectFreeStructConstructor(const std::string &structPath);
 
   std::string resolveCalleePath(const Expr &expr) const;
+  std::string formatUnknownCallTarget(const Expr &expr) const;
   bool isParam(const std::vector<ParameterInfo> &params, const std::string &name) const;
   const BindingInfo *findParamBinding(const std::vector<ParameterInfo> &params, const std::string &name) const;
   std::string typeNameForReturnKind(ReturnKind kind) const;

@@ -5567,6 +5567,24 @@ main() {
   CHECK(runCommand(runCmd) == 169);
 }
 
+TEST_CASE("rejects vm slashless canonical unknown map helper with canonical diagnostics") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(std/collections/map/missing(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_slashless_canonical_unknown_map_helper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_slashless_canonical_unknown_map_helper_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  const std::string diagnostics = readFile(outPath);
+  CHECK(diagnostics.find("unknown call target: /std/collections/map/missing") != std::string::npos);
+  CHECK(diagnostics.find("unknown call target: std/collections/map/missing") == std::string::npos);
+}
+
 TEST_CASE("vm canonical map access string shadow currently fails backend lowering") {
   const std::string source = R"(
 [return<int>]

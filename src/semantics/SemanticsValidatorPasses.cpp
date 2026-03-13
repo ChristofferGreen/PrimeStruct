@@ -510,7 +510,7 @@ bool SemanticsValidator::validateDefinitions() {
           }
           const std::string resolved = resolveCalleePath(expr);
           if (defMap_.count(resolved) == 0) {
-            appendDefinitionRecord(expr, "unknown call target: " + expr.name);
+            appendDefinitionRecord(expr, "unknown call target: " + formatUnknownCallTarget(expr));
           } else {
             collectResolvedCallArgumentDiagnostic(expr, resolved);
           }
@@ -1583,7 +1583,7 @@ bool SemanticsValidator::validateExecutions() {
           }
           const std::string resolved = resolveCalleePath(expr);
           if (defMap_.count(resolved) == 0) {
-            appendExecutionRecord(expr, "unknown call target: " + expr.name);
+            appendExecutionRecord(expr, "unknown call target: " + formatUnknownCallTarget(expr));
           } else {
             collectResolvedCallArgumentDiagnostic(expr, resolved);
           }
