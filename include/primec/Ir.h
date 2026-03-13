@@ -114,6 +114,7 @@ enum class IrOpcode : uint8_t {
   CallVoid,
   HeapAlloc,
   HeapFree,
+  HeapRealloc,
 };
 
 enum class IrStructFieldCategory : uint8_t {

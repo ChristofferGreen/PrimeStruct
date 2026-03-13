@@ -20,8 +20,13 @@ bool isPointerExpression(const Expr &expr,
   }
   if (expr.kind == Expr::Kind::Call) {
     std::string memoryBuiltinName;
-    if (getBuiltinMemoryName(expr, memoryBuiltinName) && memoryBuiltinName == "alloc" && expr.templateArgs.size() == 1) {
-      return true;
+    if (getBuiltinMemoryName(expr, memoryBuiltinName)) {
+      if (memoryBuiltinName == "alloc" && expr.templateArgs.size() == 1) {
+        return true;
+      }
+      if (memoryBuiltinName == "realloc" && expr.args.size() == 2) {
+        return isPointerExpression(expr.args.front(), localsIn, getBuiltinOperatorName);
+      }
     }
     std::string builtinName;
     if (getBuiltinOperatorName(expr, builtinName) &&
@@ -70,8 +75,13 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
       return LocalInfo::ValueKind::Unknown;
     }
     std::string memoryBuiltinName;
-    if (getBuiltinMemoryName(expr, memoryBuiltinName) && memoryBuiltinName == "alloc" && expr.templateArgs.size() == 1) {
-      return valueKindFromTypeName(expr.templateArgs.front());
+    if (getBuiltinMemoryName(expr, memoryBuiltinName)) {
+      if (memoryBuiltinName == "alloc" && expr.templateArgs.size() == 1) {
+        return valueKindFromTypeName(expr.templateArgs.front());
+      }
+      if (memoryBuiltinName == "realloc" && expr.args.size() == 2) {
+        return inferPointerTargetValueKind(expr.args.front(), localsIn, getBuiltinOperatorName);
+      }
     }
     std::string builtinName;
     if (getBuiltinOperatorName(expr, builtinName) &&
@@ -627,11 +637,15 @@ PointerBuiltinCallReturnKindResolution inferPointerBuiltinCallReturnKind(
   std::string builtin;
   if (!getBuiltinPointerName(expr, builtin)) {
     std::string memoryBuiltin;
-    if (!getBuiltinMemoryName(expr, memoryBuiltin) || memoryBuiltin != "alloc") {
+    if (!getBuiltinMemoryName(expr, memoryBuiltin) ||
+        (memoryBuiltin != "alloc" && memoryBuiltin != "realloc")) {
       return PointerBuiltinCallReturnKindResolution::NotMatched;
     }
-    if (expr.templateArgs.size() == 1) {
+    if (memoryBuiltin == "alloc" && expr.templateArgs.size() == 1) {
       kindOut = valueKindFromTypeName(expr.templateArgs.front());
+    }
+    if (memoryBuiltin == "realloc" && expr.args.size() == 2) {
+      kindOut = inferPointerTargetKind(expr.args.front(), localsIn);
     }
     return PointerBuiltinCallReturnKindResolution::Resolved;
   }

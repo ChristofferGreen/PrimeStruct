@@ -8,6 +8,55 @@
 #include <limits>
 
 namespace primec::ir_lowerer {
+namespace {
+
+std::string inferPointerStructTypePath(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName) {
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.name);
+    if (it == localsIn.end()) {
+      return "";
+    }
+    if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
+      return it->second.structTypeName;
+    }
+    return "";
+  }
+  if (expr.kind != Expr::Kind::Call) {
+    return "";
+  }
+
+  std::string memoryBuiltin;
+  if (getBuiltinMemoryName(expr, memoryBuiltin)) {
+    if (memoryBuiltin == "alloc" && expr.templateArgs.size() == 1) {
+      std::string resolvedStruct;
+      if (resolveStructTypeName(expr.templateArgs.front(), expr.namespacePrefix, resolvedStruct)) {
+        return resolvedStruct;
+      }
+      return "";
+    }
+    if (memoryBuiltin == "realloc" && expr.args.size() == 2) {
+      return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
+    }
+  }
+
+  std::string builtinName;
+  if (getBuiltinOperatorName(expr, builtinName) &&
+      (builtinName == "plus" || builtinName == "minus") &&
+      expr.args.size() == 2) {
+    return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
+  }
+
+  if (isSimpleCallName(expr, "location") && expr.args.size() == 1) {
+    return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
+  }
+
+  return "";
+}
+
+} // namespace
 
 bool emitConversionsAndCallsOperatorExpr(
     const Expr &expr,
@@ -250,6 +299,47 @@ bool emitConversionsAndCallsOperatorExpr(
               return false;
             }
             instructions.push_back({IrOpcode::HeapFree, 0});
+            return true;
+          }
+          if (builtin == "realloc") {
+            if (!expr.templateArgs.empty()) {
+              error = "realloc does not take template arguments";
+              return false;
+            }
+            if (expr.args.size() != 2) {
+              error = "realloc requires exactly two arguments";
+              return false;
+            }
+            const LocalInfo::ValueKind countKind = normalizeIndexKind(inferExprKind(expr.args[1], localsIn));
+            if (!isSupportedIndexKind(countKind)) {
+              error = "realloc requires integer count argument";
+              return false;
+            }
+            if (!emitExpr(expr.args[0], localsIn)) {
+              return false;
+            }
+            if (!emitExpr(expr.args[1], localsIn)) {
+              return false;
+            }
+
+            int32_t slotCountMultiplier = 1;
+            const std::string structTypeName = inferPointerStructTypePath(expr.args[0], localsIn, resolveStructTypeName);
+            if (!structTypeName.empty()) {
+              if (!resolveStructSlotCount(structTypeName, slotCountMultiplier)) {
+                return false;
+              }
+            }
+
+            if (slotCountMultiplier != 1) {
+              if (countKind == LocalInfo::ValueKind::Int32) {
+                instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(slotCountMultiplier)});
+                instructions.push_back({IrOpcode::MulI32, 0});
+              } else {
+                instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(slotCountMultiplier)});
+                instructions.push_back({IrOpcode::MulI64, 0});
+              }
+            }
+            instructions.push_back({IrOpcode::HeapRealloc, 0});
             return true;
           }
           if (builtin != "alloc") {

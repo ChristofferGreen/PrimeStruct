@@ -196,74 +196,111 @@ class Arm64Emitter {
 
   void emitHeapAlloc() {
     emitPopReg(1);
-    emitCompareRegZero(1);
-    const size_t jumpNonZeroSlots = emitCondBranchPlaceholder(CondCode::Ne);
-    emitMovImm64(0, 0);
+    emitHeapAllocFromSlotCountReg(1, 0);
     emitPushReg(0);
-    const size_t jumpDone = emitJumpPlaceholder();
-
-    const size_t nonZeroSlotsIndex = currentWordIndex();
-    patchCondBranch(jumpNonZeroSlots, static_cast<int32_t>(nonZeroSlotsIndex - jumpNonZeroSlots), CondCode::Ne);
-
-    emitPushReg(1);
-
-    // x0=addr(nullptr), x1=len(bytes), x2=prot, x3=flags, x4=fd(-1), x5=offset(0)
-    emitMovImm64(2, 1);
-    emit(encodeAddReg(1, 1, 2));
-    emitMovImm64(2, IrSlotBytes);
-    emitMulReg(1, 1, 2);
-    emitMovImm64(0, 0);
-    emitMovImm64(2, MmapProtReadWrite);
-    emitMovImm64(3, MmapFlagsPrivateAnon);
-    emitMovImm64(4, ~0ull);
-    emitMovImm64(5, 0);
-    emitMovImm64(16, SysMmap);
-    emit(encodeSvc());
-    emitPopReg(6);
-
-    emitCompareRegZero(0);
-    const size_t jumpNonNegative = emitCondBranchPlaceholder(CondCode::Ge);
-    emitMovImm64(0, 0);
-    emitPushReg(0);
-    const size_t jumpDoneAfterFailure = emitJumpPlaceholder();
-
-    const size_t nonNegativeIndex = currentWordIndex();
-    patchCondBranch(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex - jumpNonNegative), CondCode::Ge);
-
-    emitMovImm64(1, 1);
-    emit(encodeAddReg(6, 6, 1));
-    emitMovImm64(1, IrSlotBytes);
-    emitMulReg(6, 6, 1);
-    emitMovImm64(1, HeapHeaderMagic);
-    emit(encodeStrRegBase(1, 0, 0));
-    emit(encodeStrRegBase(6, 0, 8));
-    emitMovImm64(1, IrSlotBytes);
-    emit(encodeAddReg(0, 0, 1));
-    emitPushReg(0);
-    const size_t doneIndex = currentWordIndex();
-    patchJump(jumpDoneAfterFailure, static_cast<int32_t>(doneIndex - jumpDoneAfterFailure));
-    patchJump(jumpDone, static_cast<int32_t>(doneIndex - jumpDone));
   }
 
   void emitHeapFree() {
     emitPopReg(0);
-    emitCompareRegZero(0);
-    const size_t jumpDone = emitCondBranchPlaceholder(CondCode::Eq);
+    emitHeapFreeFromAddressReg(0);
+  }
 
-    emitMovImm64(1, IrSlotBytes);
-    emitSubReg(0, 0, 1);
-    emit(encodeLdrRegBase(1, 0, 0));
-    emitMovImm64(2, HeapHeaderMagic);
-    emitCompareReg(1, 2);
-    const size_t jumpSkip = emitCondBranchPlaceholder(CondCode::Ne);
-    emit(encodeLdrRegBase(1, 0, 8));
+  void emitHeapRealloc() {
+    emitPopReg(1);
+    emitPopReg(0);
+    emitCompareRegZero(0);
+    const size_t jumpOldNonNull = emitCondBranchPlaceholder(CondCode::Ne);
+    emitHeapAllocFromSlotCountReg(1, 0);
+    emitPushReg(0);
+    const size_t jumpDone = emitJumpPlaceholder();
+
+    const size_t oldNonNullIndex = currentWordIndex();
+    patchCondBranch(jumpOldNonNull, static_cast<int32_t>(oldNonNullIndex - jumpOldNonNull), CondCode::Ne);
+
+    emitCompareRegZero(1);
+    const size_t jumpNonZeroSlots = emitCondBranchPlaceholder(CondCode::Ne);
+    emitHeapFreeFromAddressReg(0);
+    emitMovImm64(0, 0);
+    emitPushReg(0);
+    const size_t jumpDoneAfterFree = emitJumpPlaceholder();
+
+    const size_t nonZeroSlotsIndex = currentWordIndex();
+    patchCondBranch(jumpNonZeroSlots, static_cast<int32_t>(nonZeroSlotsIndex - jumpNonZeroSlots), CondCode::Ne);
+
+    emitMovReg(6, 1);
+    emitMovReg(7, 0);
+    emitMovReg(12, 6);
+    emitMovImm64(8, IrSlotBytes);
+    emitSubReg(9, 7, 8);
+    emit(encodeLdrRegBase(10, 9, 0));
+    emitMovImm64(11, HeapHeaderMagic);
+    emitCompareReg(10, 11);
+    const size_t jumpInvalidAddress = emitCondBranchPlaceholder(CondCode::Ne);
+    emit(encodeLdrRegBase(8, 9, 8));
+
+    emitHeapAllocFromSlotCountReg(6, 0);
+    emitCompareRegZero(0);
+    const size_t jumpAllocSucceeded = emitCondBranchPlaceholder(CondCode::Ne);
+    emitPushReg(0);
+    const size_t jumpDoneAfterAllocFailure = emitJumpPlaceholder();
+
+    const size_t allocSucceededIndex = currentWordIndex();
+    patchCondBranch(jumpAllocSucceeded,
+                    static_cast<int32_t>(allocSucceededIndex - jumpAllocSucceeded),
+                    CondCode::Ne);
+
+    emitMovReg(13, 0);
+    emitMovImm64(14, IrSlotBytes);
+    emitUdivReg(15, 8, 14);
+    emitMovImm64(6, 1);
+    emitSubReg(15, 15, 6);
+    emitCompareReg(15, 12);
+    const size_t jumpKeepOldSlots = emitCondBranchPlaceholder(CondCode::Ls);
+    emitMovReg(15, 12);
+    const size_t keepOldSlotsIndex = currentWordIndex();
+    patchCondBranch(jumpKeepOldSlots,
+                    static_cast<int32_t>(keepOldSlotsIndex - jumpKeepOldSlots),
+                    CondCode::Ls);
+
+    emitCompareRegZero(15);
+    const size_t jumpSkipCopy = emitCondBranchPlaceholder(CondCode::Eq);
+    emitMovReg(10, 7);
+    emitMovReg(11, 13);
+    emitMovImm64(14, IrSlotBytes);
+    emitMovImm64(6, 1);
+    const size_t copyLoopIndex = currentWordIndex();
+    emit(encodeLdrRegBase(2, 10, 0));
+    emit(encodeStrRegBase(2, 11, 0));
+    emit(encodeAddReg(10, 10, 14));
+    emit(encodeAddReg(11, 11, 14));
+    emitSubReg(15, 15, 6);
+    emitCompareRegZero(15);
+    const size_t jumpCopyLoop = emitCondBranchPlaceholder(CondCode::Ne);
+    patchCondBranch(jumpCopyLoop, static_cast<int32_t>(copyLoopIndex - jumpCopyLoop), CondCode::Ne);
+
+    const size_t skipCopyIndex = currentWordIndex();
+    patchCondBranch(jumpSkipCopy, static_cast<int32_t>(skipCopyIndex - jumpSkipCopy), CondCode::Eq);
+
+    emitMovReg(0, 9);
+    emitMovReg(1, 8);
     emitMovImm64(16, SysMunmap);
     emit(encodeSvc());
+    emitMovReg(0, 13);
+    emitPushReg(0);
+    const size_t jumpDoneAfterCopy = emitJumpPlaceholder();
 
-    const size_t skipIndex = currentWordIndex();
-    patchCondBranch(jumpSkip, static_cast<int32_t>(skipIndex - jumpSkip), CondCode::Ne);
+    const size_t invalidAddressIndex = currentWordIndex();
+    patchCondBranch(jumpInvalidAddress,
+                    static_cast<int32_t>(invalidAddressIndex - jumpInvalidAddress),
+                    CondCode::Ne);
+    emitMovImm64(0, 0);
+    emitPushReg(0);
+
     const size_t doneIndex = currentWordIndex();
-    patchCondBranch(jumpDone, static_cast<int32_t>(doneIndex - jumpDone), CondCode::Eq);
+    patchJump(jumpDoneAfterAllocFailure, static_cast<int32_t>(doneIndex - jumpDoneAfterAllocFailure));
+    patchJump(jumpDoneAfterCopy, static_cast<int32_t>(doneIndex - jumpDoneAfterCopy));
+    patchJump(jumpDoneAfterFree, static_cast<int32_t>(doneIndex - jumpDoneAfterFree));
+    patchJump(jumpDone, static_cast<int32_t>(doneIndex - jumpDone));
   }
 
   void emitDup() {
@@ -1162,6 +1199,69 @@ class Arm64Emitter {
 
   void emitUdivReg(uint8_t rd, uint8_t rn, uint8_t rm) {
     emit(encodeUdivReg(rd, rn, rm));
+  }
+
+  void emitHeapAllocFromSlotCountReg(uint8_t slotCountReg, uint8_t resultReg) {
+    emitCompareRegZero(slotCountReg);
+    const size_t jumpNonZeroSlots = emitCondBranchPlaceholder(CondCode::Ne);
+    emitMovImm64(resultReg, 0);
+    const size_t jumpDone = emitJumpPlaceholder();
+
+    const size_t nonZeroSlotsIndex = currentWordIndex();
+    patchCondBranch(jumpNonZeroSlots, static_cast<int32_t>(nonZeroSlotsIndex - jumpNonZeroSlots), CondCode::Ne);
+
+    emitMovReg(1, slotCountReg);
+    emitMovImm64(6, 1);
+    emit(encodeAddReg(1, 1, 6));
+    emitMovImm64(2, IrSlotBytes);
+    emitMulReg(1, 1, 2);
+    emitMovReg(6, 1);
+    emitMovImm64(0, 0);
+    emitMovImm64(2, MmapProtReadWrite);
+    emitMovImm64(3, MmapFlagsPrivateAnon);
+    emitMovImm64(4, ~0ull);
+    emitMovImm64(5, 0);
+    emitMovImm64(16, SysMmap);
+    emit(encodeSvc());
+
+    emitCompareRegZero(0);
+    const size_t jumpNonNegative = emitCondBranchPlaceholder(CondCode::Ge);
+    emitMovImm64(resultReg, 0);
+    const size_t jumpDoneAfterFailure = emitJumpPlaceholder();
+
+    const size_t nonNegativeIndex = currentWordIndex();
+    patchCondBranch(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex - jumpNonNegative), CondCode::Ge);
+
+    emitMovImm64(2, HeapHeaderMagic);
+    emit(encodeStrRegBase(2, 0, 0));
+    emit(encodeStrRegBase(6, 0, 8));
+    emitMovImm64(2, IrSlotBytes);
+    emit(encodeAddReg(resultReg, 0, 2));
+
+    const size_t doneIndex = currentWordIndex();
+    patchJump(jumpDoneAfterFailure, static_cast<int32_t>(doneIndex - jumpDoneAfterFailure));
+    patchJump(jumpDone, static_cast<int32_t>(doneIndex - jumpDone));
+  }
+
+  void emitHeapFreeFromAddressReg(uint8_t addressReg) {
+    emitCompareRegZero(addressReg);
+    const size_t jumpDone = emitCondBranchPlaceholder(CondCode::Eq);
+
+    emitMovReg(0, addressReg);
+    emitMovImm64(1, IrSlotBytes);
+    emitSubReg(0, 0, 1);
+    emit(encodeLdrRegBase(1, 0, 0));
+    emitMovImm64(2, HeapHeaderMagic);
+    emitCompareReg(1, 2);
+    const size_t jumpSkip = emitCondBranchPlaceholder(CondCode::Ne);
+    emit(encodeLdrRegBase(1, 0, 8));
+    emitMovImm64(16, SysMunmap);
+    emit(encodeSvc());
+
+    const size_t skipIndex = currentWordIndex();
+    patchCondBranch(jumpSkip, static_cast<int32_t>(skipIndex - jumpSkip), CondCode::Ne);
+    const size_t doneIndex = currentWordIndex();
+    patchCondBranch(jumpDone, static_cast<int32_t>(doneIndex - jumpDone), CondCode::Eq);
   }
 
   void emitStrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {

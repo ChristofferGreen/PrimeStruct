@@ -2327,7 +2327,7 @@ main() {
   const uint32_t magic = readU32(0);
   const uint32_t version = readU32(4);
   CHECK(magic == 0x50534952u);
-  CHECK(version == 20u);
+  CHECK(version == 21u);
 
   primec::IrModule module;
   std::string error;

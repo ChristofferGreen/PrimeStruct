@@ -82,6 +82,7 @@ bool verifyBarrierOrdering(const IrVirtualRegisterBlock &originalBlock,
       case IrOpcode::StoreLocal:
       case IrOpcode::HeapAlloc:
       case IrOpcode::HeapFree:
+      case IrOpcode::HeapRealloc:
       case IrOpcode::LoadIndirect:
       case IrOpcode::StoreIndirect:
       case IrOpcode::FileOpenRead:

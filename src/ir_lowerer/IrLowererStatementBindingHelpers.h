@@ -75,6 +75,7 @@ struct StatementBindingTypeInfo {
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+  std::string structTypeName;
 };
 
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,

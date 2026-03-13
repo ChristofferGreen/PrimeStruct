@@ -9,7 +9,7 @@ namespace primec {
 namespace {
 
 constexpr uint8_t MinOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
-constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::HeapFree);
+constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::HeapRealloc);
 constexpr uint64_t MaxGlslLocalIndex = 1023;
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
                                      EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |

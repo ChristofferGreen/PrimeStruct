@@ -842,6 +842,24 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
+TEST_CASE("runs vm with heap realloc intrinsic") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(ptr), 9i32)
+  [Pointer<i32> mut] grown{/std/intrinsics/memory/realloc(ptr, 2i32)}
+  assign(dereference(plus(grown, 16i32)), 4i32)
+  [i32] sum{plus(dereference(grown), dereference(plus(grown, 16i32)))}
+  /std/intrinsics/memory/free(grown)
+  return(sum)
+}
+)";
+  const std::string srcPath = writeTemp("vm_heap_realloc_intrinsic.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 13);
+}
+
 TEST_CASE("vm rejects dereference after heap free intrinsic") {
   const std::string source = R"(
 [return<int> effects(heap_alloc)]

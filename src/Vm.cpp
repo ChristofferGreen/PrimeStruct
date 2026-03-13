@@ -168,6 +168,70 @@ bool freeVmHeapSlots(uint64_t address,
   return false;
 }
 
+bool reallocVmHeapSlots(uint64_t address,
+                        uint64_t slotCount,
+                        uint64_t slotBytes,
+                        std::vector<uint64_t> &heapSlots,
+                        std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
+                        uint64_t &addressOut,
+                        std::string &error) {
+  if (address == 0) {
+    return allocateVmHeapSlots(slotCount, slotBytes, heapSlots, heapAllocations, addressOut, error);
+  }
+  if (slotCount == 0) {
+    if (!freeVmHeapSlots(address, slotBytes, heapSlots, heapAllocations, error)) {
+      return false;
+    }
+    addressOut = 0;
+    return true;
+  }
+  if (!isVmHeapAddress(address) || address % slotBytes != 0) {
+    error = "invalid heap realloc address in IR: " + std::to_string(address);
+    return false;
+  }
+  const uint64_t heapAddress = address & ~kVmHeapAddressTag;
+  const uint64_t baseIndex = heapAddress / slotBytes;
+  for (auto &allocation : heapAllocations) {
+    if (allocation.baseIndex != baseIndex) {
+      continue;
+    }
+    if (!allocation.live) {
+      error = "invalid heap realloc address in IR: " + std::to_string(address);
+      return false;
+    }
+    const size_t endIndex = allocation.baseIndex + allocation.slotCount;
+    if (endIndex > heapSlots.size()) {
+      error = "invalid heap realloc address in IR: " + std::to_string(address);
+      return false;
+    }
+    const size_t oldBaseIndex = allocation.baseIndex;
+    const size_t oldSlotCount = allocation.slotCount;
+
+    uint64_t newAddress = 0;
+    if (!allocateVmHeapSlots(slotCount, slotBytes, heapSlots, heapAllocations, newAddress, error)) {
+      return false;
+    }
+    const uint64_t newBaseIndex = (newAddress & ~kVmHeapAddressTag) / slotBytes;
+    const size_t copySlots = std::min(oldSlotCount, static_cast<size_t>(slotCount));
+    for (size_t index = 0; index < copySlots; ++index) {
+      heapSlots[static_cast<size_t>(newBaseIndex) + index] = heapSlots[oldBaseIndex + index];
+    }
+    for (size_t index = oldBaseIndex; index < endIndex; ++index) {
+      heapSlots[index] = 0;
+    }
+    for (auto &candidate : heapAllocations) {
+      if (candidate.baseIndex == oldBaseIndex) {
+        candidate.live = false;
+        break;
+      }
+    }
+    addressOut = newAddress;
+    return true;
+  }
+  error = "invalid heap realloc address in IR: " + std::to_string(address);
+  return false;
+}
+
 bool executeImpl(const IrModule &module,
                  uint64_t &result,
                  std::string &error,
@@ -350,6 +414,23 @@ bool executeImpl(const IrModule &module,
         if (!freeVmHeapSlots(address, kSlotBytes, heapSlots, heapAllocations, error)) {
           return false;
         }
+        ip += 1;
+        break;
+      }
+      case IrOpcode::HeapRealloc: {
+        if (stack.size() < 2) {
+          error = "IR stack underflow on heap realloc";
+          return false;
+        }
+        const uint64_t slotCount = stack.back();
+        stack.pop_back();
+        const uint64_t address = stack.back();
+        stack.pop_back();
+        uint64_t newAddress = 0;
+        if (!reallocVmHeapSlots(address, slotCount, kSlotBytes, heapSlots, heapAllocations, newAddress, error)) {
+          return false;
+        }
+        stack.push_back(newAddress);
         ip += 1;
         break;
       }
@@ -1739,6 +1820,23 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       if (!freeVmHeapSlots(address, kSlotBytes, heapSlots_, heapAllocations_, error)) {
         return finishFault();
       }
+      ip += 1;
+      return finishStep(StepOutcome::Continue);
+    }
+    case IrOpcode::HeapRealloc: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on heap realloc";
+        return finishFault();
+      }
+      const uint64_t slotCount = stack_.back();
+      stack_.pop_back();
+      const uint64_t address = stack_.back();
+      stack_.pop_back();
+      uint64_t newAddress = 0;
+      if (!reallocVmHeapSlots(address, slotCount, kSlotBytes, heapSlots_, heapAllocations_, newAddress, error)) {
+        return finishFault();
+      }
+      stack_.push_back(newAddress);
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }

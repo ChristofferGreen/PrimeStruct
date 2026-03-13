@@ -6,7 +6,7 @@
 namespace primec {
 namespace {
 constexpr uint32_t IrMagic = 0x50534952; // "PSIR"
-constexpr uint32_t IrVersion = 20;
+constexpr uint32_t IrVersion = 21;
 
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -387,7 +387,7 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       IrInstruction inst;
       const uint8_t opcodeValue = data[offset];
       const uint8_t minOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
-      const uint8_t maxOpcode = static_cast<uint8_t>(IrOpcode::HeapFree);
+      const uint8_t maxOpcode = static_cast<uint8_t>(IrOpcode::HeapRealloc);
       if (opcodeValue < minOpcode || opcodeValue > maxOpcode) {
         error = "unsupported IR opcode";
         return false;

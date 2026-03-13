@@ -19,9 +19,43 @@ bool hasSoaVectorTypeTransform(const Expr &expr) {
   return false;
 }
 
-bool isAllocMemoryIntrinsicCall(const Expr &expr) {
+bool isPointerMemoryIntrinsicCall(const Expr &expr) {
   std::string builtinName;
-  return expr.kind == Expr::Kind::Call && getBuiltinMemoryName(expr, builtinName) && builtinName == "alloc";
+  if (expr.kind != Expr::Kind::Call || !getBuiltinMemoryName(expr, builtinName)) {
+    return false;
+  }
+  return builtinName == "alloc" || builtinName == "realloc";
+}
+
+LocalInfo::ValueKind inferPointerMemoryIntrinsicValueKind(const Expr &expr,
+                                                          const LocalMap &localsIn,
+                                                          const InferBindingExprKindFn &inferExprKind) {
+  std::string builtinName;
+  if (expr.kind != Expr::Kind::Call || !getBuiltinMemoryName(expr, builtinName)) {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  if (builtinName == "alloc" && expr.templateArgs.size() == 1) {
+    return valueKindFromTypeName(expr.templateArgs.front());
+  }
+  if (builtinName == "realloc" && expr.args.size() == 2) {
+    return inferExprKind(expr.args.front(), localsIn);
+  }
+  return LocalInfo::ValueKind::Unknown;
+}
+
+std::string inferPointerMemoryIntrinsicStructType(const Expr &expr, const LocalMap &localsIn) {
+  std::string builtinName;
+  if (expr.kind != Expr::Kind::Call || !getBuiltinMemoryName(expr, builtinName)) {
+    return "";
+  }
+  if (builtinName == "realloc" && expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.args.front().name);
+    if (it != localsIn.end() &&
+        (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {
+      return it->second.structTypeName;
+    }
+  }
+  return "";
 }
 
 } // namespace
@@ -38,16 +72,16 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
   LocalInfo::ValueKind inferredInitValueKind = LocalInfo::ValueKind::Unknown;
   if (!hasExplicitType && info.kind == LocalInfo::Kind::Value) {
-    if (init.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(init.name);
-      if (it != localsIn.end()) {
-        info.kind = it->second.kind;
-      }
-    } else if (init.kind == Expr::Kind::Call) {
-      inferredInitValueKind = inferExprKind(init, localsIn);
-      if (isAllocMemoryIntrinsicCall(init)) {
-        info.kind = LocalInfo::Kind::Pointer;
-      } else if (inferredInitValueKind == LocalInfo::ValueKind::Unknown) {
+      if (init.kind == Expr::Kind::Name) {
+        auto it = localsIn.find(init.name);
+        if (it != localsIn.end()) {
+          info.kind = it->second.kind;
+        }
+      } else if (init.kind == Expr::Kind::Call) {
+        inferredInitValueKind = inferExprKind(init, localsIn);
+        if (isPointerMemoryIntrinsicCall(init)) {
+          info.kind = LocalInfo::Kind::Pointer;
+        } else if (inferredInitValueKind == LocalInfo::ValueKind::Unknown) {
         std::string collection;
         if (getBuiltinCollectionName(init, collection)) {
           if (collection == "array") {
@@ -110,9 +144,11 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       if (it != localsIn.end() && (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {
         info.valueKind = it->second.valueKind;
       }
-    } else if (info.kind == LocalInfo::Kind::Pointer && init.kind == Expr::Kind::Call && isAllocMemoryIntrinsicCall(init) &&
-               init.templateArgs.size() == 1) {
-      info.valueKind = valueKindFromTypeName(init.templateArgs.front());
+      info.structTypeName = (it != localsIn.end()) ? it->second.structTypeName : "";
+    } else if (info.kind == LocalInfo::Kind::Pointer && init.kind == Expr::Kind::Call &&
+               isPointerMemoryIntrinsicCall(init)) {
+      info.valueKind = inferPointerMemoryIntrinsicValueKind(init, localsIn, inferExprKind);
+      info.structTypeName = inferPointerMemoryIntrinsicStructType(init, localsIn);
     }
     return info;
   }
@@ -154,13 +190,11 @@ bool inferCallParameterLocalInfo(const Expr &param,
   infoOut.kind = bindingKind(param);
   if (hasExplicitBindingTypeTransform(param)) {
     infoOut.valueKind = bindingValueKind(param, infoOut.kind);
-  } else if (param.args.size() == 1 && infoOut.kind == LocalInfo::Kind::Value && isAllocMemoryIntrinsicCall(param.args.front())) {
+  } else if (param.args.size() == 1 && infoOut.kind == LocalInfo::Kind::Value &&
+             isPointerMemoryIntrinsicCall(param.args.front())) {
     infoOut.kind = LocalInfo::Kind::Pointer;
-    if (param.args.front().templateArgs.size() == 1) {
-      infoOut.valueKind = valueKindFromTypeName(param.args.front().templateArgs.front());
-    } else {
-      infoOut.valueKind = LocalInfo::ValueKind::Unknown;
-    }
+    infoOut.valueKind = inferPointerMemoryIntrinsicValueKind(param.args.front(), localsForKindInference, inferExprKind);
+    infoOut.structTypeName = inferPointerMemoryIntrinsicStructType(param.args.front(), localsForKindInference);
   } else if (param.args.size() == 1 && infoOut.kind == LocalInfo::Kind::Value) {
     infoOut.valueKind = inferExprKind(param.args.front(), localsForKindInference);
     if (infoOut.valueKind == LocalInfo::ValueKind::Unknown) {

@@ -64,12 +64,14 @@
       LocalInfo::ValueKind valueKind = bindingTypeInfo.valueKind;
       LocalInfo::ValueKind mapKeyKind = bindingTypeInfo.mapKeyKind;
       LocalInfo::ValueKind mapValueKind = bindingTypeInfo.mapValueKind;
+      std::string structTypeName = bindingTypeInfo.structTypeName;
       LocalInfo info;
       info.isMutable = isBindingMutable(stmt);
       info.kind = kind;
       info.valueKind = valueKind;
       info.mapKeyKind = mapKeyKind;
       info.mapValueKind = mapValueKind;
+      info.structTypeName = structTypeName;
       for (const auto &transform : stmt.transforms) {
         if (transform.name == "soa_vector") {
           info.isSoaVector = true;
@@ -91,6 +93,52 @@
       setReferenceArrayInfo(stmt, info);
       applyStructArrayInfo(stmt, info);
       applyStructValueInfo(stmt, info);
+      if ((info.kind == LocalInfo::Kind::Pointer || info.kind == LocalInfo::Kind::Reference) &&
+          info.structTypeName.empty()) {
+        std::function<std::string(const Expr &)> inferPointerStructType = [&](const Expr &exprIn) -> std::string {
+          if (exprIn.kind == Expr::Kind::Name) {
+            auto localIt = localsIn.find(exprIn.name);
+            if (localIt == localsIn.end()) {
+              return "";
+            }
+            if (localIt->second.kind == LocalInfo::Kind::Pointer || localIt->second.kind == LocalInfo::Kind::Reference) {
+              return localIt->second.structTypeName;
+            }
+            return "";
+          }
+          if (exprIn.kind != Expr::Kind::Call) {
+            return "";
+          }
+          std::string memoryBuiltin;
+          if (getBuiltinMemoryName(exprIn, memoryBuiltin)) {
+            if (memoryBuiltin == "alloc" && exprIn.templateArgs.size() == 1) {
+              std::string resolvedStruct;
+              if (resolveStructTypeName(exprIn.templateArgs.front(), exprIn.namespacePrefix, resolvedStruct)) {
+                return resolvedStruct;
+              }
+              return "";
+            }
+            if (memoryBuiltin == "realloc" && exprIn.args.size() == 2) {
+              return inferPointerStructType(exprIn.args.front());
+            }
+          }
+          std::string builtinName;
+          if (getBuiltinOperatorName(exprIn, builtinName) &&
+              (builtinName == "plus" || builtinName == "minus") &&
+              exprIn.args.size() == 2) {
+            return inferPointerStructType(exprIn.args.front());
+          }
+          if (isSimpleCallName(exprIn, "location") && exprIn.args.size() == 1) {
+            if (exprIn.args.front().kind != Expr::Kind::Name) {
+              return "";
+            }
+            auto localIt = localsIn.find(exprIn.args.front().name);
+            return localIt == localsIn.end() ? "" : localIt->second.structTypeName;
+          }
+          return "";
+        };
+        info.structTypeName = inferPointerStructType(init);
+      }
       if (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::Unknown &&
           info.structTypeName.empty()) {
         std::string inferredStruct = inferStructExprPath(init, localsIn);
