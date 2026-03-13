@@ -1,0 +1,35 @@
+namespace std {
+  namespace collections {
+  namespace experimental_map {
+  [public return<map<K, V>>]
+  mapNew<K, V>() {
+    return(map<K, V>())
+  }
+
+  [public return<map<K, V>>]
+  mapSingle<K, V>([K] key, [V] value) {
+    return(map<K, V>(key, value))
+  }
+
+  [public return<map<K, V>>]
+  mapPair<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
+    return(map<K, V>(firstKey, firstValue, secondKey, secondValue))
+  }
+
+  [public return<i32>]
+  mapCount<K, V>([map<K, V>] values) {
+    return(count(values))
+  }
+
+  [public return<V>]
+  mapAt<K, V>([map<K, V>] values, [K] key) {
+    return(at(values, key))
+  }
+
+  [public return<V>]
+  mapAtUnsafe<K, V>([map<K, V>] values, [K] key) {
+    return(at_unsafe(values, key))
+  }
+  }
+  }
+}

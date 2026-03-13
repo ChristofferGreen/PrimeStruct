@@ -1935,6 +1935,31 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs native experimental stdlib map helper surface") {
+  const std::string source = R"(
+import /std/collections/experimental_map/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] leftKey, [V] leftValue, [K] rightKey, [V] rightValue) {
+  return(mapPair<K, V>(leftKey, leftValue, rightKey, rightValue))
+}
+
+[return<int>]
+main() {
+  [map<string, i32>] pairs{wrapMap<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  return(plus(plus(mapCount<string, i32>(pairs), mapAt<string, i32>(pairs, "left"raw_utf8)),
+              mapAtUnsafe<string, i32>(pairs, "right"raw_utf8)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_experimental_stdlib_map_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_experimental_stdlib_map_helpers_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 13);
+}
+
 TEST_CASE("compiles and runs native templated stdlib vector wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*
