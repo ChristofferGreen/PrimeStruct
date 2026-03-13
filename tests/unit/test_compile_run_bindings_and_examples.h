@@ -4137,6 +4137,7 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`CommandList.pop_clip()`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.clip_depth()`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LoginFormNodes`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_root_column(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_column(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_leaf(...)`") != std::string::npos);
@@ -4144,6 +4145,7 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`LayoutTree.append_button(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_input(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_panel(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.append_login_form(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.measure()`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.arrange(x, y, width, height)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.serialize() -> vector<i32>`") != std::string::npos);
@@ -4152,6 +4154,7 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`CommandList.draw_input(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.begin_panel(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.end_panel()`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.draw_login_form(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("First word: format version (`1`)") != std::string::npos);
   CHECK(graphicsDoc.find("`1` = `draw_text`") != std::string::npos);
   CHECK(graphicsDoc.find("`2` = `draw_rounded_rect`") != std::string::npos);
@@ -4176,6 +4179,12 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`begin_panel(...)` emits one rounded rect for the panel background") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`end_panel()` emits one balancing `pop_clip()`") != std::string::npos);
+  CHECK(graphicsDoc.find("`append_login_form(...) -> LoginFormNodes` is the first composite widget helper") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`draw_login_form(...)` emits only through `begin_panel`, `draw_label`,") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("must not call raw `draw_text`, `draw_rounded_rect`, `push_clip`, `pop_clip`,") !=
+        std::string::npos);
   CHECK(graphicsDoc.find("can upload a deterministic BGRA8 software surface into a shared Metal") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`--software-surface-demo`") != std::string::npos);
@@ -4185,11 +4194,53 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("commands.draw_button(") != std::string::npos);
   CHECK(graphicsDoc.find("layout.append_panel(root, 2i32, 1i32, 20i32, 12i32)") != std::string::npos);
   CHECK(graphicsDoc.find("commands.begin_panel(layout, panel, 4i32") != std::string::npos);
-  CHECK(specDoc.find("the first `/std/ui/*` foundation now includes deterministic command-list rendering, a two-pass layout tree contract, basic control emission, and a basic panel container primitive") !=
+  CHECK(graphicsDoc.find("layout.append_login_form(") != std::string::npos);
+  CHECK(graphicsDoc.find("commands.draw_login_form(") != std::string::npos);
+  CHECK(specDoc.find("the first `/std/ui/*` foundation now includes deterministic command-list rendering, a two-pass layout tree contract, basic control emission, a basic panel container primitive, and the first composite widget helper") !=
         std::string::npos);
-  CHECK(specDoc.find("`draw_label`, `draw_button`, `draw_input`, `begin_panel`, `end_panel`, `LayoutTree`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
+  CHECK(specDoc.find("`draw_label`, `draw_button`, `draw_input`, `begin_panel`, `end_panel`, `draw_login_form`, `LayoutTree`, `LoginFormNodes`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `append_login_form`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
   CHECK(specDoc.find("blit a deterministic BGRA8 software surface through the native window presenter") !=
         std::string::npos);
+}
+
+TEST_CASE("software renderer composite widgets stay source locked to basic widgets") {
+  std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
+  if (!std::filesystem::exists(uiStdlibPath)) {
+    uiStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "ui" / "ui.prime";
+  }
+  REQUIRE(std::filesystem::exists(uiStdlibPath));
+
+  const std::string source = readFile(uiStdlibPath.string());
+
+  const size_t drawLoginStart = source.find("draw_login_form(");
+  const size_t pushClipStart = source.find("\n    [public effects(heap_alloc), return<void>]\n    push_clip(");
+  REQUIRE(drawLoginStart != std::string::npos);
+  REQUIRE(pushClipStart != std::string::npos);
+  REQUIRE(pushClipStart > drawLoginStart);
+  const std::string drawLoginBody = source.substr(drawLoginStart, pushClipStart - drawLoginStart);
+  CHECK(drawLoginBody.find("self.begin_panel(") != std::string::npos);
+  CHECK(drawLoginBody.find("self.draw_label(") != std::string::npos);
+  CHECK(drawLoginBody.find("self.draw_input(") != std::string::npos);
+  CHECK(drawLoginBody.find("self.draw_button(") != std::string::npos);
+  CHECK(drawLoginBody.find("self.end_panel()") != std::string::npos);
+  CHECK(drawLoginBody.find("self.draw_text(") == std::string::npos);
+  CHECK(drawLoginBody.find("self.draw_rounded_rect(") == std::string::npos);
+  CHECK(drawLoginBody.find("self.push_clip(") == std::string::npos);
+  CHECK(drawLoginBody.find("self.pop_clip(") == std::string::npos);
+
+  const size_t appendLoginStart = source.find("append_login_form(");
+  const size_t appendLeafStart = source.find("\n    [public effects(heap_alloc), return<i32>]\n    append_leaf(");
+  REQUIRE(appendLoginStart != std::string::npos);
+  REQUIRE(appendLeafStart != std::string::npos);
+  REQUIRE(appendLeafStart > appendLoginStart);
+  const std::string appendLoginBody = source.substr(appendLoginStart, appendLeafStart - appendLoginStart);
+  CHECK(appendLoginBody.find("self.append_panel(") != std::string::npos);
+  CHECK(appendLoginBody.find("self.append_label(") != std::string::npos);
+  CHECK(appendLoginBody.find("self.append_input(") != std::string::npos);
+  CHECK(appendLoginBody.find("self.append_button(") != std::string::npos);
+  CHECK(appendLoginBody.find("self.append_leaf(") == std::string::npos);
+  CHECK(appendLoginBody.find("self.append_column(") == std::string::npos);
+  CHECK(appendLoginBody.find("self.append_node(") == std::string::npos);
 }
 
 TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {

@@ -178,6 +178,7 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `CommandList.clip_depth()`
      - `CommandList.serialize() -> vector<i32>`
      - `LayoutTree`
+     - `LoginFormNodes`
      - `LayoutTree.append_root_column(...)`
      - `LayoutTree.append_column(...)`
      - `LayoutTree.append_leaf(...)`
@@ -185,6 +186,7 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `LayoutTree.append_button(...)`
      - `LayoutTree.append_input(...)`
      - `LayoutTree.append_panel(...)`
+     - `LayoutTree.append_login_form(...)`
      - `LayoutTree.measure()`
      - `LayoutTree.arrange(x, y, width, height)`
      - `LayoutTree.serialize() -> vector<i32>`
@@ -193,6 +195,7 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `CommandList.draw_input(...)`
      - `CommandList.begin_panel(...)`
      - `CommandList.end_panel()`
+     - `CommandList.draw_login_form(...)`
    - Rounded rectangles are expressed through SDF-style primitives.
    - Renders into a software color buffer (or shared surface view).
    - Current host bridge prototype: the native window host and macOS Metal host
@@ -250,6 +253,15 @@ The following architecture is planned but not locked as part of the v1 contract:
        `begin_panel(...)` and `end_panel()` in command order.
 5. Composite widget layer:
    - Higher-level widgets composed from basic widgets only.
+   - Current prototype contract:
+     - `append_login_form(...) -> LoginFormNodes` is the first composite widget
+       helper and expands only through `append_panel`, `append_label`,
+       `append_input`, and `append_button`.
+     - `draw_login_form(...)` emits only through `begin_panel`, `draw_label`,
+       `draw_input`, `draw_button`, and `end_panel`.
+     - Composite widget helpers in this prototype must not call raw
+       `draw_text`, `draw_rounded_rect`, `push_clip`, `pop_clip`, `append_leaf`,
+       or `append_column` directly.
 6. Presentation and backend adapters:
    - Native path: software-rendered/shared buffer can be presented through the
      platform presenter (for example Metal).
@@ -423,6 +435,55 @@ main() {
     "abc"utf8
   )
   commands.end_panel()
+  return(commands.command_count())
+}
+```
+
+Composite widget example:
+
+```prime
+import /std/ui/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+  layout.measure()
+  layout.arrange(6i32, 7i32, 40i32, 57i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.draw_login_form(
+    layout,
+    login,
+    10i32,
+    1i32,
+    2i32,
+    4i32,
+    3i32,
+    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
+    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
+    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
+    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
+    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )
   return(commands.command_count())
 }
 ```

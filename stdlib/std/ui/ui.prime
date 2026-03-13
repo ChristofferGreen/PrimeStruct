@@ -31,6 +31,15 @@ namespace std {
     [vector<i32> mut] rectHeights{vector<i32>()}
   }
 
+  [public struct]
+  LoginFormNodes() {
+    [public i32] panel{0i32}
+    [public i32] title{0i32}
+    [public i32] usernameInput{0i32}
+    [public i32] passwordInput{0i32}
+    [public i32] submitButton{0i32}
+  }
+
   [return<i32>]
   widget_text_advance([i32] textSizePx) {
     return(max(1i32, divide(plus(textSizePx, 1i32), 2i32)))
@@ -165,6 +174,34 @@ namespace std {
     }
 
     [public effects(heap_alloc), return<void>]
+    draw_login_form(
+        [CommandList mut] self,
+        [LayoutTree] layout,
+        [LoginFormNodes] nodes,
+        [i32] textSizePx,
+        [i32] inputPaddingPx,
+        [i32] buttonPaddingPx,
+        [i32] panelRadiusPx,
+        [i32] controlRadiusPx,
+        [Rgba8] panelFill,
+        [Rgba8] titleColor,
+        [Rgba8] inputFill,
+        [Rgba8] inputTextColor,
+        [Rgba8] buttonFill,
+        [Rgba8] buttonTextColor,
+        [string] title,
+        [string] usernameText,
+        [string] passwordText,
+        [string] buttonText) {
+      self.begin_panel(layout, nodes.panel, panelRadiusPx, panelFill)
+      self.draw_label(layout, nodes.title, textSizePx, titleColor, title)
+      self.draw_input(layout, nodes.usernameInput, textSizePx, inputPaddingPx, controlRadiusPx, inputFill, inputTextColor, usernameText)
+      self.draw_input(layout, nodes.passwordInput, textSizePx, inputPaddingPx, controlRadiusPx, inputFill, inputTextColor, passwordText)
+      self.draw_button(layout, nodes.submitButton, textSizePx, buttonPaddingPx, controlRadiusPx, buttonFill, buttonTextColor, buttonText)
+      self.end_panel()
+    }
+
+    [public effects(heap_alloc), return<void>]
     push_clip([CommandList mut] self, [i32] x, [i32] y, [i32] width, [i32] height) {
       self.append_word(3i32)
       self.append_word(4i32)
@@ -258,6 +295,34 @@ namespace std {
     append_panel(
         [LayoutTree mut] self, [i32] parentIndex, [i32] paddingPx, [i32] gapPx, [i32] minWidth, [i32] minHeight) {
       return(self.append_column(parentIndex, paddingPx, gapPx, minWidth, minHeight))
+    }
+
+    [public effects(heap_alloc), return<LoginFormNodes>]
+    append_login_form(
+        [LayoutTree mut] self,
+        [i32] parentIndex,
+        [i32] panelPaddingPx,
+        [i32] panelGapPx,
+        [i32] textSizePx,
+        [i32] inputPaddingPx,
+        [i32] buttonPaddingPx,
+        [i32] inputMinWidth,
+        [string] title,
+        [string] usernameText,
+        [string] passwordText,
+        [string] buttonText) {
+      [i32] panel{self.append_panel(parentIndex, panelPaddingPx, panelGapPx, 0i32, 0i32)}
+      [i32] titleNode{self.append_label(panel, textSizePx, title)}
+      [i32] usernameNode{self.append_input(panel, textSizePx, inputPaddingPx, inputMinWidth, usernameText)}
+      [i32] passwordNode{self.append_input(panel, textSizePx, inputPaddingPx, inputMinWidth, passwordText)}
+      [i32] submitNode{self.append_button(panel, textSizePx, buttonPaddingPx, buttonText)}
+      return(LoginFormNodes(
+        [panel] panel,
+        [title] titleNode,
+        [usernameInput] usernameNode,
+        [passwordInput] passwordNode,
+        [submitButton] submitNode
+      ))
     }
 
     [public effects(heap_alloc), return<i32>]

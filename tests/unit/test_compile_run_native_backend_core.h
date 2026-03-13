@@ -823,6 +823,79 @@ main() {
   CHECK(readFile(outPath) == "1,3,2,9,2,3,20,10,5,9,8,7,255,3,4,5,6,14,4,4,0\n");
 }
 
+TEST_CASE("compiles and runs native composite login form deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+  layout.measure()
+  layout.arrange(6i32, 7i32, 40i32, 57i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.draw_login_form(
+    layout,
+    login,
+    10i32,
+    1i32,
+    2i32,
+    4i32,
+    3i32,
+    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
+    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
+    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
+    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
+    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )
+  dump_words(commands.serialize())
+  return(plus(layout.node_count(), plus(commands.command_count(), commands.clip_depth())))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ui_composite_login_form.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ui_composite_login_form").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_ui_composite_login_form.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 16);
+  CHECK(readFile(outPath) ==
+        "1,10,2,9,7,8,38,55,4,9,8,7,255,3,4,9,10,34,51,1,13,9,10,10,1,2,3,255,5,76,111,103,105,110,2,9,9,21,34,12,3,20,30,40,255,1,13,10,22,10,200,201,202,255,5,97,108,105,99,101,2,9,9,34,34,12,3,20,30,40,255,1,14,10,35,10,200,201,202,255,6,115,101,99,114,101,116,2,9,9,47,34,14,3,50,60,70,255,1,10,11,49,10,250,251,252,255,2,71,111,4,0\n");
+}
+
 TEST_CASE("compiles and runs native large frame") {
   std::ostringstream source;
   source << "[return<int>]\n";
