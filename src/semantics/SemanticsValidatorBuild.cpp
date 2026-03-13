@@ -1606,6 +1606,20 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     BindingInfo &bindingOut) {
   if (tryInferBindingTypeFromInitializer(initializer, params, locals, bindingOut, hasAnyMathImport())) {
     auto inferDeclaredCollectionBinding = [&](const Definition &definition) -> bool {
+      auto isSupportedCollectionType = [&](const std::string &typeName) -> bool {
+        std::string base;
+        std::string argText;
+        if (!splitTemplateTypeName(normalizeBindingTypeName(typeName), base, argText)) {
+          return false;
+        }
+        base = normalizeBindingTypeName(base);
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(argText, args)) {
+          return false;
+        }
+        return ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) ||
+               (base == "map" && args.size() == 2);
+      };
       for (const auto &transform : definition.transforms) {
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
@@ -1629,6 +1643,11 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
         if (base == "map" && args.size() == 2) {
           bindingOut.typeName = base;
           bindingOut.typeTemplateArg = argText;
+          return true;
+        }
+        if (base == "Reference" && args.size() == 1 && isSupportedCollectionType(args.front())) {
+          bindingOut.typeName = "Reference";
+          bindingOut.typeTemplateArg = args.front();
           return true;
         }
         return false;
