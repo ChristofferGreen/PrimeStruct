@@ -437,12 +437,12 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find(
-            "static int64_t ps_fn_0(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, int argc, "
-            "char **argv);") != std::string::npos);
+            "static int64_t ps_fn_0(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
+            "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv);") != std::string::npos);
   CHECK(output.find(
-            "static int64_t ps_fn_1(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, int argc, "
-            "char **argv);") != std::string::npos);
-  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
+            "static int64_t ps_fn_1(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
+            "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv);") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("cpp-ir emitter writes file read paths") {
@@ -1039,6 +1039,48 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("exe-ir emitter compiles and runs heap free intrinsic") {
+  SKIP_IF_VM_IR_BACKEND_LIMITED();
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(ptr), 9i32)
+  [i32] value{dereference(ptr)}
+  /std/intrinsics/memory/free(ptr)
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_heap_free_intrinsic.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_heap_free_intrinsic").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("exe-ir emitter faults on dereference after heap free intrinsic") {
+  SKIP_IF_VM_IR_BACKEND_LIMITED();
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  /std/intrinsics/memory/free(ptr)
+  return(dereference(ptr))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_heap_free_invalid_deref.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_exe_ir_heap_free_invalid_deref").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_exe_ir_heap_free_invalid_deref.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " 2> " + errPath) != 0);
+  CHECK(readFile(errPath).find("invalid indirect address in IR") != std::string::npos);
+}
+
 TEST_CASE("exe-ir emitter compiles and runs file io subset") {
   SKIP_IF_VM_IR_BACKEND_LIMITED();
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_exe_ir_file_io_subset.txt").string();
@@ -1232,6 +1274,26 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_heap_alloc_intrinsic_ir_first.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_heap_alloc_intrinsic_ir_first").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("exe emitter uses ir backend for heap free intrinsic") {
+  SKIP_IF_VM_IR_BACKEND_LIMITED();
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(ptr), 9i32)
+  [i32] value{dereference(ptr)}
+  /std/intrinsics/memory/free(ptr)
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_heap_free_intrinsic_ir_first.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_heap_free_intrinsic_ir_first").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

@@ -52,6 +52,7 @@ bool stackEffectForOpcode(IrOpcode op, StackEffect &out, std::string &error) {
       return true;
     case IrOpcode::StoreLocal:
     case IrOpcode::Pop:
+    case IrOpcode::HeapFree:
     case IrOpcode::PrintI32:
     case IrOpcode::PrintI64:
     case IrOpcode::PrintU64:

@@ -187,6 +187,25 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs native heap free intrinsic") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(ptr), 9i32)
+  [i32] value{dereference(ptr)}
+  /std/intrinsics/memory/free(ptr)
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_heap_free_intrinsic.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_heap_free_intrinsic").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles and runs native reference arithmetic") {
   const std::string source = R"(
 [return<int>]

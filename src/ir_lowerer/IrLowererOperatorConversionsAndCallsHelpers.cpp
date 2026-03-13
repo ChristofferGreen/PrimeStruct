@@ -237,6 +237,21 @@ bool emitConversionsAndCallsOperatorExpr(
           return true;
         }
         if (getBuiltinMemoryName(expr, builtin)) {
+          if (builtin == "free") {
+            if (!expr.templateArgs.empty()) {
+              error = "free does not take template arguments";
+              return false;
+            }
+            if (expr.args.size() != 1) {
+              error = "free requires exactly one argument";
+              return false;
+            }
+            if (!emitExpr(expr.args.front(), localsIn)) {
+              return false;
+            }
+            instructions.push_back({IrOpcode::HeapFree, 0});
+            return true;
+          }
           if (builtin != "alloc") {
             error = "native backend does not support memory intrinsic: " + builtin;
             return false;

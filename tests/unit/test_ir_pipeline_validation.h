@@ -29919,6 +29919,68 @@ TEST_CASE("ir lowerer conversions helper lowers alloc intrinsic to heap alloc") 
   CHECK(instructions[3].op == primec::IrOpcode::HeapAlloc);
 }
 
+TEST_CASE("ir lowerer conversions helper lowers free intrinsic to heap free") {
+  primec::Expr pointerExpr;
+  pointerExpr.kind = primec::Expr::Kind::Name;
+  pointerExpr.name = "ptr";
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "/std/intrinsics/memory/free";
+  expr.args = {pointerExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerInfo.index = 4;
+  locals.emplace("ptr", pointerInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 0;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      locals,
+      nextLocal,
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &localsIn) {
+        if (valueExpr.kind != primec::Expr::Kind::Name) {
+          return false;
+        }
+        const auto it = localsIn.find(valueExpr.name);
+        if (it == localsIn.end()) {
+          return false;
+        }
+        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK(ok);
+  CHECK(handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 4);
+  CHECK(instructions[1].op == primec::IrOpcode::HeapFree);
+}
+
 TEST_CASE("ir lowerer conversions helper emits vector record header with data pointer") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 
@@ -35106,9 +35168,10 @@ TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
       primec::IrOpcode::Call,
       primec::IrOpcode::CallVoid,
       primec::IrOpcode::HeapAlloc,
+      primec::IrOpcode::HeapFree,
   };
 
-  CHECK(expected.size() == static_cast<size_t>(static_cast<uint8_t>(primec::IrOpcode::HeapAlloc)));
+  CHECK(expected.size() == static_cast<size_t>(static_cast<uint8_t>(primec::IrOpcode::HeapFree)));
   for (size_t i = 0; i < expected.size(); ++i) {
     const auto expectedValue = static_cast<uint8_t>(i + 1);
     CHECK(static_cast<uint8_t>(expected[i]) == expectedValue);

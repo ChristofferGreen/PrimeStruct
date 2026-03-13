@@ -63,6 +63,7 @@ bool resolveIndirectAddress(uint64_t address,
                             uint64_t slotBytes,
                             std::vector<uint64_t> &locals,
                             std::vector<uint64_t> &heapSlots,
+                            std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
                             uint64_t *&slotOut,
                             std::string &error) {
   if (address % slotBytes != 0) {
@@ -76,8 +77,19 @@ bool resolveIndirectAddress(uint64_t address,
       error = "invalid indirect address in IR: " + std::to_string(address);
       return false;
     }
-    slotOut = &heapSlots[static_cast<size_t>(index)];
-    return true;
+    for (const auto &allocation : heapAllocations) {
+      if (!allocation.live) {
+        continue;
+      }
+      const uint64_t baseIndex = static_cast<uint64_t>(allocation.baseIndex);
+      const uint64_t endIndex = baseIndex + static_cast<uint64_t>(allocation.slotCount);
+      if (index >= baseIndex && index < endIndex) {
+        slotOut = &heapSlots[static_cast<size_t>(index)];
+        return true;
+      }
+    }
+    error = "invalid indirect address in IR: " + std::to_string(address);
+    return false;
   }
   const uint64_t index = address / slotBytes;
   if (index >= locals.size()) {
@@ -91,6 +103,7 @@ bool resolveIndirectAddress(uint64_t address,
 bool allocateVmHeapSlots(uint64_t slotCount,
                          uint64_t slotBytes,
                          std::vector<uint64_t> &heapSlots,
+                         std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
                          uint64_t &addressOut,
                          std::string &error) {
   if (slotCount == 0) {
@@ -113,8 +126,46 @@ bool allocateVmHeapSlots(uint64_t slotCount,
     return false;
   }
   heapSlots.resize(baseIndex + allocationSlots, 0);
+  heapAllocations.push_back({baseIndex, allocationSlots, true});
   addressOut = kVmHeapAddressTag + static_cast<uint64_t>(baseIndex) * slotBytes;
   return true;
+}
+
+bool freeVmHeapSlots(uint64_t address,
+                     uint64_t slotBytes,
+                     std::vector<uint64_t> &heapSlots,
+                     std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
+                     std::string &error) {
+  if (address == 0) {
+    return true;
+  }
+  if (!isVmHeapAddress(address) || address % slotBytes != 0) {
+    error = "invalid heap free address in IR: " + std::to_string(address);
+    return false;
+  }
+  const uint64_t heapAddress = address & ~kVmHeapAddressTag;
+  const uint64_t baseIndex = heapAddress / slotBytes;
+  for (auto &allocation : heapAllocations) {
+    if (allocation.baseIndex != baseIndex) {
+      continue;
+    }
+    if (!allocation.live) {
+      error = "invalid heap free address in IR: " + std::to_string(address);
+      return false;
+    }
+    const size_t endIndex = allocation.baseIndex + allocation.slotCount;
+    if (endIndex > heapSlots.size()) {
+      error = "invalid heap free address in IR: " + std::to_string(address);
+      return false;
+    }
+    for (size_t index = allocation.baseIndex; index < endIndex; ++index) {
+      heapSlots[index] = 0;
+    }
+    allocation.live = false;
+    return true;
+  }
+  error = "invalid heap free address in IR: " + std::to_string(address);
+  return false;
 }
 
 bool executeImpl(const IrModule &module,
@@ -150,6 +201,7 @@ bool executeImpl(const IrModule &module,
   }
   std::vector<uint64_t> stack;
   std::vector<uint64_t> heapSlots;
+  std::vector<VmDebugSession::HeapAllocation> heapAllocations;
   std::vector<Frame> frames;
   frames.reserve(64);
   Frame entryFrame;
@@ -248,7 +300,7 @@ bool executeImpl(const IrModule &module,
         uint64_t address = stack.back();
         stack.pop_back();
         uint64_t *slot = nullptr;
-        if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots, slot, error)) {
+        if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots, heapAllocations, slot, error)) {
           return false;
         }
         stack.push_back(*slot);
@@ -265,7 +317,7 @@ bool executeImpl(const IrModule &module,
         uint64_t address = stack.back();
         stack.pop_back();
         uint64_t *slot = nullptr;
-        if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots, slot, error)) {
+        if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots, heapAllocations, slot, error)) {
           return false;
         }
         *slot = value;
@@ -281,10 +333,23 @@ bool executeImpl(const IrModule &module,
         const uint64_t slotCount = stack.back();
         stack.pop_back();
         uint64_t address = 0;
-        if (!allocateVmHeapSlots(slotCount, kSlotBytes, heapSlots, address, error)) {
+        if (!allocateVmHeapSlots(slotCount, kSlotBytes, heapSlots, heapAllocations, address, error)) {
           return false;
         }
         stack.push_back(address);
+        ip += 1;
+        break;
+      }
+      case IrOpcode::HeapFree: {
+        if (stack.empty()) {
+          error = "IR stack underflow on heap free";
+          return false;
+        }
+        const uint64_t address = stack.back();
+        stack.pop_back();
+        if (!freeVmHeapSlots(address, kSlotBytes, heapSlots, heapAllocations, error)) {
+          return false;
+        }
         ip += 1;
         break;
       }
@@ -1373,6 +1438,7 @@ bool VmDebugSession::initFromModule(const IrModule &module,
   localCounts_.assign(module.functions.size(), 0);
   stack_.clear();
   heapSlots_.clear();
+  heapAllocations_.clear();
   frames_.clear();
   result_ = 0;
   pauseRequested_ = false;
@@ -1623,7 +1689,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint64_t address = stack_.back();
       stack_.pop_back();
       uint64_t *slot = nullptr;
-      if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots_, slot, error)) {
+      if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots_, heapAllocations_, slot, error)) {
         return finishFault();
       }
       stack_.push_back(*slot);
@@ -1640,7 +1706,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint64_t address = stack_.back();
       stack_.pop_back();
       uint64_t *slot = nullptr;
-      if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots_, slot, error)) {
+      if (!resolveIndirectAddress(address, kSlotBytes, locals, heapSlots_, heapAllocations_, slot, error)) {
         return finishFault();
       }
       *slot = value;
@@ -1656,10 +1722,23 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint64_t slotCount = stack_.back();
       stack_.pop_back();
       uint64_t address = 0;
-      if (!allocateVmHeapSlots(slotCount, kSlotBytes, heapSlots_, address, error)) {
+      if (!allocateVmHeapSlots(slotCount, kSlotBytes, heapSlots_, heapAllocations_, address, error)) {
         return finishFault();
       }
       stack_.push_back(address);
+      ip += 1;
+      return finishStep(StepOutcome::Continue);
+    }
+    case IrOpcode::HeapFree: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on heap free";
+        return finishFault();
+      }
+      const uint64_t address = stack_.back();
+      stack_.pop_back();
+      if (!freeVmHeapSlots(address, kSlotBytes, heapSlots_, heapAllocations_, error)) {
+        return finishFault();
+      }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }

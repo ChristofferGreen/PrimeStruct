@@ -826,6 +826,38 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
+TEST_CASE("runs vm with heap free intrinsic") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(ptr), 9i32)
+  [i32] value{dereference(ptr)}
+  /std/intrinsics/memory/free(ptr)
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("vm_heap_free_intrinsic.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
+}
+
+TEST_CASE("vm rejects dereference after heap free intrinsic") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  /std/intrinsics/memory/free(ptr)
+  return(dereference(ptr))
+}
+)";
+  const std::string srcPath = writeTemp("vm_heap_free_invalid_deref.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_heap_free_invalid_deref.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(errPath).find("invalid indirect address in IR") != std::string::npos);
+}
+
 TEST_CASE("runs vm with match cases") {
   const std::string source = R"(
 [return<int>]

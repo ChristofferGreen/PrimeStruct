@@ -1087,7 +1087,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("std::vector<uint64_t> heapSlots") != std::string::npos);
-  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter uses copy to force by-value params") {
@@ -1531,7 +1531,7 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("rejects std namespaced reordered mutator compatibility helper in C++ emitter") {
@@ -4116,7 +4116,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("static int64_t ps_fn_0(") != std::string::npos);
-  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter accepts vector namespaced mutator alias statement") {
@@ -4158,7 +4158,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("static int64_t ps_fn_0(") != std::string::npos);
-  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter routes stdlib namespaced vector at map target to map helper") {
@@ -4178,7 +4178,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("static int64_t ps_fn_0(") != std::string::npos);
-  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, argc, argv);") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter compiles stdlib namespaced map access and count helpers") {

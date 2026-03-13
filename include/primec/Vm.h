@@ -202,6 +202,12 @@ public:
   VmDebugSnapshot snapshot() const;
   VmDebugSnapshotPayload snapshotPayload() const;
 
+  struct HeapAllocation {
+    size_t baseIndex = 0;
+    size_t slotCount = 0;
+    bool live = false;
+  };
+
 private:
   struct Frame {
     const IrFunction *function = nullptr;
@@ -223,6 +229,7 @@ private:
   std::vector<size_t> localCounts_;
   std::vector<uint64_t> stack_;
   std::vector<uint64_t> heapSlots_;
+  std::vector<HeapAllocation> heapAllocations_;
   std::vector<Frame> frames_;
   VmDebugSessionState state_ = VmDebugSessionState::Idle;
   uint64_t result_ = 0;

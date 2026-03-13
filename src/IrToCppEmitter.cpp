@@ -378,13 +378,12 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "          return 1;\n";
       out << "        }\n";
       out << "        if ((loadIndirectAddress & ps_heap_address_tag) != 0ull) {\n";
-      out << "          uint64_t loadHeapAddress = loadIndirectAddress & ~ps_heap_address_tag;\n";
-      out << "          uint64_t loadHeapIndex = loadHeapAddress / " << IrSlotBytes << "ull;\n";
-      out << "          if (loadHeapIndex >= heapSlots.size()) {\n";
+      out << "          std::size_t loadHeapIndex = 0;\n";
+      out << "          if (!psResolveHeapSlot(loadIndirectAddress, heapSlots, heapAllocations, loadHeapIndex)) {\n";
       out << "            std::cerr << \"invalid indirect address in IR\\n\";\n";
       out << "            return 1;\n";
       out << "          }\n";
-      out << "          stack[sp++] = heapSlots[static_cast<std::size_t>(loadHeapIndex)];\n";
+      out << "          stack[sp++] = heapSlots[loadHeapIndex];\n";
       out << "        } else {\n";
       out << "          uint64_t loadIndirectIndex = loadIndirectAddress / " << IrSlotBytes << "ull;\n";
       out << "          if (loadIndirectIndex > " << MaxLocalIndex << "ull) {\n";
@@ -404,13 +403,12 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "          return 1;\n";
       out << "        }\n";
       out << "        if ((storeIndirectAddress & ps_heap_address_tag) != 0ull) {\n";
-      out << "          uint64_t storeHeapAddress = storeIndirectAddress & ~ps_heap_address_tag;\n";
-      out << "          uint64_t storeHeapIndex = storeHeapAddress / " << IrSlotBytes << "ull;\n";
-      out << "          if (storeHeapIndex >= heapSlots.size()) {\n";
+      out << "          std::size_t storeHeapIndex = 0;\n";
+      out << "          if (!psResolveHeapSlot(storeIndirectAddress, heapSlots, heapAllocations, storeHeapIndex)) {\n";
       out << "            std::cerr << \"invalid indirect address in IR\\n\";\n";
       out << "            return 1;\n";
       out << "          }\n";
-      out << "          heapSlots[static_cast<std::size_t>(storeHeapIndex)] = storeIndirectValue;\n";
+      out << "          heapSlots[storeHeapIndex] = storeIndirectValue;\n";
       out << "        } else {\n";
       out << "          uint64_t storeIndirectIndex = storeIndirectAddress / " << IrSlotBytes << "ull;\n";
       out << "          if (storeIndirectIndex > " << MaxLocalIndex << "ull) {\n";
@@ -425,25 +423,20 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::HeapAlloc:
       out << "        uint64_t heapAllocSlotCount = stack[--sp];\n";
-      out << "        if (heapAllocSlotCount == 0ull) {\n";
-      out << "          stack[sp++] = 0ull;\n";
-      out << "          pc = " << nextIndex << ";\n";
-      out << "          break;\n";
-      out << "        }\n";
-      out << "        if (heapAllocSlotCount > static_cast<uint64_t>(heapSlots.max_size() - heapSlots.size())) {\n";
+      out << "        uint64_t heapAllocAddress = 0ull;\n";
+      out << "        if (!psHeapAlloc(heapAllocSlotCount, heapSlots, heapAllocations, heapAllocAddress)) {\n";
       out << "          std::cerr << \"VM heap allocation overflow\\n\";\n";
       out << "          return 1;\n";
       out << "        }\n";
-      out << "        std::size_t heapBaseIndex = heapSlots.size();\n";
-      out << "        uint64_t maxAddressableIndex = (std::numeric_limits<uint64_t>::max() - ps_heap_address_tag) / "
-          << IrSlotBytes << "ull;\n";
-      out << "        if (heapBaseIndex > maxAddressableIndex) {\n";
-      out << "          std::cerr << \"VM heap allocation overflow\\n\";\n";
+      out << "        stack[sp++] = heapAllocAddress;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::HeapFree:
+      out << "        if (!psHeapFree(stack[--sp], heapSlots, heapAllocations)) {\n";
+      out << "          std::cerr << \"invalid heap free address in IR\\n\";\n";
       out << "          return 1;\n";
       out << "        }\n";
-      out << "        heapSlots.resize(heapBaseIndex + static_cast<std::size_t>(heapAllocSlotCount), 0ull);\n";
-      out << "        stack[sp++] = ps_heap_address_tag + static_cast<uint64_t>(heapBaseIndex) * " << IrSlotBytes
-          << "ull;\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
@@ -745,11 +738,11 @@ bool emitInstruction(const IrInstruction &instruction,
       }
       if (instruction.op == IrOpcode::Call) {
         out << "        int64_t callValue = " << irFunctionSymbol(static_cast<size_t>(instruction.imm))
-            << "(stack, sp, heapSlots, argc, argv);\n";
+            << "(stack, sp, heapSlots, heapAllocations, argc, argv);\n";
         out << "        stack[sp++] = static_cast<uint64_t>(callValue);\n";
       } else {
         out << "        " << irFunctionSymbol(static_cast<size_t>(instruction.imm))
-            << "(stack, sp, heapSlots, argc, argv);\n";
+            << "(stack, sp, heapSlots, heapAllocations, argc, argv);\n";
       }
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
@@ -1199,10 +1192,89 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   }
   body << "};\n\n";
   body << "static constexpr uint64_t ps_heap_address_tag = 1ull << 63;\n\n";
+  body << "struct PsHeapAllocation {\n";
+  body << "  std::size_t baseIndex = 0;\n";
+  body << "  std::size_t slotCount = 0;\n";
+  body << "  bool live = false;\n";
+  body << "};\n\n";
+  body << "static bool psResolveHeapSlot(uint64_t address,\n";
+  body << "                              const std::vector<uint64_t> &heapSlots,\n";
+  body << "                              const std::vector<PsHeapAllocation> &heapAllocations,\n";
+  body << "                              std::size_t &slotIndexOut) {\n";
+  body << "  if ((address & ps_heap_address_tag) == 0ull || (address % " << IrSlotBytes << "ull) != 0ull) {\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  uint64_t heapAddress = address & ~ps_heap_address_tag;\n";
+  body << "  uint64_t heapIndex = heapAddress / " << IrSlotBytes << "ull;\n";
+  body << "  if (heapIndex >= heapSlots.size()) {\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  for (const auto &allocation : heapAllocations) {\n";
+  body << "    if (!allocation.live) {\n";
+  body << "      continue;\n";
+  body << "    }\n";
+  body << "    uint64_t baseIndex = static_cast<uint64_t>(allocation.baseIndex);\n";
+  body << "    uint64_t endIndex = baseIndex + static_cast<uint64_t>(allocation.slotCount);\n";
+  body << "    if (heapIndex >= baseIndex && heapIndex < endIndex) {\n";
+  body << "      slotIndexOut = static_cast<std::size_t>(heapIndex);\n";
+  body << "      return true;\n";
+  body << "    }\n";
+  body << "  }\n";
+  body << "  return false;\n";
+  body << "}\n\n";
+  body << "static bool psHeapAlloc(uint64_t slotCount,\n";
+  body << "                        std::vector<uint64_t> &heapSlots,\n";
+  body << "                        std::vector<PsHeapAllocation> &heapAllocations,\n";
+  body << "                        uint64_t &addressOut) {\n";
+  body << "  if (slotCount == 0ull) {\n";
+  body << "    addressOut = 0ull;\n";
+  body << "    return true;\n";
+  body << "  }\n";
+  body << "  if (slotCount > static_cast<uint64_t>(heapSlots.max_size() - heapSlots.size())) {\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  std::size_t baseIndex = heapSlots.size();\n";
+  body << "  uint64_t maxAddressableIndex = (std::numeric_limits<uint64_t>::max() - ps_heap_address_tag) / "
+       << IrSlotBytes << "ull;\n";
+  body << "  if (baseIndex > maxAddressableIndex) {\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  heapSlots.resize(baseIndex + static_cast<std::size_t>(slotCount), 0ull);\n";
+  body << "  heapAllocations.push_back({baseIndex, static_cast<std::size_t>(slotCount), true});\n";
+  body << "  addressOut = ps_heap_address_tag + static_cast<uint64_t>(baseIndex) * " << IrSlotBytes << "ull;\n";
+  body << "  return true;\n";
+  body << "}\n\n";
+  body << "static bool psHeapFree(uint64_t address,\n";
+  body << "                       std::vector<uint64_t> &heapSlots,\n";
+  body << "                       std::vector<PsHeapAllocation> &heapAllocations) {\n";
+  body << "  if (address == 0ull) {\n";
+  body << "    return true;\n";
+  body << "  }\n";
+  body << "  if ((address & ps_heap_address_tag) == 0ull || (address % " << IrSlotBytes << "ull) != 0ull) {\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  uint64_t heapAddress = address & ~ps_heap_address_tag;\n";
+  body << "  std::size_t baseIndex = static_cast<std::size_t>(heapAddress / " << IrSlotBytes << "ull);\n";
+  body << "  for (auto &allocation : heapAllocations) {\n";
+  body << "    if (allocation.baseIndex != baseIndex) {\n";
+  body << "      continue;\n";
+  body << "    }\n";
+  body << "    if (!allocation.live || allocation.baseIndex + allocation.slotCount > heapSlots.size()) {\n";
+  body << "      return false;\n";
+  body << "    }\n";
+  body << "    for (std::size_t i = 0; i < allocation.slotCount; ++i) {\n";
+  body << "      heapSlots[allocation.baseIndex + i] = 0ull;\n";
+  body << "    }\n";
+  body << "    allocation.live = false;\n";
+  body << "    return true;\n";
+  body << "  }\n";
+  body << "  return false;\n";
+  body << "}\n\n";
 
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     body << "static int64_t " << irFunctionSymbol(functionIndex)
-         << "(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, int argc, char **argv);\n";
+         << "(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
+            "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv);\n";
   }
   body << "\n";
 
@@ -1219,7 +1291,8 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     const IrFunction &function = module.functions[functionIndex];
     body << "static int64_t " << irFunctionSymbol(functionIndex)
-         << "(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, int argc, char **argv) {\n";
+         << "(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
+            "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv) {\n";
     body << "  uint64_t locals[1024] = {};\n";
     body << "  std::size_t pc = 0;\n";
     body << "  while (true) {\n";
@@ -1246,8 +1319,9 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "  uint64_t stack[1024] = {};\n";
   body << "  std::size_t sp = 0;\n";
   body << "  std::vector<uint64_t> heapSlots;\n";
+  body << "  std::vector<PsHeapAllocation> heapAllocations;\n";
   body << "  return " << irFunctionSymbol(static_cast<size_t>(module.entryIndex))
-       << "(stack, sp, heapSlots, argc, argv);\n";
+       << "(stack, sp, heapSlots, heapAllocations, argc, argv);\n";
   body << "}\n\n";
   body << "int main(int argc, char **argv) {\n";
   body << "  return static_cast<int>(ps_entry_" << static_cast<size_t>(module.entryIndex) << "(argc, argv));\n";

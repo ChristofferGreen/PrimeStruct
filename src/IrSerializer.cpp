@@ -387,7 +387,7 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       IrInstruction inst;
       const uint8_t opcodeValue = data[offset];
       const uint8_t minOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
-      const uint8_t maxOpcode = static_cast<uint8_t>(IrOpcode::HeapAlloc);
+      const uint8_t maxOpcode = static_cast<uint8_t>(IrOpcode::HeapFree);
       if (opcodeValue < minOpcode || opcodeValue > maxOpcode) {
         error = "unsupported IR opcode";
         return false;

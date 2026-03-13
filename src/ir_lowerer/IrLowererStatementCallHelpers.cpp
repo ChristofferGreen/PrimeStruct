@@ -10,6 +10,15 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool isFreeMemoryIntrinsicCall(const Expr &expr) {
+  std::string builtinName;
+  return expr.kind == Expr::Kind::Call && getBuiltinMemoryName(expr, builtinName) && builtinName == "free";
+}
+
+} // namespace
+
 static bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -472,7 +481,9 @@ AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(
   if (!emitExpr(stmt, localsIn)) {
     return AssignOrExprStatementEmitResult::Error;
   }
-  instructions.push_back({IrOpcode::Pop, 0});
+  if (!isFreeMemoryIntrinsicCall(stmt)) {
+    instructions.push_back({IrOpcode::Pop, 0});
+  }
   return AssignOrExprStatementEmitResult::Emitted;
 }
 
