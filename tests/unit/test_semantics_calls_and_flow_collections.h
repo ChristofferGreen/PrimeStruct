@@ -4722,6 +4722,52 @@ main() {
   CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
+TEST_CASE("reference-wrapped map helper receiver expression body arguments fall back to canonical helper target") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[return<int>]
+/std/collections/map/count([Reference</std/collections/map<i32, i32>>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
+  return(borrowMap(location(values)).count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reference-wrapped map helper receiver expression body arguments keep canonical mismatch diagnostics") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[return<int>]
+/std/collections/map/count([Reference</std/collections/map<i32, i32>>] values) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
+  return(borrowMap(location(values)).count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("map namespaced count method expression body arguments keep slash-path diagnostics") {
   const std::string source = R"(
 [return<int>]

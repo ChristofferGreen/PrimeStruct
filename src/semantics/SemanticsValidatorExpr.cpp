@@ -1815,11 +1815,44 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return extractMapKeyValueTypes(it->second, keyType, valueType);
       }
       if (target.kind == Expr::Kind::Call) {
+        auto returnsMapCollection = [&](const std::string &typeName) {
+          std::string normalizedType = normalizeBindingTypeName(typeName);
+          while (true) {
+            std::string base;
+            std::string arg;
+            if (!splitTemplateTypeName(normalizedType, base, arg)) {
+              return normalizedType == "map";
+            }
+            if (base == "map") {
+              std::vector<std::string> args;
+              return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
+            }
+            if (base == "Reference" || base == "Pointer") {
+              std::vector<std::string> args;
+              if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+                return false;
+              }
+              normalizedType = normalizeBindingTypeName(args.front());
+              continue;
+            }
+            return false;
+          }
+        };
         std::string collectionTypePath;
-        if (!resolveCallCollectionTypePath(target, collectionTypePath) || collectionTypePath != "/map") {
+        if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/map") {
+          return true;
+        }
+        auto defIt = defMap_.find(resolveCalleePath(target));
+        if (defIt == defMap_.end() || !defIt->second) {
           return false;
         }
-        return true;
+        for (const auto &transform : defIt->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          return returnsMapCollection(transform.templateArgs.front());
+        }
+        return false;
       }
       return false;
     };
