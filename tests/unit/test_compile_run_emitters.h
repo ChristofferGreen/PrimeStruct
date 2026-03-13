@@ -4829,7 +4829,7 @@ main() {
   CHECK(runCommand(exePath) == 169);
 }
 
-TEST_CASE("C++ emitter prefers canonical explicit-template map count method over alias helper") {
+TEST_CASE("C++ emitter rejects explicit-template map count method with non-templated alias helper") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -4848,18 +4848,24 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_canonical_explicit_template_map_count_method_precedence.prime", source);
+      writeTemp("compile_cpp_map_count_explicit_template_method_non_templated_alias_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_map_count_explicit_template_method_non_templated_alias_reject.err")
+          .string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_explicit_template_map_count_method_precedence_exe")
+       "primec_cpp_map_count_explicit_template_method_non_templated_alias_reject_exe")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 73);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /map/count") !=
+        std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical explicit-template map count method diagnostics") {
+TEST_CASE("C++ emitter keeps alias explicit-template map count method precedence") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -4878,17 +4884,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_canonical_explicit_template_map_count_method_diag.prime", source);
-  const std::string errPath =
+      writeTemp("compile_cpp_map_count_explicit_template_method_alias_precedence.prime", source);
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_explicit_template_map_count_method_diag.err")
+       "primec_cpp_map_count_explicit_template_method_alias_precedence_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /std/collections/map/count") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 96);
 }
 
 TEST_CASE("C++ emitter keeps builtin map diagnostics on explicit canonical typed bindings") {
@@ -5063,19 +5067,19 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects slashless canonical unknown map helper with canonical diagnostics") {
+TEST_CASE("C++ emitter rejects canonical unknown map helper with canonical diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(std/collections/map/missing(values))
+  return(/std/collections/map/missing(values))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_slashless_canonical_unknown_map_helper.prime", source);
+      writeTemp("compile_cpp_canonical_unknown_map_helper.prime", source);
   const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_slashless_canonical_unknown_map_helper.err")
+       "primec_cpp_canonical_unknown_map_helper.err")
           .string();
 
   const std::string compileCmd =

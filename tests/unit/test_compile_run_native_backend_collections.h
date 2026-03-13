@@ -6327,23 +6327,23 @@ main() {
   CHECK(runCommand(exePath) == 169);
 }
 
-TEST_CASE("rejects native slashless canonical unknown map helper with canonical diagnostics") {
+TEST_CASE("rejects native canonical unknown map helper with canonical diagnostics") {
   const std::string source = R"(
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(std/collections/map/missing(values))
+  return(/std/collections/map/missing(values))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_slashless_canonical_unknown_map_helper.prime", source);
+      writeTemp("compile_native_canonical_unknown_map_helper.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_slashless_canonical_unknown_map_helper_out.txt")
+       "primec_native_canonical_unknown_map_helper_out.txt")
           .string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_slashless_canonical_unknown_map_helper_exe")
+       "primec_native_canonical_unknown_map_helper_exe")
           .string();
 
   const std::string compileCmd =

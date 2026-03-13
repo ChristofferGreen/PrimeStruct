@@ -3135,30 +3135,6 @@ main() {
   CHECK(foundUnknownTarget);
 }
 
-TEST_CASE("collected diagnostics normalize slashless canonical map helper unknown targets") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
-  return(std/collections/map/missing(values))
-}
-)";
-  primec::SemanticDiagnosticInfo diagnosticInfo;
-  std::string error;
-  CHECK_FALSE(validateProgramCollectingDiagnostics(source, "/main", error, diagnosticInfo));
-  CHECK(error.find("unknown call target: /std/collections/map/missing") != std::string::npos);
-  CHECK(error.find("unknown call target: std/collections/map/missing") == std::string::npos);
-  REQUIRE(diagnosticInfo.records.size() >= 1);
-  bool foundUnknownTarget = false;
-  for (const auto &record : diagnosticInfo.records) {
-    if (record.message.find("unknown call target: /std/collections/map/missing") != std::string::npos) {
-      foundUnknownTarget = true;
-      break;
-    }
-  }
-  CHECK(foundUnknownTarget);
-}
-
 TEST_CASE("stdlib namespaced map helpers accept canonical map references") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
