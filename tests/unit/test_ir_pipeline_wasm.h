@@ -624,6 +624,74 @@ TEST_CASE("wasm emitter maps wasi file open write flush close and error paths") 
   }
 }
 
+TEST_CASE("wasm emitter maps wasi file read byte and eof paths") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  const std::string inName = "primec_wasm_file_read_input.txt";
+  module.stringTable.push_back(inName);
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::FileOpenRead, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::FileReadByte, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::FileReadByte, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, primec::FileReadEofCode});
+  mainFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 65});
+  mainFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  const auto textBytes = [](const std::string &text) {
+    return std::vector<uint8_t>(text.begin(), text.end());
+  };
+  CHECK(containsByteSequence(bytes, textBytes("fd_read")));
+
+  if (hasWasmtime()) {
+    const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_file_read_runtime";
+    std::error_code ec;
+    std::filesystem::remove_all(tempRoot, ec);
+    std::filesystem::create_directories(tempRoot, ec);
+    REQUIRE(!ec);
+
+    {
+      std::ofstream input(tempRoot / inName, std::ios::binary);
+      REQUIRE(input.good());
+      input.write("A", 1);
+      REQUIRE(input.good());
+    }
+
+    const std::filesystem::path wasmPath = tempRoot / "file_read.wasm";
+    {
+      std::ofstream wasmFile(wasmPath, std::ios::binary);
+      REQUIRE(wasmFile.good());
+      wasmFile.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+      REQUIRE(wasmFile.good());
+    }
+
+    const std::filesystem::path runOutPath = tempRoot / "wasmtime_stdout.txt";
+    const std::string runCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
+                               quoteShellArg(wasmPath.string()) + " > " + quoteShellArg(runOutPath.string());
+    CHECK(runCommand(runCmd) == 0);
+    CHECK(readFileText(runOutPath.string()).find("1") != std::string::npos);
+  }
+}
+
 TEST_CASE("wasm emitter formats decimal file writes for i32 i64 and u64") {
   primec::WasmEmitter emitter;
   primec::IrModule module;

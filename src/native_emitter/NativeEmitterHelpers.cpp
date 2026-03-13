@@ -140,6 +140,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "FileOpenWrite";
       case IrOpcode::FileOpenAppend:
         return "FileOpenAppend";
+      case IrOpcode::FileReadByte:
+        return "FileReadByte";
       case IrOpcode::FileClose:
         return "FileClose";
       case IrOpcode::FileFlush:
@@ -356,6 +358,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       case IrOpcode::FileOpenWrite:
       case IrOpcode::FileOpenAppend:
         return 1;
+      case IrOpcode::FileReadByte:
+        return 0;
       case IrOpcode::FileClose:
       case IrOpcode::FileFlush:
         return 0;

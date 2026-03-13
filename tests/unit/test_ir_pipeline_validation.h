@@ -33868,6 +33868,57 @@ TEST_CASE("ir lowerer file write helpers emit write_byte calls") {
   CHECK(instructions[0].imm == 6);
 }
 
+TEST_CASE("ir lowerer file write helpers emit read_byte calls") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "file";
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Name;
+  valueArg.name = "value";
+
+  primec::Expr readByteExpr;
+  readByteExpr.kind = primec::Expr::Kind::Call;
+  readByteExpr.name = "read_byte";
+  readByteExpr.args = {receiver, valueArg};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valueInfo;
+  valueInfo.index = 17;
+  valueInfo.isMutable = true;
+  valueInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("value", valueInfo);
+
+  std::string error;
+  CHECK(primec::ir_lowerer::emitFileReadByteCall(readByteExpr, locals, 14, emitInstruction, error));
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 14);
+  CHECK(instructions[1].op == primec::IrOpcode::FileReadByte);
+  CHECK(instructions[1].imm == 17);
+
+  instructions.clear();
+  error.clear();
+  primec::Expr badArityExpr = readByteExpr;
+  badArityExpr.args = {receiver};
+  CHECK_FALSE(primec::ir_lowerer::emitFileReadByteCall(badArityExpr, locals, 14, emitInstruction, error));
+  CHECK(error == "read_byte requires exactly one argument");
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  valueInfo.isMutable = false;
+  locals["value"] = valueInfo;
+  CHECK_FALSE(primec::ir_lowerer::emitFileReadByteCall(readByteExpr, locals, 14, emitInstruction, error));
+  CHECK(error == "read_byte requires mutable integer binding");
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer file write helpers emit write_bytes calls") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
@@ -34064,6 +34115,43 @@ TEST_CASE("ir lowerer file write helpers dispatch file-handle methods") {
   CHECK(emitExprCalls == 1);
   CHECK(error.empty());
   CHECK_FALSE(instructions.empty());
+
+  instructions.clear();
+  emitExprCalls = 0;
+  nextLocal = 20;
+  primec::Expr readExpr;
+  readExpr.kind = primec::Expr::Kind::Call;
+  readExpr.name = "read_byte";
+  readExpr.isMethodCall = true;
+  readExpr.args = {receiver, valueArg};
+  valueInfo.isMutable = true;
+  valueInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals["value"] = valueInfo;
+  CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
+            readExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            [&]() { return nextLocal++; },
+            emitInstruction,
+            getInstructionCount,
+            patchInstructionImm,
+            error) == Result::Emitted);
+  CHECK(emitExprCalls == 0);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 7);
+  CHECK(instructions[1].op == primec::IrOpcode::FileReadByte);
+  CHECK(instructions[1].imm == 11);
 
   primec::Expr badWriteByteExpr;
   badWriteByteExpr.kind = primec::Expr::Kind::Call;
@@ -34960,6 +35048,28 @@ TEST_CASE("ir validator wasm target accepts wasi file opcodes and file_write eff
   fn.instructions.push_back({primec::IrOpcode::Pop, 0});
   fn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
   fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(std::move(fn));
+
+  std::string error;
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir validator wasm target accepts wasi file read opcode and file_write effect") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("in.txt");
+
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.metadata.effectMask = primec::EffectFileWrite;
+  fn.metadata.capabilityMask = primec::EffectFileWrite;
+  fn.instructions.push_back({primec::IrOpcode::FileOpenRead, 0});
+  fn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  fn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileReadByte, 1});
   fn.instructions.push_back({primec::IrOpcode::Pop, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(std::move(fn));

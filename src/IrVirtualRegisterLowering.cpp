@@ -87,6 +87,7 @@ bool stackEffectForOpcode(IrOpcode op, StackEffect &out, std::string &error) {
     case IrOpcode::ConvertF64ToF32:
     case IrOpcode::FileClose:
     case IrOpcode::FileFlush:
+    case IrOpcode::FileReadByte:
     case IrOpcode::FileWriteString:
     case IrOpcode::FileWriteNewline:
     case IrOpcode::LoadStringByte:

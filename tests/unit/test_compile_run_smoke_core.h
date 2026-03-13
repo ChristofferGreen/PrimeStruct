@@ -393,6 +393,59 @@ main([array<string>] args) {
   }
 }
 
+TEST_CASE("primec wasm wasi supports File<Read>.read_byte with deterministic eof") {
+  const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_file_read_byte_runtime";
+  std::error_code ec;
+  std::filesystem::remove_all(tempRoot, ec);
+  std::filesystem::create_directories(tempRoot, ec);
+  REQUIRE(!ec);
+
+  {
+    std::ofstream input(tempRoot / "input.bin", std::ios::binary);
+    REQUIRE(input.good());
+    input.write("AB", 2);
+    REQUIRE(input.good());
+  }
+
+  const std::string source = R"(
+[return<Result<FileError>> effects(file_write, io_out) on_error<FileError, /log_file_error>]
+main() {
+  [File<Read>] file{ File<Read>("input.bin"utf8)? }
+  [i32 mut] first{0i32}
+  [i32 mut] second{0i32}
+  [i32 mut] third{99i32}
+  file.read_byte(first)?
+  file.read_byte(second)?
+  print_line(first)
+  print_line(second)
+  print_line(Result.why(file.read_byte(third)))
+  print_line(third)
+  file.close()?
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_file_read_byte.prime", source);
+  const std::string wasmPath = (tempRoot / "file_read_byte.wasm").string();
+  const std::string compileErrPath = (tempRoot / "file_read_byte_compile_err.txt").string();
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+
+  if (hasWasmtime()) {
+    const std::string outPath = (tempRoot / "file_read_byte_stdout.txt").string();
+    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
+                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(wasmRunCmd) == 0);
+    CHECK(readFile(outPath) == "65\n66\nEOF\n99\n");
+  }
+}
+
 TEST_CASE("primec wasm parity corpus matches vm outputs and exits deterministically") {
   struct ParityCase {
     std::string name;
@@ -2274,7 +2327,7 @@ main() {
   const uint32_t magic = readU32(0);
   const uint32_t version = readU32(4);
   CHECK(magic == 0x50534952u);
-  CHECK(version == 19u);
+  CHECK(version == 20u);
 
   primec::IrModule module;
   std::string error;

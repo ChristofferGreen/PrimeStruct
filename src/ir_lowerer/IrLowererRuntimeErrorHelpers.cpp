@@ -245,6 +245,8 @@ void emitFileErrorWhy(IrFunction &function, int32_t errorLocal, const InternRunt
   std::vector<size_t> jumpToEnd;
   const int32_t emptyIndex = internString("");
   emitMatch(0, emptyIndex, jumpToEnd);
+  const int32_t eofIndex = internString("EOF");
+  emitMatch(FileReadEofCode, eofIndex, jumpToEnd);
   std::unordered_set<int> seen;
   for (const auto &mapping : mappings) {
     if (mapping.code == 0 || !seen.insert(mapping.code).second) {

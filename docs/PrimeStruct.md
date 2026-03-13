@@ -147,7 +147,7 @@ module {
 ### Wasm backend limits (current)
 - `WASM-LIMIT-MEM-ON-DEMAND`: the emitter allocates linear memory only when the lowered IR uses WASI runtime opcodes (`PushArgc`, `Print*`, `File*`). Pure compute/control-flow modules emit no memory section.
 - `WASM-LIMIT-MEM-SINGLE`: when memory is present, the module uses exactly one linear memory (`memory index 0`) sized for runtime scratch space and literal data segments; no additional memories are emitted.
-- `WASM-LIMIT-IMPORTS-WASI`: imported host calls are limited to `wasi_snapshot_preview1` and the fixed symbol set `{fd_write, args_sizes_get, args_get, path_open, fd_close, fd_sync}` selected on demand from IR opcode usage.
+- `WASM-LIMIT-IMPORTS-WASI`: imported host calls are limited to `wasi_snapshot_preview1` and the fixed symbol set `{fd_write, fd_read, args_sizes_get, args_get, path_open, fd_close, fd_sync}` selected on demand from IR opcode usage.
 - `WASM-LIMIT-PROFILE-BROWSER`: `--wasm-profile=browser` rejects all non-zero effect/capability masks and rejects WASI-only opcodes (`PushArgc`, `Print*`, `File*`) during IR validation.
 - `WASM-LIMIT-PROFILE-WASI-ALLOWLIST`: `--wasm-profile=wasi` accepts only the explicit Wasm opcode/effect/capability allowlist; unsupported IR operations fail with deterministic `ir-validate` diagnostics.
 
@@ -162,7 +162,7 @@ module {
 - **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM). Normalisation happens once; backends never see syntactic sugar.
 - **Graphics contract:** the windowed graphics language surface and locked spinning-cube v1 mini-spec are defined in `docs/Graphics_API_Design.md` (`/std/gfx/*`, profile deduction, `VertexColored` wire layout, deterministic `GfxError` codes).
 - **Layered UI/rendering roadmap:** the first `/std/ui/*` foundation now includes deterministic command-list rendering, a two-pass layout tree contract, basic control emission, a basic panel container primitive, and the first composite widget helper, plus deterministic HTML/backend adapter records and deterministic platform input records (`CommandList`, `draw_text`, `draw_rounded_rect`, `push_clip`, `pop_clip`, `draw_label`, `draw_button`, `draw_input`, `begin_panel`, `end_panel`, `draw_login_form`, `HtmlCommandList`, `emit_panel`, `emit_label`, `emit_button`, `emit_input`, `bind_event`, `emit_login_form`, `UiEventStream`, `push_pointer_move`, `push_pointer_down`, `push_pointer_up`, `push_key_down`, `push_key_up`, `push_ime_preedit`, `push_ime_commit`, `push_resize`, `push_focus_gained`, `push_focus_lost`, `LayoutTree`, `LoginFormNodes`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `append_login_form`, `measure`, `arrange`, deterministic `serialize()` output), and the current host bridge can blit a deterministic BGRA8 software surface through the native window presenter and macOS Metal host paths while the shared widget/layout model can also emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into deterministic UI event-stream records; planned follow-up layers now center on platform/runtime consumption of that shared event stream, with composite-widget composition locked to the basic widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
-- **IR definition (stable, PSIR v19):**
+- **IR definition (stable, PSIR v20):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, entry_index, version }`.
   - **Function:** `{ name, metadata, local_debug_slots, instructions }` where instructions are linear, stack-based ops with immediates and debug IDs.
   - **Metadata:** `{ effect_mask, capability_mask, scheduling_scope, instrumentation_flags }` (see PSIR binary layout).
@@ -184,8 +184,8 @@ module {
       `instruction_count` entries: `u8 opcode` + `u64 imm` + `u32 debug_id`.
     - `u32 instruction_source_map_count`, then `instruction_source_map_count` entries:
       `u32 debug_id`, `u32 line`, `u32 column`, `u8 provenance`.
-  - **PSIR opcode set:** see the `IrOpcode` enum and the “PSIR opcode set (v19, VM/native)” section below.
-- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings; v9 adds `PrintArgvUnsafe` to emit unchecked entry-arg prints for `at_unsafe`; v10 adds `LoadStringByte` for string indexing in VM/native backends; v11 adds struct layout manifests; v12 adds struct field visibility/static metadata; v13 adds float arithmetic/compare/convert opcodes; v14 adds float return opcodes (`ReturnF32`, `ReturnF64`); v15 adds per-function execution metadata (effect/capability masks plus scheduling/instrumentation fields); v16 adds `Call` and `CallVoid` function-call opcodes for callable IR; v17 adds per-function local debug slot metadata (`slot_index`, `name`, `type`) without runtime semantic changes; v18 adds per-instruction debug IDs for source-map linkage; v19 adds per-instruction source-map metadata entries keyed by instruction debug ID (`line`, `column`, `provenance`).
+  - **PSIR opcode set:** see the `IrOpcode` enum and the “PSIR opcode set (v20, VM/native)” section below.
+- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings; v9 adds `PrintArgvUnsafe` to emit unchecked entry-arg prints for `at_unsafe`; v10 adds `LoadStringByte` for string indexing in VM/native backends; v11 adds struct layout manifests; v12 adds struct field visibility/static metadata; v13 adds float arithmetic/compare/convert opcodes; v14 adds float return opcodes (`ReturnF32`, `ReturnF64`); v15 adds per-function execution metadata (effect/capability masks plus scheduling/instrumentation fields); v16 adds `Call` and `CallVoid` function-call opcodes for callable IR; v17 adds per-function local debug slot metadata (`slot_index`, `name`, `type`) without runtime semantic changes; v18 adds per-instruction debug IDs for source-map linkage; v19 adds per-instruction source-map metadata entries keyed by instruction debug ID (`line`, `column`, `provenance`); v20 adds `FileReadByte` for deterministic single-byte file reads with explicit EOF mapping.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
   - **Versioning policy:** the `version` field is a single, monotonically increasing integer for incompatible changes. There is no forward/backward compatibility guarantee today; tools reject unknown versions and require recompilation. Migration tooling may be added later, but no automatic migrations exist yet.
@@ -666,6 +666,7 @@ sum_two_files([string] a, [string] b) {
 - **Construction:** `File<Mode>(path)` returns `Result<File<Mode>, FileError>`.
   - `path` is a `string` (string literal or literal-backed binding in VM/native).
 - **Methods (all return `Result<FileError>`):**
+  - `read_byte([i32 mut] value)` (reads one byte into `value`; leaves `value` unchanged on error)
   - `write(values...)` (variadic text write)
   - `write_line(values...)` (variadic + newline)
   - `write_byte(u8_value)`
@@ -673,6 +674,7 @@ sum_two_files([string] a, [string] b) {
   - `flush()`
   - `close()`
 - **Error type:** `FileError` carries `why()` (owned `string`).
+  - `read_byte(...)` reports deterministic end-of-file as `EOF`.
 - **Effect requirement:** all file operations require `effects(file_write)`.
 - **Example:**
   ```
@@ -1269,7 +1271,7 @@ bad_use_after_take() {
 
 ## VM Design
 - **Instruction set:** stack-based ops covering control flow, stack manipulation, memory/pointer access, IO, and explicit conversions. No implicit conversions; opcodes mirror the canonical language surface.
-- **PSIR opcode set (v19, VM/native):** `PushI32`, `PushI64`, `PushF32`, `PushF64`, `PushArgc`, `LoadLocal`, `StoreLocal`,
+- **PSIR opcode set (v20, VM/native):** `PushI32`, `PushI64`, `PushF32`, `PushF64`, `PushArgc`, `LoadLocal`, `StoreLocal`,
   `AddressOfLocal`, `LoadIndirect`, `StoreIndirect`, `Dup`, `Pop`, `AddI32`, `SubI32`, `MulI32`, `DivI32`, `NegI32`,
   `AddI64`, `SubI64`, `MulI64`, `DivI64`, `DivU64`, `NegI64`, `AddF32`, `SubF32`, `MulF32`, `DivF32`, `NegF32`,
   `AddF64`, `SubF64`, `MulF64`, `DivF64`, `NegF64`, `CmpEqI32`, `CmpNeI32`, `CmpLtI32`, `CmpLeI32`, `CmpGtI32`,
@@ -1280,11 +1282,11 @@ bad_use_after_take() {
   `ConvertF32ToU64`, `ConvertF64ToI32`, `ConvertF64ToI64`, `ConvertF64ToU64`, `ConvertF32ToF64`, `ConvertF64ToF32`,
   `JumpIfZero`, `Jump`, `ReturnVoid`, `ReturnI32`, `ReturnI64`, `ReturnF32`, `ReturnF64`, `PrintI32`, `PrintI64`,
   `PrintU64`, `PrintString`, `PrintArgv`, `PrintArgvUnsafe`, `LoadStringByte`, `FileOpenRead`, `FileOpenWrite`,
-  `FileOpenAppend`, `FileClose`, `FileFlush`, `FileWriteI32`, `FileWriteI64`, `FileWriteU64`, `FileWriteString`,
-  `FileWriteByte`, `FileWriteNewline`, `PrintStringDynamic`, `Call`, `CallVoid`.
+  `FileOpenAppend`, `FileReadByte`, `FileClose`, `FileFlush`, `FileWriteI32`, `FileWriteI64`, `FileWriteU64`,
+  `FileWriteString`, `FileWriteByte`, `FileWriteNewline`, `PrintStringDynamic`, `Call`, `CallVoid`.
 - **Call-opcode status:** `Call` and `CallVoid` are serialized/validated and execute in both VM and native backends with frame/call-stack semantics. Current lowering still inlines source-level definition calls and does not emit call opcodes yet.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`; these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v19 (adds per-instruction source-map metadata keyed by debug ID on top of v18’s instruction debug IDs, v17’s local debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes, v13’s float arithmetic/compare/convert opcodes, and v12’s struct field visibility/static metadata, `LoadStringByte`, `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
+- **PSIR versioning:** current portable IR is PSIR v20 (adds `FileReadByte` on top of v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes, v13’s float arithmetic/compare/convert opcodes, and v12’s struct field visibility/static metadata, `LoadStringByte`, `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
 - **Frames & stack:** VM/native execution starts at the entry frame and pushes/pops frames for `Call`/`CallVoid`; each frame stores locals in 16-byte slots while the operand stack stores raw `u64` values interpreted by opcode (ints, floats as bits, and indices). Indirect addresses are byte offsets into the active frame’s local slot space and must be 16-byte aligned.
 - **Module layout:** `IrModule` bundles functions, string table, and struct layouts; lowering emits entry instructions plus reachable non-entry callable function bodies so function names/metadata and executable IR survive serialization. VM/native execution starts from `entryIndex`; lowering currently still inlines source-level calls, so recursion remains rejected in lowered source programs even though callable IR call opcodes support recursive execution.
 - **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it. File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via lowering.

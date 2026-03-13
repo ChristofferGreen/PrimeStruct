@@ -630,6 +630,13 @@
             << ")";
         return out.str();
       }
+      if (expr.name == "read_byte" && expr.args.size() == 2) {
+        out << "ps_file_read_byte(" << receiver << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
+                        resultInfos, returnStructs, allowMathBare)
+            << ")";
+        return out.str();
+      }
       if (expr.name == "write_bytes" && expr.args.size() == 2) {
         out << "ps_file_write_bytes(" << receiver << ", "
             << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,

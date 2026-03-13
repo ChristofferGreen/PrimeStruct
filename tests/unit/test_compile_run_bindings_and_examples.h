@@ -4344,6 +4344,39 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngBody.find("return(2i32)") == std::string::npos);
 }
 
+TEST_CASE("file read_byte docs and helpers stay source locked") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path preludePath = std::filesystem::path("..") / "src" / "emitter" / "EmitterEmitPrelude.h";
+  std::filesystem::path lowererPath = std::filesystem::path("..") / "src" / "ir_lowerer" / "IrLowererFileWriteHelpers.cpp";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(preludePath)) {
+    preludePath = std::filesystem::current_path() / "src" / "emitter" / "EmitterEmitPrelude.h";
+  }
+  if (!std::filesystem::exists(lowererPath)) {
+    lowererPath = std::filesystem::current_path() / "src" / "ir_lowerer" / "IrLowererFileWriteHelpers.cpp";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(preludePath));
+  REQUIRE(std::filesystem::exists(lowererPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string prelude = readFile(preludePath.string());
+  const std::string lowerer = readFile(lowererPath.string());
+
+  CHECK(primeStructDoc.find("`read_byte([i32 mut] value)`") != std::string::npos);
+  CHECK(primeStructDoc.find("`read_byte(...)` reports deterministic end-of-file as `EOF`") != std::string::npos);
+
+  CHECK(prelude.find("static inline uint32_t ps_file_read_byte") != std::string::npos);
+  CHECK(prelude.find("return 65536u;") != std::string::npos);
+  CHECK(prelude.find("return std::string_view(\"EOF\")") != std::string::npos);
+
+  CHECK(lowerer.find("read_byte requires exactly one argument") != std::string::npos);
+  CHECK(lowerer.find("read_byte requires mutable integer binding") != std::string::npos);
+  CHECK(lowerer.find("emitInstruction(IrOpcode::FileReadByte") != std::string::npos);
+}
+
 TEST_CASE("software renderer composite widgets stay source locked to basic widgets") {
   std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
   if (!std::filesystem::exists(uiStdlibPath)) {

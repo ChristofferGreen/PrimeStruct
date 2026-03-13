@@ -207,6 +207,7 @@ bool isWasmOpcodeAllowedWasi(IrOpcode op) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileReadByte:
     case IrOpcode::FileClose:
     case IrOpcode::FileFlush:
     case IrOpcode::FileWriteI32:
@@ -238,6 +239,7 @@ bool isWasiOnlyOpcode(IrOpcode op) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileReadByte:
     case IrOpcode::FileClose:
     case IrOpcode::FileFlush:
     case IrOpcode::FileWriteI32:
@@ -403,6 +405,7 @@ bool validateFunction(const IrModule &module,
       case IrOpcode::LoadLocal:
       case IrOpcode::StoreLocal:
       case IrOpcode::AddressOfLocal:
+      case IrOpcode::FileReadByte:
         if (inst.imm > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
           return failInstruction(functionIndex, function.name, instructionIndex, "local index exceeds 32-bit limit", error);
         }

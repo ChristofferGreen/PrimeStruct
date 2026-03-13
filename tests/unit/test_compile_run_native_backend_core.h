@@ -42,6 +42,57 @@ TEST_CASE("compiles and runs native file io") {
   CHECK(readFile(outPath) == "Hello 123 world\n\nABC");
 }
 
+TEST_CASE("compiles and runs native file read_byte with deterministic eof") {
+  const std::string inPath = (std::filesystem::temp_directory_path() / "primec_native_file_read_byte.txt").string();
+  {
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write("AB", 2);
+    REQUIRE(file.good());
+  }
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(inPath);
+  const std::string source =
+      "[return<Result<FileError>> effects(file_write, io_out) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Read>] file{ File<Read>(\"" + escapedPath + "\"utf8)? }\n"
+      "  [i32 mut] first{0i32}\n"
+      "  [i32 mut] second{0i32}\n"
+      "  [i32 mut] third{99i32}\n"
+      "  file.read_byte(first)?\n"
+      "  file.read_byte(second)?\n"
+      "  print_line(first)\n"
+      "  print_line(second)\n"
+      "  print_line(Result.why(file.read_byte(third)))\n"
+      "  print_line(third)\n"
+      "  file.close()?\n"
+      "  return(Result.ok())\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(\"file error\"utf8)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("native_file_read_byte.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_file_read_byte_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_file_read_byte_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "65\n66\nEOF\n99\n");
+}
+
 TEST_CASE("compiles and runs native executable") {
   const std::string source = R"(
 [return<int>]

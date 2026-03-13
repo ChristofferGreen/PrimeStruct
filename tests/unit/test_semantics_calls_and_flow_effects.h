@@ -1449,6 +1449,46 @@ log_file_error([FileError] err) {
   CHECK(error.empty());
 }
 
+TEST_CASE("file read_byte accepts mutable integer binding") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+main() {
+  [File<Read>] file{ File<Read>("file.txt"utf8)? }
+  [i32 mut] value{0i32}
+  file.read_byte(value)?
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("file read_byte rejects immutable binding") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+main() {
+  [File<Read>] file{ File<Read>("file.txt"utf8)? }
+  [i32] value{0i32}
+  file.read_byte(value)?
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("read_byte requires mutable integer binding") != std::string::npos);
+}
+
 TEST_CASE("file write_bytes accepts builtin array argument") {
   const std::string source = R"(
 [return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]

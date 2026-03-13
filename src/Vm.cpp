@@ -1062,6 +1062,32 @@ bool executeImpl(const IrModule &module,
         ip += 1;
         break;
       }
+      case IrOpcode::FileReadByte: {
+        if (stack.empty()) {
+          error = "IR stack underflow on file read";
+          return false;
+        }
+        if (inst.imm >= locals.size()) {
+          error = "invalid local index in IR";
+          return false;
+        }
+        uint64_t handle = stack.back();
+        stack.pop_back();
+        int fd = static_cast<int>(handle & 0xffffffffu);
+        uint8_t value = 0;
+        ssize_t rc = ::read(fd, &value, 1);
+        uint32_t err = 0u;
+        if (rc < 0) {
+          err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
+        } else if (rc == 0) {
+          err = FileReadEofCode;
+        } else {
+          locals[static_cast<size_t>(inst.imm)] = static_cast<uint64_t>(value);
+        }
+        stack.push_back(static_cast<uint64_t>(err));
+        ip += 1;
+        break;
+      }
       case IrOpcode::FileFlush: {
         if (stack.empty()) {
           error = "IR stack underflow on file flush";
@@ -2427,6 +2453,32 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const int fd = static_cast<int>(handle & 0xffffffffu);
       const int rc = ::close(fd);
       const uint32_t err = (rc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;
+      stack_.push_back(static_cast<uint64_t>(err));
+      ip += 1;
+      return finishStep(StepOutcome::Continue);
+    }
+    case IrOpcode::FileReadByte: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on file read";
+        return finishFault();
+      }
+      if (inst.imm >= locals_.size()) {
+        error = "invalid local index in IR";
+        return finishFault();
+      }
+      const uint64_t handle = stack_.back();
+      stack_.pop_back();
+      const int fd = static_cast<int>(handle & 0xffffffffu);
+      uint8_t value = 0;
+      const ssize_t rc = ::read(fd, &value, 1);
+      uint32_t err = 0u;
+      if (rc < 0) {
+        err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
+      } else if (rc == 0) {
+        err = FileReadEofCode;
+      } else {
+        locals_[static_cast<size_t>(inst.imm)] = static_cast<uint64_t>(value);
+      }
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);

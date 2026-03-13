@@ -190,6 +190,7 @@ bool usesFileIoHelpers(IrOpcode opcode) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileReadByte:
     case IrOpcode::FileClose:
     case IrOpcode::FileFlush:
     case IrOpcode::FileWriteI32:
@@ -930,6 +931,28 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        uint64_t fileByteHandle = stack[--sp];\n";
       out << "        int fileByteFd = static_cast<int>(fileByteHandle & 0xffffffffu);\n";
       out << "        stack[sp++] = static_cast<uint64_t>(psWriteAll(fileByteFd, &fileByteValue, 1));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::FileReadByte:
+      if (instruction.imm >= context.localCount) {
+        error = "IrToCppEmitter local index out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      emitStackUnderflowGuard(1, "file read");
+      out << "        uint64_t fileReadHandle = stack[--sp];\n";
+      out << "        int fileReadFd = static_cast<int>(fileReadHandle & 0xffffffffu);\n";
+      out << "        uint8_t fileReadByte = 0;\n";
+      out << "        ssize_t fileReadRc = ::read(fileReadFd, &fileReadByte, 1);\n";
+      out << "        uint32_t fileReadErr = 0;\n";
+      out << "        if (fileReadRc < 0) {\n";
+      out << "          fileReadErr = errno == 0 ? 1u : static_cast<uint32_t>(errno);\n";
+      out << "        } else if (fileReadRc == 0) {\n";
+      out << "          fileReadErr = " << FileReadEofCode << "u;\n";
+      out << "        } else {\n";
+      out << "          locals[" << instruction.imm << "] = static_cast<uint64_t>(fileReadByte);\n";
+      out << "        }\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(fileReadErr);\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;

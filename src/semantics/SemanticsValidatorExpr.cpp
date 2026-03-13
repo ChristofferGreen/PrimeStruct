@@ -2625,7 +2625,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (typeName == "File") {
         if (normalizedMethodName == "write" || normalizedMethodName == "write_line" ||
-            normalizedMethodName == "write_byte" || normalizedMethodName == "write_bytes" ||
+            normalizedMethodName == "write_byte" || normalizedMethodName == "read_byte" ||
+            normalizedMethodName == "write_bytes" ||
             normalizedMethodName == "flush" || normalizedMethodName == "close") {
           resolvedOut = "/file/" + normalizedMethodName;
           isBuiltinOut = true;
@@ -4381,6 +4382,33 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           if (!isIntegerOrBoolExpr(expr.args[1])) {
             error_ = "write_byte requires integer argument";
+            return false;
+          }
+          return true;
+        }
+        if (expr.name == "read_byte") {
+          if (expr.args.size() != 2) {
+            error_ = "read_byte requires exactly one argument";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args[1])) {
+            return false;
+          }
+          if (expr.args[1].kind != Expr::Kind::Name || !isMutableBinding(params, locals, expr.args[1].name)) {
+            error_ = "read_byte requires mutable integer binding";
+            return false;
+          }
+          ReturnKind kind = ReturnKind::Unknown;
+          if (const BindingInfo *paramBinding = findParamBinding(params, expr.args[1].name)) {
+            kind = returnKindForBinding(*paramBinding);
+          } else {
+            auto itLocal = locals.find(expr.args[1].name);
+            if (itLocal != locals.end()) {
+              kind = returnKindForBinding(itLocal->second);
+            }
+          }
+          if (kind != ReturnKind::Int && kind != ReturnKind::Int64 && kind != ReturnKind::UInt64) {
+            error_ = "read_byte requires mutable integer binding";
             return false;
           }
           return true;

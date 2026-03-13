@@ -166,6 +166,35 @@ bool emitFileWriteByteCall(const Expr &expr,
   return true;
 }
 
+bool emitFileReadByteCall(const Expr &expr,
+                          const LocalMap &localsIn,
+                          int32_t handleIndex,
+                          const EmitInstructionForWriteFn &emitInstruction,
+                          std::string &error) {
+  if (expr.args.size() != 2) {
+    error = "read_byte requires exactly one argument";
+    return false;
+  }
+  if (expr.args[1].kind != Expr::Kind::Name) {
+    error = "read_byte requires mutable integer binding";
+    return false;
+  }
+  auto it = localsIn.find(expr.args[1].name);
+  if (it == localsIn.end() || !it->second.isMutable) {
+    error = "read_byte requires mutable integer binding";
+    return false;
+  }
+  const LocalInfo::ValueKind kind = it->second.valueKind;
+  if (kind != LocalInfo::ValueKind::Int32 && kind != LocalInfo::ValueKind::Int64 &&
+      kind != LocalInfo::ValueKind::UInt64) {
+    error = "read_byte requires mutable integer binding";
+    return false;
+  }
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
+  emitInstruction(IrOpcode::FileReadByte, static_cast<uint64_t>(it->second.index));
+  return true;
+}
+
 bool emitFileWriteBytesCall(const Expr &expr,
                             int32_t handleIndex,
                             const EmitExprForWriteFn &emitExpr,
@@ -299,6 +328,12 @@ FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
                                [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
                                emitInstruction,
                                error)) {
+      return FileHandleMethodCallEmitResult::Error;
+    }
+    return FileHandleMethodCallEmitResult::Emitted;
+  }
+  if (expr.name == "read_byte") {
+    if (!emitFileReadByteCall(expr, localsIn, handleIndex, emitInstruction, error)) {
       return FileHandleMethodCallEmitResult::Error;
     }
     return FileHandleMethodCallEmitResult::Emitted;

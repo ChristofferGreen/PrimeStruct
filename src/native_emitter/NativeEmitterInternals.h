@@ -26,6 +26,7 @@ constexpr uint32_t PrintScratchBytes = 32;
 constexpr uint32_t PrintScratchSlots = (PrintScratchBytes + 15) / 16;
 #endif
 #if defined(__APPLE__)
+constexpr uint64_t SysRead = SYS_read;
 constexpr uint64_t SysWrite = SYS_write;
 constexpr uint64_t SysOpen = SYS_open;
 constexpr uint64_t SysClose = SYS_close;
@@ -42,6 +43,7 @@ constexpr uint64_t MmapFlagsPrivateAnon = static_cast<uint64_t>(MAP_PRIVATE | MA
 constexpr uint64_t MmapFlagsPrivateAnon = static_cast<uint64_t>(MAP_PRIVATE | MAP_ANONYMOUS);
 #endif
 #else
+constexpr uint64_t SysRead = 0;
 constexpr uint64_t SysWrite = 0;
 constexpr uint64_t SysOpen = 0;
 constexpr uint64_t SysClose = 0;
@@ -681,6 +683,38 @@ class Arm64Emitter {
     emitMovImm64(0, 0);
     emitPushReg(0);
   }
+  void emitFileReadByte(uint32_t localIndex, uint32_t scratchOffset) {
+    emitPopReg(3);
+    emitLoadFrameOffset(1, scratchOffset);
+    emitMovImm64(2, 1);
+    emitReadSyscallReg(3, 1, 2);
+
+    emitMovImm64(2, 1);
+    emitCompareReg(0, 2);
+    size_t successBranch = emitCondBranchPlaceholder(CondCode::Eq);
+    emitCompareRegZero(0);
+    size_t eofBranch = emitCondBranchPlaceholder(CondCode::Eq);
+
+    emitMovImm64(0, 1);
+    size_t afterError = emitJumpPlaceholder();
+
+    size_t successIndex = currentWordIndex();
+    patchCondBranch(successBranch, static_cast<int32_t>(successIndex - successBranch), CondCode::Eq);
+    emitLoadFrameOffset(1, scratchOffset);
+    emit(encodeLdrbRegBase(2, 1, 0));
+    emitStoreLocalFromReg(localIndex, 2);
+    emitMovImm64(0, 0);
+    size_t afterSuccess = emitJumpPlaceholder();
+
+    size_t eofIndex = currentWordIndex();
+    patchCondBranch(eofBranch, static_cast<int32_t>(eofIndex - eofBranch), CondCode::Eq);
+    emitMovImm64(0, FileReadEofCode);
+
+    size_t afterIndex = currentWordIndex();
+    patchJump(afterError, static_cast<int32_t>(afterIndex - afterError));
+    patchJump(afterSuccess, static_cast<int32_t>(afterIndex - afterSuccess));
+    emitPushReg(0);
+  }
   void emitFileWriteNewline(uint32_t scratchOffset) {
     emitPopReg(3);
     emitWriteNewlineReg(3, scratchOffset);
@@ -1104,6 +1138,13 @@ class Arm64Emitter {
     emitMovReg(1, bufferReg);
     emitMovReg(2, lengthReg);
     emitMovImm64(16, SysWrite);
+    emit(encodeSvc());
+  }
+  void emitReadSyscallReg(uint8_t fdReg, uint8_t bufferReg, uint8_t lengthReg) {
+    emitMovReg(0, fdReg);
+    emitMovReg(1, bufferReg);
+    emitMovReg(2, lengthReg);
+    emitMovImm64(16, SysRead);
     emit(encodeSvc());
   }
 

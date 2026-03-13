@@ -121,6 +121,7 @@ bool isSchedulingBarrierOpcode(IrOpcode op) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileReadByte:
     case IrOpcode::FileClose:
     case IrOpcode::FileFlush:
     case IrOpcode::FileWriteI32:

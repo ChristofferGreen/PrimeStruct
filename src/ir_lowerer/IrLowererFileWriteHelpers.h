@@ -68,6 +68,11 @@ bool emitFileWriteByteCall(const Expr &expr,
                            const EmitExprForWriteFn &emitExpr,
                            const EmitInstructionForWriteFn &emitInstruction,
                            std::string &error);
+bool emitFileReadByteCall(const Expr &expr,
+                          const LocalMap &localsIn,
+                          int32_t handleIndex,
+                          const EmitInstructionForWriteFn &emitInstruction,
+                          std::string &error);
 bool emitFileWriteBytesCall(const Expr &expr,
                             int32_t handleIndex,
                             const EmitExprForWriteFn &emitExpr,

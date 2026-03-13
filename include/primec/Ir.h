@@ -60,6 +60,7 @@ enum class IrOpcode : uint8_t {
   FileOpenRead,
   FileOpenWrite,
   FileOpenAppend,
+  FileReadByte,
   FileClose,
   FileFlush,
   FileWriteI32,
@@ -145,6 +146,7 @@ constexpr uint64_t EffectFileWrite = 1ull << 6;
 constexpr uint64_t EffectGpuDispatch = 1ull << 7;
 constexpr uint64_t EffectPathSpaceBind = 1ull << 8;
 constexpr uint64_t EffectPathSpaceSchedule = 1ull << 9;
+constexpr uint32_t FileReadEofCode = 65536u;
 
 struct IrStructField {
   std::string name;

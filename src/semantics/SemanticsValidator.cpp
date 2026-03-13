@@ -414,7 +414,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     return true;
   }
   if (expr.isMethodCall) {
-    if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" ||
+    if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
         expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
       out.isResult = true;
       out.hasValue = false;

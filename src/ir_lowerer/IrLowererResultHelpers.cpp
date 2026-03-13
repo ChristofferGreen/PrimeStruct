@@ -45,8 +45,8 @@ bool resolveResultExprInfo(const Expr &expr,
       }
       const LocalResultInfo local = lookupLocal(expr.args.front().name);
       if (local.found && local.isFileHandle) {
-        if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "write_bytes" ||
-            expr.name == "flush" || expr.name == "close") {
+        if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
+            expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
           out.isResult = true;
           out.hasValue = false;
           out.errorType = "FileError";

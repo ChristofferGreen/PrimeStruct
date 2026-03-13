@@ -606,6 +606,9 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
         stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
         break;
       }
+      case IrOpcode::FileReadByte:
+        emitter.emitFileReadByte(static_cast<uint32_t>(inst.imm), layout.scratchOffset);
+        break;
       case IrOpcode::FileClose:
         emitter.emitFileClose();
         break;

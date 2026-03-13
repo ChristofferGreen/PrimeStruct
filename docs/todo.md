@@ -119,7 +119,7 @@ Type-resolution graph rollout note: keep the graph migration blocked on the rema
 - ○ Add end-to-end conformance suite entries dedicated to graph resolution semantics (mutual recursion, cycle diagnostics, mixed template+auto inference, import-crossing dependencies) and keep them required in `./scripts/compile.sh`.
 
 **Backends & IR**
-- ○ Add `/std/image/ppm/*` read implementations and conformance tests for VM/native/Wasm.
+- ○ Add `/std/image/ppm/*` read implementations and conformance tests for VM/native/Wasm on top of `File<Read>.read_byte(...)`.
 - ○ Add `/std/image/ppm/*` write implementations and conformance tests for VM/native/Wasm.
 - ○ Add `/std/image/png/*` read implementations and conformance tests for VM/native/Wasm.
 - ○ Add `/std/image/png/*` write implementations and conformance tests for VM/native/Wasm.

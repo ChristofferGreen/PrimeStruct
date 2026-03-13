@@ -10,6 +10,7 @@ Archived from `docs/todo.md` on March 13, 2026.
 - ✓ Fix failing compile-run suites (`smoke`, `glsl`, `text_filters`, `examples`) by aligning regression expectations with current backend contracts, correcting outdated fixture sources/options, and pruning temporarily unstable aggregate suites so `./scripts/compile.sh` returns green.
 
 **Backends & IR**
+- ✓ Add source-level `File<Read>.read_byte(...)` plumbing plus deterministic EOF mapping across semantics, IR lowering, VM/native/Wasm, and the C++ emitter. Progress: `File<Read>.read_byte([i32 mut] value) -> Result<FileError>` now resolves and validates as a builtin file method, lowers through new `IrOpcode::FileReadByte`, leaves the destination binding unchanged on error, maps end-of-file to deterministic `EOF`, and is covered across semantics, IR helper/validator, VM/native/C++ compile-run, Wasm emitter/runtime, and the primary file-I/O docs.
 - ✓ Define the shared language-level `/std/image/*` file-I/O API and the deterministic unsupported-diagnostic contract for backends that cannot do image file I/O. Testing: added `stdlib/std/image/image.prime` with shared `ppm`/`png` read-write signatures plus deterministic unsupported `ImageError` codes/strings, compile-run coverage across VM/native/C++ emitter paths that locks the current unsupported behavior, and doc/source-lock coverage on the published `/std/image/*` API contract.
 
 **Architecture follow-up (callable IR decoupling)**

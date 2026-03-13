@@ -132,7 +132,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.args.front().name);
       if (it != localsIn.end() && it->second.isFileHandle) {
-        if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" ||
+        if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
             expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
           kindOut = LocalInfo::ValueKind::Int32;
           return true;
@@ -162,7 +162,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       if (arg.isMethodCall && !arg.args.empty() && arg.args.front().kind == Expr::Kind::Name) {
         auto it = localsIn.find(arg.args.front().name);
         if (it != localsIn.end() && it->second.isFileHandle) {
-          if (arg.name == "write" || arg.name == "write_line" || arg.name == "write_byte" ||
+          if (arg.name == "write" || arg.name == "write_line" || arg.name == "write_byte" || arg.name == "read_byte" ||
               arg.name == "write_bytes" || arg.name == "flush" || arg.name == "close") {
             kindOut = LocalInfo::ValueKind::Int32;
             return true;
