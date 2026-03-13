@@ -18,6 +18,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                            const std::vector<Expr> *enclosingStatements,
                                            size_t statementIndex) {
   ExprContextScope statementScope(*this, stmt);
+  const std::vector<std::string> *definitionTemplateArgs = nullptr;
+  auto currentDefIt = defMap_.find(currentDefinitionPath_);
+  if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
+    definitionTemplateArgs = &currentDefIt->second->templateArgs;
+  }
   auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {
       std::string base;
@@ -621,6 +626,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
             return false;
           }
         }
+        if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+          return false;
+        }
         locals.emplace(stmt.name, info);
         return true;
       }
@@ -633,6 +641,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           error_ = "restrict type does not match binding type";
           return false;
         }
+      }
+      if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+        return false;
       }
       locals.emplace(stmt.name, info);
       return true;
@@ -661,6 +672,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           error_ = "restrict type does not match binding type";
           return false;
         }
+      }
+      if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+        return false;
       }
       locals.emplace(stmt.name, info);
       return true;
@@ -893,6 +907,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (resolvePointerRoot(initializer, pointerRoot)) {
         info.referenceRoot = std::move(pointerRoot);
       }
+      if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+        return false;
+      }
       locals.emplace(stmt.name, info);
       return true;
     }
@@ -987,6 +1004,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         }
       }
       if (!initIsLocation && !currentDefinitionIsUnsafe_) {
+        if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+          return false;
+        }
         locals.emplace(stmt.name, info);
         return true;
       }
@@ -1005,6 +1025,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           info.referenceRoot = std::move(borrowRoot);
         }
         info.isUnsafeReference = true;
+        if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+          return false;
+        }
         locals.emplace(stmt.name, info);
         return true;
       }
@@ -1063,6 +1086,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
       info.referenceRoot = std::move(borrowRoot);
       info.isUnsafeReference = currentDefinitionIsUnsafe_;
+    }
+    if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+      return false;
     }
     locals.emplace(stmt.name, info);
     return true;

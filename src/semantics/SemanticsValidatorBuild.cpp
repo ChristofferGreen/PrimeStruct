@@ -1207,6 +1207,9 @@ bool SemanticsValidator::buildParameters() {
       if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
         (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasAnyMathImport());
       }
+      if (!validateBuiltinMapKeyType(binding, &def.templateArgs, error_)) {
+        return false;
+      }
       ParameterInfo info;
       info.name = param.name;
       info.binding = std::move(binding);
@@ -1381,6 +1384,9 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     return false;
   }
   if (hasExplicitBindingTypeTransform(fieldStmt)) {
+    if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+      return false;
+    }
     return true;
   }
   const std::string fieldPath = structDef.fullPath + "/" + fieldStmt.name;
@@ -1394,6 +1400,9 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
   if (inferBindingTypeFromInitializer(fieldStmt.args.front(), noParams, noLocals, inferred)) {
     if (!(inferred.typeName == "array" && inferred.typeTemplateArg.empty())) {
       bindingOut = std::move(inferred);
+      if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+        return false;
+      }
       return true;
     }
   }
@@ -1402,6 +1411,9 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     if (!structPath.empty()) {
       bindingOut.typeName = std::move(structPath);
       bindingOut.typeTemplateArg.clear();
+      if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+        return false;
+      }
       return true;
     }
   }

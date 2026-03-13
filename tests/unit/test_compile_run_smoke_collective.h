@@ -562,6 +562,39 @@ main() {
   CHECK(nativeErr.find("^") != std::string::npos);
 }
 
+TEST_CASE("map bindings reject unsupported key type in vm/native") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<array<i32>, i32>] values{map<array<i32>, i32>()}
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_unsupported_key_type.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_map_unsupported_key_type_err.txt").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_map_unsupported_key_type_native").string();
+  const std::string expected =
+      "Semantic error: map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): "
+      "array<i32>";
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runVmCmd) == 2);
+  const std::string vmErr = readFile(errPath);
+  CHECK(vmErr.find(expected) != std::string::npos);
+  CHECK(vmErr.find(": error: " + expected) != std::string::npos);
+  CHECK(vmErr.find("^") != std::string::npos);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileNativeCmd) == 2);
+  const std::string nativeErr = readFile(errPath);
+  CHECK(nativeErr.find(expected) != std::string::npos);
+  CHECK(nativeErr.find(": error: " + expected) != std::string::npos);
+  CHECK(nativeErr.find("^") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs binding inference feeding method call") {
   const std::string source = R"(
 namespace i64 {

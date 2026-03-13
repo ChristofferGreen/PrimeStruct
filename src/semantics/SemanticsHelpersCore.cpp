@@ -94,6 +94,41 @@ std::string normalizeBindingTypeName(const std::string &name) {
   return name;
 }
 
+bool isBuiltinMapComparableKeyTypeName(const std::string &name) {
+  const std::string normalized = normalizeBindingTypeName(name);
+  return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "f32" ||
+         normalized == "f64" || normalized == "bool" || normalized == "string";
+}
+
+bool validateBuiltinMapKeyType(const std::string &typeName,
+                               const std::vector<std::string> *templateArgs,
+                               std::string &error) {
+  const std::string normalized = normalizeBindingTypeName(typeName);
+  if (templateArgs != nullptr) {
+    for (const auto &templateArg : *templateArgs) {
+      if (normalizeBindingTypeName(templateArg) == normalized) {
+        return true;
+      }
+    }
+  }
+  if (isBuiltinMapComparableKeyTypeName(normalized)) {
+    return true;
+  }
+  error = "map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): " + normalized;
+  return false;
+}
+
+bool validateBuiltinMapKeyType(const BindingInfo &binding,
+                               const std::vector<std::string> *templateArgs,
+                               std::string &error) {
+  std::string keyType;
+  std::string valueType;
+  if (!extractMapKeyValueTypes(binding, keyType, valueType)) {
+    return true;
+  }
+  return validateBuiltinMapKeyType(keyType, templateArgs, error);
+}
+
 bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut) {
   keyTypeOut.clear();
   valueTypeOut.clear();
@@ -485,6 +520,9 @@ ReturnKind getReturnKind(const Definition &def,
         std::vector<std::string> args;
         if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
           error = "map return type requires exactly two template arguments on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        if (!validateBuiltinMapKeyType(args.front(), &def.templateArgs, error)) {
           return ReturnKind::Unknown;
         }
         if (!isAllowedCollectionTypeArg(args.front()) || !isAllowedCollectionTypeArg(args.back())) {

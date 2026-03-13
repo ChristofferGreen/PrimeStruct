@@ -18,8 +18,6 @@ Stdlib container substrate note: the items below are the hard prerequisites for 
 - ○ Define explicit ownership/drop semantics for container element lifecycles during resize/remove operations for non-trivial element types.
 - ○ Define explicit ownership/drop semantics for container element lifecycles during reallocation/move operations for non-trivial element types.
 - ○ Implement container element drop behavior in vector/map runtimes once the ownership contract is fixed.
-- ○ Define map key trait contracts (`Hash + Eq` for hash maps and/or `Comparable` for ordered maps).
-- ○ Enforce map key trait contracts in semantics with deterministic diagnostics on unsupported key types.
 - ○ Define a standard container error contract (`Result`/`Maybe` and/or panic primitive) for stdlib containers.
 - ○ Replace compiler-injected vector/map runtime abort paths with the standard container error contract across VM/native/C++ flows.
 Stdlib container bring-up note: land a real `.prime` implementation under an experimental path/name first, prove parity there, then swap canonical names and remove the builtin implementation.

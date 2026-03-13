@@ -3935,7 +3935,9 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unsupported return type on /wrapMapUnknownKey") != std::string::npos);
+  CHECK(readFile(errPath).find(
+            "map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Unknown") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib map return envelope unsupported value arg") {

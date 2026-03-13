@@ -52,6 +52,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map binding rejects unsupported builtin Comparable key contract") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<array<i32>, i32>] values{map<array<i32>, i32>()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): array<i32>") !=
+        std::string::npos);
+}
+
+TEST_CASE("inferred map binding rejects unsupported builtin Comparable key contract") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [mut] values{map<array<i32>, i32>()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): array<i32>") !=
+        std::string::npos);
+}
+
 TEST_CASE("count helper validates on vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
