@@ -589,6 +589,23 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     auto resolveCallCollectionTemplateArgs =
         [&](const Expr &target, const std::string &expectedBase, std::vector<std::string> &argsOut) -> bool {
       argsOut.clear();
+      auto extractCollectionArgsFromType =
+          [&](const std::string &typeName, auto &&extractCollectionArgsFromTypeRef) -> bool {
+        std::string base;
+        std::string arg;
+        const std::string normalizedType = normalizeBindingTypeName(typeName);
+        if (!splitTemplateTypeName(normalizedType, base, arg)) {
+          return false;
+        }
+        if (base == expectedBase) {
+          return splitTopLevelTemplateArgs(arg, argsOut);
+        }
+        std::vector<std::string> args;
+        if ((base == "Reference" || base == "Pointer") && splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+          return extractCollectionArgsFromTypeRef(args.front(), extractCollectionArgsFromTypeRef);
+        }
+        return false;
+      };
       if (target.kind != Expr::Kind::Call) {
         return false;
       }
@@ -607,13 +624,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
         }
-        std::string base;
-        std::string arg;
-        const std::string normalizedReturn = normalizeBindingTypeName(transform.templateArgs.front());
-        if (!splitTemplateTypeName(normalizedReturn, base, arg) || base != expectedBase) {
-          return false;
-        }
-        return splitTopLevelTemplateArgs(arg, argsOut);
+        return extractCollectionArgsFromType(transform.templateArgs.front(), extractCollectionArgsFromType);
       }
       return false;
     };

@@ -8521,6 +8521,24 @@ main() {
   CHECK(error.find("if branches must return compatible types") != std::string::npos);
 }
 
+TEST_CASE("wrapper-returned referenced canonical map keeps builtin key diagnostics") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(borrowMap(location(values))[true])
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires map key type i32") != std::string::npos);
+}
+
 TEST_CASE("wrapper-returned canonical map access count call auto inference keeps string helper shadow") {
   const std::string source = R"(
 [return<bool>]
@@ -8559,6 +8577,55 @@ wrapMap() {
 [return<int>]
 main() {
   [auto] inferred{count(wrapMap()[1i32])}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
+}
+
+TEST_CASE("wrapper-returned referenced canonical map access count call auto inference keeps string helper shadow") {
+  const std::string source = R"(
+[return<bool>]
+/string/count([string] values) {
+  return(false)
+}
+
+[return<Reference</std/collections/map<i32, string>>>]
+borrowMap([Reference</std/collections/map<i32, string>>] values) {
+  return(values)
+}
+
+[return<bool>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  [auto] inferred{count(borrowMap(location(values))[1i32])}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper-returned referenced canonical map access count call auto inference keeps string helper mismatch diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/string/count([string] values) {
+  return(false)
+}
+
+[return<Reference</std/collections/map<i32, string>>>]
+borrowMap([Reference</std/collections/map<i32, string>>] values) {
+  return(values)
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  [auto] inferred{count(borrowMap(location(values))[1i32])}
   return(inferred)
 }
 )";
