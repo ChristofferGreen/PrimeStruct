@@ -7,6 +7,7 @@ Archived from `docs/todo.md` on March 13, 2026.
 
 **Types & Semantics (March 13, 2026)**
 - ✓ Finish constructor/access-helper fallback and precedence for canonical `/std/collections/map/*` spellings across semantics, template monomorphization, and IR setup-type resolution. Canonical `/std/collections/map/*` helper calls now keep explicit `/map/*` constructor/access fallback precedence through IR setup inference as well, with focused lowerer regressions for constructor return-kind and element-kind inference.
+- ✓ Finish slashless/canonical map path normalization across IR lowering lookup and C++ emitter method/struct metadata resolution. Slashless `std/collections/map/*` and `map/*` spellings now resolve consistently through lowerer call-path lookup and emitter receiver/return metadata probes, including direct slashless canonical map receiver calls with slashless metadata keys.
 
 **Regression stabilization (March 9, 2026)**
 - ✓ Fix failing `PrimeStruct_primestruct_compile_run_native_backend_core` and `PrimeStruct_primestruct_compile_run_native_backend_math_numeric` by restoring explicit-binding numeric compatibility for float/software-numeric initializers in semantics and by flushing native value-stack cache at control-flow merge targets; added focused semantics/native regression tests.

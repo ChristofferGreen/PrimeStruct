@@ -943,6 +943,63 @@ bool resolveMethodCallPath(const Expr &call,
       }
     }
   };
+  auto normalizeMapImportAliasPath = [](const std::string &path) {
+    if (path.empty() || path.front() == '/') {
+      return path;
+    }
+    if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
+      return "/" + path;
+    }
+    return path;
+  };
+  auto metadataPathCandidates = [&](const std::string &path) {
+    std::vector<std::string> candidates;
+    auto appendUnique = [&](const std::string &candidate) {
+      if (candidate.empty()) {
+        return;
+      }
+      for (const auto &existing : candidates) {
+        if (existing == candidate) {
+          return;
+        }
+      }
+      candidates.push_back(candidate);
+    };
+    appendUnique(path);
+    appendUnique(normalizeMapImportAliasPath(path));
+    if (!path.empty() && path.front() == '/' &&
+        (path.rfind("/map/", 0) == 0 || path.rfind("/std/collections/map/", 0) == 0)) {
+      appendUnique(path.substr(1));
+    }
+    return candidates;
+  };
+  auto findStructTypeMetadata = [&](const std::string &path) -> const std::string * {
+    for (const auto &candidate : metadataPathCandidates(path)) {
+      auto it = structTypeMap.find(candidate);
+      if (it != structTypeMap.end()) {
+        return &it->second;
+      }
+    }
+    return nullptr;
+  };
+  auto findReturnStructMetadata = [&](const std::string &path) -> const std::string * {
+    for (const auto &candidate : metadataPathCandidates(path)) {
+      auto it = returnStructs.find(candidate);
+      if (it != returnStructs.end()) {
+        return &it->second;
+      }
+    }
+    return nullptr;
+  };
+  auto findReturnKindMetadata = [&](const std::string &path) -> const ReturnKind * {
+    for (const auto &candidate : metadataPathCandidates(path)) {
+      auto it = returnKinds.find(candidate);
+      if (it != returnKinds.end()) {
+        return &it->second;
+      }
+    }
+    return nullptr;
+  };
   std::function<std::string(const Expr &)> inferPrimitiveTypeName;
   auto resolveCollectionElementTypeFromCall = [&](const Expr &candidate, std::string &typeOut) -> bool {
     typeOut.clear();
@@ -1052,20 +1109,19 @@ bool resolveMethodCallPath(const Expr &call,
             }
           }
           for (const auto &candidate : resolvedCandidates) {
-            auto structIt = returnStructs.find(candidate);
-            if (structIt != returnStructs.end()) {
-              return normalizeCollectionReceiverType(structIt->second);
+            if (const std::string *structPath = findReturnStructMetadata(candidate)) {
+              return normalizeCollectionReceiverType(*structPath);
             }
           }
           for (const auto &candidate : resolvedCandidates) {
-            auto it = returnKinds.find(candidate);
-            if (it == returnKinds.end()) {
+            const ReturnKind *kind = findReturnKindMetadata(candidate);
+            if (kind == nullptr) {
               continue;
             }
-            if (it->second == ReturnKind::Array) {
+            if (*kind == ReturnKind::Array) {
               return "array";
             }
-            const std::string inferredType = typeNameForReturnKind(it->second);
+            const std::string inferredType = typeNameForReturnKind(*kind);
             if (!inferredType.empty()) {
               return inferredType;
             }
@@ -1103,16 +1159,14 @@ bool resolveMethodCallPath(const Expr &call,
         std::string methodPath;
         if (resolveMethodCallPath(
                 expr, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
-          auto structIt = returnStructs.find(methodPath);
-          if (structIt != returnStructs.end()) {
-            return normalizeCollectionReceiverType(structIt->second);
+          if (const std::string *structPath = findReturnStructMetadata(methodPath)) {
+            return normalizeCollectionReceiverType(*structPath);
           }
-          auto it = returnKinds.find(methodPath);
-          if (it != returnKinds.end()) {
-            if (it->second == ReturnKind::Array) {
+          if (const ReturnKind *kind = findReturnKindMetadata(methodPath)) {
+            if (*kind == ReturnKind::Array) {
               return "array";
             }
-            return typeNameForReturnKind(it->second);
+            return typeNameForReturnKind(*kind);
           }
         }
         return "";
@@ -1121,15 +1175,6 @@ bool resolveMethodCallPath(const Expr &call,
     return "";
   };
   std::string typeName;
-  auto normalizeMapImportAliasPath = [](const std::string &path) {
-    if (path.empty() || path.front() == '/') {
-      return path;
-    }
-    if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
-      return "/" + path;
-    }
-    return path;
-  };
   if (receiver.kind == Expr::Kind::Name) {
     auto it = localTypes.find(receiver.name);
     if (it == localTypes.end()) {
@@ -1144,9 +1189,7 @@ bool resolveMethodCallPath(const Expr &call,
       }
       return path;
     };
-    auto hasStructPath = [&](const std::string &path) {
-      return structTypeMap.count(path) > 0;
-    };
+    auto hasStructPath = [&](const std::string &path) { return findStructTypeMetadata(path) != nullptr; };
     auto importIt = importAliases.find(receiver.name);
     if (!hasStructPath(resolved) && importIt != importAliases.end()) {
       resolved = importIt->second;
@@ -1184,7 +1227,7 @@ bool resolveMethodCallPath(const Expr &call,
   }
   typeName = normalizeMapImportAliasPath(typeName);
   std::string resolvedType = resolveTypePath(typeName, call.namespacePrefix);
-  if (returnKinds.count(resolvedType) == 0) {
+  if (findReturnKindMetadata(resolvedType) == nullptr) {
     auto importIt = importAliases.find(typeName);
     if (importIt != importAliases.end()) {
       resolvedType = normalizeMapImportAliasPath(importIt->second);
