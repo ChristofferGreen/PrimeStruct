@@ -6655,7 +6655,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("vector method templated call keeps compatibility template diagnostics past non-templated helper") {
+TEST_CASE("vector method templated call rejects compatibility template forwarding past non-templated helper") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -6679,7 +6679,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("wrapper temporary templated vector method call keeps compatibility template diagnostics") {
+TEST_CASE("wrapper temporary templated vector method call rejects compatibility template forwarding") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -6707,7 +6707,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("wrapper temporary templated vector method keeps compatibility template diagnostics on arity mismatch") {
+TEST_CASE("wrapper temporary templated vector method arity mismatch rejects compatibility template forwarding") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {

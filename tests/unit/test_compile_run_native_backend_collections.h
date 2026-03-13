@@ -1520,7 +1520,7 @@ main() {
   CHECK(readFile(errPath).find("unknown named argument: marker") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native wrapper temporary templated vector method compatibility template forwarding") {
+TEST_CASE("rejects native wrapper temporary templated vector method compatibility template forwarding") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -1544,10 +1544,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_temp_templated_vector_method_compatibility_forwarding_reject.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_wrapper_temp_templated_vector_method_compat_exe").string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_wrapper_temp_templated_vector_method_compatibility_forwarding_reject_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native array alias templated forwarding to canonical vector helper") {
@@ -1605,7 +1610,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native vector alias templated forwarding past non-templated compatibility helper") {
+TEST_CASE("rejects native vector alias templated forwarding past non-templated compatibility helper") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -1625,11 +1630,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_vector_templated_alias_forwarding_non_template_compat_reject.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_templated_alias_forwarding_non_template_compat_exe")
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_vector_templated_alias_forwarding_non_template_compat_reject_err.txt")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native vector namespaced mutator alias") {

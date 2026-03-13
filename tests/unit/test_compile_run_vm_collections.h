@@ -1194,8 +1194,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_wrapper_temp_templated_vector_method_compatibility_forwarding_reject.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_temp_templated_vector_method_compatibility_forwarding_reject_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm array alias templated forwarding to canonical vector helper") {
@@ -1264,8 +1270,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_vector_templated_alias_forwarding_non_template_compat_reject.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_vector_templated_alias_forwarding_non_template_compat_reject_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm vector namespaced mutator alias") {

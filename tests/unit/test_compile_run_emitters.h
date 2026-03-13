@@ -3844,12 +3844,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_temp_templated_vector_method_canonical_forwarding.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_temp_templated_vector_method_canonical_forwarding_exe")
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_temp_templated_vector_method_canonical_forwarding_err.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects array alias templated forwarding to canonical vector helper in C++ emitter") {
@@ -3926,12 +3930,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_templated_alias_forwarding_non_template_compat.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_templated_alias_forwarding_non_template_compat_exe")
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_templated_alias_forwarding_non_template_compat_err.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vector namespaced count capacity access aliases in C++ emitter") {
