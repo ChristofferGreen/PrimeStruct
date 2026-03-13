@@ -231,25 +231,29 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
 
   std::function<std::string(const std::string &, const std::string &)> resolveStructReturnPath;
   auto resolveCollectionReturnPath = [](const std::string &typeName) -> std::string {
-    std::string base;
-    std::string arg;
-    if (!splitTemplateTypeName(typeName, base, arg)) {
+    std::string currentType = normalizeBindingTypeName(typeName);
+    while (true) {
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(currentType, base, arg)) {
+        return "";
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args)) {
+        return "";
+      }
+      if ((base == "array" || base == "vector") && args.size() == 1) {
+        return "/" + base;
+      }
+      if (base == "map" && args.size() == 2) {
+        return "/map";
+      }
+      if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
+        currentType = normalizeBindingTypeName(args.front());
+        continue;
+      }
       return "";
     }
-    std::vector<std::string> args;
-    if (!splitTopLevelTemplateArgs(arg, args)) {
-      return "";
-    }
-    if (base == "/std/collections/map" || base == "std/collections/map") {
-      base = "map";
-    }
-    if ((base == "array" || base == "vector") && args.size() == 1) {
-      return "/" + base;
-    }
-    if (base == "map" && args.size() == 2) {
-      return "/map";
-    }
-    return "";
   };
 
   auto returnTypeFor = [&](const Definition &def) {

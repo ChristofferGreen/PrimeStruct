@@ -3190,6 +3190,62 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("C++ emitter compiles map method sugar on wrapper-returned canonical map references") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{borrowMap(location(values))}
+  [i32] c{ref.count()}
+  [i32] first{ref.at(1i32)}
+  [i32] second{ref.at_unsafe(2i32)}
+  return(plus(c, plus(first, second)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_map_reference_method_sugar.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_map_reference_method_sugar_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
+TEST_CASE("C++ emitter keeps canonical diagnostics on wrapper-returned canonical map reference method sugar") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{borrowMap(location(values))}
+  return(ref.at(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_map_reference_method_sugar_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_map_reference_method_sugar_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("at requires map key type i32") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter treats canonical map reference string access as string receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
