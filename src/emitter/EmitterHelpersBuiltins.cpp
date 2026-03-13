@@ -1000,6 +1000,21 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return nullptr;
   };
+  auto preferCanonicalMapMethodHelperPath = [&](const std::string &path) {
+    if (path.rfind("/map/", 0) != 0) {
+      return path;
+    }
+    const std::string suffix = path.substr(std::string("/map/").size());
+    if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
+      return path;
+    }
+    const std::string canonicalPath = "/std/collections/map/" + suffix;
+    if (defMap.count(canonicalPath) > 0 || findStructTypeMetadata(canonicalPath) != nullptr ||
+        findReturnStructMetadata(canonicalPath) != nullptr || findReturnKindMetadata(canonicalPath) != nullptr) {
+      return canonicalPath;
+    }
+    return path;
+  };
   std::function<std::string(const Expr &)> inferPrimitiveTypeName;
   auto resolveCollectionElementTypeFromCall = [&](const Expr &candidate, std::string &typeOut) -> bool {
     typeOut.clear();
@@ -1233,7 +1248,7 @@ bool resolveMethodCallPath(const Expr &call,
       resolvedType = normalizeMapImportAliasPath(importIt->second);
     }
   }
-  resolvedOut = resolvedType + "/" + normalizedMethodName;
+  resolvedOut = preferCanonicalMapMethodHelperPath(resolvedType + "/" + normalizedMethodName);
   return true;
 }
 

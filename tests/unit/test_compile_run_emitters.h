@@ -3169,6 +3169,49 @@ TEST_CASE("C++ emitter helper normalizes slashless map type import alias method 
   CHECK(resolved == "pkg/Thing/tag");
 }
 
+TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibility alias") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+  call.name = "count";
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+  call.args.push_back(receiver);
+  call.argNames.push_back(std::nullopt);
+
+  primec::Definition aliasCountDef;
+  aliasCountDef.fullPath = "/map/count";
+  primec::Definition canonicalCountDef;
+  canonicalCountDef.fullPath = "/std/collections/map/count";
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "map";
+  receiverInfo.typeTemplateArg = "i32, i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {aliasCountDef.fullPath, &aliasCountDef},
+      {canonicalCountDef.fullPath, &canonicalCountDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  std::string resolved;
+
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/std/collections/map/count");
+
+  defMap.erase(canonicalCountDef.fullPath);
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/map/count");
+}
+
 TEST_CASE("C++ emitter helper rejects canonical vector alias access struct-return forwarding resolution") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
@@ -4736,6 +4779,116 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 11);
+}
+
+TEST_CASE("C++ emitter keeps canonical map sugar before compatibility aliases") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(96i32)
+}
+
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(73i32)
+}
+
+[return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(41i32)
+}
+
+[return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(11i32)
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(42i32)
+}
+
+[return<int>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(12i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(plus(plus(count(values), values.count()),
+              plus(values.at(1i32), values.at_unsafe(1i32))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_canonical_map_sugar_before_aliases.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_map_sugar_before_aliases_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 169);
+}
+
+TEST_CASE("C++ emitter prefers canonical explicit-template map count method over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(96i32)
+}
+
+[return<int>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(73i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values.count<i32, i32>(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_explicit_template_map_count_method_precedence.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_explicit_template_map_count_method_precedence_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 73);
+}
+
+TEST_CASE("C++ emitter keeps canonical explicit-template map count method diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(false)
+}
+
+[return<int>]
+/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(96i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values.count<i32, i32>(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_explicit_template_map_count_method_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_explicit_template_map_count_method_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps builtin map diagnostics on explicit canonical typed bindings") {
