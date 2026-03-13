@@ -1,5 +1,7 @@
 #include "IrLowererSetupInferenceHelpers.h"
 
+#include <algorithm>
+
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 
@@ -279,9 +281,17 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
       appendReceiverIndex(i);
     }
   }
+  const bool hasAlternativeCollectionReceiver =
+      probePositionalReorderedReceiver &&
+      std::any_of(receiverIndices.begin(), receiverIndices.end(), [&](size_t index) {
+        return index > 0 && index < expr.args.size() && isKnownCollectionAccessReceiverExpr(expr.args[index]);
+      });
 
   for (size_t receiverIndex : receiverIndices) {
     if (receiverIndex >= expr.args.size()) {
+      continue;
+    }
+    if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
       continue;
     }
     const Expr &target = expr.args[receiverIndex];

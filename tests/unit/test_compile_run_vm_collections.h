@@ -5914,6 +5914,29 @@ main() {
   CHECK(runCommand(runCmd) == 83);
 }
 
+TEST_CASE("runs vm with map access preferring later map receiver over string") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<string, i32>] values, [string] key) {
+  return(85i32)
+}
+
+[return<int>]
+/string/at([string] values, [map<string, i32>] key) {
+  return(86i32)
+}
+
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(at("only"raw_utf8, values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_access_later_receiver_precedence.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 85);
+}
+
 TEST_CASE("runs vm with user map at_unsafe string positional call shadow") {
   const std::string source = R"(
 [return<int>]

@@ -1321,6 +1321,33 @@ main() {
   CHECK(runCommand(exePath) == 84);
 }
 
+TEST_CASE("C++ emitter map access prefers later map receiver over string") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<string, i32>] values, [string] key) {
+  return(86i32)
+}
+
+[return<int>]
+/string/at([string] values, [map<string, i32>] key) {
+  return(87i32)
+}
+
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(at("only"raw_utf8, values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_map_access_later_receiver_precedence.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_map_access_later_receiver_precedence_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 86);
+}
+
 TEST_CASE("compiles and runs user map access unsafe string positional call shadow in C++ emitter") {
   const std::string source = R"(
 [return<int>]

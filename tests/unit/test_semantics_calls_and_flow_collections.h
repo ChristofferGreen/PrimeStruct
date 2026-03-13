@@ -8658,6 +8658,29 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map at call-form helper shadow prefers later map receiver over leading string") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<string, i32>] values, [string] key) {
+  return(83i32)
+}
+
+[return<int>]
+/string/at([string] values, [map<string, i32>] key) {
+  return(84i32)
+}
+
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(at("only"raw_utf8, values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("map at_unsafe call-form helper shadow accepts string positional reordered arguments") {
   const std::string source = R"(
 [return<int>]

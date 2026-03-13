@@ -1,5 +1,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 
+#include <algorithm>
+
 #include "IrLowererHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -981,8 +983,17 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       appendReceiverIndex(i);
     }
   }
+  const bool hasAlternativeCollectionReceiver =
+      probePositionalReorderedAccessReceiver &&
+      std::any_of(receiverIndices.begin(), receiverIndices.end(), [&](size_t index) {
+        return index > 0 && index < callExpr.args.size() &&
+               isKnownCollectionAccessReceiverExpr(callExpr.args[index]);
+      });
 
   for (size_t receiverIndex : receiverIndices) {
+    if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
+      continue;
+    }
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
     bool methodResolved = false;
     if (resolveMethodCallReturnKind(methodExpr,

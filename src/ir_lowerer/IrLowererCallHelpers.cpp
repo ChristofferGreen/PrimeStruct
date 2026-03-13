@@ -1,5 +1,6 @@
 #include "IrLowererCallHelpers.h"
 
+#include <algorithm>
 #include <cctype>
 #include <limits>
 #include <string_view>
@@ -1849,11 +1850,19 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       appendReceiverIndex(i);
     }
   }
+  const bool hasAlternativeCollectionReceiver =
+      probePositionalReorderedAccessReceiver && isCollectionAccessReceiverExpr &&
+      std::any_of(receiverIndices.begin(), receiverIndices.end(), [&](size_t index) {
+        return index > 0 && index < expr.args.size() && isCollectionAccessReceiverExpr(expr.args[index]);
+      });
 
   const std::string priorError = error;
   for (size_t receiverIndex : receiverIndices) {
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
     const Definition *callee = resolveMethodCallDefinition(methodExpr);
+    if (hasAlternativeCollectionReceiver && receiverIndex == 0 && callee != nullptr) {
+      continue;
+    }
     const auto emitResult = emitResolvedInlineDefinitionCall(
         methodExpr, callee, emitInlineDefinitionCall, error);
     if (emitResult == ResolvedInlineCallResult::Emitted) {
