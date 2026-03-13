@@ -4478,6 +4478,52 @@ main() {
   CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
+TEST_CASE("wrapper-returned bare map helper statement body arguments fall back to canonical helper target") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(5i32, 6i32))
+}
+
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  wrapValues().count(true) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper-returned bare map helper statement body arguments keep canonical mismatch diagnostics") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(5i32, 6i32))
+}
+
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  wrapValues().count(true) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("map namespaced count method statement body arguments keep slash-path diagnostics") {
   const std::string source = R"(
 [return<int>]

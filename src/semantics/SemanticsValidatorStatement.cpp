@@ -2424,6 +2424,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         resolvedOut = normalizeBodyArgumentTarget(resolvedType + "/" + methodName);
         return;
       }
+      if (!isExplicitMethodPath &&
+          (methodName == "count" || methodName == "at" || methodName == "at_unsafe") &&
+          isMapReceiverExpr(receiver)) {
+        resolvedOut = "/std/collections/map/" + methodName;
+        return;
+      }
     }
     auto inferPointerLikeCallReturnType = [&](const Expr &receiverExpr) -> std::string {
       if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
