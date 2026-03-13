@@ -108,6 +108,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const std::unordered_set<std::string> &structNames,
     const InferReceiverExprKindFn &inferExprKind,
     const ResolveReceiverExprPathFn &resolveExprPath,
+    const GetReturnInfoForPathFn &getReturnInfo = {},
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut);
 bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,

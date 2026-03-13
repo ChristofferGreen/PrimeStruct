@@ -1142,6 +1142,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const std::unordered_set<std::string> &structNames,
     const InferReceiverExprKindFn &inferExprKind,
     const ResolveReceiverExprPathFn &resolveExprPath,
+    const GetReturnInfoForPathFn &getReturnInfo,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
   std::string accessName;
@@ -1228,11 +1229,21 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                                                               structNames,
                                                                               inferExprKind,
                                                                               resolveExprPath,
+                                                                              getReturnInfo,
                                                                               defMap,
                                                                               nestedError);
     if (receiverMethodDef != nullptr && inferReceiverTypeFromDeclaredReturn(*receiverMethodDef, typeName)) {
       lookupError.clear();
       resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(typeName, lookupError);
+    } else if (receiverMethodDef != nullptr) {
+      LocalInfo::ValueKind receiverKind = LocalInfo::ValueKind::Unknown;
+      if (resolveReturnInfoKindForPath(receiverMethodDef->fullPath, getReturnInfo, false, receiverKind)) {
+        typeName = typeNameForValueKind(receiverKind);
+        if (!typeName.empty()) {
+          lookupError.clear();
+          resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(typeName, lookupError);
+        }
+      }
     } else {
       std::vector<std::string> receiverPaths = collectionHelperPathCandidates(resolveExprPath(*receiver));
       auto pruneMapAccessReceiverPaths = [&](const std::string &path) {

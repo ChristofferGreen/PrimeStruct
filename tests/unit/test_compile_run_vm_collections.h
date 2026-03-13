@@ -3204,6 +3204,92 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("rejects vm vector alias access auto wrapper canonical struct-return forwarding") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(index)
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(plus(index, 40i32)))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(/vector/at(values, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_alias_access_auto_wrapper_canonical_struct_return_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_vector_alias_access_auto_wrapper_canonical_struct_return_reject.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("rejects vm vector alias access auto wrapper canonical diagnostics forwarding") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(index)
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(plus(index, 40i32)))
+}
+
+[return<int>]
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(/vector/at(values, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values).tag(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_alias_access_auto_wrapper_canonical_diagnostic.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_vector_alias_access_auto_wrapper_canonical_diagnostic.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+}
+
 TEST_CASE("rejects vm templated stdlib map wrapper temporary unsafe key mismatch") {
   const std::string source = R"(
 import /std/collections/*

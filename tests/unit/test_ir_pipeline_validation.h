@@ -17613,6 +17613,72 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics when expr path 
   CHECK(error == "unknown method target for tag");
 }
 
+TEST_CASE("ir lowerer setup type helper keeps auto-wrapper primitive diagnostics for vector alias receiver calls") {
+  primec::Definition projectDef;
+  projectDef.fullPath = "/project";
+  primec::Transform returnAuto;
+  returnAuto.name = "return";
+  returnAuto.templateArgs = {"auto"};
+  projectDef.transforms.push_back(returnAuto);
+
+  primec::Definition i32TagDef;
+  i32TagDef.fullPath = "/i32/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {projectDef.fullPath, &projectDef},
+      {i32TagDef.fullPath, &i32TagDef},
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "project";
+  receiverCall.args = {valuesExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("values", valuesLocal);
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "project") {
+          return std::string("/project");
+        }
+        return expr.name;
+      },
+      [&](const std::string &path, primec::ir_lowerer::ReturnInfo &infoOut) {
+        if (path != "/project") {
+          return false;
+        }
+        infoOut.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        return true;
+      },
+      defMap,
+      error);
+  CHECK(resolved == &i32TagDef);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper keeps builtin count/capacity fallback when no override definition exists") {
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;

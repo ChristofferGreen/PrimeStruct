@@ -5348,6 +5348,75 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
+TEST_CASE("vector alias access auto wrapper keeps primitive receiver diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(index)
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(/vector/at(values, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values).tag())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("vector alias access auto wrapper keeps primitive argument diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(index)
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<int>]
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(/vector/at(values, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values).tag(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+}
+
 TEST_CASE("templated stdlib canonical vector helpers reject method-call sugar template args on count") {
   const std::string source = R"(
 [return<int>]

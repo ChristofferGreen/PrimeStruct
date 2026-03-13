@@ -246,6 +246,7 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
                                                *structNames,
                                                stateOut.inferExprKind,
                                                resolveExprPath,
+                                               stateOut.getReturnInfo,
                                                *defMap,
                                                errorOut);
   };

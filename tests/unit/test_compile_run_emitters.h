@@ -5570,7 +5570,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias access auto wrapper canonical diagnostics forwarding in C++ emitter") {
@@ -5590,8 +5590,8 @@ Marker {
 }
 
 [return<int>]
-/Marker/tag([Marker] self, [bool] marker) {
-  return(self.value)
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
 }
 
 [return<auto>]
@@ -5614,7 +5614,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter forwards explicit-template vector count wrappers through canonical return kinds") {
