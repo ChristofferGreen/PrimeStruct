@@ -1137,12 +1137,20 @@ main() {
 }
 
 TEST_CASE("graphics api contract doc-linked constraints stay locked") {
-  std::filesystem::path graphicsDocPath = std::filesystem::current_path() / "docs" / "Graphics_API_Design.md";
-  if (!std::filesystem::exists(graphicsDocPath)) {
-    graphicsDocPath = std::filesystem::current_path().parent_path() / "docs" / "Graphics_API_Design.md";
-  }
+  auto resolveDocPath = [](const std::string &name) -> std::filesystem::path {
+    std::filesystem::path path = std::filesystem::current_path() / "docs" / name;
+    if (!std::filesystem::exists(path)) {
+      path = std::filesystem::current_path().parent_path() / "docs" / name;
+    }
+    return path;
+  };
+
+  const std::filesystem::path graphicsDocPath = resolveDocPath("Graphics_API_Design.md");
+  const std::filesystem::path guidelinesDocPath = resolveDocPath("Coding_Guidelines.md");
   REQUIRE(std::filesystem::exists(graphicsDocPath));
+  REQUIRE(std::filesystem::exists(guidelinesDocPath));
   const std::string graphicsDoc = readFile(graphicsDocPath.string());
+  const std::string guidelinesDoc = readFile(guidelinesDocPath.string());
 
   const std::vector<std::string> lockedConstraintIds = {
       "GFX-CORE-API-NAMESPACE",
@@ -1151,6 +1159,11 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
       "GFX-PROFILE-IDENTIFIERS",
       "GFX-PROFILE-GATING",
       "GFX-DIAG-PROFILE-CONTEXT",
+      "GFX-V1-MINISPEC-SIGNATURES",
+      "GFX-V1-PROFILE-DEDUCTION",
+      "GFX-V1-VERTEXCOLORED-LAYOUT",
+      "GFX-V1-ERROR-CODES",
+      "GFX-V1-RESULT-PROPAGATION",
   };
   for (const std::string &constraintId : lockedConstraintIds) {
     CAPTURE(constraintId);
@@ -1173,6 +1186,76 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   for (const std::string &symbol : lockedCoreSymbols) {
     CAPTURE(symbol);
     CHECK(graphicsDoc.find(symbol) != std::string::npos);
+  }
+
+  const std::vector<std::string> lockedV1SignatureSnippets = {
+      "Window([title] string, [width] i32, [height] i32)",
+      "Device()",
+      "Device.default_queue(self)",
+      "Device.create_swapchain(",
+      "Device.create_mesh(",
+      "Device.create_pipeline(",
+      "Pipeline.material(self)",
+      "Window.is_open(self) -> bool",
+      "Window.poll_events(self) -> void",
+      "Window.aspect_ratio(self) -> f32",
+      "Swapchain.frame(self)",
+      "Frame.render_pass(self, [clear_color] ColorRGBA, [clear_depth] f32)",
+      "RenderPass.draw_mesh(self, [mesh] Mesh, [material] Material) -> void",
+      "RenderPass.end(self) -> void",
+      "Frame.submit(self, [queue] Queue) -> Result<void, GfxError>",
+      "Frame.present(self) -> Result<void, GfxError>",
+  };
+  for (const std::string &snippet : lockedV1SignatureSnippets) {
+    CAPTURE(snippet);
+    CHECK(graphicsDoc.find(snippet) != std::string::npos);
+  }
+
+  const std::vector<std::string> lockedVertexColoredLayoutSnippets = {
+      "| `px` | `f32` | `0` |",
+      "| `py` | `f32` | `4` |",
+      "| `pz` | `f32` | `8` |",
+      "| `pw` | `f32` | `12` |",
+      "| `r` | `f32` | `16` |",
+      "| `g` | `f32` | `20` |",
+      "| `b` | `f32` | `24` |",
+      "| `a` | `f32` | `28` |",
+      "Total size: `32` bytes.",
+      "Alignment: `4` bytes.",
+      "No implicit backend-added padding.",
+  };
+  for (const std::string &snippet : lockedVertexColoredLayoutSnippets) {
+    CAPTURE(snippet);
+    CHECK(graphicsDoc.find(snippet) != std::string::npos);
+  }
+
+  const std::vector<std::string> lockedGfxErrorCodes = {
+      "window_create_failed",   "device_create_failed",   "swapchain_create_failed",
+      "mesh_create_failed",     "pipeline_create_failed", "material_create_failed",
+      "frame_acquire_failed",   "queue_submit_failed",    "frame_present_failed",
+  };
+  for (const std::string &code : lockedGfxErrorCodes) {
+    CAPTURE(code);
+    CHECK(graphicsDoc.find(code) != std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-V1-PROFILE-DEDUCTION");
+    CHECK(graphicsDoc.find("Device creation must not require source-level profile literals.") != std::string::npos);
+    CHECK(graphicsDoc.find("Source forms like `Device([profile] \"metal-osx\")` are out of contract for v1") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("Example: `device{Device()}` is preferred over") != std::string::npos);
+    CHECK(guidelinesDoc.find("device{Device()?}") != std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-V1-RESULT-PROPAGATION");
+    CHECK(graphicsDoc.find("Examples and conformance for this mini-spec must use `Result` propagation (`?`)") !=
+          std::string::npos);
+    CHECK(graphicsDoc.find("plus `on_error<...>` handlers") != std::string::npos);
+    CHECK(guidelinesDoc.find("on_error<GfxError, /log_gfx_error>") != std::string::npos);
+    CHECK(guidelinesDoc.find("frame.submit(queue)?") != std::string::npos);
+    CHECK(guidelinesDoc.find("frame.present()?") != std::string::npos);
   }
 
   {

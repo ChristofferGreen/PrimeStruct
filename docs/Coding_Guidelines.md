@@ -203,8 +203,8 @@ main() {
     pass.draw_mesh(mesh, material)
     pass.end()
 
-    frame.submit(queue)
-    frame.present()
+    frame.submit(queue)?
+    frame.present()?
 
     angle = wrap_angle(angle + (1.1 * dt))
   }
