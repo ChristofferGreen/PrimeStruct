@@ -3693,6 +3693,180 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
+TEST_CASE("stdlib canonical map count method auto inference keeps canonical precedence over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map count method auto inference keeps canonical mismatch diagnostics over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
+}
+
+TEST_CASE("stdlib canonical map count call auto inference keeps canonical precedence over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map count call auto inference keeps canonical mismatch diagnostics over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
+}
+
+TEST_CASE("stdlib canonical map access count shadow keeps canonical precedence over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<i32, string>] values, [i32] key) {
+  return(41i32)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return(42i32)
+}
+
+[return<string>]
+/std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(5i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "value"utf8)}
+  return(plus(values.at(1i32).count(), values.at_unsafe(1i32).count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map access count shadow keeps canonical non-string diagnostics over alias helper") {
+  const std::string source = R"(
+[return<string>]
+/map/at([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return(41i32)
+}
+
+[return<string>]
+/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return(42i32)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(5i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "value"utf8)}
+  return(plus(values.at(1i32).count(), values.at_unsafe(1i32).count()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("rejects stdlib canonical vector helper method-precedence forwarding in method-call sugar") {
   const std::string source = R"(
 [return<int>]

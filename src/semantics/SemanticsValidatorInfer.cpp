@@ -1118,6 +1118,19 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return true;
         }
       }
+      {
+        std::string keyType;
+        std::string valueType;
+        if (normalizedMethodName == "count" && resolveMapTarget(receiver, keyType, valueType)) {
+          resolvedOut = preferVectorStdlibHelperPathForCall("/std/collections/map/count");
+          return true;
+        }
+        if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
+            resolveMapTarget(receiver, keyType, valueType)) {
+          resolvedOut = preferVectorStdlibHelperPathForCall("/std/collections/map/" + normalizedMethodName);
+          return true;
+        }
+      }
       if (receiver.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
           typeName = paramBinding->typeName;
@@ -1173,7 +1186,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
                                                         const Expr &receiverExpr,
                                                         ReturnKind &kindOut) -> bool {
       if (resolvedPath == "/array/count" || resolvedPath == "/vector/count" || resolvedPath == "/string/count" ||
-          resolvedPath == "/map/count" || resolvedPath == "/vector/capacity") {
+          resolvedPath == "/map/count" || resolvedPath == "/std/collections/map/count" ||
+          resolvedPath == "/vector/capacity") {
         kindOut = ReturnKind::Int;
         return true;
       }
@@ -1203,7 +1217,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         return false;
       }
-      if (resolvedPath == "/map/at" || resolvedPath == "/map/at_unsafe") {
+      if (resolvedPath == "/map/at" || resolvedPath == "/map/at_unsafe" ||
+          resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe") {
         std::string keyType;
         std::string valueType;
         if (resolveMapTarget(receiverExpr, keyType, valueType)) {
@@ -1827,7 +1842,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         resolved = "/string/count";
         hasResolvedPath = true;
       } else if (resolveMapTarget(expr.args.front(), keyType, valueType)) {
-        const std::string methodPath = preferVectorStdlibHelperPath("/map/count");
+        const std::string methodPath = preferVectorStdlibHelperPath("/std/collections/map/count");
         if (defMap_.find(methodPath) == defMap_.end()) {
           return ReturnKind::Int;
         }

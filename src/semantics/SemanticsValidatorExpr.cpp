@@ -2318,7 +2318,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return setCollectionMethodTarget("/string/count");
         }
         if (resolveMapTarget(receiver)) {
-          return setCollectionMethodTarget("/map/count");
+          return setCollectionMethodTarget("/std/collections/map/count");
         }
       }
       if (normalizedMethodName == "capacity") {
@@ -2337,7 +2337,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return setCollectionMethodTarget("/string/" + normalizedMethodName);
         }
         if (resolveMapTarget(receiver)) {
-          return setCollectionMethodTarget("/map/" + normalizedMethodName);
+          return setCollectionMethodTarget("/std/collections/map/" + normalizedMethodName);
         }
       }
       if (normalizedMethodName == "get" || normalizedMethodName == "ref") {
@@ -4573,8 +4573,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     }
-      if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" || resolved == "/soa_vector/count" ||
-                             resolved == "/string/count" || resolved == "/map/count")) {
+      if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" ||
+                             resolved == "/soa_vector/count" || resolved == "/string/count" ||
+                             resolved == "/map/count" || resolved == "/std/collections/map/count")) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;
