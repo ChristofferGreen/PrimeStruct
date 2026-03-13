@@ -588,7 +588,7 @@ for(
   - `map<K, V>` values must be numeric/bool for **`VM/native`**; string values are **`C++`** only.
   - String indexing in **`VM/native (limited)`** requires string literals or bindings backed by literals.
   - `vector<T>` is specified as a C++-style dynamic contiguous sequence (`push`/`reserve` may grow capacity). VM/native currently still enforce fixed-capacity growth limits; migration to full dynamic semantics is tracked in `docs/todo.md`.
-  - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_map/*` (`mapNew`, `mapSingle`, `mapPair`, `mapCount`, `mapAt`, `mapAtUnsafe`) backed by builtin `map<K, V>` while the fully stdlib-owned map implementation is still in progress.
+  - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_map/*` (`mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`, `mapQuint`, `mapSext`, `mapSept`, `mapOct`, `mapCount`, `mapAt`, `mapAtUnsafe`) backed by builtin `map<K, V>` while the fully stdlib-owned map implementation is still in progress.
 - **Core builtins (root namespace):**
   - **`assign(target, value)`** (statement): mutates a mutable binding or dereferenced pointer.
   - **`increment(target)` / `decrement(target)`** (statement): mutation helpers used by `++`/`--` desugaring.

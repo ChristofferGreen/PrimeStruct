@@ -1596,6 +1596,33 @@ main() {
   CHECK(runCommand(runCmd) == 13);
 }
 
+TEST_CASE("runs vm with experimental stdlib map extended constructor parity") {
+  const std::string source = R"(
+import /std/collections/experimental_map/*
+
+[return<map<K, V>>]
+wrapMap<K, V>() {
+  return(mapOct<K, V>(
+      "a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32, "d"raw_utf8, 4i32,
+      "e"raw_utf8, 5i32, "f"raw_utf8, 6i32, "g"raw_utf8, 7i32, "h"raw_utf8, 8i32))
+}
+
+[return<int>]
+main() {
+  [map<string, i32>] direct{mapTriple<string, i32>("left"raw_utf8, 10i32, "mid"raw_utf8, 20i32, "right"raw_utf8, 30i32)}
+  [map<string, i32>] wrapped{wrapMap<string, i32>()}
+  [i32] directTotal{plus(mapCount<string, i32>(direct), plus(mapAt<string, i32>(direct, "left"raw_utf8),
+                                                            mapAtUnsafe<string, i32>(direct, "right"raw_utf8)))}
+  [i32] wrappedTotal{plus(mapCount<string, i32>(wrapped), plus(mapAt<string, i32>(wrapped, "c"raw_utf8),
+                                                               mapAtUnsafe<string, i32>(wrapped, "h"raw_utf8)))}
+  return(plus(directTotal, wrappedTotal))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_stdlib_map_extended_ctor_parity.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 62);
+}
+
 TEST_CASE("runs vm with templated stdlib vector wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*

@@ -22,7 +22,6 @@ Stdlib container substrate note: the items below are the hard prerequisites for 
 - ○ Replace compiler-injected vector/map runtime abort paths with the standard container error contract across VM/native/C++ flows.
 Stdlib container bring-up note: land a real `.prime` implementation under an experimental path/name first, prove parity there, then swap canonical names and remove the builtin implementation.
 - ○ Implement an experimental stdlib `vector` in `.prime` under a temporary path/name so conformance can advance without blocking on canonical-name migration.
-- ○ Experimental stdlib `map` bring-up slice: extend the temporary `/std/collections/experimental_map/*` helper surface with broader constructor families and dedicated wrapper/direct-call parity coverage.
 - ○ Experimental stdlib `map` bring-up slice: replace builtin-backed `/std/collections/experimental_map/*` helpers with a stdlib-owned storage/runtime implementation once pointer/ownership substrate lands.
 - ○ Add a shared collection conformance harness that can run the same behavioral/diagnostic suite against builtin and experimental-stdlib `vector`/`map` implementations.
 - ○ Switch canonical `/std/collections/vector/*` and `/std/collections/map/*` helpers to the stdlib implementations once parity is proven.
