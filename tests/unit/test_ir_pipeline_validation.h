@@ -28594,9 +28594,9 @@ TEST_CASE("ir lowerer statement call helper orchestrates entry execution cleanup
 
   bool sawReturn = false;
   std::optional<primec::ir_lowerer::OnErrorHandler> currentOnError;
-  currentOnError = primec::ir_lowerer::OnErrorHandler{.handlerPath = "/main/prev"};
+  currentOnError = primec::ir_lowerer::OnErrorHandler{.errorType = "FileError", .handlerPath = "/main/prev"};
   const std::optional<primec::ir_lowerer::OnErrorHandler> entryOnError =
-      primec::ir_lowerer::OnErrorHandler{.handlerPath = "/main/handler"};
+      primec::ir_lowerer::OnErrorHandler{.errorType = "FileError", .handlerPath = "/main/handler"};
   std::optional<primec::ir_lowerer::ResultReturnInfo> currentReturnResult;
   currentReturnResult = primec::ir_lowerer::ResultReturnInfo{.isResult = false, .hasValue = false};
   const std::optional<primec::ir_lowerer::ResultReturnInfo> entryResult =

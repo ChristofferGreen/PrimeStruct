@@ -582,11 +582,12 @@ bool SemanticsValidator::validateDefinitions() {
     if (!parseOnErrorTransform(def.transforms, def.namespacePrefix, def.fullPath, onErrorHandler)) {
       return false;
     }
-    if (onErrorHandler.has_value() && (!currentResultType_.has_value() || !currentResultType_->isResult)) {
-      error_ = "on_error requires Result return type on " + def.fullPath;
+    if (onErrorHandler.has_value() && (!currentResultType_.has_value() || !currentResultType_->isResult) &&
+        kind != ReturnKind::Int) {
+      error_ = "on_error requires Result or int return type on " + def.fullPath;
       return false;
     }
-    if (onErrorHandler.has_value() &&
+    if (onErrorHandler.has_value() && currentResultType_.has_value() && currentResultType_->isResult &&
         !errorTypesMatch(onErrorHandler->errorType, currentResultType_->errorType, def.namespacePrefix)) {
       error_ = "on_error error type mismatch on " + def.fullPath;
       return false;

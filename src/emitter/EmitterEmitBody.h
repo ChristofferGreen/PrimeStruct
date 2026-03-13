@@ -27,8 +27,23 @@
         std::string pad(static_cast<size_t>(indent) * 2, ' ');
         auto nameIt = nameMap.find(handler.handlerPath);
         const std::string handlerName = (nameIt == nameMap.end()) ? handler.handlerPath : nameIt->second;
+        std::string errorArgText = "ps_err";
+        const std::string errorStructPath = resolveStructReturnPath(handler.errorType, namespacePrefix);
+        if (!errorStructPath.empty()) {
+          auto ctorIt = nameMap.find(errorStructPath);
+          auto fieldIt = paramMap.find(errorStructPath);
+          if (ctorIt != nameMap.end() && fieldIt != paramMap.end() && fieldIt->second.size() == 1) {
+            BindingInfo fieldBinding = getBindingInfo(fieldIt->second.front());
+            std::string fieldType =
+                bindingTypeToCpp(fieldBinding, namespacePrefix, importAliases, structTypeMap);
+            if (!fieldType.empty()) {
+              errorArgText =
+                  ctorIt->second + "(static_cast<" + fieldType + ">(ps_err))";
+            }
+          }
+        }
         out << pad << "auto ps_on_error = [&](uint32_t ps_err) {\n";
-        out << pad << "  " << handlerName << "(ps_err";
+        out << pad << "  " << handlerName << "(" << errorArgText;
         for (const auto &argExpr : handler.boundArgs) {
           out << ", "
               << emitExpr(argExpr,

@@ -253,8 +253,8 @@
             error = "missing on_error for ? usage";
             return false;
           }
-          if (!currentReturnResult.has_value() || !currentReturnResult->isResult) {
-            error = "try requires Result return type";
+          if (!currentReturnResult.has_value() && returnsVoid) {
+            error = "try requires Result or int return type";
             return false;
           }
           ResultExprInfo resultInfo;
@@ -293,6 +293,29 @@
             errorExpr.name = errorName;
             errorExpr.namespacePrefix = expr.namespacePrefix;
 
+            Expr handlerErrorExpr = errorExpr;
+            std::string errorStructPath;
+            if (resolveStructTypeName(handler.errorType, expr.namespacePrefix, errorStructPath)) {
+              StructSlotLayoutInfo layout;
+              if (!resolveStructSlotLayout(errorStructPath, layout)) {
+                return false;
+              }
+              if (layout.fields.size() != 1 || !layout.fields.front().structPath.empty() ||
+                  layout.fields.front().valueKind != LocalInfo::ValueKind::Int32) {
+                error = "on_error requires int-backed error type";
+                return false;
+              }
+              Expr ctorExpr;
+              ctorExpr.kind = Expr::Kind::Call;
+              ctorExpr.name = errorStructPath;
+              ctorExpr.namespacePrefix = expr.namespacePrefix;
+              ctorExpr.isMethodCall = false;
+              ctorExpr.isBinding = false;
+              ctorExpr.args.push_back(errorExpr);
+              ctorExpr.argNames.push_back(std::nullopt);
+              handlerErrorExpr = std::move(ctorExpr);
+            }
+
             Expr callExpr;
             callExpr.kind = Expr::Kind::Call;
             callExpr.name = handler.handlerPath;
@@ -300,7 +323,7 @@
             callExpr.isMethodCall = false;
             callExpr.isBinding = false;
             callExpr.args.reserve(handler.boundArgs.size() + 1);
-            callExpr.args.push_back(errorExpr);
+            callExpr.args.push_back(handlerErrorExpr);
             for (const auto &argExpr : handler.boundArgs) {
               callExpr.args.push_back(argExpr);
             }
@@ -315,7 +338,7 @@
               function.instructions.push_back({IrOpcode::Pop, 0});
             }
 
-            const bool returnHasValue = currentReturnResult->hasValue;
+            const bool returnHasValue = currentReturnResult.has_value() && currentReturnResult->hasValue;
             if (activeInlineContext) {
               InlineContext &context = *activeInlineContext;
               if (context.returnLocal < 0) {

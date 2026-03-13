@@ -232,6 +232,79 @@ main() {
   CHECK(readFile(outPath) == "custom error\n");
 }
 
+TEST_CASE("C++ emitter supports graphics-style int return propagation with on_error") {
+  const std::string source = R"(
+[struct]
+GfxError() {
+  [i32] code{0i32}
+}
+
+namespace GfxError {
+  [return<string>]
+  why([GfxError] err) {
+    return(if(equal(err.code, 7i32), then() { "frame_acquire_failed"utf8 }, else() { "queue_submit_failed"utf8 }))
+  }
+}
+
+[struct]
+Frame() {
+  [i32] token{0i32}
+}
+
+[return<Result<Frame, GfxError>>]
+acquire_frame_ok() {
+  return(Result.ok(Frame([token] 9i32)))
+}
+
+[return<Result<Frame, GfxError>>]
+acquire_frame_fail() {
+  return(7i32)
+}
+
+namespace Frame {
+  [return<Result<GfxError>>]
+  submit([Frame] self) {
+    return(Result.ok())
+  }
+}
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main_ok() {
+  frame{acquire_frame_ok()?}
+  frame.submit()?
+  return(frame.token)
+}
+
+[return<int> effects(io_err) on_error<GfxError, /log_gfx_error>]
+main_fail() {
+  frame{acquire_frame_fail()?}
+  return(frame.token)
+}
+)";
+  const std::string srcPath = writeTemp("compile_graphics_int_on_error_exe.prime", source);
+  const std::string okExePath =
+      (std::filesystem::temp_directory_path() / "primec_graphics_int_on_error_exe_ok").string();
+  const std::string failExePath =
+      (std::filesystem::temp_directory_path() / "primec_graphics_int_on_error_exe_fail").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_graphics_int_on_error_exe_err.txt").string();
+
+  const std::string compileOkCmd =
+      "./primec --emit=exe " + srcPath + " -o " + okExePath + " --entry /main_ok";
+  const std::string compileFailCmd =
+      "./primec --emit=exe " + srcPath + " -o " + failExePath + " --entry /main_fail";
+  CHECK(runCommand(compileOkCmd) == 0);
+  CHECK(runCommand(compileFailCmd) == 0);
+  CHECK(runCommand(okExePath) == 9);
+  CHECK(runCommand(failExePath + " 2> " + errPath) == 7);
+  CHECK(readFile(errPath) == "frame_acquire_failed\n");
+}
+
 TEST_CASE("C++ emitter renders static fields and visibility") {
   const std::string source = R"(
 [struct]

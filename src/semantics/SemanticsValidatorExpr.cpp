@@ -4010,11 +4010,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = "missing on_error for ? usage";
           return false;
         }
-        if (!currentResultType_.has_value() || !currentResultType_->isResult) {
-          error_ = "try requires Result return type";
+        ReturnKind enclosingReturnKind = ReturnKind::Unknown;
+        if (!currentDefinitionPath_.empty()) {
+          auto enclosingReturnIt = returnKinds_.find(currentDefinitionPath_);
+          if (enclosingReturnIt != returnKinds_.end()) {
+            enclosingReturnKind = enclosingReturnIt->second;
+          }
+        }
+        const bool returnsResult = currentResultType_.has_value() && currentResultType_->isResult;
+        if (!returnsResult && enclosingReturnKind != ReturnKind::Int) {
+          error_ = "try requires Result or int return type";
           return false;
         }
-        if (!errorTypesMatch(currentResultType_->errorType, currentOnError_->errorType, expr.namespacePrefix)) {
+        if (returnsResult &&
+            !errorTypesMatch(currentResultType_->errorType, currentOnError_->errorType, expr.namespacePrefix)) {
           error_ = "on_error error type mismatch";
           return false;
         }

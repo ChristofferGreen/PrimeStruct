@@ -8,6 +8,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   std::unordered_map<std::string, std::string> returnStructs;
   std::unordered_map<std::string, std::string> importAliases;
   struct OnErrorHandler {
+    std::string errorType;
     std::string handlerPath;
     std::vector<Expr> boundArgs;
   };
@@ -215,6 +216,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         return false;
       }
       OnErrorHandler handler;
+      handler.errorType = transform.templateArgs.front();
       handler.handlerPath = handlerPath;
       handler.boundArgs.reserve(transform.arguments.size());
       for (const auto &argText : transform.arguments) {

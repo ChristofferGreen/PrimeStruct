@@ -1505,21 +1505,67 @@ main() {
   CHECK(error.find("missing on_error for ? usage") != std::string::npos);
 }
 
-TEST_CASE("on_error requires Result return type") {
+TEST_CASE("on_error allows int return type for graphics-style flow") {
   const std::string source = R"(
-[return<int> on_error<FileError, /log_file_error>]
+[struct]
+GfxError() {
+  [i32] code{0i32}
+}
+
+[struct]
+Frame() {
+  [i32] token{0i32}
+}
+
+[return<Result<Frame, GfxError>>]
+acquire_frame() {
+  return(Result.ok(Frame([token] 9i32)))
+}
+
+namespace Frame {
+  [return<Result<GfxError>>]
+  submit([Frame] self) {
+    return(Result.ok())
+  }
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
 main() {
-  return(0i32)
+  frame{acquire_frame()?}
+  frame.submit()?
+  return(frame.token)
 }
 
 [effects(io_err)]
-log_file_error([FileError] err) {
-  print_line_error("file error"utf8)
+log_gfx_error([GfxError] err) {
+  print_line_error("gfx error"utf8)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("on_error rejects non-Result non-int return type") {
+  const std::string source = R"(
+[struct]
+GfxError() {
+  [i32] code{0i32}
+}
+
+[return<bool> on_error<GfxError, /log_gfx_error>]
+main() {
+  return(false)
+}
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error("gfx error"utf8)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("on_error requires Result return type") != std::string::npos);
+  CHECK(error.find("on_error requires Result or int return type") != std::string::npos);
 }
 
 TEST_CASE("statement on_error rejects non-block execution target") {
@@ -1540,7 +1586,7 @@ log_file_error([FileError] err) {
   CHECK(error.find("on_error transform is not allowed on executions: /print_line") != std::string::npos);
 }
 
-TEST_CASE("statement block on_error reports block Result requirement") {
+TEST_CASE("statement block on_error reports block return requirement") {
   const std::string source = R"(
 [return<Result<FileError>> on_error<FileError, /log_file_error>]
 main() {
@@ -1557,7 +1603,7 @@ log_file_error([FileError] err) {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("on_error requires Result return type on /main/block") != std::string::npos);
+  CHECK(error.find("on_error requires Result or int return type on /main/block") != std::string::npos);
 }
 
 TEST_CASE("try rejects mismatched error type") {

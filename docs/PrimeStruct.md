@@ -648,6 +648,8 @@ sum_two_files([string] a, [string] b) {
   `on_error` handler and then returns the error from the current function.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches
     `Result.and_then` semantics and is the recommended shorthand for fallible sequencing.
+  - **Graphics entry flow:** `?` is also valid inside `return<int>` definitions with a matching
+    `on_error<ErrorType, Handler>(...)`; on error, the handler runs and the definition returns the raw error code.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.

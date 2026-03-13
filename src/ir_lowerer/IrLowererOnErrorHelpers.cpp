@@ -51,6 +51,7 @@ bool parseOnErrorTransform(const std::vector<Transform> &transforms,
       return false;
     }
     OnErrorHandler handler;
+    handler.errorType = transform.templateArgs.front();
     handler.handlerPath = handlerPath;
     handler.boundArgs.reserve(transform.arguments.size());
     for (const auto &argText : transform.arguments) {

@@ -128,8 +128,6 @@ Type-resolution graph rollout note: keep the graph migration blocked on the rema
 - ○ Add GLSL reject/diagnostic coverage for image file I/O.
 
 **Web + Native + Metal 3D Target (Spinning Cube)**
-- ○ Implement `?` fallible flow for the v1 graphics path with compile-run coverage on canonical sample snippets.
-- ○ Implement `on_error<...>` fallible flow for the v1 graphics path with compile-run coverage on canonical sample snippets.
 - ○ Add base software renderer draw-command primitives (`draw_text`, `draw_rounded_rect`) with deterministic ordering and command serialization tests.
 - ○ Add base software renderer clip/push-pop command-list support with deterministic stack behavior and serialization tests.
 - ○ Add a software color-buffer/shared-surface bridge so software-rendered output can be presented through the native presenter path (including Metal host blit/present flow).

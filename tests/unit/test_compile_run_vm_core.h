@@ -377,6 +377,70 @@ main() {
   CHECK(readFile(outPath) == "custom error\n");
 }
 
+TEST_CASE("vm supports graphics-style int return propagation with on_error") {
+  const std::string source = R"(
+[struct]
+GfxError() {
+  [i32] code{0i32}
+}
+
+namespace GfxError {
+  [return<string>]
+  why([GfxError] err) {
+    return(if(equal(err.code, 7i32), then() { "frame_acquire_failed"utf8 }, else() { "queue_submit_failed"utf8 }))
+  }
+}
+
+[struct]
+Frame() {
+  [i32] token{0i32}
+}
+
+[return<Result<Frame, GfxError>>]
+acquire_frame_ok() {
+  return(Result.ok(Frame([token] 9i32)))
+}
+
+[return<Result<Frame, GfxError>>]
+acquire_frame_fail() {
+  return(7i32)
+}
+
+namespace Frame {
+  [return<Result<GfxError>>]
+  submit([Frame] self) {
+    return(Result.ok())
+  }
+}
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main_ok() {
+  frame{acquire_frame_ok()?}
+  frame.submit()?
+  return(frame.token)
+}
+
+[return<int> effects(io_err) on_error<GfxError, /log_gfx_error>]
+main_fail() {
+  frame{acquire_frame_fail()?}
+  return(frame.token)
+}
+)";
+  const std::string srcPath = writeTemp("vm_graphics_int_on_error.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_graphics_int_on_error_err.txt").string();
+  const std::string okCmd = "./primec --emit=vm " + srcPath + " --entry /main_ok";
+  const std::string failCmd = "./primec --emit=vm " + srcPath + " --entry /main_fail 2> " + errPath;
+  CHECK(runCommand(okCmd) == 9);
+  CHECK(runCommand(failCmd) == 7);
+  CHECK(readFile(errPath) == "frame_acquire_failed\n");
+}
+
 #if defined(EACCES)
 TEST_CASE("vm maps FileError.why codes") {
   const std::string source =

@@ -13,6 +13,7 @@
 namespace primec::ir_lowerer {
 
 struct OnErrorHandler {
+  std::string errorType;
   std::string handlerPath;
   std::vector<Expr> boundArgs;
 };

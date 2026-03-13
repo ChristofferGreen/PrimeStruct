@@ -679,9 +679,11 @@ Draft constraints:
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches
     `Result.and_then` semantics and is the recommended shorthand for fallible sequencing.
-  - **Type rule:** `?` is only valid inside a definition (or block) whose return envelope is `Result<_, ErrorType>`.
-    The nearest `on_error<ErrorType, Handler>(...)` must match the error type, and the `?` expression yields the
-    success payload type.
+  - **Type rule:** `?` is valid inside a definition (or block) whose return envelope is `Result<_, ErrorType>`, and
+    also inside `return<int>` definitions that declare a matching `on_error<ErrorType, Handler>(...)`.
+    In the `return<int>` form, an error invokes the handler and returns the raw error code from the current
+    definition. The nearest `on_error<ErrorType, Handler>(...)` must match the error type, and the `?` expression
+    yields the success payload type.
 - Error handlers are declared with a semantic transform on the same scope as the `?` usage:
   - `on_error<ErrorType, Handler>(args...)`
   - The handler signature is `Handler(ErrorType err, args...)`.
