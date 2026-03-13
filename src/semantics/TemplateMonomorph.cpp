@@ -323,6 +323,43 @@ bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
          helperName == "remove_at" || helperName == "remove_swap";
 }
 
+bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
+  return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
+}
+
+bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
+                                            std::string rawMethodName) {
+  if (!rawMethodName.empty() && rawMethodName.front() == '/') {
+    rawMethodName.erase(rawMethodName.begin());
+  }
+
+  std::string_view helperName;
+  bool isVectorFamilyReceiver =
+      receiverTypeName == "array" || receiverTypeName == "vector" || receiverTypeName == "soa_vector";
+  if (isVectorFamilyReceiver) {
+    if (rawMethodName.rfind("array/", 0) == 0) {
+      helperName = std::string_view(rawMethodName).substr(std::string_view("array/").size());
+    } else if (rawMethodName.rfind("vector/", 0) == 0) {
+      helperName = std::string_view(rawMethodName).substr(std::string_view("vector/").size());
+    } else if (rawMethodName.rfind("std/collections/vector/", 0) == 0) {
+      helperName =
+          std::string_view(rawMethodName).substr(std::string_view("std/collections/vector/").size());
+    }
+    return !helperName.empty() && isRemovedVectorCompatibilityHelper(std::string(helperName));
+  }
+
+  if (receiverTypeName != "map") {
+    return false;
+  }
+  if (rawMethodName.rfind("map/", 0) == 0) {
+    helperName = std::string_view(rawMethodName).substr(std::string_view("map/").size());
+  } else if (rawMethodName.rfind("std/collections/map/", 0) == 0) {
+    helperName =
+        std::string_view(rawMethodName).substr(std::string_view("std/collections/map/").size());
+  }
+  return !helperName.empty() && isRemovedMapCompatibilityHelper(helperName);
+}
+
 std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, Definition> &defs) {
   std::string preferred = path;
@@ -885,7 +922,8 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (!expr.isMethodCall || expr.args.empty() || expr.name.empty()) {
     return false;
   }
-  std::string methodName = expr.name;
+  const std::string rawMethodName = expr.name;
+  std::string methodName = rawMethodName;
   if (!methodName.empty() && methodName.front() == '/') {
     methodName.erase(methodName.begin());
   }
@@ -976,6 +1014,9 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     typeName = typeBase;
   }
   typeName = normalizeCollectionReceiverTypeName(typeName);
+  if (isExplicitRemovedCollectionMethodAlias(typeName, rawMethodName)) {
+    return false;
+  }
   const std::string normalizedMethodName = normalizeCollectionMethodName(typeName, methodName);
   if (isPrimitiveBindingTypeName(typeName)) {
     pathOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;

@@ -4487,7 +4487,7 @@ main() {
   CHECK(error.find("template arguments") != std::string::npos);
 }
 
-TEST_CASE("templated stdlib canonical vector helpers reject slash-path method-call template args on count") {
+TEST_CASE("templated slash-path vector helper methods stay on unknown method diagnostics") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -4507,10 +4507,10 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("templated slash-path vector helper keeps template argument diagnostics") {
+TEST_CASE("templated slash-path vector helper arity failures stay on unknown method diagnostics") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -4525,7 +4525,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("templated stdlib canonical vector helper keeps template argument diagnostics") {
@@ -7082,6 +7082,42 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("template arguments are only supported on templated definitions: /map/count") != std::string::npos);
+}
+
+TEST_CASE("map slash-path explicit-template count method stays on unknown method diagnostic") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values./map/count<i32, i32>(true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+}
+
+TEST_CASE("map canonical slash-path explicit-template access method stays on unknown method diagnostic") {
+  const std::string source = R"(
+[effects(heap_alloc), return<i32>]
+/std/collections/map/at<K, V>([map<K, V>] values, [i32] key) {
+  return(key)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values./std/collections/map/at<i32, i32>(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/at") != std::string::npos);
 }
 
 TEST_CASE("map canonical explicit-template count call keeps canonical non-templated diagnostics") {
