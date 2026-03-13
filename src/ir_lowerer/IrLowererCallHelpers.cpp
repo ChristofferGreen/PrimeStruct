@@ -35,6 +35,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   constexpr std::string_view stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = normalized.substr(vectorPrefix.size());
+    if (helperNameOut == "count" || helperNameOut == "capacity") {
+      return true;
+    }
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }

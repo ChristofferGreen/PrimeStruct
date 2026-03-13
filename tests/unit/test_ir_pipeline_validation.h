@@ -14327,7 +14327,7 @@ TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
   CHECK(error == "native backend requires map lookup key type to match map key type");
 }
 
-TEST_CASE("ir lowerer call helpers handle non-method count fallback" * doctest::skip()) {
+TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   using Result = primec::ir_lowerer::CountMethodFallbackResult;
 
   primec::Expr countCall;
