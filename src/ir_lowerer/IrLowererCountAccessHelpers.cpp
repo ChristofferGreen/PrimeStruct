@@ -1,6 +1,7 @@
 #include "IrLowererCountAccessHelpers.h"
 
 #include <limits>
+#include <string_view>
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
@@ -24,6 +25,17 @@ bool isExplicitArrayCountName(const Expr &expr) {
     normalized.erase(normalized.begin());
   }
   return normalized == "array/count";
+}
+
+bool isExplicitVectorCompatibilityName(const Expr &expr, std::string_view helperName) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "vector/" + std::string(helperName);
 }
 
 bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
@@ -54,6 +66,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = normalized.substr(vectorPrefix.size());
+    if (helperNameOut == "count" || helperNameOut == "capacity") {
+      return true;
+    }
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }
@@ -207,6 +222,9 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     if (it->second.kind == LocalInfo::Kind::Reference) {
       return it->second.referenceToArray || it->second.referenceToMap;
     }
+    if (it->second.isSoaVector && isExplicitVectorCompatibilityName(expr, "count")) {
+      return false;
+    }
     return it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
            it->second.isSoaVector ||
            it->second.kind == LocalInfo::Kind::Map;
@@ -214,6 +232,9 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
     if (!getBuiltinCollectionName(target, collection)) {
+      return false;
+    }
+    if (collection == "soa_vector" && isExplicitVectorCompatibilityName(expr, "count")) {
       return false;
     }
     if (collection == "array" || collection == "vector" || collection == "soa_vector") {

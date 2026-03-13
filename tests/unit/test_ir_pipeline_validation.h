@@ -23390,7 +23390,7 @@ TEST_CASE("ir lowerer binding type helpers build bundled setup adapters") {
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
-TEST_CASE("ir lowerer count access helpers classify entry args and count calls" * doctest::skip()) {
+TEST_CASE("ir lowerer count access helpers classify entry args and count calls") {
   primec::Definition entryDef;
   bool hasEntryArgs = true;
   std::string entryArgsName = "stale";
@@ -23564,7 +23564,7 @@ TEST_CASE("ir lowerer count access helpers reject removed /array/capacity alias"
   CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 }
 
-TEST_CASE("ir lowerer count access helpers classify capacity and string count" * doctest::skip()) {
+TEST_CASE("ir lowerer count access helpers classify capacity and string count") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo vecInfo;
   vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
@@ -23791,7 +23791,7 @@ TEST_CASE("ir lowerer call helpers lower soa_vector count calls") {
   CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
 }
 
-TEST_CASE("ir lowerer count access helpers emit count access calls" * doctest::skip()) {
+TEST_CASE("ir lowerer count access helpers emit count access calls") {
   using Result = primec::ir_lowerer::CountAccessCallEmitResult;
 
   primec::Expr targetName;
@@ -24000,7 +24000,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls" * doctest::s
   CHECK(error == "native backend only supports count() on string literals or string bindings");
 }
 
-TEST_CASE("ir lowerer count access helpers build count classifier adapters" * doctest::skip()) {
+TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   primec::ir_lowerer::LocalMap locals;
   auto isEntryArgsName = primec::ir_lowerer::makeIsEntryArgsName(true, "argv");
   auto isArrayCountCall = primec::ir_lowerer::makeIsArrayCountCall(true, "argv");
@@ -24046,7 +24046,7 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters" * do
   CHECK(isStringCountCall(stringCount, locals));
 }
 
-TEST_CASE("ir lowerer count access helpers build bundled classifiers" * doctest::skip()) {
+TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   primec::ir_lowerer::LocalMap locals;
   auto classifiers = primec::ir_lowerer::makeCountAccessClassifiers(true, "argv");
 
