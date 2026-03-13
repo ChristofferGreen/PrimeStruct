@@ -361,29 +361,38 @@ bool inferDeclaredReturnCollection(const Definition &definition,
                                    std::vector<std::string> &collectionArgsOut) {
   collectionNameOut.clear();
   collectionArgsOut.clear();
+  auto inferCollectionFromType = [&](const std::string &typeName,
+                                     auto &&inferCollectionFromTypeRef) -> bool {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(typeName, base, argText)) {
+      return false;
+    }
+    base = normalizeDeclaredCollectionTypeBase(base);
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(argText, args)) {
+      return false;
+    }
+    if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+      collectionNameOut = base;
+      collectionArgsOut = std::move(args);
+      return true;
+    }
+    if (base == "map" && args.size() == 2) {
+      collectionNameOut = base;
+      collectionArgsOut = std::move(args);
+      return true;
+    }
+    if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
+      return inferCollectionFromTypeRef(normalizeBindingTypeName(args.front()), inferCollectionFromTypeRef);
+    }
+    return false;
+  };
   for (const auto &transform : definition.transforms) {
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
     }
-    std::string base;
-    std::string argText;
-    if (!splitTemplateTypeName(transform.templateArgs.front(), base, argText)) {
-      return false;
-    }
-    base = normalizeDeclaredCollectionTypeBase(base);
-    if (!splitTemplateArgs(argText, collectionArgsOut)) {
-      return false;
-    }
-    if ((base == "array" || base == "vector" || base == "soa_vector") &&
-        collectionArgsOut.size() == 1) {
-      collectionNameOut = base;
-      return true;
-    }
-    if (base == "map" && collectionArgsOut.size() == 2) {
-      collectionNameOut = base;
-      return true;
-    }
-    return false;
+    return inferCollectionFromType(normalizeBindingTypeName(transform.templateArgs.front()), inferCollectionFromType);
   }
   return false;
 }

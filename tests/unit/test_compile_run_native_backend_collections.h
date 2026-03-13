@@ -6617,6 +6617,33 @@ main() {
   CHECK(runCommand(exePath) == 91);
 }
 
+TEST_CASE("compiles and runs native map method sugar on wrapper-returned canonical map references") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(plus(borrowMap(location(values)).count(),
+              plus(borrowMap(location(values)).at(1i32),
+                   borrowMap(location(values)).at_unsafe(2i32))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_wrapper_map_reference_method_sugar.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_wrapper_map_reference_method_sugar_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("native keeps non-string diagnostics on canonical map reference access count shadow") {
   const std::string source = R"(
 [return<int>]
@@ -6642,6 +6669,32 @@ main() {
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
+TEST_CASE("native keeps key diagnostics on wrapper-returned canonical map reference method sugar") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(borrowMap(location(values)).at(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_wrapper_map_reference_method_sugar_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_wrapper_map_reference_method_sugar_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("at requires map key type i32") != std::string::npos);
 }
 
 TEST_CASE("native keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {

@@ -19498,6 +19498,18 @@ TEST_CASE("ir lowerer return inference helper unwraps referenced collection retu
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
+TEST_CASE("ir lowerer setup type infers referenced declared collection receivers") {
+  primec::Definition def;
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {"Reference</std/collections/map<i32, string>>"};
+  def.transforms.push_back(returnTransform);
+
+  std::string typeName;
+  CHECK(primec::ir_lowerer::inferReceiverTypeFromDeclaredReturn(def, typeName));
+  CHECK(typeName == "map");
+}
+
 TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
   primec::Definition callee;
   callee.fullPath = "/pkg/do_work";
