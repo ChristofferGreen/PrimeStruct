@@ -196,6 +196,14 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `CommandList.begin_panel(...)`
      - `CommandList.end_panel()`
      - `CommandList.draw_login_form(...)`
+     - `HtmlCommandList`
+     - `HtmlCommandList.emit_panel(...)`
+     - `HtmlCommandList.emit_label(...)`
+     - `HtmlCommandList.emit_button(...)`
+     - `HtmlCommandList.emit_input(...)`
+     - `HtmlCommandList.bind_event(...)`
+     - `HtmlCommandList.emit_login_form(...)`
+     - `HtmlCommandList.serialize() -> vector<i32>`
    - Rounded rectangles are expressed through SDF-style primitives.
    - Renders into a software color buffer (or shared surface view).
    - Current host bridge prototype: the native window host and macOS Metal host
@@ -265,7 +273,19 @@ The following architecture is planned but not locked as part of the v1 contract:
 6. Presentation and backend adapters:
    - Native path: software-rendered/shared buffer can be presented through the
      platform presenter (for example Metal).
-   - Web path: UI tree/layout can also be emitted as HTML/CSS + event bindings.
+   - Web path: shared widget/layout model can also emit deterministic
+     HTML/backend adapter records that a DOM/CSS/event layer can consume.
+   - Current prototype contract:
+     - `emit_panel(...)` emits one panel DOM/CSS record for the arranged node.
+     - `emit_label(...)` emits one label DOM/CSS record for the arranged node.
+     - `emit_button(...)` emits one button DOM/CSS record followed by one
+       `bind_event(...)` click record.
+     - `emit_input(...)` emits one input DOM/CSS record followed by one
+       `bind_event(...)` input record.
+     - `emit_login_form(...)` emits only through `emit_panel`, `emit_label`,
+       `emit_input`, and `emit_button`.
+     - Composite HTML adapter helpers in this prototype must not call raw
+       `append_word`, `append_color`, or `append_string` directly.
 7. Platform input adapter:
    - Normalizes OS/web input (pointer, keyboard, IME, resize, focus) into one
      UI event stream consumed by the UI runtime.
@@ -289,6 +309,24 @@ Current prototype serialization format for `/std/ui/CommandList.serialize()`:
     depth is non-zero.
   - `pop_clip()` at depth `0` is a deterministic no-op: no command is emitted
     and `clip_depth()` remains `0`.
+
+Current prototype serialization format for `/std/ui/HtmlCommandList.serialize()`:
+
+- First word: format version (`1`)
+- Second word: total command count
+- Then, for each command in insertion order:
+  - opcode
+  - payload word count
+  - payload words
+- Current opcodes:
+  - `1` = `emit_panel`
+  - `2` = `emit_label`
+  - `3` = `emit_button`
+  - `4` = `emit_input`
+  - `5` = `bind_event`
+- Event kinds used by `bind_event(...)`:
+  - `1` = `click`
+  - `2` = `input`
 
 Current prototype serialization format for `/std/ui/LayoutTree.serialize()`:
 
@@ -485,6 +523,58 @@ main() {
     "Go"utf8
   )
   return(commands.command_count())
+}
+```
+
+HTML adapter example:
+
+```prime
+import /std/ui/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+  layout.measure()
+  layout.arrange(6i32, 7i32, 40i32, 57i32)
+
+  [HtmlCommandList mut] html{HtmlCommandList()}
+  html.emit_login_form(
+    layout,
+    login,
+    10i32,
+    1i32,
+    2i32,
+    4i32,
+    3i32,
+    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
+    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
+    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
+    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
+    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8,
+    "user_input"utf8,
+    "pass_input"utf8,
+    "submit_click"utf8
+  )
+  return(html.commandCount)
 }
 ```
 

@@ -4138,6 +4138,7 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`CommandList.clip_depth()`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree`") != std::string::npos);
   CHECK(graphicsDoc.find("`LoginFormNodes`") != std::string::npos);
+  CHECK(graphicsDoc.find("`HtmlCommandList`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_root_column(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_column(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_leaf(...)`") != std::string::npos);
@@ -4155,11 +4156,27 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`CommandList.begin_panel(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.end_panel()`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.draw_login_form(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`HtmlCommandList.emit_panel(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`HtmlCommandList.emit_label(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`HtmlCommandList.emit_button(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`HtmlCommandList.emit_input(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`HtmlCommandList.bind_event(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`HtmlCommandList.emit_login_form(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`HtmlCommandList.serialize() -> vector<i32>`") != std::string::npos);
   CHECK(graphicsDoc.find("First word: format version (`1`)") != std::string::npos);
   CHECK(graphicsDoc.find("`1` = `draw_text`") != std::string::npos);
   CHECK(graphicsDoc.find("`2` = `draw_rounded_rect`") != std::string::npos);
   CHECK(graphicsDoc.find("`3` = `push_clip`") != std::string::npos);
   CHECK(graphicsDoc.find("`4` = `pop_clip`") != std::string::npos);
+  CHECK(graphicsDoc.find("Current prototype serialization format for `/std/ui/HtmlCommandList.serialize()`") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`1` = `emit_panel`") != std::string::npos);
+  CHECK(graphicsDoc.find("`2` = `emit_label`") != std::string::npos);
+  CHECK(graphicsDoc.find("`3` = `emit_button`") != std::string::npos);
+  CHECK(graphicsDoc.find("`4` = `emit_input`") != std::string::npos);
+  CHECK(graphicsDoc.find("`5` = `bind_event`") != std::string::npos);
+  CHECK(graphicsDoc.find("`1` = `click`") != std::string::npos);
+  CHECK(graphicsDoc.find("`2` = `input`") != std::string::npos);
   CHECK(graphicsDoc.find("`pop_clip()` at depth `0` is a deterministic no-op") != std::string::npos);
   CHECK(graphicsDoc.find("Single-root flat tree; nodes are appended in parent-before-child") != std::string::npos);
   CHECK(graphicsDoc.find("`measure()` walks reverse insertion order") != std::string::npos);
@@ -4185,6 +4202,10 @@ TEST_CASE("software renderer command list docs stay source locked") {
         std::string::npos);
   CHECK(graphicsDoc.find("must not call raw `draw_text`, `draw_rounded_rect`, `push_clip`, `pop_clip`,") !=
         std::string::npos);
+  CHECK(graphicsDoc.find("`emit_login_form(...)` emits only through `emit_panel`, `emit_label`,") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("must not call raw `append_word`, `append_color`, or `append_string`") !=
+        std::string::npos);
   CHECK(graphicsDoc.find("can upload a deterministic BGRA8 software surface into a shared Metal") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`--software-surface-demo`") != std::string::npos);
@@ -4196,10 +4217,14 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("commands.begin_panel(layout, panel, 4i32") != std::string::npos);
   CHECK(graphicsDoc.find("layout.append_login_form(") != std::string::npos);
   CHECK(graphicsDoc.find("commands.draw_login_form(") != std::string::npos);
+  CHECK(graphicsDoc.find("[HtmlCommandList mut] html{HtmlCommandList()}") != std::string::npos);
+  CHECK(graphicsDoc.find("html.emit_login_form(") != std::string::npos);
   CHECK(specDoc.find("the first `/std/ui/*` foundation now includes deterministic command-list rendering, a two-pass layout tree contract, basic control emission, a basic panel container primitive, and the first composite widget helper") !=
         std::string::npos);
-  CHECK(specDoc.find("`draw_label`, `draw_button`, `draw_input`, `begin_panel`, `end_panel`, `draw_login_form`, `LayoutTree`, `LoginFormNodes`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `append_login_form`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
+  CHECK(specDoc.find("`draw_label`, `draw_button`, `draw_input`, `begin_panel`, `end_panel`, `draw_login_form`, `HtmlCommandList`, `emit_panel`, `emit_label`, `emit_button`, `emit_input`, `bind_event`, `emit_login_form`, `LayoutTree`, `LoginFormNodes`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `append_login_form`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
   CHECK(specDoc.find("blit a deterministic BGRA8 software surface through the native window presenter") !=
+        std::string::npos);
+  CHECK(specDoc.find("shared widget/layout model can also emit deterministic HTML/backend adapter records") !=
         std::string::npos);
 }
 
@@ -4241,6 +4266,31 @@ TEST_CASE("software renderer composite widgets stay source locked to basic widge
   CHECK(appendLoginBody.find("self.append_leaf(") == std::string::npos);
   CHECK(appendLoginBody.find("self.append_column(") == std::string::npos);
   CHECK(appendLoginBody.find("self.append_node(") == std::string::npos);
+}
+
+TEST_CASE("software renderer html adapter stays source locked to shared widgets") {
+  std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
+  if (!std::filesystem::exists(uiStdlibPath)) {
+    uiStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "ui" / "ui.prime";
+  }
+  REQUIRE(std::filesystem::exists(uiStdlibPath));
+
+  const std::string source = readFile(uiStdlibPath.string());
+
+  const size_t emitLoginStart = source.find("emit_login_form(");
+  const size_t serializeStart =
+      source.find("\n    [public effects(heap_alloc), return<vector<i32>>]\n    serialize(", emitLoginStart);
+  REQUIRE(emitLoginStart != std::string::npos);
+  REQUIRE(serializeStart != std::string::npos);
+  REQUIRE(serializeStart > emitLoginStart);
+  const std::string emitLoginBody = source.substr(emitLoginStart, serializeStart - emitLoginStart);
+  CHECK(emitLoginBody.find("self.emit_panel(") != std::string::npos);
+  CHECK(emitLoginBody.find("self.emit_label(") != std::string::npos);
+  CHECK(emitLoginBody.find("self.emit_input(") != std::string::npos);
+  CHECK(emitLoginBody.find("self.emit_button(") != std::string::npos);
+  CHECK(emitLoginBody.find("self.append_word(") == std::string::npos);
+  CHECK(emitLoginBody.find("self.append_color(") == std::string::npos);
+  CHECK(emitLoginBody.find("self.append_string(") == std::string::npos);
 }
 
 TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {

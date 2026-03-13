@@ -16,6 +16,12 @@ namespace std {
   }
 
   [public struct]
+  HtmlCommandList() {
+    [public vector<i32> mut] records{vector<i32>()}
+    [public i32 mut] commandCount{0i32}
+  }
+
+  [public struct]
   LayoutTree() {
     [public vector<i32> mut] kinds{vector<i32>()}
     [public vector<i32> mut] parentIndices{vector<i32>()}
@@ -246,6 +252,189 @@ namespace std {
     }
   }
 
+  namespace HtmlCommandList {
+    [effects(heap_alloc), return<void>]
+    append_word([HtmlCommandList mut] self, [i32] value) {
+      push(self.records, value)
+    }
+
+    [effects(heap_alloc), return<void>]
+    append_color([HtmlCommandList mut] self, [Rgba8] color) {
+      self.append_word(color.r)
+      self.append_word(color.g)
+      self.append_word(color.b)
+      self.append_word(color.a)
+    }
+
+    [effects(heap_alloc), return<void>]
+    append_string([HtmlCommandList mut] self, [string] text) {
+      [i32] len{count(text)}
+      self.append_word(len)
+      for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+        self.append_word(text[index])
+      }
+    }
+
+    [public effects(heap_alloc), return<void>]
+    emit_panel(
+        [HtmlCommandList mut] self,
+        [LayoutTree] layout,
+        [i32] nodeId,
+        [i32] radiusPx,
+        [Rgba8] fill) {
+      self.append_word(1i32)
+      self.append_word(12i32)
+      self.append_word(nodeId)
+      self.append_word(layout.parent_index(nodeId))
+      self.append_word(layout.rect_x(nodeId))
+      self.append_word(layout.rect_y(nodeId))
+      self.append_word(layout.rect_width(nodeId))
+      self.append_word(layout.rect_height(nodeId))
+      self.append_word(layout.padding_px(nodeId))
+      self.append_word(radiusPx)
+      self.append_color(fill)
+      assign(self.commandCount, plus(self.commandCount, 1i32))
+    }
+
+    [public effects(heap_alloc), return<void>]
+    emit_label(
+        [HtmlCommandList mut] self,
+        [LayoutTree] layout,
+        [i32] nodeId,
+        [i32] textSizePx,
+        [Rgba8] textColor,
+        [string] text) {
+      [i32] len{count(text)}
+      self.append_word(2i32)
+      self.append_word(plus(12i32, len))
+      self.append_word(nodeId)
+      self.append_word(layout.parent_index(nodeId))
+      self.append_word(layout.rect_x(nodeId))
+      self.append_word(layout.rect_y(nodeId))
+      self.append_word(layout.rect_width(nodeId))
+      self.append_word(layout.rect_height(nodeId))
+      self.append_word(textSizePx)
+      self.append_color(textColor)
+      self.append_string(text)
+      assign(self.commandCount, plus(self.commandCount, 1i32))
+    }
+
+    [public effects(heap_alloc), return<void>]
+    emit_button(
+        [HtmlCommandList mut] self,
+        [LayoutTree] layout,
+        [i32] nodeId,
+        [i32] textSizePx,
+        [i32] paddingPx,
+        [i32] radiusPx,
+        [Rgba8] fill,
+        [Rgba8] textColor,
+        [string] text,
+        [string] clickHandler) {
+      [i32] len{text.count()}
+      self.append_word(3i32)
+      self.append_word(plus(18i32, len))
+      self.append_word(nodeId)
+      self.append_word(layout.parent_index(nodeId))
+      self.append_word(layout.rect_x(nodeId))
+      self.append_word(layout.rect_y(nodeId))
+      self.append_word(layout.rect_width(nodeId))
+      self.append_word(layout.rect_height(nodeId))
+      self.append_word(textSizePx)
+      self.append_word(paddingPx)
+      self.append_word(radiusPx)
+      self.append_color(fill)
+      self.append_color(textColor)
+      self.append_string(text)
+      assign(self.commandCount, plus(self.commandCount, 1i32))
+      self.bind_event(nodeId, 1i32, clickHandler)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    emit_input(
+        [HtmlCommandList mut] self,
+        [LayoutTree] layout,
+        [i32] nodeId,
+        [i32] textSizePx,
+        [i32] paddingPx,
+        [i32] radiusPx,
+        [Rgba8] fill,
+        [Rgba8] textColor,
+        [string] text,
+        [string] inputHandler) {
+      [i32] len{text.count()}
+      self.append_word(4i32)
+      self.append_word(plus(18i32, len))
+      self.append_word(nodeId)
+      self.append_word(layout.parent_index(nodeId))
+      self.append_word(layout.rect_x(nodeId))
+      self.append_word(layout.rect_y(nodeId))
+      self.append_word(layout.rect_width(nodeId))
+      self.append_word(layout.rect_height(nodeId))
+      self.append_word(textSizePx)
+      self.append_word(paddingPx)
+      self.append_word(radiusPx)
+      self.append_color(fill)
+      self.append_color(textColor)
+      self.append_string(text)
+      assign(self.commandCount, plus(self.commandCount, 1i32))
+      self.bind_event(nodeId, 2i32, inputHandler)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    bind_event([HtmlCommandList mut] self, [i32] nodeId, [i32] eventKind, [string] handlerName) {
+      [i32] len{handlerName.count()}
+      self.append_word(5i32)
+      self.append_word(plus(3i32, len))
+      self.append_word(nodeId)
+      self.append_word(eventKind)
+      self.append_string(handlerName)
+      assign(self.commandCount, plus(self.commandCount, 1i32))
+    }
+
+    [public effects(heap_alloc), return<void>]
+    emit_login_form(
+        [HtmlCommandList mut] self,
+        [LayoutTree] layout,
+        [LoginFormNodes] nodes,
+        [i32] textSizePx,
+        [i32] inputPaddingPx,
+        [i32] buttonPaddingPx,
+        [i32] panelRadiusPx,
+        [i32] controlRadiusPx,
+        [Rgba8] panelFill,
+        [Rgba8] titleColor,
+        [Rgba8] inputFill,
+        [Rgba8] inputTextColor,
+        [Rgba8] buttonFill,
+        [Rgba8] buttonTextColor,
+        [string] title,
+        [string] usernameText,
+        [string] passwordText,
+        [string] buttonText,
+        [string] usernameInputHandler,
+        [string] passwordInputHandler,
+        [string] submitClickHandler) {
+      self.emit_panel(layout, nodes.panel, panelRadiusPx, panelFill)
+      self.emit_label(layout, nodes.title, textSizePx, titleColor, title)
+      self.emit_input(layout, nodes.usernameInput, textSizePx, inputPaddingPx, controlRadiusPx, inputFill, inputTextColor, usernameText, usernameInputHandler)
+      self.emit_input(layout, nodes.passwordInput, textSizePx, inputPaddingPx, controlRadiusPx, inputFill, inputTextColor, passwordText, passwordInputHandler)
+      self.emit_button(layout, nodes.submitButton, textSizePx, buttonPaddingPx, controlRadiusPx, buttonFill, buttonTextColor, buttonText, submitClickHandler)
+    }
+
+    [public effects(heap_alloc), return<vector<i32>>]
+    serialize([HtmlCommandList] self) {
+      [vector<i32> mut] words{vector<i32>()}
+      [i32] len{count(self.records)}
+      push(words, 1i32)
+      push(words, self.commandCount)
+      for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+        push(words, self.records[index])
+      }
+      return(words)
+    }
+  }
+
   namespace LayoutTree {
     [effects(heap_alloc), return<i32>]
     append_node(
@@ -393,6 +582,11 @@ namespace std {
     [return<i32>]
     padding_px([LayoutTree] self, [i32] nodeId) {
       return(self.paddingPxs[nodeId])
+    }
+
+    [return<i32>]
+    parent_index([LayoutTree] self, [i32] nodeId) {
+      return(self.parentIndices[nodeId])
     }
 
     [public return<void>]
