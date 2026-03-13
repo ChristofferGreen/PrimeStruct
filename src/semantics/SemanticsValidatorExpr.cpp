@@ -3354,9 +3354,78 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return !helper.empty() && isRemovedMapCompatibilityHelper(helper);
       };
+      auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool {
+        if (expr.isMethodCall || expr.name.empty()) {
+          return false;
+        }
+        std::string normalized = expr.name;
+        if (!normalized.empty() && normalized.front() == '/') {
+          normalized.erase(normalized.begin());
+        }
+        std::string helperName;
+        if (normalized == "count") {
+          helperName = "count";
+        } else if (normalized == "at") {
+          helperName = "at";
+        } else if (normalized == "at_unsafe") {
+          helperName = "at_unsafe";
+        } else if (resolved == "/count") {
+          helperName = "count";
+        } else if (resolved == "/at") {
+          helperName = "at";
+        } else if (resolved == "/at_unsafe") {
+          helperName = "at_unsafe";
+        } else {
+          return false;
+        }
+        if (defMap_.count("/" + helperName) > 0 || expr.args.empty()) {
+          return false;
+        }
+        std::vector<size_t> receiverIndices;
+        auto appendReceiverIndex = [&](size_t index) {
+          if (index >= expr.args.size()) {
+            return;
+          }
+          for (size_t existing : receiverIndices) {
+            if (existing == index) {
+              return;
+            }
+          }
+          receiverIndices.push_back(index);
+        };
+        if (hasNamedArguments(expr.argNames)) {
+          bool foundValues = false;
+          for (size_t i = 0; i < expr.args.size(); ++i) {
+            if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
+              appendReceiverIndex(i);
+              foundValues = true;
+              break;
+            }
+          }
+          if (!foundValues) {
+            for (size_t i = 0; i < expr.args.size(); ++i) {
+              appendReceiverIndex(i);
+            }
+          }
+        } else {
+          for (size_t i = 0; i < expr.args.size(); ++i) {
+            appendReceiverIndex(i);
+          }
+        }
+        for (size_t receiverIndex : receiverIndices) {
+          std::string keyType;
+          std::string valueType;
+          if (!resolveMapTarget(expr.args[receiverIndex], keyType, valueType)) {
+            continue;
+          }
+          resolved = "/std/collections/map/" + helperName;
+          return true;
+        }
+        return false;
+      };
       if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlockCall(expr)) {
         if (!resolvedMethod) {
-          if (!shouldPreserveBodyArgumentTarget(resolved)) {
+          if (!resolveBareMapCallBodyArgumentTarget() && !shouldPreserveBodyArgumentTarget(resolved)) {
             resolved = preferVectorStdlibHelperPath(resolved);
           }
         }

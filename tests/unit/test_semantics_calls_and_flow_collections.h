@@ -4592,6 +4592,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("bare map call form expression body arguments fall back to canonical helper target") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
+  return(count(values, true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare map call form expression body arguments keep canonical mismatch diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
+  return(count(values, true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("map namespaced count method expression body arguments keep slash-path diagnostics") {
   const std::string source = R"(
 [return<int>]
