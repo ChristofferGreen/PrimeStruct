@@ -1,5 +1,6 @@
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
 #include "test_compile_run_map_conformance_helpers.h"
+#include "test_compile_run_unchecked_pointer_conformance_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
@@ -154,6 +155,11 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 17);
   CHECK(readFile(outPath).empty());
+}
+
+TEST_CASE("runs vm unchecked pointer conformance harness for imported .prime helpers") {
+  expectUncheckedPointerHelperSurfaceConformance("vm");
+  expectUncheckedPointerGrowthConformance("vm");
 }
 
 TEST_CASE("runs vm map namespaced at compatibility alias") {

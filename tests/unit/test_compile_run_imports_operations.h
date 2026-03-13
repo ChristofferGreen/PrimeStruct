@@ -1,5 +1,6 @@
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
 #include "test_compile_run_map_conformance_helpers.h"
+#include "test_compile_run_unchecked_pointer_conformance_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
@@ -70,6 +71,11 @@ TEST_CASE("compiles and runs checked pointer conformance harness in C++ emitter"
   expectCheckedPointerHelperSurfaceConformance("exe");
   expectCheckedPointerGrowthConformance("exe");
   expectCheckedPointerOutOfBoundsConformance("exe");
+}
+
+TEST_CASE("compiles and runs unchecked pointer conformance harness in C++ emitter") {
+  expectUncheckedPointerHelperSurfaceConformance("exe");
+  expectUncheckedPointerGrowthConformance("exe");
 }
 
 TEST_CASE("compiles with executions using collection arguments") {

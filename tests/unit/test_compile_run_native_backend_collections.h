@@ -1,6 +1,7 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
 #include "test_compile_run_map_conformance_helpers.h"
+#include "test_compile_run_unchecked_pointer_conformance_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
@@ -196,6 +197,11 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs native unchecked pointer conformance harness for imported .prime helpers") {
+  expectUncheckedPointerHelperSurfaceConformance("native");
+  expectUncheckedPointerGrowthConformance("native");
 }
 
 TEST_CASE("rejects native array namespaced vector constructor alias") {

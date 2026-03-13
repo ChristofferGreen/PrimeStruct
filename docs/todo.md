@@ -11,7 +11,6 @@ Finished items were moved to `docs/todo_finished.md` on March 13, 2026.
 Collection strategy note: keep `array` as a language-core collection, but migrate `vector` and `map` to stdlib `.prime` implementations so users can build equivalent containers. Progress is tracked by the slices below plus the archived finished slice bullets in `docs/todo_finished.md`.
 Vector/map de-builtinization roadmap note: prioritize the substrate and parity work that makes a real stdlib implementation possible, then keep compatibility cleanup limited to bridge work while builtin collection handling still exists.
 Stdlib container substrate note: the items below are the hard prerequisites for moving `vector`/`map` into self-contained `.prime` implementations instead of extending compiler-owned collection behavior.
-- ○ Add unsafe pointer-element-access conformance tests so `.prime` containers can implement relocation and unchecked access without compiler special-cases.
 - ○ Define explicit ownership/drop semantics for container element lifecycles during resize/remove operations for non-trivial element types.
 - ○ Define explicit ownership/drop semantics for container element lifecycles during reallocation/move operations for non-trivial element types.
 - ○ Implement container element drop behavior in vector/map runtimes once the ownership contract is fixed.
