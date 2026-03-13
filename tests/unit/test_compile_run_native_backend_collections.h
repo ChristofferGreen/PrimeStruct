@@ -1,4 +1,5 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+#include "test_compile_run_container_error_conformance_helpers.h"
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
 #include "test_compile_run_map_conformance_helpers.h"
 #include "test_compile_run_unchecked_pointer_conformance_helpers.h"
@@ -1954,6 +1955,10 @@ TEST_CASE("compiles and runs native shared map conformance harness for stdlib an
     expectMapHelperSurfaceConformance("native", "/std/collections/experimental_map/*");
     expectMapExtendedConstructorConformance("native", "/std/collections/experimental_map/*");
   }
+}
+
+TEST_CASE("compiles and runs native imported container error contract conformance") {
+  expectContainerErrorConformance("native");
 }
 
 TEST_CASE("compiles and runs native checked pointer conformance harness for imported .prime helpers") {

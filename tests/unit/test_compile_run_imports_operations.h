@@ -1,3 +1,4 @@
+#include "test_compile_run_container_error_conformance_helpers.h"
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
 #include "test_compile_run_map_conformance_helpers.h"
 #include "test_compile_run_unchecked_pointer_conformance_helpers.h"
@@ -65,6 +66,10 @@ TEST_CASE("compiles and runs shared map conformance harness in C++ emitter") {
     expectMapHelperSurfaceConformance("exe", "/std/collections/experimental_map/*");
     expectMapExtendedConstructorConformance("exe", "/std/collections/experimental_map/*");
   }
+}
+
+TEST_CASE("compiles and runs container error contract conformance in C++ emitter") {
+  expectContainerErrorConformance("exe");
 }
 
 TEST_CASE("compiles and runs checked pointer conformance harness in C++ emitter") {

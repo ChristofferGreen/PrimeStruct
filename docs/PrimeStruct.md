@@ -588,6 +588,7 @@ for(
   - `map<K, V>` values must be numeric/bool for **`VM/native`**; string values are **`C++`** only.
   - String indexing in **`VM/native (limited)`** requires string literals or bindings backed by literals.
   - `vector<T>` is specified as a C++-style dynamic contiguous sequence (`push`/`reserve` may grow capacity). VM/native currently still enforce fixed-capacity growth limits; migration to full dynamic semantics is tracked in `docs/todo.md`.
+  - Stdlib collection helpers now share `ContainerError` for deterministic error payloads: `containerMissingKey()` (`1`), `containerIndexOutOfBounds()` (`2`), `containerEmpty()` (`3`), and `containerCapacityExceeded()` (`4`). `Result.why(Result<ContainerError>)` maps those codes to stable literal-backed messages.
   - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_map/*` (`mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`, `mapQuint`, `mapSext`, `mapSept`, `mapOct`, `mapCount`, `mapAt`, `mapAtUnsafe`) backed by builtin `map<K, V>` while the fully stdlib-owned map implementation is still in progress.
 - **Core builtins (root namespace):**
   - **`assign(target, value)`** (statement): mutates a mutable binding or dereferenced pointer.
@@ -614,11 +615,12 @@ for(
   - **Operators (desugared forms):** `plus`, `minus`, `multiply`, `divide`, `negate`, `increment`, `decrement`.
   - **Comparisons/booleans:** `greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`, `and`, `or`, `not`.
   - **Result helpers (draft):**
-    - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
-    - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
-    - `Result.error()` returns `true` when the result is an error.
-    - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
-    - The postfix `?` operator unwraps a `Result` or propagates the error (see Error Handling).
+  - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
+  - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
+  - `Result.error()` returns `true` when the result is an error.
+  - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
+  - Stdlib containers use `Result<ContainerError>` / `Result<T, ContainerError>` as the shared error contract; unknown codes fall back to `"container error"`.
+  - The postfix `?` operator unwraps a `Result` or propagates the error (see Error Handling).
     - `Result.map(result, fn)` applies `fn` to the success value (if any) and returns a new `Result`.
     - `Result.and_then(result, fn)` (a.k.a. bind) applies `fn` to the success value and flattens the result.
     - `Result.map2(a, b, fn)` applies `fn` if both results are ok; otherwise returns the first error.

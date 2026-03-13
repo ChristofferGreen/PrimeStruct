@@ -1,0 +1,47 @@
+namespace std {
+  namespace collections {
+  [public struct]
+  ContainerError() {
+    [public i32] code{0i32}
+  }
+
+  namespace ContainerError {
+    [public return<string>]
+    why([ContainerError] err) {
+      if(equal(err.code, 1i32)) {
+        return("container missing key"utf8)
+      }
+      if(equal(err.code, 2i32)) {
+        return("container index out of bounds"utf8)
+      }
+      if(equal(err.code, 3i32)) {
+        return("container empty"utf8)
+      }
+      if(equal(err.code, 4i32)) {
+        return("container capacity exceeded"utf8)
+      }
+      return("container error"utf8)
+    }
+  }
+
+  [public return<ContainerError>]
+  containerMissingKey() {
+    return(ContainerError(1i32))
+  }
+
+  [public return<ContainerError>]
+  containerIndexOutOfBounds() {
+    return(ContainerError(2i32))
+  }
+
+  [public return<ContainerError>]
+  containerEmpty() {
+    return(ContainerError(3i32))
+  }
+
+  [public return<ContainerError>]
+  containerCapacityExceeded() {
+    return(ContainerError(4i32))
+  }
+  }
+}

@@ -80,6 +80,39 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("container error contract shape validates through Result.why") {
+  const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+namespace ContainerError {
+  [return<string>]
+  why([ContainerError] err) {
+    return("container error"utf8)
+  }
+}
+
+[return<ContainerError>]
+containerMissingKey() {
+  return(ContainerError(1i32))
+}
+
+[return<void>]
+main() {
+  [Result<ContainerError>] status{ containerMissingKey().code }
+  [Result<ContainerError>] unknown{ 99i32 }
+  [string] message{ Result.why(status) }
+  [auto] fallback{ Result.why(unknown) }
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("count helper validates on vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -1,3 +1,4 @@
+#include "test_compile_run_container_error_conformance_helpers.h"
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
 #include "test_compile_run_map_conformance_helpers.h"
 #include "test_compile_run_unchecked_pointer_conformance_helpers.h"
@@ -1594,6 +1595,10 @@ TEST_CASE("runs vm shared map conformance harness for stdlib and experimental he
     expectMapHelperSurfaceConformance("vm", "/std/collections/experimental_map/*");
     expectMapExtendedConstructorConformance("vm", "/std/collections/experimental_map/*");
   }
+}
+
+TEST_CASE("runs vm imported container error contract conformance") {
+  expectContainerErrorConformance("vm");
 }
 
 TEST_CASE("runs vm checked pointer conformance harness for imported .prime helpers") {
