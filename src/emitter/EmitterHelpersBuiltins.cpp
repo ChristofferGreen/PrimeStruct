@@ -950,6 +950,34 @@ bool resolveMethodCallPath(const Expr &call,
       return false;
     }
 
+    auto extractCollectionElementTypeFromReturn = [&](const std::string &typeName) -> bool {
+      std::string normalizedType = normalizeBindingTypeName(typeName);
+      while (true) {
+        std::string base;
+        std::string arg;
+        if (!splitTemplateTypeName(normalizedType, base, arg)) {
+          return false;
+        }
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args)) {
+          return false;
+        }
+        if ((base == "array" || base == "vector") && args.size() == 1) {
+          typeOut = normalizeBindingTypeName(args.front());
+          return true;
+        }
+        if (base == "map" && args.size() == 2) {
+          typeOut = normalizeBindingTypeName(args[1]);
+          return true;
+        }
+        if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
+          normalizedType = normalizeBindingTypeName(args.front());
+          continue;
+        }
+        return false;
+      }
+    };
+
     const std::string resolvedExprPath = resolveExprPath(candidate);
     std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
     pruneMapAccessStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
@@ -978,25 +1006,7 @@ bool resolveMethodCallPath(const Expr &call,
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
         }
-        std::string base;
-        std::string arg;
-        const std::string normalizedReturn = normalizeBindingTypeName(transform.templateArgs.front());
-        if (!splitTemplateTypeName(normalizedReturn, base, arg)) {
-          return false;
-        }
-        std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(arg, args)) {
-          return false;
-        }
-        if ((base == "array" || base == "vector") && args.size() == 1) {
-          typeOut = normalizeBindingTypeName(args.front());
-          return true;
-        }
-        if (base == "map" && args.size() == 2) {
-          typeOut = normalizeBindingTypeName(args[1]);
-          return true;
-        }
-        return false;
+        return extractCollectionElementTypeFromReturn(transform.templateArgs.front());
       }
     }
     return false;

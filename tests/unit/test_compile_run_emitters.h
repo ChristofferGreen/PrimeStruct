@@ -5075,6 +5075,36 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("C++ emitter treats direct-call wrapper-returned canonical map reference access as string receiver") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, string>>>]
+borrowMap([Reference</std/collections/map<i32, string>>] values) {
+  return(values)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  return(/std/collections/map/at(borrowMap(location(values)), 1i32).count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_direct_wrapper_map_reference_string_receiver.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_direct_wrapper_map_reference_string_receiver_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
+}
+
 TEST_CASE("C++ emitter keeps non-string diagnostics on wrapper-returned canonical map access receivers") {
   const std::string source = R"(
 [return</std/collections/map<i32, i32>>]
@@ -5092,6 +5122,37 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() /
        "primec_cpp_wrapper_canonical_map_string_receiver_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter keeps non-string diagnostics on direct-call wrapper-returned canonical map reference access") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/std/collections/map/at(borrowMap(location(values)), 1i32).count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_direct_wrapper_map_reference_string_receiver_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_direct_wrapper_map_reference_string_receiver_diag.err")
           .string();
 
   const std::string compileCmd =

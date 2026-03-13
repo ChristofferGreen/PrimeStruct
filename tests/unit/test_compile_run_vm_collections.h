@@ -5735,6 +5735,30 @@ main() {
   CHECK(runCommand(runCmd) == 91);
 }
 
+TEST_CASE("runs vm with user string count method shadow on direct-call wrapper-returned canonical map reference access") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<Reference</std/collections/map<i32, string>>>]
+borrowMap([Reference</std/collections/map<i32, string>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  return(/std/collections/map/at(borrowMap(location(values)), 1i32).count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_user_string_count_method_shadow_direct_wrapper_map_reference_access.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 91);
+}
+
 TEST_CASE("vm keeps non-string diagnostics on canonical map reference access count shadow") {
   const std::string source = R"(
 [return<int>]

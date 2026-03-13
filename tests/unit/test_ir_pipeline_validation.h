@@ -19474,6 +19474,30 @@ TEST_CASE("ir lowerer return inference helper resolves declared array and struct
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
 }
 
+TEST_CASE("ir lowerer return inference helper unwraps referenced collection returns") {
+  primec::Definition def;
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {"Reference</std/collections/map<i32, string>>"};
+  def.transforms.push_back(returnTransform);
+
+  primec::ir_lowerer::ReturnInfo info;
+  bool hasReturnTransform = false;
+  bool hasReturnAuto = false;
+  primec::ir_lowerer::analyzeDeclaredReturnTransforms(
+      def,
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
+      info,
+      hasReturnTransform,
+      hasReturnAuto);
+
+  CHECK(hasReturnTransform);
+  CHECK_FALSE(hasReturnAuto);
+  CHECK(info.returnsArray);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+}
+
 TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
   primec::Definition callee;
   callee.fullPath = "/pkg/do_work";

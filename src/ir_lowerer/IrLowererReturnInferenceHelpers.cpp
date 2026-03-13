@@ -56,6 +56,71 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
                                      bool &hasReturnAuto) {
   hasReturnTransform = false;
   hasReturnAuto = false;
+  auto applyWrappedCollectionReturnInfo = [&](const std::string &typeName) -> bool {
+    std::string currentType = typeName;
+    while (true) {
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(currentType, base, arg)) {
+        return false;
+      }
+      base = normalizeDeclaredCollectionTypeBase(base);
+      if (base == "array") {
+        info.returnsArray = true;
+        info.kind = valueKindFromTypeName(trimTemplateTypeText(arg));
+        info.returnsVoid = false;
+        return true;
+      }
+      if (base == "vector") {
+        std::vector<std::string> args;
+        if (!splitTemplateArgs(arg, args) || args.size() != 1) {
+          info.returnsArray = false;
+          info.kind = LocalInfo::ValueKind::Unknown;
+          info.returnsVoid = false;
+          return true;
+        }
+        info.returnsArray = true;
+        info.kind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
+        info.returnsVoid = false;
+        return true;
+      }
+      if (base == "map") {
+        std::vector<std::string> args;
+        if (!splitTemplateArgs(arg, args) || args.size() != 2) {
+          info.returnsArray = false;
+          info.kind = LocalInfo::ValueKind::Unknown;
+          info.returnsVoid = false;
+          return true;
+        }
+        info.returnsArray = true;
+        info.kind = valueKindFromTypeName(trimTemplateTypeText(args.back()));
+        info.returnsVoid = false;
+        return true;
+      }
+      if (base == "soa_vector") {
+        std::vector<std::string> args;
+        if (!splitTemplateArgs(arg, args) || args.size() != 1) {
+          info.returnsArray = false;
+          info.kind = LocalInfo::ValueKind::Unknown;
+          info.returnsVoid = false;
+          return true;
+        }
+        info.returnsArray = true;
+        info.kind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
+        info.returnsVoid = false;
+        return true;
+      }
+      if (base == "Reference" || base == "Pointer") {
+        std::vector<std::string> args;
+        if (!splitTemplateArgs(arg, args) || args.size() != 1) {
+          return false;
+        }
+        currentType = normalizeBindingTypeName(trimTemplateTypeText(args.front()));
+        continue;
+      }
+      return false;
+    }
+  };
   for (const auto &transform : def.transforms) {
     if (transform.name == "struct" || transform.name == "pod" || transform.name == "handle" ||
         transform.name == "gpu_lane" || transform.name == "no_padding" ||
@@ -92,55 +157,8 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
       info.returnsVoid = true;
       break;
     }
-    std::string base;
-    std::string arg;
-    if (splitTemplateTypeName(typeName, base, arg)) {
-      base = normalizeDeclaredCollectionTypeBase(base);
-      if (base == "array") {
-        info.returnsArray = true;
-        info.kind = valueKindFromTypeName(trimTemplateTypeText(arg));
-        info.returnsVoid = false;
-        break;
-      }
-      if (base == "vector") {
-        std::vector<std::string> args;
-        if (!splitTemplateArgs(arg, args) || args.size() != 1) {
-          info.returnsArray = false;
-          info.kind = LocalInfo::ValueKind::Unknown;
-          info.returnsVoid = false;
-          break;
-        }
-        info.returnsArray = true;
-        info.kind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
-        info.returnsVoid = false;
-        break;
-      }
-      if (base == "map") {
-        std::vector<std::string> args;
-        if (!splitTemplateArgs(arg, args) || args.size() != 2) {
-          info.returnsArray = false;
-          info.kind = LocalInfo::ValueKind::Unknown;
-          info.returnsVoid = false;
-          break;
-        }
-        info.returnsArray = true;
-        info.kind = valueKindFromTypeName(trimTemplateTypeText(args.back()));
-        info.returnsVoid = false;
-        break;
-      }
-      if (base == "soa_vector") {
-        std::vector<std::string> args;
-        if (!splitTemplateArgs(arg, args) || args.size() != 1) {
-          info.returnsArray = false;
-          info.kind = LocalInfo::ValueKind::Unknown;
-          info.returnsVoid = false;
-          break;
-        }
-        info.returnsArray = true;
-        info.kind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
-        info.returnsVoid = false;
-        break;
-      }
+    if (applyWrappedCollectionReturnInfo(typeName)) {
+      break;
     }
     std::string structPath;
     StructArrayTypeInfo structInfo;
