@@ -1723,7 +1723,7 @@ TEST_CASE("C++ emitter helper rejects removed full-path vector method aliases") 
   CHECK(resolved.empty());
 }
 
-TEST_CASE("C++ emitter helper prefers map alias receiver metadata for canonical namespaced access") {
+TEST_CASE("C++ emitter helper keeps canonical receiver metadata for namespaced map access") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.name = "/std/collections/map/at";
@@ -1764,7 +1764,7 @@ TEST_CASE("C++ emitter helper prefers map alias receiver metadata for canonical 
   std::string resolved;
   CHECK(primec::emitter::resolveMethodCallPath(
       methodCall, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/AliasMarker/tag");
+  CHECK(resolved == "/CanonicalMarker/tag");
 }
 
 TEST_CASE("C++ emitter helper falls back to canonical map receiver metadata when alias missing") {
@@ -3709,7 +3709,7 @@ main() {
   CHECK(readFile(errPath).find("at requires map key type i32") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter prefers map alias for stdlib namespaced map access helpers") {
+TEST_CASE("C++ emitter keeps canonical stdlib namespaced map access helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -3743,18 +3743,18 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_namespaced_map_access_alias_precedence.prime", source);
+      writeTemp("compile_cpp_stdlib_namespaced_map_access_canonical_precedence.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_stdlib_namespaced_map_access_alias_precedence_exe")
+       "primec_cpp_stdlib_namespaced_map_access_canonical_precedence_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 83);
+  CHECK(runCommand(exePath) == 15);
 }
 
-TEST_CASE("C++ emitter keeps map alias diagnostics for stdlib namespaced map at") {
+TEST_CASE("C++ emitter keeps canonical diagnostics for stdlib namespaced map at") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -3762,12 +3762,12 @@ wrapMap() {
 }
 
 [return<int>]
-/map/at([map<i32, i32>] values, [bool] key) {
+/map/at([map<i32, i32>] values, [i32] key) {
   return(41i32)
 }
 
 [return<int>]
-/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+/std/collections/map/at([map<i32, i32>] values, [bool] key) {
   return(7i32)
 }
 
@@ -3777,16 +3777,87 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_namespaced_map_at_alias_precedence_diag.prime", source);
+      writeTemp("compile_cpp_stdlib_namespaced_map_at_canonical_precedence_diag.prime", source);
   const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_stdlib_namespaced_map_at_alias_precedence_diag.err")
+       "primec_cpp_stdlib_namespaced_map_at_canonical_precedence_diag.err")
           .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /map/at parameter key") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
+}
+
+TEST_CASE("C++ emitter keeps canonical stdlib namespaced map count helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/count(wrapMap()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_namespaced_map_count_canonical_precedence.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_stdlib_namespaced_map_count_canonical_precedence_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("C++ emitter keeps canonical diagnostics for stdlib namespaced map count") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/count(wrapMap()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_namespaced_map_count_canonical_precedence_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_stdlib_namespaced_map_count_canonical_precedence_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument count mismatch for /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects stdlib namespaced vector capacity on map target in C++ emitter") {
