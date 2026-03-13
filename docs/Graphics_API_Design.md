@@ -177,6 +177,13 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `CommandList.pop_clip()`
      - `CommandList.clip_depth()`
      - `CommandList.serialize() -> vector<i32>`
+     - `LayoutTree`
+     - `LayoutTree.append_root_column(...)`
+     - `LayoutTree.append_column(...)`
+     - `LayoutTree.append_leaf(...)`
+     - `LayoutTree.measure()`
+     - `LayoutTree.arrange(x, y, width, height)`
+     - `LayoutTree.serialize() -> vector<i32>`
    - Rounded rectangles are expressed through SDF-style primitives.
    - Renders into a software color buffer (or shared surface view).
    - Current host bridge prototype: the native window host and macOS Metal host
@@ -187,6 +194,25 @@ The following architecture is planned but not locked as part of the v1 contract:
    - Two-pass layout contract:
      - Bottom-up measure pass (children -> parent).
      - Top-down arrange pass (parent -> children).
+   - Current prototype contract:
+     - Single-root flat tree; nodes are appended in parent-before-child
+       insertion order.
+     - `append_root_column(...)` creates the root column at node `0` with
+       parent index `-1`.
+     - `append_column(...)` appends a vertical stack container child.
+     - `append_leaf(...)` appends a leaf node with fixed minimum size.
+     - `measure()` walks reverse insertion order, so children are always
+       measured before parents.
+     - Leaf measurement is exactly `(min_width, min_height)`.
+     - Column measurement is:
+       - width = `max(child.measured_width) + 2 * padding`, clamped by
+         `min_width`
+       - height = `sum(child.measured_height) + gap * (child_count - 1) +
+         2 * padding`, clamped by `min_height`
+     - `arrange(x, y, width, height)` assigns the root rectangle, then walks
+       insertion order to place children.
+     - Column arrange stretches each child to the parent inner width and uses
+       the child measured height as the arranged height.
 3. Basic widget layer:
    - Small primitive controls built on top of layout + draw commands.
 4. Composite widget layer:
@@ -219,6 +245,23 @@ Current prototype serialization format for `/std/ui/CommandList.serialize()`:
   - `pop_clip()` at depth `0` is a deterministic no-op: no command is emitted
     and `clip_depth()` remains `0`.
 
+Current prototype serialization format for `/std/ui/LayoutTree.serialize()`:
+
+- First word: format version (`1`)
+- Second word: total node count
+- Then, for each node in insertion order:
+  - kind
+  - parent index
+  - measured width
+  - measured height
+  - arranged x
+  - arranged y
+  - arranged width
+  - arranged height
+- Current node kinds:
+  - `1` = `leaf`
+  - `2` = `column`
+
 Example:
 
 ```prime
@@ -244,6 +287,27 @@ main() {
   )
   [vector<i32>] words{commands.serialize()}
   return(commands.command_count())
+}
+```
+
+Layout example:
+
+```prime
+import /std/ui/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [LayoutTree mut] tree{LayoutTree()}
+  [i32] root{tree.append_root_column(2i32, 3i32, 10i32, 4i32)}
+  [i32] header{tree.append_leaf(root, 20i32, 5i32)}
+  [i32] body{tree.append_column(root, 1i32, 2i32, 12i32, 8i32)}
+  [i32] badge{tree.append_leaf(body, 8i32, 4i32)}
+  [i32] details{tree.append_leaf(body, 10i32, 6i32)}
+  [i32] footer{tree.append_leaf(root, 6i32, 7i32)}
+  tree.measure()
+  tree.arrange(10i32, 20i32, 50i32, 40i32)
+  [vector<i32>] words{tree.serialize()}
+  return(tree.node_count())
 }
 ```
 

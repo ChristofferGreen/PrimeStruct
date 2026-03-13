@@ -563,6 +563,88 @@ main() {
         "1,6,3,4,1,2,20,10,1,11,7,9,14,255,240,0,255,3,72,105,33,3,4,3,4,5,6,2,9,8,9,10,11,2,1,2,3,4,4,0,4,0\n");
 }
 
+TEST_CASE("compiles and runs native two-pass layout tree serialization deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [LayoutTree mut] tree{LayoutTree()}
+  [i32] root{tree.append_root_column(2i32, 3i32, 10i32, 4i32)}
+  [i32] header{tree.append_leaf(root, 20i32, 5i32)}
+  [i32] body{tree.append_column(root, 1i32, 2i32, 12i32, 8i32)}
+  [i32] badge{tree.append_leaf(body, 8i32, 4i32)}
+  [i32] details{tree.append_leaf(body, 10i32, 6i32)}
+  [i32] footer{tree.append_leaf(root, 6i32, 7i32)}
+  tree.measure()
+  tree.arrange(10i32, 20i32, 50i32, 40i32)
+  dump_words(tree.serialize())
+  return(tree.node_count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ui_layout_tree_serialization.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ui_layout_tree_serialization").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_ui_layout_tree_serialization.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 6);
+  CHECK(readFile(outPath) ==
+        "1,6,2,-1,24,36,10,20,50,40,1,0,20,5,12,22,46,5,2,0,12,14,12,30,46,14,1,2,8,4,13,31,44,4,1,2,10,6,13,37,44,6,1,0,6,7,12,47,46,7\n");
+}
+
+TEST_CASE("compiles and runs native two-pass layout empty root deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [LayoutTree mut] tree{LayoutTree()}
+  [i32] root{tree.append_root_column(4i32, 9i32, 11i32, 13i32)}
+  tree.measure()
+  tree.arrange(3i32, 5i32, 11i32, 13i32)
+  dump_words(tree.serialize())
+  return(tree.node_count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ui_layout_tree_empty_root.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ui_layout_tree_empty_root").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_ui_layout_tree_empty_root.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 1);
+  CHECK(readFile(outPath) == "1,1,2,-1,11,13,3,5,11,13\n");
+}
+
 TEST_CASE("compiles and runs native large frame") {
   std::ostringstream source;
   source << "[return<int>]\n";

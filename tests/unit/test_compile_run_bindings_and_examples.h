@@ -4136,19 +4136,32 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`CommandList.push_clip(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.pop_clip()`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.clip_depth()`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.append_root_column(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.append_column(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.append_leaf(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.measure()`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.arrange(x, y, width, height)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.serialize() -> vector<i32>`") != std::string::npos);
   CHECK(graphicsDoc.find("First word: format version (`1`)") != std::string::npos);
   CHECK(graphicsDoc.find("`1` = `draw_text`") != std::string::npos);
   CHECK(graphicsDoc.find("`2` = `draw_rounded_rect`") != std::string::npos);
   CHECK(graphicsDoc.find("`3` = `push_clip`") != std::string::npos);
   CHECK(graphicsDoc.find("`4` = `pop_clip`") != std::string::npos);
   CHECK(graphicsDoc.find("`pop_clip()` at depth `0` is a deterministic no-op") != std::string::npos);
+  CHECK(graphicsDoc.find("Single-root flat tree; nodes are appended in parent-before-child") != std::string::npos);
+  CHECK(graphicsDoc.find("`measure()` walks reverse insertion order") != std::string::npos);
+  CHECK(graphicsDoc.find("`arrange(x, y, width, height)` assigns the root rectangle") != std::string::npos);
+  CHECK(graphicsDoc.find("`1` = `leaf`") != std::string::npos);
+  CHECK(graphicsDoc.find("`2` = `column`") != std::string::npos);
   CHECK(graphicsDoc.find("can upload a deterministic BGRA8 software surface into a shared Metal") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`--software-surface-demo`") != std::string::npos);
   CHECK(graphicsDoc.find("[CommandList mut] commands{CommandList()}") != std::string::npos);
-  CHECK(specDoc.find("the first command-list software-renderer slice now exists under `/std/ui/*`") !=
+  CHECK(graphicsDoc.find("tree.append_root_column(2i32, 3i32, 10i32, 4i32)") != std::string::npos);
+  CHECK(specDoc.find("the first `/std/ui/*` foundation now includes deterministic command-list rendering plus a two-pass layout tree contract") !=
         std::string::npos);
-  CHECK(specDoc.find("`push_clip`, `pop_clip`, deterministic `serialize()` output") != std::string::npos);
+  CHECK(specDoc.find("`LayoutTree`, `append_root_column`, `append_column`, `append_leaf`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
   CHECK(specDoc.find("blit a deterministic BGRA8 software surface through the native window presenter") !=
         std::string::npos);
 }

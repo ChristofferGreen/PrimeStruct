@@ -15,6 +15,22 @@ namespace std {
     [i32 mut] clipDepth{0i32}
   }
 
+  [public struct]
+  LayoutTree() {
+    [public vector<i32> mut] kinds{vector<i32>()}
+    [public vector<i32> mut] parentIndices{vector<i32>()}
+    [vector<i32> mut] paddingPxs{vector<i32>()}
+    [vector<i32> mut] gapPxs{vector<i32>()}
+    [vector<i32> mut] minWidths{vector<i32>()}
+    [vector<i32> mut] minHeights{vector<i32>()}
+    [vector<i32> mut] measuredWidths{vector<i32>()}
+    [vector<i32> mut] measuredHeights{vector<i32>()}
+    [vector<i32> mut] rectXs{vector<i32>()}
+    [vector<i32> mut] rectYs{vector<i32>()}
+    [vector<i32> mut] rectWidths{vector<i32>()}
+    [vector<i32> mut] rectHeights{vector<i32>()}
+  }
+
   namespace CommandList {
     [effects(heap_alloc), return<void>]
     append_word([CommandList mut] self, [i32] value) {
@@ -99,6 +115,172 @@ namespace std {
       push(words, self.commandCount)
       for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
         push(words, self.records[index])
+      }
+      return(words)
+    }
+  }
+
+  namespace LayoutTree {
+    [effects(heap_alloc), return<i32>]
+    append_node(
+        [LayoutTree mut] self,
+        [i32] kind,
+        [i32] parentIndex,
+        [i32] paddingPx,
+        [i32] gapPx,
+        [i32] minWidth,
+        [i32] minHeight) {
+      [i32] nodeId{count(self.kinds)}
+      push(self.kinds, kind)
+      push(self.parentIndices, parentIndex)
+      push(self.paddingPxs, paddingPx)
+      push(self.gapPxs, gapPx)
+      push(self.minWidths, minWidth)
+      push(self.minHeights, minHeight)
+      push(self.measuredWidths, 0i32)
+      push(self.measuredHeights, 0i32)
+      push(self.rectXs, 0i32)
+      push(self.rectYs, 0i32)
+      push(self.rectWidths, 0i32)
+      push(self.rectHeights, 0i32)
+      return(nodeId)
+    }
+
+    [return<void>]
+    assign_rect([LayoutTree mut] self, [i32] nodeId, [i32] x, [i32] y, [i32] width, [i32] height) {
+      assign(self.rectXs[nodeId], x)
+      assign(self.rectYs[nodeId], y)
+      assign(self.rectWidths[nodeId], width)
+      assign(self.rectHeights[nodeId], height)
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    append_root_column([LayoutTree mut] self, [i32] paddingPx, [i32] gapPx, [i32] minWidth, [i32] minHeight) {
+      return(self.append_node(2i32, -1i32, paddingPx, gapPx, minWidth, minHeight))
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    append_column(
+        [LayoutTree mut] self, [i32] parentIndex, [i32] paddingPx, [i32] gapPx, [i32] minWidth, [i32] minHeight) {
+      return(self.append_node(2i32, parentIndex, paddingPx, gapPx, minWidth, minHeight))
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    append_leaf([LayoutTree mut] self, [i32] parentIndex, [i32] minWidth, [i32] minHeight) {
+      return(self.append_node(1i32, parentIndex, 0i32, 0i32, minWidth, minHeight))
+    }
+
+    [public return<i32>]
+    node_count([LayoutTree] self) {
+      return(count(self.kinds))
+    }
+
+    [public return<i32>]
+    measured_width([LayoutTree] self, [i32] nodeId) {
+      return(self.measuredWidths[nodeId])
+    }
+
+    [public return<i32>]
+    measured_height([LayoutTree] self, [i32] nodeId) {
+      return(self.measuredHeights[nodeId])
+    }
+
+    [public return<i32>]
+    rect_x([LayoutTree] self, [i32] nodeId) {
+      return(self.rectXs[nodeId])
+    }
+
+    [public return<i32>]
+    rect_y([LayoutTree] self, [i32] nodeId) {
+      return(self.rectYs[nodeId])
+    }
+
+    [public return<i32>]
+    rect_width([LayoutTree] self, [i32] nodeId) {
+      return(self.rectWidths[nodeId])
+    }
+
+    [public return<i32>]
+    rect_height([LayoutTree] self, [i32] nodeId) {
+      return(self.rectHeights[nodeId])
+    }
+
+    [public return<void>]
+    measure([LayoutTree mut] self) {
+      [i32 mut] nodeId{minus(count(self.kinds), 1i32)}
+      while(greater_equal(nodeId, 0i32)) {
+        if(equal(self.kinds[nodeId], 1i32)) {
+          assign(self.measuredWidths[nodeId], self.minWidths[nodeId])
+          assign(self.measuredHeights[nodeId], self.minHeights[nodeId])
+        } else {
+          [i32 mut] maxChildWidth{0i32}
+          [i32 mut] totalChildHeight{0i32}
+          [i32 mut] childCount{0i32}
+          [i32] totalNodes{count(self.kinds)}
+          for([i32 mut] childId{0i32}, less_than(childId, totalNodes), assign(childId, plus(childId, 1i32))) {
+            if(equal(self.parentIndices[childId], nodeId)) {
+              assign(maxChildWidth, max(maxChildWidth, self.measuredWidths[childId]))
+              assign(totalChildHeight, plus(totalChildHeight, self.measuredHeights[childId]))
+              assign(childCount, plus(childCount, 1i32))
+            }
+          }
+          [i32] gapCount{max(0i32, minus(childCount, 1i32))}
+          [i32] contentWidth{plus(maxChildWidth, multiply(self.paddingPxs[nodeId], 2i32))}
+          [i32] contentHeight{
+            plus(
+              plus(totalChildHeight, multiply(self.gapPxs[nodeId], gapCount)),
+              multiply(self.paddingPxs[nodeId], 2i32)
+            )
+          }
+          assign(self.measuredWidths[nodeId], max(self.minWidths[nodeId], contentWidth))
+          assign(self.measuredHeights[nodeId], max(self.minHeights[nodeId], contentHeight))
+        }
+        assign(nodeId, minus(nodeId, 1i32))
+      }
+    }
+
+    [public return<void>]
+    arrange([LayoutTree mut] self, [i32] rootX, [i32] rootY, [i32] rootWidth, [i32] rootHeight) {
+      if(equal(count(self.kinds), 0i32)) {
+        return()
+      }
+
+      self.assign_rect(0i32, rootX, rootY, rootWidth, rootHeight)
+
+      [i32] totalNodes{count(self.kinds)}
+      for([i32 mut] nodeId{0i32}, less_than(nodeId, totalNodes), assign(nodeId, plus(nodeId, 1i32))) {
+        if(equal(self.kinds[nodeId], 2i32)) {
+          [i32] paddingPx{self.paddingPxs[nodeId]}
+          [i32] innerX{plus(self.rectXs[nodeId], paddingPx)}
+          [i32] innerY{plus(self.rectYs[nodeId], paddingPx)}
+          [i32] innerWidth{max(0i32, minus(self.rectWidths[nodeId], multiply(paddingPx, 2i32)))}
+          [i32 mut] childY{innerY}
+
+          for([i32 mut] childId{0i32}, less_than(childId, totalNodes), assign(childId, plus(childId, 1i32))) {
+            if(equal(self.parentIndices[childId], nodeId)) {
+              self.assign_rect(childId, innerX, childY, innerWidth, self.measuredHeights[childId])
+              assign(childY, plus(childY, plus(self.measuredHeights[childId], self.gapPxs[nodeId])))
+            }
+          }
+        }
+      }
+    }
+
+    [public effects(heap_alloc), return<vector<i32>>]
+    serialize([LayoutTree] self) {
+      [vector<i32> mut] words{vector<i32>()}
+      [i32] totalNodes{count(self.kinds)}
+      push(words, 1i32)
+      push(words, totalNodes)
+      for([i32 mut] nodeId{0i32}, less_than(nodeId, totalNodes), assign(nodeId, plus(nodeId, 1i32))) {
+        push(words, self.kinds[nodeId])
+        push(words, self.parentIndices[nodeId])
+        push(words, self.measuredWidths[nodeId])
+        push(words, self.measuredHeights[nodeId])
+        push(words, self.rectXs[nodeId])
+        push(words, self.rectYs[nodeId])
+        push(words, self.rectWidths[nodeId])
+        push(words, self.rectHeights[nodeId])
       }
       return(words)
     }
