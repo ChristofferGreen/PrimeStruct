@@ -115,7 +115,7 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
         if (!splitTemplateArgs(arg, args) || args.size() != 1) {
           return false;
         }
-        currentType = normalizeBindingTypeName(trimTemplateTypeText(args.front()));
+        currentType = trimTemplateTypeText(args.front());
         continue;
       }
       return false;
@@ -218,7 +218,8 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
       bindingInfo.structTypeName = inferredStruct;
     }
   }
-  if (isStringBinding(bindingExpr) && bindingInfo.kind != LocalInfo::Kind::Value) {
+  if (isStringBinding(bindingExpr) && bindingInfo.kind != LocalInfo::Kind::Value &&
+      bindingInfo.kind != LocalInfo::Kind::Map) {
     error = "native backend does not support string pointers or references";
     return false;
   }

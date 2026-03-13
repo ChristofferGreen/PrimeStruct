@@ -96,10 +96,11 @@ TEST_CASE("canonical stdlib map return rejects wrong template arity") {
 main() {
   return(map<string, i32>("only"raw_utf8, 1i32))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map return type requires exactly two template arguments") != std::string::npos);
+  CHECK(error.find("template arguments are only supported on templated definitions: /std/collections/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("soa_vector return rejects missing template arg") {

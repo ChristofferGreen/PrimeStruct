@@ -76,7 +76,7 @@ main() {
   return(1i32)
 }
 
-[return<void>]
+[effects(heap_alloc), return<void>]
 execute_repeat([i32] count) {
   return()
 }

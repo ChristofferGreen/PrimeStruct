@@ -628,7 +628,7 @@ bool isStringValue(const Expr &target, const std::unordered_map<std::string, Bin
   if (target.kind == Expr::Kind::Call) {
     if ((isSimpleCallName(target, "at") || isSimpleCallName(target, "at_unsafe")) && target.args.size() == 2) {
       std::string elementType;
-      if (inferCollectionElementTypeNameFromExpr(target.args.front(), localTypes, elementType) &&
+      if (inferCollectionElementTypeNameFromExpr(target.args.front(), localTypes, {}, elementType) &&
           normalizeBindingTypeName(elementType) == "string") {
         return true;
       }

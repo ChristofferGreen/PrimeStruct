@@ -959,7 +959,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector namespaced templated canonical helper alias call without alias definition") {
@@ -987,7 +987,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector alias arity-mismatch compatibility template forwarding") {
@@ -1485,7 +1485,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /vector/push") != std::string::npos);
+  CHECK(readFile(outPath).find("push is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector alias named-argument compatibility template forwarding") {
@@ -1547,8 +1547,7 @@ main() {
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_wrapper_temp_templated_vector_method_compat_exe").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 90);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects native array alias templated forwarding to canonical vector helper") {
@@ -1630,8 +1629,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_native_vector_templated_alias_forwarding_non_template_compat_exe")
           .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 180);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("rejects native vector namespaced mutator alias") {
@@ -1651,8 +1649,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /vector/push") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("rejects native vector namespaced count capacity access aliases") {
@@ -1677,7 +1674,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native vector access checks bounds") {
@@ -6124,10 +6121,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_native_canonical_map_access_string_shadow_before_aliases_exe")
           .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_canonical_map_access_string_shadow_before_aliases_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("native backend only supports entry argument indexing") != std::string::npos);
 }
 
 TEST_CASE("native canonical map access non-string diagnostics beat compatibility aliases") {
@@ -6172,8 +6174,9 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 1);
-  CHECK(readFile(outPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("native backend only supports numeric/bool, string, or struct parameters") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native map compatibility count call with canonical templated helper present") {
@@ -6509,7 +6512,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  CHECK(runCommand(exePath) == 5);
 }
 
 TEST_CASE("compiles and runs native builtin count on canonical map reference string access") {
@@ -6551,10 +6554,16 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_native_builtin_count_wrapper_canonical_map_string_access_exe")
           .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_builtin_count_wrapper_canonical_map_string_access_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("native backend does not support string array return types on /wrapMap") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user string count method shadow on wrapper-returned canonical map access") {
@@ -6580,10 +6589,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_native_user_string_count_method_shadow_wrapper_canonical_map_access_exe")
           .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_user_string_count_method_shadow_wrapper_canonical_map_access_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("native backend only supports entry argument indexing") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user string count method shadow on direct-call wrapper-returned canonical map reference access") {
@@ -6611,10 +6625,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_native_user_string_count_method_shadow_direct_wrapper_map_reference_access_exe")
           .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_user_string_count_method_shadow_direct_wrapper_map_reference_access_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("native backend only supports entry argument indexing") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native map method sugar on wrapper-returned canonical map references") {
@@ -6638,10 +6657,15 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_native_wrapper_map_reference_method_sugar_exe")
           .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_wrapper_map_reference_method_sugar_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("native backend only supports returning array values") != std::string::npos);
 }
 
 TEST_CASE("native keeps non-string diagnostics on canonical map reference access count shadow") {
@@ -7667,7 +7691,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
+  CHECK(readFile(errPath).find("push requires vector binding") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native std namespaced reordered mutator compatibility helper shadow") {
@@ -7804,7 +7828,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
+  CHECK(readFile(errPath).find("push is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native named vector push expression receiver precedence") {

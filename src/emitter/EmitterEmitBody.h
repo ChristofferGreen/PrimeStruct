@@ -34,6 +34,7 @@
               << emitExpr(argExpr,
                           nameMap,
                           paramMap,
+                          defMap,
                           structTypeMap,
                           importAliases,
                           localTypes,
@@ -142,6 +143,7 @@
             << emitExpr(*field.initializer,
                         nameMap,
                         paramMap,
+                        defMap,
                         structTypeMap,
                         importAliases,
                         emptyLocals,
@@ -191,6 +193,7 @@
         std::string text = emitExpr(condExpr,
                                     nameMap,
                                     paramMap,
+                                    defMap,
                                     structTypeMap,
                                     importAliases,
                                     condTypes,
@@ -206,7 +209,7 @@
       if (isReturnCall(stmt)) {
         out << pad << "return";
         if (!stmt.args.empty()) {
-          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
+          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
         }
         out << ";\n";
         return;
@@ -217,7 +220,7 @@
           const char *stream = (printBuiltin.target == PrintTarget::Err) ? "stderr" : "stdout";
           std::string argText = "\"\"";
           if (!stmt.args.empty()) {
-            argText = emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
+            argText = emitExpr(stmt.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
           }
           out << pad << "ps_print_value(" << stream << ", " << argText << ", "
               << (printBuiltin.newline ? "true" : "false") << ");\n";
@@ -271,9 +274,9 @@
         }
         if (!stmt.args.empty()) {
           if (!useAuto && isReference) {
-            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ")";
+            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ")";
           } else {
-            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
+            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
           }
         }
         out << ";\n";
@@ -341,7 +344,7 @@
         out << pad << "{\n";
         std::string innerPad(static_cast<size_t>(indent + 1) * 2, ' ');
         std::string countExpr =
-            emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
+            emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
         std::unordered_map<std::string, ReturnKind> locals;
         locals.reserve(localTypes.size());
         for (const auto &entry : localTypes) {
@@ -414,7 +417,7 @@
         std::string countExpr = "\"\"";
         ReturnKind countKind = ReturnKind::Unknown;
         if (!stmt.args.empty()) {
-          countExpr = emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
+          countExpr = emitExpr(stmt.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
           std::unordered_map<std::string, ReturnKind> locals;
           locals.reserve(localTypes.size());
           for (const auto &entry : localTypes) {
@@ -450,7 +453,7 @@
         callExpr.bodyArguments.clear();
         callExpr.hasBodyArguments = false;
         out << pad
-            << emitExpr(callExpr, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+            << emitExpr(callExpr, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
             << ";\n";
         out << pad << "{\n";
         auto blockTypes = localTypes;
@@ -464,12 +467,12 @@
       if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
           stmt.args.front().kind == Expr::Kind::Name) {
         out << pad << stmt.args.front().name << " = "
-            << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ";\n";
+            << emitExpr(stmt.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ";\n";
         return;
       }
       if (stmt.kind == Expr::Kind::Call && isPathSpaceBuiltinName(stmt) && nameMap.find(resolveExprPath(stmt)) == nameMap.end()) {
         for (const auto &arg : stmt.args) {
-          out << pad << "(void)(" << emitExpr(arg, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ");\n";
+          out << pad << "(void)(" << emitExpr(arg, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ");\n";
         }
         return;
       }
@@ -565,6 +568,7 @@
                 << emitExpr(helperCall,
                             nameMap,
                             paramMap,
+                            defMap,
                             structTypeMap,
                             importAliases,
                             localTypes,
@@ -577,50 +581,50 @@
           }
           if (vectorHelper == "push") {
             out << pad << "ps_vector_push("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "pop") {
             out << pad << "ps_vector_pop("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "reserve") {
             out << pad << "ps_vector_reserve("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "clear") {
-            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ".clear();\n";
             return;
           }
           if (vectorHelper == "remove_at") {
             out << pad << "ps_vector_remove_at("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "remove_swap") {
             out << pad << "ps_vector_remove_swap("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;
           }
         }
       }
-      out << pad << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ";\n";
+      out << pad << emitExpr(stmt, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ";\n";
     };
     std::unordered_map<std::string, BindingInfo> localTypes;
     for (const auto &param : params) {
@@ -638,6 +642,7 @@
               << emitExpr(*def.returnExpr,
                           nameMap,
                           paramMap,
+                          defMap,
                           structTypeMap,
                           importAliases,
                           localTypes,
@@ -668,6 +673,7 @@
               << emitExpr(*def.returnExpr,
                           nameMap,
                           paramMap,
+                          defMap,
                           structTypeMap,
                           importAliases,
                           localTypes,

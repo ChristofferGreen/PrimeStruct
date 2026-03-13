@@ -6,7 +6,7 @@
     if (expr.args.size() == 2) {
       std::ostringstream out;
       out << "ps_result_pack(0u, static_cast<uint32_t>("
-          << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+          << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                       resultInfos, returnStructs, allowMathBare)
           << "))";
       return out.str();
@@ -23,7 +23,7 @@
       return "false";
     }
     std::string argText =
-        emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+        emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     if (resultInfo.hasValue) {
       return "(ps_result_error(" + argText + ") != 0u)";
@@ -40,7 +40,7 @@
       return "std::string_view()";
     }
     std::string argText =
-        emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+        emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     const std::string errorExpr =
         resultInfo.hasValue ? "ps_result_error(" + argText + ")" : "static_cast<uint32_t>(" + argText + ")";
@@ -167,10 +167,10 @@
       valueType = "uint32_t";
     }
     std::string resultExpr =
-        emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+        emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::string lambdaExpr =
-        emitExpr(expr.args[2], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+        emitExpr(expr.args[2], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::ostringstream out;
     out << "([&]() -> uint64_t {";
@@ -198,10 +198,10 @@
       valueType = "uint32_t";
     }
     std::string resultExpr =
-        emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+        emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::string lambdaExpr =
-        emitExpr(expr.args[2], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+        emitExpr(expr.args[2], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::ostringstream out;
     out << "([&]() -> uint64_t {";
@@ -236,13 +236,13 @@
       rightType = "uint32_t";
     }
     std::string leftExpr =
-        emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+        emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::string rightExpr =
-        emitExpr(expr.args[2], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+        emitExpr(expr.args[2], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::string lambdaExpr =
-        emitExpr(expr.args[3], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+        emitExpr(expr.args[3], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::ostringstream out;
     out << "([&]() -> uint64_t {";
@@ -263,7 +263,7 @@
     ResultInfo resultInfo;
     if (resolveResultExprInfo(expr.args.front(), resultInfo) && resultInfo.isResult) {
       std::string argText =
-          emitExpr(expr.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+          emitExpr(expr.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                    resultInfos, returnStructs, allowMathBare);
       if (resultInfo.hasValue) {
         std::string base;
@@ -527,6 +527,7 @@
           << emitExpr(expr.args.front(),
                       nameMap,
                       paramMap,
+                      defMap,
                       structTypeMap,
                       importAliases,
                       localTypes,
@@ -543,6 +544,7 @@
           << emitExpr(expr.args.front(),
                       nameMap,
                       paramMap,
+                      defMap,
                       structTypeMap,
                       importAliases,
                       localTypes,
@@ -559,6 +561,7 @@
           << emitExpr(expr.args.front(),
                       nameMap,
                       paramMap,
+                      defMap,
                       structTypeMap,
                       importAliases,
                       localTypes,
@@ -575,6 +578,7 @@
           << emitExpr(expr.args.front(),
                       nameMap,
                       paramMap,
+                      defMap,
                       structTypeMap,
                       importAliases,
                       localTypes,
@@ -589,7 +593,7 @@
       std::ostringstream out;
       const std::string mode = expr.templateArgs.front();
       std::string pathText =
-          emitExpr(expr.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+          emitExpr(expr.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                    resultInfos, returnStructs, allowMathBare);
       if (mode == "Read") {
         out << "ps_file_open_read(" << pathText << ")";
@@ -607,13 +611,13 @@
     if (full.rfind("/file/", 0) == 0) {
       std::ostringstream out;
       const std::string receiver =
-          emitExpr(expr.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+          emitExpr(expr.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                    resultInfos, returnStructs, allowMathBare);
       if (expr.name == "write" || expr.name == "write_line") {
         out << "ps_file_" << expr.name << "(" << receiver;
         for (size_t i = 1; i < expr.args.size(); ++i) {
           out << ", "
-              << emitExpr(expr.args[i], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+              << emitExpr(expr.args[i], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                           resultInfos, returnStructs, allowMathBare);
         }
         out << ")";
@@ -621,14 +625,14 @@
       }
       if (expr.name == "write_byte" && expr.args.size() == 2) {
         out << "ps_file_write_byte(" << receiver << ", "
-            << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+            << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                         resultInfos, returnStructs, allowMathBare)
             << ")";
         return out.str();
       }
       if (expr.name == "write_bytes" && expr.args.size() == 2) {
         out << "ps_file_write_bytes(" << receiver << ", "
-            << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+            << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                         resultInfos, returnStructs, allowMathBare)
             << ")";
         return out.str();
@@ -645,7 +649,7 @@
     if (full == "/file_error/why" && expr.args.size() == 1) {
       std::ostringstream out;
       out << "ps_file_error_why("
-          << emitExpr(expr.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+          << emitExpr(expr.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                       resultInfos, returnStructs, allowMathBare)
           << ")";
       return out.str();
@@ -657,11 +661,12 @@
       const Expr &target = expr.args[receiverIndex];
       if (isResolvedStringTarget(target)) {
         out << "ps_string_at("
-            << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
             << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
+                        defMap,
                         structTypeMap,
                         importAliases,
                         localTypes,
@@ -672,11 +677,12 @@
             << ")";
       } else if (isResolvedMapTarget(target)) {
         out << "ps_map_at("
-            << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
             << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
+                        defMap,
                         structTypeMap,
                         importAliases,
                         localTypes,
@@ -687,11 +693,12 @@
             << ")";
       } else {
         out << "ps_array_at("
-            << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
             << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
+                        defMap,
                         structTypeMap,
                         importAliases,
                         localTypes,
@@ -710,11 +717,12 @@
       const Expr &target = expr.args[receiverIndex];
       if (isResolvedStringTarget(target)) {
         out << "ps_string_at_unsafe("
-            << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
             << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
+                        defMap,
                         structTypeMap,
                         importAliases,
                         localTypes,
@@ -725,11 +733,12 @@
             << ")";
       } else if (isResolvedMapTarget(target)) {
         out << "ps_map_at_unsafe("
-            << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
             << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
+                        defMap,
                         structTypeMap,
                         importAliases,
                         localTypes,
@@ -740,11 +749,12 @@
             << ")";
       } else {
         out << "ps_array_at_unsafe("
-            << emitExpr(target, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
             << emitExpr(expr.args[indexIndex],
                         nameMap,
                         paramMap,
+                        defMap,
                         structTypeMap,
                         importAliases,
                         localTypes,
@@ -761,33 +771,33 @@
       std::ostringstream out;
       if ((op == '+' || op == '-') && isPointerExpr(expr.args[0])) {
         out << "ps_pointer_add("
-            << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ", ";
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ", ";
         if (op == '-') {
           out << "-("
-              << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+              << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
               << ")";
         } else {
-          out << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
+          out << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
         }
         out << ")";
         return out.str();
       }
       out << "("
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << " "
+          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << " "
           << op << " "
-          << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
+          << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
       return out.str();
     }
     if (isBuiltinNegate(expr) && expr.args.size() == 1) {
       std::ostringstream out;
       out << "(-"
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
+          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
       return out.str();
     }
     if (!expr.isMethodCall && isSimpleCallName(expr, "move") && expr.args.size() == 1) {
       std::ostringstream out;
       out << "std::move("
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
           << ")";
       return out.str();
     }
@@ -796,7 +806,7 @@
       std::ostringstream out;
       const char *op = mutateName == "increment" ? "++" : "--";
       out << "(" << op
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
+          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
       return out.str();
     }
     const char *cmp = nullptr;
@@ -805,15 +815,15 @@
       if (expr.args.size() == 1) {
         out << "("
             << cmp
-            << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ")";
         return out.str();
       }
       if (expr.args.size() == 2) {
         out << "("
-            << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << " "
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << " "
             << cmp << " "
-            << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ")";
         return out.str();
       }
@@ -821,9 +831,9 @@
     if (isBuiltinClamp(expr, allowMathBare) && expr.args.size() == 3) {
       std::ostringstream out;
       out << "ps_builtin_clamp("
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ", "
-          << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ", "
-          << emitExpr(expr.args[2], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ", "
+          << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ", "
+          << emitExpr(expr.args[2], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
           << ")";
       return out.str();
     }
@@ -831,22 +841,22 @@
     if (getBuiltinMinMaxName(expr, minMaxName, allowMathBare) && expr.args.size() == 2) {
       std::ostringstream out;
       out << "ps_builtin_" << minMaxName << "("
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ", "
-          << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
+          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ", "
+          << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
       return out.str();
     }
     std::string absSignName;
     if (getBuiltinAbsSignName(expr, absSignName, allowMathBare) && expr.args.size() == 1) {
       std::ostringstream out;
       out << "ps_builtin_" << absSignName << "("
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
+          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
       return out.str();
     }
     std::string saturateName;
     if (getBuiltinSaturateName(expr, saturateName, allowMathBare) && expr.args.size() == 1) {
       std::ostringstream out;
       out << "ps_builtin_" << saturateName << "("
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
           << ")";
       return out.str();
     }
@@ -858,7 +868,7 @@
         if (i > 0) {
           out << ", ";
         }
-        out << emitExpr(expr.args[i], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
+        out << emitExpr(expr.args[i], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
       }
       out << ")";
       return out.str();
@@ -875,12 +885,12 @@
                                targetKind == ReturnKind::UInt64;
       if (argIsFloat && targetIsInt) {
         out << "ps_convert_float_to_int<" << targetType << ">("
-            << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                         resultInfos, returnStructs, allowMathBare)
             << ")";
       } else {
         out << "static_cast<" << targetType << ">("
-            << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                         resultInfos, returnStructs, allowMathBare)
             << ")";
       }
@@ -890,7 +900,7 @@
     if (getBuiltinPointerOperator(expr, pointerOp) && expr.args.size() == 1) {
       std::ostringstream out;
       out << "(" << pointerOp
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
+          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
       return out.str();
     }
     std::string collection;
@@ -904,7 +914,7 @@
           if (i > 0) {
             out << ", ";
           }
-          out << emitExpr(expr.args[i], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
+          out << emitExpr(expr.args[i], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
         }
         out << "}";
         return out.str();
@@ -921,9 +931,9 @@
             out << ", ";
           }
           out << "{"
-              << emitExpr(expr.args[i], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+              << emitExpr(expr.args[i], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
               << ", "
-              << emitExpr(expr.args[i + 1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+              << emitExpr(expr.args[i + 1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
               << "}";
         }
         out << "}";
@@ -933,8 +943,8 @@
     if (isBuiltinAssign(expr, nameMap) && expr.args.size() == 2) {
       std::ostringstream out;
       out << "("
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << " = "
-          << emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
+          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << " = "
+          << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
       return out.str();
     }
     if (!expr.isMethodCall && expr.name.find('/') == std::string::npos) {
@@ -949,6 +959,7 @@
           out << emitExpr(expr.args[i],
                           nameMap,
                           paramMap,
+                          defMap,
                           structTypeMap,
                           importAliases,
                           localTypes,
@@ -978,7 +989,7 @@
     if (i > 0) {
       out << ", ";
     }
-    out << emitExpr(*orderedArgs[i], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
+    out << emitExpr(*orderedArgs[i], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
   }
   out << ")";
   return out.str();

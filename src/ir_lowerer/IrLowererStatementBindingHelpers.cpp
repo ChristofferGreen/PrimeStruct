@@ -168,7 +168,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
   if (!isStringBinding(param)) {
     return true;
   }
-  if (infoOut.kind != LocalInfo::Kind::Value) {
+  if (infoOut.kind != LocalInfo::Kind::Value && infoOut.kind != LocalInfo::Kind::Map) {
     error = "native backend does not support string pointers or references";
     return false;
   }

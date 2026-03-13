@@ -992,7 +992,8 @@ NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
   }
   if (targetExpr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(targetExpr.name);
-    if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
+    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
+        it->second.valueKind == LocalInfo::ValueKind::String) {
       error = "native backend only supports indexing into string literals or string bindings";
       return NonLiteralStringAccessTargetResult::Error;
     }

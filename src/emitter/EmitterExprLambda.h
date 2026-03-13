@@ -1,6 +1,7 @@
 std::string Emitter::emitExpr(const Expr &expr,
                               const std::unordered_map<std::string, std::string> &nameMap,
                               const std::unordered_map<std::string, std::vector<Expr>> &paramMap,
+                              const std::unordered_map<std::string, const Definition *> &defMap,
                               const std::unordered_map<std::string, std::string> &structTypeMap,
                               const std::unordered_map<std::string, std::string> &importAliases,
                               const std::unordered_map<std::string, BindingInfo> &localTypes,
@@ -192,6 +193,7 @@ std::string Emitter::emitExpr(const Expr &expr,
             << emitExpr(param.args.front(),
                         nameMap,
                         paramMap,
+                        defMap,
                         structTypeMap,
                         importAliases,
                         lambdaTypes,
@@ -216,6 +218,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         std::string text = emitExpr(condExpr,
                                     nameMap,
                                     paramMap,
+                                    defMap,
                                     structTypeMap,
                                     importAliases,
                                     condTypes,
@@ -235,6 +238,7 @@ std::string Emitter::emitExpr(const Expr &expr,
               << emitExpr(stmt.args.front(),
                           nameMap,
                           paramMap,
+                          defMap,
                           structTypeMap,
                           importAliases,
                           activeTypes,
@@ -255,6 +259,7 @@ std::string Emitter::emitExpr(const Expr &expr,
             argText = emitExpr(stmt.args.front(),
                                nameMap,
                                paramMap,
+                               defMap,
                                structTypeMap,
                                importAliases,
                                activeTypes,
@@ -293,6 +298,7 @@ std::string Emitter::emitExpr(const Expr &expr,
                 << emitExpr(stmt.args.front(),
                             nameMap,
                             paramMap,
+                            defMap,
                             structTypeMap,
                             importAliases,
                             activeTypes,
@@ -323,6 +329,7 @@ std::string Emitter::emitExpr(const Expr &expr,
               out << " = *(" << emitExpr(stmt.args.front(),
                                          nameMap,
                                          paramMap,
+                                         defMap,
                                          structTypeMap,
                                          importAliases,
                                          activeTypes,
@@ -335,6 +342,7 @@ std::string Emitter::emitExpr(const Expr &expr,
               out << " = " << emitExpr(stmt.args.front(),
                                       nameMap,
                                       paramMap,
+                                      defMap,
                                       structTypeMap,
                                       importAliases,
                                       activeTypes,
@@ -355,6 +363,7 @@ std::string Emitter::emitExpr(const Expr &expr,
             out << " = " << emitExpr(stmt.args.front(),
                                     nameMap,
                                     paramMap,
+                                    defMap,
                                     structTypeMap,
                                     importAliases,
                                     activeTypes,
@@ -426,7 +435,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         const std::string indexVar = "ps_loop_i_" + std::to_string(repeatIndex);
         out << "{ ";
         std::string countExpr =
-            emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
+            emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
         ReturnKind countKind = inferPrimitiveReturnKind(stmt.args[0], activeTypes, returnKinds, allowMathBare);
         out << "auto " << endVar << " = " << countExpr << "; ";
         const std::string indexType = (countKind == ReturnKind::Bool) ? "int" : ("decltype(" + endVar + ")");
@@ -474,7 +483,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         ReturnKind countKind = ReturnKind::Unknown;
         if (!stmt.args.empty()) {
           countExpr =
-              emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
+              emitExpr(stmt.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare);
           countKind = inferPrimitiveReturnKind(stmt.args.front(), activeTypes, returnKinds, allowMathBare);
         }
         out << "auto " << endVar << " = " << countExpr << "; ";
@@ -502,7 +511,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         Expr callExpr = stmt;
         callExpr.bodyArguments.clear();
         callExpr.hasBodyArguments = false;
-        out << emitExpr(callExpr, nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+        out << emitExpr(callExpr, nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << "; ";
         out << "{ ";
         auto blockTypes = activeTypes;
@@ -515,14 +524,14 @@ std::string Emitter::emitExpr(const Expr &expr,
       if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
           stmt.args.front().kind == Expr::Kind::Name) {
         out << stmt.args.front().name << " = "
-            << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            << emitExpr(stmt.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << "; ";
         return;
       }
       if (stmt.kind == Expr::Kind::Call && isPathSpaceBuiltinName(stmt) && nameMap.find(resolveExprPath(stmt)) == nameMap.end()) {
         for (const auto &arg : stmt.args) {
           out << "(void)("
-              << emitExpr(arg, nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+              << emitExpr(arg, nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
               << "); ";
         }
         return;
@@ -618,6 +627,7 @@ std::string Emitter::emitExpr(const Expr &expr,
             out << emitExpr(helperCall,
                             nameMap,
                             paramMap,
+                            defMap,
                             structTypeMap,
                             importAliases,
                             activeTypes,
@@ -630,50 +640,50 @@ std::string Emitter::emitExpr(const Expr &expr,
           }
           if (vectorHelper == "push") {
             out << "ps_vector_push("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+                << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+                << emitExpr(stmt.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << "); ";
             return;
           }
           if (vectorHelper == "pop") {
             out << "ps_vector_pop("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+                << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << "); ";
             return;
           }
           if (vectorHelper == "reserve") {
             out << "ps_vector_reserve("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+                << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+                << emitExpr(stmt.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << "); ";
             return;
           }
           if (vectorHelper == "clear") {
-            out << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            out << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << ".clear(); ";
             return;
           }
           if (vectorHelper == "remove_at") {
             out << "ps_vector_remove_at("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+                << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+                << emitExpr(stmt.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << "); ";
             return;
           }
           if (vectorHelper == "remove_swap") {
             out << "ps_vector_remove_swap("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+                << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+                << emitExpr(stmt.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
                 << "); ";
             return;
           }
         }
       }
-      out << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+      out << emitExpr(stmt, nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
           << "; ";
     };
     for (const auto &stmt : expr.bodyArguments) {

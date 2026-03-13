@@ -146,11 +146,7 @@
         return true;
       }
 
-      if (valueKind == LocalInfo::ValueKind::String) {
-        if (kind != LocalInfo::Kind::Value) {
-          error = "native backend does not support string pointers or references";
-          return false;
-        }
+      if (valueKind == LocalInfo::ValueKind::String && kind == LocalInfo::Kind::Value) {
         if (!ir_lowerer::emitStringStatementBindingInitializer(
                 stmt,
                 init,

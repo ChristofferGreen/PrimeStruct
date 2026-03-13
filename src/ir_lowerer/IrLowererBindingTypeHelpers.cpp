@@ -181,7 +181,7 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
     }
     if (base == "map") {
       std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
+      if (!splitTemplateArgs(arg, args) || args.size() != 2) {
         return;
       }
       info.referenceToMap = true;

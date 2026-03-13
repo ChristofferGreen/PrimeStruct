@@ -384,7 +384,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
       return true;
     }
     if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
-      return inferCollectionFromTypeRef(normalizeBindingTypeName(args.front()), inferCollectionFromTypeRef);
+      return inferCollectionFromTypeRef(trimTemplateTypeText(args.front()), inferCollectionFromTypeRef);
     }
     return false;
   };
@@ -392,7 +392,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
     }
-    return inferCollectionFromType(normalizeBindingTypeName(transform.templateArgs.front()), inferCollectionFromType);
+    return inferCollectionFromType(trimTemplateTypeText(transform.templateArgs.front()), inferCollectionFromType);
   }
   return false;
 }
@@ -886,7 +886,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
                                       const GetReturnInfoForPathFn &getReturnInfo,
                                       bool requireArrayReturn,
                                       LocalInfo::ValueKind &kindOut,
-                                      bool *methodResolvedOut) {
+                                      bool *methodResolvedOut,
+                                      const InferReceiverExprKindFn &inferExprKind) {
   kindOut = LocalInfo::ValueKind::Unknown;
   if (methodResolvedOut != nullptr) {
     *methodResolvedOut = false;
@@ -1073,12 +1074,27 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return true;
     }
     if (methodResolved) {
+      if (isCountCall && !requireArrayReturn && inferExprKind &&
+          inferExprKind(methodExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+        if (methodResolvedOut != nullptr) {
+          *methodResolvedOut = true;
+        }
+        kindOut = LocalInfo::ValueKind::Int32;
+        return true;
+      }
       if (methodResolvedOut != nullptr) {
         *methodResolvedOut = true;
       }
       return false;
     }
   }
+
+  if (isCountCall && !requireArrayReturn && inferExprKind &&
+      inferExprKind(callExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+    kindOut = LocalInfo::ValueKind::Int32;
+    return true;
+  }
+
   return false;
 }
 

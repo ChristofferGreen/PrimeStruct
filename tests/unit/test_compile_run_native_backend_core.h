@@ -417,7 +417,7 @@ main() {
   CHECK(readFile(errPath) == "Native lowering error: native backend does not support recursive calls: /main\n");
 }
 
-TEST_CASE("rejects native string pointers") {
+TEST_CASE("native accepts string pointers") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -427,10 +427,11 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_string_ptr.prime", source);
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_string_ptr_err.txt").string();
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_string_ptr_exe").string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) == "Native lowering error: native backend does not support string pointers or references\n");
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("native ignores top-level executions") {

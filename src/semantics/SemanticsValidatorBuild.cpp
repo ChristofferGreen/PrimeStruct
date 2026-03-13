@@ -1604,79 +1604,243 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     BindingInfo &bindingOut) {
-  if (tryInferBindingTypeFromInitializer(initializer, params, locals, bindingOut, hasAnyMathImport())) {
-    auto inferDeclaredCollectionBinding = [&](const Definition &definition) -> bool {
-      auto isSupportedCollectionType = [&](const std::string &typeName) -> bool {
-        std::string base;
-        std::string argText;
-        if (!splitTemplateTypeName(normalizeBindingTypeName(typeName), base, argText)) {
-          return false;
-        }
-        base = normalizeBindingTypeName(base);
-        std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(argText, args)) {
-          return false;
-        }
-        return ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) ||
-               (base == "map" && args.size() == 2);
-      };
-      for (const auto &transform : definition.transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        const std::string normalizedReturnType = normalizeBindingTypeName(transform.templateArgs.front());
-        std::string base;
-        std::string argText;
-        if (!splitTemplateTypeName(normalizedReturnType, base, argText)) {
-          return false;
-        }
-        base = normalizeBindingTypeName(base);
-        std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(argText, args)) {
-          return false;
-        }
-        if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
-          bindingOut.typeName = base;
-          bindingOut.typeTemplateArg = argText;
-          return true;
-        }
-        if (base == "map" && args.size() == 2) {
-          bindingOut.typeName = base;
-          bindingOut.typeTemplateArg = argText;
-          return true;
-        }
-        if (base == "Reference" && args.size() == 1 && isSupportedCollectionType(args.front())) {
-          bindingOut.typeName = "Reference";
-          bindingOut.typeTemplateArg = args.front();
-          return true;
-        }
+  auto inferCollectionBindingFromExpr = [&](const Expr &expr, auto &&inferCollectionBindingFromExprRef) -> bool {
+    auto copyNamedBinding = [&](const std::string &name) -> bool {
+      if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+        bindingOut = *paramBinding;
+        return true;
+      }
+      auto it = locals.find(name);
+      if (it == locals.end()) {
         return false;
+      }
+      bindingOut = it->second;
+      return true;
+    };
+    if (expr.kind == Expr::Kind::Name) {
+      return copyNamedBinding(expr.name);
+    }
+    if (expr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string collection;
+    if (getBuiltinCollectionName(expr, collection)) {
+      if ((collection == "array" || collection == "vector" || collection == "soa_vector") && expr.templateArgs.size() == 1) {
+        bindingOut.typeName = collection;
+        bindingOut.typeTemplateArg = expr.templateArgs.front();
+        return true;
+      }
+      if (collection == "map" && expr.templateArgs.size() == 2) {
+        bindingOut.typeName = "map";
+        bindingOut.typeTemplateArg = joinTemplateArgs(expr.templateArgs);
+        return true;
+      }
+    }
+    auto defIt = defMap_.find(resolveCalleePath(expr));
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string normalizedReturnType = normalizeBindingTypeName(transform.templateArgs.front());
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(normalizedReturnType, base, argText)) {
+        return false;
+      }
+      base = normalizeBindingTypeName(base);
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args)) {
+        return false;
+      }
+      if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+        bindingOut.typeName = base;
+        bindingOut.typeTemplateArg = argText;
+        return true;
+      }
+      if (base == "map" && args.size() == 2) {
+        bindingOut.typeName = base;
+        bindingOut.typeTemplateArg = argText;
+        return true;
+      }
+      if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
+        bindingOut.typeName = base;
+        bindingOut.typeTemplateArg = args.front();
+        return true;
+      }
+      return false;
+    }
+    return false;
+  };
+  auto inferBuiltinCollectionValueBinding = [&](const Expr &expr) -> bool {
+    auto inferArrayElementType = [&](const BindingInfo &binding, std::string &elemTypeOut) {
+      elemTypeOut.clear();
+      if ((binding.typeName == "array" || binding.typeName == "vector" || binding.typeName == "soa_vector") &&
+          !binding.typeTemplateArg.empty()) {
+        elemTypeOut = binding.typeTemplateArg;
+        return true;
+      }
+      if ((binding.typeName == "Reference" || binding.typeName == "Pointer") && !binding.typeTemplateArg.empty()) {
+        std::string base;
+        std::string argText;
+        if (!splitTemplateTypeName(binding.typeTemplateArg, base, argText)) {
+          return false;
+        }
+        base = normalizeBindingTypeName(base);
+        if ((base == "array" || base == "vector" || base == "soa_vector") && !argText.empty()) {
+          elemTypeOut = argText;
+          return true;
+        }
       }
       return false;
     };
-    auto defIt = initializer.kind == Expr::Kind::Call ? defMap_.find(resolveCalleePath(initializer)) : defMap_.end();
-    if (initializer.kind == Expr::Kind::Call && defIt != defMap_.end()) {
-      ReturnKind resolvedKind = inferExprReturnKind(initializer, params, locals);
-      if (resolvedKind != ReturnKind::Unknown && resolvedKind != ReturnKind::Void) {
-        if (resolvedKind == ReturnKind::Array) {
-          if (inferDeclaredCollectionBinding(*defIt->second)) {
-            return true;
-          }
-          std::string inferredStruct = inferStructReturnPath(initializer, params, locals);
-          if (!inferredStruct.empty()) {
-            bindingOut.typeName = inferredStruct;
-            bindingOut.typeTemplateArg.clear();
-            return true;
-          }
-        }
-        std::string inferredType = typeNameForReturnKind(resolvedKind);
-        if (!inferredType.empty()) {
-          bindingOut.typeName = inferredType;
-          bindingOut.typeTemplateArg.clear();
-          return true;
-        }
+    if (expr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string builtinAccessName;
+    if (getBuiltinArrayAccessName(expr, builtinAccessName) && expr.args.size() == 2) {
+      BindingInfo collectionBinding;
+      if (!inferCollectionBindingFromExpr(expr.args.front(), inferCollectionBindingFromExpr)) {
+        return false;
+      }
+      collectionBinding = bindingOut;
+      std::string keyType;
+      std::string valueType;
+      if (extractMapKeyValueTypes(collectionBinding, keyType, valueType)) {
+        bindingOut.typeName = normalizeBindingTypeName(valueType);
+        bindingOut.typeTemplateArg.clear();
+        return true;
+      }
+      std::string elemType;
+      if (inferArrayElementType(collectionBinding, elemType)) {
+        bindingOut.typeName = normalizeBindingTypeName(elemType);
+        bindingOut.typeTemplateArg.clear();
+        return true;
+      }
+      return false;
+    }
+    const bool isCountLike =
+        (isSimpleCallName(expr, "count") || resolveCalleePath(expr) == "/std/collections/map/count" ||
+         resolveCalleePath(expr) == "/map/count") &&
+        expr.args.size() == 1;
+    if (!isCountLike) {
+      return false;
+    }
+    BindingInfo collectionBinding;
+    if (!inferCollectionBindingFromExpr(expr.args.front(), inferCollectionBindingFromExpr)) {
+      return false;
+    }
+    collectionBinding = bindingOut;
+    std::string keyType;
+    std::string valueType;
+    std::string elemType;
+    if (extractMapKeyValueTypes(collectionBinding, keyType, valueType) ||
+        inferArrayElementType(collectionBinding, elemType) ||
+        collectionBinding.typeName == "string") {
+      bindingOut.typeName = "i32";
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+    return false;
+  };
+  auto inferDeclaredCollectionBinding = [&](const Definition &definition) -> bool {
+    auto isSupportedCollectionType = [&](const std::string &typeName) -> bool {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(normalizeBindingTypeName(typeName), base, argText)) {
+        return false;
+      }
+      base = normalizeBindingTypeName(base);
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args)) {
+        return false;
+      }
+      return ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) ||
+             (base == "map" && args.size() == 2);
+    };
+    for (const auto &transform : definition.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string normalizedReturnType = normalizeBindingTypeName(transform.templateArgs.front());
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(normalizedReturnType, base, argText)) {
+        return false;
+      }
+      base = normalizeBindingTypeName(base);
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args)) {
+        return false;
+      }
+      if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+        bindingOut.typeName = base;
+        bindingOut.typeTemplateArg = argText;
+        return true;
+      }
+      if (base == "map" && args.size() == 2) {
+        bindingOut.typeName = base;
+        bindingOut.typeTemplateArg = argText;
+        return true;
+      }
+      if ((base == "Reference" || base == "Pointer") && args.size() == 1 && isSupportedCollectionType(args.front())) {
+        bindingOut.typeName = base;
+        bindingOut.typeTemplateArg = args.front();
+        return true;
+      }
+      return false;
+    }
+    return false;
+  };
+  auto inferCallInitializerBinding = [&]() -> bool {
+    if (initializer.kind != Expr::Kind::Call) {
+      return false;
+    }
+    ReturnKind resolvedKind = inferExprReturnKind(initializer, params, locals);
+    if (resolvedKind == ReturnKind::Unknown || resolvedKind == ReturnKind::Void) {
+      return false;
+    }
+    if (resolvedKind == ReturnKind::Array) {
+      auto defIt = defMap_.find(resolveCalleePath(initializer));
+      if (defIt == defMap_.end()) {
+        return false;
+      }
+      if (inferDeclaredCollectionBinding(*defIt->second)) {
+        return true;
+      }
+      std::string inferredStruct = inferStructReturnPath(initializer, params, locals);
+      if (!inferredStruct.empty()) {
+        bindingOut.typeName = inferredStruct;
+        bindingOut.typeTemplateArg.clear();
+        return true;
       }
     }
+    std::string inferredType = typeNameForReturnKind(resolvedKind);
+    if (inferredType.empty()) {
+      return false;
+    }
+    bindingOut.typeName = inferredType;
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  };
+  if (tryInferBindingTypeFromInitializer(initializer, params, locals, bindingOut, hasAnyMathImport())) {
+    if (!(bindingOut.typeName == "array" && bindingOut.typeTemplateArg.empty())) {
+      return true;
+    }
+    if (inferCallInitializerBinding()) {
+      return true;
+    }
+    if (inferBuiltinCollectionValueBinding(initializer)) {
+      return true;
+    }
+    return true;
+  }
+  if (inferCallInitializerBinding()) {
+    return true;
+  }
+  if (inferBuiltinCollectionValueBinding(initializer)) {
     return true;
   }
   ReturnKind kind = inferExprReturnKind(initializer, params, locals);

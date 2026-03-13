@@ -25,7 +25,7 @@ main() {
   CHECK(error.find("Result.error requires Result argument") != std::string::npos);
 }
 
-TEST_CASE("Result.why explicit string binding rejects FileError results") {
+TEST_CASE("Result.why explicit string binding accepts FileError results") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -33,13 +33,13 @@ main() {
   [string] message{ Result.why(status) }
   return()
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("Result.why explicit string binding rejects non-FileError results") {
+TEST_CASE("Result.why explicit string binding accepts non-FileError results") {
   const std::string source = R"(
 [struct]
 OtherError() {
@@ -52,10 +52,10 @@ main() {
   [string] message{ Result.why(status) }
   return()
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("Result.why infers string binding") {

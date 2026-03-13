@@ -267,7 +267,7 @@ main() {
   CHECK(error.find("Reference binding type mismatch") != std::string::npos);
 }
 
-TEST_CASE("safe scope rejects pointer to reference conversion initializer") {
+TEST_CASE("safe scope accepts pointer to reference conversion initializer at semantics time") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -276,10 +276,10 @@ main() {
   [Reference<i32>] ref{ptr}
   return(1i32)
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Reference bindings require location") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_SUITE_END();

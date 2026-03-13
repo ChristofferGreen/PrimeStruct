@@ -380,6 +380,40 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   }
 
   if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
+      expr.args.front().kind == Expr::Kind::Call) {
+    std::string accessName;
+    const Expr &target = expr.args.front();
+    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+      const Expr &accessTarget = target.args.front();
+      bool stringMapAccess = false;
+      if (accessTarget.kind == Expr::Kind::Name) {
+        auto it = localsIn.find(accessTarget.name);
+        if (it != localsIn.end()) {
+          const LocalInfo &info = it->second;
+          stringMapAccess =
+              (info.kind == LocalInfo::Kind::Map ||
+               (info.kind == LocalInfo::Kind::Reference && info.referenceToMap)) &&
+              info.mapValueKind == LocalInfo::ValueKind::String;
+        }
+      } else if (accessTarget.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (getBuiltinCollectionName(accessTarget, collection) && collection == "map" &&
+            accessTarget.templateArgs.size() == 2) {
+          stringMapAccess =
+              accessTarget.templateArgs[1] == "string" || accessTarget.templateArgs[1] == "/string";
+        }
+      }
+      if (stringMapAccess) {
+        if (!emitExpr(target, localsIn)) {
+          return CountAccessCallEmitResult::Error;
+        }
+        emitInstruction(IrOpcode::LoadStringLength, 0);
+        return CountAccessCallEmitResult::Emitted;
+      }
+    }
+  }
+
+  if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
       inferExprKind && inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;

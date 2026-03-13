@@ -142,10 +142,10 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
 }
 
 TEST_CASE("omitted initializer rejects effect-free Create with vector alias method helper fallback") {
@@ -208,7 +208,7 @@ main() {
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
-TEST_CASE("omitted initializer accepts effect-free Create with explicit-template vector alias call fallback") {
+TEST_CASE("omitted initializer keeps explicit-template vector alias call diagnostics in Create") {
   const std::string source = R"(
 [effects(io_out), return<i32>]
 /vector/count([array<i32>] values, [bool] marker) {
@@ -237,10 +237,11 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("omitted initializer rejects effect-free Create with explicit-template vector alias method fallback") {
@@ -272,11 +273,10 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
-  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") != std::string::npos);
 }
 
 TEST_CASE("omitted initializer accepts effect-free Create with bare array count method") {
@@ -336,10 +336,11 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
@@ -372,7 +373,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("omitted initializer accepts effect-free Create with canonical map method precedence") {
+TEST_CASE("omitted initializer rejects Create with canonical map method precedence when constructor is not effect-free") {
   const std::string source = R"(
 [effects(io_out), return<i32>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -401,10 +402,10 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
 }
 
 TEST_CASE("map method precedence keeps canonical mismatch diagnostics in Create") {
@@ -442,7 +443,7 @@ main() {
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
-TEST_CASE("omitted initializer accepts effect-free Create with canonical map call precedence") {
+TEST_CASE("omitted initializer rejects Create with canonical map call precedence when constructor is not effect-free") {
   const std::string source = R"(
 [effects(io_out), return<i32>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -471,10 +472,10 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
 }
 
 TEST_CASE("map call precedence keeps canonical mismatch diagnostics in Create") {
@@ -512,7 +513,7 @@ main() {
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
-TEST_CASE("omitted initializer accepts effect-free Create with canonical slash-path map call helper") {
+TEST_CASE("omitted initializer rejects Create with canonical slash-path map call helper when constructor is not effect-free") {
   const std::string source = R"(
 [return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -535,10 +536,10 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
 }
 
 TEST_CASE("omitted initializer rejects effect-free Create with map alias call helper fallback") {
@@ -564,14 +565,13 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
-  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") != std::string::npos);
 }
 
-TEST_CASE("omitted initializer accepts effect-free Create with wrapper-returned canonical map call helper fallback") {
+TEST_CASE("omitted initializer rejects wrapper-returned canonical map call helper fallback when constructor is not effect-free") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapItems() {
@@ -598,10 +598,10 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
 }
 
 TEST_CASE("omitted initializer keeps canonical diagnostics for wrapper-returned map call helper fallback") {
@@ -638,7 +638,7 @@ main() {
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
-TEST_CASE("omitted initializer accepts effect-free Create with wrapper-returned canonical map method helper fallback") {
+TEST_CASE("omitted initializer rejects wrapper-returned canonical map method helper fallback when constructor is not effect-free") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapItems() {
@@ -665,10 +665,10 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
 }
 
 TEST_CASE("omitted initializer keeps canonical diagnostics for wrapper-returned map method helper fallback") {

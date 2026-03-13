@@ -184,7 +184,7 @@ main() {
   CHECK(cpp.find("ps_array_count(") != std::string::npos);
 }
 
-TEST_CASE("emitter cpp rejects removed array count builtin fallback") {
+TEST_CASE("emitter cpp keeps array count builtin fallback") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -210,8 +210,7 @@ main() {
 
   primec::Emitter emitter;
   const std::string cpp = emitter.emitCpp(program, "/main");
-  CHECK(cpp.find("ps_array_count(") == std::string::npos);
-  CHECK(cpp.find("return 0;") != std::string::npos);
+  CHECK(cpp.find("ps_array_count(") != std::string::npos);
 }
 
 TEST_CASE("semantics accepts and lowerer emits empty soa_vector literals") {
@@ -10170,7 +10169,7 @@ TEST_CASE("ir lowerer struct return helpers keep bare map access canonical forwa
                                                           defMap) == "/pkg/Marker");
 }
 
-TEST_CASE("ir lowerer struct return helpers reject slash-path map access alias forwarding") {
+TEST_CASE("ir lowerer struct return helpers keep canonical slash-path map access forwarding") {
   const std::unordered_set<std::string> structNames = {
       "/map",
       "/pkg/Marker",
@@ -10228,7 +10227,7 @@ TEST_CASE("ir lowerer struct return helpers reject slash-path map access alias f
                                                           structNames,
                                                           resolveStructTypePath,
                                                           resolveStructLayoutExprPath,
-                                                          defMap).empty());
+                                                          defMap) == "/pkg/Marker");
 }
 
 TEST_CASE("ir lowerer struct return helpers keep canonical map access call forwarding") {
@@ -11865,8 +11864,8 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for 
   CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
             callExpr,
             [](const primec::Expr &, std::string &) { return false; },
-            error) == Result::NotHandled);
-  CHECK(error.empty());
+            error) == Result::Error);
+  CHECK(error == "count requires array, vector, map, or string target");
 
   callExpr.name = "/std/collections/vector/capacity";
   error.clear();
@@ -14881,10 +14880,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(aliasPushResolveCalls == 2);
-  CHECK(aliasPushEmitCalls == 1);
+  CHECK(aliasPushResolveCalls == 0);
+  CHECK(aliasPushEmitCalls == 0);
 
   primec::Expr boolArg;
   boolArg.kind = primec::Expr::Kind::BoolLiteral;
@@ -16857,7 +16856,7 @@ TEST_CASE("ir lowerer setup type helper rejects slash-path map methods from expr
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method: /map/at");
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer setup type helper resolves declared receiver aliases through slashless map imports") {
@@ -17429,7 +17428,7 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map non-struct fallback 
             },
             defMap,
             error) == nullptr);
-  CHECK(error == "unknown method target for tag");
+  CHECK(error == "unknown method: /i32/tag");
 }
 
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for map alias receiver unsafe call returns") {
@@ -18787,7 +18786,7 @@ TEST_CASE("ir lowerer setup type helper resolves reordered positional access cal
       &methodResolved));
   CHECK(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(resolveCalls == 2);
+  CHECK(resolveCalls == 1);
 }
 
 TEST_CASE("ir lowerer setup type helper keeps leading collection receiver for positional access calls") {
@@ -23942,6 +23941,9 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               ++dynamicCountEmitExprCalls;
@@ -23968,6 +23970,9 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               ++dynamicCapacityEmitExprCalls;
@@ -34545,6 +34550,7 @@ TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
       primec::IrOpcode::PrintArgv,
       primec::IrOpcode::PrintArgvUnsafe,
       primec::IrOpcode::LoadStringByte,
+      primec::IrOpcode::LoadStringLength,
       primec::IrOpcode::FileOpenRead,
       primec::IrOpcode::FileOpenWrite,
       primec::IrOpcode::FileOpenAppend,

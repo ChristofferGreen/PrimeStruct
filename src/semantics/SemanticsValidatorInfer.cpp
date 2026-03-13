@@ -533,13 +533,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (typePath == "/array" || typePath == "array") {
         return "/array";
       }
-      if (typePath == "/vector" || typePath == "vector") {
+      if (typePath == "/vector" || typePath == "vector" || typePath == "/std/collections/vector" ||
+          typePath == "std/collections/vector") {
         return "/vector";
       }
       if (typePath == "/soa_vector" || typePath == "soa_vector") {
         return "/soa_vector";
       }
-      if (typePath == "/map" || typePath == "map") {
+      if (typePath == "/map" || typePath == "map" || typePath == "/std/collections/map" ||
+          typePath == "std/collections/map") {
         return "/map";
       }
       if (typePath == "/string" || typePath == "string") {
@@ -549,6 +551,38 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     };
     auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {
       typePathOut.clear();
+      auto inferCollectionTypePathFromType =
+          [&](const std::string &typeName, auto &&inferCollectionTypePathFromTypeRef) -> std::string {
+        const std::string normalizedType = normalizeBindingTypeName(typeName);
+        std::string normalized = normalizeCollectionTypePath(normalizedType);
+        if (!normalized.empty()) {
+          return normalized;
+        }
+        std::string base;
+        std::string arg;
+        if (!splitTemplateTypeName(normalizedType, base, arg)) {
+          return {};
+        }
+        base = normalizeBindingTypeName(base);
+        if (base == "Reference" || base == "Pointer") {
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+            return {};
+          }
+          return inferCollectionTypePathFromTypeRef(args.front(), inferCollectionTypePathFromTypeRef);
+        }
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args)) {
+          return {};
+        }
+        if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+          return "/" + base;
+        }
+        if (base == "map" && args.size() == 2) {
+          return "/map";
+        }
+        return {};
+      };
       if (target.kind != Expr::Kind::Call) {
         return false;
       }
@@ -563,6 +597,21 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (collection == "map" && target.templateArgs.size() == 2) {
           typePathOut = "/map";
           return true;
+        }
+      }
+      auto defIt = defMap_.find(resolvedTarget);
+      if (defIt != defMap_.end() && defIt->second != nullptr) {
+        for (const auto &transform : defIt->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string inferred = inferCollectionTypePathFromType(transform.templateArgs.front(),
+                                                                 inferCollectionTypePathFromType);
+          if (!inferred.empty()) {
+            typePathOut = std::move(inferred);
+            return true;
+          }
+          break;
         }
       }
       auto structIt = returnStructs_.find(resolvedTarget);
@@ -839,6 +888,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
     auto resolveStringTarget = [&](const Expr &target) -> bool {
       if (target.kind == Expr::Kind::StringLiteral) {
         return true;
@@ -856,8 +906,18 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return true;
         }
         std::string builtinName;
-        if (defMap_.find(resolveCalleePath(target)) == defMap_.end() && getBuiltinArrayAccessName(target, builtinName) &&
-            target.args.size() == 2) {
+        if (getBuiltinArrayAccessName(target, builtinName) && target.args.size() == 2) {
+          const std::string resolvedTarget = resolveCalleePath(target);
+          auto defIt = defMap_.find(resolvedTarget);
+          if (defIt != defMap_.end() && defIt->second != nullptr) {
+            if (!inferDefinitionReturnKind(*defIt->second)) {
+              return false;
+            }
+            auto kindIt = returnKinds_.find(resolvedTarget);
+            if (kindIt != returnKinds_.end() && kindIt->second != ReturnKind::Unknown) {
+              return kindIt->second == ReturnKind::String;
+            }
+          }
           std::string elemType;
           if (resolveArrayTarget(target.args.front(), elemType) && elemType == "string") {
             return true;
@@ -872,7 +932,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
-    auto resolveMapTarget = [&](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+    resolveMapTarget = [&](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
       keyTypeOut.clear();
       valueTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
@@ -1190,15 +1250,57 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
       {
+        std::string elemType;
         std::string keyType;
         std::string valueType;
+        if (normalizedMethodName == "count") {
+          if (resolveVectorTarget(receiver, elemType)) {
+            resolvedOut = preferVectorStdlibHelperPathForCall("/vector/count");
+            return true;
+          }
+          if (resolveSoaVectorTarget(receiver, elemType)) {
+            resolvedOut = "/soa_vector/count";
+            return true;
+          }
+          if (resolveArrayTarget(receiver, elemType)) {
+            resolvedOut = preferVectorStdlibHelperPathForCall("/array/count");
+            return true;
+          }
+          if (resolveStringTarget(receiver)) {
+            resolvedOut = "/string/count";
+            return true;
+          }
+        }
+        if (normalizedMethodName == "capacity" && resolveVectorTarget(receiver, elemType)) {
+          resolvedOut = preferVectorStdlibHelperPathForCall("/vector/capacity");
+          return true;
+        }
         if (normalizedMethodName == "count" && resolveMapTarget(receiver, keyType, valueType)) {
           resolvedOut = preferVectorStdlibHelperPathForCall("/std/collections/map/count");
           return true;
         }
+        if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
+          if (resolveVectorTarget(receiver, elemType)) {
+            resolvedOut = preferVectorStdlibHelperPathForCall("/vector/" + normalizedMethodName);
+            return true;
+          }
+          if (resolveArrayTarget(receiver, elemType)) {
+            resolvedOut = preferVectorStdlibHelperPathForCall("/array/" + normalizedMethodName);
+            return true;
+          }
+          if (resolveStringTarget(receiver)) {
+            resolvedOut = "/string/" + normalizedMethodName;
+            return true;
+          }
+        }
         if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
             resolveMapTarget(receiver, keyType, valueType)) {
           resolvedOut = preferVectorStdlibHelperPathForCall("/std/collections/map/" + normalizedMethodName);
+          return true;
+        }
+        if ((normalizedMethodName == "get" || normalizedMethodName == "ref") &&
+            resolveSoaVectorTarget(receiver, elemType)) {
+          resolvedOut = "/soa_vector/" + normalizedMethodName;
           return true;
         }
       }
@@ -1300,6 +1402,38 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           }
         }
         return false;
+      }
+      return false;
+    };
+    auto resolveBuiltinCollectionAccessCallReturnKind = [&](const Expr &callExpr, ReturnKind &kindOut) -> bool {
+      kindOut = ReturnKind::Unknown;
+      if (callExpr.isMethodCall || callExpr.args.size() != 2) {
+        return false;
+      }
+      std::string builtinName;
+      if (!getBuiltinArrayAccessName(callExpr, builtinName)) {
+        return false;
+      }
+      std::string elemType;
+      if (resolveStringTarget(callExpr.args.front())) {
+        kindOut = ReturnKind::Int;
+        return true;
+      }
+      std::string keyType;
+      std::string valueType;
+      if (resolveMapTarget(callExpr.args.front(), keyType, valueType)) {
+        ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
+        if (kind != ReturnKind::Unknown) {
+          kindOut = kind;
+          return true;
+        }
+      }
+      if (resolveArrayTarget(callExpr.args.front(), elemType)) {
+        ReturnKind kind = returnKindForTypeName(elemType);
+        if (kind != ReturnKind::Unknown) {
+          kindOut = kind;
+          return true;
+        }
       }
       return false;
     };
@@ -1819,12 +1953,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall && isMapNamespacedCountCompatibilityCall(expr)) {
       return ReturnKind::Unknown;
     }
-    if (!expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr)) {
-      return ReturnKind::Unknown;
-    }
-    if (!expr.isMethodCall && isUnnamespacedMapAccessBuiltinFallbackCall(expr)) {
-      return ReturnKind::Unknown;
-    }
     if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall(expr)) {
       return ReturnKind::Unknown;
     }
@@ -2055,6 +2183,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
         !isMapNamespacedCountCompatibilityCall(expr);
+    const bool isUnnamespacedMapCountFallbackCall =
+        !expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr);
     const bool isResolvedMapCountCall =
         !expr.isMethodCall && (resolved == "/map/count" || resolved == "/std/collections/map/count");
     const bool isNamespacedVectorCapacityCall =
@@ -2069,6 +2199,38 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         !expr.isMethodCall && isBuiltinAccess && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
         !isMapNamespacedAccessCompatibilityCall(expr);
+    auto resolveBuiltinCollectionCountCapacityReturnKind = [&](const Expr &callExpr, ReturnKind &kindOut) -> bool {
+      kindOut = ReturnKind::Unknown;
+      if (callExpr.isMethodCall || callExpr.args.empty()) {
+        return false;
+      }
+      const bool isCountLike =
+          (isVectorBuiltinName(callExpr, "count") || isNamespacedMapCountCall ||
+           isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
+          callExpr.args.size() == 1 && !isArrayNamespacedVectorCountCompatibilityCall(callExpr) &&
+          !prefersCanonicalVectorCountAliasDefinition;
+      const bool isCapacityLike = isVectorBuiltinName(callExpr, "capacity") && callExpr.args.size() == 1;
+      if (!isCountLike && !isCapacityLike) {
+        return false;
+      }
+      std::string methodResolved;
+      if (!resolveMethodCallPath(isCountLike ? "count" : "capacity", methodResolved)) {
+        return false;
+      }
+      methodResolved = preferVectorStdlibHelperPath(methodResolved);
+      auto methodIt = defMap_.find(methodResolved);
+      if (methodIt != defMap_.end()) {
+        if (!inferDefinitionReturnKind(*methodIt->second)) {
+          return false;
+        }
+        auto kindIt = returnKinds_.find(methodResolved);
+        if (kindIt != returnKinds_.end() && kindIt->second != ReturnKind::Unknown) {
+          kindOut = kindIt->second;
+          return true;
+        }
+      }
+      return resolveBuiltinCollectionMethodReturnKind(methodResolved, callExpr.args.front(), kindOut);
+    };
     auto defIt = hasResolvedPath ? defMap_.find(resolved) : defMap_.end();
     const bool hasResolvedDefinition = defIt != defMap_.end();
     std::string normalizedCallName = expr.name;
@@ -2091,21 +2253,38 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedCollectionHelperReturn) {
       if (!inferDefinitionReturnKind(*defIt->second)) {
+        ReturnKind builtinAccessKind = ReturnKind::Unknown;
+        if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinAccessKind)) {
+          return builtinAccessKind;
+        }
+        ReturnKind builtinCollectionKind = ReturnKind::Unknown;
+        if (resolveBuiltinCollectionCountCapacityReturnKind(expr, builtinCollectionKind)) {
+          return builtinCollectionKind;
+        }
         return ReturnKind::Unknown;
       }
       auto kindIt = returnKinds_.find(resolved);
-      if (kindIt != returnKinds_.end()) {
+      if (kindIt != returnKinds_.end() && kindIt->second != ReturnKind::Unknown) {
         return kindIt->second;
+      }
+      ReturnKind builtinAccessKind = ReturnKind::Unknown;
+      if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinAccessKind)) {
+        return builtinAccessKind;
+      }
+      ReturnKind builtinCollectionKind = ReturnKind::Unknown;
+      if (resolveBuiltinCollectionCountCapacityReturnKind(expr, builtinCollectionKind)) {
+        return builtinCollectionKind;
       }
       return ReturnKind::Unknown;
     }
     if (!expr.isMethodCall &&
-        (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall || isResolvedMapCountCall) &&
+        (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall ||
+         isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
         expr.args.size() == 1 &&
         !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
         !prefersCanonicalVectorCountAliasDefinition &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall ||
-         isResolvedMapCountCall)) {
+         isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
       std::string methodResolved;
       if (resolveMethodCallPath("count", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -2136,12 +2315,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Int;
     }
     if (!expr.isMethodCall &&
-        (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall || isResolvedMapCountCall) &&
+        (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall ||
+         isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
         !expr.args.empty() && expr.args.size() != 1 &&
         !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
         !prefersCanonicalVectorCountAliasDefinition &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall ||
-         isResolvedMapCountCall)) {
+         isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
       std::string methodResolved;
       if (resolveMethodCallPath("count", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -2322,11 +2502,27 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (defIt != defMap_.end() && shouldDeferResolvedNamespacedCollectionHelperReturn) {
       if (!inferDefinitionReturnKind(*defIt->second)) {
+        ReturnKind builtinAccessKind = ReturnKind::Unknown;
+        if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinAccessKind)) {
+          return builtinAccessKind;
+        }
+        ReturnKind builtinCollectionKind = ReturnKind::Unknown;
+        if (resolveBuiltinCollectionCountCapacityReturnKind(expr, builtinCollectionKind)) {
+          return builtinCollectionKind;
+        }
         return ReturnKind::Unknown;
       }
       auto kindIt = returnKinds_.find(resolved);
-      if (kindIt != returnKinds_.end()) {
+      if (kindIt != returnKinds_.end() && kindIt->second != ReturnKind::Unknown) {
         return kindIt->second;
+      }
+      ReturnKind builtinAccessKind = ReturnKind::Unknown;
+      if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinAccessKind)) {
+        return builtinAccessKind;
+      }
+      ReturnKind builtinCollectionKind = ReturnKind::Unknown;
+      if (resolveBuiltinCollectionCountCapacityReturnKind(expr, builtinCollectionKind)) {
+        return builtinCollectionKind;
       }
       return ReturnKind::Unknown;
     }

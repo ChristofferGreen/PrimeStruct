@@ -89,7 +89,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
                                       const GetReturnInfoForPathFn &getReturnInfo,
                                       bool requireArrayReturn,
                                       LocalInfo::ValueKind &kindOut,
-                                      bool *methodResolvedOut = nullptr);
+                                      bool *methodResolvedOut = nullptr,
+                                      const InferReceiverExprKindFn &inferExprKind = {});
 bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
                                          const LocalMap &localsIn,
                                          const ResolveMethodCallDefinitionFn &resolveMethodCallDefinition,

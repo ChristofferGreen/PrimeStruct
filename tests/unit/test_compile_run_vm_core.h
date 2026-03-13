@@ -412,7 +412,7 @@ main() {
   CHECK(readFile(errPath) == "VM lowering error: vm backend does not support recursive calls: /main\n");
 }
 
-TEST_CASE("vm rejects string pointers") {
+TEST_CASE("vm accepts string pointers") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -423,8 +423,8 @@ main() {
   const std::string srcPath = writeTemp("vm_string_pointer.prime", source);
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_string_pointer_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support string pointers or references\n");
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm ignores top-level executions") {

@@ -512,7 +512,9 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
                                                   stateInOut.resolveMethodCallDefinition,
                                                   stateInOut.getReturnInfo,
                                                   true,
-                                                  kindOut);
+                                                  kindOut,
+                                                  nullptr,
+                                                  stateInOut.inferExprKind);
         },
         [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
           return resolveMethodCallReturnKind(
@@ -665,7 +667,8 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
                                                    stateInOut.getReturnInfo,
                                                    false,
                                                    candidateKindOut,
-                                                   &countMethodResolved)) {
+                                                   &countMethodResolved,
+                                                   stateInOut.inferExprKind)) {
                 matchedOut = countMethodResolved;
                 return true;
               }
@@ -1129,6 +1132,40 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         kindOut = LocalInfo::ValueKind::Unknown;
 
+        auto isBuiltinCountLikeCall = [](const Expr &candidate) {
+          if (candidate.kind != Expr::Kind::Call) {
+            return false;
+          }
+          if (isSimpleCallName(candidate, "count")) {
+            return true;
+          }
+          std::string collectionName;
+          std::string helperName;
+          return getNamespacedCollectionHelperName(candidate, collectionName, helperName) && helperName == "count";
+        };
+
+        if (isBuiltinCountLikeCall(expr) && expr.args.size() == 1) {
+          LocalInfo::ValueKind accessElementKind = LocalInfo::ValueKind::Unknown;
+          if (resolveArrayMapAccessElementKind(
+                  expr.args.front(),
+                  localsIn,
+                  [&](const Expr &candidate, const LocalMap &candidateLocals) {
+                    return isEntryArgsName(candidate, candidateLocals);
+                  },
+                  accessElementKind,
+                  [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &candidateKindOut) {
+                    return resolveCallMapAccessValueKind(candidate, candidateLocals, candidateKindOut);
+                  }) == ArrayMapAccessElementKindResolution::Resolved &&
+              accessElementKind == LocalInfo::ValueKind::String) {
+            kindOut = LocalInfo::ValueKind::Int32;
+            return true;
+          }
+          if (stateInOut.inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+            kindOut = LocalInfo::ValueKind::Int32;
+            return true;
+          }
+        }
+
         LocalInfo::ValueKind countCapacityKind = LocalInfo::ValueKind::Unknown;
         if (inferCountCapacityCallReturnKind(
                 expr,
@@ -1456,6 +1493,18 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
     }
     switch (expr.kind) {
       case Expr::Kind::Call: {
+        auto isBuiltinCountLikeCall = [](const Expr &candidate) {
+          if (candidate.kind != Expr::Kind::Call) {
+            return false;
+          }
+          if (isSimpleCallName(candidate, "count")) {
+            return true;
+          }
+          std::string collectionName;
+          std::string helperName;
+          return getNamespacedCollectionHelperName(candidate, collectionName, helperName) && helperName == "count";
+        };
+
         LocalInfo::ValueKind callBaseKind = LocalInfo::ValueKind::Unknown;
         if (stateInOut.inferCallExprBaseKind(expr, localsIn, callBaseKind)) {
           return callBaseKind;
@@ -1465,12 +1514,37 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         if (callReturnResolution == CallExpressionReturnKindResolution::Resolved) {
           return callReturnKind;
         }
-        if (callReturnResolution == CallExpressionReturnKindResolution::MatchedButUnsupported) {
-          return LocalInfo::ValueKind::Unknown;
-        }
         LocalInfo::ValueKind callFallbackKind = LocalInfo::ValueKind::Unknown;
         if (stateInOut.inferCallExprCountAccessGpuFallbackKind(expr, localsIn, callFallbackKind)) {
           return callFallbackKind;
+        }
+        if (isBuiltinCountLikeCall(expr) && expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call) {
+          std::string accessName;
+          const Expr &accessExpr = expr.args.front();
+          if (getBuiltinArrayAccessName(accessExpr, accessName) && accessExpr.args.size() == 2) {
+            const Expr &accessTarget = accessExpr.args.front();
+            if (accessTarget.kind == Expr::Kind::Name) {
+              auto it = localsIn.find(accessTarget.name);
+              if (it != localsIn.end() &&
+                  ((it->second.kind == LocalInfo::Kind::Map) ||
+                   (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap)) &&
+                  it->second.mapValueKind == LocalInfo::ValueKind::String) {
+                return LocalInfo::ValueKind::Int32;
+              }
+            } else if (accessTarget.kind == Expr::Kind::Call) {
+              std::string collectionName;
+              if (getBuiltinCollectionName(accessTarget, collectionName) && collectionName == "map" &&
+                  accessTarget.templateArgs.size() == 2) {
+                const std::string &valueType = accessTarget.templateArgs[1];
+                if (valueType == "string" || valueType == "/string") {
+                  return LocalInfo::ValueKind::Int32;
+                }
+              }
+            }
+          }
+        }
+        if (callReturnResolution == CallExpressionReturnKindResolution::MatchedButUnsupported) {
+          return LocalInfo::ValueKind::Unknown;
         }
         LocalInfo::ValueKind operatorFallbackKind = LocalInfo::ValueKind::Unknown;
         if (stateInOut.inferCallExprOperatorFallbackKind(expr, localsIn, operatorFallbackKind)) {

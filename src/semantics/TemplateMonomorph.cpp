@@ -64,6 +64,34 @@ bool isBuiltinTemplateContainer(const std::string &name) {
          name == "File" || isBuiltinTemplateTypeName(name);
 }
 
+std::string normalizeBuiltinCollectionTemplateBase(const std::string &name) {
+  if (name == "array" || name == "/array") {
+    return "array";
+  }
+  if (name == "vector" || name == "/vector" || name == "std/collections/vector" ||
+      name == "/std/collections/vector") {
+    return "vector";
+  }
+  if (name == "soa_vector" || name == "/soa_vector") {
+    return "soa_vector";
+  }
+  if (name == "map" || name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
+    return "map";
+  }
+  return {};
+}
+
+bool isBuiltinCollectionTemplateBase(const std::string &name, size_t argumentCount) {
+  const std::string normalized = normalizeBuiltinCollectionTemplateBase(name);
+  if (normalized.empty()) {
+    return false;
+  }
+  if ((normalized == "array" || normalized == "vector" || normalized == "soa_vector") && argumentCount == 1) {
+    return true;
+  }
+  return normalized == "map" && argumentCount == 2;
+}
+
 bool isStructDefinition(const Definition &def) {
   bool isStruct = false;
   bool hasReturnTransform = false;
@@ -1406,8 +1434,11 @@ ResolvedType resolveTypeString(const std::string &input,
     }
     resolvedArgs.push_back(resolved.text);
   }
-  if (isBuiltinTemplateContainer(base)) {
-    result.text = base + "<" + joinTemplateArgs(resolvedArgs) + ">";
+  if (isBuiltinTemplateContainer(base) || isBuiltinCollectionTemplateBase(base, resolvedArgs.size())) {
+    const std::string normalizedBase = isBuiltinTemplateContainer(base)
+                                           ? base
+                                           : normalizeBuiltinCollectionTemplateBase(base);
+    result.text = normalizedBase + "<" + joinTemplateArgs(resolvedArgs) + ">";
     result.concrete = allConcrete;
     return result;
   }
@@ -1515,6 +1546,25 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
 }
 
 std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx) {
+  auto rewriteBuiltinCollectionImportAlias = [&](const std::string &resolvedPath) -> std::string {
+    if (expr.isMethodCall) {
+      return resolvedPath;
+    }
+    std::string builtinCollection;
+    if (!getBuiltinCollectionName(expr, builtinCollection)) {
+      return resolvedPath;
+    }
+    if (expr.name != builtinCollection) {
+      return resolvedPath;
+    }
+    if (resolvedPath == "/std/collections/vector") {
+      return "/std/collections/vector/vector";
+    }
+    if (resolvedPath == "/std/collections/map") {
+      return "/std/collections/map/map";
+    }
+    return resolvedPath;
+  };
   if (expr.name.empty()) {
     return "";
   }
@@ -1546,9 +1596,9 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     }
     auto aliasIt = ctx.importAliases.find(expr.name);
     if (aliasIt != ctx.importAliases.end()) {
-      return aliasIt->second;
+      return rewriteBuiltinCollectionImportAlias(aliasIt->second);
     }
-    return namespacePrefix + "/" + expr.name;
+    return rewriteBuiltinCollectionImportAlias(namespacePrefix + "/" + expr.name);
   }
   std::string root = "/" + expr.name;
   if (ctx.sourceDefs.count(root) > 0) {
@@ -1556,9 +1606,9 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   }
   auto aliasIt = ctx.importAliases.find(expr.name);
   if (aliasIt != ctx.importAliases.end()) {
-    return aliasIt->second;
+    return rewriteBuiltinCollectionImportAlias(aliasIt->second);
   }
-  return root;
+  return rewriteBuiltinCollectionImportAlias(root);
 }
 
 bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,

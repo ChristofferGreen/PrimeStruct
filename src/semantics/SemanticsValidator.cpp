@@ -440,15 +440,33 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
 bool SemanticsValidator::errorTypesMatch(const std::string &left,
                                          const std::string &right,
                                          const std::string &namespacePrefix) const {
+  const auto stripInnerWhitespace = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (unsigned char ch : text) {
+      if (!std::isspace(ch)) {
+        out.push_back(static_cast<char>(ch));
+      }
+    }
+    return out;
+  };
   const auto normalizeType = [&](const std::string &name) -> std::string {
     const std::string trimmed = trimText(name);
-    if (isPrimitiveBindingTypeName(trimmed)) {
-      return normalizeBindingTypeName(trimmed);
+    const std::string normalized = normalizeBindingTypeName(trimmed);
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(normalized, base, arg) &&
+        (isBuiltinTemplateTypeName(base) || base == "array" || base == "vector" || base == "soa_vector" ||
+         base == "map" || base == "Result" || base == "File")) {
+      return stripInnerWhitespace(normalized);
+    }
+    if (normalized != trimmed || isPrimitiveBindingTypeName(trimmed)) {
+      return stripInnerWhitespace(normalized);
     }
     if (!trimmed.empty() && trimmed[0] == '/') {
-      return trimmed;
+      return stripInnerWhitespace(trimmed);
     }
-    return resolveTypePath(trimmed, namespacePrefix);
+    return stripInnerWhitespace(resolveTypePath(trimmed, namespacePrefix));
   };
   return normalizeType(left) == normalizeType(right);
 }

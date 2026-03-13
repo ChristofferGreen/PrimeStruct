@@ -3,6 +3,7 @@
 Legend:
   ○ Not started
   ◐ Started
+  ✓ Finished
 
 Finished items were moved to `docs/todo_finished.md` on March 13, 2026.
 
