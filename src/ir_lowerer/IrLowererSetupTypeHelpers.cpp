@@ -80,6 +80,18 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   return false;
 }
 
+std::string normalizeCollectionHelperPath(const std::string &path) {
+  std::string normalizedPath = path;
+  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+    if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+      normalizedPath.insert(normalizedPath.begin(), '/');
+    }
+  }
+  return normalizedPath;
+}
+
 bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
   if (methodName.empty()) {
     return false;
@@ -141,6 +153,47 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
+std::vector<std::string> collectionHelperPathCandidates(const std::string &path);
+
+bool isBuiltinMapHelperSuffix(const std::string &suffix) {
+  return suffix == "count" || suffix == "at" || suffix == "at_unsafe";
+}
+
+void pruneRemovedMapCompatibilityCallReturnCandidates(std::vector<std::string> &candidates,
+                                                      const std::string &path) {
+  const std::string normalizedPath = normalizeCollectionHelperPath(path);
+  if (normalizedPath.rfind("/map/", 0) != 0) {
+    return;
+  }
+
+  const std::string suffix = normalizedPath.substr(std::string("/map/").size());
+  if (!isBuiltinMapHelperSuffix(suffix)) {
+    return;
+  }
+
+  const std::string canonicalCandidate = "/std/collections/map/" + suffix;
+  for (auto it = candidates.begin(); it != candidates.end();) {
+    if (*it == canonicalCandidate) {
+      it = candidates.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::string &resolvedPath) {
+  if (!isExplicitMapMethodAliasPath(callPath)) {
+    return true;
+  }
+
+  auto allowedCandidates = collectionHelperPathCandidates(callPath);
+  pruneRemovedMapCompatibilityCallReturnCandidates(allowedCandidates, callPath);
+  const std::string normalizedResolvedPath = normalizeCollectionHelperPath(resolvedPath);
+  return std::any_of(allowedCandidates.begin(), allowedCandidates.end(), [&](const std::string &candidate) {
+    return candidate == normalizedResolvedPath;
+  });
+}
+
 std::string normalizeMapImportAliasPath(const std::string &path) {
   if (path.empty() || path.front() == '/') {
     return path;
@@ -150,8 +203,6 @@ std::string normalizeMapImportAliasPath(const std::string &path) {
   }
   return path;
 }
-
-std::vector<std::string> collectionHelperPathCandidates(const std::string &path);
 
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path) {
   std::vector<std::string> candidates;
@@ -164,14 +215,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     candidates.push_back(candidate);
   };
 
-  std::string normalizedPath = path;
-  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/map/", 0) == 0) {
-      normalizedPath.insert(normalizedPath.begin(), '/');
-    }
-  }
+  const std::string normalizedPath = normalizeCollectionHelperPath(path);
 
   appendUnique(path);
   appendUnique(normalizedPath);
@@ -833,30 +877,7 @@ bool resolveDefinitionCallReturnKind(const Expr &callExpr,
   }
 
   auto candidates = collectionHelperPathCandidates(resolveExprPath(callExpr));
-  auto pruneRemovedMapCompatibilityCallReturnCandidates = [&](const std::string &path) {
-    std::string normalizedPath = path;
-    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-      if (normalizedPath.rfind("map/", 0) == 0) {
-        normalizedPath.insert(normalizedPath.begin(), '/');
-      }
-    }
-    if (normalizedPath.rfind("/map/", 0) != 0) {
-      return;
-    }
-    const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
-      return;
-    }
-    const std::string canonicalCandidate = "/std/collections/map/" + suffix;
-    for (auto it = candidates.begin(); it != candidates.end();) {
-      if (*it == canonicalCandidate) {
-        it = candidates.erase(it);
-      } else {
-        ++it;
-      }
-    }
-  };
-  pruneRemovedMapCompatibilityCallReturnCandidates(resolveExprPath(callExpr));
+  pruneRemovedMapCompatibilityCallReturnCandidates(candidates, resolveExprPath(callExpr));
   bool matchedDefinition = false;
   for (const auto &candidate : candidates) {
     auto defIt = defMap.find(candidate);
@@ -1060,33 +1081,31 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       continue;
     }
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
-    bool methodResolved = false;
-    if (resolveMethodCallReturnKind(methodExpr,
-                                    localsIn,
-                                    resolveMethodCallDefinition,
-                                    getReturnInfo,
-                                    requireArrayReturn,
-                                    kindOut,
-                                    &methodResolved)) {
+    if (!resolveMethodCallDefinition) {
+      continue;
+    }
+    const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
+    if (callee == nullptr || !isAllowedResolvedMapDirectCallPath(callExpr.name, callee->fullPath)) {
+      continue;
+    }
+    if (resolveReturnInfoKindForPath(callee->fullPath, getReturnInfo, requireArrayReturn, kindOut)) {
       if (methodResolvedOut != nullptr) {
         *methodResolvedOut = true;
       }
       return true;
     }
-    if (methodResolved) {
-      if (isCountCall && !requireArrayReturn && inferExprKind &&
-          inferExprKind(methodExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
-        if (methodResolvedOut != nullptr) {
-          *methodResolvedOut = true;
-        }
-        kindOut = LocalInfo::ValueKind::Int32;
-        return true;
-      }
+    if (methodResolvedOut != nullptr) {
+      *methodResolvedOut = true;
+    }
+    if (isCountCall && !requireArrayReturn && inferExprKind &&
+        inferExprKind(methodExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
       if (methodResolvedOut != nullptr) {
         *methodResolvedOut = true;
       }
-      return false;
+      kindOut = LocalInfo::ValueKind::Int32;
+      return true;
     }
+    return false;
   }
 
   if (isCountCall && !requireArrayReturn && inferExprKind &&
