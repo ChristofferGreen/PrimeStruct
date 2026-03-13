@@ -2286,7 +2286,119 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return preferVectorStdlibHelperPath(path);
   };
   auto resolveBodyArgumentTarget = [&](const Expr &callExpr, std::string &resolvedOut) {
+    auto resolveBareMapCallBodyArgumentTarget = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      std::string helperName;
+      if (normalized == "count") {
+        helperName = "count";
+      } else if (normalized == "at") {
+        helperName = "at";
+      } else if (normalized == "at_unsafe") {
+        helperName = "at_unsafe";
+      } else {
+        const std::string resolvedPath = resolveCalleePath(candidate);
+        if (resolvedPath == "/count") {
+          helperName = "count";
+        } else if (resolvedPath == "/at") {
+          helperName = "at";
+        } else if (resolvedPath == "/at_unsafe") {
+          helperName = "at_unsafe";
+        } else {
+          return false;
+        }
+      }
+      if (defMap_.count("/" + helperName) > 0 || candidate.args.empty()) {
+        return false;
+      }
+      auto isMapReceiverExpr = [&](const Expr &target) {
+        if (target.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+            std::string keyType;
+            std::string valueType;
+            return extractMapKeyValueTypes(*paramBinding, keyType, valueType);
+          }
+          auto it = locals.find(target.name);
+          if (it == locals.end()) {
+            return false;
+          }
+          std::string keyType;
+          std::string valueType;
+          return extractMapKeyValueTypes(it->second, keyType, valueType);
+        }
+        if (target.kind != Expr::Kind::Call) {
+          return false;
+        }
+        auto defIt = defMap_.find(resolveCalleePath(target));
+        if (defIt != defMap_.end() && defIt->second) {
+          for (const auto &transform : defIt->second->transforms) {
+            if (transform.name != "return" || transform.templateArgs.size() != 1) {
+              continue;
+            }
+            std::string base;
+            std::string arg;
+            const std::string normalizedReturn = normalizeBindingTypeName(transform.templateArgs.front());
+            if (!splitTemplateTypeName(normalizedReturn, base, arg) || base != "map") {
+              return false;
+            }
+            std::vector<std::string> args;
+            return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
+          }
+          return false;
+        }
+        std::string collection;
+        return getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2;
+      };
+      std::vector<size_t> receiverIndices;
+      auto appendReceiverIndex = [&](size_t index) {
+        if (index >= candidate.args.size()) {
+          return;
+        }
+        for (size_t existing : receiverIndices) {
+          if (existing == index) {
+            return;
+          }
+        }
+        receiverIndices.push_back(index);
+      };
+      if (hasNamedArguments(candidate.argNames)) {
+        bool foundValues = false;
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+              *candidate.argNames[i] == "values") {
+            appendReceiverIndex(i);
+            foundValues = true;
+            break;
+          }
+        }
+        if (!foundValues) {
+          for (size_t i = 0; i < candidate.args.size(); ++i) {
+            appendReceiverIndex(i);
+          }
+        }
+      } else {
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          appendReceiverIndex(i);
+        }
+      }
+      for (size_t receiverIndex : receiverIndices) {
+        if (!isMapReceiverExpr(candidate.args[receiverIndex])) {
+          continue;
+        }
+        resolvedOut = "/std/collections/map/" + helperName;
+        return true;
+      }
+      return false;
+    };
     if (!callExpr.isMethodCall) {
+      if (resolveBareMapCallBodyArgumentTarget(callExpr)) {
+        return;
+      }
       resolvedOut = normalizeBodyArgumentTarget(resolveCalleePath(callExpr));
       return;
     }
