@@ -6037,6 +6037,145 @@ main() {
   CHECK(runCommand(exePath) == 93);
 }
 
+TEST_CASE("compiles and runs native canonical map sugar before compatibility aliases") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(96i32)
+}
+
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(73i32)
+}
+
+[return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(41i32)
+}
+
+[return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(11i32)
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(42i32)
+}
+
+[return<int>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(12i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(plus(plus(count(values), values.count()),
+              plus(values.at(1i32), values.at_unsafe(1i32))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_canonical_map_sugar_before_aliases.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_canonical_map_sugar_before_aliases_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 169);
+}
+
+TEST_CASE("compiles and runs native canonical map access string shadow before compatibility aliases") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<i32, string>] values, [i32] key) {
+  return(41i32)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return(42i32)
+}
+
+[return<string>]
+/std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(5i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "value"utf8)}
+  return(plus(values.at(1i32).count(), values.at_unsafe(1i32).count()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_map_access_string_shadow_before_aliases.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_canonical_map_access_string_shadow_before_aliases_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+}
+
+TEST_CASE("native canonical map access non-string diagnostics beat compatibility aliases") {
+  const std::string source = R"(
+[return<string>]
+/map/at([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return(41i32)
+}
+
+[return<string>]
+/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return(42i32)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(5i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "value"utf8)}
+  return(plus(values.at(1i32).count(), values.at_unsafe(1i32).count()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_map_access_string_shadow_before_aliases_diag.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_canonical_map_access_string_shadow_before_aliases_diag.out")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 1);
+  CHECK(readFile(outPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native map compatibility count call with canonical templated helper present") {
   const std::string source = R"(
 [return<int>]

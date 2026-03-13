@@ -16140,6 +16140,10 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   vectorCountDef.fullPath = "/vector/count";
   primec::Definition stdCountDef;
   stdCountDef.fullPath = "/std/collections/vector/count";
+  primec::Definition mapCountDef;
+  mapCountDef.fullPath = "/map/count";
+  primec::Definition stdMapCountDef;
+  stdMapCountDef.fullPath = "/std/collections/map/count";
   primec::Definition mapAtDef;
   mapAtDef.fullPath = "/map/at";
   primec::Definition stdMapAtDef;
@@ -16151,7 +16155,10 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
       {"/array/count", &arrayCountDef},
       {"/vector/count", &vectorCountDef},
       {"/std/collections/vector/count", &stdCountDef},
+      {"/map/count", &mapCountDef},
+      {"/std/collections/map/count", &stdMapCountDef},
       {"/map/at", &mapAtDef},
+      {"/std/collections/map/at", &stdMapAtDef},
       {"/pkg/Ctor/length", &structMethodDef},
   };
 
@@ -16169,24 +16176,57 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "at", "std/collections/map", "", defMap, error) == &mapAtDef);
+            "count", "map", "", defMap, error) == &stdMapCountDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "at", "/map", "", defMap, error) == &mapAtDef);
+            "count", "std/collections/map", "", defMap, error) == &stdMapCountDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "at", "/std/collections/map", "", defMap, error) == &mapAtDef);
+            "count", "/map", "", defMap, error) == &stdMapCountDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "at", "", "std/collections/map", defMap, error) == &mapAtDef);
+            "count", "/std/collections/map", "", defMap, error) == &stdMapCountDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "count", "", "std/collections/map", defMap, error) == &stdMapCountDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "at", "std/collections/map", "", defMap, error) == &stdMapAtDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "at", "/map", "", defMap, error) == &stdMapAtDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "at", "/std/collections/map", "", defMap, error) == &stdMapAtDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "at", "", "std/collections/map", defMap, error) == &stdMapAtDef);
   CHECK(error.empty());
 
   const std::unordered_map<std::string, const primec::Definition *> canonicalMapDefMap = {
+      {"/std/collections/map/count", &stdMapCountDef},
       {"/std/collections/map/at", &stdMapAtDef},
   };
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "count", "std/collections/map", "", canonicalMapDefMap, error) == &stdMapCountDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "count", "/std/collections/map", "", canonicalMapDefMap, error) == &stdMapCountDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "count", "", "std/collections/map", canonicalMapDefMap, error) == &stdMapCountDef);
+  CHECK(error.empty());
+
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "at", "std/collections/map", "", canonicalMapDefMap, error) == &stdMapAtDef);
   CHECK(error.empty());

@@ -626,6 +626,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   auto isMapReceiverTarget = [&](const std::string &candidate) {
     return candidate == "map" || candidate == "std/collections/map";
   };
+  auto shouldPreferCanonicalMapPath = [&](const std::string &candidate) {
+    return !isExplicitMapMethodAlias && isMapReceiverTarget(candidate) &&
+           (normalizedMethodName == "count" || normalizedMethodName == "at" ||
+            normalizedMethodName == "at_unsafe");
+  };
   auto findMethodDefinitionByPath = [&](const std::string &path) -> const Definition * {
     auto defIt = defMap.find(path);
     if (defIt != defMap.end()) {
@@ -702,11 +707,14 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     if (!normalizedResolvedTypePath.empty() && normalizedResolvedTypePath.front() != '/') {
       normalizedResolvedTypePath.insert(normalizedResolvedTypePath.begin(), '/');
     }
-    const std::string resolved = normalizedResolvedTypePath + "/" + normalizedMethodName;
     std::string resolvedTypeWithoutSlash = normalizedResolvedTypePath;
     if (!resolvedTypeWithoutSlash.empty() && resolvedTypeWithoutSlash.front() == '/') {
       resolvedTypeWithoutSlash.erase(resolvedTypeWithoutSlash.begin());
     }
+    const std::string resolvedBase = shouldPreferCanonicalMapPath(resolvedTypeWithoutSlash)
+                                         ? "/std/collections/map"
+                                         : normalizedResolvedTypePath;
+    const std::string resolved = resolvedBase + "/" + normalizedMethodName;
     if (isExplicitRemovedVectorMethodAlias && isVectorReceiverTarget(resolvedTypeWithoutSlash)) {
       errorOut = "unknown method: " + resolved;
       return nullptr;
@@ -728,7 +736,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return nullptr;
   }
 
-  const std::string resolved = "/" + normalizedTypeName + "/" + normalizedMethodName;
+  const std::string resolvedBase =
+      shouldPreferCanonicalMapPath(normalizedTypeName) ? "/std/collections/map" : "/" + normalizedTypeName;
+  const std::string resolved = resolvedBase + "/" + normalizedMethodName;
   if (isExplicitRemovedVectorMethodAlias && isVectorReceiverTarget(normalizedTypeName)) {
     errorOut = "unknown method: " + resolved;
     return nullptr;
