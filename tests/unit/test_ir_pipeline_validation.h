@@ -18365,6 +18365,47 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map call return fallback
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer setup type helper keeps canonical map constructor fallback to compatibility defs") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  primec::Definition aliasCtorDef;
+  aliasCtorDef.fullPath = "/map/map";
+  defMap.emplace("/map/map", &aliasCtorDef);
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo ctorInfo;
+  ctorInfo.returnsVoid = false;
+  ctorInfo.returnsArray = false;
+  ctorInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  infoByPath.emplace("/map/map", ctorInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr ctorCall;
+  ctorCall.kind = primec::Expr::Kind::Call;
+  ctorCall.name = "/std/collections/map/map";
+  ctorCall.templateArgs = {"i32", "i32"};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  bool definitionMatched = false;
+  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+      ctorCall,
+      defMap,
+      [](const primec::Expr &expr) { return expr.name; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &definitionMatched));
+  CHECK(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
 TEST_CASE("ir lowerer setup type helper rejects canonical return-info forwarding when compatibility defs lack return info") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition aliasCountDef;
@@ -25212,6 +25253,34 @@ TEST_CASE("ir lowerer setup inference helper infers and validates array element 
               return false;
             }) == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
 
+  primec::Expr canonicalMapCtorCall;
+  canonicalMapCtorCall.kind = primec::Expr::Kind::Call;
+  canonicalMapCtorCall.name = "/std/collections/map/map";
+  canonicalMapCtorCall.templateArgs = {"i32", "bool"};
+  CHECK(primec::ir_lowerer::inferArrayElementValueKind(
+            canonicalMapCtorCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return std::string{}; },
+            [](const std::string &, primec::ir_lowerer::LocalInfo::ValueKind &) { return false; },
+            [](const primec::Expr &expr,
+               const primec::ir_lowerer::LocalMap &,
+               primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+              if (expr.name == "/std/collections/map/map") {
+                kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+                return true;
+              }
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &) {
+              return false;
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
   primec::Expr methodCall;
   methodCall.kind = primec::Expr::Kind::Call;
   methodCall.isMethodCall = true;
@@ -26713,6 +26782,37 @@ TEST_CASE("ir lowerer statement binding helper infers vector kind from initializ
 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer statement binding helper keeps canonical map constructor helper return kind") {
+  primec::Expr stmt;
+  stmt.name = "value";
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "/std/collections/map/map";
+  init.templateArgs = {"i32", "i32"};
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info = primec::ir_lowerer::inferStatementBindingTypeInfo(
+      stmt,
+      init,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "/std/collections/map/map") {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer statement binding helper inherits map metadata from named source binding") {

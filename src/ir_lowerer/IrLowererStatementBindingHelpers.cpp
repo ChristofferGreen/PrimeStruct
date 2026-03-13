@@ -31,6 +31,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   StatementBindingTypeInfo info;
   info.kind = bindingKind(stmt);
   const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
+  LocalInfo::ValueKind inferredInitValueKind = LocalInfo::ValueKind::Unknown;
   if (!hasExplicitType && info.kind == LocalInfo::Kind::Value) {
     if (init.kind == Expr::Kind::Name) {
       auto it = localsIn.find(init.name);
@@ -38,14 +39,17 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         info.kind = it->second.kind;
       }
     } else if (init.kind == Expr::Kind::Call) {
-      std::string collection;
-      if (getBuiltinCollectionName(init, collection)) {
-        if (collection == "array") {
-          info.kind = LocalInfo::Kind::Array;
-        } else if (collection == "vector") {
-          info.kind = LocalInfo::Kind::Vector;
-        } else if (collection == "map") {
-          info.kind = LocalInfo::Kind::Map;
+      inferredInitValueKind = inferExprKind(init, localsIn);
+      if (inferredInitValueKind == LocalInfo::ValueKind::Unknown) {
+        std::string collection;
+        if (getBuiltinCollectionName(init, collection)) {
+          if (collection == "array") {
+            info.kind = LocalInfo::Kind::Array;
+          } else if (collection == "vector") {
+            info.kind = LocalInfo::Kind::Vector;
+          } else if (collection == "map") {
+            info.kind = LocalInfo::Kind::Map;
+          }
         }
       }
     }
@@ -84,7 +88,9 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   }
 
   if (info.kind == LocalInfo::Kind::Value) {
-    info.valueKind = inferExprKind(init, localsIn);
+    info.valueKind = (inferredInitValueKind != LocalInfo::ValueKind::Unknown)
+                         ? inferredInitValueKind
+                         : inferExprKind(init, localsIn);
     if (info.valueKind == LocalInfo::ValueKind::Unknown) {
       info.valueKind = LocalInfo::ValueKind::Int32;
     }

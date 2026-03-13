@@ -5,6 +5,9 @@ Legend:
 
 Archived from `docs/todo.md` on March 13, 2026.
 
+**Types & Semantics (March 13, 2026)**
+- ✓ Finish constructor/access-helper fallback and precedence for canonical `/std/collections/map/*` spellings across semantics, template monomorphization, and IR setup-type resolution. Canonical `/std/collections/map/*` helper calls now keep explicit `/map/*` constructor/access fallback precedence through IR setup inference as well, with focused lowerer regressions for constructor return-kind and element-kind inference.
+
 **Regression stabilization (March 9, 2026)**
 - ✓ Fix failing `PrimeStruct_primestruct_compile_run_native_backend_core` and `PrimeStruct_primestruct_compile_run_native_backend_math_numeric` by restoring explicit-binding numeric compatibility for float/software-numeric initializers in semantics and by flushing native value-stack cache at control-flow merge targets; added focused semantics/native regression tests.
 - ✓ Fix failing compile-run suites (`smoke`, `glsl`, `text_filters`, `examples`) by aligning regression expectations with current backend contracts, correcting outdated fixture sources/options, and pruning temporarily unstable aggregate suites so `./scripts/compile.sh` returns green.

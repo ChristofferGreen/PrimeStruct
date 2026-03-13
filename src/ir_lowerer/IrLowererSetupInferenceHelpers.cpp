@@ -126,17 +126,6 @@ LocalInfo::ValueKind inferArrayElementValueKind(
       }
     }
 
-    std::string collection;
-    if (getBuiltinCollectionName(expr, collection)) {
-      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
-          expr.templateArgs.size() == 1) {
-        return valueKindFromTypeName(expr.templateArgs.front());
-      }
-      if (collection == "map" && expr.templateArgs.size() == 2) {
-        return valueKindFromTypeName(expr.templateArgs.back());
-      }
-    }
-
     if (!expr.isMethodCall) {
       LocalInfo::ValueKind structArrayElementKind = LocalInfo::ValueKind::Unknown;
       if (resolveStructArrayElementKindByPath(resolveExprPath(expr), structArrayElementKind)) {
@@ -154,6 +143,17 @@ LocalInfo::ValueKind inferArrayElementValueKind(
       }
     } else if (resolveMethodCallArrayReturnKind(expr, localsIn, returnKind)) {
       return returnKind;
+    }
+
+    std::string collection;
+    if (getBuiltinCollectionName(expr, collection)) {
+      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+          expr.templateArgs.size() == 1) {
+        return valueKindFromTypeName(expr.templateArgs.front());
+      }
+      if (collection == "map" && expr.templateArgs.size() == 2) {
+        return valueKindFromTypeName(expr.templateArgs.back());
+      }
     }
   }
   return LocalInfo::ValueKind::Unknown;
@@ -320,6 +320,12 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
         return ArrayMapAccessElementKindResolution::Resolved;
       }
     } else if (target.kind == Expr::Kind::Call) {
+      LocalInfo::ValueKind callValueKind = LocalInfo::ValueKind::Unknown;
+      if (resolveCallCollectionAccessValueKind &&
+          resolveCallCollectionAccessValueKind(target, localsIn, callValueKind)) {
+        kindOut = callValueKind;
+        return ArrayMapAccessElementKindResolution::Resolved;
+      }
       std::string collection;
       if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
         const LocalInfo::ValueKind valueKind = valueKindFromTypeName(target.templateArgs[1]);
@@ -327,12 +333,6 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
           kindOut = valueKind;
           return ArrayMapAccessElementKindResolution::Resolved;
         }
-      }
-      LocalInfo::ValueKind callValueKind = LocalInfo::ValueKind::Unknown;
-      if (resolveCallCollectionAccessValueKind &&
-          resolveCallCollectionAccessValueKind(target, localsIn, callValueKind)) {
-        kindOut = callValueKind;
-        return ArrayMapAccessElementKindResolution::Resolved;
       }
     }
 
