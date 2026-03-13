@@ -747,6 +747,63 @@ main() {
         "1,8,1,12,1,0,7,8,38,55,2,4,9,8,7,255,2,17,2,1,9,10,34,10,10,1,2,3,255,5,76,111,103,105,110,4,23,3,1,9,21,34,12,10,1,3,20,30,40,255,200,201,202,255,5,97,108,105,99,101,5,13,3,2,10,117,115,101,114,95,105,110,112,117,116,4,24,4,1,9,34,34,12,10,1,3,20,30,40,255,200,201,202,255,6,115,101,99,114,101,116,5,13,4,2,10,112,97,115,115,95,105,110,112,117,116,3,20,5,1,9,47,34,14,10,2,3,50,60,70,255,250,251,252,255,2,71,111,5,15,5,1,12,115,117,98,109,105,116,95,99,108,105,99,107\n");
 }
 
+TEST_CASE("C++ emitter runs ui event stream deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+
+  [UiEventStream mut] events{UiEventStream()}
+  events.push_pointer_move(login.usernameInput, 7i32, 20i32, 30i32)
+  events.push_pointer_down(login.submitButton, 7i32, 1i32, 20i32, 30i32)
+  events.push_pointer_up(login.submitButton, 7i32, 1i32, 21i32, 31i32)
+  events.push_key_down(login.usernameInput, 13i32, 3i32, 1i32)
+  events.push_key_up(login.usernameInput, 13i32, 1i32)
+  dump_words(events.serialize())
+  return(plus(login.submitButton, events.event_count()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ui_event_stream.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ui_event_stream_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ui_event_stream.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 10);
+  CHECK(readFile(outPath) ==
+        "1,5,1,5,3,7,-1,20,30,2,5,5,7,1,20,30,3,5,5,7,1,21,31,4,4,3,13,3,1,5,4,3,13,1,0\n");
+}
+
 TEST_CASE("C++ emitter supports graphics-style int return propagation with on_error") {
   const std::string source = R"(
 [struct]

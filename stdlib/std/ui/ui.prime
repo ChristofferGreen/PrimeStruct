@@ -22,6 +22,12 @@ namespace std {
   }
 
   [public struct]
+  UiEventStream() {
+    [public vector<i32> mut] records{vector<i32>()}
+    [public i32 mut] eventCount{0i32}
+  }
+
+  [public struct]
   LayoutTree() {
     [public vector<i32> mut] kinds{vector<i32>()}
     [public vector<i32> mut] parentIndices{vector<i32>()}
@@ -428,6 +434,108 @@ namespace std {
       [i32] len{count(self.records)}
       push(words, 1i32)
       push(words, self.commandCount)
+      for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+        push(words, self.records[index])
+      }
+      return(words)
+    }
+  }
+
+  namespace UiEventStream {
+    [effects(heap_alloc), return<void>]
+    append_word([UiEventStream mut] self, [i32] value) {
+      push(self.records, value)
+    }
+
+    [effects(heap_alloc), return<void>]
+    append_pointer_event(
+        [UiEventStream mut] self,
+        [i32] eventKind,
+        [i32] targetNodeId,
+        [i32] pointerId,
+        [i32] button,
+        [i32] x,
+        [i32] y) {
+      self.append_word(eventKind)
+      self.append_word(5i32)
+      self.append_word(targetNodeId)
+      self.append_word(pointerId)
+      self.append_word(button)
+      self.append_word(x)
+      self.append_word(y)
+      assign(self.eventCount, plus(self.eventCount, 1i32))
+    }
+
+    [effects(heap_alloc), return<void>]
+    append_key_event(
+        [UiEventStream mut] self,
+        [i32] eventKind,
+        [i32] targetNodeId,
+        [i32] keyCode,
+        [i32] modifierMask,
+        [i32] isRepeat) {
+      self.append_word(eventKind)
+      self.append_word(4i32)
+      self.append_word(targetNodeId)
+      self.append_word(keyCode)
+      self.append_word(modifierMask)
+      self.append_word(isRepeat)
+      assign(self.eventCount, plus(self.eventCount, 1i32))
+    }
+
+    [public effects(heap_alloc), return<void>]
+    push_pointer_move([UiEventStream mut] self, [i32] targetNodeId, [i32] pointerId, [i32] x, [i32] y) {
+      self.append_pointer_event(1i32, targetNodeId, pointerId, -1i32, x, y)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    push_pointer_down(
+        [UiEventStream mut] self,
+        [i32] targetNodeId,
+        [i32] pointerId,
+        [i32] button,
+        [i32] x,
+        [i32] y) {
+      self.append_pointer_event(2i32, targetNodeId, pointerId, button, x, y)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    push_pointer_up(
+        [UiEventStream mut] self,
+        [i32] targetNodeId,
+        [i32] pointerId,
+        [i32] button,
+        [i32] x,
+        [i32] y) {
+      self.append_pointer_event(3i32, targetNodeId, pointerId, button, x, y)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    push_key_down(
+        [UiEventStream mut] self,
+        [i32] targetNodeId,
+        [i32] keyCode,
+        [i32] modifierMask,
+        [i32] isRepeat) {
+      self.append_key_event(4i32, targetNodeId, keyCode, modifierMask, isRepeat)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    push_key_up([UiEventStream mut] self, [i32] targetNodeId, [i32] keyCode, [i32] modifierMask) {
+      self.append_key_event(5i32, targetNodeId, keyCode, modifierMask, 0i32)
+    }
+
+    [public return<i32>]
+    event_count([UiEventStream] self) {
+      return(self.eventCount)
+    }
+
+    [public effects(heap_alloc), return<vector<i32>>]
+    serialize([UiEventStream] self) {
+      [vector<i32> mut] words{vector<i32>()}
+      [i32] len{count(self.records)}
+      push(words, 1i32)
+      push(words, self.eventCount)
       for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
         push(words, self.records[index])
       }

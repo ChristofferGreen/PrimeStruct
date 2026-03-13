@@ -204,6 +204,14 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `HtmlCommandList.bind_event(...)`
      - `HtmlCommandList.emit_login_form(...)`
      - `HtmlCommandList.serialize() -> vector<i32>`
+     - `UiEventStream`
+     - `UiEventStream.push_pointer_move(...)`
+     - `UiEventStream.push_pointer_down(...)`
+     - `UiEventStream.push_pointer_up(...)`
+     - `UiEventStream.push_key_down(...)`
+     - `UiEventStream.push_key_up(...)`
+     - `UiEventStream.event_count()`
+     - `UiEventStream.serialize() -> vector<i32>`
    - Rounded rectangles are expressed through SDF-style primitives.
    - Renders into a software color buffer (or shared surface view).
    - Current host bridge prototype: the native window host and macOS Metal host
@@ -289,6 +297,12 @@ The following architecture is planned but not locked as part of the v1 contract:
 7. Platform input adapter:
    - Normalizes OS/web input (pointer, keyboard, IME, resize, focus) into one
      UI event stream consumed by the UI runtime.
+   - Current prototype contract:
+     - `push_pointer_move(...)`, `push_pointer_down(...)`, and `push_pointer_up(...)` normalize through one pointer event record shape: target node id, pointer id, button, x, y.
+     - `push_pointer_move(...)` uses button `-1` to mark non-button pointer
+       motion while preserving the same payload layout as button transitions.
+     - `push_key_down(...)` and `push_key_up(...)` normalize through one key event record shape: target node id, key code, modifier mask, is-repeat.
+     - Current modifier mask bits are `1` = `shift`, `2` = `control`, `4` = `alt`, `8` = `meta`.
 
 Current prototype serialization format for `/std/ui/CommandList.serialize()`:
 
@@ -327,6 +341,21 @@ Current prototype serialization format for `/std/ui/HtmlCommandList.serialize()`
 - Event kinds used by `bind_event(...)`:
   - `1` = `click`
   - `2` = `input`
+
+Current prototype serialization format for `/std/ui/UiEventStream.serialize()`:
+
+- First word: format version (`1`)
+- Second word: total event count
+- Then, for each event in insertion order:
+  - event kind
+  - payload word count
+  - payload words
+- Current event kinds:
+  - `1` = `pointer_move`
+  - `2` = `pointer_down`
+  - `3` = `pointer_up`
+  - `4` = `key_down`
+  - `5` = `key_up`
 
 Current prototype serialization format for `/std/ui/LayoutTree.serialize()`:
 
@@ -575,6 +604,39 @@ main() {
     "submit_click"utf8
   )
   return(html.commandCount)
+}
+```
+
+Input adapter example:
+
+```prime
+import /std/ui/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+
+  [UiEventStream mut] events{UiEventStream()}
+  events.push_pointer_move(login.usernameInput, 7i32, 20i32, 30i32)
+  events.push_pointer_down(login.submitButton, 7i32, 1i32, 20i32, 30i32)
+  events.push_pointer_up(login.submitButton, 7i32, 1i32, 21i32, 31i32)
+  events.push_key_down(login.usernameInput, 13i32, 3i32, 1i32)
+  events.push_key_up(login.usernameInput, 13i32, 1i32)
+  return(events.event_count())
 }
 ```
 

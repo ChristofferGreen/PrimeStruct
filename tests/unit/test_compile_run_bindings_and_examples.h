@@ -4139,6 +4139,7 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`LayoutTree`") != std::string::npos);
   CHECK(graphicsDoc.find("`LoginFormNodes`") != std::string::npos);
   CHECK(graphicsDoc.find("`HtmlCommandList`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiEventStream`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_root_column(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_column(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_leaf(...)`") != std::string::npos);
@@ -4163,6 +4164,13 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`HtmlCommandList.bind_event(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`HtmlCommandList.emit_login_form(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`HtmlCommandList.serialize() -> vector<i32>`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiEventStream.push_pointer_move(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiEventStream.push_pointer_down(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiEventStream.push_pointer_up(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiEventStream.push_key_down(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiEventStream.push_key_up(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiEventStream.event_count()`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiEventStream.serialize() -> vector<i32>`") != std::string::npos);
   CHECK(graphicsDoc.find("First word: format version (`1`)") != std::string::npos);
   CHECK(graphicsDoc.find("`1` = `draw_text`") != std::string::npos);
   CHECK(graphicsDoc.find("`2` = `draw_rounded_rect`") != std::string::npos);
@@ -4177,6 +4185,15 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`5` = `bind_event`") != std::string::npos);
   CHECK(graphicsDoc.find("`1` = `click`") != std::string::npos);
   CHECK(graphicsDoc.find("`2` = `input`") != std::string::npos);
+  CHECK(graphicsDoc.find("Current prototype serialization format for `/std/ui/UiEventStream.serialize()`") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`1` = `pointer_move`") != std::string::npos);
+  CHECK(graphicsDoc.find("`2` = `pointer_down`") != std::string::npos);
+  CHECK(graphicsDoc.find("`3` = `pointer_up`") != std::string::npos);
+  CHECK(graphicsDoc.find("`4` = `key_down`") != std::string::npos);
+  CHECK(graphicsDoc.find("`5` = `key_up`") != std::string::npos);
+  CHECK(graphicsDoc.find("`1` = `shift`, `2` = `control`, `4` = `alt`, `8` = `meta`") !=
+        std::string::npos);
   CHECK(graphicsDoc.find("`pop_clip()` at depth `0` is a deterministic no-op") != std::string::npos);
   CHECK(graphicsDoc.find("Single-root flat tree; nodes are appended in parent-before-child") != std::string::npos);
   CHECK(graphicsDoc.find("`measure()` walks reverse insertion order") != std::string::npos);
@@ -4206,6 +4223,10 @@ TEST_CASE("software renderer command list docs stay source locked") {
         std::string::npos);
   CHECK(graphicsDoc.find("must not call raw `append_word`, `append_color`, or `append_string`") !=
         std::string::npos);
+  CHECK(graphicsDoc.find("`push_pointer_move(...)`, `push_pointer_down(...)`, and `push_pointer_up(...)` normalize through one pointer event record shape") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`push_key_down(...)` and `push_key_up(...)` normalize through one key event record shape") !=
+        std::string::npos);
   CHECK(graphicsDoc.find("can upload a deterministic BGRA8 software surface into a shared Metal") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`--software-surface-demo`") != std::string::npos);
@@ -4219,12 +4240,19 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("commands.draw_login_form(") != std::string::npos);
   CHECK(graphicsDoc.find("[HtmlCommandList mut] html{HtmlCommandList()}") != std::string::npos);
   CHECK(graphicsDoc.find("html.emit_login_form(") != std::string::npos);
+  CHECK(graphicsDoc.find("[UiEventStream mut] events{UiEventStream()}") != std::string::npos);
+  CHECK(graphicsDoc.find("events.push_pointer_down(login.submitButton, 7i32, 1i32, 20i32, 30i32)") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("events.push_key_down(login.usernameInput, 13i32, 3i32, 1i32)") !=
+        std::string::npos);
   CHECK(specDoc.find("the first `/std/ui/*` foundation now includes deterministic command-list rendering, a two-pass layout tree contract, basic control emission, a basic panel container primitive, and the first composite widget helper") !=
         std::string::npos);
-  CHECK(specDoc.find("`draw_label`, `draw_button`, `draw_input`, `begin_panel`, `end_panel`, `draw_login_form`, `HtmlCommandList`, `emit_panel`, `emit_label`, `emit_button`, `emit_input`, `bind_event`, `emit_login_form`, `LayoutTree`, `LoginFormNodes`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `append_login_form`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
+  CHECK(specDoc.find("`draw_label`, `draw_button`, `draw_input`, `begin_panel`, `end_panel`, `draw_login_form`, `HtmlCommandList`, `emit_panel`, `emit_label`, `emit_button`, `emit_input`, `bind_event`, `emit_login_form`, `UiEventStream`, `push_pointer_move`, `push_pointer_down`, `push_pointer_up`, `push_key_down`, `push_key_up`, `LayoutTree`, `LoginFormNodes`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `append_login_form`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
   CHECK(specDoc.find("blit a deterministic BGRA8 software surface through the native window presenter") !=
         std::string::npos);
   CHECK(specDoc.find("shared widget/layout model can also emit deterministic HTML/backend adapter records") !=
+        std::string::npos);
+  CHECK(specDoc.find("normalize pointer and keyboard input into deterministic UI event-stream records") !=
         std::string::npos);
 }
 
@@ -4291,6 +4319,42 @@ TEST_CASE("software renderer html adapter stays source locked to shared widgets"
   CHECK(emitLoginBody.find("self.append_word(") == std::string::npos);
   CHECK(emitLoginBody.find("self.append_color(") == std::string::npos);
   CHECK(emitLoginBody.find("self.append_string(") == std::string::npos);
+}
+
+TEST_CASE("software renderer ui event stream stays source locked to normalized helpers") {
+  std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
+  if (!std::filesystem::exists(uiStdlibPath)) {
+    uiStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "ui" / "ui.prime";
+  }
+  REQUIRE(std::filesystem::exists(uiStdlibPath));
+
+  const std::string source = readFile(uiStdlibPath.string());
+
+  const size_t pointerMoveStart = source.find("push_pointer_move(");
+  const size_t keyDownStart =
+      source.find("\n    [public effects(heap_alloc), return<void>]\n    push_key_down(", pointerMoveStart);
+  REQUIRE(pointerMoveStart != std::string::npos);
+  REQUIRE(keyDownStart != std::string::npos);
+  REQUIRE(keyDownStart > pointerMoveStart);
+  const std::string pointerBody = source.substr(pointerMoveStart, keyDownStart - pointerMoveStart);
+  CHECK(pointerBody.find("self.append_pointer_event(1i32, targetNodeId, pointerId, -1i32, x, y)") !=
+        std::string::npos);
+  CHECK(pointerBody.find("self.append_pointer_event(2i32, targetNodeId, pointerId, button, x, y)") !=
+        std::string::npos);
+  CHECK(pointerBody.find("self.append_pointer_event(3i32, targetNodeId, pointerId, button, x, y)") !=
+        std::string::npos);
+  CHECK(pointerBody.find("self.append_word(") == std::string::npos);
+
+  const size_t eventCountStart =
+      source.find("\n    [public return<i32>]\n    event_count(", keyDownStart);
+  REQUIRE(eventCountStart != std::string::npos);
+  REQUIRE(eventCountStart > keyDownStart);
+  const std::string keyBody = source.substr(keyDownStart, eventCountStart - keyDownStart);
+  CHECK(keyBody.find("self.append_key_event(4i32, targetNodeId, keyCode, modifierMask, isRepeat)") !=
+        std::string::npos);
+  CHECK(keyBody.find("self.append_key_event(5i32, targetNodeId, keyCode, modifierMask, 0i32)") !=
+        std::string::npos);
+  CHECK(keyBody.find("self.append_word(") == std::string::npos);
 }
 
 TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {

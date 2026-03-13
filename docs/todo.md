@@ -128,6 +128,5 @@ Type-resolution graph rollout note: keep the graph migration blocked on the rema
 - ○ Add GLSL reject/diagnostic coverage for image file I/O.
 
 **Web + Native + Metal 3D Target (Spinning Cube)**
-- ○ Add a platform input adapter contract that normalizes pointer and keyboard events into one UI event stream for widget runtime consumption.
 - ○ Add a platform input adapter contract that normalizes IME events into the shared UI event stream for widget runtime consumption.
 - ○ Add a platform input adapter contract that normalizes resize and focus events into the shared UI event stream for widget runtime consumption.
