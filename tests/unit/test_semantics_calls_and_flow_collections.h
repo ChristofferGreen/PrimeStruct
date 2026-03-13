@@ -3370,6 +3370,92 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical map helper bodies prefer local count over imported alias") {
+  const std::string source = R"(
+import /util
+
+namespace util {
+  [public effects(heap_alloc), return<int>]
+  count([map<i32, i32>] values) {
+    return(99i32)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/size([map<i32, i32>] values) {
+  return(count(values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/std/collections/map/size(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical map helper bodies keep unknown target before imported alias fallback") {
+  const std::string source = R"(
+import /util
+
+namespace util {
+  [public effects(heap_alloc), return<int>]
+  count([map<i32, i32>] values) {
+    return(99i32)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/size([map<i32, i32>] values) {
+  return(count(values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/std/collections/map/size(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+}
+
+TEST_CASE("canonical map helper bodies keep unknown access target before imported alias fallback") {
+  const std::string source = R"(
+import /util
+
+namespace util {
+  [public effects(heap_alloc), return<int>]
+  at([map<i32, i32>] values, [i32] key) {
+    return(99i32)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/first([map<i32, i32>] values) {
+  return(at(values, 1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/std/collections/map/first(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
+}
+
 TEST_CASE("map unnamespaced at call resolves builtin fallback without canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

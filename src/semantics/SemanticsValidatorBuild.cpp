@@ -1323,6 +1323,9 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
              helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
              helperName == "remove_swap";
     };
+    auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
+      return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
+    };
     const size_t lastSlash = normalizedPrefix.find_last_of('/');
     const std::string_view suffix = lastSlash == std::string::npos
                                         ? std::string_view(normalizedPrefix)
@@ -1344,6 +1347,10 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     }
     if (normalizedPrefix.rfind("/std/collections/vector", 0) == 0 &&
         isRemovedVectorCompatibilityHelper(expr.name)) {
+      return normalizedPrefix + "/" + expr.name;
+    }
+    if (normalizedPrefix.rfind("/std/collections/map", 0) == 0 &&
+        isRemovedMapCompatibilityHelper(expr.name)) {
       return normalizedPrefix + "/" + expr.name;
     }
     auto it = importAliases_.find(expr.name);
