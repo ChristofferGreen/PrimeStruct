@@ -4324,6 +4324,79 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("bare map helper expression body arguments still validate") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
+  return(values.count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map namespaced count method expression body arguments keep slash-path diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
+  return(values./std/collections/map/count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /map/count") != std::string::npos);
+}
+
+TEST_CASE("map namespaced at method expression body arguments keep slash-path diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
+  return(values./map/at(5i32) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /map/at") != std::string::npos);
+}
+
+TEST_CASE("map stdlib call form expression body arguments reject alias fallback") {
+  const std::string source = R"(
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
+  return(/std/collections/map/at_unsafe(values, 5i32) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /std/collections/map/at_unsafe") !=
+        std::string::npos);
+}
+
 TEST_CASE("vector namespaced access alias chained method rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {

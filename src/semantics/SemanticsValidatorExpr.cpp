@@ -3327,6 +3327,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
                helperName == "remove_at" || helperName == "remove_swap";
       };
+      auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
+        return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
+      };
       auto shouldPreserveBodyArgumentTarget = [&](const std::string &path) -> bool {
         auto helperSuffix = [](const std::string &candidate, const char *prefix) -> std::string_view {
           const size_t prefixLen = std::char_traits<char>::length(prefix);
@@ -3342,7 +3345,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (helper.empty()) {
           helper = helperSuffix(path, "/std/collections/vector/");
         }
-        return !helper.empty() && isRemovedVectorCompatibilityHelper(helper);
+        if (!helper.empty()) {
+          return isRemovedVectorCompatibilityHelper(helper);
+        }
+        helper = helperSuffix(path, "/map/");
+        if (helper.empty()) {
+          helper = helperSuffix(path, "/std/collections/map/");
+        }
+        return !helper.empty() && isRemovedMapCompatibilityHelper(helper);
       };
       if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlockCall(expr)) {
         if (!resolvedMethod) {
