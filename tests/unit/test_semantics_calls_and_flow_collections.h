@@ -7963,6 +7963,63 @@ main() {
   CHECK(error.find("template arguments are only supported on templated definitions: /map/count") != std::string::npos);
 }
 
+TEST_CASE("wrapper reference templated map count method prefers canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/Reference/count([Reference</std/collections/map<i32, i32>>] self) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/count<K, V>([Reference</std/collections/map<K, V>>] values, [bool] marker) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<Reference</std/collections/map<i32, i32>>>]
+borrowValues([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(borrowValues(location(values)).count<i32, i32>(true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper reference templated map count method keeps canonical diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/Reference/count<K, V>([Reference</std/collections/map<K, V>>] self, [bool] marker) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/map/count([Reference</std/collections/map<i32, i32>>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<Reference</std/collections/map<i32, i32>>>]
+borrowValues([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(borrowValues(location(values)).count<i32, i32>(true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /std/collections/map/count") !=
+        std::string::npos);
+}
+
 TEST_CASE("map slash-path explicit-template count method stays on unknown method diagnostic") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]

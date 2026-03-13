@@ -579,6 +579,69 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
   return value;
 }
 
+bool isCollectionReceiverTypeName(const std::string &value) {
+  return value == "array" || value == "vector" || value == "soa_vector" || value == "map" || value == "string";
+}
+
+std::string unwrapCollectionReceiverEnvelope(std::string typeName, const std::string &typeTemplateArg = {}) {
+  std::string normalizedType = normalizeBindingTypeName(typeName);
+  if ((normalizedType == "Reference" || normalizedType == "Pointer") && !typeTemplateArg.empty()) {
+    const std::string innerType = normalizeBindingTypeName(typeTemplateArg);
+    std::string innerBase;
+    std::string innerArgText;
+    if (splitTemplateTypeName(innerType, innerBase, innerArgText) && !innerBase.empty()) {
+      const std::string normalizedInnerBase = normalizeCollectionReceiverTypeName(innerBase);
+      if (isCollectionReceiverTypeName(normalizedInnerBase)) {
+        normalizedType = innerType;
+      }
+    } else {
+      const std::string normalizedInner = normalizeCollectionReceiverTypeName(innerType);
+      if (isCollectionReceiverTypeName(normalizedInner)) {
+        normalizedType = innerType;
+      }
+    }
+  }
+
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(normalizedType, base, argText) || base.empty()) {
+      return normalizeCollectionReceiverTypeName(normalizedType);
+    }
+
+    const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+    if (isCollectionReceiverTypeName(normalizedBase)) {
+      return normalizedBase;
+    }
+
+    if (base != "Reference" && base != "Pointer") {
+      return normalizedBase;
+    }
+
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+      return base;
+    }
+
+    const std::string innerType = normalizeBindingTypeName(args.front());
+    std::string innerBase;
+    std::string innerArgText;
+    if (splitTemplateTypeName(innerType, innerBase, innerArgText) && !innerBase.empty()) {
+      const std::string normalizedInnerBase = normalizeCollectionReceiverTypeName(innerBase);
+      if (!isCollectionReceiverTypeName(normalizedInnerBase)) {
+        return base;
+      }
+    } else {
+      const std::string normalizedInner = normalizeCollectionReceiverTypeName(innerType);
+      if (!isCollectionReceiverTypeName(normalizedInner)) {
+        return base;
+      }
+    }
+
+    normalizedType = innerType;
+  }
+}
+
 bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind) {
   switch (expectedKind) {
     case ReturnKind::Integer:
@@ -960,7 +1023,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (receiver.kind == Expr::Kind::Name) {
     auto it = locals.find(receiver.name);
     if (it != locals.end()) {
-      typeName = it->second.typeName;
+      typeName = unwrapCollectionReceiverEnvelope(it->second.typeName, it->second.typeTemplateArg);
     }
   } else if (receiver.kind == Expr::Kind::Literal) {
     typeName = receiver.isUnsigned ? "u64" : (receiver.intWidth == 64 ? "i64" : "i32");
@@ -994,7 +1057,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
           if (returnType == "auto") {
             continue;
           }
-          typeName = returnType;
+          typeName = unwrapCollectionReceiverEnvelope(returnType);
           break;
         }
       } else {
@@ -1007,11 +1070,6 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   if (typeName.empty()) {
     return false;
-  }
-  std::string typeBase;
-  std::string typeArgText;
-  if (splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty()) {
-    typeName = typeBase;
   }
   typeName = normalizeCollectionReceiverTypeName(typeName);
   if (isExplicitRemovedCollectionMethodAlias(typeName, rawMethodName)) {
