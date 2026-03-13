@@ -442,6 +442,76 @@ main() {
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
+TEST_CASE("omitted initializer accepts effect-free Create with canonical map call precedence") {
+  const std::string source = R"(
+[effects(io_out), return<i32>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  print_line("alias"utf8)
+  return(9i32)
+}
+
+[return<i32>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(27i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
+  assign(this.value, count(items, true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map call precedence keeps canonical mismatch diagnostics in Create") {
+  const std::string source = R"(
+[return<i32>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(9i32)
+}
+
+[return<i32>]
+/std/collections/map/count([map<i32, i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
+  assign(this.value, count(items, true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+}
+
 TEST_CASE("omitted initializer allows Create to fill missing fields") {
   const std::string source = R"(
 [struct]

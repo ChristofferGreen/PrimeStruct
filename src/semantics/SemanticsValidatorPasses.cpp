@@ -2868,6 +2868,83 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     }
     return collectionPathFromType(normalizeBindingTypeName(binding.typeName), binding.typeTemplateArg);
   };
+  auto resolveBareMapCallPath = [&](const Expr &callExpr) -> std::string {
+    if (callExpr.isMethodCall || callExpr.args.empty()) {
+      return "";
+    }
+    std::string helperName;
+    std::string normalizedName = callExpr.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    if (normalizedName == "count") {
+      helperName = "count";
+    } else if (normalizedName == "at") {
+      helperName = "at";
+    } else if (normalizedName == "at_unsafe") {
+      helperName = "at_unsafe";
+    } else {
+      const std::string resolved = resolveCalleePath(callExpr);
+      if (resolved == "/count") {
+        helperName = "count";
+      } else if (resolved == "/at") {
+        helperName = "at";
+      } else if (resolved == "/at_unsafe") {
+        helperName = "at_unsafe";
+      } else {
+        return "";
+      }
+    }
+    if (defMap_.count("/" + helperName) > 0) {
+      return "";
+    }
+    std::vector<size_t> receiverIndices;
+    auto appendReceiverIndex = [&](size_t index) {
+      if (index >= callExpr.args.size()) {
+        return;
+      }
+      for (size_t existing : receiverIndices) {
+        if (existing == index) {
+          return;
+        }
+      }
+      receiverIndices.push_back(index);
+    };
+    if (hasNamedArguments(callExpr.argNames)) {
+      bool foundValues = false;
+      for (size_t i = 0; i < callExpr.args.size(); ++i) {
+        if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value() &&
+            *callExpr.argNames[i] == "values") {
+          appendReceiverIndex(i);
+          foundValues = true;
+          break;
+        }
+      }
+      if (!foundValues) {
+        for (size_t i = 0; i < callExpr.args.size(); ++i) {
+          appendReceiverIndex(i);
+        }
+      }
+    } else {
+      for (size_t i = 0; i < callExpr.args.size(); ++i) {
+        appendReceiverIndex(i);
+      }
+    }
+    for (size_t receiverIndex : receiverIndices) {
+      const Expr &receiver = callExpr.args[receiverIndex];
+      if (receiver.kind != Expr::Kind::Name) {
+        continue;
+      }
+      auto it = ctx.locals.find(receiver.name);
+      if (it == ctx.locals.end()) {
+        continue;
+      }
+      if (collectionPathFromBinding(it->second) == "/map") {
+        return "/std/collections/map/" + helperName;
+      }
+    }
+    return "";
+  };
 
   for (const auto &transform : expr.transforms) {
     if (transform.name == "capabilities" && !transform.arguments.empty()) {
@@ -3120,7 +3197,11 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     }
     return !def.templateArgs.empty() && def.templateArgs.size() == expr.templateArgs.size();
   };
-  const std::string resolvedPath = resolveCalleePath(expr);
+  std::string resolvedPath = resolveCalleePath(expr);
+  const std::string bareMapCallPath = resolveBareMapCallPath(expr);
+  if (!bareMapCallPath.empty()) {
+    resolvedPath = bareMapCallPath;
+  }
   const auto resolvedCandidates = collectionHelperPathCandidates(resolvedPath);
   const std::string resolved =
       resolvedCandidates.empty() ? preferCollectionHelperPath(resolvedPath) : resolvedCandidates.front();
