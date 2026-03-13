@@ -8239,6 +8239,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("wrapper-returned referenced canonical map keeps print statement string validation") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, string>>>]
+borrowMap([Reference</std/collections/map<i32, string>>] values) {
+  return(values)
+}
+
+[effects(io_out), return<int>]
+showValue() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  print_line(borrowMap(location(values))[1i32])
+  return(0i32)
+}
+
+[effects(io_out), return<int>]
+main() {
+  return(showValue())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical map reference parameter keeps if string branch compatibility") {
   const std::string source = R"(
 [return<int>]
@@ -8330,6 +8354,30 @@ wrapMap() {
 [effects(pathspace_take), return<int>]
 useValue() {
   take(wrapMap()[1i32])
+  return(0i32)
+}
+
+[effects(pathspace_take), return<int>]
+main() {
+  return(useValue())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("take requires string path argument") != std::string::npos);
+}
+
+TEST_CASE("wrapper-returned referenced canonical map keeps pathspace string diagnostics") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(pathspace_take), return<int>]
+useValue() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  take(borrowMap(location(values))[1i32])
   return(0i32)
 }
 

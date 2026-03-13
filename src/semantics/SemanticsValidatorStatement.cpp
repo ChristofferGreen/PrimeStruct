@@ -109,22 +109,38 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (target.kind == Expr::Kind::Call) {
         auto defIt = defMap_.find(resolveCalleePath(target));
         if (defIt != defMap_.end() && defIt->second) {
+          auto extractMapValueTypeFromReturn = [&](const std::string &typeName) -> bool {
+            std::string normalizedType = normalizeBindingTypeName(typeName);
+            while (true) {
+              std::string base;
+              std::string arg;
+              if (!splitTemplateTypeName(normalizedType, base, arg)) {
+                return false;
+              }
+              if (base == "map") {
+                std::vector<std::string> args;
+                if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
+                  return false;
+                }
+                valueTypeOut = args[1];
+                return true;
+              }
+              if (base == "Reference" || base == "Pointer") {
+                std::vector<std::string> args;
+                if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+                  return false;
+                }
+                normalizedType = normalizeBindingTypeName(args.front());
+                continue;
+              }
+              return false;
+            }
+          };
           for (const auto &transform : defIt->second->transforms) {
             if (transform.name != "return" || transform.templateArgs.size() != 1) {
               continue;
             }
-            std::string base;
-            std::string arg;
-            const std::string normalizedReturn = normalizeBindingTypeName(transform.templateArgs.front());
-            if (!splitTemplateTypeName(normalizedReturn, base, arg) || base != "map") {
-              return false;
-            }
-            std::vector<std::string> args;
-            if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
-              return false;
-            }
-            valueTypeOut = args[1];
-            return true;
+            return extractMapValueTypeFromReturn(transform.templateArgs.front());
           }
           return false;
         }
