@@ -24,6 +24,48 @@ bool isBuiltinCollectionHelperName(std::string_view helperName) {
          helperName == "to_aos";
 }
 
+bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
+  return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+         helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+         helperName == "remove_at" || helperName == "remove_swap";
+}
+
+bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
+  return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
+}
+
+bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath,
+                                            std::string rawMethodName) {
+  if (!rawMethodName.empty() && rawMethodName.front() == '/') {
+    rawMethodName.erase(rawMethodName.begin());
+  }
+
+  std::string_view helperName;
+  const bool isVectorFamilyReceiver = receiverPath == "/array" || receiverPath == "/vector";
+  if (isVectorFamilyReceiver) {
+    if (rawMethodName.rfind("array/", 0) == 0) {
+      helperName = std::string_view(rawMethodName).substr(std::string_view("array/").size());
+    } else if (rawMethodName.rfind("vector/", 0) == 0) {
+      helperName = std::string_view(rawMethodName).substr(std::string_view("vector/").size());
+    } else if (rawMethodName.rfind("std/collections/vector/", 0) == 0) {
+      helperName =
+          std::string_view(rawMethodName).substr(std::string_view("std/collections/vector/").size());
+    }
+    return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
+  }
+
+  if (receiverPath != "/map") {
+    return false;
+  }
+  if (rawMethodName.rfind("map/", 0) == 0) {
+    helperName = std::string_view(rawMethodName).substr(std::string_view("map/").size());
+  } else if (rawMethodName.rfind("std/collections/map/", 0) == 0) {
+    helperName =
+        std::string_view(rawMethodName).substr(std::string_view("std/collections/map/").size());
+  }
+  return !helperName.empty() && isRemovedMapCompatibilityHelper(helperName);
+}
+
 bool isLifecycleHelperName(const std::string &fullPath) {
   static const std::array<HelperSuffixInfo, 10> suffixes = {{
       {"Create", ""},
@@ -2873,6 +2915,9 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
       }
     }
     if (receiverStruct.empty()) {
+      return false;
+    }
+    if (isExplicitRemovedCollectionMethodAlias(receiverStruct, expr.name)) {
       return false;
     }
     auto isTemplateCompatibleDefinition = [&](const Definition &def) -> bool {

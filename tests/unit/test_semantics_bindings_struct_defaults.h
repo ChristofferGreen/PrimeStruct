@@ -174,7 +174,38 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+}
+
+TEST_CASE("omitted initializer rejects effect-free Create with canonical slash-path vector method helper") {
+  const std::string source = R"(
+[return<i32>]
+/std/collections/vector/count([array<i32>] values, [bool] marker) {
+  return(15i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [array<i32>] items{array<i32>(1i32, 2i32)}
+  assign(this.value, items./std/collections/vector/count(true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
 TEST_CASE("omitted initializer accepts effect-free Create with explicit-template vector alias call fallback") {
@@ -244,7 +275,37 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+}
+
+TEST_CASE("omitted initializer accepts effect-free Create with bare array count method") {
+  const std::string source = R"(
+[return<i32>]
+/array/count([array<i32>] values) {
+  return(23i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [array<i32>] items{array<i32>(1i32, 2i32)}
+  assign(this.value, items.count())
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("explicit-template vector alias fallback keeps mismatch diagnostics in Create") {
