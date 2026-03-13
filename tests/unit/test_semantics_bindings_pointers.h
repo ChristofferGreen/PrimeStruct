@@ -55,6 +55,49 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("memory at validates checked pointer access") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
+  [mut] second{/std/intrinsics/memory/at(ptr, 1i32, 2i32)}
+  assign(dereference(second), 7i32)
+  /std/intrinsics/memory/free(ptr)
+  return(7i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("memory at rejects non-pointer target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  /std/intrinsics/memory/at(1i32, 0i32, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires pointer target") != std::string::npos);
+}
+
+TEST_CASE("memory at rejects mismatched index and count kinds") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<i32>] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
+  /std/intrinsics/memory/at(ptr, 1i32, 2i64)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires matching integer index and element count kinds") != std::string::npos);
+}
+
 TEST_CASE("alloc requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]

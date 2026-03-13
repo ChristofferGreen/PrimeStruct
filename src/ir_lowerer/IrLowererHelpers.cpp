@@ -591,7 +591,7 @@ bool getBuiltinMemoryName(const Expr &expr, std::string &out) {
   if (normalized.find('/') != std::string::npos) {
     return false;
   }
-  if (normalized == "alloc" || normalized == "free" || normalized == "realloc") {
+  if (normalized == "alloc" || normalized == "free" || normalized == "realloc" || normalized == "at") {
     out = normalized;
     return true;
   }

@@ -27,6 +27,9 @@ bool isPointerExpression(const Expr &expr,
       if (memoryBuiltinName == "realloc" && expr.args.size() == 2) {
         return isPointerExpression(expr.args.front(), localsIn, getBuiltinOperatorName);
       }
+      if (memoryBuiltinName == "at" && expr.args.size() == 3) {
+        return isPointerExpression(expr.args.front(), localsIn, getBuiltinOperatorName);
+      }
     }
     std::string builtinName;
     if (getBuiltinOperatorName(expr, builtinName) &&
@@ -80,6 +83,9 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
         return valueKindFromTypeName(expr.templateArgs.front());
       }
       if (memoryBuiltinName == "realloc" && expr.args.size() == 2) {
+        return inferPointerTargetValueKind(expr.args.front(), localsIn, getBuiltinOperatorName);
+      }
+      if (memoryBuiltinName == "at" && expr.args.size() == 3) {
         return inferPointerTargetValueKind(expr.args.front(), localsIn, getBuiltinOperatorName);
       }
     }
@@ -638,13 +644,16 @@ PointerBuiltinCallReturnKindResolution inferPointerBuiltinCallReturnKind(
   if (!getBuiltinPointerName(expr, builtin)) {
     std::string memoryBuiltin;
     if (!getBuiltinMemoryName(expr, memoryBuiltin) ||
-        (memoryBuiltin != "alloc" && memoryBuiltin != "realloc")) {
+        (memoryBuiltin != "alloc" && memoryBuiltin != "realloc" && memoryBuiltin != "at")) {
       return PointerBuiltinCallReturnKindResolution::NotMatched;
     }
     if (memoryBuiltin == "alloc" && expr.templateArgs.size() == 1) {
       kindOut = valueKindFromTypeName(expr.templateArgs.front());
     }
     if (memoryBuiltin == "realloc" && expr.args.size() == 2) {
+      kindOut = inferPointerTargetKind(expr.args.front(), localsIn);
+    }
+    if (memoryBuiltin == "at" && expr.args.size() == 3) {
       kindOut = inferPointerTargetKind(expr.args.front(), localsIn);
     }
     return PointerBuiltinCallReturnKindResolution::Resolved;

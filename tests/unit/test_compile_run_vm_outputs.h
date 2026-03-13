@@ -1081,6 +1081,48 @@ main() {
   CHECK(runCommand(exePath) == 13);
 }
 
+TEST_CASE("exe-ir emitter compiles and runs checked memory at intrinsic") {
+  SKIP_IF_VM_IR_BACKEND_LIMITED();
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
+  assign(dereference(ptr), 9i32)
+  [mut] second{/std/intrinsics/memory/at(ptr, 1i32, 2i32)}
+  assign(dereference(second), 4i32)
+  [i32] sum{plus(dereference(ptr), dereference(second))}
+  /std/intrinsics/memory/free(ptr)
+  return(sum)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_heap_at_intrinsic.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_heap_at_intrinsic").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 13);
+}
+
+TEST_CASE("exe-ir emitter faults on checked memory at out of bounds") {
+  SKIP_IF_VM_IR_BACKEND_LIMITED();
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  return(dereference(/std/intrinsics/memory/at(ptr, 1i32, 1i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_heap_at_out_of_bounds.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_heap_at_out_of_bounds").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_exe_ir_heap_at_out_of_bounds.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " 2> " + errPath) != 0);
+  CHECK(readFile(errPath) == "pointer index out of bounds\n");
+}
+
 TEST_CASE("exe-ir emitter faults on dereference after heap free intrinsic") {
   SKIP_IF_VM_IR_BACKEND_LIMITED();
   const std::string source = R"(
@@ -1338,6 +1380,28 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_heap_realloc_intrinsic_ir_first.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_heap_realloc_intrinsic_ir_first").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 13);
+}
+
+TEST_CASE("exe emitter uses ir backend for checked memory at intrinsic") {
+  SKIP_IF_VM_IR_BACKEND_LIMITED();
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
+  assign(dereference(ptr), 9i32)
+  [mut] second{/std/intrinsics/memory/at(ptr, 1i32, 2i32)}
+  assign(dereference(second), 4i32)
+  [i32] sum{plus(dereference(ptr), dereference(second))}
+  /std/intrinsics/memory/free(ptr)
+  return(sum)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_heap_at_intrinsic_ir_first.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_heap_at_intrinsic_ir_first").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

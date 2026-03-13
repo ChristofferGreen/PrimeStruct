@@ -160,7 +160,8 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
   if (isGpuQualified && !isGpuBuiltin) {
     return false;
   }
-  bool isMemoryBuiltin = candidate == "alloc" || candidate == "free" || candidate == "realloc";
+  bool isMemoryBuiltin =
+      candidate == "alloc" || candidate == "free" || candidate == "realloc" || candidate == "at";
   if (isMemoryQualified && !isMemoryBuiltin) {
     return false;
   }

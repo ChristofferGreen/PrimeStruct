@@ -5701,6 +5701,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
       if (getBuiltinMemoryName(expr, builtinName)) {
+        auto normalizeIndexKind = [&](ReturnKind kind) -> ReturnKind {
+          if (kind == ReturnKind::Bool) {
+            return ReturnKind::Int;
+          }
+          return kind;
+        };
+        auto isSupportedIndexKind = [&](ReturnKind kind) -> bool {
+          return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64;
+        };
         auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {
           Expr bindingExpr;
           bindingExpr.kind = Expr::Kind::Call;
@@ -5724,6 +5733,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = builtinName + " does not accept block arguments";
           return false;
         }
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = builtinName + " does not accept named arguments";
+          return false;
+        }
         if (builtinName == "alloc") {
           if (expr.templateArgs.size() != 1) {
             error_ = "alloc requires exactly one template argument";
@@ -5745,6 +5758,44 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           if (!isIntegerExpr(expr.args.front(), params, locals)) {
             error_ = "alloc requires integer element count";
+            return false;
+          }
+          return true;
+        }
+        if (builtinName == "at") {
+          if (!expr.templateArgs.empty()) {
+            error_ = "at does not accept template arguments";
+            return false;
+          }
+          if (expr.args.size() != 3) {
+            error_ = "argument count mismatch for builtin at";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          if (!isPointerExpr(expr.args.front(), params, locals)) {
+            error_ = "at requires pointer target";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args[1])) {
+            return false;
+          }
+          ReturnKind indexKind = normalizeIndexKind(inferExprReturnKind(expr.args[1], params, locals));
+          if (!isSupportedIndexKind(indexKind)) {
+            error_ = "at requires integer index";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args[2])) {
+            return false;
+          }
+          ReturnKind countKind = normalizeIndexKind(inferExprReturnKind(expr.args[2], params, locals));
+          if (!isSupportedIndexKind(countKind)) {
+            error_ = "at requires integer element count";
+            return false;
+          }
+          if (countKind != indexKind) {
+            error_ = "at requires matching integer index and element count kinds";
             return false;
           }
           return true;

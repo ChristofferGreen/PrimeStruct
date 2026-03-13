@@ -860,6 +860,39 @@ main() {
   CHECK(runCommand(runCmd) == 13);
 }
 
+TEST_CASE("runs vm with checked memory at intrinsic") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
+  assign(dereference(ptr), 9i32)
+  [mut] second{/std/intrinsics/memory/at(ptr, 1i32, 2i32)}
+  assign(dereference(second), 4i32)
+  [i32] sum{plus(dereference(ptr), dereference(second))}
+  /std/intrinsics/memory/free(ptr)
+  return(sum)
+}
+)";
+  const std::string srcPath = writeTemp("vm_heap_at_intrinsic.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 13);
+}
+
+TEST_CASE("vm rejects checked memory at out of bounds") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  return(dereference(/std/intrinsics/memory/at(ptr, 1i32, 1i32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_heap_at_out_of_bounds.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_heap_at_out_of_bounds.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(errPath) == "pointer index out of bounds\n");
+}
+
 TEST_CASE("vm rejects dereference after heap free intrinsic") {
   const std::string source = R"(
 [return<int> effects(heap_alloc)]

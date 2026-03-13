@@ -1816,6 +1816,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
         if (builtinName == "realloc" && candidate.args.size() == 2) {
           return resolvePointerTargetType(candidate.args.front(), targetOut);
         }
+        if (builtinName == "at" && candidate.templateArgs.empty() && candidate.args.size() == 3) {
+          return resolvePointerTargetType(candidate.args.front(), targetOut);
+        }
       }
       std::string opName;
       if (getBuiltinOperatorName(candidate, opName) && (opName == "plus" || opName == "minus") &&
@@ -1842,6 +1845,10 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       targetType = expr.templateArgs.front();
     } else if (builtinName == "realloc") {
       if (expr.args.size() != 2 || !resolvePointerTargetType(expr.args.front(), targetType)) {
+        return false;
+      }
+    } else if (builtinName == "at") {
+      if (!expr.templateArgs.empty() || expr.args.size() != 3 || !resolvePointerTargetType(expr.args.front(), targetType)) {
         return false;
       }
     } else {

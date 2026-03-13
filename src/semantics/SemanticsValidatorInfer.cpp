@@ -1065,6 +1065,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           if (pointerName == "realloc" && pointerExpr.args.size() == 2) {
             return pointerTargetKind(pointerExpr.args.front());
           }
+          if (pointerName == "at" && pointerExpr.templateArgs.empty() && pointerExpr.args.size() == 3) {
+            return pointerTargetKind(pointerExpr.args.front());
+          }
         }
         std::string opName;
         if (getBuiltinOperatorName(pointerExpr, opName) && (opName == "plus" || opName == "minus") &&

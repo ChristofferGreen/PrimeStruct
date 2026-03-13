@@ -16,6 +16,7 @@ using EmitRuntimeErrorFn = std::function<void()>;
 
 struct RuntimeErrorEmitters {
   EmitRuntimeErrorFn emitArrayIndexOutOfBounds;
+  EmitRuntimeErrorFn emitPointerIndexOutOfBounds;
   EmitRuntimeErrorFn emitStringIndexOutOfBounds;
   EmitRuntimeErrorFn emitMapKeyNotFound;
   EmitRuntimeErrorFn emitVectorIndexOutOfBounds;
@@ -45,6 +46,8 @@ RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(
 RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitPointerIndexOutOfBounds(IrFunction &function,
+                                                   const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitStringIndexOutOfBounds(IrFunction &function,
                                                   const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString);
@@ -63,6 +66,7 @@ EmitRuntimeErrorFn makeEmitFloatToIntNonFinite(IrFunction &function,
                                                 const InternRuntimeErrorStringFn &internString);
 
 void emitArrayIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+void emitPointerIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitStringIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitVectorIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);

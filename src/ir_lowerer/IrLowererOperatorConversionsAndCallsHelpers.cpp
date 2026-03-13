@@ -40,6 +40,9 @@ std::string inferPointerStructTypePath(
     if (memoryBuiltin == "realloc" && expr.args.size() == 2) {
       return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
     }
+    if (memoryBuiltin == "at" && expr.args.size() == 3) {
+      return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
+    }
   }
 
   std::string builtinName;
@@ -67,6 +70,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const EmitConversionsAndCallsCompareToZeroFn &emitCompareToZero,
     const AllocConversionsAndCallsTempLocalFn &allocTempLocal,
     const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite,
+    const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds,
     const ResolveConversionsAndCallsStringTableTargetFn &resolveStringTableTarget,
     const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
     const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,
@@ -286,6 +290,11 @@ bool emitConversionsAndCallsOperatorExpr(
           return true;
         }
         if (getBuiltinMemoryName(expr, builtin)) {
+          auto pushIndexConst = [&](LocalInfo::ValueKind kind, int32_t value) {
+            instructions.push_back(
+                {(kind == LocalInfo::ValueKind::Int32) ? IrOpcode::PushI32 : IrOpcode::PushI64,
+                 static_cast<uint64_t>(value)});
+          };
           if (builtin == "free") {
             if (!expr.templateArgs.empty()) {
               error = "free does not take template arguments";
@@ -340,6 +349,91 @@ bool emitConversionsAndCallsOperatorExpr(
               }
             }
             instructions.push_back({IrOpcode::HeapRealloc, 0});
+            return true;
+          }
+          if (builtin == "at") {
+            if (!expr.templateArgs.empty()) {
+              error = "at does not take template arguments";
+              return false;
+            }
+            if (expr.args.size() != 3) {
+              error = "at requires exactly three arguments";
+              return false;
+            }
+            const LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(expr.args[1], localsIn));
+            if (!isSupportedIndexKind(indexKind)) {
+              error = "at requires integer index argument";
+              return false;
+            }
+            const LocalInfo::ValueKind countKind = normalizeIndexKind(inferExprKind(expr.args[2], localsIn));
+            if (!isSupportedIndexKind(countKind)) {
+              error = "at requires integer element count argument";
+              return false;
+            }
+            if (countKind != indexKind) {
+              error = "at requires matching integer index and element count kinds";
+              return false;
+            }
+
+            const int32_t ptrLocal = allocTempLocal();
+            if (!emitExpr(expr.args[0], localsIn)) {
+              return false;
+            }
+            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+
+            const int32_t indexLocal = allocTempLocal();
+            if (!emitExpr(expr.args[1], localsIn)) {
+              return false;
+            }
+            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+
+            const int32_t countLocal = allocTempLocal();
+            if (!emitExpr(expr.args[2], localsIn)) {
+              return false;
+            }
+            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+            if (indexKind != LocalInfo::ValueKind::UInt64) {
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+              instructions.push_back({pushZeroForIndex(indexKind), 0});
+              instructions.push_back({cmpLtForIndex(indexKind), 0});
+              const size_t jumpIndexNonNegative = instructions.size();
+              instructions.push_back({IrOpcode::JumpIfZero, 0});
+              emitPointerIndexOutOfBounds();
+              instructions[jumpIndexNonNegative].imm = static_cast<int32_t>(instructions.size());
+            }
+
+            if (countKind != LocalInfo::ValueKind::UInt64) {
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+              instructions.push_back({pushZeroForIndex(countKind), 0});
+              instructions.push_back({cmpLtForIndex(countKind), 0});
+              const size_t jumpCountNonNegative = instructions.size();
+              instructions.push_back({IrOpcode::JumpIfZero, 0});
+              emitPointerIndexOutOfBounds();
+              instructions[jumpCountNonNegative].imm = static_cast<int32_t>(instructions.size());
+            }
+
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+            instructions.push_back({cmpGeForIndex(indexKind), 0});
+            const size_t jumpIndexInRange = instructions.size();
+            instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitPointerIndexOutOfBounds();
+            instructions[jumpIndexInRange].imm = static_cast<int32_t>(instructions.size());
+
+            int32_t slotCountMultiplier = 1;
+            const std::string structTypeName = inferPointerStructTypePath(expr.args[0], localsIn, resolveStructTypeName);
+            if (!structTypeName.empty()) {
+              if (!resolveStructSlotCount(structTypeName, slotCountMultiplier)) {
+                return false;
+              }
+            }
+
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            pushIndexConst(indexKind, slotCountMultiplier * IrSlotBytesI32);
+            instructions.push_back({mulForIndex(indexKind), 0});
+            instructions.push_back({IrOpcode::AddI64, 0});
             return true;
           }
           if (builtin != "alloc") {

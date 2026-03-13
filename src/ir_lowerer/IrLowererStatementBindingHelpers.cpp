@@ -24,7 +24,7 @@ bool isPointerMemoryIntrinsicCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || !getBuiltinMemoryName(expr, builtinName)) {
     return false;
   }
-  return builtinName == "alloc" || builtinName == "realloc";
+  return builtinName == "alloc" || builtinName == "realloc" || builtinName == "at";
 }
 
 LocalInfo::ValueKind inferPointerMemoryIntrinsicValueKind(const Expr &expr,
@@ -37,7 +37,14 @@ LocalInfo::ValueKind inferPointerMemoryIntrinsicValueKind(const Expr &expr,
   if (builtinName == "alloc" && expr.templateArgs.size() == 1) {
     return valueKindFromTypeName(expr.templateArgs.front());
   }
-  if (builtinName == "realloc" && expr.args.size() == 2) {
+  if ((builtinName == "realloc" && expr.args.size() == 2) || (builtinName == "at" && expr.args.size() == 3)) {
+    if (expr.args.front().kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.args.front().name);
+      if (it != localsIn.end() &&
+          (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {
+        return it->second.valueKind;
+      }
+    }
     return inferExprKind(expr.args.front(), localsIn);
   }
   return LocalInfo::ValueKind::Unknown;
@@ -49,6 +56,13 @@ std::string inferPointerMemoryIntrinsicStructType(const Expr &expr, const LocalM
     return "";
   }
   if (builtinName == "realloc" && expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.args.front().name);
+    if (it != localsIn.end() &&
+        (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {
+      return it->second.structTypeName;
+    }
+  }
+  if (builtinName == "at" && expr.args.size() == 3 && expr.args.front().kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.args.front().name);
     if (it != localsIn.end() &&
         (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {

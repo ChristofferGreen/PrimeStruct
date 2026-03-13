@@ -837,7 +837,7 @@ bool getBuiltinMemoryName(const Expr &expr, std::string &out) {
   if (!parseMemoryName(expr.name, out)) {
     return false;
   }
-  return out == "alloc" || out == "free" || out == "realloc";
+  return out == "alloc" || out == "free" || out == "realloc" || out == "at";
 }
 
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {
@@ -1069,6 +1069,9 @@ bool isPointerExpr(const Expr &expr,
     if (builtinName == "realloc" && expr.args.size() == 2) {
       return isPointerExpr(expr.args.front(), params, locals);
     }
+    if (builtinName == "at" && expr.templateArgs.empty() && expr.args.size() == 3) {
+      return isPointerExpr(expr.args.front(), params, locals);
+    }
   }
   if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
       expr.args.size() == 2) {
@@ -1096,6 +1099,9 @@ bool isPointerLikeExpr(const Expr &expr,
       return expr.templateArgs.size() == 1 && expr.args.size() == 1;
     }
     if (builtinName == "realloc" && expr.args.size() == 2) {
+      return isPointerExpr(expr.args.front(), params, locals);
+    }
+    if (builtinName == "at" && expr.templateArgs.empty() && expr.args.size() == 3) {
       return isPointerExpr(expr.args.front(), params, locals);
     }
   }

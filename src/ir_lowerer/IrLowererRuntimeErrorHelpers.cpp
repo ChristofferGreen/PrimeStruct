@@ -31,6 +31,7 @@ RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(
 RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
   RuntimeErrorEmitters emitters;
   emitters.emitArrayIndexOutOfBounds = makeEmitArrayIndexOutOfBounds(function, internString);
+  emitters.emitPointerIndexOutOfBounds = makeEmitPointerIndexOutOfBounds(function, internString);
   emitters.emitStringIndexOutOfBounds = makeEmitStringIndexOutOfBounds(function, internString);
   emitters.emitMapKeyNotFound = makeEmitMapKeyNotFound(function, internString);
   emitters.emitVectorIndexOutOfBounds = makeEmitVectorIndexOutOfBounds(function, internString);
@@ -50,6 +51,15 @@ EmitRuntimeErrorFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
   auto internStringFn = internString;
   return [functionPtr, internStringFn]() {
     emitArrayIndexOutOfBounds(*functionPtr, internStringFn);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitPointerIndexOutOfBounds(IrFunction &function,
+                                                   const InternRuntimeErrorStringFn &internString) {
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitPointerIndexOutOfBounds(*functionPtr, internStringFn);
   };
 }
 
@@ -142,6 +152,10 @@ EmitRuntimeErrorFn makeEmitFloatToIntNonFinite(IrFunction &function,
 
 void emitArrayIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
   emitRuntimeError(function, "array index out of bounds", internString);
+}
+
+void emitPointerIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
+  emitRuntimeError(function, "pointer index out of bounds", internString);
 }
 
 void emitStringIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString) {

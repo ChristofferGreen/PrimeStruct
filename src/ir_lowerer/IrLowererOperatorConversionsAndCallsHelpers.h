@@ -22,6 +22,7 @@ using CombineConversionsAndCallsNumericKindsFn =
 using EmitConversionsAndCallsCompareToZeroFn = std::function<bool(LocalInfo::ValueKind, bool)>;
 using AllocConversionsAndCallsTempLocalFn = std::function<int32_t()>;
 using EmitConversionsAndCallsFloatToIntNonFiniteFn = std::function<void()>;
+using EmitConversionsAndCallsPointerIndexOutOfBoundsFn = std::function<void()>;
 using ResolveConversionsAndCallsStringTableTargetFn =
     std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)>;
 using ConversionsAndCallsValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
@@ -60,6 +61,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const EmitConversionsAndCallsCompareToZeroFn &emitCompareToZero,
     const AllocConversionsAndCallsTempLocalFn &allocTempLocal,
     const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite,
+    const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds,
     const ResolveConversionsAndCallsStringTableTargetFn &resolveStringTableTarget,
     const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
     const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,

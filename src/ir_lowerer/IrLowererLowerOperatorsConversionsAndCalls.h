@@ -8,6 +8,7 @@
                 emitCompareToZero,
                 allocTempLocal,
                 emitFloatToIntNonFinite,
+                emitPointerIndexOutOfBounds,
                 resolveStringTableTarget,
                 valueKindFromTypeName,
                 getMathConstantName,
