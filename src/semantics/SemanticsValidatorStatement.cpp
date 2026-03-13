@@ -2296,6 +2296,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     const Expr &receiver = callExpr.args.front();
     std::string methodName = callExpr.name;
+    const bool isExplicitMethodPath = !methodName.empty() && methodName.front() == '/';
     if (!methodName.empty() && methodName.front() == '/') {
       methodName.erase(methodName.begin());
     }
@@ -2422,6 +2423,19 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         typeName = inferred;
       }
     }
+    auto shouldPreferCanonicalMapBodyArgumentTarget = [&](const std::string &candidateType) {
+      if (isExplicitMethodPath) {
+        return false;
+      }
+      if (methodName != "count" && methodName != "at" && methodName != "at_unsafe") {
+        return false;
+      }
+      std::string normalized = normalizeBindingTypeName(candidateType);
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      return normalized == "map" || normalized == "std/collections/map";
+    };
     if (typeName.empty()) {
       if (isPointerExpr(receiver, params, locals)) {
         typeName = "Pointer";
@@ -2447,6 +2461,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (importIt != importAliases_.end()) {
         resolvedType = importIt->second;
       }
+    }
+    if (shouldPreferCanonicalMapBodyArgumentTarget(resolvedType.empty() ? typeName : resolvedType)) {
+      resolvedOut = "/std/collections/map/" + methodName;
+      return;
     }
     resolvedOut = normalizeBodyArgumentTarget(resolvedType + "/" + methodName);
   };
