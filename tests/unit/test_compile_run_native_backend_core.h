@@ -458,6 +458,55 @@ main() {
   CHECK(runCommand(exePath) == (97 + 98 + 3));
 }
 
+TEST_CASE("compiles and runs native software renderer command serialization deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [CommandList mut] commands{CommandList()}
+  commands.draw_rounded_rect(
+    2i32,
+    4i32,
+    30i32,
+    40i32,
+    6i32,
+    Rgba8([r] 12i32, [g] 34i32, [b] 56i32, [a] 255i32)
+  )
+  commands.draw_text(
+    7i32,
+    9i32,
+    14i32,
+    Rgba8([r] 255i32, [g] 240i32, [b] 0i32, [a] 255i32),
+    "Hi!"utf8
+  )
+  dump_words(commands.serialize())
+  return(commands.command_count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ui_command_serialization.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ui_command_serialization").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_ui_command_serialization.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 2);
+  CHECK(readFile(outPath) == "1,2,2,9,2,4,30,40,6,12,34,56,255,1,11,7,9,14,255,240,0,255,3,72,105,33\n");
+}
+
 TEST_CASE("compiles and runs native large frame") {
   std::ostringstream source;
   source << "[return<int>]\n";

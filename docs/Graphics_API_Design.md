@@ -168,6 +168,12 @@ The following architecture is planned but not locked as part of the v1 contract:
 
 1. Base renderer layer:
    - Consumes a flat draw-command list (`draw_text`, `draw_rounded_rect`, etc.).
+   - The initial stdlib prototype lives under `/std/ui/*` with:
+     - `Rgba8`
+     - `CommandList`
+     - `CommandList.draw_text(...)`
+     - `CommandList.draw_rounded_rect(...)`
+     - `CommandList.serialize() -> vector<i32>`
    - Rounded rectangles are expressed through SDF-style primitives.
    - Renders into a software color buffer (or shared surface view).
 2. Layout layer:
@@ -186,8 +192,49 @@ The following architecture is planned but not locked as part of the v1 contract:
    - Normalizes OS/web input (pointer, keyboard, IME, resize, focus) into one
      UI event stream consumed by the UI runtime.
 
-This section intentionally describes architecture direction only; concrete API
-signatures and conformance IDs will be added when promoted to a locked contract.
+Current prototype serialization format for `/std/ui/CommandList.serialize()`:
+
+- First word: format version (`1`)
+- Second word: total command count
+- Then, for each command in insertion order:
+  - opcode
+  - payload word count
+  - payload words
+- Current opcodes:
+  - `1` = `draw_text`
+  - `2` = `draw_rounded_rect`
+
+Example:
+
+```prime
+import /std/ui/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [CommandList mut] commands{CommandList()}
+  commands.draw_rounded_rect(
+    2i32,
+    4i32,
+    30i32,
+    40i32,
+    6i32,
+    Rgba8([r] 12i32, [g] 34i32, [b] 56i32, [a] 255i32)
+  )
+  commands.draw_text(
+    7i32,
+    9i32,
+    14i32,
+    Rgba8([r] 255i32, [g] 240i32, [b] 0i32, [a] 255i32),
+    "Hi!"utf8
+  )
+  [vector<i32>] words{commands.serialize()}
+  return(commands.command_count())
+}
+```
+
+This section still describes architecture direction first; the prototype API
+above is intentionally narrow and will expand as clipping, layout, widgets, and
+presentation layers are implemented.
 
 ## Locked Constraints and Conformance Hooks
 

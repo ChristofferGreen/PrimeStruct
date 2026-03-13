@@ -3989,6 +3989,33 @@ TEST_CASE("spinning cube vertexcolored snippets stay source locked") {
   CHECK(cubeSource.find("colorStrideBytes{16i32}") != std::string::npos);
 }
 
+TEST_CASE("software renderer command list docs stay source locked") {
+  std::filesystem::path graphicsDocPath = std::filesystem::path("..") / "docs" / "Graphics_API_Design.md";
+  std::filesystem::path specDocPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  if (!std::filesystem::exists(graphicsDocPath)) {
+    graphicsDocPath = std::filesystem::current_path() / "docs" / "Graphics_API_Design.md";
+  }
+  if (!std::filesystem::exists(specDocPath)) {
+    specDocPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  REQUIRE(std::filesystem::exists(graphicsDocPath));
+  REQUIRE(std::filesystem::exists(specDocPath));
+
+  const std::string graphicsDoc = readFile(graphicsDocPath.string());
+  const std::string specDoc = readFile(specDocPath.string());
+
+  CHECK(graphicsDoc.find("The initial stdlib prototype lives under `/std/ui/*`") != std::string::npos);
+  CHECK(graphicsDoc.find("`Rgba8`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.draw_text(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.draw_rounded_rect(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("First word: format version (`1`)") != std::string::npos);
+  CHECK(graphicsDoc.find("`1` = `draw_text`") != std::string::npos);
+  CHECK(graphicsDoc.find("`2` = `draw_rounded_rect`") != std::string::npos);
+  CHECK(graphicsDoc.find("[CommandList mut] commands{CommandList()}") != std::string::npos);
+  CHECK(specDoc.find("the first command-list software-renderer slice now exists under `/std/ui/*`") !=
+        std::string::npos);
+}
+
 TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
