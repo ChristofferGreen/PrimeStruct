@@ -9,7 +9,31 @@ Finished items were moved to `docs/todo_finished.md` on March 13, 2026.
 
 **Types & Semantics**
 Collection strategy note: keep `array` as a language-core collection, but migrate `vector` and `map` to stdlib `.prime` implementations so users can build equivalent containers. Progress is tracked by the slices below plus the archived finished slice bullets in `docs/todo_finished.md`.
-Map stdlib-forwarding rollout note: the remaining work is split into the narrower slices below so each change can land and verify independently.
+Vector/map de-builtinization roadmap note: prioritize the substrate and parity work that makes a real stdlib implementation possible, then keep compatibility cleanup limited to bridge work while builtin collection handling still exists.
+Stdlib container substrate note: the items below are the hard prerequisites for moving `vector`/`map` into self-contained `.prime` implementations instead of extending compiler-owned collection behavior.
+- ○ Define the `/std/intrinsics/memory/*` API surface in docs and semantics, including exact `effects(heap_alloc)` gating requirements.
+- ○ Implement `/std/intrinsics/memory/*` lowering/runtime plumbing for `alloc` on supported backends.
+- ○ Implement `/std/intrinsics/memory/*` lowering/runtime plumbing for `free` on supported backends.
+- ○ Implement `/std/intrinsics/memory/*` lowering/runtime plumbing for `realloc` (or the chosen growth primitive) on supported backends.
+- ○ Define safe pointer element access intrinsics, including bounds behavior and deterministic diagnostics.
+- ○ Define unsafe pointer element access intrinsics and backend lowering rules for relocation/growth code paths.
+- ○ Add safe pointer-element-access conformance tests so `.prime` containers can implement checked indexing and growth without compiler special-cases.
+- ○ Add unsafe pointer-element-access conformance tests so `.prime` containers can implement relocation and unchecked access without compiler special-cases.
+- ○ Define explicit ownership/drop semantics for container element lifecycles during resize/remove operations for non-trivial element types.
+- ○ Define explicit ownership/drop semantics for container element lifecycles during reallocation/move operations for non-trivial element types.
+- ○ Implement container element drop behavior in vector/map runtimes once the ownership contract is fixed.
+- ○ Define map key trait contracts (`Hash + Eq` for hash maps and/or `Comparable` for ordered maps).
+- ○ Enforce map key trait contracts in semantics with deterministic diagnostics on unsupported key types.
+- ○ Define a standard container error contract (`Result`/`Maybe` and/or panic primitive) for stdlib containers.
+- ○ Replace compiler-injected vector/map runtime abort paths with the standard container error contract across VM/native/C++ flows.
+Stdlib container bring-up note: land a real `.prime` implementation under an experimental path/name first, prove parity there, then swap canonical names and remove the builtin implementation.
+- ○ Implement an experimental stdlib `vector` in `.prime` under a temporary path/name so conformance can advance without blocking on canonical-name migration.
+- ○ Implement an experimental stdlib `map` in `.prime` under a temporary path/name so conformance can advance without blocking on canonical-name migration.
+- ○ Add a shared collection conformance harness that can run the same behavioral/diagnostic suite against builtin and experimental-stdlib `vector`/`map` implementations.
+- ○ Switch canonical `/std/collections/vector/*` and `/std/collections/map/*` helpers to the stdlib implementations once parity is proven.
+- ○ Remove semantics/lowering/emitter special-cases for `vector`/`map` after stdlib parity and conformance tests pass.
+Compatibility bridge note: the remaining started slices below keep the current mixed builtin+stdlib world deterministic while the substrate and experimental stdlib implementations land.
+Map stdlib-forwarding rollout note: the remaining work is split into the narrower slices below so each change can land and verify independently, but these are bridge tasks rather than the end-state migration itself.
 - ◐ Map stdlib-forwarding slice: finish remaining direct-call and wrapper template-inference conformance for canonical map count across C++ emitter flows. Progress: focused regressions now cover `at`/`at_unsafe` wrapper fallback, canonical access-helper alias precedence, templated `/std/collections/map/count(...)` `<K, V>` inference from receiver types, deterministic mismatch diagnostics, slashless canonical unknown-target diagnostics, and C++ emitter canonical sugar precedence over compatibility aliases for `count`/`at`/`at_unsafe` including explicit-template `count` method diagnostics.
 - ◐ Vector/map compatibility-alias cleanup slice: finish collapsing setup-inference/call-return fast paths onto shared alias-aware collection handling so only compatibility aliases remain special. Progress: IR setup-inference call-return wiring now reuses shared namespaced collection receiver-probe gating for vector/map alias+stdlib helper calls, with focused regressions for `/map/count` compatibility alias fallback and unresolved-without-definition behavior.
 - ◐ Vector/map compatibility-alias cleanup slice: finish lowerer helper alias classification cleanup so removed helper spellings never re-enter builtin fallback. Progress: IR lowerer call/setup-type/count-access helper alias classifiers now consistently treat removed `/array/*` vector helper spellings as non-builtin, including `/array/capacity`.
@@ -45,26 +69,6 @@ Vector reject-coverage note: the remaining `/vector/*` compatibility-forwarding 
 - ○ `soa_vector<T>` access slice: lower builtin `get` for supported backends instead of emitting deterministic unsupported diagnostics.
 - ○ `soa_vector<T>` access slice: lower builtin `ref` for supported backends instead of emitting deterministic unsupported diagnostics.
 - ○ `soa_vector<T>` access slice: implement field-view indexing (`value.field()[i]`) with canonical lowering and deterministic diagnostics/tests once field-view storage exists.
-- ○ Define the `/std/intrinsics/memory/*` API surface in docs and semantics, including exact `effects(heap_alloc)` gating requirements.
-- ○ Implement `/std/intrinsics/memory/*` lowering/runtime plumbing for `alloc` on supported backends.
-- ○ Implement `/std/intrinsics/memory/*` lowering/runtime plumbing for `free` on supported backends.
-- ○ Implement `/std/intrinsics/memory/*` lowering/runtime plumbing for `realloc` (or the chosen growth primitive) on supported backends.
-- ○ Define safe pointer element access intrinsics, including bounds behavior and deterministic diagnostics.
-- ○ Define unsafe pointer element access intrinsics and backend lowering rules for relocation/growth code paths.
-- ○ Add safe pointer-element-access conformance tests so `.prime` containers can implement checked indexing and growth without compiler special-cases.
-- ○ Add unsafe pointer-element-access conformance tests so `.prime` containers can implement relocation and unchecked access without compiler special-cases.
-- ○ Define explicit ownership/drop semantics for container element lifecycles during resize/remove operations for non-trivial element types.
-- ○ Define explicit ownership/drop semantics for container element lifecycles during reallocation/move operations for non-trivial element types.
-- ○ Implement container element drop behavior in vector/map runtimes once the ownership contract is fixed.
-- ○ Define map key trait contracts (`Hash + Eq` for hash maps and/or `Comparable` for ordered maps).
-- ○ Enforce map key trait contracts in semantics with deterministic diagnostics on unsupported key types.
-- ○ Define a standard container error contract (`Result`/`Maybe` and/or panic primitive) for stdlib containers.
-- ○ Replace compiler-injected vector/map runtime abort paths with the standard container error contract across VM/native/C++ flows.
-Vector/map de-builtinization sequencing note:
-1. Land memory intrinsics and trait contracts.
-2. Implement `std::vector` and `std::map` in `.prime`.
-3. Keep current builtin spellings as compatibility aliases that forward to stdlib.
-4. Remove semantics/lowering/emitter special-cases after parity and conformance tests pass.
 - ○ Add stdlib matrix types (`Mat2`, `Mat3`, `Mat4`) with constructors and component accessors.
 - ○ Add stdlib `Quat` with constructors, component accessors, and normalization helpers.
 - ○ Implement matrix/quaternion `plus` shape validation with deterministic diagnostics.
