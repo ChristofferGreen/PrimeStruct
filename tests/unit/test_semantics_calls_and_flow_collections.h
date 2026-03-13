@@ -4421,6 +4421,63 @@ main() {
   CHECK(error.find("argument type mismatch for /Reference/count parameter marker") != std::string::npos);
 }
 
+TEST_CASE("map method expression body-arg infers canonical helper on referenced wrapper receiver") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[return<int>]
+/std/collections/map/count([Reference</std/collections/map<i32, i32>>] values, [bool] marker) {
+  return(7i32)
+}
+
+[return<bool>]
+/Reference/count([Reference</std/collections/map<i32, i32>>] self, [bool] marker) {
+  return(false)
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(borrowMap(location(values)).count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map method expression body-arg referenced wrapper keeps canonical diagnostics") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[return<int>]
+/std/collections/map/count([Reference</std/collections/map<i32, i32>>] values, [i32] marker) {
+  return(7i32)
+}
+
+[return<int>]
+/Reference/count([Reference</std/collections/map<i32, i32>>] self, [bool] marker) {
+  return(9i32)
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(borrowMap(location(values)).count(true) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/map/count parameter marker") !=
+        std::string::npos);
+}
+
 TEST_CASE("bare map helper statement body arguments still validate") {
   const std::string source = R"(
 [return<int>]

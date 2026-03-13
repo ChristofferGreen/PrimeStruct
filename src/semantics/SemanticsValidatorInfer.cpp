@@ -875,16 +875,76 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return extractMapKeyValueTypes(it->second, keyTypeOut, valueTypeOut);
       }
       if (target.kind == Expr::Kind::Call) {
+        auto returnsMapCollection = [&](const std::string &typeName) {
+          std::string normalizedType = normalizeBindingTypeName(typeName);
+          while (true) {
+            std::string base;
+            std::string arg;
+            if (!splitTemplateTypeName(normalizedType, base, arg)) {
+              return normalizedType == "map";
+            }
+            if (base == "map") {
+              std::vector<std::string> args;
+              return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
+            }
+            if (base == "Reference" || base == "Pointer") {
+              std::vector<std::string> args;
+              if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+                return false;
+              }
+              normalizedType = normalizeBindingTypeName(args.front());
+              continue;
+            }
+            return false;
+          }
+        };
         std::string collectionTypePath;
-        if (!resolveCallCollectionTypePath(target, collectionTypePath) || collectionTypePath != "/map") {
+        if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/map") {
+          std::vector<std::string> args;
+          if (resolveCallCollectionTemplateArgs(target, "map", args) && args.size() == 2) {
+            keyTypeOut = args[0];
+            valueTypeOut = args[1];
+          }
+          return true;
+        }
+        auto defIt = defMap_.find(resolveCalleePath(target));
+        if (defIt == defMap_.end() || !defIt->second) {
           return false;
         }
-        std::vector<std::string> args;
-        if (resolveCallCollectionTemplateArgs(target, "map", args) && args.size() == 2) {
-          keyTypeOut = args[0];
-          valueTypeOut = args[1];
+        for (const auto &transform : defIt->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          if (!returnsMapCollection(transform.templateArgs.front())) {
+            return false;
+          }
+          std::string normalizedType = normalizeBindingTypeName(transform.templateArgs.front());
+          while (true) {
+            std::string base;
+            std::string arg;
+            if (!splitTemplateTypeName(normalizedType, base, arg)) {
+              return true;
+            }
+            if (base == "map") {
+              std::vector<std::string> args;
+              if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
+                keyTypeOut = args[0];
+                valueTypeOut = args[1];
+              }
+              return true;
+            }
+            if (base == "Reference" || base == "Pointer") {
+              std::vector<std::string> args;
+              if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+                return false;
+              }
+              normalizedType = normalizeBindingTypeName(args.front());
+              continue;
+            }
+            return false;
+          }
         }
-        return true;
+        return false;
       }
       return false;
     };
