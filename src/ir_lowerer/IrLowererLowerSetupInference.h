@@ -24,6 +24,7 @@
               .hasExplicitBindingTypeTransform = hasExplicitBindingTypeTransform,
               .bindingValueKind = bindingValueKind,
               .isFileErrorBinding = isFileErrorBinding,
+              .setReferenceArrayInfo = setReferenceArrayInfo,
               .applyStructArrayInfo = applyStructArrayInfo,
               .applyStructValueInfo = applyStructValueInfo,
               .isStringBinding = isStringBinding,

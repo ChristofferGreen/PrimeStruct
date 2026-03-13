@@ -120,6 +120,7 @@ struct LowerInferenceReturnInfoSetupInput {
   BindingValueKindForInferenceFn bindingValueKind;
   InferValueKindFromLocalsFn inferExprKind;
   IsFileErrorBindingForInferenceFn isFileErrorBinding;
+  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo;
   ApplyStructInfoForInferenceFn applyStructArrayInfo;
   ApplyStructInfoForInferenceFn applyStructValueInfo;
   InferStructExprPathFromLocalsFn inferStructExprPath;
@@ -152,6 +153,7 @@ struct LowerInferenceGetReturnInfoSetupInput {
   BindingValueKindForInferenceFn bindingValueKind;
   InferValueKindFromLocalsFn inferExprKind;
   IsFileErrorBindingForInferenceFn isFileErrorBinding;
+  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo;
   ApplyStructInfoForInferenceFn applyStructArrayInfo;
   ApplyStructInfoForInferenceFn applyStructValueInfo;
   InferStructExprPathFromLocalsFn inferStructExprPath;
@@ -186,6 +188,7 @@ struct LowerInferenceSetupInput {
   HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform;
   BindingValueKindForInferenceFn bindingValueKind;
   IsFileErrorBindingForInferenceFn isFileErrorBinding;
+  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo;
   ApplyStructInfoForInferenceFn applyStructArrayInfo;
   ApplyStructInfoForInferenceFn applyStructValueInfo;
   IsStringBindingForInferenceFn isStringBinding;

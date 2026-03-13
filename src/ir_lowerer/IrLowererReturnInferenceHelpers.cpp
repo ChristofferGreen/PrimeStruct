@@ -187,6 +187,7 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
                                            const BindingValueKindForInferenceFn &bindingValueKind,
                                            const InferValueKindFromLocalsFn &inferExprKindFromLocals,
                                            const IsFileErrorBindingForInferenceFn &isFileErrorBinding,
+                                           const SetReferenceArrayInfoForInferenceFn &setReferenceArrayInfo,
                                            const ApplyStructInfoForInferenceFn &applyStructArrayInfo,
                                            const ApplyStructInfoForInferenceFn &applyStructValueInfo,
                                            const InferStructExprPathFromLocalsFn &inferStructExprPathFromLocals,
@@ -209,6 +210,7 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
     bindingInfo.valueKind = LocalInfo::ValueKind::Unknown;
   }
   bindingInfo.isFileError = isFileErrorBinding(bindingExpr);
+  setReferenceArrayInfo(bindingExpr, bindingInfo);
   applyStructArrayInfo(bindingExpr, bindingInfo);
   applyStructValueInfo(bindingExpr, bindingInfo);
   if (!isParameter && bindingInfo.structTypeName.empty() && bindingInfo.kind == LocalInfo::Kind::Value &&

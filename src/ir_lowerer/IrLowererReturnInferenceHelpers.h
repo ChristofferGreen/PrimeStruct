@@ -33,6 +33,7 @@ using HasExplicitBindingTypeTransformForInferenceFn = std::function<bool(const E
 using BindingValueKindForInferenceFn = std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
 using IsFileErrorBindingForInferenceFn = std::function<bool(const Expr &)>;
 using ApplyStructInfoForInferenceFn = std::function<void(const Expr &, LocalInfo &)>;
+using SetReferenceArrayInfoForInferenceFn = std::function<void(const Expr &, LocalInfo &)>;
 using InferStructExprPathFromLocalsFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using IsStringBindingForInferenceFn = std::function<bool(const Expr &)>;
 using ResolveStructTypeNameForReturnFn = std::function<bool(const std::string &, const std::string &, std::string &)>;
@@ -69,6 +70,7 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
                                            const BindingValueKindForInferenceFn &bindingValueKind,
                                            const InferValueKindFromLocalsFn &inferExprKindFromLocals,
                                            const IsFileErrorBindingForInferenceFn &isFileErrorBinding,
+                                           const SetReferenceArrayInfoForInferenceFn &setReferenceArrayInfo,
                                            const ApplyStructInfoForInferenceFn &applyStructArrayInfo,
                                            const ApplyStructInfoForInferenceFn &applyStructValueInfo,
                                            const InferStructExprPathFromLocalsFn &inferStructExprPathFromLocals,

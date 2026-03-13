@@ -396,6 +396,7 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
           .bindingValueKind = input.bindingValueKind,
           .inferExprKind = inferExprKind,
           .isFileErrorBinding = input.isFileErrorBinding,
+          .setReferenceArrayInfo = input.setReferenceArrayInfo,
           .applyStructArrayInfo = input.applyStructArrayInfo,
           .applyStructValueInfo = input.applyStructValueInfo,
           .inferStructExprPath = input.inferStructExprPath,
@@ -755,6 +756,10 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
     errorOut = "native backend missing inference return-info setup dependency: isFileErrorBinding";
     return false;
   }
+  if (!input.setReferenceArrayInfo) {
+    errorOut = "native backend missing inference return-info setup dependency: setReferenceArrayInfo";
+    return false;
+  }
   if (!input.applyStructArrayInfo) {
     errorOut = "native backend missing inference return-info setup dependency: applyStructArrayInfo";
     return false;
@@ -788,6 +793,7 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
   const auto bindingValueKind = input.bindingValueKind;
   const auto inferExprKind = input.inferExprKind;
   const auto isFileErrorBinding = input.isFileErrorBinding;
+  const auto setReferenceArrayInfo = input.setReferenceArrayInfo;
   const auto applyStructArrayInfo = input.applyStructArrayInfo;
   const auto applyStructValueInfo = input.applyStructValueInfo;
   const auto inferStructExprPath = input.inferStructExprPath;
@@ -824,6 +830,7 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
                                                              bindingValueKind,
                                                              inferExprKind,
                                                              isFileErrorBinding,
+                                                             setReferenceArrayInfo,
                                                              applyStructArrayInfo,
                                                              applyStructValueInfo,
                                                              inferStructExprPath,
@@ -1031,6 +1038,7 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
       .bindingValueKind = input.bindingValueKind,
       .inferExprKind = input.inferExprKind,
       .isFileErrorBinding = input.isFileErrorBinding,
+      .setReferenceArrayInfo = input.setReferenceArrayInfo,
       .applyStructArrayInfo = input.applyStructArrayInfo,
       .applyStructValueInfo = input.applyStructValueInfo,
       .inferStructExprPath = input.inferStructExprPath,

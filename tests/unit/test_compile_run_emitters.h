@@ -4796,6 +4796,83 @@ main() {
   CHECK(diagnostics.find("/std/collections/map/count__t") == std::string::npos);
 }
 
+TEST_CASE("C++ emitter resolves direct canonical map count wrappers on map references") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<int>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(41i32)
+}
+
+[return<auto>]
+project([Reference</std/collections/map<i32, i32>>] ref) {
+  return(/std/collections/map/count(ref, true))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{location(values)}
+  return(project(ref).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_map_count_reference_wrapper_direct_call.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_stdlib_map_count_reference_wrapper_direct_call_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 42);
+}
+
+TEST_CASE("C++ emitter keeps canonical diagnostics on direct canonical map count reference wrappers") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value, [bool] marker) {
+    return(value)
+  }
+}
+
+[return<int>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(41i32)
+}
+
+[return<auto>]
+project([Reference</std/collections/map<i32, i32>>] ref) {
+  return(/std/collections/map/count(ref, true))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{location(values)}
+  return(project(ref).tag(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_map_count_reference_wrapper_direct_call_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_stdlib_map_count_reference_wrapper_direct_call_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter keeps canonical map return arity diagnostics for stdlib envelopes") {
   const std::string source = R"(
 [return</std/collections/map<string>>]
