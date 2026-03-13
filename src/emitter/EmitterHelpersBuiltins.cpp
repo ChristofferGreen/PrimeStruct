@@ -911,18 +911,6 @@ bool resolveMethodCallPath(const Expr &call,
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
       const std::string aliasPath = "/map/" + suffix;
       appendUnique(aliasPath);
-      if (suffix == "count" || suffix == "at" || suffix == "at_unsafe") {
-        for (size_t i = 0; i < candidates.size(); ++i) {
-          if (candidates[i] != aliasPath) {
-            continue;
-          }
-          if (i > 0) {
-            candidates.erase(candidates.begin() + i);
-            candidates.insert(candidates.begin(), aliasPath);
-          }
-          break;
-        }
-      }
     }
     return candidates;
   };
