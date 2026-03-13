@@ -5004,6 +5004,84 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map method access prefers canonical struct-return over alias helper") {
+  const std::string source = R"(
+CanonicalMarker {
+  [i32] value
+}
+
+AliasMarker {
+  [i32] value
+}
+
+[return<AliasMarker>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(AliasMarker(plus(key, 40i32)))
+}
+
+[return<CanonicalMarker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(CanonicalMarker(key))
+}
+
+[return<int>]
+/CanonicalMarker/tag([CanonicalMarker] self) {
+  return(self.value)
+}
+
+[return<auto>]
+project([map<i32, i32>] values) {
+  return(values.at(2i32).tag())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(project(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map method access keeps canonical non-struct diagnostics over alias helper") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(plus(key, 40i32)))
+}
+
+[return<i32>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(key)
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[return<auto>]
+project([map<i32, i32>] values) {
+  return(values.at(2i32).tag())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(project(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+}
+
 TEST_CASE("map method alias access rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {

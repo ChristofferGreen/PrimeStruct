@@ -684,13 +684,13 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     if (receiverStruct == "/map") {
       std::vector<std::string> candidates = {
-          "/map/" + methodName,
+          "/std/collections/map/" + methodName,
       };
       const bool blocksRemovedMapAliasStructReturnForwarding =
           rawMethodName == "map/at" || rawMethodName == "map/at_unsafe" ||
           rawMethodName == "std/collections/map/at" || rawMethodName == "std/collections/map/at_unsafe";
       if (!blocksRemovedMapAliasStructReturnForwarding) {
-        candidates.push_back("/std/collections/map/" + methodName);
+        candidates.push_back("/map/" + methodName);
       }
       return candidates;
     }

@@ -4408,6 +4408,88 @@ main() {
   CHECK(runCommand(outPath) == 2);
 }
 
+TEST_CASE("prefers canonical bare map method struct chain forwarding in C++ emitter") {
+  const std::string source = R"(
+CanonicalMarker {
+  [i32] value
+}
+
+AliasMarker {
+  [i32] value
+}
+
+[return<AliasMarker>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(AliasMarker(plus(key, 40i32)))
+}
+
+[return<CanonicalMarker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(CanonicalMarker(key))
+}
+
+[return<int>]
+/CanonicalMarker/tag([CanonicalMarker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(values.at(2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_bare_map_method_struct_chain_canonical_precedence.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_method_struct_chain_canonical_precedence.out")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(outPath) == 2);
+}
+
+TEST_CASE("keeps canonical bare map method non-struct diagnostics in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(plus(key, 40i32)))
+}
+
+[return<i32>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(key)
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(values.at(2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_bare_map_method_struct_chain_canonical_diagnostic.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_method_struct_chain_canonical_diagnostic.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+}
+
 TEST_CASE("rejects map access compatibility call struct method chain canonical forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
