@@ -173,6 +173,9 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `CommandList`
      - `CommandList.draw_text(...)`
      - `CommandList.draw_rounded_rect(...)`
+     - `CommandList.push_clip(...)`
+     - `CommandList.pop_clip()`
+     - `CommandList.clip_depth()`
      - `CommandList.serialize() -> vector<i32>`
    - Rounded rectangles are expressed through SDF-style primitives.
    - Renders into a software color buffer (or shared surface view).
@@ -203,6 +206,14 @@ Current prototype serialization format for `/std/ui/CommandList.serialize()`:
 - Current opcodes:
   - `1` = `draw_text`
   - `2` = `draw_rounded_rect`
+  - `3` = `push_clip`
+  - `4` = `pop_clip`
+- Clip-stack rule:
+  - `push_clip(...)` increments `clip_depth()` and emits one command.
+  - `pop_clip()` decrements `clip_depth()` and emits one command only when the
+    depth is non-zero.
+  - `pop_clip()` at depth `0` is a deterministic no-op: no command is emitted
+    and `clip_depth()` remains `0`.
 
 Example:
 

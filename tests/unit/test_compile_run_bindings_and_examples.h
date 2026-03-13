@@ -4008,12 +4008,19 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`Rgba8`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.draw_text(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.draw_rounded_rect(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.push_clip(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.pop_clip()`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.clip_depth()`") != std::string::npos);
   CHECK(graphicsDoc.find("First word: format version (`1`)") != std::string::npos);
   CHECK(graphicsDoc.find("`1` = `draw_text`") != std::string::npos);
   CHECK(graphicsDoc.find("`2` = `draw_rounded_rect`") != std::string::npos);
+  CHECK(graphicsDoc.find("`3` = `push_clip`") != std::string::npos);
+  CHECK(graphicsDoc.find("`4` = `pop_clip`") != std::string::npos);
+  CHECK(graphicsDoc.find("`pop_clip()` at depth `0` is a deterministic no-op") != std::string::npos);
   CHECK(graphicsDoc.find("[CommandList mut] commands{CommandList()}") != std::string::npos);
   CHECK(specDoc.find("the first command-list software-renderer slice now exists under `/std/ui/*`") !=
         std::string::npos);
+  CHECK(specDoc.find("`push_clip`, `pop_clip`, deterministic `serialize()` output") != std::string::npos);
 }
 
 TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {

@@ -282,6 +282,62 @@ main() {
   CHECK(readFile(outPath) == "1,2,2,9,2,4,30,40,6,12,34,56,255,1,11,7,9,14,255,240,0,255,3,72,105,33\n");
 }
 
+TEST_CASE("C++ emitter runs software renderer clip stack serialization deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [CommandList mut] commands{CommandList()}
+  commands.push_clip(1i32, 2i32, 20i32, 10i32)
+  commands.draw_text(
+    7i32,
+    9i32,
+    14i32,
+    Rgba8([r] 255i32, [g] 240i32, [b] 0i32, [a] 255i32),
+    "Hi!"utf8
+  )
+  commands.push_clip(3i32, 4i32, 5i32, 6i32)
+  commands.draw_rounded_rect(
+    8i32,
+    9i32,
+    10i32,
+    11i32,
+    2i32,
+    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 4i32)
+  )
+  commands.pop_clip()
+  commands.pop_clip()
+  commands.pop_clip()
+  dump_words(commands.serialize())
+  return(plus(commands.command_count(), commands.clip_depth()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ui_clip_command_serialization.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ui_clip_command_serialization_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ui_clip_command_serialization.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 6);
+  CHECK(readFile(outPath) ==
+        "1,6,3,4,1,2,20,10,1,11,7,9,14,255,240,0,255,3,72,105,33,3,4,3,4,5,6,2,9,8,9,10,11,2,1,2,3,4,4,0,4,0\n");
+}
+
 TEST_CASE("C++ emitter supports graphics-style int return propagation with on_error") {
   const std::string source = R"(
 [struct]

@@ -12,6 +12,7 @@ namespace std {
   CommandList() {
     [public vector<i32> mut] records{vector<i32>()}
     [public i32 mut] commandCount{0i32}
+    [i32 mut] clipDepth{0i32}
   }
 
   namespace CommandList {
@@ -58,9 +59,36 @@ namespace std {
       assign(self.commandCount, plus(self.commandCount, 1i32))
     }
 
+    [public effects(heap_alloc), return<void>]
+    push_clip([CommandList mut] self, [i32] x, [i32] y, [i32] width, [i32] height) {
+      self.append_word(3i32)
+      self.append_word(4i32)
+      self.append_word(x)
+      self.append_word(y)
+      self.append_word(width)
+      self.append_word(height)
+      assign(self.commandCount, plus(self.commandCount, 1i32))
+      assign(self.clipDepth, plus(self.clipDepth, 1i32))
+    }
+
+    [public effects(heap_alloc), return<void>]
+    pop_clip([CommandList mut] self) {
+      if(greater_than(self.clipDepth, 0i32)) {
+        self.append_word(4i32)
+        self.append_word(0i32)
+        assign(self.commandCount, plus(self.commandCount, 1i32))
+        assign(self.clipDepth, minus(self.clipDepth, 1i32))
+      }
+    }
+
     [public return<i32>]
     command_count([CommandList] self) {
       return(self.commandCount)
+    }
+
+    [public return<i32>]
+    clip_depth([CommandList] self) {
+      return(self.clipDepth)
     }
 
     [public effects(heap_alloc), return<vector<i32>>]
