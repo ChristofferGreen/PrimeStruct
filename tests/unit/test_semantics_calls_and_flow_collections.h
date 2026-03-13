@@ -6728,7 +6728,7 @@ main() {
   CHECK(error.find("template arguments required for /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access and count helpers are builtin-alias validated" * doctest::skip()) {
+TEST_CASE("vector namespaced access and count helpers are builtin-alias validated") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -6758,7 +6758,7 @@ main() {
   CHECK(error.find("template arguments") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced capacity rejects template arguments as builtin alias" * doctest::skip()) {
+TEST_CASE("vector namespaced capacity rejects template arguments as builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -6784,7 +6784,7 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count rejects named arguments as builtin alias" * doctest::skip()) {
+TEST_CASE("vector namespaced count rejects named arguments as builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -6836,7 +6836,7 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced capacity rejects named arguments as builtin alias" * doctest::skip()) {
+TEST_CASE("vector namespaced capacity rejects named arguments as builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {

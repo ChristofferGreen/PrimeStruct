@@ -926,11 +926,6 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
   };
 
   if (extractHelper("vector/", "vector")) {
-    if (isRemovedVectorCompatibilityHelper(helperOut)) {
-      collectionOut.clear();
-      helperOut.clear();
-      return false;
-    }
     return true;
   }
   if (extractHelper("std/collections/vector/", "vector") || extractHelper("map/", "map") ||
