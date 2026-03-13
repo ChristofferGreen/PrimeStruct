@@ -7406,6 +7406,41 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("rejects vector reserve with non-relocation-trivial elements in C++ emitter") {
+  const std::string source = R"(
+[struct]
+Mover() {
+  [i32] value{1i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Mover> mut] values{vector<Mover>(Mover())}
+  reserve(values, 4i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_vector_reserve_non_relocation_trivial_reject.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_exe_vector_reserve_non_relocation_trivial_reject_out.txt")
+          .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_exe_vector_reserve_non_relocation_trivial_reject_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find(
+            "reserve requires relocation-trivial vector element type until container move/reallocation semantics are "
+            "implemented: Mover") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs repeat loop") {
   const std::string source = R"(
 [return<int>]

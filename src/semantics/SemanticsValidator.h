@@ -63,10 +63,18 @@ private:
                                          const std::string &namespacePrefix,
                                          const std::vector<std::string> *definitionTemplateArgs,
                                          std::unordered_set<std::string> &visitingStructs);
+  bool isRelocationTrivialContainerElementType(const std::string &typeName,
+                                               const std::string &namespacePrefix,
+                                               const std::vector<std::string> *definitionTemplateArgs,
+                                               std::unordered_set<std::string> &visitingStructs);
   bool validateVectorDiscardHelperElementType(const BindingInfo &binding,
                                               const std::string &helperName,
                                               const std::string &namespacePrefix,
                                               const std::vector<std::string> *definitionTemplateArgs);
+  bool validateVectorRelocationHelperElementType(const BindingInfo &binding,
+                                                 const std::string &helperName,
+                                                 const std::string &namespacePrefix,
+                                                 const std::vector<std::string> *definitionTemplateArgs);
   bool allowMathBareName(const std::string &name) const;
   bool hasAnyMathImport() const;
   bool isEntryArgsName(const std::string &name) const;

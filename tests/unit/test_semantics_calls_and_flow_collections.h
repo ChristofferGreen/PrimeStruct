@@ -1751,6 +1751,46 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("push rejects non-relocation-trivial vector element types") {
+  const std::string source = R"(
+[struct]
+Mover() {
+  [i32] value{1i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Mover> mut] values{vector<Mover>(Mover())}
+  push(values, Mover())
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "push requires relocation-trivial vector element type until container move/reallocation semantics are "
+            "implemented: Mover") != std::string::npos);
+}
+
+TEST_CASE("push allows relocation-trivial string vector elements") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<string> mut] values{vector<string>("left"raw_utf8)}
+  push(values, "right"raw_utf8)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("push validates on mutable soa_vector parameter") {
   const std::string source = R"(
 Particle() {
@@ -2000,6 +2040,37 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("reserve rejects nested non-relocation-trivial vector element types") {
+  const std::string source = R"(
+[struct]
+Mover() {
+  [i32] value{1i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[struct]
+Wrapper() {
+  [Mover] value{Mover()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper())}
+  reserve(values, 4i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "reserve requires relocation-trivial vector element type until container move/reallocation semantics are "
+            "implemented: Wrapper") != std::string::npos);
 }
 
 TEST_CASE("reserve validates on mutable soa_vector parameter") {

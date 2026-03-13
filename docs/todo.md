@@ -11,8 +11,8 @@ Finished items were moved to `docs/todo_finished.md` on March 13, 2026.
 Collection strategy note: keep `array` as a language-core collection, but migrate `vector` and `map` to stdlib `.prime` implementations so users can build equivalent containers. Progress is tracked by the slices below plus the archived finished slice bullets in `docs/todo_finished.md`.
 Vector/map de-builtinization roadmap note: prioritize the substrate and parity work that makes a real stdlib implementation possible, then keep compatibility cleanup limited to bridge work while builtin collection handling still exists.
 Stdlib container substrate note: the items below are the hard prerequisites for moving `vector`/`map` into self-contained `.prime` implementations instead of extending compiler-owned collection behavior.
-- ○ Ownership/drop resize/remove slice: define indexed `remove_at` / `remove_swap` semantics for non-trivial vector elements after the compaction/move contract is fixed.
-- ○ Define explicit ownership/drop semantics for container element lifecycles during reallocation/move operations for non-trivial element types.
+- ○ Ownership/drop resize/remove slice: define indexed `remove_at` / `remove_swap` semantics for non-trivial vector elements after the removed-element drop + compaction contract is fixed.
+- ○ Ownership/drop reallocation slice: define non-trivial element move/rehash semantics for stdlib-owned vector/map storage once experimental containers stop forwarding to builtin runtimes.
 - ○ Implement container element drop behavior in vector/map runtimes once the ownership contract is fixed.
 - ○ Define a standard container error contract (`Result`/`Maybe` and/or panic primitive) for stdlib containers.
 - ○ Replace compiler-injected vector/map runtime abort paths with the standard container error contract across VM/native/C++ flows.

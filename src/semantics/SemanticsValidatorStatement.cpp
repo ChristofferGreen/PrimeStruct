@@ -116,6 +116,95 @@ bool SemanticsValidator::isDropTrivialContainerElementType(const std::string &ty
   return true;
 }
 
+bool SemanticsValidator::isRelocationTrivialContainerElementType(const std::string &typeName,
+                                                                 const std::string &namespacePrefix,
+                                                                 const std::vector<std::string> *definitionTemplateArgs,
+                                                                 std::unordered_set<std::string> &visitingStructs) {
+  if (templateArgsContainTypeName(definitionTemplateArgs, typeName)) {
+    return true;
+  }
+
+  const std::string normalizedType = normalizeBindingTypeName(typeName);
+  if (normalizedType == "bool" || normalizedType == "i32" || normalizedType == "i64" || normalizedType == "u64" ||
+      normalizedType == "f32" || normalizedType == "f64" || normalizedType == "string") {
+    return true;
+  }
+
+  std::string base;
+  std::string argText;
+  if (splitTemplateTypeName(normalizedType, base, argText)) {
+    const std::string normalizedBase = normalizeBindingTypeName(base);
+    if (templateArgsContainTypeName(definitionTemplateArgs, normalizedBase)) {
+      return true;
+    }
+    if (normalizedBase == "Pointer" || normalizedBase == "Reference") {
+      return true;
+    }
+    if (normalizedBase == "array") {
+      std::vector<std::string> args;
+      return splitTopLevelTemplateArgs(argText, args) && args.size() == 1 &&
+             isRelocationTrivialContainerElementType(args.front(),
+                                                     namespacePrefix,
+                                                     definitionTemplateArgs,
+                                                     visitingStructs);
+    }
+    if (normalizedBase == "vector" || normalizedBase == "map" || normalizedBase == "soa_vector" ||
+        normalizedBase == "uninitialized" || normalizedBase == "Buffer") {
+      return false;
+    }
+    base = normalizedBase;
+  } else {
+    base = normalizedType;
+  }
+
+  const std::string structPath = resolveStructTypePath(base, namespacePrefix, structNames_);
+  if (structPath.empty() || structNames_.count(structPath) == 0) {
+    return true;
+  }
+  if (!visitingStructs.insert(structPath).second) {
+    return true;
+  }
+
+  struct VisitingScope {
+    std::unordered_set<std::string> &set;
+    std::string value;
+    ~VisitingScope() { set.erase(value); }
+  } visitingScope{visitingStructs, structPath};
+
+  if (defMap_.count(structPath + "/Destroy") > 0 || defMap_.count(structPath + "/DestroyStack") > 0 ||
+      defMap_.count(structPath + "/DestroyHeap") > 0 || defMap_.count(structPath + "/DestroyBuffer") > 0 ||
+      defMap_.count(structPath + "/Copy") > 0 || defMap_.count(structPath + "/Move") > 0) {
+    return false;
+  }
+
+  const Definition *structDef = nullptr;
+  auto defIt = defMap_.find(structPath);
+  if (defIt != defMap_.end()) {
+    structDef = defIt->second;
+  }
+  if (structDef == nullptr) {
+    return true;
+  }
+
+  for (const auto &fieldStmt : structDef->statements) {
+    if (!fieldStmt.isBinding) {
+      continue;
+    }
+    BindingInfo fieldBinding;
+    if (!resolveStructFieldBinding(*structDef, fieldStmt, fieldBinding)) {
+      continue;
+    }
+    if (!isRelocationTrivialContainerElementType(bindingTypeText(fieldBinding),
+                                                 structDef->namespacePrefix,
+                                                 &structDef->templateArgs,
+                                                 visitingStructs)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool SemanticsValidator::validateVectorDiscardHelperElementType(const BindingInfo &binding,
                                                                 const std::string &helperName,
                                                                 const std::string &namespacePrefix,
@@ -133,6 +222,30 @@ bool SemanticsValidator::validateVectorDiscardHelperElementType(const BindingInf
   }
 
   error_ = helperName + " requires drop-trivial vector element type until container drop semantics are implemented: " +
+           binding.typeTemplateArg;
+  return false;
+}
+
+bool SemanticsValidator::validateVectorRelocationHelperElementType(
+    const BindingInfo &binding,
+    const std::string &helperName,
+    const std::string &namespacePrefix,
+    const std::vector<std::string> *definitionTemplateArgs) {
+  if (binding.typeTemplateArg.empty()) {
+    return true;
+  }
+
+  std::unordered_set<std::string> visitingStructs;
+  if (isRelocationTrivialContainerElementType(binding.typeTemplateArg,
+                                              namespacePrefix,
+                                              definitionTemplateArgs,
+                                              visitingStructs)) {
+    return true;
+  }
+
+  error_ = helperName +
+           " requires relocation-trivial vector element type until container move/reallocation semantics are "
+           "implemented: " +
            binding.typeTemplateArg;
   return false;
 }
@@ -2453,6 +2566,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         if (!validateVectorElementType(stmt.args[1], binding->typeTemplateArg)) {
           return false;
         }
+        if (!validateVectorRelocationHelperElementType(*binding, "push", namespacePrefix, definitionTemplateArgs)) {
+          return false;
+        }
         return true;
       }
       if (vectorHelper == "reserve") {
@@ -2476,6 +2592,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         }
         if (!isIntegerExpr(stmt.args[1])) {
           error_ = "reserve requires integer capacity";
+          return false;
+        }
+        if (!validateVectorRelocationHelperElementType(*binding, "reserve", namespacePrefix, definitionTemplateArgs)) {
           return false;
         }
         return true;
