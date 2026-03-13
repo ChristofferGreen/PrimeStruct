@@ -17679,6 +17679,56 @@ TEST_CASE("ir lowerer setup type helper keeps auto-wrapper primitive diagnostics
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper keeps direct alias primitive diagnostics from inferred receiver kinds") {
+  primec::Definition i32TagDef;
+  i32TagDef.fullPath = "/i32/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {i32TagDef.fullPath, &i32TagDef},
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/vector/at";
+  receiverCall.args = {valuesExpr, indexExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "/vector/at") {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr) { return expr.name; },
+      {},
+      defMap,
+      error);
+  CHECK(resolved == &i32TagDef);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper keeps builtin count/capacity fallback when no override definition exists") {
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;

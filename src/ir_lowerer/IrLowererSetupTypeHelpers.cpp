@@ -1245,6 +1245,15 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         }
       }
     } else {
+      const LocalInfo::ValueKind inferredReceiverKind = inferExprKind(*receiver, localsIn);
+      const std::string inferredReceiverTypeName = typeNameForValueKind(inferredReceiverKind);
+      if (!inferredReceiverTypeName.empty()) {
+        lookupError.clear();
+        resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(inferredReceiverTypeName, lookupError);
+      }
+      if (resolvedDef != nullptr) {
+        return resolvedDef;
+      }
       std::vector<std::string> receiverPaths = collectionHelperPathCandidates(resolveExprPath(*receiver));
       auto pruneMapAccessReceiverPaths = [&](const std::string &path) {
         std::string normalizedPath = path;

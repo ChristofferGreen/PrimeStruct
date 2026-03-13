@@ -4910,7 +4910,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access alias chained method keeps removed-alias diagnostics") {
@@ -4925,8 +4925,8 @@ Marker {
 }
 
 [return<int>]
-/Marker/tag([Marker] self, [bool] marker) {
-  return(self.value)
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
 }
 
 [effects(heap_alloc), return<int>]
@@ -4937,7 +4937,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access alias field expression rejects canonical struct-return forwarding") {

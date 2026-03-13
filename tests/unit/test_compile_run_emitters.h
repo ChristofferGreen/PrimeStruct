@@ -1229,7 +1229,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lambda mutator bool positional call resolves user helper") {
@@ -5325,8 +5325,8 @@ Marker {
 }
 
 [return<int>]
-/Marker/tag([Marker] self, [bool] marker) {
-  return(self.value)
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
 }
 
 [effects(heap_alloc), return<int>]
@@ -5344,7 +5344,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("keeps canonical map access struct method chain forwarding in C++ emitter") {
