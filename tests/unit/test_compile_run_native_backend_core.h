@@ -1029,6 +1029,60 @@ main() {
         "1,5,1,5,3,7,-1,20,30,2,5,5,7,1,20,30,3,5,5,7,1,21,31,4,4,3,13,3,1,5,4,3,13,1,0\n");
 }
 
+TEST_CASE("compiles and runs native ui ime event stream deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+
+  [UiEventStream mut] events{UiEventStream()}
+  events.push_ime_preedit(login.usernameInput, 1i32, 4i32, "al|"utf8)
+  events.push_ime_commit(login.usernameInput, "alice"utf8)
+  dump_words(events.serialize())
+  return(plus(login.usernameInput, events.event_count()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ui_ime_event_stream.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ui_ime_event_stream").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_ui_ime_event_stream.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 5);
+  CHECK(readFile(outPath) ==
+        "1,2,6,7,3,1,4,3,97,108,124,7,9,3,-1,-1,5,97,108,105,99,101\n");
+}
+
 TEST_CASE("compiles and runs native large frame") {
   std::ostringstream source;
   source << "[return<int>]\n";

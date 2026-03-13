@@ -448,6 +448,15 @@ namespace std {
     }
 
     [effects(heap_alloc), return<void>]
+    append_string([UiEventStream mut] self, [string] text) {
+      [i32] len{count(text)}
+      self.append_word(len)
+      for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+        self.append_word(text[index])
+      }
+    }
+
+    [effects(heap_alloc), return<void>]
     append_pointer_event(
         [UiEventStream mut] self,
         [i32] eventKind,
@@ -480,6 +489,24 @@ namespace std {
       self.append_word(keyCode)
       self.append_word(modifierMask)
       self.append_word(isRepeat)
+      assign(self.eventCount, plus(self.eventCount, 1i32))
+    }
+
+    [effects(heap_alloc), return<void>]
+    append_ime_event(
+        [UiEventStream mut] self,
+        [i32] eventKind,
+        [i32] targetNodeId,
+        [i32] selectionStart,
+        [i32] selectionEnd,
+        [string] text) {
+      [i32] len{count(text)}
+      self.append_word(eventKind)
+      self.append_word(plus(4i32, len))
+      self.append_word(targetNodeId)
+      self.append_word(selectionStart)
+      self.append_word(selectionEnd)
+      self.append_string(text)
       assign(self.eventCount, plus(self.eventCount, 1i32))
     }
 
@@ -523,6 +550,21 @@ namespace std {
     [public effects(heap_alloc), return<void>]
     push_key_up([UiEventStream mut] self, [i32] targetNodeId, [i32] keyCode, [i32] modifierMask) {
       self.append_key_event(5i32, targetNodeId, keyCode, modifierMask, 0i32)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    push_ime_preedit(
+        [UiEventStream mut] self,
+        [i32] targetNodeId,
+        [i32] selectionStart,
+        [i32] selectionEnd,
+        [string] text) {
+      self.append_ime_event(6i32, targetNodeId, selectionStart, selectionEnd, text)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    push_ime_commit([UiEventStream mut] self, [i32] targetNodeId, [string] text) {
+      self.append_ime_event(7i32, targetNodeId, -1i32, -1i32, text)
     }
 
     [public return<i32>]

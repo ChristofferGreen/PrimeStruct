@@ -210,6 +210,8 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `UiEventStream.push_pointer_up(...)`
      - `UiEventStream.push_key_down(...)`
      - `UiEventStream.push_key_up(...)`
+     - `UiEventStream.push_ime_preedit(...)`
+     - `UiEventStream.push_ime_commit(...)`
      - `UiEventStream.event_count()`
      - `UiEventStream.serialize() -> vector<i32>`
    - Rounded rectangles are expressed through SDF-style primitives.
@@ -302,6 +304,8 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `push_pointer_move(...)` uses button `-1` to mark non-button pointer
        motion while preserving the same payload layout as button transitions.
      - `push_key_down(...)` and `push_key_up(...)` normalize through one key event record shape: target node id, key code, modifier mask, is-repeat.
+     - `push_ime_preedit(...)` and `push_ime_commit(...)` normalize through one IME event record shape: target node id, selection start, selection end, text.
+     - `push_ime_commit(...)` uses selection start/end `-1` to mark committed text that no longer carries a live composition range.
      - Current modifier mask bits are `1` = `shift`, `2` = `control`, `4` = `alt`, `8` = `meta`.
 
 Current prototype serialization format for `/std/ui/CommandList.serialize()`:
@@ -356,6 +360,8 @@ Current prototype serialization format for `/std/ui/UiEventStream.serialize()`:
   - `3` = `pointer_up`
   - `4` = `key_down`
   - `5` = `key_up`
+  - `6` = `ime_preedit`
+  - `7` = `ime_commit`
 
 Current prototype serialization format for `/std/ui/LayoutTree.serialize()`:
 
@@ -636,6 +642,8 @@ main() {
   events.push_pointer_up(login.submitButton, 7i32, 1i32, 21i32, 31i32)
   events.push_key_down(login.usernameInput, 13i32, 3i32, 1i32)
   events.push_key_up(login.usernameInput, 13i32, 1i32)
+  events.push_ime_preedit(login.usernameInput, 1i32, 4i32, "al|"utf8)
+  events.push_ime_commit(login.usernameInput, "alice"utf8)
   return(events.event_count())
 }
 ```
