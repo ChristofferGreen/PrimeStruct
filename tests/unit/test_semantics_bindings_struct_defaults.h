@@ -512,6 +512,65 @@ main() {
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
+TEST_CASE("omitted initializer accepts effect-free Create with canonical slash-path map call helper") {
+  const std::string source = R"(
+[return<i32>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(27i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
+  assign(this.value, /std/collections/map/count(items, true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("omitted initializer rejects effect-free Create with map alias call helper fallback") {
+  const std::string source = R"(
+[return<i32>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(27i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
+  assign(this.value, /map/count(items, true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+}
+
 TEST_CASE("omitted initializer allows Create to fill missing fields") {
   const std::string source = R"(
 [struct]

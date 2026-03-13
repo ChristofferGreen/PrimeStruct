@@ -66,6 +66,27 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath,
   return !helperName.empty() && isRemovedMapCompatibilityHelper(helperName);
 }
 
+bool isExplicitRemovedCollectionCallAlias(std::string rawPath) {
+  if (!rawPath.empty() && rawPath.front() == '/') {
+    rawPath.erase(rawPath.begin());
+  }
+
+  std::string_view helperName;
+  if (rawPath.rfind("array/", 0) == 0) {
+    helperName = std::string_view(rawPath).substr(std::string_view("array/").size());
+    return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
+  }
+  if (rawPath.rfind("vector/", 0) == 0) {
+    helperName = std::string_view(rawPath).substr(std::string_view("vector/").size());
+    return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
+  }
+  if (rawPath.rfind("map/", 0) == 0) {
+    helperName = std::string_view(rawPath).substr(std::string_view("map/").size());
+    return !helperName.empty() && isRemovedMapCompatibilityHelper(helperName);
+  }
+  return false;
+}
+
 bool isLifecycleHelperName(const std::string &fullPath) {
   static const std::array<HelperSuffixInfo, 10> suffixes = {{
       {"Create", ""},
@@ -3201,6 +3222,9 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
   const std::string bareMapCallPath = resolveBareMapCallPath(expr);
   if (!bareMapCallPath.empty()) {
     resolvedPath = bareMapCallPath;
+  }
+  if (isExplicitRemovedCollectionCallAlias(resolvedPath)) {
+    return false;
   }
   const auto resolvedCandidates = collectionHelperPathCandidates(resolvedPath);
   const std::string resolved =
