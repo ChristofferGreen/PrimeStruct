@@ -2,7 +2,7 @@
 using namespace metal;
 
 struct VertexIn {
-  float3 position [[attribute(0)]];
+  float4 position [[attribute(0)]];
   float4 color [[attribute(1)]];
 };
 
@@ -13,7 +13,7 @@ struct VertexOut {
 
 vertex VertexOut cubeVertexMain(VertexIn in [[stage_in]]) {
   VertexOut out;
-  out.position = float4(in.position, 1.0);
+  out.position = in.position;
   out.color = in.color;
   return out;
 }

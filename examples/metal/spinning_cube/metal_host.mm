@@ -11,9 +11,21 @@
 namespace {
 
 struct Vertex {
-  simd_float3 position;
-  simd_float4 color;
+  float px;
+  float py;
+  float pz;
+  float pw;
+  float r;
+  float g;
+  float b;
+  float a;
 };
+
+static_assert(offsetof(Vertex, px) == 0);
+static_assert(offsetof(Vertex, pw) == 12);
+static_assert(offsetof(Vertex, r) == 16);
+static_assert(sizeof(Vertex) == 32);
+static_assert(alignof(Vertex) == 4);
 
 enum class GfxErrorCode {
   DeviceCreateFailed,
@@ -24,9 +36,9 @@ enum class GfxErrorCode {
 };
 
 constexpr Vertex TriangleVertices[3] = {
-    {{-0.6f, -0.5f, 0.0f}, {0.95f, 0.20f, 0.20f, 1.0f}},
-    {{0.6f, -0.5f, 0.0f}, {0.20f, 0.80f, 1.00f, 1.0f}},
-    {{0.0f, 0.65f, 0.0f}, {0.20f, 1.00f, 0.50f, 1.0f}},
+    {-0.6f, -0.5f, 0.0f, 1.0f, 0.95f, 0.20f, 0.20f, 1.0f},
+    {0.6f, -0.5f, 0.0f, 1.0f, 0.20f, 0.80f, 1.00f, 1.0f},
+    {0.0f, 0.65f, 0.0f, 1.0f, 0.20f, 1.00f, 0.50f, 1.0f},
 };
 
 bool hasArgument(int argc, char **argv, const std::string &flag) {
@@ -234,11 +246,11 @@ int main(int argc, char **argv) {
     pipelineDesc.fragmentFunction = fragmentFn;
     pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
     MTLVertexDescriptor *vertexDesc = [[MTLVertexDescriptor alloc] init];
-    vertexDesc.attributes[0].format = MTLVertexFormatFloat3;
-    vertexDesc.attributes[0].offset = offsetof(Vertex, position);
+    vertexDesc.attributes[0].format = MTLVertexFormatFloat4;
+    vertexDesc.attributes[0].offset = offsetof(Vertex, px);
     vertexDesc.attributes[0].bufferIndex = 0;
     vertexDesc.attributes[1].format = MTLVertexFormatFloat4;
-    vertexDesc.attributes[1].offset = offsetof(Vertex, color);
+    vertexDesc.attributes[1].offset = offsetof(Vertex, r);
     vertexDesc.attributes[1].bufferIndex = 0;
     vertexDesc.layouts[0].stride = sizeof(Vertex);
     vertexDesc.layouts[0].stepRate = 1;

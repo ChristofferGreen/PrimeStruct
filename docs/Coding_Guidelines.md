@@ -113,14 +113,14 @@ cube_mvp(angle, aspect) {
 [array<VertexColored>]
 cube_vertices() {
   return(array<VertexColored>{
-    VertexColored([position] Vec3(-1.0, -1.0, -1.0), [color] ColorRGBA(0.0, 0.0, 0.0, 1.0)),
-    VertexColored([position] Vec3( 1.0, -1.0, -1.0), [color] ColorRGBA(1.0, 0.0, 0.0, 1.0)),
-    VertexColored([position] Vec3( 1.0,  1.0, -1.0), [color] ColorRGBA(1.0, 1.0, 0.0, 1.0)),
-    VertexColored([position] Vec3(-1.0,  1.0, -1.0), [color] ColorRGBA(0.0, 1.0, 0.0, 1.0)),
-    VertexColored([position] Vec3(-1.0, -1.0,  1.0), [color] ColorRGBA(0.0, 0.0, 1.0, 1.0)),
-    VertexColored([position] Vec3( 1.0, -1.0,  1.0), [color] ColorRGBA(1.0, 0.0, 1.0, 1.0)),
-    VertexColored([position] Vec3( 1.0,  1.0,  1.0), [color] ColorRGBA(1.0, 1.0, 1.0, 1.0)),
-    VertexColored([position] Vec3(-1.0,  1.0,  1.0), [color] ColorRGBA(0.0, 1.0, 1.0, 1.0))
+    VertexColored([position] Vec4(-1.0, -1.0, -1.0, 1.0), [color] ColorRGBA(0.0, 0.0, 0.0, 1.0)),
+    VertexColored([position] Vec4( 1.0, -1.0, -1.0, 1.0), [color] ColorRGBA(1.0, 0.0, 0.0, 1.0)),
+    VertexColored([position] Vec4( 1.0,  1.0, -1.0, 1.0), [color] ColorRGBA(1.0, 1.0, 0.0, 1.0)),
+    VertexColored([position] Vec4(-1.0,  1.0, -1.0, 1.0), [color] ColorRGBA(0.0, 1.0, 0.0, 1.0)),
+    VertexColored([position] Vec4(-1.0, -1.0,  1.0, 1.0), [color] ColorRGBA(0.0, 0.0, 1.0, 1.0)),
+    VertexColored([position] Vec4( 1.0, -1.0,  1.0, 1.0), [color] ColorRGBA(1.0, 0.0, 1.0, 1.0)),
+    VertexColored([position] Vec4( 1.0,  1.0,  1.0, 1.0), [color] ColorRGBA(1.0, 1.0, 1.0, 1.0)),
+    VertexColored([position] Vec4(-1.0,  1.0,  1.0, 1.0), [color] ColorRGBA(0.0, 1.0, 1.0, 1.0))
   })
 }
 

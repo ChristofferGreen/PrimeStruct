@@ -566,9 +566,15 @@ TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
   CHECK(mainJs.find("./cube.wasm") != std::string::npos);
   CHECK(mainJs.find("./cube.wgsl") != std::string::npos);
   CHECK(mainJs.find("requestAnimationFrame") != std::string::npos);
+  const std::string cubeSource = readFile(cubePath.string());
+  CHECK(cubeSource.find("positionStrideBytes{16i32}") != std::string::npos);
+  CHECK(cubeSource.find("colorStrideBytes{16i32}") != std::string::npos);
   const std::string shaderText = readFile(shaderPath.string());
   CHECK(shaderText.find("@vertex") != std::string::npos);
   CHECK(shaderText.find("@fragment") != std::string::npos);
+  CHECK(shaderText.find("@location(0) position : vec4<f32>") != std::string::npos);
+  CHECK(shaderText.find("@location(1) color : vec4<f32>") != std::string::npos);
+  CHECK(shaderText.find("out.clipPosition = in.position;") != std::string::npos);
 
   const std::filesystem::path pipelineDir =
       std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_assets";
@@ -746,6 +752,15 @@ TEST_CASE("spinning cube native window host locks indexed cube pipeline resource
   const std::string hostSource = readFile(hostSourcePath.string());
 
   CHECK(hostSource.find("struct WindowVertexIn") != std::string::npos);
+  CHECK(hostSource.find("float4 position [[attribute(0)]];") != std::string::npos);
+  CHECK(hostSource.find("float4 color [[attribute(1)]];") != std::string::npos);
+  CHECK(hostSource.find("out.position = uniforms.modelViewProjection * in.position;") != std::string::npos);
+  CHECK(hostSource.find("struct WindowVertex {") != std::string::npos);
+  CHECK(hostSource.find("static_assert(offsetof(WindowVertex, px) == 0);") != std::string::npos);
+  CHECK(hostSource.find("static_assert(offsetof(WindowVertex, pw) == 12);") != std::string::npos);
+  CHECK(hostSource.find("static_assert(offsetof(WindowVertex, r) == 16);") != std::string::npos);
+  CHECK(hostSource.find("static_assert(sizeof(WindowVertex) == 32);") != std::string::npos);
+  CHECK(hostSource.find("static_assert(alignof(WindowVertex) == 4);") != std::string::npos);
   CHECK(hostSource.find("constant WindowUniforms &uniforms [[buffer(1)]]") != std::string::npos);
   CHECK(hostSource.find("CubeVertices") != std::string::npos);
   CHECK(hostSource.find("CubeIndices") != std::string::npos);
@@ -754,6 +769,9 @@ TEST_CASE("spinning cube native window host locks indexed cube pipeline resource
   CHECK(hostSource.find("newBufferWithLength:sizeof(WindowUniforms)") != std::string::npos);
   CHECK(hostSource.find("setVertexBuffer:_vertexBuffer offset:0 atIndex:0") != std::string::npos);
   CHECK(hostSource.find("setVertexBuffer:_uniformBuffer offset:0 atIndex:1") != std::string::npos);
+  CHECK(hostSource.find("vertexDescriptor.attributes[0].format = MTLVertexFormatFloat4;") != std::string::npos);
+  CHECK(hostSource.find("vertexDescriptor.attributes[0].offset = offsetof(WindowVertex, px);") != std::string::npos);
+  CHECK(hostSource.find("vertexDescriptor.attributes[1].offset = offsetof(WindowVertex, r);") != std::string::npos);
   CHECK(hostSource.find("drawIndexedPrimitives:MTLPrimitiveTypeTriangle") != std::string::npos);
   CHECK(hostSource.find("keyCode == 53") != std::string::npos);
   CHECK(hostSource.find("handleEscapeKey") != std::string::npos);
@@ -3846,6 +3864,9 @@ TEST_CASE("spinning cube metal shader path compiles and enforces profile gating"
   const std::string shaderText = readFile(metalShaderPath.string());
   CHECK(shaderText.find("vertex") != std::string::npos);
   CHECK(shaderText.find("fragment") != std::string::npos);
+  CHECK(shaderText.find("float4 position [[attribute(0)]];") != std::string::npos);
+  CHECK(shaderText.find("float4 color [[attribute(1)]];") != std::string::npos);
+  CHECK(shaderText.find("out.position = in.position;") != std::string::npos);
 
   {
     const std::string source = R"(
@@ -3929,11 +3950,43 @@ TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiri
   CHECK(source.find("queue_submit_failed") != std::string::npos);
   CHECK(source.find("newLibraryWithURL") != std::string::npos);
   CHECK(source.find("newLibraryWithFile") == std::string::npos);
+  CHECK(source.find("static_assert(offsetof(Vertex, px) == 0);") != std::string::npos);
+  CHECK(source.find("static_assert(offsetof(Vertex, pw) == 12);") != std::string::npos);
+  CHECK(source.find("static_assert(offsetof(Vertex, r) == 16);") != std::string::npos);
+  CHECK(source.find("static_assert(sizeof(Vertex) == 32);") != std::string::npos);
+  CHECK(source.find("static_assert(alignof(Vertex) == 4);") != std::string::npos);
   CHECK(source.find("MTLVertexDescriptor *vertexDesc = [[MTLVertexDescriptor alloc] init];") != std::string::npos);
-  CHECK(source.find("vertexDesc.attributes[0].format = MTLVertexFormatFloat3;") != std::string::npos);
+  CHECK(source.find("vertexDesc.attributes[0].format = MTLVertexFormatFloat4;") != std::string::npos);
+  CHECK(source.find("vertexDesc.attributes[0].offset = offsetof(Vertex, px);") != std::string::npos);
   CHECK(source.find("vertexDesc.attributes[1].format = MTLVertexFormatFloat4;") != std::string::npos);
+  CHECK(source.find("vertexDesc.attributes[1].offset = offsetof(Vertex, r);") != std::string::npos);
   CHECK(source.find("vertexDesc.layouts[0].stride = sizeof(Vertex);") != std::string::npos);
   CHECK(source.find("pipelineDesc.vertexDescriptor = vertexDesc;") != std::string::npos);
+}
+
+TEST_CASE("spinning cube vertexcolored snippets stay source locked") {
+  std::filesystem::path docsPath = std::filesystem::path("..") / "docs" / "Coding_Guidelines.md";
+  std::filesystem::path sampleDir = std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
+  if (!std::filesystem::exists(docsPath)) {
+    docsPath = std::filesystem::current_path() / "docs" / "Coding_Guidelines.md";
+  }
+  if (!std::filesystem::exists(sampleDir)) {
+    sampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(docsPath));
+  REQUIRE(std::filesystem::exists(sampleDir));
+
+  const std::filesystem::path cubePath = sampleDir / "cube.prime";
+  REQUIRE(std::filesystem::exists(cubePath));
+
+  const std::string guidelines = readFile(docsPath.string());
+  const std::string cubeSource = readFile(cubePath.string());
+
+  CHECK(guidelines.find("VertexColored([position] Vec4(-1.0, -1.0, -1.0, 1.0),") != std::string::npos);
+  CHECK(guidelines.find("VertexColored([position] Vec4( 1.0,  1.0,  1.0, 1.0),") != std::string::npos);
+  CHECK(guidelines.find("[vertex_type] VertexColored,") != std::string::npos);
+  CHECK(cubeSource.find("positionStrideBytes{16i32}") != std::string::npos);
+  CHECK(cubeSource.find("colorStrideBytes{16i32}") != std::string::npos);
 }
 
 TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {

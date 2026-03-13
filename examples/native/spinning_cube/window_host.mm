@@ -28,7 +28,7 @@ constexpr const char *WindowShaderSource = R"(
 using namespace metal;
 
 struct WindowVertexIn {
-  float3 position [[attribute(0)]];
+  float4 position [[attribute(0)]];
   float4 color [[attribute(1)]];
 };
 
@@ -44,7 +44,7 @@ struct VertexOut {
 vertex VertexOut windowVertexMain(WindowVertexIn in [[stage_in]],
                                   constant WindowUniforms &uniforms [[buffer(1)]]) {
   VertexOut out;
-  out.position = uniforms.modelViewProjection * float4(in.position, 1.0f);
+  out.position = uniforms.modelViewProjection * in.position;
   out.color = in.color;
   return out;
 }
@@ -155,23 +155,35 @@ struct SimulationFrameState {
 };
 
 struct WindowVertex {
-  simd_float3 position;
-  simd_float4 color;
+  float px;
+  float py;
+  float pz;
+  float pw;
+  float r;
+  float g;
+  float b;
+  float a;
 };
+
+static_assert(offsetof(WindowVertex, px) == 0);
+static_assert(offsetof(WindowVertex, pw) == 12);
+static_assert(offsetof(WindowVertex, r) == 16);
+static_assert(sizeof(WindowVertex) == 32);
+static_assert(alignof(WindowVertex) == 4);
 
 struct WindowUniforms {
   simd_float4x4 modelViewProjection;
 };
 
 constexpr std::array<WindowVertex, 8> CubeVertices = {{
-    {{-0.6f, -0.6f, -0.6f}, {1.0f, 0.2f, 0.2f, 1.0f}},
-    {{0.6f, -0.6f, -0.6f}, {0.2f, 1.0f, 0.2f, 1.0f}},
-    {{0.6f, 0.6f, -0.6f}, {0.2f, 0.2f, 1.0f, 1.0f}},
-    {{-0.6f, 0.6f, -0.6f}, {1.0f, 1.0f, 0.2f, 1.0f}},
-    {{-0.6f, -0.6f, 0.6f}, {1.0f, 0.2f, 1.0f, 1.0f}},
-    {{0.6f, -0.6f, 0.6f}, {0.2f, 1.0f, 1.0f, 1.0f}},
-    {{0.6f, 0.6f, 0.6f}, {1.0f, 0.6f, 0.2f, 1.0f}},
-    {{-0.6f, 0.6f, 0.6f}, {0.7f, 0.7f, 0.7f, 1.0f}},
+    {-0.6f, -0.6f, -0.6f, 1.0f, 1.0f, 0.2f, 0.2f, 1.0f},
+    {0.6f, -0.6f, -0.6f, 1.0f, 0.2f, 1.0f, 0.2f, 1.0f},
+    {0.6f, 0.6f, -0.6f, 1.0f, 0.2f, 0.2f, 1.0f, 1.0f},
+    {-0.6f, 0.6f, -0.6f, 1.0f, 1.0f, 1.0f, 0.2f, 1.0f},
+    {-0.6f, -0.6f, 0.6f, 1.0f, 1.0f, 0.2f, 1.0f, 1.0f},
+    {0.6f, -0.6f, 0.6f, 1.0f, 0.2f, 1.0f, 1.0f, 1.0f},
+    {0.6f, 0.6f, 0.6f, 1.0f, 1.0f, 0.6f, 0.2f, 1.0f},
+    {-0.6f, 0.6f, 0.6f, 1.0f, 0.7f, 0.7f, 0.7f, 1.0f},
 }};
 
 constexpr std::array<uint16_t, 36> CubeIndices = {{
@@ -557,11 +569,11 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   }
 
   MTLVertexDescriptor *vertexDescriptor = [[MTLVertexDescriptor alloc] init];
-  vertexDescriptor.attributes[0].format = MTLVertexFormatFloat3;
-  vertexDescriptor.attributes[0].offset = offsetof(WindowVertex, position);
+  vertexDescriptor.attributes[0].format = MTLVertexFormatFloat4;
+  vertexDescriptor.attributes[0].offset = offsetof(WindowVertex, px);
   vertexDescriptor.attributes[0].bufferIndex = 0;
   vertexDescriptor.attributes[1].format = MTLVertexFormatFloat4;
-  vertexDescriptor.attributes[1].offset = offsetof(WindowVertex, color);
+  vertexDescriptor.attributes[1].offset = offsetof(WindowVertex, r);
   vertexDescriptor.attributes[1].bufferIndex = 0;
   vertexDescriptor.layouts[0].stride = sizeof(WindowVertex);
   vertexDescriptor.layouts[0].stepRate = 1;

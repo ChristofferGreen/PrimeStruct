@@ -4,7 +4,7 @@ import /std/math/*
 CubeMeshLayout() {
   [i32] vertexCount{8i32}
   [i32] indexCount{36i32}
-  [i32] positionStrideBytes{12i32}
+  [i32] positionStrideBytes{16i32}
   [i32] colorStrideBytes{16i32}
   [i32] uniformStrideBytes{64i32}
 }
