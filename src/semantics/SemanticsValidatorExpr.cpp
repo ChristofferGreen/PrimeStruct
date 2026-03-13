@@ -5800,6 +5800,32 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           return true;
         }
+        if (builtinName == "at_unsafe") {
+          if (!expr.templateArgs.empty()) {
+            error_ = "at_unsafe does not accept template arguments";
+            return false;
+          }
+          if (expr.args.size() != 2) {
+            error_ = "argument count mismatch for builtin at_unsafe";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          if (!isPointerExpr(expr.args.front(), params, locals)) {
+            error_ = "at_unsafe requires pointer target";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args[1])) {
+            return false;
+          }
+          ReturnKind indexKind = normalizeIndexKind(inferExprReturnKind(expr.args[1], params, locals));
+          if (!isSupportedIndexKind(indexKind)) {
+            error_ = "at_unsafe requires integer index";
+            return false;
+          }
+          return true;
+        }
         if (!expr.templateArgs.empty()) {
           error_ = builtinName + " does not accept template arguments";
           return false;

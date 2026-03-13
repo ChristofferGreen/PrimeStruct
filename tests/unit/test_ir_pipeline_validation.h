@@ -26888,6 +26888,23 @@ TEST_CASE("ir lowerer setup inference helper infers pointer builtin call return 
             },
             kindOut) == Resolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
+  primec::Expr atUnsafeExpr;
+  atUnsafeExpr.kind = primec::Expr::Kind::Call;
+  atUnsafeExpr.name = "/std/intrinsics/memory/at_unsafe";
+  atUnsafeExpr.args = {pointerName, atIndex};
+
+  CHECK(primec::ir_lowerer::inferPointerBuiltinCallReturnKind(
+            atUnsafeExpr,
+            {},
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Name && expr.name == "ptr") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+              }
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 }
 
 TEST_CASE("ir lowerer setup inference helper handles invalid pointer builtin calls") {
@@ -27342,6 +27359,53 @@ TEST_CASE("ir lowerer statement binding helper infers pointer kind from checked 
   init.kind = primec::Expr::Kind::Call;
   init.name = "/std/intrinsics/memory/at";
   init.args = {pointerExpr, indexExpr, countExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo sourceInfo;
+  sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+  sourceInfo.structTypeName = "/pkg/Pair";
+  locals.emplace("ptr", sourceInfo);
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info = primec::ir_lowerer::inferStatementBindingTypeInfo(
+      stmt,
+      init,
+      locals,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+        if (expr.kind == primec::Expr::Kind::Name && expr.name == "ptr") {
+          auto it = localsIn.find("ptr");
+          return it == localsIn.end() ? primec::ir_lowerer::LocalInfo::ValueKind::Unknown
+                                      : it->second.valueKind;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+  CHECK(info.structTypeName == "/pkg/Pair");
+}
+
+TEST_CASE("ir lowerer statement binding helper infers pointer kind from unchecked memory at initializer call") {
+  primec::Expr stmt;
+  stmt.name = "second";
+
+  primec::Expr pointerExpr;
+  pointerExpr.kind = primec::Expr::Kind::Name;
+  pointerExpr.name = "ptr";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 1;
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "/std/intrinsics/memory/at_unsafe";
+  init.args = {pointerExpr, indexExpr};
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo sourceInfo;
@@ -30696,6 +30760,98 @@ TEST_CASE("ir lowerer conversions helper lowers checked memory at intrinsic to b
   CHECK(std::any_of(instructions.begin(),
                     instructions.end(),
                     [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::JumpIfZero; }));
+  CHECK(std::any_of(instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
+    return inst.op == primec::IrOpcode::PushI32 && inst.imm == 32;
+  }));
+  CHECK(std::any_of(instructions.begin(),
+                    instructions.end(),
+                    [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::MulI32; }));
+  CHECK(std::any_of(instructions.begin(),
+                    instructions.end(),
+                    [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::AddI64; }));
+}
+
+TEST_CASE("ir lowerer conversions helper lowers unchecked memory at intrinsic to raw pointer arithmetic") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr pointerExpr;
+  pointerExpr.kind = primec::Expr::Kind::Name;
+  pointerExpr.name = "ptr";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "/std/intrinsics/memory/at_unsafe";
+  expr.args = {pointerExpr, indexExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerInfo.index = 4;
+  pointerInfo.structTypeName = "/pkg/Pair";
+  locals.emplace("ptr", pointerInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 0;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      locals,
+      nextLocal,
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &localsIn) {
+        if (valueExpr.kind == primec::Expr::Kind::Name) {
+          auto it = localsIn.find(valueExpr.name);
+          if (it == localsIn.end()) {
+            return false;
+          }
+          instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+          return true;
+        }
+        instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(valueExpr.literalValue)});
+        return true;
+      },
+      [](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        return valueExpr.kind == primec::Expr::Kind::Literal ? ValueKind::Int32 : ValueKind::Unknown;
+      },
+      [](ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const std::string &) { return ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut) {
+        if (typeName == "Pair" && namespacePrefix == "/pkg") {
+          resolvedOut = "/pkg/Pair";
+          return true;
+        }
+        return false;
+      },
+      [](const std::string &structTypeName, int32_t &slotCount) {
+        if (structTypeName == "/pkg/Pair") {
+          slotCount = 2;
+          return true;
+        }
+        return false;
+      },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK(ok);
+  CHECK(handled);
+  CHECK(error.empty());
+  CHECK_FALSE(std::any_of(instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
+    return inst.op == primec::IrOpcode::CmpLtI32 || inst.op == primec::IrOpcode::CmpGeI32;
+  }));
   CHECK(std::any_of(instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
     return inst.op == primec::IrOpcode::PushI32 && inst.imm == 32;
   }));

@@ -248,6 +248,27 @@ main() {
   CHECK(runCommand(exePath) == 13);
 }
 
+TEST_CASE("compiles and runs native unchecked memory at intrinsic") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
+  assign(dereference(ptr), 9i32)
+  [mut] second{/std/intrinsics/memory/at_unsafe(ptr, 1i32)}
+  assign(dereference(second), 4i32)
+  [i32] sum{plus(dereference(ptr), dereference(second))}
+  /std/intrinsics/memory/free(ptr)
+  return(sum)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_heap_at_unsafe_intrinsic.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_heap_at_unsafe_intrinsic").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 13);
+}
+
 TEST_CASE("compiles and runs native reference arithmetic") {
   const std::string source = R"(
 [return<int>]

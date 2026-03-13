@@ -27,6 +27,7 @@ TEST_CASE("parser helper validates memory intrinsic qualification") {
   CHECK(primec::parser::isBuiltinName("std/intrinsics/memory/free", false));
   CHECK(primec::parser::isBuiltinName("/std/intrinsics/memory/realloc", false));
   CHECK(primec::parser::isBuiltinName("/std/intrinsics/memory/at", false));
+  CHECK(primec::parser::isBuiltinName("/std/intrinsics/memory/at_unsafe", false));
   CHECK_FALSE(primec::parser::isBuiltinName("alloc", false));
   CHECK_FALSE(primec::parser::isBuiltinName("std/intrinsics/memory/not_builtin", false));
 }

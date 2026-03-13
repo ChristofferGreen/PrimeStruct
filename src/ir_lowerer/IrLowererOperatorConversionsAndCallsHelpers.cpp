@@ -43,6 +43,9 @@ std::string inferPointerStructTypePath(
     if (memoryBuiltin == "at" && expr.args.size() == 3) {
       return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
     }
+    if (memoryBuiltin == "at_unsafe" && expr.args.size() == 2) {
+      return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
+    }
   }
 
   std::string builtinName;
@@ -431,6 +434,41 @@ bool emitConversionsAndCallsOperatorExpr(
 
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            pushIndexConst(indexKind, slotCountMultiplier * IrSlotBytesI32);
+            instructions.push_back({mulForIndex(indexKind), 0});
+            instructions.push_back({IrOpcode::AddI64, 0});
+            return true;
+          }
+          if (builtin == "at_unsafe") {
+            if (!expr.templateArgs.empty()) {
+              error = "at_unsafe does not take template arguments";
+              return false;
+            }
+            if (expr.args.size() != 2) {
+              error = "at_unsafe requires exactly two arguments";
+              return false;
+            }
+            const LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(expr.args[1], localsIn));
+            if (!isSupportedIndexKind(indexKind)) {
+              error = "at_unsafe requires integer index argument";
+              return false;
+            }
+
+            if (!emitExpr(expr.args[0], localsIn)) {
+              return false;
+            }
+            if (!emitExpr(expr.args[1], localsIn)) {
+              return false;
+            }
+
+            int32_t slotCountMultiplier = 1;
+            const std::string structTypeName = inferPointerStructTypePath(expr.args[0], localsIn, resolveStructTypeName);
+            if (!structTypeName.empty()) {
+              if (!resolveStructSlotCount(structTypeName, slotCountMultiplier)) {
+                return false;
+              }
+            }
+
             pushIndexConst(indexKind, slotCountMultiplier * IrSlotBytesI32);
             instructions.push_back({mulForIndex(indexKind), 0});
             instructions.push_back({IrOpcode::AddI64, 0});
