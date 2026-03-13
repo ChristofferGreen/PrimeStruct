@@ -17133,6 +17133,110 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics when alias rece
   CHECK(error == "unknown method target for tag");
 }
 
+TEST_CASE("ir lowerer setup type helper rejects map alias receiver call return fallback to canonical stdlib defs") {
+  primec::Definition canonicalAtDef;
+  canonicalAtDef.fullPath = "/std/collections/map/at";
+  primec::Transform returnMarker;
+  returnMarker.name = "return";
+  returnMarker.templateArgs = {"Marker"};
+  canonicalAtDef.transforms.push_back(returnMarker);
+
+  primec::Definition markerTagDef;
+  markerTagDef.fullPath = "/Marker/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalAtDef.fullPath, &canonicalAtDef},
+      {markerTagDef.fullPath, &markerTagDef},
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/map/at";
+  receiverCall.args = {valuesExpr, keyExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr) { return expr.name; },
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method target for tag");
+}
+
+TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for map alias receiver unsafe call returns") {
+  primec::Definition canonicalAtUnsafeDef;
+  canonicalAtUnsafeDef.fullPath = "/std/collections/map/at_unsafe";
+  primec::Transform returnMarker;
+  returnMarker.name = "return";
+  returnMarker.templateArgs = {"Marker"};
+  canonicalAtUnsafeDef.transforms.push_back(returnMarker);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalAtUnsafeDef.fullPath, &canonicalAtUnsafeDef},
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/map/at_unsafe";
+  receiverCall.args = {valuesExpr, keyExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &expr) { return expr.name; },
+            defMap,
+            error) == nullptr);
+  CHECK(error == "unknown method target for tag");
+}
+
 TEST_CASE("ir lowerer setup type helper rejects alias receiver fallback when expr path is unavailable") {
   primec::Definition aliasAtDef;
   aliasAtDef.fullPath = "/vector/at";

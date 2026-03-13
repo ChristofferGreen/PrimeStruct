@@ -1176,6 +1176,35 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(typeName, lookupError);
     } else {
       std::vector<std::string> receiverPaths = collectionHelperPathCandidates(resolveExprPath(*receiver));
+      auto pruneMapAccessReceiverPaths = [&](const std::string &path) {
+        std::string normalizedPath = path;
+        if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+          if (normalizedPath.rfind("map/", 0) == 0 || normalizedPath.rfind("std/collections/map/", 0) == 0) {
+            normalizedPath.insert(normalizedPath.begin(), '/');
+          }
+        }
+        auto eraseCandidate = [&](const std::string &candidate) {
+          for (auto it = receiverPaths.begin(); it != receiverPaths.end();) {
+            if (*it == candidate) {
+              it = receiverPaths.erase(it);
+            } else {
+              ++it;
+            }
+          }
+        };
+        if (normalizedPath.rfind("/map/", 0) == 0) {
+          const std::string suffix = normalizedPath.substr(std::string("/map/").size());
+          if (suffix == "at" || suffix == "at_unsafe") {
+            eraseCandidate("/std/collections/map/" + suffix);
+          }
+        } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+          const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
+          if (suffix == "at" || suffix == "at_unsafe") {
+            eraseCandidate("/map/" + suffix);
+          }
+        }
+      };
+      pruneMapAccessReceiverPaths(resolveExprPath(*receiver));
       auto appendUniqueReceiverPath = [&](const std::string &candidate) {
         if (candidate.empty()) {
           return;
@@ -1192,6 +1221,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         for (const auto &resolvedReceiverPath : resolvedReceiverPaths) {
           appendUniqueReceiverPath(resolvedReceiverPath);
         }
+        pruneMapAccessReceiverPaths(receiverMethodDef->fullPath);
       }
       for (const auto &receiverPath : receiverPaths) {
         auto receiverDefIt = defMap.find(receiverPath);
