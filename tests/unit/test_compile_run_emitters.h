@@ -485,6 +485,119 @@ main() {
         "1,5,1,10,6,7,10,1,2,3,255,2,72,105,2,9,6,19,28,16,4,10,20,30,255,1,10,9,22,10,250,251,252,255,2,71,111,2,9,6,37,28,14,3,40,50,60,255,1,11,8,39,10,200,210,220,255,3,97,98,99\n");
 }
 
+TEST_CASE("C++ emitter runs panel container widget deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 2i32, 0i32, 0i32)}
+  [i32] title{layout.append_label(root, 10i32, "Top"utf8)}
+  [i32] panel{layout.append_panel(root, 2i32, 1i32, 20i32, 12i32)}
+  [i32] action{layout.append_button(panel, 10i32, 2i32, "Go"utf8)}
+  [i32] field{layout.append_input(panel, 10i32, 1i32, 16i32, "abc"utf8)}
+  [i32] footer{layout.append_label(root, 10i32, "!"utf8)}
+  layout.measure()
+  layout.arrange(4i32, 5i32, 28i32, 60i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.draw_label(layout, title, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "Top"utf8)
+  commands.begin_panel(layout, panel, 4i32, Rgba8([r] 8i32, [g] 9i32, [b] 10i32, [a] 255i32))
+  commands.draw_button(
+    layout,
+    action,
+    10i32,
+    2i32,
+    3i32,
+    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
+    "Go"utf8
+  )
+  commands.draw_input(
+    layout,
+    field,
+    10i32,
+    1i32,
+    2i32,
+    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
+    Rgba8([r] 210i32, [g] 211i32, [b] 212i32, [a] 255i32),
+    "abc"utf8
+  )
+  commands.end_panel()
+  commands.draw_label(layout, footer, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "!"utf8)
+  dump_words(commands.serialize())
+  return(plus(layout.node_count(), plus(commands.command_count(), commands.clip_depth())))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ui_panel_widget.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ui_panel_widget_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ui_panel_widget.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 14);
+  CHECK(readFile(outPath) ==
+        "1,8,1,11,5,6,10,1,2,3,255,3,84,111,112,2,9,5,18,26,31,4,8,9,10,255,3,4,7,20,22,27,2,9,7,20,22,14,3,20,30,40,255,1,10,9,22,10,200,201,202,255,2,71,111,2,9,7,35,22,12,2,50,60,70,255,1,11,8,36,10,210,211,212,255,3,97,98,99,4,0,1,9,5,51,10,1,2,3,255,1,33\n");
+}
+
+TEST_CASE("C++ emitter runs empty panel container stays balanced deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(0i32, 0i32, 0i32, 0i32)}
+  [i32] panel{layout.append_panel(root, 3i32, 1i32, 12i32, 10i32)}
+  layout.measure()
+  layout.arrange(2i32, 3i32, 20i32, 18i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.begin_panel(layout, panel, 5i32, Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32))
+  commands.end_panel()
+  dump_words(commands.serialize())
+  return(plus(layout.node_count(), plus(commands.command_count(), commands.clip_depth())))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ui_empty_panel_widget.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ui_empty_panel_widget_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ui_empty_panel_widget.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 5);
+  CHECK(readFile(outPath) == "1,3,2,9,2,3,20,10,5,9,8,7,255,3,4,5,6,14,4,4,0\n");
+}
+
 TEST_CASE("C++ emitter supports graphics-style int return propagation with on_error") {
   const std::string source = R"(
 [struct]

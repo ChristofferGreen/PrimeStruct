@@ -184,12 +184,15 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `LayoutTree.append_label(...)`
      - `LayoutTree.append_button(...)`
      - `LayoutTree.append_input(...)`
+     - `LayoutTree.append_panel(...)`
      - `LayoutTree.measure()`
      - `LayoutTree.arrange(x, y, width, height)`
      - `LayoutTree.serialize() -> vector<i32>`
      - `CommandList.draw_label(...)`
      - `CommandList.draw_button(...)`
      - `CommandList.draw_input(...)`
+     - `CommandList.begin_panel(...)`
+     - `CommandList.end_panel()`
    - Rounded rectangles are expressed through SDF-style primitives.
    - Renders into a software color buffer (or shared surface view).
    - Current host bridge prototype: the native window host and macOS Metal host
@@ -234,13 +237,24 @@ The following architecture is planned but not locked as part of the v1 contract:
        origin.
      - `draw_button(...)` emits one rounded rect followed by one text command.
      - `draw_input(...)` emits one rounded rect followed by one text command.
-4. Composite widget layer:
+4. Basic widget container layer:
+   - Current prototype contract:
+     - `append_panel(...)` creates a column-backed container node using the
+       existing layout measure/arrange rules.
+     - `begin_panel(...)` emits one rounded rect for the panel background,
+       then emits one `push_clip(...)` for the panel inner content rect.
+     - The inner content rect is `panel_rect` inset by the layout padding on
+       every side, with width/height clamped to `>= 0`.
+     - `end_panel()` emits one balancing `pop_clip()`.
+     - Child widget draw calls for that panel must appear between
+       `begin_panel(...)` and `end_panel()` in command order.
+5. Composite widget layer:
    - Higher-level widgets composed from basic widgets only.
-5. Presentation and backend adapters:
+6. Presentation and backend adapters:
    - Native path: software-rendered/shared buffer can be presented through the
      platform presenter (for example Metal).
    - Web path: UI tree/layout can also be emitted as HTML/CSS + event bindings.
-6. Platform input adapter:
+7. Platform input adapter:
    - Normalizes OS/web input (pointer, keyboard, IME, resize, focus) into one
      UI event stream consumed by the UI runtime.
 
@@ -367,6 +381,48 @@ main() {
     Rgba8([r] 200i32, [g] 210i32, [b] 220i32, [a] 255i32),
     "abc"utf8
   )
+  return(commands.command_count())
+}
+```
+
+Basic container example:
+
+```prime
+import /std/ui/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 2i32, 0i32, 0i32)}
+  [i32] panel{layout.append_panel(root, 2i32, 1i32, 20i32, 12i32)}
+  [i32] action{layout.append_button(panel, 10i32, 2i32, "Go"utf8)}
+  [i32] field{layout.append_input(panel, 10i32, 1i32, 16i32, "abc"utf8)}
+  layout.measure()
+  layout.arrange(4i32, 5i32, 28i32, 60i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.begin_panel(layout, panel, 4i32, Rgba8([r] 8i32, [g] 9i32, [b] 10i32, [a] 255i32))
+  commands.draw_button(
+    layout,
+    action,
+    10i32,
+    2i32,
+    3i32,
+    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
+    "Go"utf8
+  )
+  commands.draw_input(
+    layout,
+    field,
+    10i32,
+    1i32,
+    2i32,
+    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
+    Rgba8([r] 210i32, [g] 211i32, [b] 212i32, [a] 255i32),
+    "abc"utf8
+  )
+  commands.end_panel()
   return(commands.command_count())
 }
 ```

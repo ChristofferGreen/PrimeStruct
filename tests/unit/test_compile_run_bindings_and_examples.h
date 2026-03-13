@@ -4143,12 +4143,15 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`LayoutTree.append_label(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_button(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.append_input(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.append_panel(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.measure()`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.arrange(x, y, width, height)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.serialize() -> vector<i32>`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.draw_label(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.draw_button(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.draw_input(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.begin_panel(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`CommandList.end_panel()`") != std::string::npos);
   CHECK(graphicsDoc.find("First word: format version (`1`)") != std::string::npos);
   CHECK(graphicsDoc.find("`1` = `draw_text`") != std::string::npos);
   CHECK(graphicsDoc.find("`2` = `draw_rounded_rect`") != std::string::npos);
@@ -4169,6 +4172,10 @@ TEST_CASE("software renderer command list docs stay source locked") {
         std::string::npos);
   CHECK(graphicsDoc.find("`draw_input(...)` emits one rounded rect followed by one text command") !=
         std::string::npos);
+  CHECK(graphicsDoc.find("`append_panel(...)` creates a column-backed container node") != std::string::npos);
+  CHECK(graphicsDoc.find("`begin_panel(...)` emits one rounded rect for the panel background") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`end_panel()` emits one balancing `pop_clip()`") != std::string::npos);
   CHECK(graphicsDoc.find("can upload a deterministic BGRA8 software surface into a shared Metal") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`--software-surface-demo`") != std::string::npos);
@@ -4176,9 +4183,11 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("tree.append_root_column(2i32, 3i32, 10i32, 4i32)") != std::string::npos);
   CHECK(graphicsDoc.find("layout.append_label(root, 10i32, \"Hi\"utf8)") != std::string::npos);
   CHECK(graphicsDoc.find("commands.draw_button(") != std::string::npos);
-  CHECK(specDoc.find("the first `/std/ui/*` foundation now includes deterministic command-list rendering, a two-pass layout tree contract, and basic control emission") !=
+  CHECK(graphicsDoc.find("layout.append_panel(root, 2i32, 1i32, 20i32, 12i32)") != std::string::npos);
+  CHECK(graphicsDoc.find("commands.begin_panel(layout, panel, 4i32") != std::string::npos);
+  CHECK(specDoc.find("the first `/std/ui/*` foundation now includes deterministic command-list rendering, a two-pass layout tree contract, basic control emission, and a basic panel container primitive") !=
         std::string::npos);
-  CHECK(specDoc.find("`draw_label`, `draw_button`, `draw_input`, `LayoutTree`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
+  CHECK(specDoc.find("`draw_label`, `draw_button`, `draw_input`, `begin_panel`, `end_panel`, `LayoutTree`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
   CHECK(specDoc.find("blit a deterministic BGRA8 software surface through the native window presenter") !=
         std::string::npos);
 }

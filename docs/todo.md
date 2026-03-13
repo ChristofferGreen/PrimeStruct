@@ -128,7 +128,6 @@ Type-resolution graph rollout note: keep the graph migration blocked on the rema
 - ○ Add GLSL reject/diagnostic coverage for image file I/O.
 
 **Web + Native + Metal 3D Target (Spinning Cube)**
-- ○ Add a basic widget container primitive on top of the layout contract that emits the renderer command list.
 - ○ Add a composite widget layer composed strictly from basic widgets, with conformance tests that ban direct backend draw calls in composite widgets.
 - ○ Add an HTML backend adapter that emits DOM/CSS/event wiring from the shared widget/layout model as an alternative to surface presentation.
 - ○ Add a platform input adapter contract that normalizes pointer and keyboard events into one UI event stream for widget runtime consumption.

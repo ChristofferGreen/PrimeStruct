@@ -46,6 +46,11 @@ namespace std {
     return(max(1i32, textSizePx))
   }
 
+  [return<i32>]
+  layout_inner_extent([i32] outerExtent, [i32] paddingPx) {
+    return(max(0i32, minus(outerExtent, multiply(paddingPx, 2i32))))
+  }
+
   namespace CommandList {
     [effects(heap_alloc), return<void>]
     append_word([CommandList mut] self, [i32] value) {
@@ -133,6 +138,30 @@ namespace std {
       [i32] y{layout.rect_y(nodeId)}
       self.draw_rounded_rect(x, y, layout.rect_width(nodeId), layout.rect_height(nodeId), radiusPx, fill)
       self.draw_text(plus(x, paddingPx), plus(y, paddingPx), textSizePx, textColor, text)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    begin_panel(
+        [CommandList mut] self,
+        [LayoutTree] layout,
+        [i32] nodeId,
+        [i32] radiusPx,
+        [Rgba8] fill) {
+      [i32] x{layout.rect_x(nodeId)}
+      [i32] y{layout.rect_y(nodeId)}
+      [i32] paddingPx{layout.padding_px(nodeId)}
+      self.draw_rounded_rect(x, y, layout.rect_width(nodeId), layout.rect_height(nodeId), radiusPx, fill)
+      self.push_clip(
+        plus(x, paddingPx),
+        plus(y, paddingPx),
+        layout_inner_extent(layout.rect_width(nodeId), paddingPx),
+        layout_inner_extent(layout.rect_height(nodeId), paddingPx)
+      )
+    }
+
+    [public effects(heap_alloc), return<void>]
+    end_panel([CommandList mut] self) {
+      self.pop_clip()
     }
 
     [public effects(heap_alloc), return<void>]
@@ -226,6 +255,12 @@ namespace std {
     }
 
     [public effects(heap_alloc), return<i32>]
+    append_panel(
+        [LayoutTree mut] self, [i32] parentIndex, [i32] paddingPx, [i32] gapPx, [i32] minWidth, [i32] minHeight) {
+      return(self.append_column(parentIndex, paddingPx, gapPx, minWidth, minHeight))
+    }
+
+    [public effects(heap_alloc), return<i32>]
     append_leaf([LayoutTree mut] self, [i32] parentIndex, [i32] minWidth, [i32] minHeight) {
       return(self.append_node(1i32, parentIndex, 0i32, 0i32, minWidth, minHeight))
     }
@@ -288,6 +323,11 @@ namespace std {
     [public return<i32>]
     rect_height([LayoutTree] self, [i32] nodeId) {
       return(self.rectHeights[nodeId])
+    }
+
+    [return<i32>]
+    padding_px([LayoutTree] self, [i32] nodeId) {
+      return(self.paddingPxs[nodeId])
     }
 
     [public return<void>]
