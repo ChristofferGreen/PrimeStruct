@@ -544,6 +544,18 @@ bool isCollectionCompatibilityTemplateFallbackPath(const std::string &path) {
          path == "/map/at_unsafe";
 }
 
+bool isExplicitCollectionCompatibilityAliasPath(std::string path) {
+  if (path.empty()) {
+    return false;
+  }
+  if (path.front() != '/' &&
+      (path.rfind("array/", 0) == 0 || path.rfind("vector/", 0) == 0 || path.rfind("map/", 0) == 0)) {
+    path.insert(path.begin(), '/');
+  }
+  return isCollectionCompatibilityTemplateFallbackPath(path) || path == "/array/count" ||
+         path == "/array/capacity" || path == "/array/at" || path == "/array/at_unsafe";
+}
+
 bool shouldPreserveCompatibilityTemplatePath(const std::string &path, const Context &ctx) {
   return isCollectionCompatibilityTemplateFallbackPath(path) && ctx.sourceDefs.count(path) > 0 &&
          ctx.templateDefs.count(path) == 0;
@@ -1773,11 +1785,15 @@ bool rewriteExpr(Expr &expr,
 
   if (!expr.isMethodCall) {
     std::string resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx);
+    const std::string originalResolvedPath = resolvedPath;
     const std::string preferredPath = preferVectorStdlibHelperPath(resolvedPath, ctx.sourceDefs);
     if (preferredPath != resolvedPath && ctx.sourceDefs.count(preferredPath) > 0) {
       resolvedPath = preferredPath;
       expr.name = preferredPath;
     }
+    const bool explicitCompatibilityAliasToCanonicalTemplate =
+        expr.templateArgs.empty() && isExplicitCollectionCompatibilityAliasPath(originalResolvedPath) &&
+        preferredPath != originalResolvedPath && ctx.templateDefs.count(preferredPath) > 0;
     const bool resolvedWasTemplate = ctx.templateDefs.count(resolvedPath) > 0;
     if (!expr.templateArgs.empty() && !resolvedWasTemplate) {
       if (!shouldPreserveCompatibilityTemplatePath(resolvedPath, ctx) &&
@@ -1789,7 +1805,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
     }
-    if (expr.templateArgs.empty()) {
+    if (expr.templateArgs.empty() && !explicitCompatibilityAliasToCanonicalTemplate) {
       const std::string implicitTemplatePreferredPath =
           preferVectorStdlibImplicitTemplatePath(expr, resolvedPath, locals, params, allowMathBare, ctx, namespacePrefix);
       if (implicitTemplatePreferredPath != resolvedPath) {

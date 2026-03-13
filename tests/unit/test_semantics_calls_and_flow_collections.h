@@ -5425,7 +5425,7 @@ main() {
   CHECK(error.find("template arguments") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced call aliases forward to canonical stdlib helper precedence" * doctest::skip()) {
+TEST_CASE("vector namespaced call aliases forward to canonical stdlib helper precedence") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -6710,7 +6710,7 @@ main() {
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias keeps templated canonical helper diagnostics" * doctest::skip()) {
+TEST_CASE("vector namespaced alias keeps templated canonical helper diagnostics") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -7892,6 +7892,24 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("map compatibility alias keeps templated canonical helper diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/map/count(values, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments required for /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("map compatibility explicit-template count call keeps alias precedence with canonical templated helper") {
