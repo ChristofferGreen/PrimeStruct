@@ -19,6 +19,10 @@ bool isPointerExpression(const Expr &expr,
     return true;
   }
   if (expr.kind == Expr::Kind::Call) {
+    std::string memoryBuiltinName;
+    if (getBuiltinMemoryName(expr, memoryBuiltinName) && memoryBuiltinName == "alloc" && expr.templateArgs.size() == 1) {
+      return true;
+    }
     std::string builtinName;
     if (getBuiltinOperatorName(expr, builtinName) &&
         (builtinName == "plus" || builtinName == "minus") &&
@@ -64,6 +68,10 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
         }
       }
       return LocalInfo::ValueKind::Unknown;
+    }
+    std::string memoryBuiltinName;
+    if (getBuiltinMemoryName(expr, memoryBuiltinName) && memoryBuiltinName == "alloc" && expr.templateArgs.size() == 1) {
+      return valueKindFromTypeName(expr.templateArgs.front());
     }
     std::string builtinName;
     if (getBuiltinOperatorName(expr, builtinName) &&
@@ -618,7 +626,14 @@ PointerBuiltinCallReturnKindResolution inferPointerBuiltinCallReturnKind(
 
   std::string builtin;
   if (!getBuiltinPointerName(expr, builtin)) {
-    return PointerBuiltinCallReturnKindResolution::NotMatched;
+    std::string memoryBuiltin;
+    if (!getBuiltinMemoryName(expr, memoryBuiltin) || memoryBuiltin != "alloc") {
+      return PointerBuiltinCallReturnKindResolution::NotMatched;
+    }
+    if (expr.templateArgs.size() == 1) {
+      kindOut = valueKindFromTypeName(expr.templateArgs.front());
+    }
+    return PointerBuiltinCallReturnKindResolution::Resolved;
   }
 
   if (builtin == "dereference") {

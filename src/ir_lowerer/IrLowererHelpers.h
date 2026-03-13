@@ -72,6 +72,7 @@ bool getBuiltinMathPredicateName(const Expr &expr, std::string &out, bool allowB
 bool getBuiltinRoundingName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinRootName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinConvertName(const Expr &expr);
+bool getBuiltinMemoryName(const Expr &expr, std::string &out);
 bool getBuiltinGpuName(const Expr &expr, std::string &out);
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
 bool getBuiltinPointerName(const Expr &expr, std::string &out);

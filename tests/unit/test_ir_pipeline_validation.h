@@ -25047,6 +25047,19 @@ TEST_CASE("ir lowerer setup inference helper infers pointer target kinds") {
   primec::Expr one;
   one.kind = primec::Expr::Kind::Literal;
   one.literalValue = 1;
+
+  primec::Expr allocCall;
+  allocCall.kind = primec::Expr::Kind::Call;
+  allocCall.name = "/std/intrinsics/memory/alloc";
+  allocCall.templateArgs = {"i32"};
+  allocCall.args = {one};
+  CHECK(primec::ir_lowerer::inferPointerTargetValueKind(
+            allocCall,
+            locals,
+            [](const primec::Expr &expr, std::string &builtinName) {
+              return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
   primec::Expr plusCall;
   plusCall.kind = primec::Expr::Kind::Call;
   plusCall.name = "plus";
@@ -26417,6 +26430,15 @@ TEST_CASE("ir lowerer setup inference helper infers pointer builtin call return 
   dereferenceExpr.name = "dereference";
   dereferenceExpr.args = {pointerName};
 
+  primec::Expr allocExpr;
+  allocExpr.kind = primec::Expr::Kind::Call;
+  allocExpr.name = "/std/intrinsics/memory/alloc";
+  allocExpr.templateArgs = {"i32"};
+  primec::Expr allocCount;
+  allocCount.kind = primec::Expr::Kind::Literal;
+  allocCount.literalValue = 2;
+  allocExpr.args = {allocCount};
+
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(primec::ir_lowerer::inferPointerBuiltinCallReturnKind(
             dereferenceExpr,
@@ -26429,6 +26451,15 @@ TEST_CASE("ir lowerer setup inference helper infers pointer builtin call return 
             },
             kindOut) == Resolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
+  CHECK(primec::ir_lowerer::inferPointerBuiltinCallReturnKind(
+            allocExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
 TEST_CASE("ir lowerer setup inference helper handles invalid pointer builtin calls") {
@@ -26782,6 +26813,39 @@ TEST_CASE("ir lowerer statement binding helper infers vector kind from initializ
 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer statement binding helper infers pointer kind from alloc initializer call") {
+  primec::Expr stmt;
+  stmt.name = "ptr";
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "/std/intrinsics/memory/alloc";
+  init.templateArgs = {"i32"};
+  primec::Expr countExpr;
+  countExpr.kind = primec::Expr::Kind::Literal;
+  countExpr.literalValue = 4;
+  init.args = {countExpr};
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info = primec::ir_lowerer::inferStatementBindingTypeInfo(
+      stmt,
+      init,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "/std/intrinsics/memory/alloc") {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
 TEST_CASE("ir lowerer statement binding helper keeps canonical map constructor helper return kind") {
@@ -29767,6 +29831,7 @@ TEST_CASE("ir lowerer conversions helper emits float conversion opcode") {
       },
       [](const std::string &, std::string &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
@@ -29780,6 +29845,78 @@ TEST_CASE("ir lowerer conversions helper emits float conversion opcode") {
   CHECK(std::any_of(instructions.begin(),
                     instructions.end(),
                     [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::ConvertI32ToF32; }));
+}
+
+TEST_CASE("ir lowerer conversions helper lowers alloc intrinsic to heap alloc") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr countExpr;
+  countExpr.kind = primec::Expr::Kind::Literal;
+  countExpr.intWidth = 32;
+  countExpr.literalValue = 3;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "/std/intrinsics/memory/alloc";
+  expr.templateArgs = {"Pair"};
+  expr.args = {countExpr};
+  expr.namespacePrefix = "/pkg";
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 0;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      {},
+      nextLocal,
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(valueExpr.literalValue)});
+        return true;
+      },
+      [](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        if (valueExpr.kind == primec::Expr::Kind::Literal) {
+          return ValueKind::Int32;
+        }
+        return ValueKind::Unknown;
+      },
+      [](ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const std::string &) { return ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut) {
+        if (typeName == "Pair" && namespacePrefix == "/pkg") {
+          resolvedOut = "/pkg/Pair";
+          return true;
+        }
+        return false;
+      },
+      [](const std::string &structTypeName, int32_t &slotCount) {
+        if (structTypeName == "/pkg/Pair") {
+          slotCount = 2;
+          return true;
+        }
+        return false;
+      },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK(ok);
+  CHECK(handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 3);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].imm == 2);
+  CHECK(instructions[2].op == primec::IrOpcode::MulI32);
+  CHECK(instructions[3].op == primec::IrOpcode::HeapAlloc);
 }
 
 TEST_CASE("ir lowerer conversions helper emits vector record header with data pointer") {
@@ -29831,6 +29968,7 @@ TEST_CASE("ir lowerer conversions helper emits vector record header with data po
       },
       [](const std::string &, std::string &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
@@ -29917,6 +30055,7 @@ TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
       [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
       [](const std::string &, std::string &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
@@ -29953,6 +30092,7 @@ TEST_CASE("ir lowerer conversions helper ignores unrelated call names") {
       [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
       [](const std::string &, std::string &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },

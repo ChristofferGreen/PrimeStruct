@@ -576,6 +576,28 @@ bool getBuiltinConvertName(const Expr &expr) {
   return name == "convert";
 }
 
+bool getBuiltinMemoryName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  if (normalized.rfind("std/intrinsics/memory/", 0) != 0) {
+    return false;
+  }
+  normalized = normalized.substr(22);
+  if (normalized.find('/') != std::string::npos) {
+    return false;
+  }
+  if (normalized == "alloc" || normalized == "free" || normalized == "realloc") {
+    out = normalized;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinGpuName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;

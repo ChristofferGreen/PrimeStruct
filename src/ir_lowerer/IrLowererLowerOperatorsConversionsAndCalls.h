@@ -12,6 +12,9 @@
                 valueKindFromTypeName,
                 getMathConstantName,
                 inferStructExprPath,
+                [&](const std::string &typeName, const std::string &namespacePrefix, std::string &structPathOut) {
+                  return resolveStructTypeName(typeName, namespacePrefix, structPathOut);
+                },
                 [&](const std::string &structTypeName, int32_t &slotCount) {
                   StructSlotLayout layout;
                   if (!resolveStructSlotLayout(structTypeName, layout)) {

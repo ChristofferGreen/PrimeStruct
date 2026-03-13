@@ -27,6 +27,8 @@ using ResolveConversionsAndCallsStringTableTargetFn =
 using ConversionsAndCallsValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
 using ConversionsAndCallsGetMathConstantNameFn = std::function<bool(const std::string &, std::string &)>;
 using InferConversionsAndCallsStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
+using ResolveConversionsAndCallsStructTypeNameFn =
+    std::function<bool(const std::string &, const std::string &, std::string &)>;
 using ResolveConversionsAndCallsStructSlotCountFn = std::function<bool(const std::string &, int32_t &)>;
 using ResolveConversionsAndCallsStructFieldInfoFn =
     std::function<bool(const std::string &, const std::string &, int32_t &, int32_t &, std::string &)>;
@@ -62,6 +64,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
     const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,
     const InferConversionsAndCallsStructExprPathFn &inferStructExprPath,
+    const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
     const ResolveConversionsAndCallsStructSlotCountFn &resolveStructSlotCount,
     const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,

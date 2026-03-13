@@ -19,6 +19,11 @@ bool hasSoaVectorTypeTransform(const Expr &expr) {
   return false;
 }
 
+bool isAllocMemoryIntrinsicCall(const Expr &expr) {
+  std::string builtinName;
+  return expr.kind == Expr::Kind::Call && getBuiltinMemoryName(expr, builtinName) && builtinName == "alloc";
+}
+
 } // namespace
 
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
@@ -40,7 +45,9 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       }
     } else if (init.kind == Expr::Kind::Call) {
       inferredInitValueKind = inferExprKind(init, localsIn);
-      if (inferredInitValueKind == LocalInfo::ValueKind::Unknown) {
+      if (isAllocMemoryIntrinsicCall(init)) {
+        info.kind = LocalInfo::Kind::Pointer;
+      } else if (inferredInitValueKind == LocalInfo::ValueKind::Unknown) {
         std::string collection;
         if (getBuiltinCollectionName(init, collection)) {
           if (collection == "array") {
@@ -97,6 +104,19 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
     return info;
   }
 
+  if (info.kind == LocalInfo::Kind::Pointer || info.kind == LocalInfo::Kind::Reference) {
+    if (init.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(init.name);
+      if (it != localsIn.end() && (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {
+        info.valueKind = it->second.valueKind;
+      }
+    } else if (info.kind == LocalInfo::Kind::Pointer && init.kind == Expr::Kind::Call && isAllocMemoryIntrinsicCall(init) &&
+               init.templateArgs.size() == 1) {
+      info.valueKind = valueKindFromTypeName(init.templateArgs.front());
+    }
+    return info;
+  }
+
   if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector) {
     if (init.kind == Expr::Kind::Name) {
       auto it = localsIn.find(init.name);
@@ -134,6 +154,13 @@ bool inferCallParameterLocalInfo(const Expr &param,
   infoOut.kind = bindingKind(param);
   if (hasExplicitBindingTypeTransform(param)) {
     infoOut.valueKind = bindingValueKind(param, infoOut.kind);
+  } else if (param.args.size() == 1 && infoOut.kind == LocalInfo::Kind::Value && isAllocMemoryIntrinsicCall(param.args.front())) {
+    infoOut.kind = LocalInfo::Kind::Pointer;
+    if (param.args.front().templateArgs.size() == 1) {
+      infoOut.valueKind = valueKindFromTypeName(param.args.front().templateArgs.front());
+    } else {
+      infoOut.valueKind = LocalInfo::ValueKind::Unknown;
+    }
   } else if (param.args.size() == 1 && infoOut.kind == LocalInfo::Kind::Value) {
     infoOut.valueKind = inferExprKind(param.args.front(), localsForKindInference);
     if (infoOut.valueKind == LocalInfo::ValueKind::Unknown) {

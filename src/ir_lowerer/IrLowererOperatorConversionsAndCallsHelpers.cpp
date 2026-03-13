@@ -1,6 +1,7 @@
 #include "IrLowererOperatorConversionsAndCallsHelpers.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererIndexKindHelpers.h"
 
 #include <algorithm>
 #include <cstring>
@@ -21,6 +22,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
     const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,
     const InferConversionsAndCallsStructExprPathFn &inferStructExprPath,
+    const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
     const ResolveConversionsAndCallsStructSlotCountFn &resolveStructSlotCount,
     const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
@@ -232,6 +234,57 @@ bool emitConversionsAndCallsOperatorExpr(
           if (needsConvert) {
             instructions.push_back({convertOp, 0});
           }
+          return true;
+        }
+        if (getBuiltinMemoryName(expr, builtin)) {
+          if (builtin != "alloc") {
+            error = "native backend does not support memory intrinsic: " + builtin;
+            return false;
+          }
+          if (expr.templateArgs.size() != 1) {
+            error = "alloc requires exactly one template argument";
+            return false;
+          }
+          if (expr.args.size() != 1) {
+            error = "alloc requires exactly one argument";
+            return false;
+          }
+          const LocalInfo::ValueKind countKind = normalizeIndexKind(inferExprKind(expr.args.front(), localsIn));
+          if (!isSupportedIndexKind(countKind)) {
+            error = "alloc requires integer count argument";
+            return false;
+          }
+          if (!emitExpr(expr.args.front(), localsIn)) {
+            return false;
+          }
+
+          int32_t slotCountMultiplier = 1;
+          const std::string &targetTypeName = expr.templateArgs.front();
+          LocalInfo::ValueKind targetKind = valueKindFromTypeName(targetTypeName);
+          if (targetKind == LocalInfo::ValueKind::Unknown) {
+            std::string resolvedStructType;
+            if (!resolveStructTypeName(targetTypeName, expr.namespacePrefix, resolvedStructType)) {
+              error = "native backend does not support alloc target type: " + targetTypeName;
+              return false;
+            }
+            if (!resolveStructSlotCount(resolvedStructType, slotCountMultiplier)) {
+              return false;
+            }
+          } else if (targetKind == LocalInfo::ValueKind::String) {
+            error = "native backend does not support alloc target type: " + targetTypeName;
+            return false;
+          }
+
+          if (slotCountMultiplier != 1) {
+            if (countKind == LocalInfo::ValueKind::Int32) {
+              instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(slotCountMultiplier)});
+              instructions.push_back({IrOpcode::MulI32, 0});
+            } else {
+              instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(slotCountMultiplier)});
+              instructions.push_back({IrOpcode::MulI64, 0});
+            }
+          }
+          instructions.push_back({IrOpcode::HeapAlloc, 0});
           return true;
         }
         if (getBuiltinPointerName(expr, builtin)) {

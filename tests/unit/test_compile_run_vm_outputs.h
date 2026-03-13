@@ -1021,6 +1021,24 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
+TEST_CASE("exe-ir emitter compiles and runs heap alloc intrinsic") {
+  SKIP_IF_VM_IR_BACKEND_LIMITED();
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(ptr), 9i32)
+  return(dereference(ptr))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_heap_alloc_intrinsic.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_ir_heap_alloc_intrinsic").string();
+
+  const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("exe-ir emitter compiles and runs file io subset") {
   SKIP_IF_VM_IR_BACKEND_LIMITED();
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_exe_ir_file_io_subset.txt").string();
@@ -1200,6 +1218,24 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 8);
+}
+
+TEST_CASE("exe emitter uses ir backend for heap alloc intrinsic") {
+  SKIP_IF_VM_IR_BACKEND_LIMITED();
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(ptr), 9i32)
+  return(dereference(ptr))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_heap_alloc_intrinsic_ir_first.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exe_heap_alloc_intrinsic_ir_first").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
 }
 
 TEST_CASE("exe emitter uses ir backend for file io subset") {

@@ -812,6 +812,20 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with heap alloc intrinsic") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(ptr), 9i32)
+  return(dereference(ptr))
+}
+)";
+  const std::string srcPath = writeTemp("vm_heap_alloc_intrinsic.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
+}
+
 TEST_CASE("runs vm with match cases") {
   const std::string source = R"(
 [return<int>]
