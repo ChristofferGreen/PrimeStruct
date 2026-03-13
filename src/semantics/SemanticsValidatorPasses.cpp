@@ -3062,6 +3062,9 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
         }
       }
     }
+    if (receiverStruct.empty() && receiver.kind == Expr::Kind::Call) {
+      receiverStruct = collectionPathFromCallExpr(receiver);
+    }
     if (receiverStruct.empty()) {
       return false;
     }
