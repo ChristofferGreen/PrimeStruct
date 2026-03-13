@@ -823,7 +823,31 @@ bool resolveDefinitionCallReturnKind(const Expr &callExpr,
     return false;
   }
 
-  const auto candidates = collectionHelperPathCandidates(resolveExprPath(callExpr));
+  auto candidates = collectionHelperPathCandidates(resolveExprPath(callExpr));
+  auto pruneRemovedMapCompatibilityCallReturnCandidates = [&](const std::string &path) {
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("map/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+    if (normalizedPath.rfind("/map/", 0) != 0) {
+      return;
+    }
+    const std::string suffix = normalizedPath.substr(std::string("/map/").size());
+    if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
+      return;
+    }
+    const std::string canonicalCandidate = "/std/collections/map/" + suffix;
+    for (auto it = candidates.begin(); it != candidates.end();) {
+      if (*it == canonicalCandidate) {
+        it = candidates.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  };
+  pruneRemovedMapCompatibilityCallReturnCandidates(resolveExprPath(callExpr));
   bool matchedDefinition = false;
   for (const auto &candidate : candidates) {
     auto defIt = defMap.find(candidate);
