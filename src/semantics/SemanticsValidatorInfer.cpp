@@ -1959,6 +1959,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const std::string removedCollectionMethodCompatibilityPath =
         expr.isMethodCall ? explicitRemovedCollectionMethodPath(expr) : "";
     if (!removedCollectionMethodCompatibilityPath.empty()) {
+      if (removedCollectionMethodCompatibilityPath == "/vector/at" ||
+          removedCollectionMethodCompatibilityPath == "/vector/at_unsafe") {
+        ReturnKind builtinMethodKind = ReturnKind::Unknown;
+        if (resolveBuiltinCollectionMethodReturnKind(
+                removedCollectionMethodCompatibilityPath, expr.args.front(), builtinMethodKind)) {
+          return builtinMethodKind;
+        }
+      }
       return ReturnKind::Unknown;
     }
     const auto resolvedCandidates = collectionHelperPathCandidates(resolvedCallee);
