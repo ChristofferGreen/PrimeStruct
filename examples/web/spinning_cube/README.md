@@ -198,6 +198,20 @@ Expected runtime behavior:
   `startup_failure_exit_code`, and graphics-path `gfx_error_code` /
   `gfx_error_why` fields before exit.
 
+Software surface bridge demo:
+```bash
+xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host
+/tmp/spinning_cube_window_host --software-surface-demo --max-frames 1
+```
+- Startup: opens the same `CAMetalLayer` presenter path without requiring a
+  cube simulation stream.
+- Bridge behavior: uploads a deterministic BGRA8 software color buffer into a
+  shared Metal texture and blits it into the window drawable.
+- Diagnostics: prints `software_surface_bridge=1`,
+  `software_surface_width=64`, `software_surface_height=64`,
+  `software_surface_presented=1`, `frame_rendered=1`, and
+  `exit_reason=max_frames`.
+
 ### Native Window Launcher (macOS)
 ```bash
 ./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec
@@ -229,6 +243,18 @@ xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -
 Expected runtime behavior:
 - Startup: host process returns 0 after one frame submission.
 - Diagnostics: prints `frame_rendered=1`.
+
+Software surface bridge demo:
+```bash
+xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework Metal -o /tmp/metal_host
+/tmp/metal_host --software-surface-demo
+```
+- Startup: host process returns 0 after one software-surface blit pass.
+- Bridge behavior: uploads the deterministic BGRA8 software buffer into a
+  shared Metal texture and blits it into the host target texture.
+- Diagnostics: prints `software_surface_bridge=1`,
+  `software_surface_width=64`, `software_surface_height=64`,
+  `software_surface_presented=1`, and `frame_rendered=1`.
 
 ### Native Windowed Execution Preflight (macOS)
 ```bash

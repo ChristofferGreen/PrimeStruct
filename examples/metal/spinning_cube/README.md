@@ -17,9 +17,15 @@ spinning-cube sample.
    - `xcrun clang++ -std=c++17 -fobjc-arc metal_host.mm -framework Foundation -framework Metal -o metal_host`
 4. Run host smoke:
    - `./metal_host ./cube.metallib`
+5. Optional software-surface bridge smoke:
+   - `./metal_host --software-surface-demo`
 
 The host prints `gfx_profile=metal-osx` and `frame_rendered=1` and exits 0
 when frame submission completes.
+The software-surface bridge smoke uploads a deterministic BGRA8 software buffer
+into a shared Metal texture, blits it into the host target texture, and prints
+`software_surface_bridge=1`, `software_surface_width=64`,
+`software_surface_height=64`, and `software_surface_presented=1`.
 
 Failure diagnostics print deterministic:
 - `gfx_profile=metal-osx`

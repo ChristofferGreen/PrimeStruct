@@ -128,7 +128,6 @@ Type-resolution graph rollout note: keep the graph migration blocked on the rema
 - ○ Add GLSL reject/diagnostic coverage for image file I/O.
 
 **Web + Native + Metal 3D Target (Spinning Cube)**
-- ○ Add a software color-buffer/shared-surface bridge so software-rendered output can be presented through the native presenter path (including Metal host blit/present flow).
 - ○ Add a two-pass layout engine contract (children-up measure + parents-down arrange) with deterministic layout golden tests.
 - ○ Add a basic widget control layer on top of the layout contract (`button`, `label`, `input`) that emits the renderer command list.
 - ○ Add a basic widget container primitive on top of the layout contract that emits the renderer command list.

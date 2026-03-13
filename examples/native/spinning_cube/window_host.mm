@@ -2,6 +2,8 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
+#include "../../shared/software_surface_bridge.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -356,6 +358,39 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   return true;
 }
 
+bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
+                                         const primestruct::software_surface::SoftwareSurfaceFrame &frame,
+                                         id<MTLTexture> &textureOut,
+                                         std::string &errorOut) {
+  if (device == nil) {
+    errorOut = "failed to create Metal device";
+    return false;
+  }
+  if (!primestruct::software_surface::validateFrame(frame, errorOut)) {
+    return false;
+  }
+
+  MTLTextureDescriptor *descriptor =
+      [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+                                                         width:static_cast<NSUInteger>(frame.width)
+                                                        height:static_cast<NSUInteger>(frame.height)
+                                                     mipmapped:NO];
+  descriptor.storageMode = MTLStorageModeShared;
+  descriptor.usage = MTLTextureUsageShaderRead;
+  textureOut = [device newTextureWithDescriptor:descriptor];
+  if (textureOut == nil) {
+    errorOut = "failed to create software surface texture";
+    return false;
+  }
+
+  const MTLRegion region = MTLRegionMake2D(0, 0, static_cast<NSUInteger>(frame.width), static_cast<NSUInteger>(frame.height));
+  [textureOut replaceRegion:region
+                mipmapLevel:0
+                  withBytes:frame.pixelsBgra8.data()
+                bytesPerRow:static_cast<NSUInteger>(frame.width * 4)];
+  return true;
+}
+
 } // namespace
 
 @class PrimeStructWindowHostDelegate;
@@ -367,7 +402,8 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 @interface PrimeStructWindowHostDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
 - (instancetype)initWithMaxFrames:(int)maxFrames
                 cubeSimulationPath:(const std::string &)cubeSimulationPath
-               simulationSmokeMode:(bool)simulationSmokeMode;
+               simulationSmokeMode:(bool)simulationSmokeMode
+           softwareSurfaceDemoMode:(bool)softwareSurfaceDemoMode;
 - (void)failStartupStage:(StartupFailureStage)stage
                   reason:(const char *)reason
                  details:(const char *)details
@@ -414,16 +450,19 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   bool _printedFirstFrame;
   bool _printedSimulationFrame;
   bool _simulationSmokeMode;
+  bool _softwareSurfaceDemoMode;
   bool _firstFrameSubmitted;
   std::string _cubeSimulationPath;
   std::vector<SimulationFrameState> _simulationFrames;
+  id<MTLTexture> _softwareSurfaceTexture;
   NSUInteger _indexCount;
   CGSize _depthTextureSize;
 }
 
 - (instancetype)initWithMaxFrames:(int)maxFrames
                 cubeSimulationPath:(const std::string &)cubeSimulationPath
-               simulationSmokeMode:(bool)simulationSmokeMode {
+               simulationSmokeMode:(bool)simulationSmokeMode
+           softwareSurfaceDemoMode:(bool)softwareSurfaceDemoMode {
   self = [super init];
   if (self != nil) {
     _maxFrames = maxFrames;
@@ -432,6 +471,7 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     _printedFirstFrame = false;
     _printedSimulationFrame = false;
     _simulationSmokeMode = simulationSmokeMode;
+    _softwareSurfaceDemoMode = softwareSurfaceDemoMode;
     _firstFrameSubmitted = false;
     _cubeSimulationPath = cubeSimulationPath;
     _indexCount = CubeIndices.size();
@@ -503,28 +543,30 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
   (void)notification;
 
-  std::string simulationError;
-  if (!loadSimulationFrames(_cubeSimulationPath, _simulationFrames, simulationError)) {
-    [self failStartupStage:StartupFailureStage::SimulationStreamLoad
-                    reason:"simulation_stream_load_failed"
-                   details:simulationError.c_str()
-              gfxErrorCode:GfxErrorCode::None];
-    return;
-  }
+  if (!_softwareSurfaceDemoMode) {
+    std::string simulationError;
+    if (!loadSimulationFrames(_cubeSimulationPath, _simulationFrames, simulationError)) {
+      [self failStartupStage:StartupFailureStage::SimulationStreamLoad
+                      reason:"simulation_stream_load_failed"
+                     details:simulationError.c_str()
+                gfxErrorCode:GfxErrorCode::None];
+      return;
+    }
 
-  std::cout << "simulation_stream_loaded=1\n";
-  std::cout << "simulation_frames_loaded=" << _simulationFrames.size() << "\n";
-  std::cout << "simulation_fixed_step_millis=" << SimulationFixedStepMillis << "\n";
+    std::cout << "simulation_stream_loaded=1\n";
+    std::cout << "simulation_frames_loaded=" << _simulationFrames.size() << "\n";
+    std::cout << "simulation_fixed_step_millis=" << SimulationFixedStepMillis << "\n";
 
-  if (_simulationSmokeMode) {
-    const SimulationFrameState &frame = _simulationFrames.front();
-    std::cout << "simulation_smoke_tick=" << frame.tick << "\n";
-    std::cout << "simulation_smoke_angle_milli=" << frame.angleMilli << "\n";
-    std::cout << "simulation_smoke_axis_x_centi=" << frame.axisXCenti << "\n";
-    std::cout << "simulation_smoke_axis_y_centi=" << frame.axisYCenti << "\n";
-    gExitCode = 0;
-    [NSApp terminate:nil];
-    return;
+    if (_simulationSmokeMode) {
+      const SimulationFrameState &frame = _simulationFrames.front();
+      std::cout << "simulation_smoke_tick=" << frame.tick << "\n";
+      std::cout << "simulation_smoke_angle_milli=" << frame.angleMilli << "\n";
+      std::cout << "simulation_smoke_axis_x_centi=" << frame.axisXCenti << "\n";
+      std::cout << "simulation_smoke_axis_y_centi=" << frame.axisYCenti << "\n";
+      gExitCode = 0;
+      [NSApp terminate:nil];
+      return;
+    }
   }
 
   _device = MTLCreateSystemDefaultDevice();
@@ -545,104 +587,120 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
     return;
   }
 
-  NSError *libraryError = nil;
-  NSString *shaderSource = [NSString stringWithUTF8String:WindowShaderSource];
-  id<MTLLibrary> library = [_device newLibraryWithSource:shaderSource options:nil error:&libraryError];
-  if (library == nil) {
-    const char *details = libraryError == nil ? "unknown" : libraryError.localizedDescription.UTF8String;
-    [self failStartupStage:StartupFailureStage::ShaderLoad
-                    reason:"shader_library_compile_failed"
-                   details:details
-              gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
-    return;
+  if (_softwareSurfaceDemoMode) {
+    const primestruct::software_surface::SoftwareSurfaceFrame surfaceFrame =
+        primestruct::software_surface::makeDemoFrame();
+    std::string surfaceError;
+    if (!uploadSoftwareSurfaceFrameToTexture(_device, surfaceFrame, _softwareSurfaceTexture, surfaceError)) {
+      [self failStartupStage:StartupFailureStage::PipelineSetup
+                      reason:"software_surface_texture_creation_failed"
+                     details:surfaceError.c_str()
+                gfxErrorCode:GfxErrorCode::MaterialCreateFailed];
+      return;
+    }
+    std::cout << "software_surface_bridge=1\n";
+    std::cout << "software_surface_width=" << surfaceFrame.width << "\n";
+    std::cout << "software_surface_height=" << surfaceFrame.height << "\n";
+  } else {
+    NSError *libraryError = nil;
+    NSString *shaderSource = [NSString stringWithUTF8String:WindowShaderSource];
+    id<MTLLibrary> library = [_device newLibraryWithSource:shaderSource options:nil error:&libraryError];
+    if (library == nil) {
+      const char *details = libraryError == nil ? "unknown" : libraryError.localizedDescription.UTF8String;
+      [self failStartupStage:StartupFailureStage::ShaderLoad
+                      reason:"shader_library_compile_failed"
+                     details:details
+                gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
+      return;
+    }
+    std::cout << "shader_library_ready=1\n";
+
+    id<MTLFunction> vertexFn = [library newFunctionWithName:@"windowVertexMain"];
+    id<MTLFunction> fragmentFn = [library newFunctionWithName:@"windowFragmentMain"];
+    if (vertexFn == nil || fragmentFn == nil) {
+      [self failStartupStage:StartupFailureStage::ShaderLoad
+                      reason:"shader_entrypoint_missing"
+                     details:"missing window host shader entrypoints"
+                gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
+      return;
+    }
+
+    MTLVertexDescriptor *vertexDescriptor = [[MTLVertexDescriptor alloc] init];
+    vertexDescriptor.attributes[0].format = MTLVertexFormatFloat4;
+    vertexDescriptor.attributes[0].offset = offsetof(WindowVertex, px);
+    vertexDescriptor.attributes[0].bufferIndex = 0;
+    vertexDescriptor.attributes[1].format = MTLVertexFormatFloat4;
+    vertexDescriptor.attributes[1].offset = offsetof(WindowVertex, r);
+    vertexDescriptor.attributes[1].bufferIndex = 0;
+    vertexDescriptor.layouts[0].stride = sizeof(WindowVertex);
+    vertexDescriptor.layouts[0].stepRate = 1;
+    vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+
+    MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
+    pipelineDesc.vertexFunction = vertexFn;
+    pipelineDesc.fragmentFunction = fragmentFn;
+    pipelineDesc.vertexDescriptor = vertexDescriptor;
+    pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+    pipelineDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+
+    NSError *pipelineError = nil;
+    _pipeline = [_device newRenderPipelineStateWithDescriptor:pipelineDesc error:&pipelineError];
+    if (_pipeline == nil) {
+      const char *details = pipelineError == nil ? "unknown" : pipelineError.localizedDescription.UTF8String;
+      [self failStartupStage:StartupFailureStage::PipelineSetup
+                      reason:"render_pipeline_creation_failed"
+                     details:details
+                gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
+      return;
+    }
+
+    MTLDepthStencilDescriptor *depthDescriptor = [[MTLDepthStencilDescriptor alloc] init];
+    depthDescriptor.depthCompareFunction = MTLCompareFunctionLess;
+    depthDescriptor.depthWriteEnabled = YES;
+    _depthState = [_device newDepthStencilStateWithDescriptor:depthDescriptor];
+    if (_depthState == nil) {
+      [self failStartupStage:StartupFailureStage::PipelineSetup
+                      reason:"depth_state_creation_failed"
+                     details:"failed to create depth state"
+                gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
+      return;
+    }
+
+    _vertexBuffer = [_device newBufferWithBytes:CubeVertices.data()
+                                          length:(CubeVertices.size() * sizeof(WindowVertex))
+                                         options:MTLResourceStorageModeShared];
+    if (_vertexBuffer == nil) {
+      [self failStartupStage:StartupFailureStage::PipelineSetup
+                      reason:"vertex_buffer_creation_failed"
+                     details:"failed to create vertex buffer"
+                gfxErrorCode:GfxErrorCode::MeshCreateFailed];
+      return;
+    }
+
+    _indexBuffer = [_device newBufferWithBytes:CubeIndices.data()
+                                         length:(CubeIndices.size() * sizeof(uint16_t))
+                                        options:MTLResourceStorageModeShared];
+    if (_indexBuffer == nil) {
+      [self failStartupStage:StartupFailureStage::PipelineSetup
+                      reason:"index_buffer_creation_failed"
+                     details:"failed to create index buffer"
+                gfxErrorCode:GfxErrorCode::MeshCreateFailed];
+      return;
+    }
+
+    _uniformBuffer = [_device newBufferWithLength:sizeof(WindowUniforms) options:MTLResourceStorageModeShared];
+    if (_uniformBuffer == nil) {
+      [self failStartupStage:StartupFailureStage::PipelineSetup
+                      reason:"uniform_buffer_creation_failed"
+                     details:"failed to create uniform buffer"
+                gfxErrorCode:GfxErrorCode::MaterialCreateFailed];
+      return;
+    }
+
+    std::cout << "vertex_buffer_ready=1\n";
+    std::cout << "index_buffer_ready=1\n";
+    std::cout << "uniform_buffer_ready=1\n";
   }
-  std::cout << "shader_library_ready=1\n";
-
-  id<MTLFunction> vertexFn = [library newFunctionWithName:@"windowVertexMain"];
-  id<MTLFunction> fragmentFn = [library newFunctionWithName:@"windowFragmentMain"];
-  if (vertexFn == nil || fragmentFn == nil) {
-    [self failStartupStage:StartupFailureStage::ShaderLoad
-                    reason:"shader_entrypoint_missing"
-                   details:"missing window host shader entrypoints"
-              gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
-    return;
-  }
-
-  MTLVertexDescriptor *vertexDescriptor = [[MTLVertexDescriptor alloc] init];
-  vertexDescriptor.attributes[0].format = MTLVertexFormatFloat4;
-  vertexDescriptor.attributes[0].offset = offsetof(WindowVertex, px);
-  vertexDescriptor.attributes[0].bufferIndex = 0;
-  vertexDescriptor.attributes[1].format = MTLVertexFormatFloat4;
-  vertexDescriptor.attributes[1].offset = offsetof(WindowVertex, r);
-  vertexDescriptor.attributes[1].bufferIndex = 0;
-  vertexDescriptor.layouts[0].stride = sizeof(WindowVertex);
-  vertexDescriptor.layouts[0].stepRate = 1;
-  vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
-
-  MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
-  pipelineDesc.vertexFunction = vertexFn;
-  pipelineDesc.fragmentFunction = fragmentFn;
-  pipelineDesc.vertexDescriptor = vertexDescriptor;
-  pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-  pipelineDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
-
-  NSError *pipelineError = nil;
-  _pipeline = [_device newRenderPipelineStateWithDescriptor:pipelineDesc error:&pipelineError];
-  if (_pipeline == nil) {
-    const char *details = pipelineError == nil ? "unknown" : pipelineError.localizedDescription.UTF8String;
-    [self failStartupStage:StartupFailureStage::PipelineSetup
-                    reason:"render_pipeline_creation_failed"
-                   details:details
-              gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
-    return;
-  }
-
-  MTLDepthStencilDescriptor *depthDescriptor = [[MTLDepthStencilDescriptor alloc] init];
-  depthDescriptor.depthCompareFunction = MTLCompareFunctionLess;
-  depthDescriptor.depthWriteEnabled = YES;
-  _depthState = [_device newDepthStencilStateWithDescriptor:depthDescriptor];
-  if (_depthState == nil) {
-    [self failStartupStage:StartupFailureStage::PipelineSetup
-                    reason:"depth_state_creation_failed"
-                   details:"failed to create depth state"
-              gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
-    return;
-  }
-
-  _vertexBuffer = [_device newBufferWithBytes:CubeVertices.data()
-                                        length:(CubeVertices.size() * sizeof(WindowVertex))
-                                       options:MTLResourceStorageModeShared];
-  if (_vertexBuffer == nil) {
-    [self failStartupStage:StartupFailureStage::PipelineSetup
-                    reason:"vertex_buffer_creation_failed"
-                   details:"failed to create vertex buffer"
-              gfxErrorCode:GfxErrorCode::MeshCreateFailed];
-    return;
-  }
-
-  _indexBuffer = [_device newBufferWithBytes:CubeIndices.data()
-                                       length:(CubeIndices.size() * sizeof(uint16_t))
-                                      options:MTLResourceStorageModeShared];
-  if (_indexBuffer == nil) {
-    [self failStartupStage:StartupFailureStage::PipelineSetup
-                    reason:"index_buffer_creation_failed"
-                   details:"failed to create index buffer"
-              gfxErrorCode:GfxErrorCode::MeshCreateFailed];
-    return;
-  }
-
-  _uniformBuffer = [_device newBufferWithLength:sizeof(WindowUniforms) options:MTLResourceStorageModeShared];
-  if (_uniformBuffer == nil) {
-    [self failStartupStage:StartupFailureStage::PipelineSetup
-                    reason:"uniform_buffer_creation_failed"
-                   details:"failed to create uniform buffer"
-              gfxErrorCode:GfxErrorCode::MaterialCreateFailed];
-    return;
-  }
-
-  std::cout << "vertex_buffer_ready=1\n";
-  std::cout << "index_buffer_ready=1\n";
-  std::cout << "uniform_buffer_ready=1\n";
 
   NSRect frame = NSMakeRect(120.0, 120.0, 960.0, 640.0);
   const NSWindowStyleMask styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
@@ -692,7 +750,11 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 
   std::cout << "window_created=1\n";
   std::cout << "swapchain_layer_created=1\n";
-  std::cout << "pipeline_ready=1\n";
+  if (_softwareSurfaceDemoMode) {
+    std::cout << "software_surface_presenter_ready=1\n";
+  } else {
+    std::cout << "pipeline_ready=1\n";
+  }
 
   _frameTimer = [NSTimer scheduledTimerWithTimeInterval:(1.0 / 60.0)
                                                   target:self
@@ -704,7 +766,14 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 - (void)renderFrame:(NSTimer *)timer {
   (void)timer;
   @autoreleasepool {
-    if (_metalLayer == nil || _queue == nil || _pipeline == nil || _simulationFrames.empty()) {
+    if (_metalLayer == nil || _queue == nil) {
+      return;
+    }
+    if (_softwareSurfaceDemoMode) {
+      if (_softwareSurfaceTexture == nil) {
+        return;
+      }
+    } else if (_pipeline == nil || _simulationFrames.empty()) {
       return;
     }
 
@@ -719,22 +788,6 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
       return;
     }
     _metalLayer.drawableSize = drawableSize;
-    [self ensureDepthTextureForSize:drawableSize];
-    if (_depthTexture == nil) {
-      if (!_firstFrameSubmitted) {
-        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
-                        reason:"depth_texture_creation_failed"
-                       details:"failed to create depth texture"
-                  gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
-      } else {
-        [self failRuntimeCode:80
-                       reason:"depth_texture_creation_failed"
-                      details:"failed to create depth texture"
-                 gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
-      }
-      return;
-    }
-
     id<CAMetalDrawable> drawable = [_metalLayer nextDrawable];
     if (drawable == nil) {
       if (!_firstFrameSubmitted) {
@@ -746,6 +799,102 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
         [self failRuntimeCode:82
                        reason:"frame_drawable_acquisition_failed"
                       details:"failed to acquire drawable from CAMetalLayer"
+                 gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
+      }
+      return;
+    }
+
+    if (_softwareSurfaceDemoMode) {
+      id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
+      if (commandBuffer == nil) {
+        if (!_firstFrameSubmitted) {
+          [self failStartupStage:StartupFailureStage::FirstFrameSubmission
+                          reason:"command_buffer_creation_failed"
+                         details:"failed to create command buffer"
+                    gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
+        } else {
+          [self failRuntimeCode:83
+                         reason:"command_buffer_creation_failed"
+                        details:"failed to create command buffer"
+                   gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
+        }
+        return;
+      }
+      id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
+      if (blitEncoder == nil) {
+        if (!_firstFrameSubmitted) {
+          [self failStartupStage:StartupFailureStage::FirstFrameSubmission
+                          reason:"software_surface_blit_encoder_creation_failed"
+                         details:"failed to create software surface blit encoder"
+                    gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
+        } else {
+          [self failRuntimeCode:81
+                         reason:"software_surface_blit_encoder_creation_failed"
+                        details:"failed to create software surface blit encoder"
+                   gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
+        }
+        return;
+      }
+
+      const NSUInteger blitWidth = std::min(drawable.texture.width, _softwareSurfaceTexture.width);
+      const NSUInteger blitHeight = std::min(drawable.texture.height, _softwareSurfaceTexture.height);
+      [blitEncoder copyFromTexture:_softwareSurfaceTexture
+                       sourceSlice:0
+                       sourceLevel:0
+                      sourceOrigin:MTLOriginMake(0, 0, 0)
+                        sourceSize:MTLSizeMake(blitWidth, blitHeight, 1)
+                         toTexture:drawable.texture
+                  destinationSlice:0
+                  destinationLevel:0
+                 destinationOrigin:MTLOriginMake(0, 0, 0)];
+      [blitEncoder endEncoding];
+
+      [commandBuffer presentDrawable:drawable];
+      [commandBuffer commit];
+
+      if (!_firstFrameSubmitted) {
+        [commandBuffer waitUntilCompleted];
+        if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
+          NSError *commandBufferError = commandBuffer.error;
+          const char *details = commandBufferError == nil ? "software surface command buffer did not complete"
+                                                          : commandBufferError.localizedDescription.UTF8String;
+          [self failStartupStage:StartupFailureStage::FirstFrameSubmission
+                          reason:"software_surface_submit_failed"
+                         details:details
+                    gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
+          return;
+        }
+        std::cout << "gfx_profile=" << deducedGfxProfileName() << "\n";
+        std::cout << "startup_success=1\n";
+        _firstFrameSubmitted = true;
+      }
+
+      if (!_printedFirstFrame) {
+        std::cout << "software_surface_presented=1\n";
+        std::cout << "frame_rendered=1\n";
+        _printedFirstFrame = true;
+      }
+
+      _renderedFrameCount += 1;
+      if (_maxFrames > 0 && _renderedFrameCount >= _maxFrames) {
+        std::cout << "exit_reason=max_frames\n";
+        gExitCode = 0;
+        [NSApp terminate:nil];
+      }
+      return;
+    }
+
+    [self ensureDepthTextureForSize:drawableSize];
+    if (_depthTexture == nil) {
+      if (!_firstFrameSubmitted) {
+        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
+                        reason:"depth_texture_creation_failed"
+                       details:"failed to create depth texture"
+                  gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
+      } else {
+        [self failRuntimeCode:80
+                       reason:"depth_texture_creation_failed"
+                      details:"failed to create depth texture"
                  gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
       }
       return;
@@ -902,12 +1051,14 @@ int main(int argc, char **argv) {
   int maxFrames = 0;
   std::string cubeSimulationPath;
   bool simulationSmokeMode = false;
+  bool softwareSurfaceDemoMode = false;
 
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
     if (arg == "--help") {
       std::cout
-          << "usage: window_host --cube-sim <path> [--max-frames <positive-int>] [--simulation-smoke]\n";
+          << "usage: window_host (--cube-sim <path> | --software-surface-demo) "
+             "[--max-frames <positive-int>] [--simulation-smoke]\n";
       return 0;
     }
     if (arg == "--max-frames") {
@@ -937,12 +1088,24 @@ int main(int argc, char **argv) {
       simulationSmokeMode = true;
       continue;
     }
+    if (arg == "--software-surface-demo") {
+      softwareSurfaceDemoMode = true;
+      continue;
+    }
     std::cerr << "unknown arg: " << arg << "\n";
     return 64;
   }
 
-  if (cubeSimulationPath.empty()) {
-    std::cerr << "missing required --cube-sim <path>\n";
+  if (!cubeSimulationPath.empty() && softwareSurfaceDemoMode) {
+    std::cerr << "--cube-sim is incompatible with --software-surface-demo\n";
+    return 64;
+  }
+  if (simulationSmokeMode && softwareSurfaceDemoMode) {
+    std::cerr << "--simulation-smoke is incompatible with --software-surface-demo\n";
+    return 64;
+  }
+  if (cubeSimulationPath.empty() && !softwareSurfaceDemoMode) {
+    std::cerr << "missing required --cube-sim <path> or --software-surface-demo\n";
     return 64;
   }
 
@@ -952,7 +1115,8 @@ int main(int argc, char **argv) {
         simulationSmokeMode ? NSApplicationActivationPolicyProhibited : NSApplicationActivationPolicyRegular;
     PrimeStructWindowHostDelegate *delegate = [[PrimeStructWindowHostDelegate alloc] initWithMaxFrames:maxFrames
                                                                                      cubeSimulationPath:cubeSimulationPath
-                                                                                    simulationSmokeMode:simulationSmokeMode];
+                                                                                    simulationSmokeMode:simulationSmokeMode
+                                                                                softwareSurfaceDemoMode:softwareSurfaceDemoMode];
     app.delegate = delegate;
     [app run];
   }

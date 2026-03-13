@@ -2,6 +2,8 @@
 #import <Metal/Metal.h>
 #include <simd/simd.h>
 
+#include "../../shared/software_surface_bridge.h"
+
 #include <cstddef>
 #include <cmath>
 #include <cstdlib>
@@ -74,6 +76,119 @@ void emitGfxError(std::ostream &out, GfxErrorCode code, const std::string &why) 
   out << "gfx_profile=" << deducedGfxProfileName() << "\n";
   out << "gfx_error_code=" << gfxErrorCodeName(code) << "\n";
   out << "gfx_error_why=" << why << "\n";
+}
+
+bool uploadSoftwareSurfaceFrame(id<MTLDevice> device,
+                                const primestruct::software_surface::SoftwareSurfaceFrame &frame,
+                                id<MTLTexture> &textureOut,
+                                std::string &whyOut) {
+  if (device == nil) {
+    whyOut = "failed to create Metal device";
+    return false;
+  }
+  if (!primestruct::software_surface::validateFrame(frame, whyOut)) {
+    return false;
+  }
+
+  MTLTextureDescriptor *descriptor =
+      [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+                                                         width:static_cast<NSUInteger>(frame.width)
+                                                        height:static_cast<NSUInteger>(frame.height)
+                                                     mipmapped:NO];
+  descriptor.storageMode = MTLStorageModeShared;
+  descriptor.usage = MTLTextureUsageShaderRead;
+  textureOut = [device newTextureWithDescriptor:descriptor];
+  if (textureOut == nil) {
+    whyOut = "failed to create software surface texture";
+    return false;
+  }
+
+  const MTLRegion region = MTLRegionMake2D(0, 0, static_cast<NSUInteger>(frame.width), static_cast<NSUInteger>(frame.height));
+  [textureOut replaceRegion:region
+                mipmapLevel:0
+                  withBytes:frame.pixelsBgra8.data()
+                bytesPerRow:static_cast<NSUInteger>(frame.width * 4)];
+  return true;
+}
+
+int renderSoftwareSurfaceDemo() {
+  @autoreleasepool {
+    id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+    if (device == nil) {
+      emitGfxError(std::cerr, GfxErrorCode::DeviceCreateFailed, "failed to create Metal device");
+      return 70;
+    }
+
+    id<MTLCommandQueue> queue = [device newCommandQueue];
+    if (queue == nil) {
+      emitGfxError(std::cerr, GfxErrorCode::DeviceCreateFailed, "failed to create command queue");
+      return 74;
+    }
+
+    const primestruct::software_surface::SoftwareSurfaceFrame surfaceFrame =
+        primestruct::software_surface::makeDemoFrame();
+    id<MTLTexture> softwareSurfaceTexture = nil;
+    std::string softwareSurfaceWhy;
+    if (!uploadSoftwareSurfaceFrame(device, surfaceFrame, softwareSurfaceTexture, softwareSurfaceWhy)) {
+      emitGfxError(std::cerr, GfxErrorCode::MeshCreateFailed, softwareSurfaceWhy);
+      return 75;
+    }
+
+    MTLTextureDescriptor *targetDesc =
+        [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+                                                           width:static_cast<NSUInteger>(surfaceFrame.width)
+                                                          height:static_cast<NSUInteger>(surfaceFrame.height)
+                                                       mipmapped:NO];
+    targetDesc.storageMode = MTLStorageModePrivate;
+    targetDesc.usage = MTLTextureUsageRenderTarget;
+    id<MTLTexture> targetTexture = [device newTextureWithDescriptor:targetDesc];
+    if (targetTexture == nil) {
+      emitGfxError(std::cerr, GfxErrorCode::FrameAcquireFailed, "failed to create software surface target texture");
+      return 76;
+    }
+
+    id<MTLCommandBuffer> commandBuffer = [queue commandBuffer];
+    if (commandBuffer == nil) {
+      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, "failed to create command buffer");
+      return 77;
+    }
+    id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
+    if (blitEncoder == nil) {
+      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, "failed to create software surface blit encoder");
+      return 77;
+    }
+    [blitEncoder copyFromTexture:softwareSurfaceTexture
+                     sourceSlice:0
+                     sourceLevel:0
+                    sourceOrigin:MTLOriginMake(0, 0, 0)
+                      sourceSize:MTLSizeMake(static_cast<NSUInteger>(surfaceFrame.width),
+                                             static_cast<NSUInteger>(surfaceFrame.height),
+                                             1)
+                       toTexture:targetTexture
+                destinationSlice:0
+                destinationLevel:0
+               destinationOrigin:MTLOriginMake(0, 0, 0)];
+    [blitEncoder endEncoding];
+
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
+    if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
+      NSError *commandBufferError = commandBuffer.error;
+      const std::string why = "software surface blit failed: " +
+                              std::string(commandBufferError == nil ? "unknown"
+                                                                    : commandBufferError.localizedDescription.UTF8String);
+      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, why);
+      return 78;
+    }
+
+    std::cout << "gfx_profile=" << deducedGfxProfileName() << "\n";
+    std::cout << "software_surface_bridge=1\n";
+    std::cout << "software_surface_width=" << surfaceFrame.width << "\n";
+    std::cout << "software_surface_height=" << surfaceFrame.height << "\n";
+    std::cout << "software_surface_presented=1\n";
+    std::cout << "frame_rendered=1\n";
+    return 0;
+  }
 }
 
 struct CubeSimulationState {
@@ -188,6 +303,7 @@ int main(int argc, char **argv) {
     std::cerr << "usage: metal_host <cube.metallib>\n";
     std::cerr << "       metal_host --snapshot-code <ticks>\n";
     std::cerr << "       metal_host --parity-check <ticks>\n";
+    std::cerr << "       metal_host --software-surface-demo\n";
     return argc < 2 ? 64 : 0;
   }
 
@@ -214,6 +330,10 @@ int main(int argc, char **argv) {
                     std::fabs(fixed.axisY - chunked.axisY) <= 0.02f;
     std::cout << "parity_ok=" << (ok ? 1 : 0) << "\n";
     return ok ? 0 : 1;
+  }
+
+  if (std::string(argv[1]) == "--software-surface-demo") {
+    return renderSoftwareSurfaceDemo();
   }
 
   @autoreleasepool {

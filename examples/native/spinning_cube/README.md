@@ -40,9 +40,14 @@ Or run the manual steps:
    - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream --max-frames 120`
 5. Optional non-GUI integration smoke:
    - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream --simulation-smoke`
+6. Optional software-surface bridge demo:
+   - `./spinning_cube_window_host --software-surface-demo --max-frames 1`
 
 The window host now renders an indexed cube mesh each frame and updates
 transform uniforms from the deterministic fixed-step simulation stream.
+The software-surface demo reuses the same window presenter path, uploads a
+deterministic BGRA8 software buffer into a shared Metal texture, and blits it
+into the drawable.
 
 Expected diagnostics include:
 - `gfx_profile=native-desktop`
@@ -58,6 +63,10 @@ Expected diagnostics include:
 - `startup_success=1`
 - `frame_rendered=1`
 - `exit_reason=max_frames` (bounded smoke run)
+- `software_surface_bridge=1`
+- `software_surface_width=64`
+- `software_surface_height=64`
+- `software_surface_presented=1` (software-surface demo)
 
 Close handling diagnostics:
 - `exit_reason=window_close` when the user closes the window.

@@ -179,6 +179,10 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `CommandList.serialize() -> vector<i32>`
    - Rounded rectangles are expressed through SDF-style primitives.
    - Renders into a software color buffer (or shared surface view).
+   - Current host bridge prototype: the native window host and macOS Metal host
+     can upload a deterministic BGRA8 software surface into a shared Metal
+     texture and blit it through their presenter/output paths via
+     `--software-surface-demo`.
 2. Layout layer:
    - Two-pass layout contract:
      - Bottom-up measure pass (children -> parent).

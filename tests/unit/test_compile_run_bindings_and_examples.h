@@ -802,6 +802,33 @@ TEST_CASE("spinning cube native window host locks indexed cube pipeline resource
   CHECK(hostSource.find("exit_reason=max_frames") != std::string::npos);
 }
 
+TEST_CASE("spinning cube native window host software surface bridge stays source locked") {
+  std::filesystem::path nativeSampleDir =
+      std::filesystem::path("..") / "examples" / "native" / "spinning_cube";
+  if (!std::filesystem::exists(nativeSampleDir)) {
+    nativeSampleDir = std::filesystem::current_path() / "examples" / "native" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(nativeSampleDir));
+
+  const std::filesystem::path hostSourcePath = nativeSampleDir / "window_host.mm";
+  REQUIRE(std::filesystem::exists(hostSourcePath));
+  const std::string hostSource = readFile(hostSourcePath.string());
+
+  CHECK(hostSource.find("#include \"../../shared/software_surface_bridge.h\"") != std::string::npos);
+  CHECK(hostSource.find("uploadSoftwareSurfaceFrameToTexture") != std::string::npos);
+  CHECK(hostSource.find("software_surface_bridge=1") != std::string::npos);
+  CHECK(hostSource.find("software_surface_width=") != std::string::npos);
+  CHECK(hostSource.find("software_surface_height=") != std::string::npos);
+  CHECK(hostSource.find("software_surface_presenter_ready=1") != std::string::npos);
+  CHECK(hostSource.find("software_surface_presented=1") != std::string::npos);
+  CHECK(hostSource.find("--software-surface-demo") != std::string::npos);
+  CHECK(hostSource.find("--simulation-smoke is incompatible with --software-surface-demo") != std::string::npos);
+  CHECK(hostSource.find("--cube-sim is incompatible with --software-surface-demo") != std::string::npos);
+  CHECK(hostSource.find("copyFromTexture:_softwareSurfaceTexture") != std::string::npos);
+  CHECK(hostSource.find("id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];") !=
+        std::string::npos);
+}
+
 TEST_CASE("spinning cube native window host sample compiles and validates args deterministically") {
   if (!spinningCubeBackendsSupportArrayReturns()) {
     INFO("Skipping spinning cube native host arg checks until array-return lowering support lands");
@@ -831,6 +858,7 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(hostSource.find("#import <QuartzCore/CAMetalLayer.h>") != std::string::npos);
   CHECK(hostSource.find("--cube-sim") != std::string::npos);
   CHECK(hostSource.find("--simulation-smoke") != std::string::npos);
+  CHECK(hostSource.find("--software-surface-demo") != std::string::npos);
   CHECK(hostSource.find("simulation_stream_loaded=1") != std::string::npos);
   CHECK(hostSource.find("simulation_fixed_step_millis=16") != std::string::npos);
   CHECK(hostSource.find("gfx_profile=native-desktop") != std::string::npos);
@@ -881,7 +909,8 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(runCommand(helpCmd) == 0);
   CHECK(readFile(helpErrPath.string()).empty());
   CHECK(readFile(helpOutPath.string())
-            .find("usage: window_host --cube-sim <path> [--max-frames <positive-int>] [--simulation-smoke]") !=
+            .find("usage: window_host (--cube-sim <path> | --software-surface-demo) [--max-frames <positive-int>] "
+                  "[--simulation-smoke]") !=
         std::string::npos);
 
   const std::filesystem::path missingCubeOutPath = outDir / "window_host.missing_cube.out.txt";
@@ -891,7 +920,8 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
       quoteShellArg(missingCubeErrPath.string());
   CHECK(runCommand(missingCubeCmd) == 64);
   CHECK(readFile(missingCubeOutPath.string()).empty());
-  CHECK(readFile(missingCubeErrPath.string()).find("missing required --cube-sim <path>") != std::string::npos);
+  CHECK(readFile(missingCubeErrPath.string()).find("missing required --cube-sim <path> or --software-surface-demo") !=
+        std::string::npos);
 
   const std::filesystem::path missingCubeValueOutPath = outDir / "window_host.missing_cube_value.out.txt";
   const std::filesystem::path missingCubeValueErrPath = outDir / "window_host.missing_cube_value.err.txt";
@@ -919,6 +949,16 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(runCommand(badFramesCmd) == 64);
   CHECK(readFile(badFramesOutPath.string()).empty());
   CHECK(readFile(badFramesErrPath.string()).find("invalid value for --max-frames: 0") != std::string::npos);
+
+  const std::filesystem::path incompatibleModeOutPath = outDir / "window_host.incompatible_mode.out.txt";
+  const std::filesystem::path incompatibleModeErrPath = outDir / "window_host.incompatible_mode.err.txt";
+  const std::string incompatibleModeCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --software-surface-demo --simulation-smoke > " +
+      quoteShellArg(incompatibleModeOutPath.string()) + " 2> " + quoteShellArg(incompatibleModeErrPath.string());
+  CHECK(runCommand(incompatibleModeCmd) == 64);
+  CHECK(readFile(incompatibleModeOutPath.string()).empty());
+  CHECK(readFile(incompatibleModeErrPath.string()).find("--simulation-smoke is incompatible with --software-surface-demo") !=
+        std::string::npos);
 
   const std::filesystem::path badStreamOutPath = outDir / "window_host.bad_stream.out.txt";
   const std::filesystem::path badStreamErrPath = outDir / "window_host.bad_stream.err.txt";
@@ -958,6 +998,61 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(smokeOutput.find("simulation_smoke_angle_milli=0") != std::string::npos);
   CHECK(smokeOutput.find("simulation_smoke_axis_x_centi=100") != std::string::npos);
   CHECK(smokeOutput.find("simulation_smoke_axis_y_centi=0") != std::string::npos);
+}
+
+TEST_CASE("spinning cube native window host software surface bridge visual smoke") {
+  std::filesystem::path nativeSampleDir =
+      std::filesystem::path("..") / "examples" / "native" / "spinning_cube";
+  if (!std::filesystem::exists(nativeSampleDir)) {
+    nativeSampleDir = std::filesystem::current_path() / "examples" / "native" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(nativeSampleDir));
+
+  const std::filesystem::path hostSourcePath = nativeSampleDir / "window_host.mm";
+  REQUIRE(std::filesystem::exists(hostSourcePath));
+
+  if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun unavailable; native software surface bridge smoke requires macOS toolchain");
+    return;
+  }
+  if (runCommand("command -v launchctl > /dev/null 2>&1") != 0) {
+    INFO("SKIP: launchctl unavailable; native software surface bridge smoke requires GUI-capable macOS");
+    return;
+  }
+  if (runCommand("launchctl print gui/$(id -u) > /dev/null 2>&1") != 0) {
+    INFO("SKIP: GUI session unavailable; native software surface bridge smoke requires GUI-capable macOS");
+    return;
+  }
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_window_software_surface";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path hostBinaryPath = outDir / "spinning_cube_window_host";
+  const std::string compileHostCmd =
+      "xcrun clang++ -std=c++17 -fobjc-arc " + quoteShellArg(hostSourcePath.string()) +
+      " -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o " +
+      quoteShellArg(hostBinaryPath.string());
+  CHECK(runCommand(compileHostCmd) == 0);
+  CHECK(std::filesystem::exists(hostBinaryPath));
+
+  const std::filesystem::path hostOutPath = outDir / "window_host.software_surface.out.txt";
+  const std::filesystem::path hostErrPath = outDir / "window_host.software_surface.err.txt";
+  const std::string runHostCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --software-surface-demo --max-frames 1 > " +
+      quoteShellArg(hostOutPath.string()) + " 2> " + quoteShellArg(hostErrPath.string());
+  CHECK(runCommand(runHostCmd) == 0);
+  CHECK(readFile(hostErrPath.string()).empty());
+  const std::string hostOutput = readFile(hostOutPath.string());
+  CHECK(hostOutput.find("software_surface_bridge=1") != std::string::npos);
+  CHECK(hostOutput.find("software_surface_width=64") != std::string::npos);
+  CHECK(hostOutput.find("software_surface_height=64") != std::string::npos);
+  CHECK(hostOutput.find("software_surface_presented=1") != std::string::npos);
+  CHECK(hostOutput.find("frame_rendered=1") != std::string::npos);
+  CHECK(hostOutput.find("exit_reason=max_frames") != std::string::npos);
 }
 
 TEST_CASE("spinning cube fixed-step snapshots stay deterministic") {
@@ -1568,6 +1663,9 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework "
       "AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host",
       "/tmp/spinning_cube_window_host --cube-sim /tmp/cube_native_frame_stream --max-frames 120",
+      "/tmp/spinning_cube_window_host --software-surface-demo --max-frames 1",
+      "uploads a deterministic BGRA8 software color buffer into a",
+      "shared Metal texture and blits it into the window drawable.",
       "### Native Window Launcher (macOS)",
       "./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec",
       "./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec --visual-smoke",
@@ -1583,6 +1681,8 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework "
       "Metal -o /tmp/metal_host",
       "/tmp/metal_host /tmp/cube.metallib",
+      "/tmp/metal_host --software-surface-demo",
+      "shared Metal texture and blits it into the host target texture.",
       "### Native Windowed Execution Preflight (macOS)",
       "./scripts/preflight_native_spinning_cube_window.sh",
       "`xcrun --find metal`, `xcrun --find metallib`, and",
@@ -3964,6 +4064,31 @@ TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiri
   CHECK(source.find("pipelineDesc.vertexDescriptor = vertexDesc;") != std::string::npos);
 }
 
+TEST_CASE("spinning cube metal host software surface bridge stays source locked") {
+  std::filesystem::path metalSampleDir =
+      std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
+  if (!std::filesystem::exists(metalSampleDir)) {
+    metalSampleDir = std::filesystem::current_path() / "examples" / "metal" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(metalSampleDir));
+
+  const std::filesystem::path metalHostPath = metalSampleDir / "metal_host.mm";
+  REQUIRE(std::filesystem::exists(metalHostPath));
+
+  const std::string source = readFile(metalHostPath.string());
+  CHECK(source.find("#include \"../../shared/software_surface_bridge.h\"") != std::string::npos);
+  CHECK(source.find("uploadSoftwareSurfaceFrame(") != std::string::npos);
+  CHECK(source.find("renderSoftwareSurfaceDemo()") != std::string::npos);
+  CHECK(source.find("--software-surface-demo") != std::string::npos);
+  CHECK(source.find("software_surface_bridge=1") != std::string::npos);
+  CHECK(source.find("software_surface_width=") != std::string::npos);
+  CHECK(source.find("software_surface_height=") != std::string::npos);
+  CHECK(source.find("software_surface_presented=1") != std::string::npos);
+  CHECK(source.find("id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];") !=
+        std::string::npos);
+  CHECK(source.find("copyFromTexture:softwareSurfaceTexture") != std::string::npos);
+}
+
 TEST_CASE("spinning cube vertexcolored snippets stay source locked") {
   std::filesystem::path docsPath = std::filesystem::path("..") / "docs" / "Coding_Guidelines.md";
   std::filesystem::path sampleDir = std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
@@ -4017,10 +4142,15 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`3` = `push_clip`") != std::string::npos);
   CHECK(graphicsDoc.find("`4` = `pop_clip`") != std::string::npos);
   CHECK(graphicsDoc.find("`pop_clip()` at depth `0` is a deterministic no-op") != std::string::npos);
+  CHECK(graphicsDoc.find("can upload a deterministic BGRA8 software surface into a shared Metal") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`--software-surface-demo`") != std::string::npos);
   CHECK(graphicsDoc.find("[CommandList mut] commands{CommandList()}") != std::string::npos);
   CHECK(specDoc.find("the first command-list software-renderer slice now exists under `/std/ui/*`") !=
         std::string::npos);
   CHECK(specDoc.find("`push_clip`, `pop_clip`, deterministic `serialize()` output") != std::string::npos);
+  CHECK(specDoc.find("blit a deterministic BGRA8 software surface through the native window presenter") !=
+        std::string::npos);
 }
 
 TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {
@@ -4199,6 +4329,53 @@ TEST_CASE("spinning cube metal full-path smoke renders frame") {
   CHECK(runCommand(runHostCmd) == 0);
   const std::string hostStdout = readFile(hostStdoutPath.string());
   CHECK(hostStdout.find("gfx_profile=metal-osx") != std::string::npos);
+  CHECK(hostStdout.find("frame_rendered=1") != std::string::npos);
+}
+
+TEST_CASE("spinning cube metal software surface bridge smoke") {
+  std::filesystem::path metalSampleDir =
+      std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
+  if (!std::filesystem::exists(metalSampleDir)) {
+    metalSampleDir = std::filesystem::current_path() / "examples" / "metal" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(metalSampleDir));
+
+  const std::filesystem::path metalHostPath = metalSampleDir / "metal_host.mm";
+  REQUIRE(std::filesystem::exists(metalHostPath));
+
+  if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun unavailable; cannot run metal software surface bridge smoke");
+    return;
+  }
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_software_surface";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path hostBinaryPath = outDir / "metal_host";
+  const std::filesystem::path hostStdoutPath = outDir / "metal_host.stdout.txt";
+  const std::filesystem::path hostStderrPath = outDir / "metal_host.stderr.txt";
+
+  const std::string compileHostCmd =
+      "xcrun clang++ -std=c++17 -fobjc-arc " + quoteShellArg(metalHostPath.string()) +
+      " -framework Foundation -framework Metal -o " + quoteShellArg(hostBinaryPath.string());
+  CHECK(runCommand(compileHostCmd) == 0);
+  CHECK(std::filesystem::exists(hostBinaryPath));
+
+  const std::string runHostCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --software-surface-demo > " +
+      quoteShellArg(hostStdoutPath.string()) + " 2> " + quoteShellArg(hostStderrPath.string());
+  CHECK(runCommand(runHostCmd) == 0);
+  CHECK(readFile(hostStderrPath.string()).empty());
+  const std::string hostStdout = readFile(hostStdoutPath.string());
+  CHECK(hostStdout.find("gfx_profile=metal-osx") != std::string::npos);
+  CHECK(hostStdout.find("software_surface_bridge=1") != std::string::npos);
+  CHECK(hostStdout.find("software_surface_width=64") != std::string::npos);
+  CHECK(hostStdout.find("software_surface_height=64") != std::string::npos);
+  CHECK(hostStdout.find("software_surface_presented=1") != std::string::npos);
   CHECK(hostStdout.find("frame_rendered=1") != std::string::npos);
 }
 
