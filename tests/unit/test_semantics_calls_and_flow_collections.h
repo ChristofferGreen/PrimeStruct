@@ -5448,7 +5448,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector namespaced count alias keeps canonical helper diagnostics" * doctest::skip()) {
+TEST_CASE("vector namespaced count alias keeps canonical helper diagnostics") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -5465,6 +5465,24 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch") != std::string::npos);
   CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count alias falls back to canonical helper return") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/vector/count(values, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced call alias with explicit template args is rejected without alias definition") {

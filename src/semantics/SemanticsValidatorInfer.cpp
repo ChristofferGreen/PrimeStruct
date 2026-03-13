@@ -1837,6 +1837,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     std::string resolved = resolvedCandidates.empty() ? preferVectorStdlibHelperPath(resolvedCallee)
                                                       : resolvedCandidates.front();
     bool hasResolvedPath = !expr.isMethodCall;
+    const bool prefersCanonicalVectorCountAliasDefinition =
+        !expr.isMethodCall && resolved == "/vector/count" && defMap_.find(resolved) == defMap_.end() &&
+        defMap_.find("/std/collections/vector/count") != defMap_.end();
+    if (prefersCanonicalVectorCountAliasDefinition) {
+      resolved = "/std/collections/vector/count";
+    }
     if (!expr.isMethodCall && !resolvedCandidates.empty()) {
       std::string firstTemplateCompatibleCandidate;
       for (const auto &candidate : resolvedCandidates) {
@@ -2080,6 +2086,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         isNamespacedVectorCountCall || isNamespacedMapCountCall || isResolvedMapCountCall ||
         isNamespacedVectorCapacityCall || shouldDeferNamespacedVectorAccessCall ||
         shouldDeferNamespacedMapAccessCall;
+    if (prefersCanonicalVectorCountAliasDefinition) {
+      shouldDeferResolvedNamespacedCollectionHelperReturn = false;
+    }
     if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedCollectionHelperReturn) {
       if (!inferDefinitionReturnKind(*defIt->second)) {
         return ReturnKind::Unknown;
@@ -2094,6 +2103,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall || isResolvedMapCountCall) &&
         expr.args.size() == 1 &&
         !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
+        !prefersCanonicalVectorCountAliasDefinition &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall ||
          isResolvedMapCountCall)) {
       std::string methodResolved;
@@ -2129,6 +2139,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall || isResolvedMapCountCall) &&
         !expr.args.empty() && expr.args.size() != 1 &&
         !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
+        !prefersCanonicalVectorCountAliasDefinition &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall ||
          isResolvedMapCountCall)) {
       std::string methodResolved;

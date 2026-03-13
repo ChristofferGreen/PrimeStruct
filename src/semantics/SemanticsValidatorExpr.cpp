@@ -2889,6 +2889,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isNamespacedMapAccessCall =
         isBuiltinAccessName && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
+    const bool prefersCanonicalVectorCountAliasDefinition =
+        !expr.isMethodCall && resolved == "/vector/count" && defMap_.find(resolved) == defMap_.end() &&
+        defMap_.find("/std/collections/vector/count") != defMap_.end();
+    if (prefersCanonicalVectorCountAliasDefinition) {
+      resolved = "/std/collections/vector/count";
+    }
     auto normalizeCollectionMethodName = [](const std::string &methodName) {
       std::string normalized = methodName;
       if (!normalized.empty() && normalized.front() == '/') {
@@ -3075,6 +3081,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall || isResolvedMapCountCall) &&
                expr.args.size() == 1 &&
                !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
+               !prefersCanonicalVectorCountAliasDefinition &&
                (defMap_.find(resolved) == defMap_.end() ||
                 (isNamespacedVectorCountCall && !isStdNamespacedVectorCountCall) ||
                 isNamespacedMapCountCall || isResolvedMapCountCall)) {
@@ -3101,6 +3108,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 isNamespacedMapCountCall ||
                 isResolvedMapCountCall) &&
                !expr.args.empty() && expr.args.size() != 1 &&
+               !prefersCanonicalVectorCountAliasDefinition &&
                (defMap_.find(resolved) != defMap_.end() || isNamespacedMapCountCall || isResolvedMapCountCall)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
