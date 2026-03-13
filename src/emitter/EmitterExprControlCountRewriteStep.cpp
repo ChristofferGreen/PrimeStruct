@@ -118,6 +118,34 @@ bool isNamespacedMapHelperCall(const Expr &expr) {
          normalized.rfind("std/collections/map/", 0) == 0;
 }
 
+std::string preserveExplicitCanonicalMapHelperPath(const std::string &resolvedPath,
+                                                   const std::string &candidatePath) {
+  std::string normalizedResolvedPath = resolvedPath;
+  if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() != '/' &&
+      normalizedResolvedPath.rfind("std/collections/map/", 0) == 0) {
+    normalizedResolvedPath.insert(normalizedResolvedPath.begin(), '/');
+  }
+  if (normalizedResolvedPath.rfind("/std/collections/map/", 0) != 0) {
+    return candidatePath;
+  }
+
+  const std::string suffix =
+      normalizedResolvedPath.substr(std::string("/std/collections/map/").size());
+  if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
+    return candidatePath;
+  }
+
+  std::string normalizedCandidatePath = candidatePath;
+  if (!normalizedCandidatePath.empty() && normalizedCandidatePath.front() != '/' &&
+      normalizedCandidatePath.rfind("map/", 0) == 0) {
+    normalizedCandidatePath.insert(normalizedCandidatePath.begin(), '/');
+  }
+  if (normalizedCandidatePath == "/map/" + suffix) {
+    return normalizedResolvedPath;
+  }
+  return candidatePath;
+}
+
 } // namespace
 
 std::optional<std::string> runEmitterExprControlCountRewriteStep(
@@ -226,7 +254,9 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
       if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
         continue;
       }
-      const std::string preferredPath = preferVectorStdlibHelperPath(methodPath, nameMap);
+      const std::string canonicalPreservedPath =
+          preserveExplicitCanonicalMapHelperPath(resolvedPath, methodPath);
+      const std::string preferredPath = preferVectorStdlibHelperPath(canonicalPreservedPath, nameMap);
       if (isVectorMutatorLikeCall && nameMap.count(preferredPath) == 0) {
         continue;
       }

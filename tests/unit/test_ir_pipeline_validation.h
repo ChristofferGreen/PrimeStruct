@@ -5430,8 +5430,27 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
         return true;
       });
   REQUIRE(aliasMapCountResolvedPath.has_value());
-  CHECK(*aliasMapCountResolvedPath == "/map/count");
+  CHECK(*aliasMapCountResolvedPath == "/std/collections/map/count");
   CHECK(aliasMapCountResolveCalls == 1);
+
+  std::unordered_map<std::string, std::string> aliasOnlyMapCountNameMap{
+      {"/map/count", "ps_map_count"}};
+  auto aliasOnlyMapCountResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      aliasMapCountExpr,
+      "/std/collections/map/count",
+      aliasOnlyMapCountNameMap,
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        CHECK(methodCandidate.isMethodCall);
+        CHECK(methodCandidate.name == "count");
+        pathOut = "/map/count";
+        return true;
+      });
+  REQUIRE(aliasOnlyMapCountResolvedPath.has_value());
+  CHECK(*aliasOnlyMapCountResolvedPath == "/map/count");
 
   primec::Expr aliasCapacityExpr = countExpr;
   aliasCapacityExpr.name = "/vector/capacity";
@@ -5534,6 +5553,47 @@ TEST_CASE("emitter expr control count-rewrite step rewrites eligible count calls
   REQUIRE(aliasMapAccessResolvedPath.has_value());
   CHECK(*aliasMapAccessResolvedPath == "/map/at");
   CHECK(aliasMapAccessResolveCalls == 1);
+
+  primec::Expr canonicalMapAccessExpr = accessExpr;
+  canonicalMapAccessExpr.name = "/std/collections/map/at";
+  int canonicalMapAccessResolveCalls = 0;
+  auto canonicalMapAccessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      canonicalMapAccessExpr,
+      "/std/collections/map/at",
+      {},
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        ++canonicalMapAccessResolveCalls;
+        CHECK(methodCandidate.isMethodCall);
+        CHECK(methodCandidate.name == "at");
+        pathOut = "/map/at";
+        return true;
+      });
+  REQUIRE(canonicalMapAccessResolvedPath.has_value());
+  CHECK(*canonicalMapAccessResolvedPath == "/std/collections/map/at");
+  CHECK(canonicalMapAccessResolveCalls == 1);
+
+  std::unordered_map<std::string, std::string> aliasOnlyMapAccessNameMap{
+      {"/map/at", "ps_map_at"}};
+  auto aliasOnlyMapAccessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
+      canonicalMapAccessExpr,
+      "/std/collections/map/at",
+      aliasOnlyMapAccessNameMap,
+      {},
+      {},
+      {},
+      {},
+      [&](const primec::Expr &methodCandidate, std::string &pathOut) {
+        CHECK(methodCandidate.isMethodCall);
+        CHECK(methodCandidate.name == "at");
+        pathOut = "/map/at";
+        return true;
+      });
+  REQUIRE(aliasOnlyMapAccessResolvedPath.has_value());
+  CHECK(*aliasOnlyMapAccessResolvedPath == "/map/at");
 
   int labeledAccessResolveCalls = 0;
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
