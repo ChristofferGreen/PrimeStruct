@@ -2858,8 +2858,8 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     }
     return candidates;
   };
-  auto collectionPathFromBinding = [](const BindingInfo &binding) -> std::string {
-    auto collectionPathFromType = [](const std::string &typeName, const std::string &typeTemplateArg) -> std::string {
+  std::function<std::string(const std::string &, const std::string &)> collectionPathFromType;
+  collectionPathFromType = [&](const std::string &typeName, const std::string &typeTemplateArg) -> std::string {
       if (typeName == "string") {
         return "/string";
       }
@@ -2882,12 +2882,56 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
       if (base == "map" && args.size() == 2) {
         return "/map";
       }
+      if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
+        return collectionPathFromType(normalizeBindingTypeName(args.front()), "");
+      }
       return "";
     };
+  auto collectionPathFromBinding = [&](const BindingInfo &binding) -> std::string {
     if ((binding.typeName == "Reference" || binding.typeName == "Pointer") && !binding.typeTemplateArg.empty()) {
       return collectionPathFromType(normalizeBindingTypeName(binding.typeTemplateArg), "");
     }
     return collectionPathFromType(normalizeBindingTypeName(binding.typeName), binding.typeTemplateArg);
+  };
+  auto collectionPathFromCallExpr = [&](const Expr &callExpr) -> std::string {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+      return "";
+    }
+    std::string builtinCollection;
+    if (getBuiltinCollectionName(callExpr, builtinCollection)) {
+      if (builtinCollection == "string") {
+        return "/string";
+      }
+      if ((builtinCollection == "array" || builtinCollection == "vector" || builtinCollection == "soa_vector") &&
+          callExpr.templateArgs.size() == 1) {
+        return "/" + builtinCollection;
+      }
+      if (builtinCollection == "map" && callExpr.templateArgs.size() == 2) {
+        return "/map";
+      }
+    }
+
+    auto resolvedCandidates = collectionHelperPathCandidates(resolveCalleePath(callExpr));
+    if (resolvedCandidates.empty()) {
+      resolvedCandidates.push_back(resolveCalleePath(callExpr));
+    }
+    for (const auto &candidate : resolvedCandidates) {
+      auto defIt = defMap_.find(candidate);
+      if (defIt == defMap_.end() || !defIt->second) {
+        continue;
+      }
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        const std::string collectionPath =
+            collectionPathFromType(normalizeBindingTypeName(transform.templateArgs.front()), "");
+        if (!collectionPath.empty()) {
+          return collectionPath;
+        }
+      }
+    }
+    return "";
   };
   auto resolveBareMapCallPath = [&](const Expr &callExpr) -> std::string {
     if (callExpr.isMethodCall || callExpr.args.empty()) {
@@ -2953,14 +2997,16 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     }
     for (size_t receiverIndex : receiverIndices) {
       const Expr &receiver = callExpr.args[receiverIndex];
-      if (receiver.kind != Expr::Kind::Name) {
-        continue;
+      if (receiver.kind == Expr::Kind::Name) {
+        auto it = ctx.locals.find(receiver.name);
+        if (it == ctx.locals.end()) {
+          continue;
+        }
+        if (collectionPathFromBinding(it->second) == "/map") {
+          return "/std/collections/map/" + helperName;
+        }
       }
-      auto it = ctx.locals.find(receiver.name);
-      if (it == ctx.locals.end()) {
-        continue;
-      }
-      if (collectionPathFromBinding(it->second) == "/map") {
+      if (collectionPathFromCallExpr(receiver) == "/map") {
         return "/std/collections/map/" + helperName;
       }
     }

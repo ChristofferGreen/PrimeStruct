@@ -571,6 +571,73 @@ main() {
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
+TEST_CASE("omitted initializer accepts effect-free Create with wrapper-returned canonical map call helper fallback") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapItems() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<i32>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(27i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  assign(this.value, count(wrapItems(), true))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("omitted initializer keeps canonical diagnostics for wrapper-returned map call helper fallback") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapItems() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<i32>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(27i32)
+}
+
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  assign(this.value, count(wrapItems()))
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(value.value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+}
+
 TEST_CASE("omitted initializer allows Create to fill missing fields") {
   const std::string source = R"(
 [struct]
