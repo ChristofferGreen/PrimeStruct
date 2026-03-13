@@ -510,6 +510,21 @@ namespace std {
       assign(self.eventCount, plus(self.eventCount, 1i32))
     }
 
+    [effects(heap_alloc), return<void>]
+    append_view_event(
+        [UiEventStream mut] self,
+        [i32] eventKind,
+        [i32] targetNodeId,
+        [i32] arg0,
+        [i32] arg1) {
+      self.append_word(eventKind)
+      self.append_word(3i32)
+      self.append_word(targetNodeId)
+      self.append_word(arg0)
+      self.append_word(arg1)
+      assign(self.eventCount, plus(self.eventCount, 1i32))
+    }
+
     [public effects(heap_alloc), return<void>]
     push_pointer_move([UiEventStream mut] self, [i32] targetNodeId, [i32] pointerId, [i32] x, [i32] y) {
       self.append_pointer_event(1i32, targetNodeId, pointerId, -1i32, x, y)
@@ -565,6 +580,21 @@ namespace std {
     [public effects(heap_alloc), return<void>]
     push_ime_commit([UiEventStream mut] self, [i32] targetNodeId, [string] text) {
       self.append_ime_event(7i32, targetNodeId, -1i32, -1i32, text)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    push_resize([UiEventStream mut] self, [i32] targetNodeId, [i32] width, [i32] height) {
+      self.append_view_event(8i32, targetNodeId, width, height)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    push_focus_gained([UiEventStream mut] self, [i32] targetNodeId) {
+      self.append_view_event(9i32, targetNodeId, 0i32, 0i32)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    push_focus_lost([UiEventStream mut] self, [i32] targetNodeId) {
+      self.append_view_event(10i32, targetNodeId, 0i32, 0i32)
     }
 
     [public return<i32>]

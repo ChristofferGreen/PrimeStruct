@@ -212,6 +212,9 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `UiEventStream.push_key_up(...)`
      - `UiEventStream.push_ime_preedit(...)`
      - `UiEventStream.push_ime_commit(...)`
+     - `UiEventStream.push_resize(...)`
+     - `UiEventStream.push_focus_gained(...)`
+     - `UiEventStream.push_focus_lost(...)`
      - `UiEventStream.event_count()`
      - `UiEventStream.serialize() -> vector<i32>`
    - Rounded rectangles are expressed through SDF-style primitives.
@@ -306,6 +309,9 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `push_key_down(...)` and `push_key_up(...)` normalize through one key event record shape: target node id, key code, modifier mask, is-repeat.
      - `push_ime_preedit(...)` and `push_ime_commit(...)` normalize through one IME event record shape: target node id, selection start, selection end, text.
      - `push_ime_commit(...)` uses selection start/end `-1` to mark committed text that no longer carries a live composition range.
+     - `push_resize(...)`, `push_focus_gained(...)`, and `push_focus_lost(...)` normalize through one view event record shape: target node id, arg0, arg1.
+     - `push_resize(...)` uses `arg0 = width` and `arg1 = height`.
+     - `push_focus_gained(...)` and `push_focus_lost(...)` use `arg0 = 0` and `arg1 = 0`.
      - Current modifier mask bits are `1` = `shift`, `2` = `control`, `4` = `alt`, `8` = `meta`.
 
 Current prototype serialization format for `/std/ui/CommandList.serialize()`:
@@ -362,6 +368,9 @@ Current prototype serialization format for `/std/ui/UiEventStream.serialize()`:
   - `5` = `key_up`
   - `6` = `ime_preedit`
   - `7` = `ime_commit`
+  - `8` = `resize`
+  - `9` = `focus_gained`
+  - `10` = `focus_lost`
 
 Current prototype serialization format for `/std/ui/LayoutTree.serialize()`:
 
@@ -644,6 +653,9 @@ main() {
   events.push_key_up(login.usernameInput, 13i32, 1i32)
   events.push_ime_preedit(login.usernameInput, 1i32, 4i32, "al|"utf8)
   events.push_ime_commit(login.usernameInput, "alice"utf8)
+  events.push_resize(login.panel, 40i32, 57i32)
+  events.push_focus_gained(login.usernameInput)
+  events.push_focus_lost(login.usernameInput)
   return(events.event_count())
 }
 ```

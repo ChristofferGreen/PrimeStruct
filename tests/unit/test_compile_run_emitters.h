@@ -858,6 +858,60 @@ main() {
         "1,2,6,7,3,1,4,3,97,108,124,7,9,3,-1,-1,5,97,108,105,99,101\n");
 }
 
+TEST_CASE("C++ emitter runs ui resize and focus event stream deterministically") {
+  const std::string source = R"(
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{count(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+
+  [UiEventStream mut] events{UiEventStream()}
+  events.push_resize(login.panel, 40i32, 57i32)
+  events.push_focus_gained(login.usernameInput)
+  events.push_focus_lost(login.usernameInput)
+  dump_words(events.serialize())
+  return(plus(login.usernameInput, events.event_count()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_ui_resize_focus_event_stream.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ui_resize_focus_event_stream_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_ui_resize_focus_event_stream.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 6);
+  CHECK(readFile(outPath) == "1,3,8,3,1,40,57,9,3,3,0,0,10,3,3,0,0\n");
+}
+
 TEST_CASE("C++ emitter supports graphics-style int return propagation with on_error") {
   const std::string source = R"(
 [struct]
