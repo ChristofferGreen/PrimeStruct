@@ -16071,15 +16071,42 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver struct paths fr
   };
   receiverCall.name = "MapCompatAlias";
   CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
-            receiverCall, "/not-struct/MapCompatAlias", importAliases, canonicalOnlyStructNames) ==
-        "/std/collections/map/at");
+            receiverCall, "/not-struct/MapCompatAlias", importAliases, canonicalOnlyStructNames)
+        .empty());
 
   const std::unordered_set<std::string> compatOnlyStructNames = {
       "/map/at",
   };
   receiverCall.name = "MapCanonicalAlias";
   CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
-            receiverCall, "/not-struct/MapCanonicalAlias", importAliases, compatOnlyStructNames) == "/map/at");
+            receiverCall, "/not-struct/MapCanonicalAlias", importAliases, compatOnlyStructNames)
+        .empty());
+}
+
+TEST_CASE("ir lowerer setup type helper keeps direct map access unsafe receiver paths separated") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "MapCompatAlias";
+
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"MapCanonicalAlias", "std/collections/map/at_unsafe"},
+      {"MapCompatAlias", "map/at_unsafe"},
+  };
+
+  const std::unordered_set<std::string> canonicalOnlyStructNames = {
+      "/std/collections/map/at_unsafe",
+  };
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/not-struct/MapCompatAlias", importAliases, canonicalOnlyStructNames)
+        .empty());
+
+  const std::unordered_set<std::string> compatOnlyStructNames = {
+      "/map/at_unsafe",
+  };
+  receiverCall.name = "MapCanonicalAlias";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/not-struct/MapCanonicalAlias", importAliases, compatOnlyStructNames)
+        .empty());
 }
 
 TEST_CASE("ir lowerer setup type helper rejects non-struct method receiver call paths") {
