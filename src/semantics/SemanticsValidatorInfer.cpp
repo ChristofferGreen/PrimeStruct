@@ -888,6 +888,61 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto isBuiltinStringReceiverExpr = [&](const Expr &target) -> bool {
+      if (target.kind == Expr::Kind::StringLiteral) {
+        return true;
+      }
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          return paramBinding->typeName == "string";
+        }
+        auto it = locals.find(target.name);
+        return it != locals.end() && it->second.typeName == "string";
+      }
+      if (target.kind == Expr::Kind::Call) {
+        std::string collectionTypePath;
+        return resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/string";
+      }
+      return false;
+    };
+    auto isDirectCanonicalVectorAccessCallOnBuiltinReceiver = [&](const Expr &candidate,
+                                                                  size_t &receiverIndexOut) -> bool {
+      receiverIndexOut = 0;
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      if (normalized != "std/collections/vector/at" && normalized != "std/collections/vector/at_unsafe") {
+        return false;
+      }
+      if (candidate.args.empty()) {
+        return false;
+      }
+      if (hasNamedArguments(candidate.argNames)) {
+        bool foundValues = false;
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+              *candidate.argNames[i] == "values") {
+            receiverIndexOut = i;
+            foundValues = true;
+            break;
+          }
+        }
+        if (!foundValues) {
+          receiverIndexOut = 0;
+        }
+      }
+      if (receiverIndexOut >= candidate.args.size()) {
+        return false;
+      }
+      std::string elemType;
+      return resolveVectorTarget(candidate.args[receiverIndexOut], elemType) ||
+             resolveArrayTarget(candidate.args[receiverIndexOut], elemType) ||
+             isBuiltinStringReceiverExpr(candidate.args[receiverIndexOut]);
+    };
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
     auto resolveStringTarget = [&](const Expr &target) -> bool {
       if (target.kind == Expr::Kind::StringLiteral) {
@@ -907,6 +962,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         std::string builtinName;
         if (getBuiltinArrayAccessName(target, builtinName) && target.args.size() == 2) {
+          size_t receiverIndex = 0;
+          if (isDirectCanonicalVectorAccessCallOnBuiltinReceiver(target, receiverIndex)) {
+            std::string elemType;
+            return resolveArrayTarget(target.args[receiverIndex], elemType) &&
+                   normalizeBindingTypeName(elemType) == "string";
+          }
           const std::string resolvedTarget = resolveCalleePath(target);
           auto defIt = defMap_.find(resolvedTarget);
           if (defIt != defMap_.end() && defIt->second != nullptr) {

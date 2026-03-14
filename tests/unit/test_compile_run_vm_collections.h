@@ -6613,6 +6613,58 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
+TEST_CASE("runs vm canonical vector access builtin string count shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<i32>]
+/std/collections/vector/at([vector<string>] values, [i32] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<string>] values{vector<string>("hello"raw_utf8)}
+  return(count(/std/collections/vector/at(values, 0i32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_canonical_vector_access_builtin_string_count_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 91);
+}
+
+TEST_CASE("vm keeps primitive diagnostics on canonical vector unsafe access count shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return("abc"raw_utf8)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  return(count(/std/collections/vector/at_unsafe(values, 0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_canonical_vector_access_unsafe_count_shadow_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_canonical_vector_access_unsafe_count_shadow_reject.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("runs vm with user vector count method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

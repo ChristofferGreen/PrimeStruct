@@ -449,6 +449,62 @@
     }
     return "";
   };
+  auto builtinCanonicalVectorAccessReceiverTypePath = [&](const Expr &candidate) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return "";
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "std/collections/vector/at" && normalized != "std/collections/vector/at_unsafe") {
+      return "";
+    }
+    if (candidate.args.empty()) {
+      return "";
+    }
+    size_t receiverIndex = 0;
+    if (hasNamedArguments(candidate.argNames)) {
+      bool foundValues = false;
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          receiverIndex = i;
+          foundValues = true;
+          break;
+        }
+      }
+      if (!foundValues) {
+        receiverIndex = 0;
+      }
+    }
+    if (receiverIndex >= candidate.args.size()) {
+      return "";
+    }
+    const Expr &receiver = candidate.args[receiverIndex];
+    if (receiver.kind == Expr::Kind::StringLiteral || isStringValue(receiver, localTypes)) {
+      return "/string";
+    }
+    if (isVectorValue(receiver, localTypes)) {
+      return "/vector";
+    }
+    if (isArrayValue(receiver, localTypes)) {
+      return "/array";
+    }
+    if (receiver.kind == Expr::Kind::Call) {
+      std::string collectionName;
+      if (getBuiltinCollectionName(receiver, collectionName)) {
+        if (collectionName == "vector" || collectionName == "array") {
+          return "/" + collectionName;
+        }
+      }
+      const std::string receiverTypePath = resolvedTypePathForResolvedCall(resolveExprPath(receiver));
+      if (receiverTypePath == "/vector" || receiverTypePath == "/array" || receiverTypePath == "/string") {
+        return receiverTypePath;
+      }
+    }
+    return "";
+  };
   auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
     if (isStringValue(targetExpr, localTypes)) {
       return "/string";
@@ -472,7 +528,10 @@
       }
     }
     if (!targetExpr.isMethodCall) {
-      if (isExplicitVectorAccessCompatibilityCall(targetExpr)) {
+      const bool shouldProbeBuiltinVectorAccessType =
+          isExplicitVectorAccessCompatibilityCall(targetExpr) ||
+          !builtinCanonicalVectorAccessReceiverTypePath(targetExpr).empty();
+      if (shouldProbeBuiltinVectorAccessType) {
         const std::string probedTypePath = probedTypePathForTarget(targetExpr);
         if (probedTypePath == "/string" || probedTypePath == "/array" || probedTypePath == "/vector" ||
             probedTypePath == "/map") {

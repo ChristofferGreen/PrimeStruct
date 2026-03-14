@@ -7109,6 +7109,36 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("C++ emitter keeps canonical vector access builtin string count shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<i32>]
+/std/collections/vector/at([vector<string>] values, [i32] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<string>] values{vector<string>("hello"raw_utf8)}
+  return(count(/std/collections/vector/at(values, 0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_vector_access_builtin_string_count_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_vector_access_builtin_string_count_shadow_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
+}
+
 TEST_CASE("C++ emitter keeps wrapper-returned vector string access count fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<string>>]
@@ -7150,6 +7180,37 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK_FALSE(readFile(errPath).empty());
+}
+
+TEST_CASE("C++ emitter keeps primitive diagnostics on canonical vector unsafe access count shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return("abc"raw_utf8)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  return(count(/std/collections/vector/at_unsafe(values, 0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_vector_access_unsafe_count_shadow_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_vector_access_unsafe_count_shadow_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps primitive diagnostics on vector alias access count canonical wrapper return forwarding") {
