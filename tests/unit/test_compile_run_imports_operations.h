@@ -79,13 +79,17 @@ TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") 
   SUBCASE("stdlib") {
     expectVectorHelperSurfaceConformance("exe", "/std/collections/*");
     expectVectorExtendedConstructorConformance("exe", "/std/collections/*");
+    expectVectorGrowthConformance("exe", "/std/collections/*");
     expectVectorTypeMismatchReject("exe", "/std/collections/*");
+    expectVectorPushTypeMismatchReject("exe", "/std/collections/*");
   }
 
   SUBCASE("experimental") {
     expectVectorHelperSurfaceConformance("exe", "/std/collections/experimental_vector/*");
     expectVectorExtendedConstructorConformance("exe", "/std/collections/experimental_vector/*");
+    expectVectorGrowthConformance("exe", "/std/collections/experimental_vector/*");
     expectVectorTypeMismatchReject("exe", "/std/collections/experimental_vector/*");
+    expectVectorPushTypeMismatchReject("exe", "/std/collections/experimental_vector/*");
   }
 }
 

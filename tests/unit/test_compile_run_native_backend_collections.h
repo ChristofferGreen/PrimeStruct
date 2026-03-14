@@ -2049,13 +2049,17 @@ TEST_CASE("compiles and runs native shared vector conformance harness for stdlib
   SUBCASE("stdlib") {
     expectVectorHelperSurfaceConformance("native", "/std/collections/*");
     expectVectorExtendedConstructorConformance("native", "/std/collections/*");
+    expectVectorGrowthConformance("native", "/std/collections/*");
     expectVectorTypeMismatchReject("native", "/std/collections/*");
+    expectVectorPushTypeMismatchReject("native", "/std/collections/*");
   }
 
   SUBCASE("experimental") {
     expectVectorHelperSurfaceConformance("native", "/std/collections/experimental_vector/*");
     expectVectorExtendedConstructorConformance("native", "/std/collections/experimental_vector/*");
+    expectVectorGrowthConformance("native", "/std/collections/experimental_vector/*");
     expectVectorTypeMismatchReject("native", "/std/collections/experimental_vector/*");
+    expectVectorPushTypeMismatchReject("native", "/std/collections/experimental_vector/*");
   }
 }
 

@@ -1682,13 +1682,17 @@ TEST_CASE("runs vm shared vector conformance harness for stdlib and experimental
   SUBCASE("stdlib") {
     expectVectorHelperSurfaceConformance("vm", "/std/collections/*");
     expectVectorExtendedConstructorConformance("vm", "/std/collections/*");
+    expectVectorGrowthConformance("vm", "/std/collections/*");
     expectVectorTypeMismatchReject("vm", "/std/collections/*");
+    expectVectorPushTypeMismatchReject("vm", "/std/collections/*");
   }
 
   SUBCASE("experimental") {
     expectVectorHelperSurfaceConformance("vm", "/std/collections/experimental_vector/*");
     expectVectorExtendedConstructorConformance("vm", "/std/collections/experimental_vector/*");
+    expectVectorGrowthConformance("vm", "/std/collections/experimental_vector/*");
     expectVectorTypeMismatchReject("vm", "/std/collections/experimental_vector/*");
+    expectVectorPushTypeMismatchReject("vm", "/std/collections/experimental_vector/*");
   }
 }
 

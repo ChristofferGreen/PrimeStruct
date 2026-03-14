@@ -22,6 +22,20 @@ namespace std {
     /std/collections/experimental_buffer_unchecked/bufferWriteUnsafe<T>(values.data, index, value)
   }
 
+  [effects(heap_alloc), return<void>]
+  vectorReserveInternal<T>([Vector<T> mut] values, [i32] capacity) {
+    if(greater_than(capacity, values.capacity),
+       then() {
+         [i32 mut] allocCount{capacity}
+         if(equal(allocCount, 0i32),
+            then() { assign(allocCount, 1i32) },
+            else() { })
+         assign(values.data, /std/collections/experimental_buffer_checked/bufferGrow<T>(values.data, allocCount))
+         assign(values.capacity, capacity)
+       },
+       else() { })
+  }
+
   [public effects(heap_alloc), return<Vector<T>>]
   vectorNew<T>() {
     return(vectorAlloc<T>(0i32, 0i32))
@@ -119,6 +133,26 @@ namespace std {
   [public return<i32>]
   vectorCapacity<T>([Vector<T>] values) {
     return(values.capacity)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  vectorReserve<T>([Vector<T> mut] values, [i32] capacity) {
+    vectorReserveInternal<T>(values, capacity)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  vectorPush<T>([Vector<T> mut] values, [T] value) {
+    if(equal(values.count, values.capacity),
+       then() {
+         [i32 mut] nextCapacity{values.capacity}
+         if(equal(nextCapacity, 0i32),
+            then() { assign(nextCapacity, 1i32) },
+            else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
+         vectorReserveInternal<T>(values, nextCapacity)
+       },
+       else() { })
+    vectorWrite<T>(values, values.count, value)
+    assign(values.count, plus(values.count, 1i32))
   }
 
   [public return<T>]
