@@ -7957,8 +7957,10 @@ main() {
   CHECK(error.find("unknown call target: /array/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector capacity rejects named arguments as builtin alias") {
+TEST_CASE("stdlib namespaced vector capacity accepts named arguments through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 5i32)}
@@ -7966,8 +7968,21 @@ main() {
 }
 )";
   std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector capacity requires imported stdlib helper or explicit definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/std/collections/vector/capacity(values))
+}
+)";
+  std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity rejects named arguments as builtin alias") {

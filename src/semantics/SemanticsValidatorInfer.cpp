@@ -1562,7 +1562,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (!(namespacedCollection == "vector" && namespacedHelper == helper)) {
         return false;
       }
-      if (resolveCalleePath(candidate) != "/std/collections/vector/" + namespacedHelper) {
+      if ((namespacedHelper != "count" && namespacedHelper != "capacity") ||
+          resolveCalleePath(candidate) != "/std/collections/vector/" + namespacedHelper) {
         return true;
       }
       return defMap_.find("/std/collections/vector/" + namespacedHelper) != defMap_.end() ||

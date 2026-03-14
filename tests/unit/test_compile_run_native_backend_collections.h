@@ -9125,8 +9125,10 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects native namespaced vector capacity named arguments") {
+TEST_CASE("compiles and runs native namespaced vector capacity named arguments through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
@@ -9134,12 +9136,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("native_namespaced_vector_capacity_named_args.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_namespaced_vector_capacity_named_args_err.txt").string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_namespaced_vector_capacity_named_args_exe").string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects native removed vector access alias named arguments") {

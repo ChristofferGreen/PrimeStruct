@@ -7971,8 +7971,10 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm namespaced vector capacity named arguments") {
+TEST_CASE("runs vm namespaced vector capacity named arguments through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
@@ -7980,11 +7982,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_namespaced_vector_capacity_named_args.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_namespaced_vector_capacity_named_args_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("rejects vm removed vector access alias named arguments") {
