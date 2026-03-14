@@ -7891,7 +7891,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced count helper auto inference falls back to canonical helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced count helper auto inference falls back to canonical helper return") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -8025,7 +8025,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced count expression falls back to canonical helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced count expression falls back to canonical helper return") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {

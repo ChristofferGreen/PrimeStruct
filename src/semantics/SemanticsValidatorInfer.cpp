@@ -2152,6 +2152,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         isNamespacedCollectionHelperCall && namespacedCollection == "vector";
     const bool isNamespacedMapHelperCall =
         isNamespacedCollectionHelperCall && namespacedCollection == "map";
+    const bool isStdNamespacedVectorCountCall =
+        !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
     const bool isNamespacedVectorCountCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
         isVectorBuiltinName(expr, "count") && !isArrayNamespacedVectorCountCompatibilityCall(expr);
@@ -2219,11 +2221,17 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         isNamespacedVectorAccessCall && (!hasResolvedDefinition || isStdNamespacedVectorAccessSpelling);
     const bool shouldDeferNamespacedMapAccessCall =
         isNamespacedMapAccessCall && (!hasResolvedDefinition || isStdNamespacedMapAccessSpelling);
+    const bool shouldUseResolvedStdNamespacedVectorCountDefinition =
+        isStdNamespacedVectorCountCall && defMap_.find("/vector/count") == defMap_.end() &&
+        defMap_.find("/std/collections/vector/count") != defMap_.end();
     bool shouldDeferResolvedNamespacedCollectionHelperReturn =
         isNamespacedVectorCountCall || isNamespacedMapCountCall || isResolvedMapCountCall ||
         isNamespacedVectorCapacityCall || shouldDeferNamespacedVectorAccessCall ||
         shouldDeferNamespacedMapAccessCall;
     if (prefersCanonicalVectorCountAliasDefinition) {
+      shouldDeferResolvedNamespacedCollectionHelperReturn = false;
+    }
+    if (shouldUseResolvedStdNamespacedVectorCountDefinition) {
       shouldDeferResolvedNamespacedCollectionHelperReturn = false;
     }
     if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedCollectionHelperReturn) {
