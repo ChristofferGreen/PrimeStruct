@@ -1662,6 +1662,7 @@ TEST_CASE("runs vm shared map conformance harness for stdlib and experimental he
   SUBCASE("stdlib") {
     expectMapHelperSurfaceConformance("vm", "/std/collections/*");
     expectMapExtendedConstructorConformance("vm", "/std/collections/*");
+    expectMapOverwriteConformance("vm", "/std/collections/*");
     expectMapTryAtConformance("vm", "/std/collections/*", false);
     expectMapTryAtConformance("vm", "/std/collections/*", true);
   }
@@ -1669,6 +1670,7 @@ TEST_CASE("runs vm shared map conformance harness for stdlib and experimental he
   SUBCASE("experimental") {
     expectMapHelperSurfaceConformance("vm", "/std/collections/experimental_map/*");
     expectMapExtendedConstructorConformance("vm", "/std/collections/experimental_map/*");
+    expectMapOverwriteConformance("vm", "/std/collections/experimental_map/*");
     expectMapTryAtConformance("vm", "/std/collections/experimental_map/*", false);
     expectMapTryAtConformance("vm", "/std/collections/experimental_map/*", true);
   }

@@ -2029,6 +2029,7 @@ TEST_CASE("compiles and runs native shared map conformance harness for stdlib an
   SUBCASE("stdlib") {
     expectMapHelperSurfaceConformance("native", "/std/collections/*");
     expectMapExtendedConstructorConformance("native", "/std/collections/*");
+    expectMapOverwriteConformance("native", "/std/collections/*");
     expectMapTryAtConformance("native", "/std/collections/*", false);
     expectMapTryAtConformance("native", "/std/collections/*", true);
   }
@@ -2036,6 +2037,7 @@ TEST_CASE("compiles and runs native shared map conformance harness for stdlib an
   SUBCASE("experimental") {
     expectMapHelperSurfaceConformance("native", "/std/collections/experimental_map/*");
     expectMapExtendedConstructorConformance("native", "/std/collections/experimental_map/*");
+    expectMapOverwriteConformance("native", "/std/collections/experimental_map/*");
     expectMapTryAtConformance("native", "/std/collections/experimental_map/*", false);
     expectMapTryAtConformance("native", "/std/collections/experimental_map/*", true);
   }

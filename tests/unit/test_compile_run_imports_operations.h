@@ -60,6 +60,7 @@ TEST_CASE("compiles and runs shared map conformance harness in C++ emitter") {
   SUBCASE("stdlib") {
     expectMapHelperSurfaceConformance("exe", "/std/collections/*");
     expectMapExtendedConstructorConformance("exe", "/std/collections/*");
+    expectMapOverwriteConformance("exe", "/std/collections/*");
     expectMapTryAtConformance("exe", "/std/collections/*", false);
     expectMapTryAtConformance("exe", "/std/collections/*", true);
   }
@@ -67,6 +68,7 @@ TEST_CASE("compiles and runs shared map conformance harness in C++ emitter") {
   SUBCASE("experimental") {
     expectMapHelperSurfaceConformance("exe", "/std/collections/experimental_map/*");
     expectMapExtendedConstructorConformance("exe", "/std/collections/experimental_map/*");
+    expectMapOverwriteConformance("exe", "/std/collections/experimental_map/*");
     expectMapTryAtConformance("exe", "/std/collections/experimental_map/*", false);
     expectMapTryAtConformance("exe", "/std/collections/experimental_map/*", true);
   }

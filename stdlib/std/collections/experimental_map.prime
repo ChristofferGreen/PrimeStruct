@@ -1,102 +1,170 @@
 namespace std {
   namespace collections {
   namespace experimental_map {
-  [public return<map<K, V>>]
+  [public struct]
+  Map<K, V>() {
+    [public vector<K> mut] keys{vector<K>()}
+    [public vector<V> mut] payloads{vector<V>()}
+  }
+
+  [return<i32> Comparable<K>]
+  mapFindIndex<K, V>([Map<K, V>] entries, [K] key) {
+    [i32 mut] index{0i32}
+    [i32] limit{count(entries.keys)}
+    while(less_than(index, limit), do() {
+      if(equal(entries.keys[index], key),
+         then() { return(index) },
+         else() { })
+      increment(index)
+    })
+    return(limit)
+  }
+
+  [effects(heap_alloc), return<void> Comparable<K>]
+  mapInsert<K, V>([Map<K, V> mut] entries, [K] key, [V] value) {
+    [i32] index{mapFindIndex<K, V>(entries, key)}
+    [i32] limit{count(entries.keys)}
+    if(less_than(index, limit),
+       then() { assign(entries.payloads[index], value) },
+       else() {
+         push(entries.keys, key)
+         push(entries.payloads, value)
+       })
+  }
+
+  [public return<Map<K, V>>]
   mapNew<K, V>() {
-    return(map<K, V>())
+    return(Map<K, V>())
   }
 
-  [public return<map<K, V>>]
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapSingle<K, V>([K] key, [V] value) {
-    return(map<K, V>(key, value))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, key, value)
+    return(out)
   }
 
-  [public return<map<K, V>>]
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapDouble<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-    return(map<K, V>(firstKey, firstValue, secondKey, secondValue))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    return(out)
   }
 
-  [public return<map<K, V>>]
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapPair<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
     return(mapDouble<K, V>(firstKey, firstValue, secondKey, secondValue))
   }
 
-  [public return<map<K, V>>]
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapTriple<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue) {
-    return(map<K, V>(firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    return(out)
   }
 
-  [public return<map<K, V>>]
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapQuad<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue) {
-    return(map<K, V>(firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    mapInsert<K, V>(out, fourthKey, fourthValue)
+    return(out)
   }
 
-  [public return<map<K, V>>]
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapQuint<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue) {
-    return(map<K, V>(
-        firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
-        fifthValue))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    mapInsert<K, V>(out, fourthKey, fourthValue)
+    mapInsert<K, V>(out, fifthKey, fifthValue)
+    return(out)
   }
 
-  [public return<map<K, V>>]
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapSext<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue) {
-    return(map<K, V>(
-        firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
-        fifthValue, sixthKey, sixthValue))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    mapInsert<K, V>(out, fourthKey, fourthValue)
+    mapInsert<K, V>(out, fifthKey, fifthValue)
+    mapInsert<K, V>(out, sixthKey, sixthValue)
+    return(out)
   }
 
-  [public return<map<K, V>>]
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapSept<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey,
       [V] seventhValue) {
-    return(map<K, V>(
-        firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
-        fifthValue, sixthKey, sixthValue, seventhKey, seventhValue))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    mapInsert<K, V>(out, fourthKey, fourthValue)
+    mapInsert<K, V>(out, fifthKey, fifthValue)
+    mapInsert<K, V>(out, sixthKey, sixthValue)
+    mapInsert<K, V>(out, seventhKey, seventhValue)
+    return(out)
   }
 
-  [public return<map<K, V>>]
+  [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapOct<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey, [V] seventhValue,
       [K] eighthKey, [V] eighthValue) {
-    return(map<K, V>(
-        firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
-        fifthValue, sixthKey, sixthValue, seventhKey, seventhValue, eighthKey, eighthValue))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    mapInsert<K, V>(out, fourthKey, fourthValue)
+    mapInsert<K, V>(out, fifthKey, fifthValue)
+    mapInsert<K, V>(out, sixthKey, sixthValue)
+    mapInsert<K, V>(out, seventhKey, seventhValue)
+    mapInsert<K, V>(out, eighthKey, eighthValue)
+    return(out)
   }
 
   [public return<i32>]
-  mapCount<K, V>([map<K, V>] values) {
-    return(count(values))
+  mapCount<K, V>([Map<K, V>] entries) {
+    return(count(entries.keys))
   }
 
-  [public return<bool>]
-  mapContains<K, V>([map<K, V>] values, [K] key) {
-    return(contains(values, key))
+  [public return<bool> Comparable<K>]
+  mapContains<K, V>([Map<K, V>] entries, [K] key) {
+    return(less_than(mapFindIndex<K, V>(entries, key), count(entries.keys)))
   }
 
-  [public return<Result<V, ContainerError>>]
-  mapTryAt<K, V>([map<K, V>] values, [K] key) {
-    if(contains(values, key),
-       then() { return(Result.ok(mapAtUnsafe<K, V>(values, key))) },
+  [public return<Result<V, ContainerError>> Comparable<K>]
+  mapTryAt<K, V>([Map<K, V>] entries, [K] key) {
+    [i32] index{mapFindIndex<K, V>(entries, key)}
+    if(less_than(index, count(entries.keys)),
+       then() { return(Result.ok(entries.payloads[index])) },
        else() { return(containerErrorResult<V>(containerMissingKey())) })
   }
 
-  [public return<V>]
-  mapAt<K, V>([map<K, V>] values, [K] key) {
-    return(at(values, key))
+  [public return<V> Comparable<K>]
+  mapAt<K, V>([Map<K, V>] entries, [K] key) {
+    return(at(entries.payloads, mapFindIndex<K, V>(entries, key)))
   }
 
-  [public return<V>]
-  mapAtUnsafe<K, V>([map<K, V>] values, [K] key) {
-    return(at_unsafe(values, key))
+  [public return<V> Comparable<K>]
+  mapAtUnsafe<K, V>([Map<K, V>] entries, [K] key) {
+    return(at_unsafe(entries.payloads, mapFindIndex<K, V>(entries, key)))
   }
   }
   }

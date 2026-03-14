@@ -18,8 +18,8 @@ Stdlib container substrate note: the items below are the hard prerequisites for 
 - ○ Replace compiler-injected vector index/pop runtime abort paths with the standard container error contract across VM/native/C++ flows.
 Stdlib container bring-up note: land a real `.prime` implementation under an experimental path/name first, prove parity there, then swap canonical names and remove the builtin implementation.
 - ○ Implement an experimental stdlib `vector` in `.prime` under a temporary path/name so conformance can advance without blocking on canonical-name migration.
-- ○ Experimental stdlib `map` storage/runtime slice: land a `.prime`-owned storage/runtime path for `/std/collections/experimental_map/*` once pointer/ownership substrate lands.
-- ○ Experimental stdlib `map` helper-surface slice: route `/std/collections/experimental_map/*` helpers through the `.prime` implementation instead of compiler-owned behavior once the storage/runtime path exists.
+- ◐ Experimental stdlib `map` storage/runtime slice: land a `.prime`-owned storage/runtime path for `/std/collections/experimental_map/*` once pointer/ownership substrate lands. Progress: `/std/collections/experimental_map/*` now returns a real experimental `Map<K, V>` struct backed by parallel `vector<K>` / `vector<V>` storage in `.prime`, and shared C++/VM/native helper conformance now exercises that path with comparable `i32` keys.
+- ○ Experimental stdlib `map` helper-surface slice: finish parity for `/std/collections/experimental_map/*` now that the storage/runtime path exists; remaining gaps include exact checked-miss `mapAt(...)` parity and the backend string-key behavior that canonical builtin `map` still special-cases.
 - ○ Shared collection conformance harness slice: add reusable backend coverage for builtin and experimental-stdlib `vector`/`map` helper parity.
 - ○ Switch canonical `/std/collections/vector/*` helpers to the stdlib implementation once vector parity is proven.
 - ○ Switch canonical `/std/collections/map/*` helpers to the stdlib implementation once map parity is proven.
