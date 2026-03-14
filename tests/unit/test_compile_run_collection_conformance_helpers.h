@@ -15,6 +15,7 @@ inline void expectSharedMapConformanceHarness(const std::string &emitMode) {
     expectCanonicalMapNamespaceTypeMismatchReject(emitMode);
     expectCanonicalMapNamespaceImportRequirement(emitMode);
     expectCanonicalMapCountImportRequirement(emitMode);
+    expectCanonicalMapContainsImportRequirement(emitMode);
     expectCanonicalMapNamespaceCountShadow(emitMode);
     expectCanonicalMapNamespaceAccessShadow(emitMode);
   }

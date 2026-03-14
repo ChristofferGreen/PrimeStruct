@@ -359,7 +359,7 @@
       appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-      if (suffix != "count") {
+      if (suffix != "count" && suffix != "contains") {
         appendUnique("/map/" + suffix);
       }
     }
