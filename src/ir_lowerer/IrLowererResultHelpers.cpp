@@ -148,8 +148,9 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     return ResultOkMethodCallEmitResult::Error;
   }
   const LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
-  if (argKind != LocalInfo::ValueKind::Int32 && argKind != LocalInfo::ValueKind::Bool) {
-    error = "native backend only supports Result.ok with 32-bit values";
+  if (argKind != LocalInfo::ValueKind::Int32 && argKind != LocalInfo::ValueKind::Bool &&
+      argKind != LocalInfo::ValueKind::String) {
+    error = "native backend only supports Result.ok with 32-bit or string values";
     return ResultOkMethodCallEmitResult::Error;
   }
   if (!emitExpr(expr.args[1], localsIn)) {

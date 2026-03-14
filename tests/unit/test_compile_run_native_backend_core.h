@@ -465,6 +465,49 @@ main_fail() {
   CHECK(readFile(errPath).empty());
 }
 
+TEST_CASE("native backend supports string Result.ok payloads through try") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return("parse failed"utf8)
+  }
+}
+
+[return<Result<string, ParseError>>]
+greeting() {
+  return(Result.ok("alpha"utf8))
+}
+
+[effects(io_err)]
+log_parse_error([ParseError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<ParseError, /log_parse_error>]
+main() {
+  [string] text{greeting()?}
+  print_line(text)
+  return(count(text))
+}
+)";
+  const std::string srcPath = writeTemp("native_result_ok_string.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_result_ok_string_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_ok_string_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 5);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 #if defined(EACCES)
 TEST_CASE("compiles and runs native FileError.why mapping") {
   const std::string source =

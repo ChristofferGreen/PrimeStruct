@@ -1265,6 +1265,44 @@ main_fail() {
   CHECK(readFile(errPath).empty());
 }
 
+TEST_CASE("vm supports string Result.ok payloads through try") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return("parse failed"utf8)
+  }
+}
+
+[return<Result<string, ParseError>>]
+greeting() {
+  return(Result.ok("alpha"utf8))
+}
+
+[effects(io_err)]
+log_parse_error([ParseError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<ParseError, /log_parse_error>]
+main() {
+  [string] text{greeting()?}
+  print_line(text)
+  return(count(text))
+}
+)";
+  const std::string srcPath = writeTemp("vm_result_ok_string.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_result_ok_string_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 5);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 #if defined(EACCES)
 TEST_CASE("vm maps FileError.why codes") {
   const std::string source =

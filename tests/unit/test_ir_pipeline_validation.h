@@ -32897,6 +32897,24 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             expr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::String;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              emitCalled = true;
+              return true;
+            },
+            [&](primec::IrOpcode, uint64_t) {},
+            error) ==
+        EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitCalled);
+
+  emitCalled = false;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return ValueKind::Int64;
             },
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
@@ -32906,7 +32924,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [&](primec::IrOpcode, uint64_t) {},
             error) ==
         EmitResult::Error);
-  CHECK(error == "native backend only supports Result.ok with 32-bit values");
+  CHECK(error == "native backend only supports Result.ok with 32-bit or string values");
   CHECK_FALSE(emitCalled);
 
   error.clear();

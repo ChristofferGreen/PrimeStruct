@@ -256,3 +256,51 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
   CHECK(runCommand(runCmd) == expectedExitCode);
   CHECK(readFile(outPath) == "container missing key\n");
 }
+
+inline std::string makeExperimentalMapTryAtStringConformanceSource() {
+  std::string source;
+  source += "import /std/collections/errors/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedMapTryAtStringError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<i32, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedMapTryAtStringError>]\n";
+  source += "main() {\n";
+  source += "  [Map<i32, string>] values{mapPair<i32, string>(11i32, \"alpha\"utf8, 22i32, \"beta\"utf8)}\n";
+  source += "  [string] found{try(mapTryAt<i32, string>(values, 11i32))}\n";
+  source += "  [Result<string, ContainerError>] missing{mapTryAt<i32, string>(values, 99i32)}\n";
+  source += "  print_line(found)\n";
+  source += "  print_line(Result.why(missing))\n";
+  source += "  return(Result.ok(plus(count(found), 23i32)))\n";
+  source += "}\n";
+  return source;
+}
+
+inline void expectExperimentalMapTryAtStringConformance(const std::string &emitMode) {
+  const std::string source = makeExperimentalMapTryAtStringConformanceSource();
+  const std::string srcPath = writeTemp("map_try_at_experimental_string_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / ("primec_map_try_at_experimental_string_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 28);
+    CHECK(readFile(outPath) == "alpha\ncontainer missing key\n");
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / ("primec_map_try_at_experimental_string_" + emitMode + "_exe"))
+          .string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == 28);
+  CHECK(readFile(outPath) == "alpha\ncontainer missing key\n");
+}

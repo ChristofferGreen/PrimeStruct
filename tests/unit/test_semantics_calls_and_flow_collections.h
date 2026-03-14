@@ -249,6 +249,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("mapTryAt helper validates for supported string container result payloads") {
+  const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+[return<ContainerError>]
+containerMissingKey() {
+  return(ContainerError(1i32))
+}
+
+[return<Result<T, ContainerError>>]
+containerErrorResult<T>([ContainerError] err) {
+  return(multiply(convert<i64>(err.code), 4294967296i64))
+}
+
+[return<Result<V, ContainerError>>]
+mapTryAt<K, V>([map<K, V>] values, [K] key) {
+  if(contains(values, key),
+     then() { return(Result.ok(at_unsafe(values, key))) },
+     else() { return(containerErrorResult<V>(containerMissingKey())) })
+}
+
+[return<Result<string, ContainerError>>]
+main() {
+  [map<string, string>] values{map<string, string>("left"raw_utf8, "alpha"utf8)}
+  return(mapTryAt<string, string>(values, "left"raw_utf8))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("count helper validates on vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

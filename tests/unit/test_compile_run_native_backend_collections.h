@@ -2041,6 +2041,7 @@ TEST_CASE("compiles and runs native shared map conformance harness for stdlib an
     expectMapOverwriteConformance("native", "/std/collections/experimental_map/*");
     expectMapTryAtConformance("native", "/std/collections/experimental_map/*", false);
     expectMapTryAtConformance("native", "/std/collections/experimental_map/*", true);
+    expectExperimentalMapTryAtStringConformance("native");
   }
 }
 
