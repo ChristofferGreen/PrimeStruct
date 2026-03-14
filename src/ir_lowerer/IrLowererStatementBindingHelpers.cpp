@@ -549,8 +549,7 @@ UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
     const LocalMap &localsIn,
     std::vector<IrInstruction> &instructions,
     const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
-    const EmitExprForBindingFn &emitExpr,
-    std::string &error) {
+    const EmitExprForBindingFn &emitExpr) {
   if (stmt.kind != Expr::Kind::Call || stmt.isMethodCall || !isSimpleCallName(stmt, "take") || stmt.args.size() != 1) {
     return UninitializedStorageTakeEmitResult::NotMatched;
   }

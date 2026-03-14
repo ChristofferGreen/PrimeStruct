@@ -999,12 +999,6 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
     return !helperOut.empty();
   };
 
-  auto isRemovedVectorCompatibilityHelper = [](const std::string &helper) {
-    return helper == "count" || helper == "capacity" || helper == "at" || helper == "at_unsafe" ||
-           helper == "push" || helper == "pop" || helper == "reserve" || helper == "clear" ||
-           helper == "remove_at" || helper == "remove_swap";
-  };
-
   if (extractHelper("vector/", "vector")) {
     return true;
   }

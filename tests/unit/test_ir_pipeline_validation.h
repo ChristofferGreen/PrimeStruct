@@ -28289,8 +28289,7 @@ TEST_CASE("ir lowerer statement binding helper emits uninitialized take statemen
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               instructions.push_back({primec::IrOpcode::PushI64, 7});
               return true;
-            },
-            error) == EmitResult::Emitted);
+            }) == EmitResult::Emitted);
   CHECK(error.empty());
   REQUIRE(instructions.size() == 2);
   CHECK(instructions[0].op == primec::IrOpcode::PushI64);
@@ -28321,8 +28320,7 @@ TEST_CASE("ir lowerer statement binding helper skips non-emittable take statemen
               resolved = false;
               return true;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            error) == EmitResult::NotMatched);
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; }) == EmitResult::NotMatched);
   CHECK(error.empty());
   CHECK(instructions.empty());
 
@@ -28337,8 +28335,7 @@ TEST_CASE("ir lowerer statement binding helper skips non-emittable take statemen
               resolved = true;
               return true;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            error) == EmitResult::NotMatched);
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; }) == EmitResult::NotMatched);
   CHECK(error.empty());
   CHECK(instructions.empty());
 }
@@ -28364,8 +28361,7 @@ TEST_CASE("ir lowerer statement binding helper surfaces take resolution errors")
             instructions,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::UninitializedStorageAccessInfo &,
                bool &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            error) == EmitResult::Error);
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; }) == EmitResult::Error);
 }
 
 TEST_CASE("ir lowerer statement binding helper emits print statement builtins") {

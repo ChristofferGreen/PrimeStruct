@@ -11,8 +11,8 @@ enum class TransformPhase { Auto, Text, Semantic };
 
 struct Transform {
   std::string name;
-  std::vector<std::string> templateArgs;
-  std::vector<std::string> arguments;
+  std::vector<std::string> templateArgs = {};
+  std::vector<std::string> arguments = {};
   TransformPhase phase = TransformPhase::Auto;
 };
 

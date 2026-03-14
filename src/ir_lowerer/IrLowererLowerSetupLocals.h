@@ -109,7 +109,6 @@
   const auto &structTypeResolutionAdapters = setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
   auto resolveStructTypeName = structTypeResolutionAdapters.resolveStructTypeName;
 
-  using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
   using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
   const auto &structArrayInfoAdapters = setupLocalsOrchestration.structArrayInfoAdapters;
   auto resolveStructArrayInfoFromPath = structArrayInfoAdapters.resolveStructArrayTypeInfoFromPath;

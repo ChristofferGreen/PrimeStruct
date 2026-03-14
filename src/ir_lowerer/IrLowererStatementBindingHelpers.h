@@ -134,8 +134,7 @@ UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
     const LocalMap &localsIn,
     std::vector<IrInstruction> &instructions,
     const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
-    const EmitExprForBindingFn &emitExpr,
-    std::string &error);
+    const EmitExprForBindingFn &emitExpr);
 StatementPrintPathSpaceEmitResult tryEmitPrintPathSpaceStatementBuiltin(
     const Expr &stmt,
     const LocalMap &localsIn,

@@ -1645,7 +1645,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     }
     return assignBindingTypeFromText(resultInfo.valueType);
   };
-  auto inferCollectionBindingFromExpr = [&](const Expr &expr, auto &&inferCollectionBindingFromExprRef) -> bool {
+  auto inferCollectionBindingFromExpr = [&](const Expr &expr) -> bool {
     auto copyNamedBinding = [&](const std::string &name) -> bool {
       if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
         bindingOut = *paramBinding;
@@ -1743,7 +1743,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     std::string builtinAccessName;
     if (getBuiltinArrayAccessName(expr, builtinAccessName) && expr.args.size() == 2) {
       BindingInfo collectionBinding;
-      if (!inferCollectionBindingFromExpr(expr.args.front(), inferCollectionBindingFromExpr)) {
+      if (!inferCollectionBindingFromExpr(expr.args.front())) {
         return false;
       }
       collectionBinding = bindingOut;
@@ -1770,7 +1770,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
         !expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2;
     if (isMapContainsLike) {
       BindingInfo collectionBinding;
-      if (!inferCollectionBindingFromExpr(expr.args.front(), inferCollectionBindingFromExpr)) {
+      if (!inferCollectionBindingFromExpr(expr.args.front())) {
         return false;
       }
       collectionBinding = bindingOut;
@@ -1787,7 +1787,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       return false;
     }
     BindingInfo collectionBinding;
-    if (!inferCollectionBindingFromExpr(expr.args.front(), inferCollectionBindingFromExpr)) {
+    if (!inferCollectionBindingFromExpr(expr.args.front())) {
       return false;
     }
     collectionBinding = bindingOut;

@@ -274,8 +274,7 @@
             const LocalMap &valueLocals,
             ir_lowerer::UninitializedStorageAccessInfo &accessOut,
             bool &resolvedOut) { return resolveUninitializedStorage(storageExpr, valueLocals, accessOut, resolvedOut); },
-        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
-        error);
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); });
     if (uninitializedTakeResult == ir_lowerer::UninitializedStorageTakeEmitResult::Error) {
       return false;
     }

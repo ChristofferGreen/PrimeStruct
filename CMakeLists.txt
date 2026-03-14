@@ -7,6 +7,22 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+function(primestructEnableWarnings targetName)
+  if(MSVC)
+    target_compile_options(${targetName} PRIVATE
+      /W4
+      $<$<OR:$<CONFIG:Debug>,$<CONFIG:Release>>:/WX>
+    )
+  else()
+    target_compile_options(${targetName} PRIVATE
+      -Wall
+      -Wextra
+      -Wpedantic
+      $<$<OR:$<CONFIG:Debug>,$<CONFIG:Release>>:-Werror>
+    )
+  endif()
+endfunction()
+
 add_library(primec_lib
   src/AstPrinter.cpp
   src/CompilePipeline.cpp
@@ -170,15 +186,15 @@ add_library(primec_lib
 )
 
 target_include_directories(primec_lib PUBLIC include)
-target_compile_options(primec_lib PRIVATE -Wall -Wextra -Wpedantic)
+primestructEnableWarnings(primec_lib)
 
 add_executable(primec src/main.cpp)
 target_link_libraries(primec PRIVATE primec_lib)
-target_compile_options(primec PRIVATE -Wall -Wextra -Wpedantic)
+primestructEnableWarnings(primec)
 
 add_executable(primevm src/primevm_main.cpp)
 target_link_libraries(primevm PRIVATE primec_lib)
-target_compile_options(primevm PRIVATE -Wall -Wextra -Wpedantic)
+primestructEnableWarnings(primevm)
 
 if(PRIMESTRUCT_BUILD_TESTS)
   enable_testing()
@@ -211,7 +227,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   target_include_directories(PrimeStruct_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)
-  target_compile_options(PrimeStruct_tests PRIVATE -Wall -Wextra -Wpedantic)
+  primestructEnableWarnings(PrimeStruct_tests)
 
   set(PrimeStructTestSuites
     primestruct.dumps.ast_ir

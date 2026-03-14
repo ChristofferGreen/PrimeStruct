@@ -47,90 +47,90 @@ struct LowerInferenceSetupBootstrapInput {
   const std::unordered_map<std::string, std::string> *importAliases = nullptr;
   const std::unordered_set<std::string> *structNames = nullptr;
 
-  IsArrayCountCallFn isArrayCountCall;
-  IsVectorCapacityCallFn isVectorCapacityCall;
-  IsEntryArgsNameFn isEntryArgsName;
-  ResolveExprPathFn resolveExprPath;
-  GetSetupInferenceBuiltinOperatorNameFn getBuiltinOperatorName;
+  IsArrayCountCallFn isArrayCountCall = {};
+  IsVectorCapacityCallFn isVectorCapacityCall = {};
+  IsEntryArgsNameFn isEntryArgsName = {};
+  ResolveExprPathFn resolveExprPath = {};
+  GetSetupInferenceBuiltinOperatorNameFn getBuiltinOperatorName = {};
 };
 
 struct LowerInferenceArrayKindSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
 
-  ResolveExprPathFn resolveExprPath;
-  ResolveStructArrayTypeInfoFn resolveStructArrayInfoFromPath;
-  IsArrayCountCallFn isArrayCountCall;
-  IsStringCountCallFn isStringCountCall;
+  ResolveExprPathFn resolveExprPath = {};
+  ResolveStructArrayTypeInfoFn resolveStructArrayInfoFromPath = {};
+  IsArrayCountCallFn isArrayCountCall = {};
+  IsStringCountCallFn isStringCountCall = {};
 };
 
 struct LowerInferenceExprKindBaseSetupInput {
-  GetSetupMathConstantNameFn getMathConstantName;
+  GetSetupMathConstantNameFn getMathConstantName = {};
 };
 
 struct LowerInferenceExprKindCallBaseSetupInput {
-  InferStructExprWithLocalsFn inferStructExprPath;
-  ResolveStructFieldSlotFn resolveStructFieldSlot;
+  InferStructExprWithLocalsFn inferStructExprPath = {};
+  ResolveStructFieldSlotFn resolveStructFieldSlot = {};
   std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>
-      resolveUninitializedStorage;
+      resolveUninitializedStorage = {};
 };
 struct LowerInferenceExprKindCallReturnSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
 
-  ResolveExprPathFn resolveExprPath;
-  IsArrayCountCallFn isArrayCountCall;
-  IsStringCountCallFn isStringCountCall;
+  ResolveExprPathFn resolveExprPath = {};
+  IsArrayCountCallFn isArrayCountCall = {};
+  IsStringCountCallFn isStringCountCall = {};
 };
 struct LowerInferenceExprKindCallFallbackSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
 
-  ResolveExprPathFn resolveExprPath;
-  IsArrayCountCallFn isArrayCountCall;
-  IsStringCountCallFn isStringCountCall;
-  IsVectorCapacityCallFn isVectorCapacityCall;
-  IsEntryArgsNameFn isEntryArgsName;
-  InferSetupInferenceStructExprPathFn inferStructExprPath;
-  ResolveStructFieldSlotFn resolveStructFieldSlot;
+  ResolveExprPathFn resolveExprPath = {};
+  IsArrayCountCallFn isArrayCountCall = {};
+  IsStringCountCallFn isStringCountCall = {};
+  IsVectorCapacityCallFn isVectorCapacityCall = {};
+  IsEntryArgsNameFn isEntryArgsName = {};
+  InferSetupInferenceStructExprPathFn inferStructExprPath = {};
+  ResolveStructFieldSlotFn resolveStructFieldSlot = {};
 };
 struct LowerInferenceExprKindCallOperatorFallbackSetupInput {
   bool hasMathImport = false;
-  SetupInferenceCombineNumericKindsFn combineNumericKinds;
+  SetupInferenceCombineNumericKindsFn combineNumericKinds = {};
 };
 struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
-  ResolveSetupInferenceExprPathFn resolveExprPath;
-  LowerSetupInferenceMatchToIfFn lowerMatchToIf;
-  SetupInferenceCombineNumericKindsFn combineNumericKinds;
-  IsSetupInferenceBindingMutableFn isBindingMutable;
-  SetupInferenceBindingKindFn bindingKind;
-  HasSetupInferenceExplicitBindingTypeTransformFn hasExplicitBindingTypeTransform;
-  SetupInferenceBindingValueKindFn bindingValueKind;
-  ApplySetupInferenceStructInfoFn applyStructArrayInfo;
-  ApplySetupInferenceStructInfoFn applyStructValueInfo;
-  InferSetupInferenceStructExprPathFn inferStructExprPath;
+  ResolveSetupInferenceExprPathFn resolveExprPath = {};
+  LowerSetupInferenceMatchToIfFn lowerMatchToIf = {};
+  SetupInferenceCombineNumericKindsFn combineNumericKinds = {};
+  IsSetupInferenceBindingMutableFn isBindingMutable = {};
+  SetupInferenceBindingKindFn bindingKind = {};
+  HasSetupInferenceExplicitBindingTypeTransformFn hasExplicitBindingTypeTransform = {};
+  SetupInferenceBindingValueKindFn bindingValueKind = {};
+  ApplySetupInferenceStructInfoFn applyStructArrayInfo = {};
+  ApplySetupInferenceStructInfoFn applyStructValueInfo = {};
+  InferSetupInferenceStructExprPathFn inferStructExprPath = {};
 };
 struct LowerInferenceExprKindCallPointerFallbackSetupInput {};
 struct LowerInferenceExprKindDispatchSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
-  ResolveExprPathFn resolveExprPath;
+  ResolveExprPathFn resolveExprPath = {};
   std::string *error = nullptr;
 };
 
 struct LowerInferenceReturnInfoSetupInput {
-  ResolveStructTypeNameForReturnFn resolveStructTypeName;
-  ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath;
-  IsBindingMutableForInferenceFn isBindingMutable;
-  BindingKindForInferenceFn bindingKind;
-  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform;
-  BindingValueKindForInferenceFn bindingValueKind;
-  InferValueKindFromLocalsFn inferExprKind;
-  IsFileErrorBindingForInferenceFn isFileErrorBinding;
-  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo;
-  ApplyStructInfoForInferenceFn applyStructArrayInfo;
-  ApplyStructInfoForInferenceFn applyStructValueInfo;
-  InferStructExprPathFromLocalsFn inferStructExprPath;
-  IsStringBindingForInferenceFn isStringBinding;
-  InferValueKindFromLocalsFn inferArrayElementKind;
-  ExpandMatchToIfFn lowerMatchToIf;
+  ResolveStructTypeNameForReturnFn resolveStructTypeName = {};
+  ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath = {};
+  IsBindingMutableForInferenceFn isBindingMutable = {};
+  BindingKindForInferenceFn bindingKind = {};
+  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform = {};
+  BindingValueKindForInferenceFn bindingValueKind = {};
+  InferValueKindFromLocalsFn inferExprKind = {};
+  IsFileErrorBindingForInferenceFn isFileErrorBinding = {};
+  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo = {};
+  ApplyStructInfoForInferenceFn applyStructArrayInfo = {};
+  ApplyStructInfoForInferenceFn applyStructValueInfo = {};
+  InferStructExprPathFromLocalsFn inferStructExprPath = {};
+  IsStringBindingForInferenceFn isStringBinding = {};
+  InferValueKindFromLocalsFn inferArrayElementKind = {};
+  ExpandMatchToIfFn lowerMatchToIf = {};
 };
 struct LowerInferenceGetReturnInfoStepInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
@@ -149,21 +149,21 @@ struct LowerInferenceGetReturnInfoSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
-  ResolveStructTypeNameForReturnFn resolveStructTypeName;
-  ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath;
-  IsBindingMutableForInferenceFn isBindingMutable;
-  BindingKindForInferenceFn bindingKind;
-  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform;
-  BindingValueKindForInferenceFn bindingValueKind;
-  InferValueKindFromLocalsFn inferExprKind;
-  IsFileErrorBindingForInferenceFn isFileErrorBinding;
-  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo;
-  ApplyStructInfoForInferenceFn applyStructArrayInfo;
-  ApplyStructInfoForInferenceFn applyStructValueInfo;
-  InferStructExprPathFromLocalsFn inferStructExprPath;
-  IsStringBindingForInferenceFn isStringBinding;
-  InferValueKindFromLocalsFn inferArrayElementKind;
-  ExpandMatchToIfFn lowerMatchToIf;
+  ResolveStructTypeNameForReturnFn resolveStructTypeName = {};
+  ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath = {};
+  IsBindingMutableForInferenceFn isBindingMutable = {};
+  BindingKindForInferenceFn bindingKind = {};
+  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform = {};
+  BindingValueKindForInferenceFn bindingValueKind = {};
+  InferValueKindFromLocalsFn inferExprKind = {};
+  IsFileErrorBindingForInferenceFn isFileErrorBinding = {};
+  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo = {};
+  ApplyStructInfoForInferenceFn applyStructArrayInfo = {};
+  ApplyStructInfoForInferenceFn applyStructValueInfo = {};
+  InferStructExprPathFromLocalsFn inferStructExprPath = {};
+  IsStringBindingForInferenceFn isStringBinding = {};
+  InferValueKindFromLocalsFn inferArrayElementKind = {};
+  ExpandMatchToIfFn lowerMatchToIf = {};
   std::string *error = nullptr;
 };
 struct LowerInferenceSetupInput {
@@ -171,32 +171,32 @@ struct LowerInferenceSetupInput {
   const std::unordered_map<std::string, std::string> *importAliases = nullptr;
   const std::unordered_set<std::string> *structNames = nullptr;
 
-  IsArrayCountCallFn isArrayCountCall;
-  IsStringCountCallFn isStringCountCall;
-  IsVectorCapacityCallFn isVectorCapacityCall;
-  IsEntryArgsNameFn isEntryArgsName;
-  ResolveExprPathFn resolveExprPath;
-  GetSetupInferenceBuiltinOperatorNameFn getBuiltinOperatorName;
-  ResolveStructArrayTypeInfoFn resolveStructArrayInfoFromPath;
-  InferStructExprWithLocalsFn inferStructExprPath;
-  ResolveStructFieldSlotFn resolveStructFieldSlot;
+  IsArrayCountCallFn isArrayCountCall = {};
+  IsStringCountCallFn isStringCountCall = {};
+  IsVectorCapacityCallFn isVectorCapacityCall = {};
+  IsEntryArgsNameFn isEntryArgsName = {};
+  ResolveExprPathFn resolveExprPath = {};
+  GetSetupInferenceBuiltinOperatorNameFn getBuiltinOperatorName = {};
+  ResolveStructArrayTypeInfoFn resolveStructArrayInfoFromPath = {};
+  InferStructExprWithLocalsFn inferStructExprPath = {};
+  ResolveStructFieldSlotFn resolveStructFieldSlot = {};
   std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>
-      resolveUninitializedStorage;
+      resolveUninitializedStorage = {};
   bool hasMathImport = false;
-  SetupInferenceCombineNumericKindsFn combineNumericKinds;
-  GetSetupMathConstantNameFn getMathConstantName;
+  SetupInferenceCombineNumericKindsFn combineNumericKinds = {};
+  GetSetupMathConstantNameFn getMathConstantName = {};
 
-  ResolveStructTypeNameForReturnFn resolveStructTypeName;
-  IsBindingMutableForInferenceFn isBindingMutable;
-  BindingKindForInferenceFn bindingKind;
-  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform;
-  BindingValueKindForInferenceFn bindingValueKind;
-  IsFileErrorBindingForInferenceFn isFileErrorBinding;
-  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo;
-  ApplyStructInfoForInferenceFn applyStructArrayInfo;
-  ApplyStructInfoForInferenceFn applyStructValueInfo;
-  IsStringBindingForInferenceFn isStringBinding;
-  ExpandMatchToIfFn lowerMatchToIf;
+  ResolveStructTypeNameForReturnFn resolveStructTypeName = {};
+  IsBindingMutableForInferenceFn isBindingMutable = {};
+  BindingKindForInferenceFn bindingKind = {};
+  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform = {};
+  BindingValueKindForInferenceFn bindingValueKind = {};
+  IsFileErrorBindingForInferenceFn isFileErrorBinding = {};
+  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo = {};
+  ApplyStructInfoForInferenceFn applyStructArrayInfo = {};
+  ApplyStructInfoForInferenceFn applyStructValueInfo = {};
+  IsStringBindingForInferenceFn isStringBinding = {};
+  ExpandMatchToIfFn lowerMatchToIf = {};
 };
 
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,

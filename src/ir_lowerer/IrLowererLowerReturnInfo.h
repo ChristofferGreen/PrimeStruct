@@ -69,11 +69,6 @@
       [&](const std::string &path, ReturnInfo &info) -> bool {
         return getReturnInfo && getReturnInfo(path, info);
       });
-  auto buildOrderedCallArguments = [&](const Expr &callExpr,
-                                       const std::vector<Expr> &params,
-                                       std::vector<const Expr *> &ordered) -> bool {
-    return ir_lowerer::buildOrderedCallArguments(callExpr, params, ordered, error);
-  };
 
   auto emitStringValueForCall = [&](const Expr &arg,
                                     const LocalMap &callerLocals,
