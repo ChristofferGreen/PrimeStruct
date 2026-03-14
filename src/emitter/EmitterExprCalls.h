@@ -513,7 +513,9 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "at" && normalized != "at_unsafe") {
+    if (normalized != "at" && normalized != "at_unsafe" && normalized != "vector/at" &&
+        normalized != "vector/at_unsafe" && normalized != "std/collections/vector/at" &&
+        normalized != "std/collections/vector/at_unsafe") {
       return "";
     }
     const Expr &receiver = candidate.args.front();

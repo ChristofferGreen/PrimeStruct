@@ -9707,6 +9707,64 @@ main() {
   CHECK(error.find("unknown method: /i32/count") != std::string::npos);
 }
 
+TEST_CASE("slash-method vector access count keeps builtin string fallback") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<i32>]
+/std/collections/vector/at([vector<string>] values, [i32] index) {
+  return(7i32)
+}
+
+[return<i32>]
+/std/collections/vector/at_unsafe([vector<string>] values, [i32] index) {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  [vector<string>] values{vector<string>("hello"utf8)}
+  return(plus(values./vector/at(0i32).count(),
+              values./std/collections/vector/at_unsafe(0i32).count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("slash-method vector access count keeps primitive diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return("abc"utf8)
+}
+
+[return<string>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return("abc"utf8)
+}
+
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  return(plus(values./vector/at(0i32).count(),
+              values./std/collections/vector/at_unsafe(0i32).count()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("wrapper-returned vector access count keeps builtin string helper shadow") {
   const std::string source = R"(
 [return<bool>]
