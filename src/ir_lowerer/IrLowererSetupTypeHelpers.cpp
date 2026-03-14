@@ -583,6 +583,103 @@ std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallEx
   return typeNameForValueKind(inferredKind);
 }
 
+bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
+                                          const LocalMap &localsIn,
+                                          const InferReceiverExprKindFn &inferExprKind,
+                                          const ResolveReceiverExprPathFn &resolveExprPath,
+                                          const GetReturnInfoForPathFn &getReturnInfo,
+                                          const std::unordered_map<std::string, const Definition *> &defMap,
+                                          LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+
+  std::string accessName;
+  if (!(receiverCallExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(receiverCallExpr, accessName) &&
+        receiverCallExpr.args.size() == 2)) {
+    return false;
+  }
+
+  const Expr &accessReceiver = receiverCallExpr.args.front();
+  auto assignKind = [&](LocalInfo::ValueKind valueKind) {
+    if (valueKind == LocalInfo::ValueKind::Unknown) {
+      return false;
+    }
+    kindOut = valueKind;
+    return true;
+  };
+  auto assignCollectionKind = [&](const std::string &collectionName, const std::vector<std::string> &collectionArgs) {
+    if ((collectionName == "vector" || collectionName == "array") && collectionArgs.size() == 1) {
+      return assignKind(valueKindFromTypeName(collectionArgs.front()));
+    }
+    if (collectionName == "map" && collectionArgs.size() == 2) {
+      return assignKind(valueKindFromTypeName(collectionArgs.back()));
+    }
+    return false;
+  };
+
+  if (accessReceiver.kind == Expr::Kind::Name) {
+    auto localIt = localsIn.find(accessReceiver.name);
+    if (localIt == localsIn.end()) {
+      return false;
+    }
+    const LocalInfo &receiverInfo = localIt->second;
+    if (receiverInfo.kind == LocalInfo::Kind::Vector || receiverInfo.kind == LocalInfo::Kind::Array ||
+        (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToArray)) {
+      return assignKind(receiverInfo.valueKind);
+    }
+    if (receiverInfo.kind == LocalInfo::Kind::Map ||
+        (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToMap)) {
+      return assignKind(receiverInfo.mapValueKind);
+    }
+    if (receiverInfo.kind == LocalInfo::Kind::Value && receiverInfo.valueKind == LocalInfo::ValueKind::String) {
+      return assignKind(LocalInfo::ValueKind::Int32);
+    }
+    return false;
+  }
+
+  if (accessReceiver.kind != Expr::Kind::Call) {
+    return false;
+  }
+
+  std::string collectionName;
+  if (getBuiltinCollectionName(accessReceiver, collectionName)) {
+    if (collectionName == "string") {
+      return assignKind(LocalInfo::ValueKind::Int32);
+    }
+    if (assignCollectionKind(collectionName, accessReceiver.templateArgs)) {
+      return true;
+    }
+  }
+
+  if (inferExprKind && inferExprKind(accessReceiver, localsIn) == LocalInfo::ValueKind::String) {
+    return assignKind(LocalInfo::ValueKind::Int32);
+  }
+
+  const std::string receiverPath = resolveExprPath ? resolveExprPath(accessReceiver) : std::string();
+  if (receiverPath.empty()) {
+    return false;
+  }
+
+  auto defIt = defMap.find(receiverPath);
+  if (defIt != defMap.end() && defIt->second != nullptr) {
+    std::string declaredCollectionName;
+    std::vector<std::string> declaredCollectionArgs;
+    if (inferDeclaredReturnCollection(*defIt->second, declaredCollectionName, declaredCollectionArgs) &&
+        assignCollectionKind(declaredCollectionName, declaredCollectionArgs)) {
+      return true;
+    }
+  }
+
+  ReturnInfo receiverInfo;
+  if (getReturnInfo && getReturnInfo(receiverPath, receiverInfo) && !receiverInfo.returnsVoid && !receiverInfo.returnsArray) {
+    if (receiverInfo.kind == LocalInfo::ValueKind::String) {
+      return assignKind(LocalInfo::ValueKind::Int32);
+    }
+    return assignKind(receiverInfo.kind);
+  }
+
+  return false;
+}
+
 bool isSoaVectorReceiverExpr(const Expr &receiverExpr, const LocalMap &localsIn) {
   if (receiverExpr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(receiverExpr.name);
@@ -1473,7 +1570,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         }
       }
     } else {
-      const LocalInfo::ValueKind inferredReceiverKind = inferExprKind(*receiver, localsIn);
+      LocalInfo::ValueKind inferredReceiverKind = LocalInfo::ValueKind::Unknown;
+      if (!inferBuiltinAccessReceiverResultKind(
+              *receiver, localsIn, inferExprKind, resolveExprPath, getReturnInfo, defMap, inferredReceiverKind) &&
+          inferExprKind) {
+        inferredReceiverKind = inferExprKind(*receiver, localsIn);
+      }
       const std::string inferredReceiverTypeName = typeNameForValueKind(inferredReceiverKind);
       if (!inferredReceiverTypeName.empty()) {
         lookupError.clear();
@@ -1596,11 +1698,13 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         receiverExpr, localsIn, methodName, typeNameOut, resolvedTypePathOut, errorOut);
   }
   if (receiverExpr.kind == Expr::Kind::Call) {
-    typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferExprKind(receiverExpr, localsIn));
+    const LocalInfo::ValueKind inferredKind =
+        inferExprKind ? inferExprKind(receiverExpr, localsIn) : LocalInfo::ValueKind::Unknown;
+    typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind);
     if (typeNameOut.empty() && receiverExpr.isMethodCall && receiverExpr.args.size() == 2) {
       std::string accessName;
       if (getBuiltinArrayAccessName(receiverExpr, accessName) &&
-          inferExprKind(receiverExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+          inferExprKind && inferExprKind(receiverExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
         typeNameOut = "i32";
       }
     }
@@ -1611,7 +1715,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     return true;
   }
 
-  typeNameOut = typeNameForValueKind(inferExprKind(receiverExpr, localsIn));
+  typeNameOut = inferExprKind ? typeNameForValueKind(inferExprKind(receiverExpr, localsIn)) : "";
   return true;
 }
 

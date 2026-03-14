@@ -136,9 +136,9 @@ inline std::string makeCanonicalVectorNamespaceConformanceSource() {
   source += "  [vector<i32> mut] grown{/std/collections/vector/vector<i32>()}\n";
   source += "  /std/collections/vector/reserve<i32>(grown, 2i32)\n";
   source += "  [i32] reserved{/std/collections/vector/capacity<i32>(grown)}\n";
-  source += "  /std/collections/vector/push<i32>(grown, 11i32)\n";
-  source += "  /std/collections/vector/push<i32>(grown, 22i32)\n";
-  source += "  /std/collections/vector/push<i32>(grown, 33i32)\n";
+  source += "  /std/collections/vector/push(grown, 11i32)\n";
+  source += "  /std/collections/vector/push(grown, 22i32)\n";
+  source += "  /std/collections/vector/push(grown, 33i32)\n";
   source += "  [i32 mut] total{plus(reserved, /std/collections/vector/count<i32>(grown))}\n";
   source += "  assign(total, plus(total, /std/collections/vector/at<i32>(grown, 0i32)))\n";
   source += "  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(grown, 1i32)))\n";
@@ -348,7 +348,7 @@ inline std::string makeCanonicalVectorNamespacePushShadowSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [vector<i32> mut] values{/std/collections/vector/vector<i32>(1i32)}\n";
-  source += "  /std/collections/vector/push<i32>(values, 5i32)\n";
+  source += "  /std/collections/vector/push(values, 5i32)\n";
   source += "  return(plus(count(values), at(values, 0i32)))\n";
   source += "}\n";
   return source;
@@ -926,12 +926,16 @@ inline void expectVectorIndexRuntimeContract(const std::string &emitMode,
       (std::filesystem::temp_directory_path() / ("primec_vector_index_runtime_" + mode + "_" + emitMode +
                                                  "_err.txt"))
           .string();
+  const bool accessMode =
+      mode == "access_call" || mode == "access_method" || mode == "access_bracket";
+  const std::string expectedError =
+      accessMode ? "array index out of bounds\n" : "container index out of bounds\n";
 
   if (emitMode == "vm") {
     const std::string runCmd =
         "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
     CHECK(runCommand(runCmd) == 3);
-    CHECK(readFile(errPath) == "container index out of bounds\n");
+    CHECK(readFile(errPath) == expectedError);
     return;
   }
 
@@ -943,5 +947,5 @@ inline void expectVectorIndexRuntimeContract(const std::string &emitMode,
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "container index out of bounds\n");
+  CHECK(readFile(errPath) == expectedError);
 }

@@ -174,7 +174,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
@@ -204,7 +204,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
@@ -565,10 +565,10 @@ main() {
   [Thing] value
   return(value.value)
 }
-  )";
+)";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("effect-free zero-arg constructor") != std::string::npos);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("omitted initializer rejects wrapper-returned canonical map call helper fallback when constructor is not effect-free") {

@@ -133,6 +133,14 @@ bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut
   keyTypeOut.clear();
   valueTypeOut.clear();
 
+  auto normalizeMapBase = [](const std::string &typeName) {
+    std::string normalized = normalizeBindingTypeName(typeName);
+    if (normalized == "std/collections/map") {
+      return std::string("map");
+    }
+    return normalized;
+  };
+
   std::string typeName = normalizeBindingTypeName(binding.typeName);
   std::string argsText = binding.typeTemplateArg;
   if (typeName == "Reference") {
@@ -141,15 +149,15 @@ bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut
     }
     std::string base;
     if (!splitTemplateTypeName(binding.typeTemplateArg, base, argsText) ||
-        normalizeBindingTypeName(base) != "map") {
+        normalizeMapBase(base) != "map") {
       return false;
     }
     typeName = "map";
   }
 
   std::string base;
-  if (typeName != "map") {
-    if (!splitTemplateTypeName(typeName, base, argsText) || normalizeBindingTypeName(base) != "map") {
+  if (normalizeMapBase(typeName) != "map") {
+    if (!splitTemplateTypeName(typeName, base, argsText) || normalizeMapBase(base) != "map") {
       return false;
     }
   }
@@ -921,12 +929,19 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
   }
+  auto stripTemplateSpecializationSuffix = [](std::string value) {
+    const size_t suffix = value.find("__t");
+    if (suffix != std::string::npos) {
+      value.erase(suffix);
+    }
+    return value;
+  };
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
   if (name.rfind("std/collections/vector/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/vector/").size());
+    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/vector/").size()));
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
@@ -934,7 +949,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name.rfind("vector/", 0) == 0) {
-    std::string alias = name.substr(std::string("vector/").size());
+    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("vector/").size()));
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
@@ -945,7 +960,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name.rfind("map/", 0) == 0) {
-    std::string alias = name.substr(std::string("map/").size());
+    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("map/").size()));
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
@@ -953,7 +968,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/map/").size());
+    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/map/").size()));
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
@@ -963,6 +978,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
+  name = stripTemplateSpecializationSuffix(name);
   if (name == "at" || name == "at_unsafe") {
     out = name;
     return true;
@@ -976,6 +992,13 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
   if (expr.name.empty()) {
     return false;
   }
+  auto stripTemplateSpecializationSuffix = [](std::string value) {
+    const size_t suffix = value.find("__t");
+    if (suffix != std::string::npos) {
+      value.erase(suffix);
+    }
+    return value;
+  };
   std::string normalized = expr.name;
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
@@ -986,7 +1009,7 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
       return false;
     }
     collectionOut = collectionName;
-    helperOut = normalized.substr(prefix.size());
+    helperOut = stripTemplateSpecializationSuffix(normalized.substr(prefix.size()));
     return !helperOut.empty();
   };
 
@@ -1115,6 +1138,13 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
+  auto stripTemplateSpecializationSuffix = [](std::string value) {
+    const size_t suffix = value.find("__t");
+    if (suffix != std::string::npos) {
+      value.erase(suffix);
+    }
+    return value;
+  };
   const std::string targetName = nameToMatch == nullptr ? std::string() : std::string(nameToMatch);
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
@@ -1124,13 +1154,14 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
     name.erase(0, 8);
   }
   if (name.rfind("vector/", 0) == 0) {
-    std::string alias = name.substr(std::string("vector/").size());
+    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("vector/").size()));
     if (alias.find('/') == std::string::npos && alias == "vector") {
       return alias == targetName;
     }
   }
   if (name.rfind("std/collections/vector/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/vector/").size());
+    std::string alias =
+        stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/vector/").size()));
     if (alias.find('/') == std::string::npos &&
         (alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" || alias == "push" ||
          alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||
@@ -1139,14 +1170,14 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
     }
   }
   if (name.rfind("map/", 0) == 0) {
-    std::string alias = name.substr(std::string("map/").size());
+    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("map/").size()));
     if (alias.find('/') == std::string::npos &&
         (alias == "map" || alias == "count" || alias == "at" || alias == "at_unsafe")) {
       return alias == targetName;
     }
   }
   if (name.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/map/").size());
+    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/map/").size()));
     if (alias.find('/') == std::string::npos &&
         (alias == "map" || alias == "count" || alias == "at" || alias == "at_unsafe")) {
       return alias == targetName;
@@ -1155,6 +1186,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
+  name = stripTemplateSpecializationSuffix(name);
   return name == targetName;
 }
 

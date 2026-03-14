@@ -169,7 +169,7 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
     return true;
   }
   if (input[start] == '/' && !isCommentStart(input, start)) {
-    if (start == 0 || isSeparator(input[start - 1])) {
+    if (start == 0 || isSeparator(input[start - 1]) || input[start - 1] == '.') {
       size_t end = start + 1;
       while (end < input.size() && !isSeparator(input[end])) {
         ++end;
@@ -184,6 +184,9 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
   }
   size_t end = start + 1;
   while (end < input.size() && isIdentifierBodyChar(input[end])) {
+    if (input[end] == '.' && end + 1 < input.size() && input[end + 1] == '/') {
+      break;
+    }
     ++end;
   }
   std::string token = input.substr(start, end - start);

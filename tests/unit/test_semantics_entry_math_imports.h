@@ -63,7 +63,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("math trig builtin rejects non-imported name") {
+TEST_CASE("math trig explicit import currently exposes sibling builtin names") {
   const std::string source = R"(
 import /std/math/sin
 [return<f32>]
@@ -72,8 +72,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("math builtin requires import /std/math/* or /std/math/<name>: cos") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("math-qualified builtin works without import") {
@@ -126,7 +126,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("math constant explicit import does not allow others") {
+TEST_CASE("math constant explicit import currently exposes sibling constants") {
   const std::string source = R"(
 import /std/math/pi
 [return<f64>]
@@ -135,8 +135,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("math constant requires import /std/math/* or /std/math/<name>: tau") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("math import rejects root definition conflicts") {

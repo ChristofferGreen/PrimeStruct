@@ -65,6 +65,47 @@ std::string normalizeCollectionMethodName(std::string methodName) {
   return methodName;
 }
 
+std::string inferBuiltinCollectionReceiverPath(
+    const Expr &expr,
+    const std::unordered_map<std::string, LayoutFieldBinding> &knownFields) {
+  auto normalizeBuiltinCollectionName = [](const std::string &typeName) -> std::string {
+    if (typeName == "vector" || typeName == "array" || typeName == "map" || typeName == "string") {
+      return "/" + typeName;
+    }
+    if (typeName.rfind("vector<", 0) == 0) {
+      return "/vector";
+    }
+    if (typeName.rfind("array<", 0) == 0) {
+      return "/array";
+    }
+    if (typeName.rfind("map<", 0) == 0) {
+      return "/map";
+    }
+    return "";
+  };
+
+  if (expr.kind == Expr::Kind::Name) {
+    auto fieldIt = knownFields.find(expr.name);
+    if (fieldIt == knownFields.end()) {
+      return "";
+    }
+    std::string fieldType = fieldIt->second.typeName;
+    if ((fieldType == "Reference" || fieldType == "Pointer") && !fieldIt->second.typeTemplateArg.empty()) {
+      fieldType = fieldIt->second.typeTemplateArg;
+    }
+    return normalizeBuiltinCollectionName(fieldType);
+  }
+
+  if (expr.kind == Expr::Kind::Call) {
+    std::string collectionName;
+    if (getBuiltinCollectionName(expr, collectionName)) {
+      return normalizeBuiltinCollectionName(collectionName);
+    }
+  }
+
+  return "";
+}
+
 std::vector<std::string> collectionMethodPathCandidates(const std::string &receiverStruct,
                                                         const std::string &methodName,
                                                         const std::string &rawMethodName) {
@@ -393,13 +434,16 @@ std::string inferStructReturnPathFromExprInternal(
     if (expr.args.empty()) {
       return "";
     }
-    const std::string receiverStruct = inferStructReturnPathFromExprInternal(expr.args.front(),
-                                                                              knownFields,
-                                                                              structNames,
-                                                                              resolveStructTypePath,
-                                                                              resolveStructLayoutExprPath,
-                                                                              defMap,
-                                                                              visitedDefs);
+    std::string receiverStruct = inferBuiltinCollectionReceiverPath(expr.args.front(), knownFields);
+    if (receiverStruct.empty()) {
+      receiverStruct = inferStructReturnPathFromExprInternal(expr.args.front(),
+                                                             knownFields,
+                                                             structNames,
+                                                             resolveStructTypePath,
+                                                             resolveStructLayoutExprPath,
+                                                             defMap,
+                                                             visitedDefs);
+    }
     if (receiverStruct.empty()) {
       return "";
     }
@@ -456,13 +500,16 @@ std::string inferStructReturnPathFromExprInternal(
           }
         }
         if (receiverIndex < expr.args.size()) {
-          const std::string receiverStruct = inferStructReturnPathFromExprInternal(expr.args[receiverIndex],
-                                                                                   knownFields,
-                                                                                   structNames,
-                                                                                   resolveStructTypePath,
-                                                                                   resolveStructLayoutExprPath,
-                                                                                   defMap,
-                                                                                   visitedDefs);
+          std::string receiverStruct = inferBuiltinCollectionReceiverPath(expr.args[receiverIndex], knownFields);
+          if (receiverStruct.empty()) {
+            receiverStruct = inferStructReturnPathFromExprInternal(expr.args[receiverIndex],
+                                                                   knownFields,
+                                                                   structNames,
+                                                                   resolveStructTypePath,
+                                                                   resolveStructLayoutExprPath,
+                                                                   defMap,
+                                                                   visitedDefs);
+          }
           if (receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") {
             const std::string canonicalCandidate = "/std/collections/vector/" + suffix;
             for (auto it = resolvedCandidates.begin(); it != resolvedCandidates.end();) {
@@ -471,6 +518,9 @@ std::string inferStructReturnPathFromExprInternal(
               } else {
                 ++it;
               }
+            }
+            if (resolvedCandidates.empty()) {
+              return "";
             }
           }
         }

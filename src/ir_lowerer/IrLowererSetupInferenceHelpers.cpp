@@ -332,7 +332,8 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     }
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
-      if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
+      if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
+          it->second.valueKind == LocalInfo::ValueKind::String) {
         kindOut = LocalInfo::ValueKind::Int32;
         return ArrayMapAccessElementKindResolution::Resolved;
       }

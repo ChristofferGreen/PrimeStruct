@@ -86,7 +86,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown field: value") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown struct type for layout: Widget") != std::string::npos);
 }
 
 TEST_SUITE_END();

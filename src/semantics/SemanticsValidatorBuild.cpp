@@ -1306,14 +1306,119 @@ bool SemanticsValidator::buildParameters() {
 }
 
 std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
+  auto rewriteCanonicalCollectionHelperPath = [&](const std::string &resolvedPath) -> std::string {
+    auto canonicalVectorHelperAliasPath = [&](std::string_view helperName) -> std::string {
+      if (helperName == "count" || helperName == "capacity" || helperName == "at" ||
+          helperName == "at_unsafe") {
+        return "/vector/" + std::string(helperName);
+      }
+      return {};
+    };
+    auto canonicalMapHelperAliasPath = [&](std::string_view helperName) -> std::string {
+      if (helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
+          helperName == "at" || helperName == "at_unsafe") {
+        return "/map/" + std::string(helperName);
+      }
+      return {};
+    };
+    auto rewriteCanonicalHelper = [&](std::string_view prefix,
+                                      const auto &aliasPathBuilder,
+                                      bool requirePositionalBuiltinAlias) -> std::string {
+      if (resolvedPath.rfind(prefix, 0) != 0) {
+        return resolvedPath;
+      }
+      const std::string helperName = resolvedPath.substr(prefix.size());
+      const std::string aliasPath = aliasPathBuilder(helperName);
+      if (aliasPath.empty()) {
+        return resolvedPath;
+      }
+      if (defMap_.count(aliasPath) > 0) {
+        return aliasPath;
+      }
+      if (requirePositionalBuiltinAlias && !hasNamedArguments(expr.argNames) &&
+          defMap_.count(resolvedPath) > 0) {
+        return aliasPath;
+      }
+      return resolvedPath;
+    };
+    std::string rewritten =
+        rewriteCanonicalHelper("/std/collections/vector/", canonicalVectorHelperAliasPath, true);
+    if (rewritten != resolvedPath) {
+      return rewritten;
+    }
+    return rewriteCanonicalHelper("/std/collections/map/", canonicalMapHelperAliasPath, false);
+  };
+  auto rewriteCanonicalCollectionConstructorPath = [&](const std::string &resolvedPath) -> std::string {
+    if (expr.isMethodCall) {
+      return rewriteCanonicalCollectionHelperPath(resolvedPath);
+    }
+    auto vectorConstructorHelperPath = [&]() -> std::string {
+      switch (expr.args.size()) {
+      case 0:
+        return "/std/collections/vectorNew";
+      case 1:
+        return "/std/collections/vectorSingle";
+      case 2:
+        return "/std/collections/vectorPair";
+      case 3:
+        return "/std/collections/vectorTriple";
+      case 4:
+        return "/std/collections/vectorQuad";
+      case 5:
+        return "/std/collections/vectorQuint";
+      case 6:
+        return "/std/collections/vectorSext";
+      case 7:
+        return "/std/collections/vectorSept";
+      case 8:
+        return "/std/collections/vectorOct";
+      default:
+        return {};
+      }
+    };
+    auto mapConstructorHelperPath = [&]() -> std::string {
+      switch (expr.args.size()) {
+      case 0:
+        return "/std/collections/mapNew";
+      case 2:
+        return "/std/collections/mapSingle";
+      case 4:
+        return "/std/collections/mapPair";
+      case 6:
+        return "/std/collections/mapTriple";
+      case 8:
+        return "/std/collections/mapQuad";
+      case 10:
+        return "/std/collections/mapQuint";
+      case 12:
+        return "/std/collections/mapSext";
+      case 14:
+        return "/std/collections/mapSept";
+      case 16:
+        return "/std/collections/mapOct";
+      default:
+        return {};
+      }
+    };
+    std::string helperPath;
+    if (resolvedPath == "/std/collections/vector/vector") {
+      helperPath = vectorConstructorHelperPath();
+    } else if (resolvedPath == "/std/collections/map/map") {
+      helperPath = mapConstructorHelperPath();
+    }
+    if (!helperPath.empty() && defMap_.count(helperPath) > 0) {
+      return helperPath;
+    }
+    return rewriteCanonicalCollectionHelperPath(resolvedPath);
+  };
   if (expr.name.empty()) {
     return "";
   }
   if (!expr.name.empty() && expr.name[0] == '/') {
-    return expr.name;
+    return rewriteCanonicalCollectionConstructorPath(expr.name);
   }
   if (expr.name.find('/') != std::string::npos) {
-    return "/" + expr.name;
+    return rewriteCanonicalCollectionConstructorPath("/" + expr.name);
   }
   if (!expr.namespacePrefix.empty()) {
     std::string normalizedPrefix = expr.namespacePrefix;
@@ -1358,19 +1463,19 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     }
     auto it = importAliases_.find(expr.name);
     if (it != importAliases_.end()) {
-      return it->second;
+      return rewriteCanonicalCollectionConstructorPath(it->second);
     }
-    return normalizedPrefix + "/" + expr.name;
+    return rewriteCanonicalCollectionConstructorPath(normalizedPrefix + "/" + expr.name);
   }
   std::string root = "/" + expr.name;
   if (defMap_.count(root) > 0) {
-    return root;
+    return rewriteCanonicalCollectionConstructorPath(root);
   }
   auto it = importAliases_.find(expr.name);
   if (it != importAliases_.end()) {
-    return it->second;
+    return rewriteCanonicalCollectionConstructorPath(it->second);
   }
-  return root;
+  return rewriteCanonicalCollectionConstructorPath(root);
 }
 
 bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
@@ -1763,7 +1868,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       return false;
     }
     const bool isCountLike =
-        (isSimpleCallName(expr, "count") || resolveCalleePath(expr) == "/std/collections/map/count") &&
+        (isSimpleCallName(expr, "count") ||
+         (resolveCalleePath(expr) == "/std/collections/map/count" &&
+          defMap_.find("/std/collections/map/count") != defMap_.end())) &&
         expr.args.size() == 1;
     const bool isMapContainsLike =
         !expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2;

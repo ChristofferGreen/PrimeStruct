@@ -73,7 +73,7 @@ main() {
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_maybe_struct_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown field: value") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown struct type for layout: Widget") != std::string::npos);
 }
 
 TEST_SUITE_END();

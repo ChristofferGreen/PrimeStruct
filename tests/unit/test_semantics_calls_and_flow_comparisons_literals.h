@@ -37,7 +37,7 @@ main() {
   CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
 }
 
-TEST_CASE("user-defined at comparisons use resolved return type") {
+TEST_CASE("builtin map at comparisons keep builtin return type precedence") {
   const std::string source = R"(
 [return<int>]
 at([map<i32, string>] values, [i32] key) {
@@ -51,8 +51,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
 }
 
 TEST_CASE("arithmetic operators reject bool operands") {

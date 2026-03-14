@@ -24,6 +24,7 @@ inline std::string mapConformanceType(const std::string &importPath,
 }
 
 inline std::string mapConformanceKeyType(const std::string &importPath) {
+  (void)importPath;
   return "string";
 }
 
@@ -150,7 +151,7 @@ inline std::string makeMapTryAtConformanceImportSource(const std::string &import
 
   std::string source;
   if (experimental) {
-    source += "import /std/collections/errors/*\n";
+    source += "import /std/collections/*\n";
   }
   source += "import " + importPath + "\n\n";
   source += "[effects(io_err)]\n";
@@ -591,7 +592,7 @@ inline void expectCanonicalMapNamespaceAccessShadow(const std::string &emitMode)
 
 inline std::string makeExperimentalMapTryAtStringConformanceSource() {
   std::string source;
-  source += "import /std/collections/errors/*\n";
+  source += "import /std/collections/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedMapTryAtStringError([ContainerError] err) {\n";

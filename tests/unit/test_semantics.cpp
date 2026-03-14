@@ -1,6 +1,12 @@
 #include <algorithm>
+#include <atomic>
+#include <cctype>
+#include <chrono>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 
+#include "primec/CompilePipeline.h"
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
@@ -8,11 +14,69 @@
 #include "third_party/doctest.h"
 
 namespace {
+bool usesStdImportPipeline(const std::string &source) {
+  size_t pos = 0;
+  while ((pos = source.find("import /std", pos)) != std::string::npos) {
+    const size_t next = pos + std::string("import /std").size();
+    if (next >= source.size()) {
+      return true;
+    }
+    const char c = source[next];
+    if (c == '/' || std::isspace(static_cast<unsigned char>(c)) != 0) {
+      return true;
+    }
+    pos = next;
+  }
+  return false;
+}
+
+std::filesystem::path makeTempSemanticSourcePath() {
+  static std::atomic<unsigned long long> counter{0};
+  const auto nonce = std::to_string(
+      static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
+  return std::filesystem::temp_directory_path() /
+         ("primestruct-semantics-" + nonce + "-" + std::to_string(counter++) + ".prime");
+}
+
+bool validateProgramThroughCompilePipeline(const std::string &source,
+                                           const std::string &entry,
+                                           const std::vector<std::string> &defaultEffects,
+                                           const std::vector<std::string> &entryDefaultEffects,
+                                           std::string &error,
+                                           primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
+  const std::filesystem::path tempPath = makeTempSemanticSourcePath();
+  {
+    std::ofstream file(tempPath);
+    if (!file) {
+      error = "failed to write semantic test source";
+      return false;
+    }
+    file << source;
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = entry;
+  options.defaultEffects = defaultEffects;
+  options.entryDefaultEffects = entryDefaultEffects;
+  options.dumpStage = "ast_semantic";
+  options.collectDiagnostics = diagnosticInfo != nullptr;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error, diagnosticInfo);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+  return ok;
+}
+
 primec::Program parseProgram(const std::string &source) {
+  std::string error;
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
-  std::string error;
   CHECK(parser.parse(program, error));
   CHECK(error.empty());
   return program;
@@ -26,9 +90,12 @@ bool parseProgramWithError(const std::string &source, std::string &error) {
 }
 
 bool validateProgram(const std::string &source, const std::string &entry, std::string &error) {
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  if (usesStdImportPipeline(source)) {
+    return validateProgramThroughCompilePipeline(source, entry, defaults, defaults, error);
+  }
   auto program = parseProgram(source);
   primec::Semantics semantics;
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
   return semantics.validate(program, entry, error, defaults, defaults);
 }
 
@@ -37,6 +104,10 @@ bool validateProgramWithDefaults(const std::string &source,
                                  const std::vector<std::string> &defaultEffects,
                                  const std::vector<std::string> &entryDefaultEffects,
                                  std::string &error) {
+  if (usesStdImportPipeline(source)) {
+    return validateProgramThroughCompilePipeline(
+        source, entry, defaultEffects, entryDefaultEffects, error);
+  }
   auto program = parseProgram(source);
   primec::Semantics semantics;
   return semantics.validate(program, entry, error, defaultEffects, entryDefaultEffects);
@@ -53,6 +124,30 @@ bool validateProgramCollectingDiagnostics(const std::string &source,
                                           const std::string &entry,
                                           std::string &error,
                                           primec::SemanticDiagnosticInfo &diagnosticInfo) {
+  if (usesStdImportPipeline(source)) {
+    primec::CompilePipelineDiagnosticInfo pipelineDiagnostics;
+    const std::vector<std::string> defaults = {"io_out", "io_err"};
+    const bool ok = validateProgramThroughCompilePipeline(
+        source, entry, defaults, defaults, error, &pipelineDiagnostics);
+    diagnosticInfo = {};
+    for (const auto &record : pipelineDiagnostics.records) {
+      primec::SemanticDiagnosticRecord semanticRecord;
+      semanticRecord.message = record.normalizedMessage;
+      if (record.hasPrimarySpan) {
+        semanticRecord.line = record.primarySpan.line;
+        semanticRecord.column = record.primarySpan.column;
+      }
+      for (const auto &related : record.relatedSpans) {
+        primec::SemanticDiagnosticRelatedSpan relatedSpan;
+        relatedSpan.label = related.label;
+        relatedSpan.line = related.span.line;
+        relatedSpan.column = related.span.column;
+        semanticRecord.relatedSpans.push_back(std::move(relatedSpan));
+      }
+      diagnosticInfo.records.push_back(std::move(semanticRecord));
+    }
+    return ok;
+  }
   auto program = parseProgram(source);
   primec::Semantics semantics;
   const std::vector<std::string> defaults = {"io_out", "io_err"};

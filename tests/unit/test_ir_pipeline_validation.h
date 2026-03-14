@@ -228,6 +228,8 @@ TEST_CASE("shared simple-call helpers reject removed array count alias") {
 
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -2006,7 +2008,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced at unsafe de
   CHECK(resolveMethodCalls == 1);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers namespaced map count definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup prefers canonical namespaced map count lookup") {
   primec::Definition receiverCountDef;
   receiverCountDef.fullPath = "/map/count";
   primec::Definition canonicalCountDef;
@@ -2066,7 +2068,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced map count de
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
   CHECK(resolveMethodCalls == 1);
 
   resolveReceiverHelper = false;
@@ -2327,7 +2329,7 @@ TEST_CASE("ir lowerer inference call-return setup rejects explicit map helper al
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers namespaced map access definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup prefers canonical namespaced map access lookup") {
   primec::Definition receiverAtDef;
   receiverAtDef.fullPath = "/map/at";
   primec::Definition canonicalAtDef;
@@ -2391,7 +2393,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced map access d
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
   CHECK(resolveMethodCalls == 1);
 
   resolveReceiverHelper = false;
@@ -2403,7 +2405,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced map access d
   CHECK(resolveMethodCalls == 1);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers namespaced map at unsafe definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup prefers canonical namespaced map at unsafe lookup") {
   primec::Definition receiverAtUnsafeDef;
   receiverAtUnsafeDef.fullPath = "/map/at_unsafe";
   primec::Definition canonicalAtUnsafeDef;
@@ -2468,7 +2470,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced map at unsaf
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
   CHECK(resolveMethodCalls == 1);
 
   resolveReceiverHelper = false;
@@ -27336,7 +27338,7 @@ TEST_CASE("ir lowerer setup inference helper keeps labeled named receiver for ac
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup inference helper handles invalid access kinds") {
+TEST_CASE("ir lowerer setup inference helper handles invalid and templated access kinds") {
   using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
 
   primec::Expr nonAccess;
@@ -27380,7 +27382,7 @@ TEST_CASE("ir lowerer setup inference helper handles invalid access kinds") {
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
 TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical map access kinds") {

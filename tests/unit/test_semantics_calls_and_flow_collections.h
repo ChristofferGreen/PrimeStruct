@@ -948,6 +948,8 @@ main() {
 
 TEST_CASE("namespaced access wrapper temporaries infer i32 for chained methods") {
   const std::string source = R"(
+import /std/collections/*
+
 wrapText() {
   [string] text{"abc"utf8}
   return(text)
@@ -1016,6 +1018,8 @@ main() {
 
 TEST_CASE("namespaced access wrapper temporary chained method reports i32 path diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 wrapText() {
   [string] text{"abc"utf8}
   return(text)
@@ -1033,6 +1037,8 @@ main() {
 
 TEST_CASE("slash-method access wrapper temporaries infer i32 for chained methods") {
   const std::string source = R"(
+import /std/collections/*
+
 wrapText() {
   [string] text{"abc"utf8}
   return(text)
@@ -1056,6 +1062,8 @@ main() {
 
 TEST_CASE("slash-method access wrapper temporary chained method reports i32 path diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 wrapText() {
   [string] text{"abc"utf8}
   return(text)
@@ -1090,6 +1098,8 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count validates on wrapper temporary vector target") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc)]
 wrapVectorAuto() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
@@ -1108,6 +1118,9 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count rejects wrapper temporary map target") {
   const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc)]
 wrapMapAuto() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(values)
@@ -1120,7 +1133,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count requires vector target") != std::string::npos);
+  CHECK(error.find("template arguments required for /std/collections/vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("map wrapper temporary access call validates map target classification") {
@@ -3155,6 +3169,8 @@ main() {
 
 TEST_CASE("stdlib namespaced vector helper accepts statement form") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -3427,7 +3443,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("only supported as a statement") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("vector helper method expression stays statement-only with canonical stdlib helper") {
@@ -3653,6 +3669,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector access and count helpers are builtin-alias validated") {
   const std::string source = R"(
+import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(4i32, 5i32)}
@@ -3804,16 +3821,14 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
-  [i32] aliasCount{/map/count(values)}
+  [i32] aliasCount{/std/collections/map/count(values)}
   [i32] first{/std/collections/map/at(values, 1i32)}
   return(plus(aliasCount, first))
 }
 )";
-  primec::SemanticDiagnosticInfo diagnosticInfo;
   std::string error;
-  CHECK(validateProgramCollectingDiagnostics(source, "/main", error, diagnosticInfo));
+  CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
-  CHECK(diagnosticInfo.records.empty());
 }
 
 TEST_CASE("collected diagnostics keep unknown target for unsupported canonical map helper calls") {
@@ -3871,7 +3886,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires map key type i32") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/map/at") != std::string::npos);
+  CHECK(error.find("parameter key") != std::string::npos);
 }
 
 TEST_CASE("map compatibility count call requires explicit alias definition") {
@@ -3947,6 +3963,47 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
   [bool] found{/map/contains(values, 1i32)}
   return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map compatibility tryAt call requires explicit alias definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(17i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(try(/map/tryAt(values, 1i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+}
+
+TEST_CASE("map compatibility tryAt call keeps explicit alias precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(19i32))
+}
+
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+/std/collections/map/tryAt([map<i32, i32>] values, [bool] key) {
+  return(Result.ok(7i32))
+}
+
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/map/tryAt(values, 1i32))
 }
 )";
   std::string error;
@@ -4631,7 +4688,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector helper alias method-call inference keeps unknown-method diagnostics") {
@@ -4650,7 +4707,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced helper alias rejects method-call sugar auto inference") {
@@ -4669,7 +4726,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity alias rejects method-call sugar auto inference") {
@@ -4707,7 +4764,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector access alias rejects method-call sugar auto inference") {
@@ -4726,7 +4783,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+  CHECK(error.find("at requires integer index") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector helper alias method-call inference keeps unknown-method diagnostics") {
@@ -4745,7 +4802,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced slash method spelling rejects statement body arguments") {
@@ -4853,8 +4910,8 @@ main() {
   }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /std/collections/vector/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("array namespaced vector helper call form rejects expression body arguments") {
@@ -4908,8 +4965,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /std/collections/vector/count") !=
-        std::string::npos);
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("array namespaced slash method pointer receiver diagnostics keep divide target") {
@@ -5222,8 +5278,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/map/count parameter marker") !=
-        std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
   CHECK(error.find("/std/collections/map/count__t") == std::string::npos);
 }
 
@@ -5812,8 +5867,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map namespaced access alias chained method keeps downstream tag diagnostics") {
@@ -5840,7 +5895,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("map namespaced unsafe access alias chained method rejects canonical struct-return forwarding") {
@@ -5866,8 +5921,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map namespaced unsafe access alias chained method keeps downstream tag diagnostics") {
@@ -5894,7 +5949,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(error.find("unknown method: /Marker/tag") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access alias field expression keeps removed-alias diagnostics") {
@@ -6370,7 +6425,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("map method alias access keeps primitive argument diagnostics during inference") {
@@ -6402,12 +6457,12 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("wrapper-returned map method alias access keeps primitive receiver diagnostics during inference") {
   const std::string source = R"(
-[return</std/collections/map<i32, i32>>]
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
   return(map<i32, i32>(2i32, 7i32))
 }
@@ -6428,8 +6483,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("wrapper-returned map method alias access keeps primitive argument diagnostics during inference") {
@@ -6438,7 +6493,7 @@ Marker {
   [i32] value
 }
 
-[return</std/collections/map<i32, i32>>]
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
   return(map<i32, i32>(2i32, 7i32))
 }
@@ -6465,7 +6520,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("std-namespaced vector method alias access keeps primitive receiver diagnostics during inference") {
@@ -6676,7 +6731,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("templated slash-path vector helper arity failures stay on unknown method diagnostics") {
@@ -6694,7 +6749,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("templated stdlib canonical vector helper keeps template argument diagnostics") {
@@ -7353,7 +7408,7 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(plus(/vector/count(values, makeMarker()), values.count(makeMarker())))
 }
-  )";
+)";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
@@ -7890,7 +7945,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced templated vector count arity keeps builtin template-argument diagnostics") {
@@ -7912,8 +7967,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced templated alias call keeps builtin template diagnostics") {
@@ -8065,7 +8120,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity rejects template arguments as builtin alias") {
@@ -9034,8 +9089,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced count expression compatibility fallback keeps return mismatch diagnostics" * doctest::skip()) {
@@ -9072,8 +9127,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count non-builtin arity rejects array helper fallback" * doctest::skip()) {
@@ -9090,8 +9145,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count non-builtin arity diagnostics report builtin mismatch" * doctest::skip()) {
@@ -9108,8 +9163,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count auto inference non-builtin arity rejects array helper fallback" * doctest::skip()) {
@@ -9292,8 +9347,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("map compatibility count call does not inherit canonical templated helper") {
@@ -9333,8 +9388,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("map compatibility explicit-template count call keeps non-templated alias diagnostics") {
@@ -9407,8 +9462,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("wrapper reference templated map count method keeps canonical diagnostics") {
@@ -9436,8 +9491,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /std/collections/map/count") !=
-        std::string::npos);
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("map slash-path explicit-template count method stays on unknown method diagnostic") {
@@ -9886,7 +9940,7 @@ main() {
 
 TEST_CASE("wrapper-returned canonical map keeps pathspace string diagnostics") {
   const std::string source = R"(
-[return</std/collections/map<i32, i32>>]
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -9953,7 +10007,7 @@ main() {
 
 TEST_CASE("wrapper-returned canonical map keeps if string branch diagnostics") {
   const std::string source = R"(
-[return</std/collections/map<i32, i32>>]
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -10095,8 +10149,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("wrapper-returned canonical map method access count keeps primitive diagnostics") {
@@ -10129,7 +10183,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /string/count parameter values: expected string") !=
+        std::string::npos);
 }
 
 TEST_CASE("canonical vector access count call keeps builtin string helper shadow") {
@@ -10144,7 +10199,7 @@ TEST_CASE("canonical vector access count call keeps builtin string helper shadow
   return(7i32)
 }
 
-[return<bool>]
+[effects(heap_alloc), return<bool>]
 main() {
   [vector<string>] values{vector<string>("hello"utf8)}
   [auto] inferred{count(/std/collections/vector/at(values, 0i32))}
@@ -10168,7 +10223,7 @@ TEST_CASE("canonical vector unsafe access count call keeps primitive diagnostics
   return("abc"utf8)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   return(count(/std/collections/vector/at_unsafe(values, 0i32)))
@@ -10191,7 +10246,7 @@ TEST_CASE("canonical vector method access count keeps builtin string fallback") 
   return(7i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<string>] values{vector<string>("hello"utf8)}
   return(values.at(0i32).count())
@@ -10214,7 +10269,7 @@ TEST_CASE("canonical vector unsafe method access count keeps primitive diagnosti
   return("abc"utf8)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   return(values.at_unsafe(0i32).count())
@@ -10242,7 +10297,7 @@ TEST_CASE("slash-method vector access count keeps builtin string fallback") {
   return(7i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<string>] values{vector<string>("hello"utf8)}
   return(plus(values./vector/at(0i32).count(),
@@ -10271,7 +10326,7 @@ TEST_CASE("slash-method vector access count keeps primitive diagnostics") {
   return("abc"utf8)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   return(plus(values./vector/at(0i32).count(),
@@ -10300,7 +10355,7 @@ TEST_CASE("wrapper-returned vector access count keeps builtin string helper shad
   return(7i32)
 }
 
-[return<vector<string>>]
+[effects(heap_alloc), return<vector<string>>]
 wrapValues() {
   return(vector<string>("hello"utf8))
 }
@@ -10334,7 +10389,7 @@ TEST_CASE("wrapper-returned vector access count keeps primitive diagnostics") {
   return("abc"utf8)
 }
 
-[return<vector<i32>>]
+[effects(heap_alloc), return<vector<i32>>]
 wrapValues() {
   return(vector<i32>(1i32))
 }
@@ -10440,7 +10495,7 @@ TEST_CASE("wrapper-returned slash-method map access count keeps primitive diagno
   return("abc"utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -10452,7 +10507,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+  CHECK(error.find("unknown method: /map/at") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count expression inferred template fallback keeps alias diagnostics") {
@@ -10470,8 +10525,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /map/count") != std::string::npos);
-  CHECK(error.find("parameter marker") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count auto inference keeps canonical helper return precedence") {

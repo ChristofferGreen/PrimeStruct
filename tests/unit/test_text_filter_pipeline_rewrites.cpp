@@ -25,6 +25,30 @@ TEST_CASE("does not rewrite slash paths") {
   CHECK(output.find("divide(/std/math") == std::string::npos);
 }
 
+TEST_CASE("does not rewrite slash-method helper paths after dot") {
+  const std::string source =
+      "main(){ return(wrapText()./std/collections/vector/at(1i32).missing_tag()) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("./std/collections/vector/at(1i32)") != std::string::npos);
+  CHECK(output.find("divide(divide(divide(std, collections), vector), at(1i32))") == std::string::npos);
+}
+
+TEST_CASE("does not rewrite slash-method helper paths after identifier receivers") {
+  const std::string source =
+      "main(){ return(values./vector/at(0i32).count()) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("values./vector/at(0i32).count()") != std::string::npos);
+  CHECK(output.find("divide(divide(values., vector), at(0i32))") == std::string::npos);
+}
+
 TEST_CASE("rewrites plus operator without spaces") {
   const std::string source = "main(){ return(a+b) }\n";
   primec::TextFilterPipeline pipeline;
