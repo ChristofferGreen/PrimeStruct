@@ -755,7 +755,8 @@ std::string inferAccessCallTypeName(const Expr &call,
                                     const std::unordered_map<std::string, BindingInfo> &localTypes,
                                     const std::function<std::string(const Expr &)> &inferPrimitiveTypeName,
                                     const std::function<bool(const Expr &, std::string &)> &resolveCallElementTypeName) {
-  if (!(isSimpleCallName(call, "at") || isSimpleCallName(call, "at_unsafe")) || call.args.size() != 2) {
+  std::string accessName;
+  if (!getBuiltinArrayAccessName(call, accessName) || call.args.size() != 2) {
     return "";
   }
   const size_t receiverIndex = getAccessCallReceiverIndex(call, localTypes);

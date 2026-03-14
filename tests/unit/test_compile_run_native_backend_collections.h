@@ -232,6 +232,62 @@ main() {
   CHECK(runCommand(exePath) == 197);
 }
 
+TEST_CASE("compiles and runs native slash-method wrapper string access method chain compatibility fallback") {
+  const std::string source = R"(
+[return<int>]
+/i32/tag([i32] value) {
+  return(plus(value, 1i32))
+}
+
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(plus(wrapText()./std/collections/vector/at(1i32).tag(),
+              wrapText()./vector/at_unsafe(0i32).tag()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_slash_method_wrapper_string_access_method_chain_compatibility_fallback.prime",
+                source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_slash_method_wrapper_string_access_method_chain_compatibility_fallback_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 197);
+}
+
+TEST_CASE("native keeps slash-method wrapper string access i32 diagnostics") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./std/collections/vector/at(1i32).missing_tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_slash_method_wrapper_string_access_method_chain_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_slash_method_wrapper_string_access_method_chain_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/missing_tag") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native unchecked pointer conformance harness for imported .prime helpers") {
   expectUncheckedPointerHelperSurfaceConformance("native");
   expectUncheckedPointerGrowthConformance("native");

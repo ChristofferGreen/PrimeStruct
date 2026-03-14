@@ -1546,6 +1546,13 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
   }
   if (receiverExpr.kind == Expr::Kind::Call) {
     typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferExprKind(receiverExpr, localsIn));
+    if (typeNameOut.empty() && receiverExpr.isMethodCall && receiverExpr.args.size() == 2) {
+      std::string accessName;
+      if (getBuiltinArrayAccessName(receiverExpr, accessName) &&
+          inferExprKind(receiverExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+        typeNameOut = "i32";
+      }
+    }
     if (typeNameOut.empty()) {
       resolvedTypePathOut = resolveMethodReceiverStructTypePathFromCallExpr(
           receiverExpr, resolveExprPath(receiverExpr), importAliases, structNames);

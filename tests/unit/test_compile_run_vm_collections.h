@@ -93,6 +93,53 @@ main() {
   CHECK(runCommand(runCmd) == 197);
 }
 
+TEST_CASE("runs vm slash-method wrapper string access method chain compatibility fallback") {
+  const std::string source = R"(
+[return<int>]
+/i32/tag([i32] value) {
+  return(plus(value, 1i32))
+}
+
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(plus(wrapText()./std/collections/vector/at(1i32).tag(),
+              wrapText()./vector/at_unsafe(0i32).tag()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_slash_method_wrapper_string_access_method_chain_compatibility_fallback.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 197);
+}
+
+TEST_CASE("vm keeps slash-method wrapper string access i32 diagnostics") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./std/collections/vector/at(1i32).missing_tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_slash_method_wrapper_string_access_method_chain_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_slash_method_wrapper_string_access_method_chain_diag.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/missing_tag") != std::string::npos);
+}
+
 TEST_CASE("rejects vm array namespaced vector constructor alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
