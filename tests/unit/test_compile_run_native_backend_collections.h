@@ -181,6 +181,8 @@ main() {
 
 TEST_CASE("compiles and runs native stdlib namespaced vector builtin aliases") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
@@ -317,6 +319,8 @@ main() {
 
 TEST_CASE("rejects native array namespaced vector at alias") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
@@ -338,6 +342,8 @@ main() {
 
 TEST_CASE("rejects native array namespaced vector at_unsafe alias") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
@@ -361,6 +367,8 @@ main() {
 
 TEST_CASE("rejects native array namespaced vector count builtin alias") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
@@ -926,6 +934,8 @@ main() {
 
 TEST_CASE("rejects native array namespaced vector capacity alias") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
@@ -947,6 +957,8 @@ main() {
 
 TEST_CASE("rejects native array namespaced vector mutator alias") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}

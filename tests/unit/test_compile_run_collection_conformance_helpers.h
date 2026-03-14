@@ -37,7 +37,9 @@ inline void expectSharedVectorConformanceHarness(const std::string &emitMode) {
     expectVectorPopTypeMismatchReject(emitMode, "/std/collections/*");
     expectVectorPushTypeMismatchReject(emitMode, "/std/collections/*");
     expectCanonicalVectorNamespaceConformance(emitMode);
+    expectCanonicalVectorNamespaceNamedArgsConformance(emitMode);
     expectCanonicalVectorNamespaceTypeMismatchReject(emitMode);
+    expectCanonicalVectorNamespaceImportRequirement(emitMode);
     expectCanonicalVectorNamespaceCountShadow(emitMode);
     expectCanonicalVectorNamespacePushShadow(emitMode);
   }

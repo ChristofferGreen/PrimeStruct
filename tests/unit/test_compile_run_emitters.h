@@ -2393,6 +2393,8 @@ main() {
 
 TEST_CASE("compiles and runs stdlib namespaced vector builtin aliases in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
@@ -2435,6 +2437,8 @@ main() {
 
 TEST_CASE("rejects array namespaced vector at alias in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
@@ -2456,6 +2460,8 @@ main() {
 
 TEST_CASE("rejects array namespaced vector at_unsafe alias in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
@@ -2478,6 +2484,8 @@ main() {
 
 TEST_CASE("rejects array namespaced vector count builtin alias in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
@@ -2499,6 +2507,8 @@ main() {
 
 TEST_CASE("rejects array namespaced vector capacity alias in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
@@ -2520,6 +2530,8 @@ main() {
 
 TEST_CASE("rejects array namespaced vector mutator alias in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}

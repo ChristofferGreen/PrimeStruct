@@ -43,8 +43,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (name.rfind("std/collections/vector/", 0) == 0) {
     std::string alias = name.substr(std::string("std/collections/vector/").size());
     if (alias.find('/') == std::string::npos &&
-        (alias == "vector" || alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" ||
-         alias == "push" || alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||
+        (alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" || alias == "push" ||
+         alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap")) {
       return alias == targetName;
     }
