@@ -6439,6 +6439,106 @@ main() {
   CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps vector method alias struct-return precedence over canonical helper") {
+  const std::string source = R"(
+AliasMarker {
+  [i32] value
+}
+
+CanonicalMarker {
+  [i32] value
+}
+
+[return<AliasMarker>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(AliasMarker(plus(index, 40i32)))
+}
+
+[return<CanonicalMarker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(CanonicalMarker(index))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.at(2i32).value)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_method_struct_field_alias_precedence.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_method_struct_field_alias_precedence_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 42);
+}
+
+TEST_CASE("C++ emitter keeps primitive diagnostics for canonical vector method access") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.at(2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_vector_method_struct_chain_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_vector_method_struct_chain_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter keeps struct receiver diagnostics for canonical vector unsafe method access") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.at_unsafe(2i32).value)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_vector_unsafe_method_field_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_vector_unsafe_method_field_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+}
+
 TEST_CASE("rejects map method alias access struct method chain with primitive receiver diagnostics in C++ emitter") {
   const std::string source = R"(
 Marker {

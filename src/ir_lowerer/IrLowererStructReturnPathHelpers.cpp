@@ -408,8 +408,18 @@ std::string inferStructReturnPathFromExprInternal(
       rawMethodName.erase(rawMethodName.begin());
     }
     const std::string methodName = normalizeCollectionMethodName(expr.name);
-    const std::vector<std::string> candidates =
-        collectionMethodPathCandidates(receiverStruct, methodName, rawMethodName);
+    std::vector<std::string> candidates = collectionMethodPathCandidates(receiverStruct, methodName, rawMethodName);
+    if ((receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") &&
+        (methodName == "at" || methodName == "at_unsafe")) {
+      const std::string canonicalCandidate = "/std/collections/vector/" + methodName;
+      for (auto it = candidates.begin(); it != candidates.end();) {
+        if (*it == canonicalCandidate) {
+          it = candidates.erase(it);
+        } else {
+          ++it;
+        }
+      }
+    }
     for (const auto &candidate : candidates) {
       if (const std::string inferred = inferStructReturnPathFromDefinitionInternal(
               candidate, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);

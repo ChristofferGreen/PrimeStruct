@@ -3158,7 +3158,7 @@ std::string SemanticsValidator::inferStructReturnPath(
           !namespacedHelper.empty()) {
         methodName = namespacedHelper;
       }
-      const bool blocksRemovedVectorAliasStructReturnForwarding =
+      const bool blocksBuiltinVectorAccessStructReturnForwarding =
           methodName == "at" || methodName == "at_unsafe";
       const bool isExplicitRemovedMapAliasStructReturnMethod =
           rawMethodName == "map/at" || rawMethodName == "map/at_unsafe" ||
@@ -3166,17 +3166,19 @@ std::string SemanticsValidator::inferStructReturnPath(
       std::vector<std::string> methodCandidates;
       if (receiverStruct == "/vector") {
         methodCandidates = {"/vector/" + methodName};
-        if (!blocksRemovedVectorAliasStructReturnForwarding) {
+        if (!blocksBuiltinVectorAccessStructReturnForwarding) {
           methodCandidates.push_back("/std/collections/vector/" + methodName);
         }
-        if (methodName != "count" && !blocksRemovedVectorAliasStructReturnForwarding) {
+        if (methodName != "count" && !blocksBuiltinVectorAccessStructReturnForwarding) {
           methodCandidates.push_back("/array/" + methodName);
         }
       } else if (receiverStruct == "/array") {
         methodCandidates = {"/array/" + methodName};
         if (methodName != "count") {
           methodCandidates.push_back("/vector/" + methodName);
-          methodCandidates.push_back("/std/collections/vector/" + methodName);
+          if (!blocksBuiltinVectorAccessStructReturnForwarding) {
+            methodCandidates.push_back("/std/collections/vector/" + methodName);
+          }
         }
       } else if (receiverStruct == "/map") {
         if (!isExplicitRemovedMapAliasStructReturnMethod) {
