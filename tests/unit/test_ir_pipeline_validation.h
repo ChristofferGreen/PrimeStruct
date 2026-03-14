@@ -26977,6 +26977,57 @@ TEST_CASE("ir lowerer setup inference helper resolves bare vector method access 
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
+TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned vector access kinds") {
+  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+
+  primec::Expr wrapValuesCall;
+  wrapValuesCall.kind = primec::Expr::Kind::Call;
+  wrapValuesCall.name = "wrapValues";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+
+  primec::Expr directAccessExpr;
+  directAccessExpr.kind = primec::Expr::Kind::Call;
+  directAccessExpr.name = "/vector/at";
+  directAccessExpr.args = {wrapValuesCall, indexExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  auto resolveWrapValuesKind = [](const primec::Expr &candidate,
+                                  const primec::ir_lowerer::LocalMap &,
+                                  primec::ir_lowerer::LocalInfo::ValueKind &candidateKindOut) {
+    if (candidate.kind != primec::Expr::Kind::Call || candidate.name != "wrapValues") {
+      return false;
+    }
+    candidateKindOut = primec::ir_lowerer::LocalInfo::ValueKind::String;
+    return true;
+  };
+
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            directAccessExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut,
+            resolveWrapValuesKind) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+
+  primec::Expr methodAccessExpr;
+  methodAccessExpr.kind = primec::Expr::Kind::Call;
+  methodAccessExpr.isMethodCall = true;
+  methodAccessExpr.name = "at_unsafe";
+  methodAccessExpr.args = {wrapValuesCall, indexExpr};
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            methodAccessExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut,
+            resolveWrapValuesKind) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+}
+
 TEST_CASE("ir lowerer setup inference helper infers body value kinds with locals scaffolding") {
   primec::Expr bindingExpr;
   bindingExpr.isBinding = true;

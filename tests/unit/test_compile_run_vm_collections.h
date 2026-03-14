@@ -6807,6 +6807,77 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
+TEST_CASE("runs vm wrapper-returned vector access string count fallback") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<i32>]
+/std/collections/vector/at([vector<string>] values, [i32] index) {
+  return(7i32)
+}
+
+[return<i32>]
+/std/collections/vector/at_unsafe([vector<string>] values, [i32] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<vector<string>>]
+wrapValues() {
+  return(vector<string>("hello"raw_utf8))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(count(/vector/at(wrapValues(), 0i32)),
+              wrapValues().at_unsafe(0i32).count()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_wrapper_vector_access_string_count_fallback.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 182);
+}
+
+TEST_CASE("vm keeps wrapper-returned vector access primitive count diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return("abc"raw_utf8)
+}
+
+[return<string>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return("abc"raw_utf8)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapValues() {
+  return(vector<i32>(1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(count(/vector/at(wrapValues(), 0i32)),
+              wrapValues().at_unsafe(0i32).count()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_wrapper_vector_access_primitive_count_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_vector_access_primitive_count_diag.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("runs vm with user vector count method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

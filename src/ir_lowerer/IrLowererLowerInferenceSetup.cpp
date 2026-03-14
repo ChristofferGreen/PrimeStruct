@@ -1131,7 +1131,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
         return !structPathOut.empty();
       };
 
-  const auto resolveCallMapAccessValueKind =
+  const auto resolveCallCollectionAccessValueKind =
       [defMap, resolveExprPath, resolveFieldAccessCollectionInfo, &stateInOut](
           const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
         kindOut = LocalInfo::ValueKind::Unknown;
@@ -1164,13 +1164,19 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
 
         std::string collectionName;
         std::vector<std::string> collectionArgs;
-        if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) || collectionName != "map" ||
-            collectionArgs.size() != 2) {
+        if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs)) {
           return false;
         }
-
-        kindOut = valueKindFromTypeName(collectionArgs.back());
-        return true;
+        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+            collectionArgs.size() == 1) {
+          kindOut = valueKindFromTypeName(collectionArgs.front());
+          return true;
+        }
+        if (collectionName == "map" && collectionArgs.size() == 2) {
+          kindOut = valueKindFromTypeName(collectionArgs.back());
+          return true;
+        }
+        return false;
       };
 
   stateInOut.inferCallExprCountAccessGpuFallbackKind =
@@ -1178,7 +1184,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
        isStringCountCall,
        isVectorCapacityCall,
        isEntryArgsName,
-       resolveCallMapAccessValueKind,
+       resolveCallCollectionAccessValueKind,
        resolveFieldAccessCollectionInfo,
        &stateInOut](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
@@ -1206,7 +1212,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                   },
                   accessElementKind,
                   [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &candidateKindOut) {
-                    return resolveCallMapAccessValueKind(candidate, candidateLocals, candidateKindOut);
+                    return resolveCallCollectionAccessValueKind(candidate, candidateLocals, candidateKindOut);
                   }) == ArrayMapAccessElementKindResolution::Resolved &&
               accessElementKind == LocalInfo::ValueKind::String) {
             kindOut = LocalInfo::ValueKind::Int32;
@@ -1275,7 +1281,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                 },
                 accessElementKind,
                 [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &candidateKindOut) {
-                  return resolveCallMapAccessValueKind(candidate, candidateLocals, candidateKindOut);
+                  return resolveCallCollectionAccessValueKind(candidate, candidateLocals, candidateKindOut);
                 }) == ArrayMapAccessElementKindResolution::Resolved) {
           kindOut = accessElementKind;
           return true;
