@@ -671,9 +671,14 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     if (receiverStruct == "/vector") {
       std::vector<std::string> candidates = {
           "/vector/" + methodName,
-          "/std/collections/vector/" + methodName,
       };
-      if (allowsArrayVectorCompatibilitySuffix(methodName)) {
+      const bool blocksRemovedVectorAliasStructReturnForwarding =
+          methodName == "at" || methodName == "at_unsafe";
+      if (!blocksRemovedVectorAliasStructReturnForwarding) {
+        candidates.push_back("/std/collections/vector/" + methodName);
+      }
+      if (allowsArrayVectorCompatibilitySuffix(methodName) &&
+          !blocksRemovedVectorAliasStructReturnForwarding) {
         candidates.push_back("/array/" + methodName);
       }
       return candidates;

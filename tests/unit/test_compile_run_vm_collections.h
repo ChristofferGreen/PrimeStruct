@@ -3688,6 +3688,78 @@ main() {
   CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
+TEST_CASE("rejects vm vector unsafe method alias access struct method chain with primitive receiver diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(values./vector/at_unsafe(2i32).tag())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_method_alias_access_unsafe_struct_method_chain_canonical_forwarding_reject.prime",
+                source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_vector_method_alias_access_unsafe_struct_method_chain_canonical_forwarding_reject.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("rejects vm vector unsafe method alias access field expression with struct receiver diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(values./vector/at_unsafe(2i32).value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_method_alias_access_unsafe_field_expression_struct_receiver_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_vector_method_alias_access_unsafe_field_expression_struct_receiver_diag.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+}
+
 TEST_CASE("rejects vm map method alias access struct method chain with primitive receiver diagnostics") {
   const std::string source = R"(
 Marker {

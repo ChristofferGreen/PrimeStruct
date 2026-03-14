@@ -5713,6 +5713,65 @@ main() {
   CHECK(error.find("field access requires struct receiver") != std::string::npos);
 }
 
+TEST_CASE("vector unsafe method alias access struct method chain keeps primitive receiver diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(values./vector/at_unsafe(2i32).tag())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("vector unsafe method alias access field expression keeps struct receiver diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(values./vector/at_unsafe(2i32).value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("field access requires struct receiver") != std::string::npos);
+}
+
 TEST_CASE("map method access keeps canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {
