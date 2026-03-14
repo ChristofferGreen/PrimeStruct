@@ -7402,6 +7402,46 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps wrapper-returned slash-method map access primitive count diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return("abc"raw_utf8)
+}
+
+[return<string>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return("abc"raw_utf8)
+}
+
+[return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(wrapMap()./std/collections/map/at(1i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_slash_method_map_access_count_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_slash_method_map_access_count_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter keeps stdlib namespaced vector string access count fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

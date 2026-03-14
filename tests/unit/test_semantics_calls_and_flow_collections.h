@@ -10008,6 +10008,38 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
+TEST_CASE("wrapper-returned slash-method map access count keeps primitive diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return("abc"utf8)
+}
+
+[return<string>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return("abc"utf8)
+}
+
+[return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[return<int>]
+main() {
+  return(count(wrapMap()./std/collections/map/at(1i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("map stdlib namespaced count expression inferred template fallback keeps alias diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

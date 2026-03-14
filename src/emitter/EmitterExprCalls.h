@@ -542,6 +542,18 @@
     }
     return "";
   };
+  auto isExplicitMapAccessMethod = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    return normalized == "map/at" || normalized == "map/at_unsafe" ||
+           normalized == "std/collections/map/at" ||
+           normalized == "std/collections/map/at_unsafe";
+  };
   auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
     if (isStringValue(targetExpr, localTypes)) {
       return "/string";
@@ -579,6 +591,12 @@
         }
       }
       return resolvedTypePathForResolvedCall(resolveExprPath(targetExpr));
+    }
+    if (isExplicitMapAccessMethod(targetExpr)) {
+      const std::string probedTypePath = probedTypePathForTarget(targetExpr);
+      if (!probedTypePath.empty()) {
+        return probedTypePath;
+      }
     }
     if (!builtinVectorAccessMethodReceiverTypePath(targetExpr).empty()) {
       const std::string probedTypePath = probedTypePathForTarget(targetExpr);

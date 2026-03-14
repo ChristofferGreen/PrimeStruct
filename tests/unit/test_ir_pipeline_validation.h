@@ -18947,6 +18947,54 @@ TEST_CASE("ir lowerer setup type helper infers wrapper-returned slash-method map
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-method map access kinds") {
+  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+
+  primec::Expr wrapMapCall;
+  wrapMapCall.kind = primec::Expr::Kind::Call;
+  wrapMapCall.name = "wrapMap";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.isMethodCall = true;
+  accessExpr.name = "/std/collections/map/at";
+  accessExpr.args = {wrapMapCall, keyExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  auto resolveWrapMapKind = [](const primec::Expr &candidate,
+                               const primec::ir_lowerer::LocalMap &,
+                               primec::ir_lowerer::LocalInfo::ValueKind &candidateKindOut) {
+    if (candidate.kind != primec::Expr::Kind::Call || candidate.name != "wrapMap") {
+      return false;
+    }
+    candidateKindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    return true;
+  };
+
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut,
+            resolveWrapMapKind) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  accessExpr.name = "/std/collections/map/at_unsafe";
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut,
+            resolveWrapMapKind) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
 TEST_CASE("ir lowerer setup type helper keeps builtin count/capacity fallback when no override definition exists") {
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;
