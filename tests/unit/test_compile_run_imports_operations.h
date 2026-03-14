@@ -72,6 +72,7 @@ TEST_CASE("compiles and runs shared map conformance harness in C++ emitter") {
     expectMapOverwriteConformance("exe", "/std/collections/experimental_map/*");
     expectMapTryAtConformance("exe", "/std/collections/experimental_map/*", false);
     expectMapTryAtConformance("exe", "/std/collections/experimental_map/*", true);
+    expectExperimentalMapAtMissingConformance("exe");
   }
 }
 

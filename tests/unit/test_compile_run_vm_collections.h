@@ -1674,6 +1674,7 @@ TEST_CASE("runs vm shared map conformance harness for stdlib and experimental he
     expectMapOverwriteConformance("vm", "/std/collections/experimental_map/*");
     expectMapTryAtConformance("vm", "/std/collections/experimental_map/*", false);
     expectMapTryAtConformance("vm", "/std/collections/experimental_map/*", true);
+    expectExperimentalMapAtMissingConformance("vm");
     expectExperimentalMapTryAtStringConformance("vm");
   }
 }

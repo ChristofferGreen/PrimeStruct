@@ -304,3 +304,40 @@ inline void expectExperimentalMapTryAtStringConformance(const std::string &emitM
   CHECK(runCommand(runCmd) == 28);
   CHECK(readFile(outPath) == "alpha\ncontainer missing key\n");
 }
+
+inline std::string makeExperimentalMapAtMissingConformanceSource() {
+  std::string source;
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<int>]\n";
+  source += "main() {\n";
+  source += "  [Map<i32, i32>] values{mapPair<i32, i32>(11i32, 7i32, 22i32, 9i32)}\n";
+  source += "  return(mapAt<i32, i32>(values, 99i32))\n";
+  source += "}\n";
+  return source;
+}
+
+inline void expectExperimentalMapAtMissingConformance(const std::string &emitMode) {
+  const std::string source = makeExperimentalMapAtMissingConformanceSource();
+  const std::string srcPath = writeTemp("map_at_missing_experimental_" + emitMode + ".prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / ("primec_map_at_missing_experimental_" + emitMode + "_err.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(runCmd) == 3);
+    CHECK(readFile(errPath) == "map key not found\n");
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / ("primec_map_at_missing_experimental_" + emitMode + "_exe"))
+          .string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "map key not found\n");
+}

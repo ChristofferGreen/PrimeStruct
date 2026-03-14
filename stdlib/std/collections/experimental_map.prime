@@ -159,7 +159,10 @@ namespace std {
 
   [public return<V> Comparable<K>]
   mapAt<K, V>([Map<K, V>] entries, [K] key) {
-    return(at(entries.payloads, mapFindIndex<K, V>(entries, key)))
+    [i32] index{mapFindIndex<K, V>(entries, key)}
+    if(less_than(index, count(entries.keys)),
+       then() { return(entries.payloads[index]) },
+       else() { return(at(map<K, V>(), key)) })
   }
 
   [public return<V> Comparable<K>]
