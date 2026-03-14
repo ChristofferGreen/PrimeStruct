@@ -43,5 +43,10 @@ namespace std {
   containerCapacityExceeded() {
     return(ContainerError(4i32))
   }
+
+  [public return<Result<T, ContainerError>>]
+  containerErrorResult<T>([ContainerError] err) {
+    return(multiply(convert<i64>(err.code), 4294967296i64))
+  }
   }
 }

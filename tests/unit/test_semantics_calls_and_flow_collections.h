@@ -152,6 +152,103 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("containerErrorResult helper validates for value-carrying container results") {
+  const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+[return<ContainerError>]
+containerMissingKey() {
+  return(ContainerError(1i32))
+}
+
+[return<Result<T, ContainerError>>]
+containerErrorResult<T>([ContainerError] err) {
+  return(multiply(convert<i64>(err.code), 4294967296i64))
+}
+
+[return<Result<i32, ContainerError>>]
+main() {
+  return(containerErrorResult<i32>(containerMissingKey()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("mapTryAt helper validates for supported i32 container result payloads") {
+  const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+[return<ContainerError>]
+containerMissingKey() {
+  return(ContainerError(1i32))
+}
+
+[return<Result<T, ContainerError>>]
+containerErrorResult<T>([ContainerError] err) {
+  return(multiply(convert<i64>(err.code), 4294967296i64))
+}
+
+[return<Result<V, ContainerError>>]
+mapTryAt<K, V>([map<K, V>] values, [K] key) {
+  if(contains(values, key),
+     then() { return(Result.ok(at_unsafe(values, key))) },
+     else() { return(containerErrorResult<V>(containerMissingKey())) })
+}
+
+[return<Result<i32, ContainerError>>]
+main() {
+  [map<string, i32>] values{map<string, i32>("left"raw_utf8, 7i32)}
+  return(mapTryAt<string, i32>(values, "left"raw_utf8))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("mapTryAt helper validates for supported bool container result payloads") {
+  const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+[return<ContainerError>]
+containerMissingKey() {
+  return(ContainerError(1i32))
+}
+
+[return<Result<T, ContainerError>>]
+containerErrorResult<T>([ContainerError] err) {
+  return(multiply(convert<i64>(err.code), 4294967296i64))
+}
+
+[return<Result<V, ContainerError>>]
+mapTryAt<K, V>([map<K, V>] values, [K] key) {
+  if(contains(values, key),
+     then() { return(Result.ok(at_unsafe(values, key))) },
+     else() { return(containerErrorResult<V>(containerMissingKey())) })
+}
+
+[return<Result<bool, ContainerError>>]
+main() {
+  [map<string, bool>] values{map<string, bool>("left"raw_utf8, true)}
+  return(mapTryAt<string, bool>(values, "left"raw_utf8))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("count helper validates on vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

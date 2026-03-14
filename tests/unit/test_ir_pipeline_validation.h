@@ -118,6 +118,41 @@ main() {
   CHECK(std::find(module.stringTable.begin(), module.stringTable.end(), "map key not found") == module.stringTable.end());
 }
 
+TEST_CASE("ir lowerer guarded map Result lookup avoids missing-key runtime helpers") {
+  const std::string source = R"(
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+[return<Result<i32, MyError>>]
+probe([map<i32, i32>] values, [i32] key) {
+  if(contains(values, key),
+     then(){ return(Result.ok(at_unsafe(values, key))) },
+     else(){ return(multiply(convert<i64>(1i32), 4294967296i64)) })
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 7i32)}
+  probe(values, 1i32)
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
+  CHECK(error.empty());
+  CHECK(std::find(module.stringTable.begin(), module.stringTable.end(), "map key not found") == module.stringTable.end());
+}
+
 TEST_CASE("ir lowerer effects unit resolves entry and non-entry defaults") {
   const std::vector<primec::Transform> transforms;
   const std::vector<std::string> defaultEffects = {"io_out"};

@@ -71,6 +71,43 @@ main() {
 )";
 }
 
+inline std::string makeMapTryAtConformanceImportSource(const std::string &importPath,
+                                                       bool boolValues) {
+  const bool experimental = (importPath == "/std/collections/experimental_map/*");
+  const std::string helperPrefix = experimental ? "/std/collections/experimental_map/" : "";
+  const std::string valueType = boolValues ? "bool" : "i32";
+  const std::string leftValue = boolValues ? "true" : "7i32";
+  const std::string rightValue = boolValues ? "false" : "11i32";
+  const std::string successExpr = boolValues ? "if(found, then(){ 1i32 }, else(){ 99i32 })" : "found";
+  const auto helperCall = [&](const std::string &name) {
+    return helperPrefix + name;
+  };
+
+  std::string source;
+  source += "import /std/collections/*\n";
+  if (!experimental) {
+    source += "import " + importPath + "\n";
+  }
+  source += "\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedMapTryAtError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source += "[return<Result<i32, ContainerError>> effects(io_out) on_error<ContainerError, /unexpectedMapTryAtError>]\n";
+  source += "main() {\n";
+  source += "  [map<string, " + valueType + ">] values{" + helperCall("mapPair") + "<string, " + valueType +
+            ">(\"left\"raw_utf8, " + leftValue + ", \"right\"raw_utf8, " + rightValue + ")}\n";
+  source += "  [" + valueType + "] found{try(" + helperCall("mapTryAt") + "<string, " + valueType +
+            ">(values, \"left\"raw_utf8))}\n";
+  source += "  [Result<" + valueType + ", ContainerError>] missing{" + helperCall("mapTryAt") + "<string, " +
+            valueType + ">(values, \"missing\"raw_utf8)}\n";
+  source += "  print_line(Result.why(missing))\n";
+  source += "  return(Result.ok(plus(" + successExpr + ", 21i32)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline void expectMapConformanceProgramRuns(const std::string &source,
                                             const std::string &nameStem,
                                             const std::string &emitMode,
@@ -109,4 +146,37 @@ inline void expectMapExtendedConstructorConformance(const std::string &emitMode,
       "map_extended_ctor_" + slug + "_" + emitMode,
       emitMode,
       77);
+}
+
+inline void expectMapTryAtConformance(const std::string &emitMode,
+                                      const std::string &importPath,
+                                      bool boolValues) {
+  const std::string slug = mapHelperConformanceImportSlug(importPath);
+  const std::string valueSlug = boolValues ? "bool" : "i32";
+  const int expectedExitCode = boolValues ? 22 : 28;
+  const std::string source = makeMapTryAtConformanceImportSource(importPath, boolValues);
+  const std::string srcPath = writeTemp("map_try_at_" + slug + "_" + valueSlug + "_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / ("primec_map_try_at_" + slug + "_" + valueSlug + "_" + emitMode +
+                                                 "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == expectedExitCode);
+    CHECK(readFile(outPath) == "container missing key\n");
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / ("primec_map_try_at_" + slug + "_" + valueSlug + "_" + emitMode +
+                                                 "_exe"))
+          .string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == expectedExitCode);
+  CHECK(readFile(outPath) == "container missing key\n");
 }

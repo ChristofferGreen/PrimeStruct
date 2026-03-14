@@ -175,6 +175,13 @@ namespace std {
     return(contains(values, key))
   }
 
+  [public return<Result<V, ContainerError>>]
+  mapTryAt<K, V>([map<K, V>] values, [K] key) {
+    if(contains(values, key),
+       then() { return(Result.ok(mapAtUnsafe<K, V>(values, key))) },
+       else() { return(containerErrorResult<V>(containerMissingKey())) })
+  }
+
   [public return<V>]
   mapAt<K, V>([map<K, V>] values, [K] key) {
     return(at(values, key))
