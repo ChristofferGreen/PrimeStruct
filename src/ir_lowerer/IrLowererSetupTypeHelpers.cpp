@@ -851,6 +851,61 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
 
   const Definition *callee = resolveMethodCallDefinition(methodCallExpr, localsIn);
   if (callee == nullptr) {
+    auto resolveExplicitRemovedVectorAccessMethodReturnKind = [&](LocalInfo::ValueKind &builtinKindOut) {
+      builtinKindOut = LocalInfo::ValueKind::Unknown;
+      if (!methodCallExpr.isMethodCall || requireArrayReturn || methodCallExpr.args.size() != 2) {
+        return false;
+      }
+
+      std::string normalizedName = methodCallExpr.name;
+      if (!normalizedName.empty() && normalizedName.front() == '/') {
+        normalizedName.erase(normalizedName.begin());
+      }
+      if (normalizedName != "vector/at" && normalizedName != "vector/at_unsafe") {
+        return false;
+      }
+
+      const Expr &receiverExpr = methodCallExpr.args.front();
+      auto assignKnownElementKind = [&](LocalInfo::ValueKind valueKind) {
+        if (valueKind == LocalInfo::ValueKind::Unknown) {
+          return false;
+        }
+        builtinKindOut = valueKind;
+        return true;
+      };
+
+      if (receiverExpr.kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(receiverExpr.name);
+        if (localIt == localsIn.end()) {
+          return false;
+        }
+        const LocalInfo &receiverInfo = localIt->second;
+        if (receiverInfo.kind == LocalInfo::Kind::Vector || receiverInfo.kind == LocalInfo::Kind::Array ||
+            (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToArray)) {
+          return assignKnownElementKind(receiverInfo.valueKind);
+        }
+        return false;
+      }
+
+      if (receiverExpr.kind != Expr::Kind::Call) {
+        return false;
+      }
+      std::string collectionName;
+      if (!getBuiltinCollectionName(receiverExpr, collectionName)) {
+        return false;
+      }
+      if ((collectionName == "vector" || collectionName == "array") && receiverExpr.templateArgs.size() == 1) {
+        return assignKnownElementKind(valueKindFromTypeName(receiverExpr.templateArgs.front()));
+      }
+      return false;
+    };
+
+    if (resolveExplicitRemovedVectorAccessMethodReturnKind(kindOut)) {
+      if (methodResolvedOut != nullptr) {
+        *methodResolvedOut = true;
+      }
+      return true;
+    }
     return false;
   }
 

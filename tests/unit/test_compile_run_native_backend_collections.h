@@ -3817,7 +3817,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("rejects native vector method alias access struct method chain canonical forwarding") {
+TEST_CASE("rejects native vector method alias access struct method chain with primitive receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3854,10 +3854,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("rejects native vector method alias access struct method chain canonical diagnostics forwarding") {
+TEST_CASE("rejects native vector method alias access struct method chain with primitive argument diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -3893,7 +3893,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib map wrapper temporary unsafe key mismatch") {
