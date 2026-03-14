@@ -80,7 +80,9 @@ TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") 
     expectVectorHelperSurfaceConformance("exe", "/std/collections/*");
     expectVectorExtendedConstructorConformance("exe", "/std/collections/*");
     expectVectorGrowthConformance("exe", "/std/collections/*");
+    expectVectorShrinkRemoveConformance("exe", "/std/collections/*");
     expectVectorTypeMismatchReject("exe", "/std/collections/*");
+    expectVectorPopTypeMismatchReject("exe", "/std/collections/*");
     expectVectorPushTypeMismatchReject("exe", "/std/collections/*");
   }
 
@@ -88,9 +90,17 @@ TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") 
     expectVectorHelperSurfaceConformance("exe", "/std/collections/experimental_vector/*");
     expectVectorExtendedConstructorConformance("exe", "/std/collections/experimental_vector/*");
     expectVectorGrowthConformance("exe", "/std/collections/experimental_vector/*");
+    expectVectorShrinkRemoveConformance("exe", "/std/collections/experimental_vector/*");
     expectVectorTypeMismatchReject("exe", "/std/collections/experimental_vector/*");
+    expectVectorPopTypeMismatchReject("exe", "/std/collections/experimental_vector/*");
     expectVectorPushTypeMismatchReject("exe", "/std/collections/experimental_vector/*");
   }
+}
+
+TEST_CASE("compiles and runs experimental vector helper runtime contracts in C++ emitter") {
+  expectVectorHelperRuntimeContract("exe", "/std/collections/experimental_vector/*", "pop_empty");
+  expectVectorHelperRuntimeContract("exe", "/std/collections/experimental_vector/*", "remove_at_oob");
+  expectVectorHelperRuntimeContract("exe", "/std/collections/experimental_vector/*", "remove_swap_oob");
 }
 
 TEST_CASE("compiles and runs vector pop empty runtime contract in C++ emitter") {

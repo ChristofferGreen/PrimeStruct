@@ -74,12 +74,43 @@ inline std::string makeVectorGrowthConformanceSource(const std::string &importPa
   return source;
 }
 
+inline std::string makeVectorShrinkRemoveConformanceSource(const std::string &importPath) {
+  std::string source;
+  source += "import " + importPath + "\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorQuad<i32>(10i32, 20i32, 30i32, 40i32)}\n";
+  source += "  [i32 mut] total{0i32}\n";
+  source += "  vectorPop<i32>(values)\n";
+  source += "  assign(total, plus(total, plus(vectorCount<i32>(values), vectorAt<i32>(values, 1i32))))\n";
+  source += "  vectorRemoveAt<i32>(values, 1i32)\n";
+  source += "  assign(total, plus(total, plus(vectorCount<i32>(values), vectorAtUnsafe<i32>(values, 1i32))))\n";
+  source += "  vectorRemoveSwap<i32>(values, 0i32)\n";
+  source += "  assign(total, plus(total, plus(vectorCount<i32>(values), vectorAt<i32>(values, 0i32))))\n";
+  source += "  vectorClear<i32>(values)\n";
+  source += "  return(plus(total, vectorCount<i32>(values)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeVectorTypeMismatchRejectSource(const std::string &importPath) {
   std::string source;
   source += "import " + importPath + "\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [" + vectorConformanceType(importPath, "i32") + "] values{vectorPair<i32>(1i32, false)}\n";
+  source += "  return(vectorCount<i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeVectorPopTypeMismatchRejectSource(const std::string &importPath) {
+  std::string source;
+  source += "import " + importPath + "\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorSingle<i32>(9i32)}\n";
+  source += "  vectorPop<bool>(values)\n";
   source += "  return(vectorCount<i32>(values))\n";
   source += "}\n";
   return source;
@@ -93,6 +124,27 @@ inline std::string makeVectorPushTypeMismatchRejectSource(const std::string &imp
   source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorNew<i32>()}\n";
   source += "  vectorPush<bool>(values, true)\n";
   source += "  return(vectorCount<i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeVectorHelperRuntimeContractSource(const std::string &importPath,
+                                                         const std::string &mode) {
+  std::string source;
+  source += "import " + importPath + "\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  if (mode == "pop_empty") {
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorNew<i32>()}\n";
+    source += "  vectorPop<i32>(values)\n";
+  } else if (mode == "remove_at_oob") {
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorSingle<i32>(4i32)}\n";
+    source += "  vectorRemoveAt<i32>(values, 1i32)\n";
+  } else {
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorSingle<i32>(4i32)}\n";
+    source += "  vectorRemoveSwap<i32>(values, 1i32)\n";
+  }
+  source += "  return(0i32)\n";
   source += "}\n";
   return source;
 }
@@ -147,11 +199,39 @@ inline void expectVectorGrowthConformance(const std::string &emitMode,
       71);
 }
 
+inline void expectVectorShrinkRemoveConformance(const std::string &emitMode,
+                                                const std::string &importPath) {
+  const std::string slug = vectorHelperConformanceImportSlug(importPath);
+  expectVectorConformanceProgramRuns(
+      makeVectorShrinkRemoveConformanceSource(importPath),
+      "vector_shrink_remove_" + slug + "_" + emitMode,
+      emitMode,
+      86);
+}
+
 inline void expectVectorTypeMismatchReject(const std::string &emitMode,
                                            const std::string &importPath) {
   const std::string slug = vectorHelperConformanceImportSlug(importPath);
   const std::string source = makeVectorTypeMismatchRejectSource(importPath);
   const std::string srcPath = writeTemp("vector_type_mismatch_" + slug + "_" + emitMode + ".prime", source);
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+    CHECK(runCommand(runCmd) == 2);
+    return;
+  }
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+inline void expectVectorPopTypeMismatchReject(const std::string &emitMode,
+                                              const std::string &importPath) {
+  const std::string slug = vectorHelperConformanceImportSlug(importPath);
+  const std::string source = makeVectorPopTypeMismatchRejectSource(importPath);
+  const std::string srcPath = writeTemp("vector_pop_type_mismatch_" + slug + "_" + emitMode + ".prime", source);
 
   if (emitMode == "vm") {
     const std::string runCmd =
@@ -181,6 +261,38 @@ inline void expectVectorPushTypeMismatchReject(const std::string &emitMode,
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
+}
+
+inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
+                                              const std::string &importPath,
+                                              const std::string &mode) {
+  const std::string slug = vectorHelperConformanceImportSlug(importPath);
+  const std::string source = makeVectorHelperRuntimeContractSource(importPath, mode);
+  const std::string srcPath = writeTemp("vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + ".prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + "_err.txt"))
+          .string();
+  const std::string expectedError = mode == "pop_empty" ? "container empty\n" : "container index out of bounds\n";
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(runCmd) == 3);
+    CHECK(readFile(errPath) == expectedError);
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + "_exe"))
+          .string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == expectedError);
 }
 
 inline std::string makeVectorPopEmptyRuntimeContractSource(bool methodForm) {

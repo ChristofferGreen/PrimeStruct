@@ -2050,7 +2050,9 @@ TEST_CASE("compiles and runs native shared vector conformance harness for stdlib
     expectVectorHelperSurfaceConformance("native", "/std/collections/*");
     expectVectorExtendedConstructorConformance("native", "/std/collections/*");
     expectVectorGrowthConformance("native", "/std/collections/*");
+    expectVectorShrinkRemoveConformance("native", "/std/collections/*");
     expectVectorTypeMismatchReject("native", "/std/collections/*");
+    expectVectorPopTypeMismatchReject("native", "/std/collections/*");
     expectVectorPushTypeMismatchReject("native", "/std/collections/*");
   }
 
@@ -2058,9 +2060,17 @@ TEST_CASE("compiles and runs native shared vector conformance harness for stdlib
     expectVectorHelperSurfaceConformance("native", "/std/collections/experimental_vector/*");
     expectVectorExtendedConstructorConformance("native", "/std/collections/experimental_vector/*");
     expectVectorGrowthConformance("native", "/std/collections/experimental_vector/*");
+    expectVectorShrinkRemoveConformance("native", "/std/collections/experimental_vector/*");
     expectVectorTypeMismatchReject("native", "/std/collections/experimental_vector/*");
+    expectVectorPopTypeMismatchReject("native", "/std/collections/experimental_vector/*");
     expectVectorPushTypeMismatchReject("native", "/std/collections/experimental_vector/*");
   }
+}
+
+TEST_CASE("compiles and runs native experimental vector helper runtime contracts") {
+  expectVectorHelperRuntimeContract("native", "/std/collections/experimental_vector/*", "pop_empty");
+  expectVectorHelperRuntimeContract("native", "/std/collections/experimental_vector/*", "remove_at_oob");
+  expectVectorHelperRuntimeContract("native", "/std/collections/experimental_vector/*", "remove_swap_oob");
 }
 
 TEST_CASE("compiles and runs native vector pop empty runtime contract") {

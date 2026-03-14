@@ -1683,7 +1683,9 @@ TEST_CASE("runs vm shared vector conformance harness for stdlib and experimental
     expectVectorHelperSurfaceConformance("vm", "/std/collections/*");
     expectVectorExtendedConstructorConformance("vm", "/std/collections/*");
     expectVectorGrowthConformance("vm", "/std/collections/*");
+    expectVectorShrinkRemoveConformance("vm", "/std/collections/*");
     expectVectorTypeMismatchReject("vm", "/std/collections/*");
+    expectVectorPopTypeMismatchReject("vm", "/std/collections/*");
     expectVectorPushTypeMismatchReject("vm", "/std/collections/*");
   }
 
@@ -1691,9 +1693,17 @@ TEST_CASE("runs vm shared vector conformance harness for stdlib and experimental
     expectVectorHelperSurfaceConformance("vm", "/std/collections/experimental_vector/*");
     expectVectorExtendedConstructorConformance("vm", "/std/collections/experimental_vector/*");
     expectVectorGrowthConformance("vm", "/std/collections/experimental_vector/*");
+    expectVectorShrinkRemoveConformance("vm", "/std/collections/experimental_vector/*");
     expectVectorTypeMismatchReject("vm", "/std/collections/experimental_vector/*");
+    expectVectorPopTypeMismatchReject("vm", "/std/collections/experimental_vector/*");
     expectVectorPushTypeMismatchReject("vm", "/std/collections/experimental_vector/*");
   }
+}
+
+TEST_CASE("runs vm experimental vector helper runtime contracts") {
+  expectVectorHelperRuntimeContract("vm", "/std/collections/experimental_vector/*", "pop_empty");
+  expectVectorHelperRuntimeContract("vm", "/std/collections/experimental_vector/*", "remove_at_oob");
+  expectVectorHelperRuntimeContract("vm", "/std/collections/experimental_vector/*", "remove_swap_oob");
 }
 
 TEST_CASE("runs vm vector pop empty runtime contract") {

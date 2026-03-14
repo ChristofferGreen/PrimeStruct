@@ -22,6 +22,12 @@ namespace std {
     /std/collections/experimental_buffer_unchecked/bufferWriteUnsafe<T>(values.data, index, value)
   }
 
+  [return<void>]
+  vectorCheckIndex<T>([Vector<T>] values, [i32] index) {
+    [Pointer<T>] checked{/std/collections/experimental_buffer_checked/bufferOffsetChecked<T>(
+        values.data, index, values.count)}
+  }
+
   [effects(heap_alloc), return<void>]
   vectorReserveInternal<T>([Vector<T> mut] values, [i32] capacity) {
     if(greater_than(capacity, values.capacity),
@@ -153,6 +159,43 @@ namespace std {
        else() { })
     vectorWrite<T>(values, values.count, value)
     assign(values.count, plus(values.count, 1i32))
+  }
+
+  [public effects(heap_alloc), return<void>]
+  vectorPop<T>([Vector<T> mut] values) {
+    if(equal(values.count, 0i32),
+       then() {
+         [vector<T> mut] empty{vector<T>()}
+         pop(empty)
+       },
+       else() { assign(values.count, minus(values.count, 1i32)) })
+  }
+
+  [public effects(heap_alloc), return<void>]
+  vectorClear<T>([Vector<T> mut] values) {
+    assign(values.count, 0i32)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  vectorRemoveAt<T>([Vector<T> mut] values, [i32] index) {
+    vectorCheckIndex<T>(values, index)
+    [i32] lastIndex{minus(values.count, 1i32)}
+    [i32 mut] current{index}
+    while(less_than(current, lastIndex), do() {
+      vectorWrite<T>(values, current, vectorAtUnsafe<T>(values, plus(current, 1i32)))
+      increment(current)
+    })
+    assign(values.count, lastIndex)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  vectorRemoveSwap<T>([Vector<T> mut] values, [i32] index) {
+    vectorCheckIndex<T>(values, index)
+    [i32] lastIndex{minus(values.count, 1i32)}
+    if(less_than(index, lastIndex),
+       then() { vectorWrite<T>(values, index, vectorAtUnsafe<T>(values, lastIndex)) },
+       else() { })
+    assign(values.count, lastIndex)
   }
 
   [public return<T>]
