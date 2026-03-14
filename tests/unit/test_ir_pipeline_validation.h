@@ -19556,7 +19556,7 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup type helper keeps canonical map call return fallback to compatibility defs") {
+TEST_CASE("ir lowerer setup type helper rejects canonical map count fallback while keeping access fallback to compatibility defs") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition aliasCountDef;
   aliasCountDef.fullPath = "/map/count";
@@ -19593,7 +19593,7 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map call return fallback
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   bool definitionMatched = false;
-  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       countCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -19601,8 +19601,8 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map call return fallback
       false,
       kindOut,
       &definitionMatched));
-  CHECK(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr atUnsafeCall;
   atUnsafeCall.kind = primec::Expr::Kind::Call;

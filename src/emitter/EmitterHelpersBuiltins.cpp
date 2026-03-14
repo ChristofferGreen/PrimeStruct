@@ -570,10 +570,12 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
     }
   }
   if (preferred.rfind("/std/collections/map/", 0) == 0 && nameMap.count(preferred) == 0) {
-    const std::string mapAlias =
-        "/map/" + preferred.substr(std::string("/std/collections/map/").size());
-    if (nameMap.count(mapAlias) > 0) {
-      preferred = mapAlias;
+    const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
+    if (suffix != "count") {
+      const std::string mapAlias = "/map/" + suffix;
+      if (nameMap.count(mapAlias) > 0) {
+        preferred = mapAlias;
+      }
     }
   }
   return preferred;

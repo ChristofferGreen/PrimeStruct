@@ -4441,7 +4441,7 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("compiles and runs stdlib namespaced map count fallback to map alias in C++ emitter") {
+TEST_CASE("rejects stdlib namespaced map count alias fallback without import in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -4458,103 +4458,17 @@ main() {
   return(/std/collections/map/count(wrapMap()))
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_map_count_alias_fallback.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_namespaced_map_count_alias_fallback_exe")
-          .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 77);
-}
-
-TEST_CASE("rejects stdlib namespaced map count alias fallback arity mismatch in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 4i32))
-}
-
-[return<int>]
-/map/count([map<i32, i32>] values, [bool] marker) {
-  return(77i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/std/collections/map/count(wrapMap()))
-}
-)";
   const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_namespaced_map_count_alias_fallback_arity_reject.prime", source);
+      writeTemp("compile_cpp_stdlib_namespaced_map_count_alias_fallback_without_import.prime", source);
   const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_stdlib_namespaced_map_count_alias_fallback_arity_reject.err")
+       "primec_cpp_stdlib_namespaced_map_count_alias_fallback_without_import.err")
           .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument count mismatch for /map/count") != std::string::npos);
-}
-
-TEST_CASE("compiles and runs stdlib namespaced map count templated alias fallback in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 4i32))
-}
-
-[return<int>]
-/map/count<K, V>([map<K, V>] values, [bool] marker) {
-  return(79i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/std/collections/map/count(wrapMap(), true))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_namespaced_map_count_templated_alias_fallback.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() /
-       "primec_cpp_stdlib_namespaced_map_count_templated_alias_fallback_exe")
-          .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 79);
-}
-
-TEST_CASE("rejects stdlib namespaced map count templated alias fallback mismatch in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 4i32))
-}
-
-[return<int>]
-/map/count<K, V>([map<K, V>] values, [bool] marker) {
-  return(79i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/std/collections/map/count(wrapMap(), 1i32))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_namespaced_map_count_templated_alias_fallback_mismatch.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_cpp_stdlib_namespaced_map_count_templated_alias_fallback_mismatch.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("argument type mismatch for /map/count") != std::string::npos);
-  CHECK(diagnostics.find("parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs map namespaced at compatibility alias in C++ emitter") {

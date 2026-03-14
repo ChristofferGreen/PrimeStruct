@@ -255,6 +255,16 @@ inline std::string makeCanonicalMapNamespaceImportRequirementSource() {
   return source;
 }
 
+inline std::string makeCanonicalMapCountImportRequirementSource() {
+  std::string source;
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [map<string, i32>] values{map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  return(/std/collections/map/count<string, i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceCountShadowSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -433,6 +443,28 @@ inline void expectCanonicalMapNamespaceImportRequirement(const std::string &emit
                                  " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/map") != std::string::npos);
+}
+
+inline void expectCanonicalMapCountImportRequirement(const std::string &emitMode) {
+  const std::string source = makeCanonicalMapCountImportRequirementSource();
+  const std::string srcPath = writeTemp("map_count_canonical_import_requirement_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_map_count_canonical_import_requirement_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
+    return;
+  }
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 inline void expectCanonicalMapNamespaceCountShadow(const std::string &emitMode) {

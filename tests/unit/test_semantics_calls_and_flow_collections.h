@@ -3740,15 +3740,27 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced map access and count helpers are builtin-alias validated") {
+TEST_CASE("stdlib namespaced map count requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
-  [i32] c{/std/collections/map/count(values)}
+  return(/std/collections/map/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced map access helpers are builtin-alias validated") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
   [i32] first{/std/collections/map/at(values, 1i32)}
   [i32] second{/std/collections/map/at_unsafe(values, 2i32)}
-  return(plus(c, plus(first, second)))
+  return(plus(first, second))
 }
 )";
   std::string error;
@@ -3756,15 +3768,14 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("collected diagnostics ignore builtin canonical map helper calls") {
+TEST_CASE("collected diagnostics ignore builtin canonical map access helper calls") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
   [i32] aliasCount{/map/count(values)}
-  [i32] canonicalCount{/std/collections/map/count(values)}
   [i32] first{/std/collections/map/at(values, 1i32)}
-  return(plus(plus(aliasCount, canonicalCount), first))
+  return(plus(aliasCount, first))
 }
 )";
   primec::SemanticDiagnosticInfo diagnosticInfo;
@@ -3799,6 +3810,8 @@ main() {
 
 TEST_CASE("stdlib namespaced map helpers accept canonical map references") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}

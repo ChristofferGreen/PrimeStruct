@@ -2985,6 +2985,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         isNamespacedCollectionHelperCall && namespacedCollection == "vector";
     const bool isStdNamespacedVectorCountCall =
         !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
+    const bool isStdNamespacedMapCountCall =
+        !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/map/count", 0) == 0;
     const bool isNamespacedMapHelperCall =
         isNamespacedCollectionHelperCall && namespacedCollection == "map";
     const bool isNamespacedVectorCountCall =
@@ -2992,11 +2994,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
-        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count";
+        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
+        !isStdNamespacedMapCountCall;
     const bool isUnnamespacedMapCountFallbackCall =
         !expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr);
     const bool isResolvedMapCountCall =
-        !expr.isMethodCall && (resolved == "/map/count" || resolved == "/std/collections/map/count");
+        !expr.isMethodCall && resolved == "/map/count";
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
         isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1;
@@ -4972,7 +4975,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
       if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" ||
                              resolved == "/soa_vector/count" || resolved == "/string/count" ||
-                             resolved == "/map/count" || resolved == "/std/collections/map/count")) {
+                             resolved == "/map/count")) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;

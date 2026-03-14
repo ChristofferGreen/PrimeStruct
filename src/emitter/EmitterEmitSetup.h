@@ -627,9 +627,12 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
     }
     if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap.count(preferred) == 0) {
-      const std::string mapAlias = "/map/" + preferred.substr(std::string("/std/collections/map/").size());
-      if (defMap.count(mapAlias) > 0) {
-        preferred = mapAlias;
+      const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
+      if (suffix != "count") {
+        const std::string mapAlias = "/map/" + suffix;
+        if (defMap.count(mapAlias) > 0) {
+          preferred = mapAlias;
+        }
       }
     }
     return preferred;
@@ -757,7 +760,10 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-      appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
+      if (suffix != "count") {
+        appendUnique("/map/" + suffix);
+      }
     }
     return candidates;
   };

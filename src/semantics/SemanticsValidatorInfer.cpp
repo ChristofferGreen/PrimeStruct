@@ -390,7 +390,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
         const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-        if (suffix != "map") {
+        if (suffix != "map" && suffix != "count") {
           const std::string mapAlias = "/map/" + suffix;
           if (defMap_.count(mapAlias) > 0) {
             preferred = mapAlias;
@@ -1318,7 +1318,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
           const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-          if (suffix != "map") {
+          if (suffix != "map" && suffix != "count") {
             const std::string mapAlias = "/map/" + suffix;
             if (defMap_.count(mapAlias) > 0) {
               preferred = mapAlias;
@@ -1949,7 +1949,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
         const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-        if (suffix != "map") {
+        if (suffix != "map" && suffix != "count") {
           const std::string mapAlias = "/map/" + suffix;
           if (defMap_.count(mapAlias) > 0) {
             preferred = mapAlias;
@@ -2013,7 +2013,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
       } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
         const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-        if (suffix != "map") {
+        if (suffix != "map" && suffix != "count") {
           appendUnique("/map/" + suffix);
         }
       }
@@ -2280,16 +2280,18 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         isNamespacedCollectionHelperCall && namespacedCollection == "map";
     const bool isStdNamespacedVectorCountCall =
         !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
+    const bool isStdNamespacedMapCountCall =
+        !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/map/count", 0) == 0;
     const bool isNamespacedVectorCountCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
         isVectorBuiltinName(expr, "count") && !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
-        !isMapNamespacedCountCompatibilityCall(expr);
+        !isMapNamespacedCountCompatibilityCall(expr) && !isStdNamespacedMapCountCall;
     const bool isUnnamespacedMapCountFallbackCall =
         !expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr);
     const bool isResolvedMapCountCall =
-        !expr.isMethodCall && (resolved == "/map/count" || resolved == "/std/collections/map/count");
+        !expr.isMethodCall && resolved == "/map/count";
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
         isVectorBuiltinName(expr, "capacity");
@@ -3478,7 +3480,7 @@ std::string SemanticsValidator::inferStructReturnPath(
       appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-      if (suffix != "map") {
+      if (suffix != "map" && suffix != "count") {
         appendUnique("/map/" + suffix);
       }
     }
