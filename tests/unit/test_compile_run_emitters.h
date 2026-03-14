@@ -5528,34 +5528,28 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects namespaced wrapper count capacity compatibility fallback in C++ emitter") {
+TEST_CASE("rejects namespaced wrapper vector count map target in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
 }
 
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(5i32, 6i32, 7i32))
-}
-
 [effects(heap_alloc), return<int>]
 main() {
-  return(plus(/std/collections/vector/count(wrapMap()),
-              /vector/capacity(wrapVector())))
+  return(/std/collections/vector/count(wrapMap()))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_namespaced_wrapper_count_capacity_compatibility_fallback_reject.prime", source);
+      writeTemp("compile_cpp_namespaced_wrapper_vector_count_map_target_reject.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_namespaced_wrapper_count_capacity_compatibility_fallback_reject_out.txt")
+                               "primec_cpp_namespaced_wrapper_vector_count_map_target_reject_out.txt")
                                   .string();
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unsupported operand types for plus") != std::string::npos);
+  CHECK(readFile(outPath).find("count requires vector target") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps array namespaced wrapper count builtin fallback") {

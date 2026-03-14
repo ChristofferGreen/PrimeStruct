@@ -973,6 +973,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector count validates on wrapper temporary vector target") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+wrapVectorAuto() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/count(wrapVectorAuto()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector count rejects wrapper temporary map target") {
+  const std::string source = R"(
+wrapMapAuto() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/count(wrapMapAuto()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("count requires vector target") != std::string::npos);
+}
+
 TEST_CASE("map wrapper temporary access call validates map target classification") {
   const std::string source = R"(
 wrapMapAuto() {

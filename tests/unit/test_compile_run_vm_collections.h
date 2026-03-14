@@ -7262,6 +7262,27 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
+TEST_CASE("rejects vm std namespaced count wrapper map target") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/count(wrapMap()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_std_namespaced_count_wrapper_map_target_reject.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_count_wrapper_map_target_reject_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("count requires vector target") != std::string::npos);
+}
+
 TEST_CASE("runs vm with std namespaced count expression canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]

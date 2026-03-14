@@ -2922,6 +2922,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isNamespacedMapAccessCall =
         isBuiltinAccessName && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
+    const bool isDirectStdNamespacedVectorCountWrapperMapTarget =
+        !expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
+        expr.args.front().kind == Expr::Kind::Call && resolveMapTarget(expr.args.front());
     const bool prefersCanonicalVectorCountAliasDefinition =
         !expr.isMethodCall && resolved == "/vector/count" && defMap_.find(resolved) == defMap_.end() &&
         defMap_.find("/std/collections/vector/count") != defMap_.end();
@@ -3110,6 +3113,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         resolvedMethod = false;
       }
+    } else if (isDirectStdNamespacedVectorCountWrapperMapTarget &&
+               defMap_.find("/std/collections/vector/count") == defMap_.end()) {
+      error_ = "count requires vector target";
+      return false;
     } else if (!isStdNamespacedVectorCountCall &&
                (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall ||
                 isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
