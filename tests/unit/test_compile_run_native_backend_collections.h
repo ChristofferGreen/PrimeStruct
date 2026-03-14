@@ -1793,7 +1793,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  CHECK(readFile(errPath) == "container index out of bounds\n");
 }
 
 TEST_CASE("compiles and runs native vector access rejects negative index") {
@@ -1813,7 +1813,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  CHECK(readFile(errPath) == "container index out of bounds\n");
 }
 
 TEST_CASE("compiles and runs native vector literal count method") {
@@ -2067,6 +2067,16 @@ TEST_CASE("compiles and runs native vector pop empty runtime contract") {
   SUBCASE("method") {
     expectVectorPopEmptyRuntimeContract("native", true);
   }
+}
+
+TEST_CASE("compiles and runs native vector index runtime contract") {
+  expectVectorIndexRuntimeContract("native", "access_call");
+  expectVectorIndexRuntimeContract("native", "access_method");
+  expectVectorIndexRuntimeContract("native", "access_bracket");
+  expectVectorIndexRuntimeContract("native", "remove_at_call");
+  expectVectorIndexRuntimeContract("native", "remove_at_method");
+  expectVectorIndexRuntimeContract("native", "remove_swap_call");
+  expectVectorIndexRuntimeContract("native", "remove_swap_method");
 }
 
 TEST_CASE("compiles and runs native imported container error contract conformance") {

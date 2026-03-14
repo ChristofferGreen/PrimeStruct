@@ -99,6 +99,16 @@ TEST_CASE("compiles and runs vector pop empty runtime contract in C++ emitter") 
   }
 }
 
+TEST_CASE("compiles and runs vector index runtime contract in C++ emitter") {
+  expectVectorIndexRuntimeContract("exe", "access_call");
+  expectVectorIndexRuntimeContract("exe", "access_method");
+  expectVectorIndexRuntimeContract("exe", "access_bracket");
+  expectVectorIndexRuntimeContract("exe", "remove_at_call");
+  expectVectorIndexRuntimeContract("exe", "remove_at_method");
+  expectVectorIndexRuntimeContract("exe", "remove_swap_call");
+  expectVectorIndexRuntimeContract("exe", "remove_swap_method");
+}
+
 TEST_CASE("compiles and runs container error contract conformance in C++ emitter") {
   expectContainerErrorConformance("exe");
 }

@@ -165,3 +165,62 @@ inline void expectVectorPopEmptyRuntimeContract(const std::string &emitMode,
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "container empty\n");
 }
+
+inline std::string makeVectorIndexRuntimeContractSource(const std::string &mode) {
+  std::string source;
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  const bool mutating = mode == "remove_at_call" || mode == "remove_at_method" ||
+                        mode == "remove_swap_call" || mode == "remove_swap_method";
+  source += mutating ? "  [vector<i32> mut] values{vector<i32>(4i32)}\n"
+                     : "  [vector<i32>] values{vector<i32>(4i32)}\n";
+  if (mode == "access_call") {
+    source += "  return(at(values, 9i32))\n";
+  } else if (mode == "access_method") {
+    source += "  return(values.at(9i32))\n";
+  } else if (mode == "access_bracket") {
+    source += "  return(values[9i32])\n";
+  } else if (mode == "remove_at_call") {
+    source += "  remove_at(values, 1i32)\n";
+    source += "  return(0i32)\n";
+  } else if (mode == "remove_at_method") {
+    source += "  values.remove_at(1i32)\n";
+    source += "  return(0i32)\n";
+  } else if (mode == "remove_swap_call") {
+    source += "  remove_swap(values, 1i32)\n";
+    source += "  return(0i32)\n";
+  } else {
+    source += "  values.remove_swap(1i32)\n";
+    source += "  return(0i32)\n";
+  }
+  source += "}\n";
+  return source;
+}
+
+inline void expectVectorIndexRuntimeContract(const std::string &emitMode,
+                                             const std::string &mode) {
+  const std::string source = makeVectorIndexRuntimeContractSource(mode);
+  const std::string srcPath = writeTemp("vector_index_runtime_" + mode + "_" + emitMode + ".prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / ("primec_vector_index_runtime_" + mode + "_" + emitMode +
+                                                 "_err.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(runCmd) == 3);
+    CHECK(readFile(errPath) == "container index out of bounds\n");
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / ("primec_vector_index_runtime_" + mode + "_" + emitMode + "_exe"))
+          .string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "container index out of bounds\n");
+}

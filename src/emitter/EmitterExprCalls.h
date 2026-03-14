@@ -981,6 +981,22 @@
                         returnStructs,
                         allowMathBare)
             << ")";
+      } else if (isResolvedVectorTarget(target)) {
+        out << "ps_vector_at("
+            << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ", "
+            << emitExpr(expr.args[indexIndex],
+                        nameMap,
+                        paramMap,
+                        defMap,
+                        structTypeMap,
+                        importAliases,
+                        localTypes,
+                        returnKinds,
+                        resultInfos,
+                        returnStructs,
+                        allowMathBare)
+            << ")";
       } else {
         out << "ps_array_at("
             << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)

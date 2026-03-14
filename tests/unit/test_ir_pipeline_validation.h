@@ -25951,7 +25951,7 @@ TEST_CASE("ir lowerer runtime error helpers map each helper to expected message"
   const std::vector<std::string> expectedMessages = {"string index out of bounds",
                                                      "pointer index out of bounds",
                                                      "map key not found",
-                                                     "vector index out of bounds",
+                                                     "container index out of bounds",
                                                      "container empty",
                                                      "vector push allocation failed (out of memory)",
                                                      "vector reserve expects non-negative capacity",

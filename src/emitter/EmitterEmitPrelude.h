@@ -307,6 +307,15 @@
   out << "  return value[static_cast<size_t>(i)];\n";
   out << "}\n";
   out << "template <typename T, typename Index>\n";
+  out << "static inline const T &ps_vector_at(const std::vector<T> &value, Index index) {\n";
+  out << "  int64_t i = static_cast<int64_t>(index);\n";
+  out << "  if (i < 0 || static_cast<size_t>(i) >= value.size()) {\n";
+  out << "    std::fprintf(stderr, \"container index out of bounds\\n\");\n";
+  out << "    std::exit(3);\n";
+  out << "  }\n";
+  out << "  return value[static_cast<size_t>(i)];\n";
+  out << "}\n";
+  out << "template <typename T, typename Index>\n";
   out << "static inline const T &ps_array_at_unsafe(const std::vector<T> &value, Index index) {\n";
   out << "  return value[static_cast<size_t>(index)];\n";
   out << "}\n";
@@ -339,7 +348,7 @@
   out << "static inline void ps_vector_remove_at(std::vector<T> &value, Index index) {\n";
   out << "  int64_t i = static_cast<int64_t>(index);\n";
   out << "  if (i < 0 || static_cast<size_t>(i) >= value.size()) {\n";
-  out << "    std::fprintf(stderr, \"vector index out of bounds\\n\");\n";
+  out << "    std::fprintf(stderr, \"container index out of bounds\\n\");\n";
   out << "    std::exit(3);\n";
   out << "  }\n";
   out << "  value.erase(value.begin() + static_cast<size_t>(i));\n";
@@ -348,7 +357,7 @@
   out << "static inline void ps_vector_remove_swap(std::vector<T> &value, Index index) {\n";
   out << "  int64_t i = static_cast<int64_t>(index);\n";
   out << "  if (i < 0 || static_cast<size_t>(i) >= value.size()) {\n";
-  out << "    std::fprintf(stderr, \"vector index out of bounds\\n\");\n";
+  out << "    std::fprintf(stderr, \"container index out of bounds\\n\");\n";
   out << "    std::exit(3);\n";
   out << "  }\n";
   out << "  size_t idx = static_cast<size_t>(i);\n";

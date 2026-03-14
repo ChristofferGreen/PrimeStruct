@@ -167,7 +167,7 @@ void emitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &
 }
 
 void emitVectorIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  emitRuntimeError(function, "vector index out of bounds", internString);
+  emitRuntimeError(function, "container index out of bounds", internString);
 }
 
 void emitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString) {

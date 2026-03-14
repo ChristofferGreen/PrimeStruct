@@ -1702,6 +1702,16 @@ TEST_CASE("runs vm vector pop empty runtime contract") {
   }
 }
 
+TEST_CASE("runs vm vector index runtime contract") {
+  expectVectorIndexRuntimeContract("vm", "access_call");
+  expectVectorIndexRuntimeContract("vm", "access_method");
+  expectVectorIndexRuntimeContract("vm", "access_bracket");
+  expectVectorIndexRuntimeContract("vm", "remove_at_call");
+  expectVectorIndexRuntimeContract("vm", "remove_at_method");
+  expectVectorIndexRuntimeContract("vm", "remove_swap_call");
+  expectVectorIndexRuntimeContract("vm", "remove_swap_method");
+}
+
 TEST_CASE("runs vm imported container error contract conformance") {
   expectContainerErrorConformance("vm");
 }
