@@ -128,6 +128,76 @@ inline std::string makeVectorPushTypeMismatchRejectSource(const std::string &imp
   return source;
 }
 
+inline std::string makeCanonicalVectorNamespaceConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32> mut] grown{/std/collections/vector/vector<i32>()}\n";
+  source += "  /std/collections/vector/reserve<i32>(grown, 2i32)\n";
+  source += "  [i32] reserved{/std/collections/vector/capacity<i32>(grown)}\n";
+  source += "  /std/collections/vector/push<i32>(grown, 11i32)\n";
+  source += "  /std/collections/vector/push<i32>(grown, 22i32)\n";
+  source += "  /std/collections/vector/push<i32>(grown, 33i32)\n";
+  source += "  [i32 mut] total{plus(reserved, /std/collections/vector/count<i32>(grown))}\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at<i32>(grown, 0i32)))\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(grown, 1i32)))\n";
+  source +=
+      "  [vector<i32> mut] shaped{/std/collections/vector/vector<i32>(10i32, 20i32, 30i32, 40i32)}\n";
+  source += "  /std/collections/vector/remove_at<i32>(shaped, 1i32)\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at<i32>(shaped, 1i32)))\n";
+  source += "  /std/collections/vector/remove_swap<i32>(shaped, 0i32)\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(shaped, 0i32)))\n";
+  source += "  /std/collections/vector/pop<i32>(shaped)\n";
+  source += "  assign(total, plus(total, /std/collections/vector/count<i32>(shaped)))\n";
+  source += "  /std/collections/vector/clear<i32>(shaped)\n";
+  source += "  return(plus(total, /std/collections/vector/count<i32>(shaped)))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalVectorNamespaceTypeMismatchRejectSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, false)}\n";
+  source += "  return(/std/collections/vector/count<i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalVectorNamespaceCountShadowSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[return<int>]\n";
+  source += "/count([vector<i32>] values) {\n";
+  source += "  return(91i32)\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32)}\n";
+  source += "  return(/std/collections/vector/count<i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalVectorNamespacePushShadowSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<void>]\n";
+  source += "/push([vector<i32> mut] values, [i32] value) {\n";
+  source += "  assign(values, vector<i32>(97i32, value))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32> mut] values{/std/collections/vector/vector<i32>(1i32)}\n";
+  source += "  /std/collections/vector/push<i32>(values, 5i32)\n";
+  source += "  return(plus(count(values), at(values, 0i32)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeVectorHelperRuntimeContractSource(const std::string &importPath,
                                                          const std::string &mode) {
   std::string source;
@@ -304,6 +374,52 @@ inline void expectVectorPushTypeMismatchReject(const std::string &emitMode,
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
+}
+
+inline void expectCanonicalVectorNamespaceConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorNamespaceConformanceSource(),
+      "vector_namespace_canonical_" + emitMode,
+      emitMode,
+      109);
+}
+
+inline void expectCanonicalVectorNamespaceTypeMismatchReject(const std::string &emitMode) {
+  const std::string source = makeCanonicalVectorNamespaceTypeMismatchRejectSource();
+  const std::string srcPath = writeTemp("vector_namespace_canonical_type_mismatch_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_vector_namespace_canonical_type_mismatch_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(outPath).find("mismatch") != std::string::npos);
+    return;
+  }
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("mismatch") != std::string::npos);
+}
+
+inline void expectCanonicalVectorNamespaceCountShadow(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorNamespaceCountShadowSource(),
+      "vector_namespace_canonical_count_shadow_" + emitMode,
+      emitMode,
+      91);
+}
+
+inline void expectCanonicalVectorNamespacePushShadow(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorNamespacePushShadowSource(),
+      "vector_namespace_canonical_push_shadow_" + emitMode,
+      emitMode,
+      99);
 }
 
 inline void expectVectorHelperRuntimeContract(const std::string &emitMode,

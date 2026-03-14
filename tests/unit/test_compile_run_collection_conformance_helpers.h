@@ -36,6 +36,10 @@ inline void expectSharedVectorConformanceHarness(const std::string &emitMode) {
     expectVectorTypeMismatchReject(emitMode, "/std/collections/*");
     expectVectorPopTypeMismatchReject(emitMode, "/std/collections/*");
     expectVectorPushTypeMismatchReject(emitMode, "/std/collections/*");
+    expectCanonicalVectorNamespaceConformance(emitMode);
+    expectCanonicalVectorNamespaceTypeMismatchReject(emitMode);
+    expectCanonicalVectorNamespaceCountShadow(emitMode);
+    expectCanonicalVectorNamespacePushShadow(emitMode);
   }
 
   SUBCASE("experimental") {
