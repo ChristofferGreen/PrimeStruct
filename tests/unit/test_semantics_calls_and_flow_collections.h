@@ -5412,7 +5412,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced access alias chained method currently validates in semantics") {
+TEST_CASE("map namespaced access alias chained method rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -5435,8 +5435,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("map namespaced access alias chained method keeps downstream tag diagnostics") {
@@ -5463,7 +5463,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access alias field expression keeps removed-alias diagnostics") {
