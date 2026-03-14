@@ -22,6 +22,59 @@ bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
+bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.rfind("std/collections/vector/", 0) == 0) {
+    std::string alias = name.substr(std::string("std/collections/vector/").size());
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
+  if (name.rfind("vector/", 0) == 0) {
+    std::string alias = name.substr(std::string("vector/").size());
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
+  if (name.rfind("array/", 0) == 0) {
+    return false;
+  }
+  if (name.rfind("map/", 0) == 0) {
+    std::string alias = name.substr(std::string("map/").size());
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
+  if (name.rfind("std/collections/map/", 0) == 0) {
+    std::string alias = name.substr(std::string("std/collections/map/").size());
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "at" || name == "at_unsafe") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
 bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::string &typeOut);
@@ -756,7 +809,7 @@ std::string inferAccessCallTypeName(const Expr &call,
                                     const std::function<std::string(const Expr &)> &inferPrimitiveTypeName,
                                     const std::function<bool(const Expr &, std::string &)> &resolveCallElementTypeName) {
   std::string accessName;
-  if (!getBuiltinArrayAccessName(call, accessName) || call.args.size() != 2) {
+  if (!getBuiltinArrayAccessNameLocal(call, accessName) || call.args.size() != 2) {
     return "";
   }
   const size_t receiverIndex = getAccessCallReceiverIndex(call, localTypes);
