@@ -877,6 +877,35 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
         }
         return false;
       };
+      auto assignDeclaredReceiverCallKind = [&](const Definition &receiverDef) {
+        std::string collectionName;
+        std::vector<std::string> collectionArgs;
+        if (inferDeclaredReturnCollection(receiverDef, collectionName, collectionArgs)) {
+          if ((normalizedName == "vector/at" || normalizedName == "vector/at_unsafe" ||
+               normalizedName == "std/collections/vector/at" ||
+               normalizedName == "std/collections/vector/at_unsafe") &&
+              (collectionName == "vector" || collectionName == "array") && collectionArgs.size() == 1) {
+            return assignKnownElementKind(valueKindFromTypeName(collectionArgs.front()));
+          }
+          if ((normalizedName == "map/at" || normalizedName == "map/at_unsafe" ||
+               normalizedName == "std/collections/map/at" ||
+               normalizedName == "std/collections/map/at_unsafe") &&
+              collectionName == "map" && collectionArgs.size() == 2) {
+            return assignKnownElementKind(valueKindFromTypeName(collectionArgs[1]));
+          }
+        }
+
+        ReturnInfo receiverInfo;
+        if (getReturnInfo && getReturnInfo(receiverDef.fullPath, receiverInfo) && !receiverInfo.returnsVoid &&
+            !receiverInfo.returnsArray &&
+            (normalizedName == "vector/at" || normalizedName == "vector/at_unsafe" ||
+             normalizedName == "std/collections/vector/at" ||
+             normalizedName == "std/collections/vector/at_unsafe") &&
+            receiverInfo.kind == LocalInfo::ValueKind::String) {
+          return assignKnownElementKind(LocalInfo::ValueKind::Int32);
+        }
+        return false;
+      };
 
       if (receiverExpr.kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(receiverExpr.name);
@@ -919,6 +948,9 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
            normalizedName == "std/collections/map/at_unsafe") &&
           collectionName == "map" && receiverExpr.templateArgs.size() == 2) {
         return assignKnownElementKind(valueKindFromTypeName(receiverExpr.templateArgs[1]));
+      }
+      if (const Definition *receiverDef = resolveMethodCallDefinition(receiverExpr, localsIn)) {
+        return assignDeclaredReceiverCallKind(*receiverDef);
       }
       return false;
     };
@@ -1312,6 +1344,18 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const GetReturnInfoForPathFn &getReturnInfo,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding) {
+    return nullptr;
+  }
+  if (!callExpr.isMethodCall) {
+    const std::string resolvedPath = resolveExprPath(callExpr);
+    auto defIt = defMap.find(resolvedPath);
+    if (defIt != defMap.end()) {
+      return defIt->second;
+    }
+    return nullptr;
+  }
+
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =

@@ -4067,6 +4067,71 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
+TEST_CASE("runs vm wrapper-returned map method alias primitive receiver fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(2i32, 7i32))
+}
+
+[return<int>]
+/i32/tag([i32] self) {
+  return(plus(self, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapMap()./std/collections/map/at(2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_wrapper_map_method_alias_primitive_receiver_fallback.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 42);
+}
+
+TEST_CASE("vm keeps wrapper-returned map method alias primitive argument diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(2i32, 7i32))
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
+}
+
+[return<auto>]
+project() {
+  return(wrapMap()./std/collections/map/at(2i32).tag(1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(project())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_wrapper_map_method_alias_primitive_argument_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_map_method_alias_primitive_argument_diag.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+}
+
 TEST_CASE("rejects vm std-namespaced vector method alias access struct method chain with primitive receiver diagnostics") {
   const std::string source = R"(
 Marker {

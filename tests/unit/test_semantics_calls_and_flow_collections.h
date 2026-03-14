@@ -6162,6 +6162,69 @@ main() {
   CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
+TEST_CASE("wrapper-returned map method alias access keeps primitive receiver diagnostics during inference") {
+  const std::string source = R"(
+[return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(2i32, 7i32))
+}
+
+[return<int>]
+/i32/tag([i32] self) {
+  return(plus(self, 40i32))
+}
+
+[return<auto>]
+project() {
+  return(wrapMap()./std/collections/map/at(2i32).tag())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(project())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper-returned map method alias access keeps primitive argument diagnostics during inference") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(2i32, 7i32))
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
+}
+
+[return<auto>]
+project() {
+  return(wrapMap()./std/collections/map/at(2i32).tag(1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(project())
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+}
+
 TEST_CASE("std-namespaced vector method alias access keeps primitive receiver diagnostics during inference") {
   const std::string source = R"(
 Marker {
