@@ -161,6 +161,7 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
       info.returnsVoid = false;
       info.isResult = true;
       info.resultHasValue = resultHasValue;
+      info.resultValueKind = resultValueKind;
       info.resultErrorType = resultErrorType;
       info.kind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       break;
@@ -222,6 +223,21 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
     bindingInfo.valueKind = LocalInfo::ValueKind::Unknown;
   }
   bindingInfo.isFileError = isFileErrorBinding(bindingExpr);
+  for (const auto &transform : bindingExpr.transforms) {
+    if (transform.name == "File") {
+      bindingInfo.isFileHandle = true;
+      bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
+    } else if (transform.name == "Result") {
+      bindingInfo.isResult = true;
+      bindingInfo.resultHasValue = (transform.templateArgs.size() == 2);
+      bindingInfo.resultValueKind =
+          bindingInfo.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
+                                     : LocalInfo::ValueKind::Unknown;
+      bindingInfo.resultErrorType = transform.templateArgs.empty() ? "" : transform.templateArgs.back();
+      bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64
+                                                         : LocalInfo::ValueKind::Int32;
+    }
+  }
   setReferenceArrayInfo(bindingExpr, bindingInfo);
   applyStructArrayInfo(bindingExpr, bindingInfo);
   applyStructValueInfo(bindingExpr, bindingInfo);

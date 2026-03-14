@@ -238,6 +238,9 @@ bool inferCallParameterLocalInfo(const Expr &param,
     } else if (transform.name == "Result") {
       infoOut.isResult = true;
       infoOut.resultHasValue = (transform.templateArgs.size() == 2);
+      infoOut.resultValueKind =
+          infoOut.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
+                                 : LocalInfo::ValueKind::Unknown;
       infoOut.valueKind = infoOut.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       if (!transform.templateArgs.empty()) {
         infoOut.resultErrorType = transform.templateArgs.back();

@@ -155,6 +155,9 @@
         } else if (transform.name == "Result") {
           info.isResult = true;
           info.resultHasValue = (transform.templateArgs.size() == 2);
+          info.resultValueKind =
+              info.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
+                                  : LocalInfo::ValueKind::Unknown;
           info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
           if (!transform.templateArgs.empty()) {
             info.resultErrorType = transform.templateArgs.back();

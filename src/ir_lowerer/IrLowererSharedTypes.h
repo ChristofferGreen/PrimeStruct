@@ -19,6 +19,7 @@ struct LocalInfo {
   bool isFileError = false;
   bool isResult = false;
   bool resultHasValue = false;
+  ValueKind resultValueKind = ValueKind::Unknown;
   std::string resultErrorType;
   enum class StringSource { None, TableIndex, ArgvIndex, RuntimeIndex } stringSource = StringSource::None;
   int32_t stringIndex = -1;
@@ -37,6 +38,7 @@ struct ReturnInfo {
   LocalInfo::ValueKind kind = LocalInfo::ValueKind::Unknown;
   bool isResult = false;
   bool resultHasValue = false;
+  LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
   std::string resultErrorType;
 };
 

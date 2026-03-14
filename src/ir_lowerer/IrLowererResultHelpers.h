@@ -16,6 +16,7 @@ namespace primec::ir_lowerer {
 struct ResultExprInfo {
   bool isResult = false;
   bool hasValue = false;
+  LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
   std::string errorType;
 };
 
@@ -23,6 +24,7 @@ struct LocalResultInfo {
   bool found = false;
   bool isResult = false;
   bool resultHasValue = false;
+  LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
   std::string resultErrorType;
   bool isFileHandle = false;
 };

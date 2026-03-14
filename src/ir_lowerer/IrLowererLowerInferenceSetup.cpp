@@ -372,6 +372,8 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
   }
   if (!runLowerInferenceExprKindDispatchSetup(
           {
+              .defMap = input.defMap,
+              .resolveExprPath = input.resolveExprPath,
               .error = &errorOut,
           },
           stateOut,
@@ -1460,6 +1462,14 @@ bool runLowerInferenceExprKindCallPointerFallbackSetup(
 bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatchSetupInput &input,
                                             LowerInferenceSetupBootstrapState &stateInOut,
                                             std::string &errorOut) {
+  if (input.defMap == nullptr) {
+    errorOut = "native backend missing inference expr-kind dispatch setup dependency: defMap";
+    return false;
+  }
+  if (!input.resolveExprPath) {
+    errorOut = "native backend missing inference expr-kind dispatch setup dependency: resolveExprPath";
+    return false;
+  }
   if (input.error == nullptr) {
     errorOut = "native backend missing inference expr-kind dispatch setup dependency: error";
     return false;
@@ -1493,9 +1503,66 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
     return false;
   }
 
+  const auto *defMap = input.defMap;
+  const auto resolveExprPath = input.resolveExprPath;
   std::string *const inferenceError = input.error;
-  stateInOut.inferExprKind = [inferenceError, &stateInOut](const Expr &expr,
-                                                            const LocalMap &localsIn) -> LocalInfo::ValueKind {
+  stateInOut.inferExprKind = [defMap, resolveExprPath, inferenceError, &stateInOut](
+                                 const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    auto resolveTryValueKind = [&](const Expr &resultExpr, LocalInfo::ValueKind &kindOut) -> bool {
+      kindOut = LocalInfo::ValueKind::Unknown;
+      if (resultExpr.kind == Expr::Kind::Name) {
+        auto it = localsIn.find(resultExpr.name);
+        if (it != localsIn.end() && it->second.isResult) {
+          kindOut = it->second.resultHasValue ? it->second.resultValueKind : LocalInfo::ValueKind::Int32;
+          return true;
+        }
+        return false;
+      }
+      if (resultExpr.kind != Expr::Kind::Call) {
+        return false;
+      }
+      if (!resultExpr.isMethodCall && isSimpleCallName(resultExpr, "File")) {
+        kindOut = LocalInfo::ValueKind::Int64;
+        return true;
+      }
+      if (resultExpr.isMethodCall && !resultExpr.args.empty() && resultExpr.args.front().kind == Expr::Kind::Name) {
+        auto it = localsIn.find(resultExpr.args.front().name);
+        if (it != localsIn.end() && it->second.isFileHandle) {
+          if (resultExpr.name == "write" || resultExpr.name == "write_line" || resultExpr.name == "write_byte" ||
+              resultExpr.name == "write_bytes" || resultExpr.name == "flush" || resultExpr.name == "close") {
+            kindOut = LocalInfo::ValueKind::Int32;
+            return true;
+          }
+        }
+        if (resultExpr.args.front().name == "Result" && resultExpr.name == "ok") {
+          kindOut = resultExpr.args.size() > 1 ? stateInOut.inferExprKind(resultExpr.args[1], localsIn)
+                                               : LocalInfo::ValueKind::Int32;
+          return true;
+        }
+      }
+
+      const Definition *callee = nullptr;
+      if (resultExpr.isMethodCall) {
+        callee = stateInOut.resolveMethodCallDefinition(resultExpr, localsIn);
+      } else {
+        const std::string path = resolveExprPath(resultExpr);
+        auto defIt = defMap->find(path);
+        if (defIt != defMap->end()) {
+          callee = defIt->second;
+        }
+      }
+      if (callee == nullptr) {
+        return false;
+      }
+
+      ReturnInfo returnInfo;
+      if (!stateInOut.getReturnInfo(callee->fullPath, returnInfo) || !returnInfo.isResult) {
+        return false;
+      }
+      kindOut = returnInfo.resultHasValue ? returnInfo.resultValueKind : LocalInfo::ValueKind::Int32;
+      return true;
+    };
+
     LocalInfo::ValueKind literalOrNameKind = LocalInfo::ValueKind::Unknown;
     if (stateInOut.inferLiteralOrNameExprKind(expr, localsIn, literalOrNameKind)) {
       return literalOrNameKind;
@@ -1513,6 +1580,13 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           std::string helperName;
           return getNamespacedCollectionHelperName(candidate, collectionName, helperName) && helperName == "count";
         };
+
+        if (isSimpleCallName(expr, "try") && expr.args.size() == 1) {
+          LocalInfo::ValueKind tryValueKind = LocalInfo::ValueKind::Unknown;
+          if (resolveTryValueKind(expr.args.front(), tryValueKind) && tryValueKind != LocalInfo::ValueKind::Unknown) {
+            return tryValueKind;
+          }
+        }
 
         LocalInfo::ValueKind callBaseKind = LocalInfo::ValueKind::Unknown;
         if (stateInOut.inferCallExprBaseKind(expr, localsIn, callBaseKind)) {

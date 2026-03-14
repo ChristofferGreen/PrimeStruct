@@ -3231,6 +3231,10 @@ TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {
       kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
       return true;
     }
+    if (expr.kind == primec::Expr::Kind::StringLiteral) {
+      kindOut = primec::ir_lowerer::LocalInfo::ValueKind::String;
+      return true;
+    }
     return false;
   };
   state.inferCallExprBaseKind = [](const primec::Expr &expr,
@@ -3298,10 +3302,30 @@ TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {
     return false;
   };
 
+  primec::Definition resultDefinition;
+  resultDefinition.fullPath = "/statusResult";
+  const std::unordered_map<std::string, const primec::Definition *> defMap{
+      {"/statusResult", &resultDefinition},
+  };
+
+  state.getReturnInfo = [](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    if (path != "/statusResult") {
+      return false;
+    }
+    out.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+    out.isResult = true;
+    out.resultHasValue = true;
+    out.resultValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+    out.resultErrorType = "ContainerError";
+    return true;
+  };
+
   std::string inferenceError;
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
       {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
           .error = &inferenceError,
       },
       state,
@@ -3333,6 +3357,36 @@ TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {
   pointerExpr.kind = primec::Expr::Kind::Call;
   pointerExpr.name = "pointer";
   CHECK(state.inferExprKind(pointerExpr, primec::ir_lowerer::LocalMap{}) == primec::ir_lowerer::LocalInfo::ValueKind::String);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo resultLocal;
+  resultLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  resultLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  resultLocal.isResult = true;
+  resultLocal.resultHasValue = true;
+  resultLocal.resultValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  resultLocal.resultErrorType = "ContainerError";
+  locals.emplace("status", resultLocal);
+
+  primec::Expr localResultExpr;
+  localResultExpr.kind = primec::Expr::Kind::Name;
+  localResultExpr.name = "status";
+
+  primec::Expr tryLocalExpr;
+  tryLocalExpr.kind = primec::Expr::Kind::Call;
+  tryLocalExpr.name = "try";
+  tryLocalExpr.args.push_back(localResultExpr);
+  CHECK(state.inferExprKind(tryLocalExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
+
+  primec::Expr resultCallExpr;
+  resultCallExpr.kind = primec::Expr::Kind::Call;
+  resultCallExpr.name = "statusResult";
+
+  primec::Expr tryCallExpr;
+  tryCallExpr.kind = primec::Expr::Kind::Call;
+  tryCallExpr.name = "try";
+  tryCallExpr.args.push_back(resultCallExpr);
+  CHECK(state.inferExprKind(tryCallExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
 TEST_CASE("ir lowerer inference expr-kind dispatch setup validates dependencies") {
@@ -3345,7 +3399,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch setup validates dependencies"
       },
       state,
       error));
-  CHECK(error == "native backend missing inference expr-kind dispatch setup state: inferLiteralOrNameExprKind");
+  CHECK(error == "native backend missing inference expr-kind dispatch setup dependency: defMap");
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-fallback setup wires callback") {

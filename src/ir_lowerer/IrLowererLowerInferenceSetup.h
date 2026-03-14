@@ -108,6 +108,8 @@ struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
 };
 struct LowerInferenceExprKindCallPointerFallbackSetupInput {};
 struct LowerInferenceExprKindDispatchSetupInput {
+  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  ResolveExprPathFn resolveExprPath;
   std::string *error = nullptr;
 };
 

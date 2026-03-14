@@ -19,6 +19,7 @@ bool resolveResultExprInfo(const Expr &expr,
     if (local.found && local.isResult) {
       out.isResult = true;
       out.hasValue = local.resultHasValue;
+      out.valueKind = local.resultValueKind;
       out.errorType = local.resultErrorType;
       return true;
     }
@@ -93,6 +94,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     local.found = true;
     local.isResult = it->second.isResult;
     local.resultHasValue = it->second.resultHasValue;
+    local.resultValueKind = it->second.resultValueKind;
     local.resultErrorType = it->second.resultErrorType;
     local.isFileHandle = it->second.isFileHandle;
     return local;
@@ -107,6 +109,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
     resultOut.isResult = true;
     resultOut.hasValue = info.resultHasValue;
+    resultOut.valueKind = info.resultValueKind;
     resultOut.errorType = info.resultErrorType;
     return true;
   };
