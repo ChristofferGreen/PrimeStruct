@@ -1692,6 +1692,16 @@ TEST_CASE("runs vm shared vector conformance harness for stdlib and experimental
   }
 }
 
+TEST_CASE("runs vm vector pop empty runtime contract") {
+  SUBCASE("call") {
+    expectVectorPopEmptyRuntimeContract("vm", false);
+  }
+
+  SUBCASE("method") {
+    expectVectorPopEmptyRuntimeContract("vm", true);
+  }
+}
+
 TEST_CASE("runs vm imported container error contract conformance") {
   expectContainerErrorConformance("vm");
 }

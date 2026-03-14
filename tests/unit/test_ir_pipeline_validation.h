@@ -25952,7 +25952,7 @@ TEST_CASE("ir lowerer runtime error helpers map each helper to expected message"
                                                      "pointer index out of bounds",
                                                      "map key not found",
                                                      "vector index out of bounds",
-                                                     "vector pop on empty",
+                                                     "container empty",
                                                      "vector push allocation failed (out of memory)",
                                                      "vector reserve expects non-negative capacity",
                                                      "vector reserve allocation failed (out of memory)",
@@ -26190,7 +26190,7 @@ TEST_CASE("ir lowerer runtime error helpers build bundled emitters") {
 
   const std::vector<std::string> expectedMessages = {"string index out of bounds",
                                                      "pointer index out of bounds",
-                                                     "vector pop on empty",
+                                                     "container empty",
                                                      "loop count must be non-negative"};
   CHECK(stringTable == expectedMessages);
   REQUIRE(function.instructions.size() == 15);

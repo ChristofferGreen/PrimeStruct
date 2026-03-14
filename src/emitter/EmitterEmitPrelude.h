@@ -330,7 +330,7 @@
   out << "template <typename T>\n";
   out << "static inline void ps_vector_pop(std::vector<T> &value) {\n";
   out << "  if (value.empty()) {\n";
-  out << "    std::fprintf(stderr, \"vector pop on empty\\n\");\n";
+  out << "    std::fprintf(stderr, \"container empty\\n\");\n";
   out << "    std::exit(3);\n";
   out << "  }\n";
   out << "  value.pop_back();\n";

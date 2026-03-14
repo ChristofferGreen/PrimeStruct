@@ -2059,6 +2059,16 @@ TEST_CASE("compiles and runs native shared vector conformance harness for stdlib
   }
 }
 
+TEST_CASE("compiles and runs native vector pop empty runtime contract") {
+  SUBCASE("call") {
+    expectVectorPopEmptyRuntimeContract("native", false);
+  }
+
+  SUBCASE("method") {
+    expectVectorPopEmptyRuntimeContract("native", true);
+  }
+}
+
 TEST_CASE("compiles and runs native imported container error contract conformance") {
   expectContainerErrorConformance("native");
 }

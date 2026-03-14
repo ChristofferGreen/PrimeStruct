@@ -124,3 +124,44 @@ inline void expectVectorTypeMismatchReject(const std::string &emitMode,
                                  " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
+
+inline std::string makeVectorPopEmptyRuntimeContractSource(bool methodForm) {
+  std::string source;
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32> mut] values{vector<i32>()}\n";
+  source += methodForm ? "  values.pop()\n" : "  pop(values)\n";
+  source += "  return(0i32)\n";
+  source += "}\n";
+  return source;
+}
+
+inline void expectVectorPopEmptyRuntimeContract(const std::string &emitMode,
+                                                bool methodForm) {
+  const std::string formSlug = methodForm ? "method" : "call";
+  const std::string source = makeVectorPopEmptyRuntimeContractSource(methodForm);
+  const std::string srcPath = writeTemp("vector_pop_empty_runtime_" + formSlug + "_" + emitMode + ".prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / ("primec_vector_pop_empty_runtime_" + formSlug + "_" + emitMode +
+                                                 "_err.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(runCmd) == 3);
+    CHECK(readFile(errPath) == "container empty\n");
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / ("primec_vector_pop_empty_runtime_" + formSlug + "_" + emitMode +
+                                                 "_exe"))
+          .string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "container empty\n");
+}

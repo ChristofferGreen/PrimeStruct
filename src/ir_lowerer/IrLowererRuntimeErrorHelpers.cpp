@@ -171,7 +171,7 @@ void emitVectorIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorSt
 }
 
 void emitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  emitRuntimeError(function, "vector pop on empty", internString);
+  emitRuntimeError(function, "container empty", internString);
 }
 
 void emitVectorCapacityExceeded(IrFunction &function, const InternRuntimeErrorStringFn &internString) {

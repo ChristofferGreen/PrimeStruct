@@ -89,6 +89,16 @@ TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") 
   }
 }
 
+TEST_CASE("compiles and runs vector pop empty runtime contract in C++ emitter") {
+  SUBCASE("call") {
+    expectVectorPopEmptyRuntimeContract("exe", false);
+  }
+
+  SUBCASE("method") {
+    expectVectorPopEmptyRuntimeContract("exe", true);
+  }
+}
+
 TEST_CASE("compiles and runs container error contract conformance in C++ emitter") {
   expectContainerErrorConformance("exe");
 }
