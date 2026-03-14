@@ -5686,6 +5686,33 @@ main() {
   CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
+TEST_CASE("vector method alias access field expression keeps struct receiver diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(values./vector/at(2i32).value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("field access requires struct receiver") != std::string::npos);
+}
+
 TEST_CASE("map method access keeps canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {
@@ -5705,6 +5732,33 @@ Marker {
 [return<auto>]
 project([map<i32, i32>] values) {
   return(values.at(2i32).tag())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(project(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map method access field expression keeps canonical struct-return forwarding") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<auto>]
+project([map<i32, i32>] values) {
+  return(values.at(2i32).value)
 }
 
 [effects(heap_alloc), return<int>]

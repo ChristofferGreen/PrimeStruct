@@ -4094,6 +4094,40 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
+TEST_CASE("rejects native vector method alias access field expression with struct receiver diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(values./vector/at(2i32).value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_vector_method_alias_access_field_expression_struct_receiver_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_vector_method_alias_access_field_expression_struct_receiver_diag.err")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+}
+
 TEST_CASE("rejects native map method alias access struct method chain with primitive receiver diagnostics") {
   const std::string source = R"(
 Marker {
@@ -4132,6 +4166,38 @@ main() {
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("keeps canonical native map method access field expression forwarding") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<auto>]
+project([map<i32, i32>] values) {
+  return(values.at(2i32).value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(project(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_map_method_field_access_forwarding.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_canonical_map_method_field_access_forwarding_exe")
+          .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects native map method alias access struct method chain with primitive argument diagnostics") {

@@ -1633,7 +1633,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             }
           }
         }
-      } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+      } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
         std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
         if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
           structPath = inferredStruct;
@@ -2713,7 +2713,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           (void)resolveStructPathFromType(typeName, receiver.namespacePrefix, structPathOut);
         }
-      } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+      } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
         std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
         if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
           structPathOut = inferredStruct;
