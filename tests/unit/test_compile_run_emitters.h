@@ -6865,6 +6865,29 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("C++ emitter keeps wrapper-returned vector string access count fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<string>>]
+wrapValues() {
+  return(vector<string>("abc"raw_utf8))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(/vector/at(wrapValues(), 0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_vector_string_access_count_fallback.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_vector_string_access_count_fallback_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("rejects stdlib namespaced vector access count for non-string element in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -6885,7 +6908,7 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
-TEST_CASE("rejects vector alias access count canonical wrapper return forwarding in C++ emitter") {
+TEST_CASE("C++ emitter keeps primitive diagnostics on vector alias access count canonical wrapper return forwarding") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapValues() {
@@ -6911,10 +6934,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("rejects vector alias access count with canonical non-string wrapper return in C++ emitter") {
+TEST_CASE("C++ emitter keeps primitive diagnostics on vector alias access count with canonical non-string wrapper return") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapValues() {
@@ -6940,7 +6963,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
 TEST_CASE("rejects inferred wrapper string count arg mismatch in C++ emitter") {

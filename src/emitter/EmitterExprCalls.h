@@ -391,6 +391,38 @@
       }
     }
   };
+  auto isExplicitVectorAccessCompatibilityCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "vector/at" && normalized != "vector/at_unsafe") {
+      return false;
+    }
+    return defMap.count("/" + normalized) == 0;
+  };
+  auto probedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
+    Expr probeCall;
+    probeCall.kind = Expr::Kind::Call;
+    probeCall.isMethodCall = true;
+    probeCall.name = "__primec_type_probe";
+    probeCall.args.push_back(targetExpr);
+    probeCall.argNames.push_back(std::nullopt);
+
+    std::string methodPath;
+    if (!resolveMethodCallPath(
+            probeCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
+      return "";
+    }
+    const size_t suffixPos = methodPath.rfind('/');
+    if (suffixPos == std::string::npos || suffixPos == 0) {
+      return "";
+    }
+    return methodPath.substr(0, suffixPos);
+  };
   auto resolvedTypePathForResolvedCall = [&](const std::string &resolvedPath) -> std::string {
     auto resolvedCandidates = collectionHelperPathCandidates(resolvedPath);
     pruneMapAccessStructReturnCompatibilityCandidates(resolvedPath, resolvedCandidates);
@@ -440,6 +472,16 @@
       }
     }
     if (!targetExpr.isMethodCall) {
+      if (isExplicitVectorAccessCompatibilityCall(targetExpr)) {
+        const std::string probedTypePath = probedTypePathForTarget(targetExpr);
+        if (probedTypePath == "/string" || probedTypePath == "/array" || probedTypePath == "/vector" ||
+            probedTypePath == "/map") {
+          return probedTypePath;
+        }
+        if (!probedTypePath.empty()) {
+          return "";
+        }
+      }
       return resolvedTypePathForResolvedCall(resolveExprPath(targetExpr));
     }
     std::string methodPath;
