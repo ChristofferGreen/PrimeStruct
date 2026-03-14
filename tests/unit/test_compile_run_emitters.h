@@ -4445,6 +4445,34 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /map/count") != std::string::npos);
 }
 
+TEST_CASE("rejects map namespaced contains compatibility alias in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [bool] found{/map/contains(values, 1i32)}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_map_namespaced_contains_compatibility_alias_reject.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_map_namespaced_contains_compatibility_alias_exe")
+          .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_map_namespaced_contains_compatibility_alias_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /map/contains") != std::string::npos);
+}
+
 TEST_CASE("rejects stdlib namespaced map count alias fallback without import in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]

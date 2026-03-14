@@ -239,6 +239,30 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /map/count") != std::string::npos);
 }
 
+TEST_CASE("rejects vm map namespaced contains compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [bool] found{/map/contains(values, 1i32)}
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_namespaced_contains_compatibility_alias_reject.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_map_namespaced_contains_compatibility_alias_reject_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /map/contains") != std::string::npos);
+}
+
 TEST_CASE("runs vm unchecked pointer conformance harness for imported .prime helpers") {
   expectUncheckedPointerHelperSurfaceConformance("vm");
   expectUncheckedPointerGrowthConformance("vm");

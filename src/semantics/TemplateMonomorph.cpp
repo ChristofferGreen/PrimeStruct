@@ -440,7 +440,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   }
   if (preferred.rfind("/map/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/map/").size());
-    if (suffix != "count") {
+    if (suffix != "count" && suffix != "contains") {
       const std::string stdlibAlias = "/std/collections/map/" + suffix;
       if (defs.count(stdlibAlias) > 0) {
         preferred = stdlibAlias;
@@ -495,7 +495,7 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
   if (path.rfind("/vector/", 0) != 0) {
     if (path.rfind("/map/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/map/").size());
-      if (suffix != "count") {
+      if (suffix != "count" && suffix != "contains") {
         const std::string stdlibPath = "/std/collections/map/" + suffix;
         if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
           return stdlibPath;

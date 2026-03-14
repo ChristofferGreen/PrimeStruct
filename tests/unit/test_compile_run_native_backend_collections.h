@@ -417,6 +417,37 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /map/count") != std::string::npos);
 }
 
+TEST_CASE("rejects native map namespaced contains compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [bool] found{/map/contains(values, 1i32)}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_map_namespaced_contains_compatibility_alias_reject.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_map_namespaced_contains_compatibility_alias_reject_out.txt")
+          .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_map_namespaced_contains_compatibility_alias_reject_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /map/contains") != std::string::npos);
+}
+
 TEST_CASE("compiles native map namespaced at compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

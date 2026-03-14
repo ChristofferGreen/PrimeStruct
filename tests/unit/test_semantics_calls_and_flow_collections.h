@@ -3911,6 +3911,49 @@ main() {
   CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
+TEST_CASE("map compatibility contains call requires explicit alias definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [bool] found{/map/contains(values, 1i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/contains") != std::string::npos);
+}
+
+TEST_CASE("map compatibility contains call keeps explicit alias precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/map/contains([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [bool] key) {
+  return(true)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [bool] found{/map/contains(values, 1i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("map namespaced at call resolves compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

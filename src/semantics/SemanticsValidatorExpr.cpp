@@ -1343,7 +1343,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
         const std::string suffix = preferred.substr(std::string("/map/").size());
-        if (suffix != "count") {
+        if (suffix != "count" && suffix != "contains") {
           const std::string stdlibAlias = "/std/collections/map/" + suffix;
           if (defMap_.count(stdlibAlias) > 0) {
             preferred = stdlibAlias;
@@ -3161,7 +3161,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         } else if (path.rfind("/map/", 0) == 0) {
           const std::string suffix = path.substr(std::string("/map/").size());
-          if (suffix != "count") {
+          if (suffix != "count" && suffix != "contains") {
             appendUnique("/std/collections/map/" + suffix);
           }
         } else if (path.rfind("/std/collections/map/", 0) == 0) {

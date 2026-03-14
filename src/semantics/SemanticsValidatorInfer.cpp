@@ -383,7 +383,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
         const std::string suffix = preferred.substr(std::string("/map/").size());
-        if (suffix != "count") {
+        if (suffix != "count" && suffix != "contains") {
           const std::string stdlibAlias = "/std/collections/map/" + suffix;
           if (defMap_.count(stdlibAlias) > 0) {
             preferred = stdlibAlias;
@@ -1313,10 +1313,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           }
         }
         if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-          const std::string stdlibAlias =
-              "/std/collections/map/" + preferred.substr(std::string("/map/").size());
-          if (defMap_.count(stdlibAlias) > 0) {
-            preferred = stdlibAlias;
+          const std::string suffix = preferred.substr(std::string("/map/").size());
+          if (suffix != "count" && suffix != "contains") {
+            const std::string stdlibAlias = "/std/collections/map/" + suffix;
+            if (defMap_.count(stdlibAlias) > 0) {
+              preferred = stdlibAlias;
+            }
           }
         }
         if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
@@ -1945,10 +1947,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
       if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-        const std::string stdlibAlias =
-            "/std/collections/map/" + preferred.substr(std::string("/map/").size());
-        if (defMap_.count(stdlibAlias) > 0) {
-          preferred = stdlibAlias;
+        const std::string suffix = preferred.substr(std::string("/map/").size());
+        if (suffix != "count" && suffix != "contains") {
+          const std::string stdlibAlias = "/std/collections/map/" + suffix;
+          if (defMap_.count(stdlibAlias) > 0) {
+            preferred = stdlibAlias;
+          }
         }
       }
       if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
@@ -2015,7 +2019,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           appendUnique("/array/" + suffix);
         }
       } else if (normalizedPath.rfind("/map/", 0) == 0) {
-        appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
+        const std::string suffix = normalizedPath.substr(std::string("/map/").size());
+        if (suffix != "count" && suffix != "contains") {
+          appendUnique("/std/collections/map/" + suffix);
+        }
       } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
         const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
         if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
@@ -3491,7 +3498,7 @@ std::string SemanticsValidator::inferStructReturnPath(
       }
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-      if (suffix != "count") {
+      if (suffix != "count" && suffix != "contains") {
         appendUnique("/std/collections/map/" + suffix);
       }
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
