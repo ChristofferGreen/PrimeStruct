@@ -1,9 +1,8 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+#include "test_compile_run_collection_conformance_helpers.h"
 #include "test_compile_run_container_error_conformance_helpers.h"
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
-#include "test_compile_run_map_conformance_helpers.h"
 #include "test_compile_run_unchecked_pointer_conformance_helpers.h"
-#include "test_compile_run_vector_conformance_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
@@ -2027,72 +2026,19 @@ main() {
 }
 
 TEST_CASE("compiles and runs native shared map conformance harness for stdlib and experimental helpers") {
-  SUBCASE("stdlib") {
-    expectMapHelperSurfaceConformance("native", "/std/collections/*");
-    expectMapExtendedConstructorConformance("native", "/std/collections/*");
-    expectMapOverwriteConformance("native", "/std/collections/*");
-    expectMapTryAtConformance("native", "/std/collections/*", false);
-    expectMapTryAtConformance("native", "/std/collections/*", true);
-  }
-
-  SUBCASE("experimental") {
-    expectMapHelperSurfaceConformance("native", "/std/collections/experimental_map/*");
-    expectMapExtendedConstructorConformance("native", "/std/collections/experimental_map/*");
-    expectMapOverwriteConformance("native", "/std/collections/experimental_map/*");
-    expectMapTryAtConformance("native", "/std/collections/experimental_map/*", false);
-    expectMapTryAtConformance("native", "/std/collections/experimental_map/*", true);
-    expectExperimentalMapAtMissingConformance("native");
-    expectExperimentalMapTryAtStringConformance("native");
-    expectExperimentalMapStringKeyReject("native", "lookup_argv");
-    expectExperimentalMapStringKeyReject("native", "constructor_argv");
-  }
+  expectSharedMapConformanceHarness("native");
 }
 
 TEST_CASE("compiles and runs native shared vector conformance harness for stdlib and experimental helpers") {
-  SUBCASE("stdlib") {
-    expectVectorHelperSurfaceConformance("native", "/std/collections/*");
-    expectVectorExtendedConstructorConformance("native", "/std/collections/*");
-    expectVectorGrowthConformance("native", "/std/collections/*");
-    expectVectorShrinkRemoveConformance("native", "/std/collections/*");
-    expectVectorTypeMismatchReject("native", "/std/collections/*");
-    expectVectorPopTypeMismatchReject("native", "/std/collections/*");
-    expectVectorPushTypeMismatchReject("native", "/std/collections/*");
-  }
-
-  SUBCASE("experimental") {
-    expectVectorHelperSurfaceConformance("native", "/std/collections/experimental_vector/*");
-    expectVectorExtendedConstructorConformance("native", "/std/collections/experimental_vector/*");
-    expectVectorGrowthConformance("native", "/std/collections/experimental_vector/*");
-    expectVectorShrinkRemoveConformance("native", "/std/collections/experimental_vector/*");
-    expectVectorTypeMismatchReject("native", "/std/collections/experimental_vector/*");
-    expectVectorPopTypeMismatchReject("native", "/std/collections/experimental_vector/*");
-    expectVectorPushTypeMismatchReject("native", "/std/collections/experimental_vector/*");
-  }
+  expectSharedVectorConformanceHarness("native");
 }
 
 TEST_CASE("compiles and runs native experimental vector helper runtime contracts") {
-  expectVectorHelperRuntimeContract("native", "/std/collections/experimental_vector/*", "pop_empty");
-  expectVectorHelperRuntimeContract("native", "/std/collections/experimental_vector/*", "remove_at_oob");
-  expectVectorHelperRuntimeContract("native", "/std/collections/experimental_vector/*", "remove_swap_oob");
+  expectExperimentalVectorRuntimeContracts("native");
 }
 
 TEST_CASE("rejects native experimental vector ownership-sensitive helpers") {
-  expectExperimentalVectorOwnershipReject(
-      "native",
-      "constructor",
-      "clear requires drop-trivial vector element type until container drop semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      "native",
-      "push",
-      "push requires relocation-trivial vector element type until container move/reallocation semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      "native",
-      "pop",
-      "pop requires drop-trivial vector element type until container drop semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      "native",
-      "remove_swap",
-      "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipRejects("native");
 }
 
 TEST_CASE("compiles and runs native vector pop empty runtime contract") {

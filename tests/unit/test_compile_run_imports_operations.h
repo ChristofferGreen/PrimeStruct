@@ -1,8 +1,7 @@
+#include "test_compile_run_collection_conformance_helpers.h"
 #include "test_compile_run_container_error_conformance_helpers.h"
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
-#include "test_compile_run_map_conformance_helpers.h"
 #include "test_compile_run_unchecked_pointer_conformance_helpers.h"
-#include "test_compile_run_vector_conformance_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
@@ -58,69 +57,19 @@ main() {
 }
 
 TEST_CASE("compiles and runs shared map conformance harness in C++ emitter") {
-  SUBCASE("stdlib") {
-    expectMapHelperSurfaceConformance("exe", "/std/collections/*");
-    expectMapExtendedConstructorConformance("exe", "/std/collections/*");
-    expectMapOverwriteConformance("exe", "/std/collections/*");
-    expectMapTryAtConformance("exe", "/std/collections/*", false);
-    expectMapTryAtConformance("exe", "/std/collections/*", true);
-  }
-
-  SUBCASE("experimental") {
-    expectMapHelperSurfaceConformance("exe", "/std/collections/experimental_map/*");
-    expectMapExtendedConstructorConformance("exe", "/std/collections/experimental_map/*");
-    expectMapOverwriteConformance("exe", "/std/collections/experimental_map/*");
-    expectMapTryAtConformance("exe", "/std/collections/experimental_map/*", false);
-    expectMapTryAtConformance("exe", "/std/collections/experimental_map/*", true);
-    expectExperimentalMapAtMissingConformance("exe");
-  }
+  expectSharedMapConformanceHarness("exe");
 }
 
 TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") {
-  SUBCASE("stdlib") {
-    expectVectorHelperSurfaceConformance("exe", "/std/collections/*");
-    expectVectorExtendedConstructorConformance("exe", "/std/collections/*");
-    expectVectorGrowthConformance("exe", "/std/collections/*");
-    expectVectorShrinkRemoveConformance("exe", "/std/collections/*");
-    expectVectorTypeMismatchReject("exe", "/std/collections/*");
-    expectVectorPopTypeMismatchReject("exe", "/std/collections/*");
-    expectVectorPushTypeMismatchReject("exe", "/std/collections/*");
-  }
-
-  SUBCASE("experimental") {
-    expectVectorHelperSurfaceConformance("exe", "/std/collections/experimental_vector/*");
-    expectVectorExtendedConstructorConformance("exe", "/std/collections/experimental_vector/*");
-    expectVectorGrowthConformance("exe", "/std/collections/experimental_vector/*");
-    expectVectorShrinkRemoveConformance("exe", "/std/collections/experimental_vector/*");
-    expectVectorTypeMismatchReject("exe", "/std/collections/experimental_vector/*");
-    expectVectorPopTypeMismatchReject("exe", "/std/collections/experimental_vector/*");
-    expectVectorPushTypeMismatchReject("exe", "/std/collections/experimental_vector/*");
-  }
+  expectSharedVectorConformanceHarness("exe");
 }
 
 TEST_CASE("compiles and runs experimental vector helper runtime contracts in C++ emitter") {
-  expectVectorHelperRuntimeContract("exe", "/std/collections/experimental_vector/*", "pop_empty");
-  expectVectorHelperRuntimeContract("exe", "/std/collections/experimental_vector/*", "remove_at_oob");
-  expectVectorHelperRuntimeContract("exe", "/std/collections/experimental_vector/*", "remove_swap_oob");
+  expectExperimentalVectorRuntimeContracts("exe");
 }
 
 TEST_CASE("rejects experimental vector ownership-sensitive helpers in C++ emitter") {
-  expectExperimentalVectorOwnershipReject(
-      "exe",
-      "constructor",
-      "clear requires drop-trivial vector element type until container drop semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      "exe",
-      "push",
-      "push requires relocation-trivial vector element type until container move/reallocation semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      "exe",
-      "pop",
-      "pop requires drop-trivial vector element type until container drop semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      "exe",
-      "remove_swap",
-      "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipRejects("exe");
 }
 
 TEST_CASE("compiles and runs vector pop empty runtime contract in C++ emitter") {

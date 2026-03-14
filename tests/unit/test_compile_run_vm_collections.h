@@ -1,8 +1,7 @@
+#include "test_compile_run_collection_conformance_helpers.h"
 #include "test_compile_run_container_error_conformance_helpers.h"
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
-#include "test_compile_run_map_conformance_helpers.h"
 #include "test_compile_run_unchecked_pointer_conformance_helpers.h"
-#include "test_compile_run_vector_conformance_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
@@ -1660,72 +1659,19 @@ main() {
 }
 
 TEST_CASE("runs vm shared map conformance harness for stdlib and experimental helpers") {
-  SUBCASE("stdlib") {
-    expectMapHelperSurfaceConformance("vm", "/std/collections/*");
-    expectMapExtendedConstructorConformance("vm", "/std/collections/*");
-    expectMapOverwriteConformance("vm", "/std/collections/*");
-    expectMapTryAtConformance("vm", "/std/collections/*", false);
-    expectMapTryAtConformance("vm", "/std/collections/*", true);
-  }
-
-  SUBCASE("experimental") {
-    expectMapHelperSurfaceConformance("vm", "/std/collections/experimental_map/*");
-    expectMapExtendedConstructorConformance("vm", "/std/collections/experimental_map/*");
-    expectMapOverwriteConformance("vm", "/std/collections/experimental_map/*");
-    expectMapTryAtConformance("vm", "/std/collections/experimental_map/*", false);
-    expectMapTryAtConformance("vm", "/std/collections/experimental_map/*", true);
-    expectExperimentalMapAtMissingConformance("vm");
-    expectExperimentalMapTryAtStringConformance("vm");
-    expectExperimentalMapStringKeyReject("vm", "lookup_argv");
-    expectExperimentalMapStringKeyReject("vm", "constructor_argv");
-  }
+  expectSharedMapConformanceHarness("vm");
 }
 
 TEST_CASE("runs vm shared vector conformance harness for stdlib and experimental helpers") {
-  SUBCASE("stdlib") {
-    expectVectorHelperSurfaceConformance("vm", "/std/collections/*");
-    expectVectorExtendedConstructorConformance("vm", "/std/collections/*");
-    expectVectorGrowthConformance("vm", "/std/collections/*");
-    expectVectorShrinkRemoveConformance("vm", "/std/collections/*");
-    expectVectorTypeMismatchReject("vm", "/std/collections/*");
-    expectVectorPopTypeMismatchReject("vm", "/std/collections/*");
-    expectVectorPushTypeMismatchReject("vm", "/std/collections/*");
-  }
-
-  SUBCASE("experimental") {
-    expectVectorHelperSurfaceConformance("vm", "/std/collections/experimental_vector/*");
-    expectVectorExtendedConstructorConformance("vm", "/std/collections/experimental_vector/*");
-    expectVectorGrowthConformance("vm", "/std/collections/experimental_vector/*");
-    expectVectorShrinkRemoveConformance("vm", "/std/collections/experimental_vector/*");
-    expectVectorTypeMismatchReject("vm", "/std/collections/experimental_vector/*");
-    expectVectorPopTypeMismatchReject("vm", "/std/collections/experimental_vector/*");
-    expectVectorPushTypeMismatchReject("vm", "/std/collections/experimental_vector/*");
-  }
+  expectSharedVectorConformanceHarness("vm");
 }
 
 TEST_CASE("runs vm experimental vector helper runtime contracts") {
-  expectVectorHelperRuntimeContract("vm", "/std/collections/experimental_vector/*", "pop_empty");
-  expectVectorHelperRuntimeContract("vm", "/std/collections/experimental_vector/*", "remove_at_oob");
-  expectVectorHelperRuntimeContract("vm", "/std/collections/experimental_vector/*", "remove_swap_oob");
+  expectExperimentalVectorRuntimeContracts("vm");
 }
 
 TEST_CASE("rejects vm experimental vector ownership-sensitive helpers") {
-  expectExperimentalVectorOwnershipReject(
-      "vm",
-      "constructor",
-      "clear requires drop-trivial vector element type until container drop semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      "vm",
-      "push",
-      "push requires relocation-trivial vector element type until container move/reallocation semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      "vm",
-      "pop",
-      "pop requires drop-trivial vector element type until container drop semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      "vm",
-      "remove_swap",
-      "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipRejects("vm");
 }
 
 TEST_CASE("runs vm vector pop empty runtime contract") {
