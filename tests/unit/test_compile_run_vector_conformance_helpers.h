@@ -232,6 +232,28 @@ inline std::string makeCanonicalVectorCapacityImportRequirementSource() {
   return source;
 }
 
+inline std::string makeCanonicalVectorAccessNamedArgsSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32>] values{vector<i32>(4i32, 5i32)}\n";
+  source += "  return(plus(/std/collections/vector/at([index] 0i32, [values] values),\n";
+  source += "      /std/collections/vector/at_unsafe([index] 1i32, [values] values)))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalVectorAccessImportRequirementSource(const std::string &helperName) {
+  std::string source;
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32>] values{vector<i32>(4i32, 5i32)}\n";
+  source += "  return(/std/collections/vector/" + helperName + "(values, 0i32))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorNamespaceCountShadowSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -560,6 +582,39 @@ inline void expectCanonicalVectorCapacityImportRequirement(const std::string &em
                                  " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+}
+
+inline void expectCanonicalVectorAccessNamedArgsConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorAccessNamedArgsSource(),
+      "vector_access_canonical_named_args_" + emitMode,
+      emitMode,
+      9);
+}
+
+inline void expectCanonicalVectorAccessImportRequirement(const std::string &emitMode,
+                                                         const std::string &helperName) {
+  const std::string source = makeCanonicalVectorAccessImportRequirementSource(helperName);
+  const std::string srcPath =
+      writeTemp("vector_" + helperName + "_canonical_import_requirement_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_vector_" + helperName + "_canonical_import_requirement_" + emitMode + "_out.txt"))
+          .string();
+  const std::string expected = "unknown call target: /std/collections/vector/" + helperName;
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(outPath).find(expected) != std::string::npos);
+    return;
+  }
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find(expected) != std::string::npos);
 }
 
 inline void expectCanonicalVectorNamespaceCountShadow(const std::string &emitMode) {

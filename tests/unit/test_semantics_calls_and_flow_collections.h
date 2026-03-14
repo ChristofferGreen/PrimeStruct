@@ -8050,17 +8050,46 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced vector access helper rejects named arguments") {
+TEST_CASE("stdlib namespaced vector access helper accepts named arguments through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(plus(/std/collections/vector/at([values] values, [index] 0i32),
+              /std/collections/vector/at_unsafe([index] 1i32, [values] values)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector access helper requires imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 5i32)}
-  return(/std/collections/vector/at([values] values, [index] 0i32))
+  return(/std/collections/vector/at(values, 0i32))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/at") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector at_unsafe helper requires imported stdlib helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/std/collections/vector/at_unsafe(values, 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access helper rejects named arguments") {
@@ -10690,7 +10719,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced access helper auto inference rejects canonical helper fallback") {
+TEST_CASE("vector stdlib namespaced access helper auto inference uses canonical helper definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
@@ -10705,8 +10734,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map stdlib namespaced access helper auto inference keeps receiver helper precedence") {

@@ -2106,7 +2106,7 @@ main() {
   CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
-TEST_CASE("rejects auto-inferred std namespaced access helper canonical fallback in C++ emitter") {
+TEST_CASE("compiles and runs auto-inferred std namespaced access helper canonical definition in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
@@ -2127,15 +2127,10 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_cpp_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_exe")
           .string();
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_cpp_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_err.txt")
-          .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects removed vector access alias named arguments in C++ emitter") {

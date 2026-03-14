@@ -8552,7 +8552,7 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("rejects vm auto-inferred std namespaced access helper canonical fallback") {
+TEST_CASE("runs vm with auto-inferred std namespaced access helper canonical definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
@@ -8568,13 +8568,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_out.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("named arguments not supported for builtin calls") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("runs vm with user vector pop call shadow") {

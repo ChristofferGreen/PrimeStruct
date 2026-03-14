@@ -2995,14 +2995,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
     const bool shouldSkipStdCapacityMethodFallback =
         isStdNamespacedVectorCapacityCall && defMap_.find("/vector/capacity") != defMap_.end();
-    const bool isBuiltinAccessName =
+    const bool hasBuiltinAccessSpelling =
         !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
+    const bool isStdNamespacedVectorAccessCall =
+        hasBuiltinAccessSpelling && !expr.isMethodCall &&
+        resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
+    const bool shouldAllowStdAccessCompatibilityFallback =
+        isStdNamespacedVectorAccessCall && !accessHelperName.empty() &&
+        defMap_.find("/vector/" + accessHelperName) != defMap_.end();
+    const bool isBuiltinAccessName =
+        hasBuiltinAccessSpelling &&
+        (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback);
     const bool isNamespacedVectorAccessCall =
         isBuiltinAccessName && isNamespacedVectorHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
-    const bool isStdNamespacedVectorAccessCall =
-        isBuiltinAccessName && !expr.isMethodCall &&
-        resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
     const bool shouldSkipStdAccessMethodFallback =
         isStdNamespacedVectorAccessCall && !accessHelperName.empty() &&
         defMap_.find("/vector/" + accessHelperName) != defMap_.end();
@@ -5589,7 +5595,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         }
       }
-      if (getBuiltinArrayAccessName(expr, builtinName)) {
+      if (getBuiltinArrayAccessName(expr, builtinName) &&
+          (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback)) {
         if (hasNamedArguments(expr.argNames)) {
           error_ = "named arguments not supported for builtin calls";
           return false;
