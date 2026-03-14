@@ -5702,7 +5702,7 @@ main() {
   CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("map method alias access rejects canonical struct-return forwarding during inference") {
+TEST_CASE("map method alias access keeps primitive receiver diagnostics during inference") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -5728,10 +5728,42 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
   return(project(values))
 }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("map method alias access keeps primitive argument diagnostics during inference") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
+}
+
+[return<auto>]
+project([map<i32, i32>] values) {
+  return(values./std/collections/map/at(2i32).tag(1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(project(values))
+}
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("vector method alias access keeps removed-alias diagnostics") {

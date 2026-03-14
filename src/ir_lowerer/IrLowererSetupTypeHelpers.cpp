@@ -851,7 +851,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
 
   const Definition *callee = resolveMethodCallDefinition(methodCallExpr, localsIn);
   if (callee == nullptr) {
-    auto resolveExplicitRemovedVectorAccessMethodReturnKind = [&](LocalInfo::ValueKind &builtinKindOut) {
+    auto resolveExplicitRemovedBuiltinAccessMethodReturnKind = [&](LocalInfo::ValueKind &builtinKindOut) {
       builtinKindOut = LocalInfo::ValueKind::Unknown;
       if (!methodCallExpr.isMethodCall || requireArrayReturn || methodCallExpr.args.size() != 2) {
         return false;
@@ -861,10 +861,6 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       if (!normalizedName.empty() && normalizedName.front() == '/') {
         normalizedName.erase(normalizedName.begin());
       }
-      if (normalizedName != "vector/at" && normalizedName != "vector/at_unsafe") {
-        return false;
-      }
-
       const Expr &receiverExpr = methodCallExpr.args.front();
       auto assignKnownElementKind = [&](LocalInfo::ValueKind valueKind) {
         if (valueKind == LocalInfo::ValueKind::Unknown) {
@@ -874,15 +870,31 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
         return true;
       };
 
+      auto assignMapValueKind = [&](const LocalInfo &receiverInfo) {
+        if (receiverInfo.kind == LocalInfo::Kind::Map ||
+            (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToMap)) {
+          return assignKnownElementKind(receiverInfo.mapValueKind);
+        }
+        return false;
+      };
+
       if (receiverExpr.kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(receiverExpr.name);
         if (localIt == localsIn.end()) {
           return false;
         }
         const LocalInfo &receiverInfo = localIt->second;
-        if (receiverInfo.kind == LocalInfo::Kind::Vector || receiverInfo.kind == LocalInfo::Kind::Array ||
-            (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToArray)) {
-          return assignKnownElementKind(receiverInfo.valueKind);
+        if (normalizedName == "vector/at" || normalizedName == "vector/at_unsafe") {
+          if (receiverInfo.kind == LocalInfo::Kind::Vector || receiverInfo.kind == LocalInfo::Kind::Array ||
+              (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToArray)) {
+            return assignKnownElementKind(receiverInfo.valueKind);
+          }
+          return false;
+        }
+        if (normalizedName == "map/at" || normalizedName == "map/at_unsafe" ||
+            normalizedName == "std/collections/map/at" ||
+            normalizedName == "std/collections/map/at_unsafe") {
+          return assignMapValueKind(receiverInfo);
         }
         return false;
       }
@@ -894,13 +906,20 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       if (!getBuiltinCollectionName(receiverExpr, collectionName)) {
         return false;
       }
-      if ((collectionName == "vector" || collectionName == "array") && receiverExpr.templateArgs.size() == 1) {
+      if ((normalizedName == "vector/at" || normalizedName == "vector/at_unsafe") &&
+          (collectionName == "vector" || collectionName == "array") && receiverExpr.templateArgs.size() == 1) {
         return assignKnownElementKind(valueKindFromTypeName(receiverExpr.templateArgs.front()));
+      }
+      if ((normalizedName == "map/at" || normalizedName == "map/at_unsafe" ||
+           normalizedName == "std/collections/map/at" ||
+           normalizedName == "std/collections/map/at_unsafe") &&
+          collectionName == "map" && receiverExpr.templateArgs.size() == 2) {
+        return assignKnownElementKind(valueKindFromTypeName(receiverExpr.templateArgs[1]));
       }
       return false;
     };
 
-    if (resolveExplicitRemovedVectorAccessMethodReturnKind(kindOut)) {
+    if (resolveExplicitRemovedBuiltinAccessMethodReturnKind(kindOut)) {
       if (methodResolvedOut != nullptr) {
         *methodResolvedOut = true;
       }
