@@ -389,7 +389,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/count") != std::string::npos);
 }
 
-TEST_CASE("compiles native map namespaced count compatibility alias") {
+TEST_CASE("rejects native map namespaced count compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -413,7 +413,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("compiles native map namespaced at compatibility alias") {
@@ -7274,7 +7275,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native map compatibility count call with canonical templated helper present") {
+TEST_CASE("rejects native map compatibility count call with canonical templated helper present") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -7294,13 +7295,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_map_count_call_alias_precedence_with_canonical_templated_helper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_map_count_call_alias_precedence_with_canonical_templated_helper_out.txt")
+          .string();
   const std::string exePath = (std::filesystem::temp_directory_path() /
                                "primec_native_map_count_call_alias_precedence_with_canonical_templated_helper_exe")
                                   .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 96);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("rejects native map compatibility count call mismatch with canonical templated helper present") {

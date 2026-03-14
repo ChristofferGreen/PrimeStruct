@@ -1342,10 +1342,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-        const std::string stdlibAlias =
-            "/std/collections/map/" + preferred.substr(std::string("/map/").size());
-        if (defMap_.count(stdlibAlias) > 0) {
-          preferred = stdlibAlias;
+        const std::string suffix = preferred.substr(std::string("/map/").size());
+        if (suffix != "count") {
+          const std::string stdlibAlias = "/std/collections/map/" + suffix;
+          if (defMap_.count(stdlibAlias) > 0) {
+            preferred = stdlibAlias;
+          }
         }
       }
       if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
@@ -2152,6 +2154,42 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       if (candidate.args.empty()) {
+        return false;
+      }
+      size_t receiverIndex = 0;
+      if (hasNamedArguments(candidate.argNames)) {
+        bool foundValues = false;
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+              *candidate.argNames[i] == "values") {
+            receiverIndex = i;
+            foundValues = true;
+            break;
+          }
+        }
+        if (!foundValues) {
+          receiverIndex = 0;
+        }
+      }
+      if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      return resolveMapTarget(candidate.args[receiverIndex]);
+    };
+    auto isMapNamespacedCountCompatibilityCall = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      const bool spellsMapCount = (normalized == "map/count");
+      const bool resolvesMapCount = (resolveCalleePath(candidate) == "/map/count");
+      if (!spellsMapCount && !resolvesMapCount) {
+        return false;
+      }
+      if (defMap_.find("/map/count") != defMap_.end() || candidate.args.empty()) {
         return false;
       }
       size_t receiverIndex = 0;
@@ -2998,11 +3036,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
-        !isStdNamespacedMapCountCall;
+        !isStdNamespacedMapCountCall && !isMapNamespacedCountCompatibilityCall(expr);
     const bool isUnnamespacedMapCountFallbackCall =
         !expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr);
     const bool isResolvedMapCountCall =
-        !expr.isMethodCall && resolved == "/map/count";
+        !expr.isMethodCall && resolved == "/map/count" &&
+        !isMapNamespacedCountCompatibilityCall(expr) &&
+        !isUnnamespacedMapCountFallbackCall;
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
         isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1;
@@ -3120,7 +3160,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             appendUnique("/array/" + suffix);
           }
         } else if (path.rfind("/map/", 0) == 0) {
-          appendUnique("/std/collections/map/" + path.substr(std::string("/map/").size()));
+          const std::string suffix = path.substr(std::string("/map/").size());
+          if (suffix != "count") {
+            appendUnique("/std/collections/map/" + suffix);
+          }
         } else if (path.rfind("/std/collections/map/", 0) == 0) {
           const std::string suffix = path.substr(std::string("/std/collections/map/").size());
           if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
@@ -4985,8 +5028,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
       if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" ||
-                             resolved == "/soa_vector/count" || resolved == "/string/count" ||
-                             resolved == "/map/count")) {
+                             resolved == "/soa_vector/count" || resolved == "/string/count")) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;

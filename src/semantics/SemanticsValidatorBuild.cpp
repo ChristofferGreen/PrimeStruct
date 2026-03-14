@@ -1763,8 +1763,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       return false;
     }
     const bool isCountLike =
-        (isSimpleCallName(expr, "count") || resolveCalleePath(expr) == "/std/collections/map/count" ||
-         resolveCalleePath(expr) == "/map/count") &&
+        (isSimpleCallName(expr, "count") || resolveCalleePath(expr) == "/std/collections/map/count") &&
         expr.args.size() == 1;
     const bool isMapContainsLike =
         !expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2;

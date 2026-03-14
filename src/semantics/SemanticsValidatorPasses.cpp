@@ -2792,9 +2792,12 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
       }
     }
     if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-      const std::string stdlibAlias = "/std/collections/map/" + preferred.substr(std::string("/map/").size());
-      if (defMap_.count(stdlibAlias) > 0) {
-        preferred = stdlibAlias;
+      const std::string suffix = preferred.substr(std::string("/map/").size());
+      if (suffix != "count") {
+        const std::string stdlibAlias = "/std/collections/map/" + suffix;
+        if (defMap_.count(stdlibAlias) > 0) {
+          preferred = stdlibAlias;
+        }
       }
     }
     if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
@@ -2867,7 +2870,10 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
         appendUnique("/array/" + suffix);
       }
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
-      appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
+      const std::string suffix = normalizedPath.substr(std::string("/map/").size());
+      if (suffix != "count") {
+        appendUnique("/std/collections/map/" + suffix);
+      }
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
       if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&

@@ -3874,7 +3874,7 @@ main() {
   CHECK(error.find("at requires map key type i32") != std::string::npos);
 }
 
-TEST_CASE("map namespaced count call resolves compatibility alias") {
+TEST_CASE("map compatibility count call requires explicit alias definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -3888,11 +3888,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("map namespaced count auto inference resolves compatibility alias") {
+TEST_CASE("map compatibility count auto inference requires explicit alias definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -3907,8 +3907,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("map namespaced at call resolves compatibility alias") {
@@ -9253,7 +9253,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map compatibility alias forwards to canonical templated helper") {
+TEST_CASE("map compatibility count call does not inherit canonical templated helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -9267,8 +9267,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("map compatibility explicit-template count call keeps alias precedence with canonical templated helper") {
