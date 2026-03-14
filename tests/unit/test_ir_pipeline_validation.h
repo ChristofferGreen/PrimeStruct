@@ -10542,6 +10542,81 @@ TEST_CASE("ir lowerer struct return helpers keep empty result when alias candida
                                                           defMap).empty());
 }
 
+TEST_CASE("ir lowerer struct return helpers reject canonical vector access call forwarding") {
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/Marker",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  primec::Definition canonicalAt;
+  canonicalAt.fullPath = "/std/collections/vector/at";
+  canonicalAt.namespacePrefix = "/std/collections/vector";
+  primec::Transform returnMarker;
+  returnMarker.name = "return";
+  returnMarker.templateArgs = {"Marker"};
+  canonicalAt.transforms.push_back(returnMarker);
+
+  primec::Definition canonicalAtUnsafe;
+  canonicalAtUnsafe.fullPath = "/std/collections/vector/at_unsafe";
+  canonicalAtUnsafe.namespacePrefix = "/std/collections/vector";
+  canonicalAtUnsafe.transforms.push_back(returnMarker);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalAt.fullPath, &canonicalAt},
+      {canonicalAtUnsafe.fullPath, &canonicalAtUnsafe},
+  };
+  std::unordered_map<std::string, primec::ir_lowerer::LayoutFieldBinding> knownFields;
+  knownFields["values"].typeName = "vector";
+  knownFields["values"].typeTemplateArg = "i32";
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 2;
+
+  primec::Expr canonicalAtCall;
+  canonicalAtCall.kind = primec::Expr::Kind::Call;
+  canonicalAtCall.name = "/std/collections/vector/at";
+  canonicalAtCall.args = {valuesName, indexLiteral};
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(canonicalAtCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap).empty());
+
+  primec::Expr canonicalAtUnsafeCall;
+  canonicalAtUnsafeCall.kind = primec::Expr::Kind::Call;
+  canonicalAtUnsafeCall.name = "/std/collections/vector/at_unsafe";
+  canonicalAtUnsafeCall.args = {valuesName, indexLiteral};
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(canonicalAtUnsafeCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap).empty());
+}
+
 TEST_CASE("ir lowerer struct return helpers keep bare map access canonical forwarding") {
   const std::unordered_set<std::string> structNames = {
       "/map",

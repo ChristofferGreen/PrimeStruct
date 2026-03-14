@@ -5425,6 +5425,60 @@ main() {
   CHECK(error.find("field access requires struct receiver") != std::string::npos);
 }
 
+TEST_CASE("vector canonical access call keeps primitive receiver diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/std/collections/vector/at(values, 2i32).tag())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("vector canonical unsafe access call keeps struct receiver diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(/std/collections/vector/at_unsafe(values, 2i32).value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("field access requires struct receiver") != std::string::npos);
+}
+
 TEST_CASE("map namespaced access call keeps canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {

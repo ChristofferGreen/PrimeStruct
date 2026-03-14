@@ -2915,6 +2915,58 @@ std::string SemanticsValidator::inferStructReturnPath(
       }
     }
   };
+  auto pruneBuiltinVectorAccessStructReturnCandidates = [&](const Expr &candidate,
+                                                            const std::string &path,
+                                                            std::vector<std::string> &candidates) {
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("vector/", 0) == 0 || normalizedPath.rfind("std/collections/vector/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+    if (normalizedPath.rfind("/std/collections/vector/", 0) != 0) {
+      return;
+    }
+    const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+    if (suffix != "at" && suffix != "at_unsafe") {
+      return;
+    }
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
+      return;
+    }
+    size_t receiverIndex = 0;
+    if (hasNamedArguments(candidate.argNames)) {
+      bool foundValues = false;
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          receiverIndex = i;
+          foundValues = true;
+          break;
+        }
+      }
+      if (!foundValues) {
+        receiverIndex = 0;
+      }
+    }
+    if (receiverIndex >= candidate.args.size()) {
+      return;
+    }
+    std::string elemType;
+    if (!resolveVectorTarget(candidate.args[receiverIndex], elemType) &&
+        !resolveArrayTarget(candidate.args[receiverIndex], elemType) &&
+        !resolveStringTarget(candidate.args[receiverIndex])) {
+      return;
+    }
+    const std::string canonicalCandidate = "/std/collections/vector/" + suffix;
+    for (auto it = candidates.begin(); it != candidates.end();) {
+      if (*it == canonicalCandidate) {
+        it = candidates.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  };
   auto isExplicitMapAccessStructReturnCompatibilityCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
@@ -3129,6 +3181,7 @@ std::string SemanticsValidator::inferStructReturnPath(
     const std::string structReturnProbePath = isExplicitMapAccessCompatibilityCall ? expr.name : resolvedCallee;
     auto resolvedCandidates = collectionHelperPathCandidates(structReturnProbePath);
     pruneMapAccessStructReturnCompatibilityCandidates(structReturnProbePath, resolvedCandidates);
+    pruneBuiltinVectorAccessStructReturnCandidates(expr, structReturnProbePath, resolvedCandidates);
     for (const auto &candidate : resolvedCandidates) {
       auto structIt = returnStructs_.find(candidate);
       if (structIt != returnStructs_.end()) {

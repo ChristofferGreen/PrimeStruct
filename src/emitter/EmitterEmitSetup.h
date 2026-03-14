@@ -790,6 +790,58 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
     }
   };
+  auto pruneBuiltinVectorAccessStructReturnCandidates = [&](const Expr &candidate,
+                                                            const std::string &path,
+                                                            const std::vector<Expr> &params,
+                                                            const std::unordered_map<std::string, std::string> &locals,
+                                                            std::vector<std::string> &candidates) {
+    std::string normalizedPath = path;
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("vector/", 0) == 0 || normalizedPath.rfind("std/collections/vector/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+    if (normalizedPath.rfind("/std/collections/vector/", 0) != 0) {
+      return;
+    }
+    const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+    if (suffix != "at" && suffix != "at_unsafe") {
+      return;
+    }
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
+      return;
+    }
+    size_t receiverIndex = 0;
+    if (hasNamedArguments(candidate.argNames)) {
+      bool foundValues = false;
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          receiverIndex = i;
+          foundValues = true;
+          break;
+        }
+      }
+      if (!foundValues) {
+        receiverIndex = 0;
+      }
+    }
+    if (receiverIndex >= candidate.args.size()) {
+      return;
+    }
+    const std::string receiverStruct = inferStructReturnPath(candidate.args[receiverIndex], params, locals);
+    if (receiverStruct != "/vector" && receiverStruct != "/array" && receiverStruct != "/string") {
+      return;
+    }
+    const std::string canonicalCandidate = "/std/collections/vector/" + suffix;
+    for (auto it = candidates.begin(); it != candidates.end();) {
+      if (*it == canonicalCandidate) {
+        it = candidates.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  };
 
   inferExprReturnKind = [&](const Expr &expr,
                             const std::vector<Expr> &params,
@@ -1164,6 +1216,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       const std::string resolvedExprPath = resolveExprPath(expr);
       auto resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
       pruneMapAccessStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
+      pruneBuiltinVectorAccessStructReturnCandidates(expr, resolvedExprPath, params, locals, resolvedCandidates);
       for (const auto &candidate : resolvedCandidates) {
         auto it = returnStructs.find(candidate);
         if (it != returnStructs.end()) {

@@ -420,7 +420,53 @@ std::string inferStructReturnPathFromExprInternal(
     return "";
   }
 
-  const auto resolvedCandidates = collectionHelperPathCandidates(resolveStructLayoutExprPath(expr));
+  auto resolvedCandidates = collectionHelperPathCandidates(resolveStructLayoutExprPath(expr));
+  if (!expr.isMethodCall && !expr.args.empty()) {
+    std::string normalizedPath = resolveStructLayoutExprPath(expr);
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      if (normalizedPath.rfind("vector/", 0) == 0 || normalizedPath.rfind("std/collections/vector/", 0) == 0) {
+        normalizedPath.insert(normalizedPath.begin(), '/');
+      }
+    }
+    if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+      if (suffix == "at" || suffix == "at_unsafe") {
+        size_t receiverIndex = 0;
+        if (hasNamedArguments(expr.argNames)) {
+          bool foundValues = false;
+          for (size_t i = 0; i < expr.args.size(); ++i) {
+            if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
+              receiverIndex = i;
+              foundValues = true;
+              break;
+            }
+          }
+          if (!foundValues) {
+            receiverIndex = 0;
+          }
+        }
+        if (receiverIndex < expr.args.size()) {
+          const std::string receiverStruct = inferStructReturnPathFromExprInternal(expr.args[receiverIndex],
+                                                                                   knownFields,
+                                                                                   structNames,
+                                                                                   resolveStructTypePath,
+                                                                                   resolveStructLayoutExprPath,
+                                                                                   defMap,
+                                                                                   visitedDefs);
+          if (receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") {
+            const std::string canonicalCandidate = "/std/collections/vector/" + suffix;
+            for (auto it = resolvedCandidates.begin(); it != resolvedCandidates.end();) {
+              if (*it == canonicalCandidate) {
+                it = resolvedCandidates.erase(it);
+              } else {
+                ++it;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   for (const auto &candidate : resolvedCandidates) {
     if (structNames.count(candidate) > 0) {
       return candidate;
