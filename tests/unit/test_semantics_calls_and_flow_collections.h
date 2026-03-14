@@ -3668,8 +3668,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced map constructor is treated as builtin collection") {
+TEST_CASE("stdlib namespaced map constructor resolves through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
@@ -3681,17 +3683,17 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced map constructor rejects named arguments") {
+TEST_CASE("stdlib namespaced map constructor requires imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{/std/collections/map/map<i32, i32>([firstKey] 1i32, [firstValue] 4i32)}
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
   return(count(values))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/map") != std::string::npos);
 }
 
 TEST_CASE("imported stdlib namespaced map helpers accept ordinary named arguments") {
@@ -3900,7 +3902,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced map constructor template call resolves map alias helper fallback") {
+TEST_CASE("stdlib namespaced map constructor does not resolve map alias helper fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/map<T, U>([T] key, [U] value) {
@@ -3913,42 +3915,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("stdlib namespaced map constructor template fallback rejects non-templated map alias helper") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/map/map([i32] key, [i32] value) {
-  return(77i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/std/collections/map/map<i32, i32>(1i32, 2i32))
-}
-)";
-  std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /map/map") != std::string::npos);
-}
-
-TEST_CASE("stdlib namespaced map constructor fallback keeps map alias diagnostics") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/map/map([i32] key) {
-  return(key)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/std/collections/map/map(1i32, 2i32))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /map/map") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/map") != std::string::npos);
 }
 
 TEST_CASE("map unnamespaced count call resolves builtin fallback with canonical helper") {

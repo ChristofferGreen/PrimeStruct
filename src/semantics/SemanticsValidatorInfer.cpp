@@ -389,10 +389,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
       if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-        const std::string mapAlias =
-            "/map/" + preferred.substr(std::string("/std/collections/map/").size());
-        if (defMap_.count(mapAlias) > 0) {
-          preferred = mapAlias;
+        const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
+        if (suffix != "map") {
+          const std::string mapAlias = "/map/" + suffix;
+          if (defMap_.count(mapAlias) > 0) {
+            preferred = mapAlias;
+          }
         }
       }
       return preferred;
@@ -1315,10 +1317,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           }
         }
         if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-          const std::string mapAlias =
-              "/map/" + preferred.substr(std::string("/std/collections/map/").size());
-          if (defMap_.count(mapAlias) > 0) {
-            preferred = mapAlias;
+          const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
+          if (suffix != "map") {
+            const std::string mapAlias = "/map/" + suffix;
+            if (defMap_.count(mapAlias) > 0) {
+              preferred = mapAlias;
+            }
           }
         }
         return preferred;
@@ -1944,10 +1948,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
       if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-        const std::string mapAlias =
-            "/map/" + preferred.substr(std::string("/std/collections/map/").size());
-        if (defMap_.count(mapAlias) > 0) {
-          preferred = mapAlias;
+        const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
+        if (suffix != "map") {
+          const std::string mapAlias = "/map/" + suffix;
+          if (defMap_.count(mapAlias) > 0) {
+            preferred = mapAlias;
+          }
         }
       }
       return preferred;
@@ -2006,7 +2012,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       } else if (normalizedPath.rfind("/map/", 0) == 0) {
         appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
       } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-        appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
+        const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
+        if (suffix != "map") {
+          appendUnique("/map/" + suffix);
+        }
       }
       return candidates;
     };
@@ -3468,7 +3477,10 @@ std::string SemanticsValidator::inferStructReturnPath(
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-      appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
+      const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
+      if (suffix != "map") {
+        appendUnique("/map/" + suffix);
+      }
     }
     return candidates;
   };

@@ -408,7 +408,7 @@ main() {
   CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
 }
 
-TEST_CASE("runs vm stdlib namespaced map constructor fallback to map alias helper") {
+TEST_CASE("rejects vm stdlib namespaced map constructor alias fallback without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/map<T, U>([T] key, [U] value) {
@@ -426,32 +426,8 @@ main() {
        "primec_vm_stdlib_namespaced_map_constructor_alias_fallback_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 77);
-  CHECK(readFile(outPath).empty());
-}
-
-TEST_CASE("runs vm stdlib namespaced map constructor template fallback rejects non-templated map alias helper") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/map/map([i32] key, [i32] value) {
-  return(77i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/std/collections/map/map<i32, i32>(1i32, 2i32))
-}
-)";
-  const std::string srcPath =
-      writeTemp("vm_stdlib_namespaced_map_constructor_template_non_template_alias_reject.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_stdlib_namespaced_map_constructor_template_non_template_alias_reject_out.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("template arguments are only supported on templated definitions: /map/map") !=
-        std::string::npos);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/map") != std::string::npos);
 }
 
 TEST_CASE("runs vm stdlib namespaced map at fallback to map alias helper") {

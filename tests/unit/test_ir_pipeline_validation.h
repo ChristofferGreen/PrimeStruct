@@ -19622,7 +19622,7 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map call return fallback
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
-TEST_CASE("ir lowerer setup type helper keeps canonical map constructor fallback to compatibility defs") {
+TEST_CASE("ir lowerer setup type helper rejects canonical map constructor fallback to compatibility defs") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition aliasCtorDef;
   aliasCtorDef.fullPath = "/map/map";
@@ -19651,7 +19651,7 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map constructor fallback
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   bool definitionMatched = false;
-  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       ctorCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -19659,8 +19659,8 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map constructor fallback
       false,
       kindOut,
       &definitionMatched));
-  CHECK(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup type helper rejects canonical return-info forwarding when compatibility defs lack return info") {

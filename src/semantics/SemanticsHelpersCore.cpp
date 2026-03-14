@@ -905,11 +905,6 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/map/").size());
-    if (alias == "map") {
-      out = "map";
-      return true;
-    }
     return false;
   }
   if (name.find('/') != std::string::npos) {

@@ -244,7 +244,10 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-    appendUnique("/map/" + normalizedPath.substr(std::string("/std/collections/map/").size()));
+    const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
+    if (suffix != "map") {
+      appendUnique("/map/" + suffix);
+    }
   }
 
   return candidates;
@@ -746,11 +749,13 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       }
     }
     if (path.rfind("/std/collections/map/", 0) == 0) {
-      const std::string mapAlias =
-          "/map/" + path.substr(std::string("/std/collections/map/").size());
-      defIt = defMap.find(mapAlias);
-      if (defIt != defMap.end()) {
-        return defIt->second;
+      const std::string suffix = path.substr(std::string("/std/collections/map/").size());
+      if (suffix != "map") {
+        const std::string mapAlias = "/map/" + suffix;
+        defIt = defMap.find(mapAlias);
+        if (defIt != defMap.end()) {
+          return defIt->second;
+        }
       }
     }
     return nullptr;
