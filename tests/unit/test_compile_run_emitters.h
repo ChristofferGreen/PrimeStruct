@@ -5807,6 +5807,35 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
+TEST_CASE("rejects vector alias access field expression with struct receiver diagnostics in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/vector/at(values, 2i32).value)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_alias_access_field_expression_struct_receiver_diag.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_vector_alias_access_field_expression_struct_receiver_diag.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+}
+
 TEST_CASE("keeps canonical map access struct method chain forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {

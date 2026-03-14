@@ -5398,7 +5398,7 @@ main() {
   CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access alias field expression rejects canonical struct-return forwarding") {
+TEST_CASE("vector namespaced access alias field expression keeps struct receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -5422,7 +5422,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("map namespaced access call keeps canonical struct-return forwarding") {

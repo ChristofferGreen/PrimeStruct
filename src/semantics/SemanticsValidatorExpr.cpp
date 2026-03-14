@@ -2642,8 +2642,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     };
 
-    auto resolveStructFieldBinding =
-        [&](const Expr &receiver, const std::string &fieldName, BindingInfo &bindingOut) -> bool {
+    auto resolveStructFieldReceiverPath =
+        [&](const Expr &receiver, std::string &structPathOut) -> bool {
       auto resolveStructPathFromType = [&](const std::string &typeName,
                                            const std::string &namespacePrefix,
                                            std::string &structPathOut) -> bool {
@@ -2698,7 +2698,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return false;
       };
-      std::string structPath;
       if (receiver.kind == Expr::Kind::Name) {
         const BindingInfo *binding = findParamBinding(params, receiver.name);
         if (!binding) {
@@ -2712,20 +2711,26 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if ((typeName == "Reference" || typeName == "Pointer") && !binding->typeTemplateArg.empty()) {
             typeName = binding->typeTemplateArg;
           }
-          (void)resolveStructPathFromType(typeName, receiver.namespacePrefix, structPath);
+          (void)resolveStructPathFromType(typeName, receiver.namespacePrefix, structPathOut);
         }
       } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
         std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
         if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
-          structPath = inferredStruct;
+          structPathOut = inferredStruct;
         } else {
           std::string resolvedType = resolveCalleePath(receiver);
           if (structNames_.count(resolvedType) > 0) {
-            structPath = resolvedType;
+            structPathOut = resolvedType;
           }
         }
       }
-      if (structPath.empty()) {
+      return !structPathOut.empty();
+    };
+
+    auto resolveStructFieldBinding =
+        [&](const Expr &receiver, const std::string &fieldName, BindingInfo &bindingOut) -> bool {
+      std::string structPath;
+      if (!resolveStructFieldReceiverPath(receiver, structPath)) {
         return false;
       }
       auto defIt = defMap_.find(structPath);
@@ -2874,7 +2879,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       BindingInfo fieldBinding;
       if (!resolveStructFieldBinding(expr.args.front(), expr.name, fieldBinding)) {
         if (error_.empty()) {
-          error_ = "unknown field: " + expr.name;
+          std::string receiverStructPath;
+          if (!resolveStructFieldReceiverPath(expr.args.front(), receiverStructPath)) {
+            error_ = "field access requires struct receiver";
+          } else {
+            error_ = "unknown field: " + expr.name;
+          }
         }
         return false;
       }
