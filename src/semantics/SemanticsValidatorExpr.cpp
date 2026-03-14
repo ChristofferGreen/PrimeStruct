@@ -5059,6 +5059,54 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
+      if (!resolvedMethod && !expr.isMethodCall && isSimpleCallName(expr, "contains") && it == defMap_.end()) {
+        if (!expr.templateArgs.empty()) {
+          error_ = "contains does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "contains does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 2) {
+          error_ = "argument count mismatch for builtin contains";
+          return false;
+        }
+        std::string mapKeyType;
+        if (!resolveMapKeyType(expr.args.front(), mapKeyType)) {
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          error_ = "contains requires map target";
+          return false;
+        }
+        if (!mapKeyType.empty()) {
+          if (normalizeBindingTypeName(mapKeyType) == "string") {
+            if (!isStringExpr(expr.args[1])) {
+              error_ = "contains requires string map key";
+              return false;
+            }
+          } else {
+            ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+            if (keyKind != ReturnKind::Unknown) {
+              if (resolveStringTarget(expr.args[1])) {
+                error_ = "contains requires map key type " + mapKeyType;
+                return false;
+              }
+              ReturnKind candidateKind = inferExprReturnKind(expr.args[1], params, locals);
+              if (candidateKind != ReturnKind::Unknown && candidateKind != keyKind) {
+                error_ = "contains requires map key type " + mapKeyType;
+                return false;
+              }
+            }
+          }
+        }
+        if (!validateExpr(params, locals, expr.args.front()) ||
+            !validateExpr(params, locals, expr.args[1])) {
+          return false;
+        }
+        return true;
+      }
       if (!resolvedMethod &&
           (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
           it == defMap_.end()) {

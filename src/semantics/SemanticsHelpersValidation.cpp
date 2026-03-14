@@ -228,6 +228,7 @@ bool isDefaultExprAllowed(const Expr &expr, const std::function<bool(const Expr 
           getBuiltinAbsSignName(expr, builtinName, true) || getBuiltinSaturateName(expr, builtinName, true) ||
           getBuiltinMathName(expr, builtinName, true) || getBuiltinConvertName(expr, builtinName) ||
           getBuiltinCollectionName(expr, builtinName) || getBuiltinArrayAccessName(expr, builtinName) ||
+          (!expr.isMethodCall && isSimpleCallName(expr, "contains")) ||
           isIfCall(expr) || isMatchCall(expr))) {
       return false;
     }

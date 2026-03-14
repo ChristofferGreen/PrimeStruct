@@ -52,6 +52,45 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("contains builtin validates on map binding") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(contains(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("contains builtin rejects non-map target") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(contains(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("contains requires map target") != std::string::npos);
+}
+
+TEST_CASE("contains builtin rejects mismatched map key type") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(contains(values, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("contains requires map key type i32") != std::string::npos);
+}
+
 TEST_CASE("map binding rejects unsupported builtin Comparable key contract") {
   const std::string source = R"(
 [return<int>]

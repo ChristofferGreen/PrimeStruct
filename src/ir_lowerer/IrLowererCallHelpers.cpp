@@ -108,6 +108,34 @@ std::string normalizeMapImportAliasPath(const std::string &path) {
 
 } // namespace
 
+MapAccessLookupEmitResult tryEmitMapContainsLookup(
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error);
+
+bool emitMapLookupContains(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error);
+
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
                                         const ResolveExprPathFn &resolveExprPath) {
@@ -600,6 +628,34 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::Error;
   }
 
+  if (!expr.isMethodCall && isSimpleCallName(expr, "contains")) {
+    if (expr.args.size() != 2) {
+      error = "contains requires exactly two arguments";
+      return NativeCallTailDispatchResult::Error;
+    }
+    const auto containsResult = tryEmitMapContainsLookup(
+        expr.args.front(),
+        expr.args[1],
+        localsIn,
+        allocTempLocal,
+        emitExpr,
+        resolveStringTableTarget,
+        resolveCallMapAccessTargetInfo,
+        inferExprKind,
+        instructionCount,
+        emitInstruction,
+        patchInstructionImm,
+        error);
+    if (containsResult == MapAccessLookupEmitResult::Emitted) {
+      return NativeCallTailDispatchResult::Emitted;
+    }
+    if (containsResult == MapAccessLookupEmitResult::Error) {
+      return NativeCallTailDispatchResult::Error;
+    }
+    error = "contains requires map target";
+    return NativeCallTailDispatchResult::Error;
+  }
+
   const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnostic(
       expr, tryGetPrintBuiltinName, error);
   if (unsupportedCallResult == UnsupportedNativeCallResult::Error) {
@@ -932,6 +988,45 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
       emitInstruction,
       patchInstructionImm,
       error);
+}
+
+MapAccessLookupEmitResult tryEmitMapContainsLookup(
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  const auto mapTargetInfo = resolveMapAccessTargetInfo(
+      targetExpr, localsIn, resolveCallMapAccessTargetInfo);
+  if (!mapTargetInfo.isMapTarget) {
+    return MapAccessLookupEmitResult::NotHandled;
+  }
+  if (!validateMapAccessTargetInfo(mapTargetInfo, "contains", error)) {
+    return MapAccessLookupEmitResult::Error;
+  }
+  if (!emitMapLookupContains(
+          mapTargetInfo.mapKeyKind,
+          targetExpr,
+          lookupKeyExpr,
+          localsIn,
+          allocTempLocal,
+          emitExpr,
+          resolveStringTableTarget,
+          inferExprKind,
+          instructionCount,
+          emitInstruction,
+          patchInstructionImm,
+          error)) {
+    return MapAccessLookupEmitResult::Error;
+  }
+  return MapAccessLookupEmitResult::Emitted;
 }
 
 StringTableAccessEmitResult tryEmitStringTableAccessLoad(
@@ -1443,6 +1538,15 @@ void emitMapLookupAccessEpilogue(
   emitMapLookupValueLoad(ptrLocal, indexLocal, emitInstruction);
 }
 
+void emitMapLookupContainsResult(
+    int32_t indexLocal,
+    int32_t countLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
+  emitInstruction(IrOpcode::CmpLtI32, 0);
+}
+
 bool emitMapLookupAccess(
     const std::string &accessName,
     LocalInfo::ValueKind mapKeyKind,
@@ -1496,6 +1600,52 @@ bool emitMapLookupAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm);
+  return true;
+}
+
+bool emitMapLookupContains(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  int32_t ptrLocal = -1;
+  if (!emitMapLookupTargetPointerLocal(
+          targetExpr,
+          localsIn,
+          allocTempLocal,
+          emitExpr,
+          [&](int32_t localIndex) { emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)); },
+          ptrLocal)) {
+    return false;
+  }
+
+  int32_t keyLocal = -1;
+  if (!emitMapLookupKeyLocal(
+          mapKeyKind,
+          lookupKeyExpr,
+          localsIn,
+          allocTempLocal,
+          resolveStringTableTarget,
+          inferExprKind,
+          emitExpr,
+          [&](int32_t stringIndex) { emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)); },
+          [&](int32_t localIndex) { emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)); },
+          keyLocal,
+          error)) {
+    return false;
+  }
+
+  const auto loopLocals = emitMapLookupLoopSearchScaffold(
+      ptrLocal, keyLocal, mapKeyKind, allocTempLocal, instructionCount, emitInstruction, patchInstructionImm);
+  emitMapLookupContainsResult(loopLocals.indexLocal, loopLocals.countLocal, emitInstruction);
   return true;
 }
 

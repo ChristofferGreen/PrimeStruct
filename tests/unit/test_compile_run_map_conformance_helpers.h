@@ -22,8 +22,15 @@ wrapMap<K, V>([K] leftKey, [V] leftValue, [K] rightKey, [V] rightValue) {
 [return<int>]
 main() {
   [map<string, i32>] pairs{wrapMap<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  return(plus(plus(mapCount<string, i32>(pairs), mapAt<string, i32>(pairs, "left"raw_utf8)),
-              mapAtUnsafe<string, i32>(pairs, "right"raw_utf8)))
+  [i32 mut] total{plus(plus(mapCount<string, i32>(pairs), mapAt<string, i32>(pairs, "left"raw_utf8)),
+                       mapAtUnsafe<string, i32>(pairs, "right"raw_utf8))}
+  if(mapContains<string, i32>(pairs, "left"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  if(not(mapContains<string, i32>(pairs, "missing"raw_utf8)),
+     then() { assign(total, plus(total, 2i32)) },
+     else() { })
+  return(total)
 }
 )";
 }
@@ -43,10 +50,22 @@ wrapMap<K, V>() {
 main() {
   [map<string, i32>] direct{mapTriple<string, i32>("left"raw_utf8, 10i32, "mid"raw_utf8, 20i32, "right"raw_utf8, 30i32)}
   [map<string, i32>] wrapped{wrapMap<string, i32>()}
-  [i32] directTotal{plus(mapCount<string, i32>(direct), plus(mapAt<string, i32>(direct, "left"raw_utf8),
-                                                            mapAtUnsafe<string, i32>(direct, "right"raw_utf8)))}
-  [i32] wrappedTotal{plus(mapCount<string, i32>(wrapped), plus(mapAt<string, i32>(wrapped, "c"raw_utf8),
-                                                               mapAtUnsafe<string, i32>(wrapped, "h"raw_utf8)))}
+  [i32 mut] directTotal{plus(mapCount<string, i32>(direct), plus(mapAt<string, i32>(direct, "left"raw_utf8),
+                                                                mapAtUnsafe<string, i32>(direct, "right"raw_utf8)))}
+  if(mapContains<string, i32>(direct, "left"raw_utf8),
+     then() { assign(directTotal, plus(directTotal, 1i32)) },
+     else() { })
+  if(not(mapContains<string, i32>(direct, "missing"raw_utf8)),
+     then() { assign(directTotal, plus(directTotal, 2i32)) },
+     else() { })
+  [i32 mut] wrappedTotal{plus(mapCount<string, i32>(wrapped), plus(mapAt<string, i32>(wrapped, "c"raw_utf8),
+                                                                   mapAtUnsafe<string, i32>(wrapped, "h"raw_utf8)))}
+  if(mapContains<string, i32>(wrapped, "c"raw_utf8),
+     then() { assign(wrappedTotal, plus(wrappedTotal, 4i32)) },
+     else() { })
+  if(not(mapContains<string, i32>(wrapped, "missing"raw_utf8)),
+     then() { assign(wrappedTotal, plus(wrappedTotal, 8i32)) },
+     else() { })
   return(plus(directTotal, wrappedTotal))
 }
 )";
@@ -79,7 +98,7 @@ inline void expectMapHelperSurfaceConformance(const std::string &emitMode,
       makeMapHelperSurfaceConformanceSource(importPath),
       "map_helper_surface_" + slug + "_" + emitMode,
       emitMode,
-      13);
+      16);
 }
 
 inline void expectMapExtendedConstructorConformance(const std::string &emitMode,
@@ -89,5 +108,5 @@ inline void expectMapExtendedConstructorConformance(const std::string &emitMode,
       makeMapExtendedConstructorConformanceSource(importPath),
       "map_extended_ctor_" + slug + "_" + emitMode,
       emitMode,
-      62);
+      77);
 }

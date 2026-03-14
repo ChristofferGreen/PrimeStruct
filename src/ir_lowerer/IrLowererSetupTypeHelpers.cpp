@@ -919,6 +919,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   }
   const bool isCountCall = (isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count")) &&
                            callExpr.args.size() == 1;
+  const bool isContainsCall = isSimpleCallName(callExpr, "contains") && callExpr.args.size() == 2;
   std::string accessName;
   const bool isCollectionAccessCall = getBuiltinArrayAccessName(callExpr, accessName);
   const bool isAccessCall = (isCollectionAccessCall || isSimpleCallName(callExpr, "get") ||
@@ -935,14 +936,14 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return 2u;
   };
   size_t expectedArgCount = 1u;
-  if (isAccessCall) {
+  if (isAccessCall || isContainsCall) {
     expectedArgCount = 2u;
   } else if (isVectorMutatorCall) {
     expectedArgCount = expectedVectorMutatorArgCount();
   }
   const bool isSoaFieldHelperCall =
       callExpr.args.size() == 1 && !isCountCall && isSoaVectorReceiverExpr(callExpr.args.front(), localsIn);
-  if ((!isCountCall && !isAccessCall && !isSoaFieldHelperCall && !isVectorMutatorCall) ||
+  if ((!isCountCall && !isContainsCall && !isAccessCall && !isSoaFieldHelperCall && !isVectorMutatorCall) ||
       callExpr.args.size() != expectedArgCount) {
     return false;
   }
@@ -973,6 +974,23 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
            (info.kind == LocalInfo::Kind::Reference && (info.referenceToArray || info.referenceToMap)) ||
            info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
+  };
+  auto isKnownMapReceiverExpr = [&](const Expr &candidate) -> bool {
+    if (candidate.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(candidate.name);
+      if (it == localsIn.end()) {
+        return false;
+      }
+      const LocalInfo &info = it->second;
+      return info.kind == LocalInfo::Kind::Map ||
+             (info.kind == LocalInfo::Kind::Reference && info.referenceToMap);
+    }
+    if (candidate.kind == Expr::Kind::Call) {
+      std::string collection;
+      return getBuiltinCollectionName(candidate, collection) && collection == "map" &&
+             candidate.templateArgs.size() == 2;
+    }
+    return false;
   };
   auto isKnownVectorMutatorReceiverExpr = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Name) {
@@ -1025,7 +1043,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   const bool hasNamedArgsValue = hasNamedArgs();
   if (hasNamedArgsValue) {
     bool hasValuesNamedReceiver = false;
-    if (isVectorMutatorCall || isAccessCall) {
+    if (isVectorMutatorCall || isAccessCall || isContainsCall) {
       for (size_t i = 0; i < callExpr.args.size(); ++i) {
         if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value() &&
             *callExpr.argNames[i] == "values") {
@@ -1058,7 +1076,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
   }
   const bool probePositionalReorderedAccessReceiver =
-      isAccessCall && !hasNamedArgsValue && callExpr.args.size() > 1 &&
+      (isAccessCall || isContainsCall) && !hasNamedArgsValue && callExpr.args.size() > 1 &&
       (callExpr.args.front().kind == Expr::Kind::Literal || callExpr.args.front().kind == Expr::Kind::BoolLiteral ||
        callExpr.args.front().kind == Expr::Kind::FloatLiteral || callExpr.args.front().kind == Expr::Kind::StringLiteral ||
        (callExpr.args.front().kind == Expr::Kind::Name &&
@@ -1081,6 +1099,13 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       continue;
     }
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
+    if (isContainsCall && isKnownMapReceiverExpr(methodExpr.args.front())) {
+      if (methodResolvedOut != nullptr) {
+        *methodResolvedOut = true;
+      }
+      kindOut = LocalInfo::ValueKind::Bool;
+      return true;
+    }
     if (!resolveMethodCallDefinition) {
       continue;
     }
@@ -1111,6 +1136,10 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   if (isCountCall && !requireArrayReturn && inferExprKind &&
       inferExprKind(callExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
     kindOut = LocalInfo::ValueKind::Int32;
+    return true;
+  }
+  if (isContainsCall && isKnownMapReceiverExpr(callExpr.args.front())) {
+    kindOut = LocalInfo::ValueKind::Bool;
     return true;
   }
 

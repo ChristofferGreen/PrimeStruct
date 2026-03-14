@@ -1737,6 +1737,23 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
         (isSimpleCallName(expr, "count") || resolveCalleePath(expr) == "/std/collections/map/count" ||
          resolveCalleePath(expr) == "/map/count") &&
         expr.args.size() == 1;
+    const bool isMapContainsLike =
+        !expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2;
+    if (isMapContainsLike) {
+      BindingInfo collectionBinding;
+      if (!inferCollectionBindingFromExpr(expr.args.front(), inferCollectionBindingFromExpr)) {
+        return false;
+      }
+      collectionBinding = bindingOut;
+      std::string keyType;
+      std::string valueType;
+      if (!extractMapKeyValueTypes(collectionBinding, keyType, valueType)) {
+        return false;
+      }
+      bindingOut.typeName = "bool";
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
     if (!isCountLike) {
       return false;
     }

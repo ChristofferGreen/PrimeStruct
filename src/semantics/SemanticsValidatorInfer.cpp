@@ -2569,6 +2569,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return ReturnKind::Unknown;
     }
+    if (defMap_.find(resolved) == defMap_.end() && !expr.isMethodCall &&
+        isSimpleCallName(expr, "contains") && expr.args.size() == 2) {
+      std::string keyType;
+      std::string valueType;
+      if (resolveMapTarget(expr.args.front(), keyType, valueType)) {
+        return ReturnKind::Bool;
+      }
+      return ReturnKind::Unknown;
+    }
     if (getBuiltinGpuName(expr, builtinName)) {
       return ReturnKind::Int;
     }

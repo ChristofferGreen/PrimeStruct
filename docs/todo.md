@@ -14,7 +14,8 @@ Stdlib container substrate note: the items below are the hard prerequisites for 
 - ○ Ownership/drop resize/remove slice: define indexed `remove_at` / `remove_swap` semantics for non-trivial vector elements after the removed-element drop + compaction contract is fixed.
 - ○ Ownership/drop reallocation slice: define non-trivial element move/rehash semantics for stdlib-owned vector/map storage once experimental containers stop forwarding to builtin runtimes.
 - ○ Implement container element drop behavior in vector/map runtimes once the ownership contract is fixed.
-- ○ Replace compiler-injected vector/map runtime abort paths with the standard container error contract across VM/native/C++ flows.
+- ○ Replace compiler-injected map missing-key runtime abort paths with the standard container error contract once value-carrying `Result` support covers the current backend map value subset.
+- ○ Replace compiler-injected vector index/pop runtime abort paths with the standard container error contract across VM/native/C++ flows.
 Stdlib container bring-up note: land a real `.prime` implementation under an experimental path/name first, prove parity there, then swap canonical names and remove the builtin implementation.
 - ○ Implement an experimental stdlib `vector` in `.prime` under a temporary path/name so conformance can advance without blocking on canonical-name migration.
 - ○ Experimental stdlib `map` bring-up slice: replace builtin-backed `/std/collections/experimental_map/*` helpers with a stdlib-owned storage/runtime implementation once pointer/ownership substrate lands.

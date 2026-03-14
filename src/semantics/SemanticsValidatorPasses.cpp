@@ -297,7 +297,8 @@ bool SemanticsValidator::validateDefinitions() {
     std::string namespacedCollection;
     std::string namespacedHelper;
     const bool isCollectionHelperBuiltin =
-        isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") || isSimpleCallName(expr, "at") ||
+        isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") ||
+        (!expr.isMethodCall && isSimpleCallName(expr, "contains")) || isSimpleCallName(expr, "at") ||
         isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
         isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
@@ -314,6 +315,7 @@ bool SemanticsValidator::validateDefinitions() {
            getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
+           (!expr.isMethodCall && isSimpleCallName(expr, "contains")) ||
            getBuiltinMemoryName(expr, builtinName) ||
            isCollectionBuiltin || isCollectionHelperBuiltin;
   };
@@ -1377,7 +1379,8 @@ bool SemanticsValidator::validateExecutions() {
     std::string namespacedCollection;
     std::string namespacedHelper;
     const bool isCollectionHelperBuiltin =
-        isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") || isSimpleCallName(expr, "at") ||
+        isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") ||
+        (!expr.isMethodCall && isSimpleCallName(expr, "contains")) || isSimpleCallName(expr, "at") ||
         isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
         isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
@@ -1394,6 +1397,7 @@ bool SemanticsValidator::validateExecutions() {
            getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
+           (!expr.isMethodCall && isSimpleCallName(expr, "contains")) ||
            getBuiltinMemoryName(expr, builtinName) ||
            isCollectionBuiltin || isCollectionHelperBuiltin;
   };
@@ -3312,7 +3316,8 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
       getBuiltinClampName(expr, builtinName, true) || getBuiltinMinMaxName(expr, builtinName, true) ||
       getBuiltinAbsSignName(expr, builtinName, true) || getBuiltinSaturateName(expr, builtinName, true) ||
       getBuiltinMathName(expr, builtinName, true) || getBuiltinConvertName(expr, builtinName) ||
-      getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName)) {
+      getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
+      (!expr.isMethodCall && isSimpleCallName(expr, "contains"))) {
     for (const auto &arg : expr.args) {
       if (!isOutsideEffectFreeExpr(arg, ctx, writesThis)) {
         return false;

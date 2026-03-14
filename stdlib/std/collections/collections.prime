@@ -170,6 +170,11 @@ namespace std {
     return(count(values))
   }
 
+  [public return<bool>]
+  mapContains<K, V>([map<K, V>] values, [K] key) {
+    return(contains(values, key))
+  }
+
   [public return<V>]
   mapAt<K, V>([map<K, V>] values, [K] key) {
     return(at(values, key))
