@@ -633,7 +633,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/map") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native stdlib map at alias fallback") {
+TEST_CASE("rejects native stdlib map at alias fallback without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -661,11 +661,11 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 66);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native stdlib map at unsafe alias fallback") {
+TEST_CASE("rejects native stdlib map at unsafe alias fallback without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -693,8 +693,9 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 67);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles native map unnamespaced count builtin fallback with canonical helper") {

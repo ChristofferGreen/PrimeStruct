@@ -430,7 +430,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/map") != std::string::npos);
 }
 
-TEST_CASE("runs vm stdlib namespaced map at fallback to map alias helper") {
+TEST_CASE("rejects vm stdlib namespaced map at fallback without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -452,11 +452,11 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_namespaced_map_at_alias_fallback_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 66);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("runs vm stdlib namespaced map at unsafe fallback to map alias helper") {
+TEST_CASE("rejects vm stdlib namespaced map at unsafe fallback without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -479,8 +479,9 @@ main() {
        "primec_vm_stdlib_namespaced_map_at_unsafe_alias_fallback_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 67);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm map unnamespaced count builtin fallback with canonical helper") {

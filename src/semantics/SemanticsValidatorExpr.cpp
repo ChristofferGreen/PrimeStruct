@@ -1350,7 +1350,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
         const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-        if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+        if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+            suffix != "at" && suffix != "at_unsafe") {
           const std::string mapAlias = "/map/" + suffix;
           if (defMap_.count(mapAlias) > 0) {
             preferred = mapAlias;
@@ -3014,12 +3015,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isStdNamespacedVectorAccessCall =
         hasBuiltinAccessSpelling && !expr.isMethodCall &&
         resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
+    const bool isStdNamespacedMapAccessCall =
+        hasBuiltinAccessSpelling && !expr.isMethodCall &&
+        resolveCalleePath(expr).rfind("/std/collections/map/at", 0) == 0;
     const bool shouldAllowStdAccessCompatibilityFallback =
         isStdNamespacedVectorAccessCall && !accessHelperName.empty() &&
         defMap_.find("/vector/" + accessHelperName) != defMap_.end();
     const bool isBuiltinAccessName =
         hasBuiltinAccessSpelling &&
-        (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback);
+        (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback) &&
+        !isStdNamespacedMapAccessCall;
     const bool isNamespacedVectorAccessCall =
         isBuiltinAccessName && isNamespacedVectorHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
@@ -3118,7 +3123,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           appendUnique("/std/collections/map/" + path.substr(std::string("/map/").size()));
         } else if (path.rfind("/std/collections/map/", 0) == 0) {
           const std::string suffix = path.substr(std::string("/std/collections/map/").size());
-          if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+          if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+              suffix != "at" && suffix != "at_unsafe") {
             appendUnique("/map/" + suffix);
           }
         }
@@ -5619,7 +5625,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (getBuiltinArrayAccessName(expr, builtinName) &&
-          (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback)) {
+          (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback) &&
+          !isStdNamespacedMapAccessCall) {
         if (hasNamedArguments(expr.argNames)) {
           error_ = "named arguments not supported for builtin calls";
           return false;

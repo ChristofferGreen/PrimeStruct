@@ -571,7 +571,8 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   }
   if (preferred.rfind("/std/collections/map/", 0) == 0 && nameMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+    if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+        suffix != "at" && suffix != "at_unsafe") {
       const std::string mapAlias = "/map/" + suffix;
       if (nameMap.count(mapAlias) > 0) {
         preferred = mapAlias;
@@ -961,8 +962,11 @@ bool resolveMethodCallPath(const Expr &call,
       appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-      const std::string aliasPath = "/map/" + suffix;
-      appendUnique(aliasPath);
+      if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+          suffix != "at" && suffix != "at_unsafe") {
+        const std::string aliasPath = "/map/" + suffix;
+        appendUnique(aliasPath);
+      }
     }
     return candidates;
   };

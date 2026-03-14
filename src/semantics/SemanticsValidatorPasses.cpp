@@ -2799,7 +2799,8 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     }
     if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-      if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+      if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+          suffix != "at" && suffix != "at_unsafe") {
         const std::string mapAlias = "/map/" + suffix;
         if (defMap_.count(mapAlias) > 0) {
           preferred = mapAlias;
@@ -2869,7 +2870,8 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
       appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-      if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+      if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+          suffix != "at" && suffix != "at_unsafe") {
         appendUnique("/map/" + suffix);
       }
     }

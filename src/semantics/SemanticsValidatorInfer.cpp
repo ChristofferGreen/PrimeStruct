@@ -390,7 +390,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
         const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-        if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+        if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+            suffix != "at" && suffix != "at_unsafe") {
           const std::string mapAlias = "/map/" + suffix;
           if (defMap_.count(mapAlias) > 0) {
             preferred = mapAlias;
@@ -1318,7 +1319,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
           const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-          if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+          if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+              suffix != "at" && suffix != "at_unsafe") {
             const std::string mapAlias = "/map/" + suffix;
             if (defMap_.count(mapAlias) > 0) {
               preferred = mapAlias;
@@ -1949,7 +1951,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
         const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-        if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+        if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+            suffix != "at" && suffix != "at_unsafe") {
           const std::string mapAlias = "/map/" + suffix;
           if (defMap_.count(mapAlias) > 0) {
             preferred = mapAlias;
@@ -2013,7 +2016,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
       } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
         const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-        if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+        if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+            suffix != "at" && suffix != "at_unsafe") {
           appendUnique("/map/" + suffix);
         }
       }
@@ -2300,12 +2304,16 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isStdNamespacedVectorAccessSpelling =
         hasBuiltinAccessSpelling && !expr.isMethodCall &&
         resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
+    const bool isStdNamespacedMapAccessSpelling =
+        hasBuiltinAccessSpelling && !expr.isMethodCall &&
+        resolveCalleePath(expr).rfind("/std/collections/map/at", 0) == 0;
     const bool shouldAllowStdAccessCompatibilityFallback =
         isStdNamespacedVectorAccessSpelling && !builtinAccessName.empty() &&
         defMap_.find("/vector/" + builtinAccessName) != defMap_.end();
     const bool isBuiltinAccess =
         hasBuiltinAccessSpelling &&
-        (!isStdNamespacedVectorAccessSpelling || shouldAllowStdAccessCompatibilityFallback);
+        (!isStdNamespacedVectorAccessSpelling || shouldAllowStdAccessCompatibilityFallback) &&
+        !isStdNamespacedMapAccessSpelling;
     const bool isNamespacedVectorAccessCall =
         !expr.isMethodCall && isBuiltinAccess && isNamespacedVectorHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
@@ -2351,11 +2359,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!normalizedCallName.empty() && normalizedCallName.front() == '/') {
       normalizedCallName.erase(normalizedCallName.begin());
     }
-    const bool isStdNamespacedMapAccessSpelling = normalizedCallName.rfind("std/collections/map/", 0) == 0;
+    const bool isStdNamespacedMapAccessPath = normalizedCallName.rfind("std/collections/map/", 0) == 0;
     const bool shouldDeferNamespacedVectorAccessCall =
         isNamespacedVectorAccessCall && (!hasResolvedDefinition || isStdNamespacedVectorAccessSpelling);
     const bool shouldDeferNamespacedMapAccessCall =
-        isNamespacedMapAccessCall && (!hasResolvedDefinition || isStdNamespacedMapAccessSpelling);
+        isNamespacedMapAccessCall && (!hasResolvedDefinition || isStdNamespacedMapAccessPath);
     const bool shouldUseResolvedStdNamespacedVectorCountDefinition =
         isStdNamespacedVectorCountCall && defMap_.find("/vector/count") == defMap_.end() &&
         defMap_.find("/std/collections/vector/count") != defMap_.end();
@@ -2692,6 +2700,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     std::string builtinName;
     if (defMap_.find(resolved) == defMap_.end() && getBuiltinArrayAccessName(expr, builtinName) &&
         (!isStdNamespacedVectorAccessSpelling || shouldAllowStdAccessCompatibilityFallback) &&
+        !isStdNamespacedMapAccessSpelling &&
         expr.args.size() == 2) {
       std::string elemType;
       if (resolveStringTarget(expr.args.front())) {
@@ -3480,7 +3489,8 @@ std::string SemanticsValidator::inferStructReturnPath(
       appendUnique("/std/collections/map/" + normalizedPath.substr(std::string("/map/").size()));
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-      if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+      if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+          suffix != "at" && suffix != "at_unsafe") {
         appendUnique("/map/" + suffix);
       }
     }

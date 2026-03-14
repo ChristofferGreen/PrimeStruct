@@ -804,7 +804,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-      if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+      if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+          suffix != "at" && suffix != "at_unsafe") {
         const std::string mapAlias = "/map/" + suffix;
         if (defMap_.count(mapAlias) > 0) {
           preferred = mapAlias;
@@ -2758,6 +2759,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   auto preferredMapBodyArgumentTarget = [&](const std::string &helperName) {
     const std::string canonical = "/std/collections/map/" + helperName;
     const std::string alias = "/map/" + helperName;
+    if (helperName == "at" || helperName == "at_unsafe") {
+      return canonical;
+    }
     if (defMap_.count(canonical) > 0) {
       return canonical;
     }
@@ -2982,7 +2986,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           appendUnique("/std/collections/map/" + path.substr(std::string("/map/").size()));
         } else if (path.rfind("/std/collections/map/", 0) == 0) {
           const std::string suffix = path.substr(std::string("/std/collections/map/").size());
-          if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+          if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+              suffix != "at" && suffix != "at_unsafe") {
             appendUnique("/map/" + suffix);
           }
         }

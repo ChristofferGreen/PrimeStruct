@@ -3780,8 +3780,10 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced map access helpers are builtin-alias validated") {
+TEST_CASE("stdlib namespaced map access helpers accept imported stdlib wrappers") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
@@ -3795,8 +3797,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("collected diagnostics ignore builtin canonical map access helper calls") {
+TEST_CASE("collected diagnostics ignore imported canonical map access helper calls") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
@@ -3856,6 +3860,8 @@ main() {
 
 TEST_CASE("stdlib namespaced map helpers keep canonical key diagnostics on map references") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
@@ -5367,10 +5373,10 @@ main() {
   CHECK(error.find("block arguments require a definition target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("map stdlib call form statement body arguments currently use alias fallback") {
+TEST_CASE("map stdlib call form statement body arguments use canonical helper target") {
   const std::string source = R"(
 [return<int>]
-/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(90i32)
 }
 
@@ -5560,10 +5566,10 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("map stdlib call form expression body arguments currently use alias fallback") {
+TEST_CASE("map stdlib call form expression body arguments use canonical helper target") {
   const std::string source = R"(
 [return<int>]
-/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(90i32)
 }
 
@@ -10968,13 +10974,8 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map stdlib namespaced at expression falls back to map alias helper") {
+TEST_CASE("stdlib namespaced map at requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/map/at([map<i32, i32>] values, [i32] key) {
-  return(42i32)
-}
-
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
@@ -10982,35 +10983,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("map stdlib namespaced at fallback keeps map alias diagnostics") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/map/at([map<i32, i32>] values, [i32] key) {
-  return(42i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(/std/collections/map/at(values, true))
-}
-)";
-  std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /map/at parameter key") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("map stdlib namespaced at_unsafe auto inference falls back to map alias helper") {
+TEST_CASE("stdlib namespaced map at_unsafe requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
-/map/at_unsafe([map<i32, i32>] values, [i32] key) {
-  return(false)
-}
-
 [effects(heap_alloc), return<bool>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
@@ -11019,26 +10997,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("map stdlib namespaced at_unsafe fallback keeps map alias diagnostics") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-/map/at_unsafe([map<i32, i32>] values, [i32] key) {
-  return(42i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(/std/collections/map/at_unsafe(values, true))
-}
-)";
-  std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /map/at_unsafe parameter key") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("soa access helper call-form expression infers auto binding from labeled receiver helper") {
