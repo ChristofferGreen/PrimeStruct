@@ -24,15 +24,14 @@ inline std::string mapConformanceType(const std::string &importPath,
 }
 
 inline std::string mapConformanceKeyType(const std::string &importPath) {
-  return isExperimentalMapImport(importPath) ? "i32" : "string";
+  return "string";
 }
 
 inline std::string mapConformanceLiteral(const std::string &importPath,
                                          const std::string &numericValue,
                                          const std::string &stringValue) {
-  if (isExperimentalMapImport(importPath)) {
-    return numericValue;
-  }
+  (void)importPath;
+  (void)numericValue;
   return stringValue;
 }
 
@@ -340,4 +339,53 @@ inline void expectExperimentalMapAtMissingConformance(const std::string &emitMod
   const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "map key not found\n");
+}
+
+inline std::string makeExperimentalMapStringKeyRejectSource(const std::string &mode) {
+  std::string source;
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<int>]\n";
+  source += "main([array<string>] args) {\n";
+  source += "  [string] key{args[0i32]}\n";
+  if (mode == "lookup_argv") {
+    source += "  [Map<string, i32>] values{mapSingle<string, i32>(\"a\"raw_utf8, 1i32)}\n";
+    source += "  return(mapAtUnsafe<string, i32>(values, key))\n";
+  } else {
+    source += "  [Map<string, i32>] values{mapSingle<string, i32>(key, 1i32)}\n";
+    source += "  return(mapCount<string, i32>(values))\n";
+  }
+  source += "}\n";
+  return source;
+}
+
+inline void expectExperimentalMapStringKeyReject(const std::string &emitMode,
+                                                 const std::string &mode) {
+  const std::string source = makeExperimentalMapStringKeyRejectSource(mode);
+  const std::string srcPath =
+      writeTemp("map_string_key_" + mode + "_experimental_" + emitMode + ".prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_map_string_key_" + mode + "_experimental_" + emitMode + "_err.txt"))
+          .string();
+  const std::string expectedError =
+      "Semantic error: entry argument strings are only supported in print calls or string bindings";
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(errPath).find(expectedError) != std::string::npos);
+    return;
+  }
+
+  const std::string compileCmd =
+      "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find(expectedError) != std::string::npos);
+  if (emitMode == "native") {
+    CHECK(diagnostics.find(": error: " + expectedError) != std::string::npos);
+    CHECK(diagnostics.find("^") != std::string::npos);
+  }
 }

@@ -7,8 +7,19 @@ namespace std {
     [public vector<V> mut] payloads{vector<V>()}
   }
 
+  [return<void>]
+  mapValidateKeyEnvelope<K>([K] key) {
+    if(false,
+       then() {
+         [map<K, i32>] guard{map<K, i32>(key, 0i32)}
+         at_unsafe(guard, key)
+       },
+       else() { })
+  }
+
   [return<i32> Comparable<K>]
   mapFindIndex<K, V>([Map<K, V>] entries, [K] key) {
+    mapValidateKeyEnvelope<K>(key)
     [i32 mut] index{0i32}
     [i32] limit{count(entries.keys)}
     while(less_than(index, limit), do() {
