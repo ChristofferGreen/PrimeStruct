@@ -3280,6 +3280,22 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector reserve accepts named arguments through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /std/collections/vector/reserve([capacity] 8i32, [values] values)
+  return(plus(count(values), capacity(values)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced vector push requires imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -3306,6 +3322,20 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/collections/vector/pop") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector reserve requires imported stdlib helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /std/collections/vector/reserve(values, 8i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector push expression requires imported stdlib helper") {
