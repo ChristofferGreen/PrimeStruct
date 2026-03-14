@@ -18149,6 +18149,68 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map non-struct fallback 
   CHECK(error == "unknown method: /i32/tag");
 }
 
+TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for std-namespaced vector method access") {
+  primec::Definition canonicalAtDef;
+  canonicalAtDef.fullPath = "/std/collections/vector/at";
+  primec::Transform returnMarker;
+  returnMarker.name = "return";
+  returnMarker.templateArgs = {"Marker"};
+  canonicalAtDef.transforms.push_back(returnMarker);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalAtDef.fullPath, &canonicalAtDef},
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/std/collections/vector/at";
+  receiverCall.isMethodCall = true;
+  receiverCall.args = {valuesExpr, indexExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  valuesLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("values", valuesLocal);
+
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &expr) {
+              if (expr.kind == primec::Expr::Kind::Call) {
+                return std::string();
+              }
+              return expr.name;
+            },
+            defMap,
+            error) == nullptr);
+  CHECK(error == "unknown method: /i32/tag");
+}
+
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for map alias receiver unsafe call returns") {
   primec::Definition canonicalAtUnsafeDef;
   canonicalAtUnsafeDef.fullPath = "/std/collections/map/at_unsafe";
@@ -26968,6 +27030,47 @@ TEST_CASE("ir lowerer setup inference helper resolves bare vector method access 
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
 
   accessExpr.name = "at_unsafe";
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+}
+
+TEST_CASE("ir lowerer setup inference helper resolves std-namespaced vector method access string kinds") {
+  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  vectorInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  locals.emplace("values", vectorInfo);
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.isMethodCall = true;
+  accessExpr.name = "/std/collections/vector/at";
+  accessExpr.args = {valuesExpr, indexExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+
+  accessExpr.name = "/std/collections/vector/at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
             accessExpr,

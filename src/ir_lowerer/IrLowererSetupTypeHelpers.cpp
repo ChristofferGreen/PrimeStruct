@@ -884,7 +884,9 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
           return false;
         }
         const LocalInfo &receiverInfo = localIt->second;
-        if (normalizedName == "vector/at" || normalizedName == "vector/at_unsafe") {
+        if (normalizedName == "vector/at" || normalizedName == "vector/at_unsafe" ||
+            normalizedName == "std/collections/vector/at" ||
+            normalizedName == "std/collections/vector/at_unsafe") {
           if (receiverInfo.kind == LocalInfo::Kind::Vector || receiverInfo.kind == LocalInfo::Kind::Array ||
               (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToArray)) {
             return assignKnownElementKind(receiverInfo.valueKind);
@@ -906,7 +908,9 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       if (!getBuiltinCollectionName(receiverExpr, collectionName)) {
         return false;
       }
-      if ((normalizedName == "vector/at" || normalizedName == "vector/at_unsafe") &&
+      if ((normalizedName == "vector/at" || normalizedName == "vector/at_unsafe" ||
+           normalizedName == "std/collections/vector/at" ||
+           normalizedName == "std/collections/vector/at_unsafe") &&
           (collectionName == "vector" || collectionName == "array") && receiverExpr.templateArgs.size() == 1) {
         return assignKnownElementKind(valueKindFromTypeName(receiverExpr.templateArgs.front()));
       }
