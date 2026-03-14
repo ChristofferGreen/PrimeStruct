@@ -360,7 +360,7 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
 
 bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
                                          const primestruct::software_surface::SoftwareSurfaceFrame &frame,
-                                         id<MTLTexture> &textureOut,
+                                         id<MTLTexture> __strong &textureOut,
                                          std::string &errorOut) {
   if (device == nil) {
     errorOut = "failed to create Metal device";

@@ -57,6 +57,26 @@ main() {
   CHECK(error.find("if branches must return compatible types") != std::string::npos);
 }
 
+TEST_CASE("if expression accepts nested string branches") {
+  const std::string source = R"(
+[return<string>]
+describe([i32] code) {
+  return(if(equal(code, 1i32),
+            then(){ "one"utf8 },
+            else(){ if(equal(code, 2i32), then(){ "two"utf8 }, else(){ "other"utf8 }) }))
+}
+
+[return<int>]
+main() {
+  [string] message{describe(2i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("repeat validates block arguments") {
   const std::string source = R"(
 [return<int>]

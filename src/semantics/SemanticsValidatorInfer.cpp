@@ -2100,6 +2100,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
           return builtinMethodKind;
         }
+        if (defMap_.find(methodResolved) == defMap_.end()) {
+          error_ = "unknown method: " + methodResolved;
+          return ReturnKind::Unknown;
+        }
         resolved = methodResolved;
         hasResolvedPath = true;
       }
@@ -2274,6 +2278,51 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       shouldDeferResolvedNamespacedCollectionHelperReturn = false;
     }
     if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedCollectionHelperReturn) {
+      if (expr.isMethodCall) {
+        const auto &calleeParams = paramsByDef_[resolved];
+        std::string orderedArgError;
+        if (!validateNamedArgumentsAgainstParams(calleeParams, expr.argNames, orderedArgError)) {
+          error_ = orderedArgError.find("argument count mismatch") != std::string::npos
+                       ? "argument count mismatch for " + resolved
+                       : orderedArgError;
+          return ReturnKind::Unknown;
+        }
+        std::vector<const Expr *> orderedArgs;
+        if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, orderedArgError)) {
+          error_ = orderedArgError.find("argument count mismatch") != std::string::npos
+                       ? "argument count mismatch for " + resolved
+                       : orderedArgError;
+          return ReturnKind::Unknown;
+        }
+        for (size_t paramIndex = 0; paramIndex < orderedArgs.size() && paramIndex < calleeParams.size(); ++paramIndex) {
+          const Expr *arg = orderedArgs[paramIndex];
+          if (arg == nullptr) {
+            continue;
+          }
+          const ParameterInfo &param = calleeParams[paramIndex];
+          if (param.binding.typeName.empty() || param.binding.typeName == "auto") {
+            continue;
+          }
+          std::string expectedBase;
+          std::string expectedArgText;
+          if (splitTemplateTypeName(param.binding.typeName, expectedBase, expectedArgText) ||
+              splitTemplateTypeName(param.binding.typeTemplateArg, expectedBase, expectedArgText)) {
+            continue;
+          }
+          const ReturnKind expectedKind = returnKindForTypeName(normalizeBindingTypeName(param.binding.typeName));
+          if (expectedKind == ReturnKind::Unknown) {
+            continue;
+          }
+          const ReturnKind actualKind = inferExprReturnKind(*arg, params, locals);
+          if (actualKind == ReturnKind::Unknown) {
+            continue;
+          }
+          if (actualKind != expectedKind) {
+            error_ = "argument type mismatch for " + resolved + " parameter " + param.name;
+            return ReturnKind::Unknown;
+          }
+        }
+      }
       if (!inferDefinitionReturnKind(*defIt->second)) {
         ReturnKind builtinAccessKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinAccessKind)) {

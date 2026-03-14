@@ -80,7 +80,7 @@ void emitGfxError(std::ostream &out, GfxErrorCode code, const std::string &why) 
 
 bool uploadSoftwareSurfaceFrame(id<MTLDevice> device,
                                 const primestruct::software_surface::SoftwareSurfaceFrame &frame,
-                                id<MTLTexture> &textureOut,
+                                id<MTLTexture> __strong &textureOut,
                                 std::string &whyOut) {
   if (device == nil) {
     whyOut = "failed to create Metal device";

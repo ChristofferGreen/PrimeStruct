@@ -713,7 +713,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_reflection_serialize_deserialize_native").string();
   const std::string nativeCompileCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
-  CHECK(runCommand(nativeCompileCmd) == 2);
+  CHECK(runCommand(nativeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 7);
 }
 
 TEST_SUITE_END();

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "IrLowererSharedTypes.h"
+#include "IrLowererRuntimeErrorHelpers.h"
 #include "primec/Ast.h"
 #include "primec/Ir.h"
 
@@ -23,6 +24,7 @@ using EmitConversionsAndCallsCompareToZeroFn = std::function<bool(LocalInfo::Val
 using AllocConversionsAndCallsTempLocalFn = std::function<int32_t()>;
 using EmitConversionsAndCallsFloatToIntNonFiniteFn = std::function<void()>;
 using EmitConversionsAndCallsPointerIndexOutOfBoundsFn = std::function<void()>;
+using EmitConversionsAndCallsArrayIndexOutOfBoundsFn = std::function<void()>;
 using ResolveConversionsAndCallsStringTableTargetFn =
     std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)>;
 using ConversionsAndCallsValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
@@ -62,6 +64,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const AllocConversionsAndCallsTempLocalFn &allocTempLocal,
     const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite,
     const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds,
+    const EmitConversionsAndCallsArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
     const ResolveConversionsAndCallsStringTableTargetFn &resolveStringTableTarget,
     const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
     const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,

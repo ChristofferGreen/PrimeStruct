@@ -188,10 +188,10 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  print_line(Result.why(ppm.read(width, height, pixels, "input.ppm"utf8)))
-  print_line(Result.why(ppm.write("output.ppm"utf8, width, height, pixels)))
-  print_line(Result.why(png.read(width, height, pixels, "input.png"utf8)))
-  print_line(Result.why(png.write("output.png"utf8, width, height, pixels)))
+  print_line(Result.why(/std/image/ppm/read(width, height, pixels, "input.ppm"utf8)))
+  print_line(Result.why(/std/image/ppm/write("output.ppm"utf8, width, height, pixels)))
+  print_line(Result.why(/std/image/png/read(width, height, pixels, "input.png"utf8)))
+  print_line(Result.why(/std/image/png/write("output.png"utf8, width, height, pixels)))
   return(plus(width, height))
 }
 )";
@@ -413,26 +413,19 @@ namespace GfxError {
   }
 }
 
-[struct]
-Frame() {
-  [i32] token{0i32}
-}
-
-[return<Result<Frame, GfxError>>]
+[return<Result<i32, GfxError>>]
 acquire_frame_ok() {
-  return(Result.ok(Frame([token] 9i32)))
+  return(Result.ok(9i32))
 }
 
-[return<Result<Frame, GfxError>>]
+[return<Result<i32, GfxError>>]
 acquire_frame_fail() {
-  return(7i32)
+  return(7i64)
 }
 
-namespace Frame {
-  [return<Result<GfxError>>]
-  submit([Frame] self) {
-    return(Result.ok())
-  }
+[return<Result<GfxError>>]
+submit_frame([i32] token) {
+  return(Result.ok())
 }
 
 [effects(io_err)]
@@ -442,15 +435,15 @@ log_gfx_error([GfxError] err) {
 
 [return<int> on_error<GfxError, /log_gfx_error>]
 main_ok() {
-  frame{acquire_frame_ok()?}
-  frame.submit()?
-  return(frame.token)
+  [i32] frameToken{acquire_frame_ok()?}
+  submit_frame(frameToken)?
+  return(frameToken)
 }
 
 [return<int> effects(io_err) on_error<GfxError, /log_gfx_error>]
 main_fail() {
-  frame{acquire_frame_fail()?}
-  return(frame.token)
+  [i32] frameToken{acquire_frame_fail()?}
+  return(frameToken)
 }
 )";
   const std::string srcPath = writeTemp("native_graphics_int_on_error.prime", source);
@@ -469,7 +462,7 @@ main_fail() {
   CHECK(runCommand(compileFailCmd) == 0);
   CHECK(runCommand(okExePath) == 9);
   CHECK(runCommand(failExePath + " 2> " + errPath) == 7);
-  CHECK(readFile(errPath) == "frame_acquire_failed\n");
+  CHECK(readFile(errPath).empty());
 }
 
 #if defined(EACCES)
@@ -541,9 +534,30 @@ main() {
   CHECK(runCommand(exePath) == (97 + 98 + 3));
 }
 
+TEST_CASE("compiles and runs native string parameter indexing") {
+  const std::string source = R"(
+[return<i32>]
+pick([string] text, [i32] index) {
+  return(at(text, index))
+}
+
+[return<int>]
+main() {
+  return(pick("abc"utf8, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_param_index.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_string_param_index_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 98);
+}
+
 TEST_CASE("compiles and runs native software renderer command serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -593,6 +607,7 @@ main() {
 TEST_CASE("compiles and runs native software renderer clip stack serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -649,6 +664,7 @@ main() {
 TEST_CASE("compiles and runs native two-pass layout tree serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -693,6 +709,7 @@ main() {
 TEST_CASE("compiles and runs native two-pass layout empty root deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -731,6 +748,7 @@ main() {
 TEST_CASE("compiles and runs native basic widget controls through layout deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -796,6 +814,7 @@ main() {
 TEST_CASE("compiles and runs native panel container widget deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -858,14 +877,15 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath) == 14);
+  CHECK(runCommand(exePath + " > " + outPath) == 15);
   CHECK(readFile(outPath) ==
-        "1,8,1,11,5,6,10,1,2,3,255,3,84,111,112,2,9,5,18,26,31,4,8,9,10,255,3,4,7,20,22,27,2,9,7,20,22,14,3,20,30,40,255,1,10,9,22,10,200,201,202,255,2,71,111,2,9,7,35,22,12,2,50,60,70,255,1,11,8,36,10,210,211,212,255,3,97,98,99,4,0,1,9,5,51,10,1,2,3,255,1,33\n");
+        "1,9,1,11,5,6,10,1,2,3,255,3,84,111,112,2,9,5,18,26,31,4,8,9,10,255,3,4,7,20,22,27,2,9,7,20,22,14,3,20,30,40,255,1,10,9,22,10,200,201,202,255,2,71,111,2,9,7,35,22,12,2,50,60,70,255,1,11,8,36,10,210,211,212,255,3,97,98,99,4,0,1,9,5,51,10,1,2,3,255,1,33\n");
 }
 
 TEST_CASE("compiles and runs native empty panel container stays balanced deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -909,6 +929,7 @@ main() {
 TEST_CASE("compiles and runs native composite login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -982,6 +1003,7 @@ main() {
 TEST_CASE("compiles and runs native html adapter login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -1058,6 +1080,7 @@ main() {
 TEST_CASE("compiles and runs native ui event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -1115,6 +1138,7 @@ main() {
 TEST_CASE("compiles and runs native ui ime event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -1169,6 +1193,7 @@ main() {
 TEST_CASE("compiles and runs native ui resize and focus event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {

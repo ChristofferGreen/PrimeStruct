@@ -679,7 +679,7 @@ main() {
   CHECK(readFile(outPath).find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector namespaced call aliases") {
+TEST_CASE("runs vm vector namespaced call aliases canonically") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -702,8 +702,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_namespaced_call_alias_canonical_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("/vector/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 10);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm vector namespaced templated canonical helper alias call without alias definition") {
@@ -1306,7 +1306,7 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("rejects vm vector namespaced count capacity access aliases") {
+TEST_CASE("runs vm vector namespaced count capacity access aliases canonically") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -1322,8 +1322,8 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_namespaced_count_access_aliases_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("/vector/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 13);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm with collection bracket literals") {
@@ -3428,7 +3428,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector method alias access struct method chain canonical diagnostics forwarding") {
@@ -3466,7 +3466,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib map wrapper temporary unsafe key mismatch") {

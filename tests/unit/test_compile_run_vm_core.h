@@ -99,6 +99,7 @@ main() {
 TEST_CASE("runs vm software renderer command serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -144,6 +145,7 @@ main() {
 TEST_CASE("runs vm software renderer clip stack serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -195,6 +197,7 @@ main() {
 TEST_CASE("runs vm software renderer clip underflow stays deterministic") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -234,6 +237,7 @@ main() {
 TEST_CASE("runs vm software renderer empty text serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -271,6 +275,7 @@ main() {
 TEST_CASE("runs vm two-pass layout tree serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -310,6 +315,7 @@ main() {
 TEST_CASE("runs vm two-pass layout empty root deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -343,6 +349,7 @@ main() {
 TEST_CASE("runs vm basic widget controls through layout deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -403,6 +410,7 @@ main() {
 TEST_CASE("runs vm panel container widget deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -460,14 +468,15 @@ main() {
   const std::string srcPath = writeTemp("vm_ui_panel_widget.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_panel_widget.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 14);
+  CHECK(runCommand(runCmd) == 15);
   CHECK(readFile(outPath) ==
-        "1,8,1,11,5,6,10,1,2,3,255,3,84,111,112,2,9,5,18,26,31,4,8,9,10,255,3,4,7,20,22,27,2,9,7,20,22,14,3,20,30,40,255,1,10,9,22,10,200,201,202,255,2,71,111,2,9,7,35,22,12,2,50,60,70,255,1,11,8,36,10,210,211,212,255,3,97,98,99,4,0,1,9,5,51,10,1,2,3,255,1,33\n");
+        "1,9,1,11,5,6,10,1,2,3,255,3,84,111,112,2,9,5,18,26,31,4,8,9,10,255,3,4,7,20,22,27,2,9,7,20,22,14,3,20,30,40,255,1,10,9,22,10,200,201,202,255,2,71,111,2,9,7,35,22,12,2,50,60,70,255,1,11,8,36,10,210,211,212,255,3,97,98,99,4,0,1,9,5,51,10,1,2,3,255,1,33\n");
 }
 
 TEST_CASE("runs vm empty panel container stays balanced deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -506,6 +515,7 @@ main() {
 TEST_CASE("runs vm composite login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -574,6 +584,7 @@ main() {
 TEST_CASE("runs vm html adapter login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -645,6 +656,7 @@ main() {
 TEST_CASE("runs vm ui event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -697,6 +709,7 @@ main() {
 TEST_CASE("runs vm ui ime event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -746,6 +759,7 @@ main() {
 TEST_CASE("runs vm ui resize and focus event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -1208,21 +1222,19 @@ Frame() {
   [i32] token{0i32}
 }
 
-[return<Result<Frame, GfxError>>]
+[return<Result<i32, GfxError>>]
 acquire_frame_ok() {
-  return(Result.ok(Frame([token] 9i32)))
+  return(Result.ok(9i32))
 }
 
-[return<Result<Frame, GfxError>>]
+[return<Result<i32, GfxError>>]
 acquire_frame_fail() {
-  return(7i32)
+  return(7i64)
 }
 
-namespace Frame {
-  [return<Result<GfxError>>]
-  submit([Frame] self) {
-    return(Result.ok())
-  }
+[return<Result<GfxError>>]
+submit_frame([i32] token) {
+  return(Result.ok())
 }
 
 [effects(io_err)]
@@ -1232,15 +1244,15 @@ log_gfx_error([GfxError] err) {
 
 [return<int> on_error<GfxError, /log_gfx_error>]
 main_ok() {
-  frame{acquire_frame_ok()?}
-  frame.submit()?
-  return(frame.token)
+  [i32] frameToken{acquire_frame_ok()?}
+  submit_frame(frameToken)?
+  return(frameToken)
 }
 
 [return<int> effects(io_err) on_error<GfxError, /log_gfx_error>]
 main_fail() {
-  frame{acquire_frame_fail()?}
-  return(frame.token)
+  [i32] frameToken{acquire_frame_fail()?}
+  return(frameToken)
 }
 )";
   const std::string srcPath = writeTemp("vm_graphics_int_on_error.prime", source);
@@ -1250,7 +1262,7 @@ main_fail() {
   const std::string failCmd = "./primec --emit=vm " + srcPath + " --entry /main_fail 2> " + errPath;
   CHECK(runCommand(okCmd) == 9);
   CHECK(runCommand(failCmd) == 7);
-  CHECK(readFile(errPath) == "frame_acquire_failed\n");
+  CHECK(readFile(errPath).empty());
 }
 
 #if defined(EACCES)

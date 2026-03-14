@@ -276,7 +276,8 @@ bool isStringCountCall(const Expr &expr, const LocalMap &localsIn) {
   }
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
-    return it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String;
+    return it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String &&
+           it->second.stringSource == LocalInfo::StringSource::TableIndex;
   }
   return false;
 }

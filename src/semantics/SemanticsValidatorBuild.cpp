@@ -1616,6 +1616,35 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     BindingInfo &bindingOut) {
+  auto assignBindingTypeFromText = [&](const std::string &typeText) -> bool {
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    if (normalizedType.empty()) {
+      return false;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText)) {
+      bindingOut.typeName = normalizeBindingTypeName(base);
+      bindingOut.typeTemplateArg = argText;
+      return true;
+    }
+    bindingOut.typeName = normalizedType;
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  };
+  auto inferTryInitializerBinding = [&]() -> bool {
+    if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall || !isSimpleCallName(initializer, "try") ||
+        initializer.args.size() != 1 || !initializer.templateArgs.empty() || initializer.hasBodyArguments ||
+        !initializer.bodyArguments.empty()) {
+      return false;
+    }
+    ResultTypeInfo resultInfo;
+    if (!resolveResultTypeForExpr(initializer.args.front(), params, locals, resultInfo) || !resultInfo.isResult ||
+        !resultInfo.hasValue || resultInfo.valueType.empty()) {
+      return false;
+    }
+    return assignBindingTypeFromText(resultInfo.valueType);
+  };
   auto inferCollectionBindingFromExpr = [&](const Expr &expr, auto &&inferCollectionBindingFromExprRef) -> bool {
     auto copyNamedBinding = [&](const std::string &name) -> bool {
       if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
@@ -1975,6 +2004,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     if (inferBuiltinPointerBinding(initializer)) {
       return true;
     }
+    return true;
+  }
+  if (inferTryInitializerBinding()) {
     return true;
   }
   if (inferCallInitializerBinding()) {

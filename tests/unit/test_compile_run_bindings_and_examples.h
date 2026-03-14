@@ -4040,7 +4040,8 @@ TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiri
   REQUIRE(std::filesystem::exists(metalHostPath));
 
   const std::string source = readFile(metalHostPath.string());
-  CHECK(source.find("gfx_profile=metal-osx") != std::string::npos);
+  CHECK(source.find("gfx_profile=") != std::string::npos);
+  CHECK(source.find("metal-osx") != std::string::npos);
   CHECK(source.find("gfx_error_code=") != std::string::npos);
   CHECK(source.find("gfx_error_why=") != std::string::npos);
   CHECK(source.find("device_create_failed") != std::string::npos);

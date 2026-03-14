@@ -44,6 +44,7 @@ constexpr uint8_t WasmOpLocalGet = 0x20;
 constexpr uint8_t WasmOpLocalSet = 0x21;
 constexpr uint8_t WasmOpLocalTee = 0x22;
 constexpr uint8_t WasmOpI32Load = 0x28;
+constexpr uint8_t WasmOpI32Load8U = 0x2d;
 constexpr uint8_t WasmOpI32Store = 0x36;
 constexpr uint8_t WasmOpI32Store8 = 0x3a;
 constexpr uint8_t WasmOpI32Const = 0x41;
@@ -57,14 +58,26 @@ constexpr uint8_t WasmOpI32LeS = 0x4c;
 constexpr uint8_t WasmOpI32GeS = 0x4e;
 constexpr uint8_t WasmOpI32GeU = 0x4f;
 constexpr uint8_t WasmOpI64Eqz = 0x50;
+constexpr uint8_t WasmOpI64Eq = 0x51;
+constexpr uint8_t WasmOpI64Ne = 0x52;
 constexpr uint8_t WasmOpI64LtS = 0x53;
+constexpr uint8_t WasmOpI64LtU = 0x54;
+constexpr uint8_t WasmOpI64GtS = 0x55;
+constexpr uint8_t WasmOpI64GtU = 0x56;
+constexpr uint8_t WasmOpI64LeS = 0x57;
+constexpr uint8_t WasmOpI64LeU = 0x58;
+constexpr uint8_t WasmOpI64GeS = 0x59;
+constexpr uint8_t WasmOpI64GeU = 0x5a;
 constexpr uint8_t WasmOpI32Add = 0x6a;
 constexpr uint8_t WasmOpI32Sub = 0x6b;
 constexpr uint8_t WasmOpI32Mul = 0x6c;
 constexpr uint8_t WasmOpI32DivS = 0x6d;
 constexpr uint8_t WasmOpI32And = 0x71;
 constexpr uint8_t WasmOpI32Or = 0x72;
+constexpr uint8_t WasmOpI64Add = 0x7c;
 constexpr uint8_t WasmOpI64Sub = 0x7d;
+constexpr uint8_t WasmOpI64Mul = 0x7e;
+constexpr uint8_t WasmOpI64DivS = 0x7f;
 constexpr uint8_t WasmOpI64DivU = 0x80;
 constexpr uint8_t WasmOpI64RemU = 0x82;
 constexpr uint8_t WasmOpI32WrapI64 = 0xa7;
@@ -450,12 +463,15 @@ std::string wasmExportName(const std::string &path) {
 
 bool inferFunctionType(const IrFunction &function, WasmFunctionType &outType, std::string &error) {
   bool hasReturnI32 = false;
+  bool hasReturnI64 = false;
   bool hasReturnF32 = false;
   bool hasReturnF64 = false;
   bool hasReturnVoid = false;
   for (const IrInstruction &inst : function.instructions) {
     if (inst.op == IrOpcode::ReturnI32) {
       hasReturnI32 = true;
+    } else if (inst.op == IrOpcode::ReturnI64) {
+      hasReturnI64 = true;
     } else if (inst.op == IrOpcode::ReturnF32) {
       hasReturnF32 = true;
     } else if (inst.op == IrOpcode::ReturnF64) {
@@ -465,7 +481,8 @@ bool inferFunctionType(const IrFunction &function, WasmFunctionType &outType, st
     }
   }
   const uint32_t returnKindCount =
-      (hasReturnI32 ? 1u : 0u) + (hasReturnF32 ? 1u : 0u) + (hasReturnF64 ? 1u : 0u) + (hasReturnVoid ? 1u : 0u);
+      (hasReturnI32 ? 1u : 0u) + (hasReturnI64 ? 1u : 0u) + (hasReturnF32 ? 1u : 0u) + (hasReturnF64 ? 1u : 0u) +
+      (hasReturnVoid ? 1u : 0u);
   if (returnKindCount > 1u) {
     error = "wasm emitter does not support mixed return kinds in function: " + function.name;
     return false;
@@ -474,6 +491,8 @@ bool inferFunctionType(const IrFunction &function, WasmFunctionType &outType, st
   outType.results.clear();
   if (hasReturnI32) {
     outType.results.push_back(WasmValueTypeI32);
+  } else if (hasReturnI64) {
+    outType.results.push_back(WasmValueTypeI64);
   } else if (hasReturnF32) {
     outType.results.push_back(WasmValueTypeF32);
   } else if (hasReturnF64) {
@@ -484,8 +503,12 @@ bool inferFunctionType(const IrFunction &function, WasmFunctionType &outType, st
 
 bool opcodeNeedsWasiRuntime(IrOpcode op) {
   switch (op) {
+    case IrOpcode::PrintI32:
+    case IrOpcode::PrintI64:
+    case IrOpcode::PrintU64:
     case IrOpcode::PushArgc:
     case IrOpcode::PrintString:
+    case IrOpcode::PrintStringDynamic:
     case IrOpcode::PrintArgv:
     case IrOpcode::PrintArgvUnsafe:
     case IrOpcode::FileOpenRead:
@@ -521,14 +544,18 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
     if (inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
       layout.hasArgvHelpers = true;
     }
-    if (inst.op == IrOpcode::FileOpenRead || inst.op == IrOpcode::FileOpenWrite || inst.op == IrOpcode::FileOpenAppend ||
+    if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
+        inst.op == IrOpcode::PrintStringDynamic || inst.op == IrOpcode::FileOpenRead ||
+        inst.op == IrOpcode::FileOpenWrite || inst.op == IrOpcode::FileOpenAppend ||
         inst.op == IrOpcode::FileReadByte || inst.op == IrOpcode::FileClose || inst.op == IrOpcode::FileFlush ||
         inst.op == IrOpcode::FileWriteI32 ||
         inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 || inst.op == IrOpcode::FileWriteString ||
         inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
       layout.hasFileHelpers = true;
     }
-    if (inst.op == IrOpcode::FileWriteI32 || inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64) {
+    if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
+        inst.op == IrOpcode::PrintStringDynamic || inst.op == IrOpcode::FileWriteI32 ||
+        inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64) {
       layout.hasFileNumericHelpers = true;
     }
   }
@@ -887,6 +914,44 @@ void emitWasiWriteDecimalFromI64Local(uint32_t fdLocal,
   emitWasiWritePtrLenFromFdLocal(fdLocal, ptrLocal, lenLocal, runtime, out);
 }
 
+void emitWasiWriteDynamicStringFromI64Local(uint32_t fdLocal,
+                                            uint32_t stringIndexLocal,
+                                            const WasmRuntimeContext &runtime,
+                                            std::vector<uint8_t> &out) {
+  out.push_back(WasmOpLocalGet);
+  appendU32Leb(stringIndexLocal, out);
+  out.push_back(WasmOpI64Const);
+  appendS64Leb(static_cast<int64_t>(runtime.stringPtrs.size()), out);
+  out.push_back(WasmOpI64GeU);
+  out.push_back(WasmOpIf);
+  out.push_back(WasmBlockTypeVoid);
+  out.push_back(WasmOpUnreachable);
+  out.push_back(WasmOpEnd);
+
+  out.push_back(WasmOpBlock);
+  out.push_back(WasmBlockTypeVoid);
+  for (size_t stringIndex = 0; stringIndex < runtime.stringPtrs.size(); ++stringIndex) {
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(stringIndexLocal, out);
+    out.push_back(WasmOpI64Const);
+    appendS64Leb(static_cast<int64_t>(stringIndex), out);
+    out.push_back(WasmOpI64Eq);
+    out.push_back(WasmOpIf);
+    out.push_back(WasmBlockTypeVoid);
+    emitWasiWriteLiteralFromFdLocal(fdLocal,
+                                    runtime.stringPtrs[stringIndex],
+                                    runtime.stringLens[stringIndex],
+                                    runtime,
+                                    out);
+    out.push_back(WasmOpDrop);
+    out.push_back(WasmOpBr);
+    appendU32Leb(1, out);
+    out.push_back(WasmOpEnd);
+  }
+  out.push_back(WasmOpUnreachable);
+  out.push_back(WasmOpEnd);
+}
+
 void emitWasiPathOpen(uint32_t pathPtr,
                       uint32_t pathLen,
                       uint32_t oflags,
@@ -941,7 +1006,9 @@ bool buildWasiRuntimeContext(const IrModule &module,
       if (inst.op == IrOpcode::PushArgc || inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
         runtime.hasArgvOps = true;
       }
-      if (inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
+      if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
+          inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintStringDynamic ||
+          inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
         runtime.hasOutputOps = true;
       }
       if (inst.op == IrOpcode::FileOpenRead || inst.op == IrOpcode::FileOpenWrite || inst.op == IrOpcode::FileOpenAppend ||
@@ -1087,6 +1154,10 @@ bool emitSimpleInstruction(const IrInstruction &inst,
       out.push_back(WasmOpI32Const);
       appendS32Leb(static_cast<int32_t>(inst.imm), out);
       return true;
+    case IrOpcode::PushI64:
+      out.push_back(WasmOpI64Const);
+      appendS64Leb(static_cast<int64_t>(inst.imm), out);
+      return true;
     case IrOpcode::PushF32:
       out.push_back(WasmOpF32Const);
       appendFixedU32Le(static_cast<uint32_t>(inst.imm & 0xffffffffu), out);
@@ -1141,6 +1212,26 @@ bool emitSimpleInstruction(const IrInstruction &inst,
       appendS32Leb(-1, out);
       out.push_back(WasmOpI32Mul);
       return true;
+    case IrOpcode::AddI64:
+      out.push_back(WasmOpI64Add);
+      return true;
+    case IrOpcode::SubI64:
+      out.push_back(WasmOpI64Sub);
+      return true;
+    case IrOpcode::MulI64:
+      out.push_back(WasmOpI64Mul);
+      return true;
+    case IrOpcode::DivI64:
+      out.push_back(WasmOpI64DivS);
+      return true;
+    case IrOpcode::DivU64:
+      out.push_back(WasmOpI64DivU);
+      return true;
+    case IrOpcode::NegI64:
+      out.push_back(WasmOpI64Const);
+      appendS64Leb(-1, out);
+      out.push_back(WasmOpI64Mul);
+      return true;
     case IrOpcode::CmpEqI32:
       out.push_back(WasmOpI32Eq);
       return true;
@@ -1158,6 +1249,36 @@ bool emitSimpleInstruction(const IrInstruction &inst,
       return true;
     case IrOpcode::CmpGeI32:
       out.push_back(WasmOpI32GeS);
+      return true;
+    case IrOpcode::CmpEqI64:
+      out.push_back(WasmOpI64Eq);
+      return true;
+    case IrOpcode::CmpNeI64:
+      out.push_back(WasmOpI64Ne);
+      return true;
+    case IrOpcode::CmpLtI64:
+      out.push_back(WasmOpI64LtS);
+      return true;
+    case IrOpcode::CmpLeI64:
+      out.push_back(WasmOpI64LeS);
+      return true;
+    case IrOpcode::CmpGtI64:
+      out.push_back(WasmOpI64GtS);
+      return true;
+    case IrOpcode::CmpGeI64:
+      out.push_back(WasmOpI64GeS);
+      return true;
+    case IrOpcode::CmpLtU64:
+      out.push_back(WasmOpI64LtU);
+      return true;
+    case IrOpcode::CmpLeU64:
+      out.push_back(WasmOpI64LeU);
+      return true;
+    case IrOpcode::CmpGtU64:
+      out.push_back(WasmOpI64GtU);
+      return true;
+    case IrOpcode::CmpGeU64:
+      out.push_back(WasmOpI64GeU);
       return true;
     case IrOpcode::AddF32:
       out.push_back(WasmOpF32Add);
@@ -1287,6 +1408,40 @@ bool emitSimpleInstruction(const IrInstruction &inst,
       appendS32Leb(0, out);
       out.push_back(WasmOpEnd);
       return true;
+    case IrOpcode::PrintI32:
+    case IrOpcode::PrintI64:
+    case IrOpcode::PrintU64: {
+      if (!runtime.enabled || !runtime.hasOutputOps || !localLayout.hasFileHelpers || !localLayout.hasFileNumericHelpers) {
+        error = "wasm emitter missing numeric print runtime support in function: " + functionName;
+        return false;
+      }
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      const uint32_t fd = (flags & PrintFlagStderr) ? 2u : 1u;
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(fd), out);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      if (inst.op == IrOpcode::PrintI32) {
+        out.push_back(WasmOpI64ExtendI32S);
+      }
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileDigitsValueLocal, out);
+      emitWasiWriteDecimalFromI64Local(localLayout.fileHandleLocal,
+                                       localLayout.fileDigitsValueLocal,
+                                       localLayout.fileDigitsRemLocal,
+                                       localLayout.fileDigitsPtrLocal,
+                                       localLayout.fileDigitsLenLocal,
+                                       localLayout.fileDigitsNegLocal,
+                                       inst.op != IrOpcode::PrintU64,
+                                       runtime,
+                                       out);
+      out.push_back(WasmOpDrop);
+      if ((flags & PrintFlagNewline) != 0) {
+        emitWasiWriteLiteralFromFdLocal(localLayout.fileHandleLocal, runtime.newlineAddr, 1, runtime, out);
+        out.push_back(WasmOpDrop);
+      }
+      return true;
+    }
     case IrOpcode::PrintString: {
       if (!runtime.enabled || !runtime.hasOutputOps) {
         error = "wasm emitter missing output runtime support in function: " + functionName;
@@ -1303,6 +1458,29 @@ bool emitSimpleInstruction(const IrInstruction &inst,
           fd, runtime.stringPtrs[static_cast<size_t>(stringIndex)], runtime.stringLens[static_cast<size_t>(stringIndex)], runtime, out);
       if ((flags & PrintFlagNewline) != 0) {
         emitWasiWriteLiteral(fd, runtime.newlineAddr, 1, runtime, out);
+      }
+      return true;
+    }
+    case IrOpcode::PrintStringDynamic: {
+      if (!runtime.enabled || !runtime.hasOutputOps || !localLayout.hasFileHelpers || !localLayout.hasFileNumericHelpers) {
+        error = "wasm emitter missing dynamic string print runtime support in function: " + functionName;
+        return false;
+      }
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      const uint32_t fd = (flags & PrintFlagStderr) ? 2u : 1u;
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(fd), out);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileDigitsValueLocal, out);
+      emitWasiWriteDynamicStringFromI64Local(localLayout.fileHandleLocal,
+                                             localLayout.fileDigitsValueLocal,
+                                             runtime,
+                                             out);
+      if ((flags & PrintFlagNewline) != 0) {
+        emitWasiWriteLiteralFromFdLocal(localLayout.fileHandleLocal, runtime.newlineAddr, 1, runtime, out);
+        out.push_back(WasmOpDrop);
       }
       return true;
     }
@@ -1738,6 +1916,7 @@ bool emitSimpleInstruction(const IrInstruction &inst,
       return true;
     }
     case IrOpcode::ReturnI32:
+    case IrOpcode::ReturnI64:
     case IrOpcode::ReturnF32:
     case IrOpcode::ReturnF64:
     case IrOpcode::ReturnVoid:

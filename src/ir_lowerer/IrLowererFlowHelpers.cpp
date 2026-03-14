@@ -57,20 +57,6 @@ bool checkedSubU64(uint64_t lhs, uint64_t rhs, uint64_t &out) {
 enum class SignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 enum class UnsignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 
-bool isVectorStatementReceiverExpr(const Expr &expr, const LocalMap &localsIn) {
-  if (expr.kind != Expr::Kind::Name) {
-    return false;
-  }
-  auto it = localsIn.find(expr.name);
-  if (it == localsIn.end()) {
-    return false;
-  }
-  if (it->second.isSoaVector) {
-    return true;
-  }
-  return it->second.kind == LocalInfo::Kind::Vector && it->second.isMutable;
-}
-
 bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -641,6 +627,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     std::vector<IrInstruction> &instructions,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
     const std::function<void()> &emitVectorCapacityExceeded,
@@ -653,6 +640,20 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   if (!resolveVectorMutatorName(stmt, vectorHelper)) {
     return VectorStatementHelperEmitResult::NotMatched;
   }
+
+  auto isMutableVectorTargetExpr = [&](const Expr &expr) {
+    if (expr.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.name);
+      if (it == localsIn.end()) {
+        return false;
+      }
+      if (it->second.isSoaVector) {
+        return true;
+      }
+      return it->second.kind == LocalInfo::Kind::Vector && it->second.isMutable;
+    }
+    return expr.kind == Expr::Kind::Call && expr.isFieldAccess && inferStructExprPath(expr, localsIn) == "/vector";
+  };
 
   if (!stmt.isMethodCall && !stmt.args.empty()) {
     std::vector<size_t> receiverIndices;
@@ -697,7 +698,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
         (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
          stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
          (stmt.args.front().kind == Expr::Kind::Name &&
-          !isVectorStatementReceiverExpr(stmt.args.front(), localsIn)));
+          !isMutableVectorTargetExpr(stmt.args.front())));
     if (probePositionalReorderedReceiver) {
       for (size_t i = 1; i < stmt.args.size(); ++i) {
         appendReceiverIndex(i);
@@ -747,16 +748,26 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   }
 
   const Expr &target = stmt.args.front();
-  if (target.kind != Expr::Kind::Name) {
+  if (!isMutableVectorTargetExpr(target)) {
     error = vectorHelper + " requires mutable vector binding";
     return VectorStatementHelperEmitResult::Error;
   }
-  auto it = localsIn.find(target.name);
-  if (it != localsIn.end() && it->second.isSoaVector) {
-    error = "native backend does not support soa_vector helper: " + vectorHelper;
-    return VectorStatementHelperEmitResult::Error;
-  }
-  if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Vector || !it->second.isMutable) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    if (it == localsIn.end()) {
+      error = vectorHelper + " requires mutable vector binding";
+      return VectorStatementHelperEmitResult::Error;
+    }
+    if (it->second.isSoaVector) {
+      error = "native backend does not support soa_vector helper: " + vectorHelper;
+      return VectorStatementHelperEmitResult::Error;
+    }
+    if (it->second.kind != LocalInfo::Kind::Vector || !it->second.isMutable) {
+      error = vectorHelper + " requires mutable vector binding";
+      return VectorStatementHelperEmitResult::Error;
+    }
+  } else if (!(target.kind == Expr::Kind::Call && target.isFieldAccess &&
+               inferStructExprPath(target, localsIn) == "/vector")) {
     error = vectorHelper + " requires mutable vector binding";
     return VectorStatementHelperEmitResult::Error;
   }
@@ -771,7 +782,9 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
 
   const int32_t ptrLocal = allocTempLocal();
   constexpr uint64_t kVectorDataPtrOffsetBytes = 2 * IrSlotBytes;
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+  if (!emitExpr(target, localsIn)) {
+    return VectorStatementHelperEmitResult::Error;
+  }
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
   auto emitLoadVectorDataPtr = [&](int32_t dataPtrLocal) {
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
@@ -1210,6 +1223,37 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   instructions.push_back({IrOpcode::StoreIndirect, 0});
   instructions.push_back({IrOpcode::Pop, 0});
   return VectorStatementHelperEmitResult::Emitted;
+}
+
+VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
+    const std::function<void()> &emitVectorCapacityExceeded,
+    const std::function<void()> &emitVectorPopOnEmpty,
+    const std::function<void()> &emitVectorIndexOutOfBounds,
+    const std::function<void()> &emitVectorReserveNegative,
+    const std::function<void()> &emitVectorReserveExceeded,
+    std::string &error) {
+  return tryEmitVectorStatementHelper(
+      stmt,
+      localsIn,
+      instructions,
+      allocTempLocal,
+      inferExprKind,
+      [](const Expr &, const LocalMap &) { return std::string(); },
+      emitExpr,
+      isUserDefinedVectorHelperCall,
+      emitVectorCapacityExceeded,
+      emitVectorPopOnEmpty,
+      emitVectorIndexOutOfBounds,
+      emitVectorReserveNegative,
+      emitVectorReserveExceeded,
+      error);
 }
 
 bool resolveBufferInitInfo(const Expr &expr,

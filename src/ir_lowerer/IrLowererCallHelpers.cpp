@@ -561,6 +561,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    size_t stringTableCount,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
@@ -673,6 +674,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
                                 expr.args[1],
                                 localsIn,
                                 resolveStringTableTarget,
+                                stringTableCount,
                                 resolveCallMapAccessTargetInfo,
                                 resolveCallArrayVectorAccessTargetInfo,
                                 inferExprKind,
@@ -692,6 +694,103 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   return NativeCallTailDispatchResult::NotHandled;
+}
+
+NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
+    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return tryEmitNativeCallTailDispatch(
+      expr,
+      localsIn,
+      tryGetMathBuiltinName,
+      isSupportedMathBuiltinName,
+      isArrayCountCall,
+      isVectorCapacityCall,
+      isStringCountCall,
+      isEntryArgsName,
+      resolveStringTableTarget,
+      0,
+      emitExpr,
+      resolveCallMapAccessTargetInfo,
+      resolveCallArrayVectorAccessTargetInfo,
+      tryGetPrintBuiltinName,
+      inferExprKind,
+      allocTempLocal,
+      emitStringIndexOutOfBounds,
+      emitMapKeyNotFound,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+}
+
+NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
+    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    size_t stringTableCount,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return tryEmitNativeCallTailDispatch(
+      expr,
+      localsIn,
+      tryGetMathBuiltinName,
+      isSupportedMathBuiltinName,
+      isArrayCountCall,
+      isVectorCapacityCall,
+      isStringCountCall,
+      isEntryArgsName,
+      resolveStringTableTarget,
+      stringTableCount,
+      emitExpr,
+      {},
+      {},
+      tryGetPrintBuiltinName,
+      inferExprKind,
+      allocTempLocal,
+      emitStringIndexOutOfBounds,
+      emitMapKeyNotFound,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
@@ -725,9 +824,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       isStringCountCall,
       isEntryArgsName,
       resolveStringTableTarget,
+      0,
       emitExpr,
-      {},
-      {},
       tryGetPrintBuiltinName,
       inferExprKind,
       allocTempLocal,
@@ -779,6 +877,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    size_t stringTableCount,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
@@ -802,9 +901,107 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       isStringCountCall,
       isEntryArgsName,
       resolveStringTableTarget,
+      stringTableCount,
       emitExpr,
       resolveCallMapAccessTargetInfo,
       resolveCallArrayVectorAccessTargetInfo,
+      tryGetPrintBuiltinName,
+      inferExprKind,
+      allocTempLocal,
+      emitStringIndexOutOfBounds,
+      emitMapKeyNotFound,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+}
+
+NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
+    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return tryEmitNativeCallTailDispatchWithLocals(
+      expr,
+      localsIn,
+      tryGetMathBuiltinName,
+      isSupportedMathBuiltinName,
+      isArrayCountCall,
+      isVectorCapacityCall,
+      isStringCountCall,
+      isEntryArgsName,
+      resolveStringTableTarget,
+      0,
+      emitExpr,
+      resolveCallMapAccessTargetInfo,
+      resolveCallArrayVectorAccessTargetInfo,
+      tryGetPrintBuiltinName,
+      inferExprKind,
+      allocTempLocal,
+      emitStringIndexOutOfBounds,
+      emitMapKeyNotFound,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+}
+
+NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
+    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    size_t stringTableCount,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return tryEmitNativeCallTailDispatchWithLocals(
+      expr,
+      localsIn,
+      tryGetMathBuiltinName,
+      isSupportedMathBuiltinName,
+      isArrayCountCall,
+      isVectorCapacityCall,
+      isStringCountCall,
+      isEntryArgsName,
+      resolveStringTableTarget,
+      stringTableCount,
+      emitExpr,
+      {},
+      {},
       tryGetPrintBuiltinName,
       inferExprKind,
       allocTempLocal,
@@ -848,9 +1045,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       isStringCountCall,
       isEntryArgsName,
       resolveStringTableTarget,
+      0,
       emitExpr,
-      {},
-      {},
       tryGetPrintBuiltinName,
       inferExprKind,
       allocTempLocal,
@@ -1077,6 +1273,99 @@ StringTableAccessEmitResult tryEmitStringTableAccessLoad(
   return StringTableAccessEmitResult::Emitted;
 }
 
+enum class DynamicStringAccessEmitResult {
+  NotHandled,
+  Emitted,
+  Error,
+};
+
+DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    size_t stringTableCount,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  bool isRuntimeStringTarget = false;
+  if (targetExpr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(targetExpr.name);
+    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
+        it->second.valueKind == LocalInfo::ValueKind::String) {
+      if (it->second.stringSource == LocalInfo::StringSource::ArgvIndex) {
+        error = "native backend only supports entry argument indexing in print calls or string bindings";
+        return DynamicStringAccessEmitResult::Error;
+      }
+      isRuntimeStringTarget = (it->second.stringSource == LocalInfo::StringSource::RuntimeIndex);
+    }
+  } else {
+    if (isEntryArgsName(targetExpr, localsIn)) {
+      error = "native backend only supports entry argument indexing in print calls or string bindings";
+      return DynamicStringAccessEmitResult::Error;
+    }
+    if (targetExpr.kind == Expr::Kind::Call) {
+      std::string nestedAccessName;
+      if (getBuiltinArrayAccessName(targetExpr, nestedAccessName) && targetExpr.args.size() == 2 &&
+          isEntryArgsName(targetExpr.args.front(), localsIn)) {
+        error = "native backend only supports entry argument indexing in print calls or string bindings";
+        return DynamicStringAccessEmitResult::Error;
+      }
+    }
+    isRuntimeStringTarget = inferExprKind(targetExpr, localsIn) == LocalInfo::ValueKind::String;
+  }
+
+  if (!isRuntimeStringTarget || stringTableCount == 0) {
+    return DynamicStringAccessEmitResult::NotHandled;
+  }
+
+  LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
+  if (!resolveValidatedAccessIndexKind(indexExpr, localsIn, accessName, inferExprKind, indexKind, error)) {
+    return DynamicStringAccessEmitResult::Error;
+  }
+
+  const int32_t stringLocal = allocTempLocal();
+  if (!emitExpr(targetExpr, localsIn)) {
+    return DynamicStringAccessEmitResult::Error;
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(stringLocal));
+
+  const int32_t indexLocal = allocTempLocal();
+  if (!emitExpr(indexExpr, localsIn)) {
+    return DynamicStringAccessEmitResult::Error;
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
+
+  std::vector<size_t> jumpToEnd;
+  jumpToEnd.reserve(stringTableCount);
+  for (size_t stringIndex = 0; stringIndex < stringTableCount; ++stringIndex) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(stringLocal));
+    emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(stringIndex));
+    emitInstruction(IrOpcode::CmpEqI64, 0);
+    const size_t jumpNext = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+    emitInstruction(IrOpcode::LoadStringByte, static_cast<uint64_t>(stringIndex));
+    const size_t jumpEnd = instructionCount();
+    emitInstruction(IrOpcode::Jump, 0);
+    patchInstructionImm(jumpNext, static_cast<uint64_t>(instructionCount()));
+    jumpToEnd.push_back(jumpEnd);
+  }
+
+  emitStringIndexOutOfBounds();
+  const size_t endIndex = instructionCount();
+  for (size_t jumpIndex : jumpToEnd) {
+    patchInstructionImm(jumpIndex, static_cast<uint64_t>(endIndex));
+  }
+  return DynamicStringAccessEmitResult::Emitted;
+}
+
 NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
     const Expr &targetExpr,
     const LocalMap &localsIn,
@@ -1257,6 +1546,7 @@ bool emitBuiltinArrayAccess(
     const Expr &indexExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    size_t stringTableCount,
     const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -1288,6 +1578,28 @@ bool emitBuiltinArrayAccess(
     return false;
   }
   if (stringTableAccessResult == StringTableAccessEmitResult::Emitted) {
+    return true;
+  }
+
+  const auto dynamicStringAccessResult = tryEmitDynamicStringAccessLoad(
+      accessName,
+      targetExpr,
+      indexExpr,
+      localsIn,
+      stringTableCount,
+      inferExprKind,
+      isEntryArgsName,
+      allocTempLocal,
+      emitExpr,
+      emitStringIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+  if (dynamicStringAccessResult == DynamicStringAccessEmitResult::Error) {
+    return false;
+  }
+  if (dynamicStringAccessResult == DynamicStringAccessEmitResult::Emitted) {
     return true;
   }
 
@@ -1344,6 +1656,8 @@ bool emitBuiltinArrayAccess(
     const Expr &indexExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<int32_t()> &allocTempLocal,
@@ -1361,8 +1675,86 @@ bool emitBuiltinArrayAccess(
       indexExpr,
       localsIn,
       resolveStringTableTarget,
+      0,
+      resolveCallMapAccessTargetInfo,
+      resolveCallArrayVectorAccessTargetInfo,
+      inferExprKind,
+      isEntryArgsName,
+      allocTempLocal,
+      emitExpr,
+      emitStringIndexOutOfBounds,
+      emitMapKeyNotFound,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+}
+
+bool emitBuiltinArrayAccess(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    size_t stringTableCount,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return emitBuiltinArrayAccess(
+      accessName,
+      targetExpr,
+      indexExpr,
+      localsIn,
+      resolveStringTableTarget,
+      stringTableCount,
       {},
       {},
+      inferExprKind,
+      isEntryArgsName,
+      allocTempLocal,
+      emitExpr,
+      emitStringIndexOutOfBounds,
+      emitMapKeyNotFound,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+}
+
+bool emitBuiltinArrayAccess(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return emitBuiltinArrayAccess(
+      accessName,
+      targetExpr,
+      indexExpr,
+      localsIn,
+      resolveStringTableTarget,
+      0,
       inferExprKind,
       isEntryArgsName,
       allocTempLocal,

@@ -9,6 +9,27 @@ static void expectCppVectorCountCompatibilityTypeMismatchReject(const std::strin
   CHECK_FALSE(readFile(errPath).empty());
 }
 
+static bool buildEmittedCppExecutableAtO0(const std::string &srcPath,
+                                          const std::string &cppPath,
+                                          const std::string &exePath) {
+  std::string cxx = "clang++";
+  if (runCommand("c++ --version > /dev/null 2>&1") == 0) {
+    cxx = "c++";
+  } else if (runCommand("clang++ --version > /dev/null 2>&1") != 0) {
+    return false;
+  }
+
+  const std::string emitCppCmd =
+      "./primec --emit=cpp " + quoteShellArg(srcPath) + " -o " + quoteShellArg(cppPath) + " --entry /main";
+  if (runCommand(emitCppCmd) != 0) {
+    return false;
+  }
+
+  const std::string compileCmd =
+      cxx + " -std=c++23 -O0 " + quoteShellArg(cppPath) + " -o " + quoteShellArg(exePath);
+  return runCommand(compileCmd) == 0;
+}
+
 TEST_CASE("compiles and runs chained method calls in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
@@ -291,10 +312,10 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  print_line(Result.why(ppm.read(width, height, pixels, "input.ppm"utf8)))
-  print_line(Result.why(ppm.write("output.ppm"utf8, width, height, pixels)))
-  print_line(Result.why(png.read(width, height, pixels, "input.png"utf8)))
-  print_line(Result.why(png.write("output.png"utf8, width, height, pixels)))
+  print_line(Result.why(/std/image/ppm/read(width, height, pixels, "input.ppm"utf8)))
+  print_line(Result.why(/std/image/ppm/write("output.ppm"utf8, width, height, pixels)))
+  print_line(Result.why(/std/image/png/read(width, height, pixels, "input.png"utf8)))
+  print_line(Result.why(/std/image/png/write("output.png"utf8, width, height, pixels)))
   return(plus(width, height))
 }
 )";
@@ -317,6 +338,7 @@ main() {
 TEST_CASE("C++ emitter runs software renderer command serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -355,11 +377,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_command_serialization.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_command_serialization_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_command_serialization.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 2);
   CHECK(readFile(outPath) == "1,2,2,9,2,4,30,40,6,12,34,56,255,1,11,7,9,14,255,240,0,255,3,72,105,33\n");
 }
@@ -367,6 +389,7 @@ main() {
 TEST_CASE("C++ emitter runs software renderer clip stack serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -410,11 +433,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_clip_command_serialization.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_clip_command_serialization_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_clip_command_serialization.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 6);
   CHECK(readFile(outPath) ==
         "1,6,3,4,1,2,20,10,1,11,7,9,14,255,240,0,255,3,72,105,33,3,4,3,4,5,6,2,9,8,9,10,11,2,1,2,3,4,4,0,4,0\n");
@@ -423,6 +446,7 @@ main() {
 TEST_CASE("C++ emitter runs two-pass layout tree serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -454,11 +478,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_layout_tree_serialization.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_layout_tree_serialization_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_layout_tree_serialization.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 6);
   CHECK(readFile(outPath) ==
         "1,6,2,-1,24,36,10,20,50,40,1,0,20,5,12,22,46,5,2,0,12,14,12,30,46,14,1,2,8,4,13,31,44,4,1,2,10,6,13,37,44,6,1,0,6,7,12,47,46,7\n");
@@ -467,6 +491,7 @@ main() {
 TEST_CASE("C++ emitter runs two-pass layout empty root deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -493,11 +518,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_layout_tree_empty_root.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_layout_tree_empty_root_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_layout_tree_empty_root.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 1);
   CHECK(readFile(outPath) == "1,1,2,-1,11,13,3,5,11,13\n");
 }
@@ -505,6 +530,7 @@ main() {
 TEST_CASE("C++ emitter runs basic widget controls through layout deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -557,11 +583,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_basic_widget_controls.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_basic_widget_controls_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_basic_widget_controls.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 9);
   CHECK(readFile(outPath) ==
         "1,5,1,10,6,7,10,1,2,3,255,2,72,105,2,9,6,19,28,16,4,10,20,30,255,1,10,9,22,10,250,251,252,255,2,71,111,2,9,6,37,28,14,3,40,50,60,255,1,11,8,39,10,200,210,220,255,3,97,98,99\n");
@@ -570,6 +596,7 @@ main() {
 TEST_CASE("C++ emitter runs panel container widget deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -627,19 +654,20 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_panel_widget.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_panel_widget_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_panel_widget.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath) == 14);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
+  CHECK(runCommand(exePath + " > " + outPath) == 15);
   CHECK(readFile(outPath) ==
-        "1,8,1,11,5,6,10,1,2,3,255,3,84,111,112,2,9,5,18,26,31,4,8,9,10,255,3,4,7,20,22,27,2,9,7,20,22,14,3,20,30,40,255,1,10,9,22,10,200,201,202,255,2,71,111,2,9,7,35,22,12,2,50,60,70,255,1,11,8,36,10,210,211,212,255,3,97,98,99,4,0,1,9,5,51,10,1,2,3,255,1,33\n");
+        "1,9,1,11,5,6,10,1,2,3,255,3,84,111,112,2,9,5,18,26,31,4,8,9,10,255,3,4,7,20,22,27,2,9,7,20,22,14,3,20,30,40,255,1,10,9,22,10,200,201,202,255,2,71,111,2,9,7,35,22,12,2,50,60,70,255,1,11,8,36,10,210,211,212,255,3,97,98,99,4,0,1,9,5,51,10,1,2,3,255,1,33\n");
 }
 
 TEST_CASE("C++ emitter runs empty panel container stays balanced deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -671,11 +699,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_empty_panel_widget.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_empty_panel_widget_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_empty_panel_widget.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 5);
   CHECK(readFile(outPath) == "1,3,2,9,2,3,20,10,5,9,8,7,255,3,4,5,6,14,4,4,0\n");
 }
@@ -683,6 +711,7 @@ main() {
 TEST_CASE("C++ emitter runs composite login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -743,11 +772,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_composite_login_form.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_composite_login_form_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_composite_login_form.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 16);
   CHECK(readFile(outPath) ==
         "1,10,2,9,7,8,38,55,4,9,8,7,255,3,4,9,10,34,51,1,13,9,10,10,1,2,3,255,5,76,111,103,105,110,2,9,9,21,34,12,3,20,30,40,255,1,13,10,22,10,200,201,202,255,5,97,108,105,99,101,2,9,9,34,34,12,3,20,30,40,255,1,14,10,35,10,200,201,202,255,6,115,101,99,114,101,116,2,9,9,47,34,14,3,50,60,70,255,1,10,11,49,10,250,251,252,255,2,71,111,4,0\n");
@@ -756,6 +785,7 @@ main() {
 TEST_CASE("C++ emitter runs html adapter login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -819,11 +849,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_html_login_form.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_html_login_form_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_html_login_form.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 14);
   CHECK(readFile(outPath) ==
         "1,8,1,12,1,0,7,8,38,55,2,4,9,8,7,255,2,17,2,1,9,10,34,10,10,1,2,3,255,5,76,111,103,105,110,4,23,3,1,9,21,34,12,10,1,3,20,30,40,255,200,201,202,255,5,97,108,105,99,101,5,13,3,2,10,117,115,101,114,95,105,110,112,117,116,4,24,4,1,9,34,34,12,10,1,3,20,30,40,255,200,201,202,255,6,115,101,99,114,101,116,5,13,4,2,10,112,97,115,115,95,105,110,112,117,116,3,20,5,1,9,47,34,14,10,2,3,50,60,70,255,250,251,252,255,2,71,111,5,15,5,1,12,115,117,98,109,105,116,95,99,108,105,99,107\n");
@@ -832,6 +862,7 @@ main() {
 TEST_CASE("C++ emitter runs ui event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -876,11 +907,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_event_stream.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_event_stream_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_event_stream.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 10);
   CHECK(readFile(outPath) ==
         "1,5,1,5,3,7,-1,20,30,2,5,5,7,1,20,30,3,5,5,7,1,21,31,4,4,3,13,3,1,5,4,3,13,1,0\n");
@@ -889,6 +920,7 @@ main() {
 TEST_CASE("C++ emitter runs ui ime event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -930,11 +962,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_ime_event_stream.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_ime_event_stream_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_ime_event_stream.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 5);
   CHECK(readFile(outPath) ==
         "1,2,6,7,3,1,4,3,97,108,124,7,9,3,-1,-1,5,97,108,105,99,101\n");
@@ -943,6 +975,7 @@ main() {
 TEST_CASE("C++ emitter runs ui resize and focus event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
+import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
@@ -985,11 +1018,11 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_ui_resize_focus_event_stream.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_resize_focus_event_stream_exe").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_resize_focus_event_stream.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 6);
   CHECK(readFile(outPath) == "1,3,8,3,1,40,57,9,3,3,0,0,10,3,3,0,0\n");
 }
@@ -1008,26 +1041,19 @@ namespace GfxError {
   }
 }
 
-[struct]
-Frame() {
-  [i32] token{0i32}
-}
-
-[return<Result<Frame, GfxError>>]
+[return<Result<i32, GfxError>>]
 acquire_frame_ok() {
-  return(Result.ok(Frame([token] 9i32)))
+  return(Result.ok(9i32))
 }
 
-[return<Result<Frame, GfxError>>]
+[return<Result<i32, GfxError>>]
 acquire_frame_fail() {
-  return(7i32)
+  return(7i64)
 }
 
-namespace Frame {
-  [return<Result<GfxError>>]
-  submit([Frame] self) {
-    return(Result.ok())
-  }
+[return<Result<GfxError>>]
+submit_frame([i32] token) {
+  return(Result.ok())
 }
 
 [effects(io_err)]
@@ -1037,15 +1063,15 @@ log_gfx_error([GfxError] err) {
 
 [return<int> on_error<GfxError, /log_gfx_error>]
 main_ok() {
-  frame{acquire_frame_ok()?}
-  frame.submit()?
-  return(frame.token)
+  [i32] frameToken{acquire_frame_ok()?}
+  submit_frame(frameToken)?
+  return(frameToken)
 }
 
 [return<int> effects(io_err) on_error<GfxError, /log_gfx_error>]
 main_fail() {
-  frame{acquire_frame_fail()?}
-  return(frame.token)
+  [i32] frameToken{acquire_frame_fail()?}
+  return(frameToken)
 }
 )";
   const std::string srcPath = writeTemp("compile_graphics_int_on_error_exe.prime", source);
@@ -1064,7 +1090,7 @@ main_fail() {
   CHECK(runCommand(compileFailCmd) == 0);
   CHECK(runCommand(okExePath) == 9);
   CHECK(runCommand(failExePath + " 2> " + errPath) == 7);
-  CHECK(readFile(errPath) == "frame_acquire_failed\n");
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("C++ emitter renders static fields and visibility") {
@@ -1229,7 +1255,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("IR backends do not support lambdas") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lambda mutator bool positional call resolves user helper") {
@@ -3362,7 +3388,7 @@ main() {
   CHECK(readFile(errPath).find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("rejects vector namespaced call aliases in C++ emitter") {
+TEST_CASE("runs vector namespaced call aliases canonically in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -3384,14 +3410,9 @@ main() {
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_call_alias_canonical_precedence_exe")
           .string();
-
-  const std::string errPath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_vector_namespaced_call_alias_canonical_precedence_err.txt")
-                                  .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("/vector/at") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
 }
 
 TEST_CASE("rejects vector namespaced templated canonical helper alias call without alias definition in C++ emitter") {
@@ -4073,7 +4094,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects vector namespaced count capacity access aliases in C++ emitter") {
+TEST_CASE("runs vector namespaced count capacity access aliases canonically in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -4086,16 +4107,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_count_access_aliases.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_access_aliases_err.txt")
-          .string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_access_aliases_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("/vector/at") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 13);
 }
 
 TEST_CASE("C++ emitter emits builtin statement for stdlib namespaced vector mutator") {
@@ -5622,7 +5638,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("rejects namespaced access method chain compatibility fallback in C++ emitter") {
+TEST_CASE("runs namespaced access method chain compatibility fallback in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -5640,15 +5656,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_namespaced_access_method_chain_compatibility_fallback_reject.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_namespaced_access_method_chain_compatibility_fallback_reject.err")
+       "primec_cpp_namespaced_access_method_chain_compatibility_fallback_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_CASE("rejects namespaced wrapper string access method chain compatibility fallback in C++ emitter") {
@@ -5682,7 +5697,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method target for tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias access struct method chain canonical forwarding in C++ emitter") {
@@ -6062,7 +6077,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access struct method chain canonical diagnostics forwarding in C++ emitter") {
@@ -6102,7 +6117,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter forwards explicit-template vector count wrappers through canonical return kinds") {

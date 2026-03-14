@@ -88,6 +88,8 @@ struct LowerInferenceExprKindCallFallbackSetupInput {
   IsStringCountCallFn isStringCountCall;
   IsVectorCapacityCallFn isVectorCapacityCall;
   IsEntryArgsNameFn isEntryArgsName;
+  InferSetupInferenceStructExprPathFn inferStructExprPath;
+  ResolveStructFieldSlotFn resolveStructFieldSlot;
 };
 struct LowerInferenceExprKindCallOperatorFallbackSetupInput {
   bool hasMathImport = false;

@@ -324,6 +324,8 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
               .isStringCountCall = input.isStringCountCall,
               .isVectorCapacityCall = input.isVectorCapacityCall,
               .isEntryArgsName = input.isEntryArgsName,
+              .inferStructExprPath = input.inferStructExprPath,
+              .resolveStructFieldSlot = input.resolveStructFieldSlot,
           },
           stateOut,
           errorOut)) {
@@ -1084,6 +1086,14 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
     errorOut = "native backend missing inference expr-kind call-fallback setup dependency: isEntryArgsName";
     return false;
   }
+  if (!input.inferStructExprPath) {
+    errorOut = "native backend missing inference expr-kind call-fallback setup dependency: inferStructExprPath";
+    return false;
+  }
+  if (!input.resolveStructFieldSlot) {
+    errorOut = "native backend missing inference expr-kind call-fallback setup dependency: resolveStructFieldSlot";
+    return false;
+  }
   if (!stateInOut.inferBufferElementKind) {
     errorOut = "native backend missing inference expr-kind call-fallback setup state: inferBufferElementKind";
     return false;
@@ -1093,16 +1103,46 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
   const auto isStringCountCall = input.isStringCountCall;
   const auto isVectorCapacityCall = input.isVectorCapacityCall;
   const auto isEntryArgsName = input.isEntryArgsName;
+  const auto inferStructExprPath = input.inferStructExprPath;
+  const auto resolveStructFieldSlot = input.resolveStructFieldSlot;
   const auto *defMap = input.defMap;
   const auto resolveExprPath = input.resolveExprPath;
 
+  const auto resolveFieldAccessCollectionInfo =
+      [inferStructExprPath, resolveStructFieldSlot](const Expr &candidate,
+                                                    const LocalMap &candidateLocals,
+                                                    std::string &structPathOut,
+                                                    LocalInfo::ValueKind &valueKindOut) {
+        structPathOut.clear();
+        valueKindOut = LocalInfo::ValueKind::Unknown;
+        if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess || candidate.args.size() != 1) {
+          return false;
+        }
+        const std::string receiverStruct = inferStructExprPath(candidate.args.front(), candidateLocals);
+        if (receiverStruct.empty()) {
+          return false;
+        }
+        StructSlotFieldInfo fieldInfo;
+        if (!resolveStructFieldSlot(receiverStruct, candidate.name, fieldInfo)) {
+          return false;
+        }
+        structPathOut = fieldInfo.structPath;
+        valueKindOut = fieldInfo.valueKind;
+        return !structPathOut.empty();
+      };
+
   const auto resolveCallMapAccessValueKind =
-      [defMap, resolveExprPath, &stateInOut](const Expr &candidate,
-                                             const LocalMap &candidateLocals,
-                                             LocalInfo::ValueKind &kindOut) {
+      [defMap, resolveExprPath, resolveFieldAccessCollectionInfo, &stateInOut](
+          const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
         kindOut = LocalInfo::ValueKind::Unknown;
         if (candidate.kind != Expr::Kind::Call) {
           return false;
+        }
+
+        std::string fieldStructPath;
+        if (resolveFieldAccessCollectionInfo(candidate, candidateLocals, fieldStructPath, kindOut) &&
+            fieldStructPath == "/vector") {
+          return true;
         }
 
         const Definition *callee = nullptr;
@@ -1139,6 +1179,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
        isVectorCapacityCall,
        isEntryArgsName,
        resolveCallMapAccessValueKind,
+       resolveFieldAccessCollectionInfo,
        &stateInOut](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         kindOut = LocalInfo::ValueKind::Unknown;
@@ -1182,12 +1223,42 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                 expr,
                 localsIn,
                 [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  std::string collectionName;
+                  std::string helperName;
+                  const bool isCountCall =
+                      candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 1 &&
+                      (isSimpleCallName(candidateExpr, "count") ||
+                       (getNamespacedCollectionHelperName(candidateExpr, collectionName, helperName) &&
+                        helperName == "count" && (collectionName == "vector" || collectionName == "map")));
+                  if (isCountCall) {
+                    std::string fieldStructPath;
+                    LocalInfo::ValueKind fieldValueKind = LocalInfo::ValueKind::Unknown;
+                    if (resolveFieldAccessCollectionInfo(
+                            candidateExpr.args.front(), candidateLocals, fieldStructPath, fieldValueKind)) {
+                      return fieldStructPath == "/vector" || fieldStructPath == "/map";
+                    }
+                  }
                   return isArrayCountCall(candidateExpr, candidateLocals);
                 },
                 [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
                   return isStringCountCall(candidateExpr, candidateLocals);
                 },
                 [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  std::string collectionName;
+                  std::string helperName;
+                  const bool isCapacityCall =
+                      candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 1 &&
+                      (isSimpleCallName(candidateExpr, "capacity") ||
+                       (getNamespacedCollectionHelperName(candidateExpr, collectionName, helperName) &&
+                        collectionName == "vector" && helperName == "capacity"));
+                  if (isCapacityCall) {
+                    std::string fieldStructPath;
+                    LocalInfo::ValueKind fieldValueKind = LocalInfo::ValueKind::Unknown;
+                    if (resolveFieldAccessCollectionInfo(
+                            candidateExpr.args.front(), candidateLocals, fieldStructPath, fieldValueKind)) {
+                      return fieldStructPath == "/vector";
+                    }
+                  }
                   return isVectorCapacityCall(candidateExpr, candidateLocals);
                 },
                 countCapacityKind) == CountCapacityCallReturnKindResolution::Resolved) {

@@ -21,6 +21,11 @@ std::string normalizeMapImportAliasPath(const std::string &path) {
   return path;
 }
 
+bool isVectorTypeName(const std::string &typeName) {
+  return typeName == "vector" || typeName == "/vector" || typeName == "std/collections/vector" ||
+         typeName == "/std/collections/vector";
+}
+
 } // namespace
 
 std::string joinTemplateArgsText(const std::vector<std::string> &args) {
@@ -585,42 +590,54 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         binding.typeTemplateArg.clear();
       }
     }
-    if (!binding.typeTemplateArg.empty()) {
-      error = "native backend does not support templated struct fields on " + structPath;
-      layoutStack.erase(structPath);
-      return false;
-    }
-
     StructSlotFieldInfo info;
     info.name = binding.name;
     info.slotOffset = offset;
-    LocalInfo::ValueKind kind = valueKindFromTypeName(binding.typeName);
-    if (kind != LocalInfo::ValueKind::Unknown) {
-      info.valueKind = kind;
-      info.slotCount = 1;
+    if (!binding.typeTemplateArg.empty()) {
+      if (isVectorTypeName(binding.typeName)) {
+        const LocalInfo::ValueKind elementKind = valueKindFromTypeName(binding.typeTemplateArg);
+        if (elementKind == LocalInfo::ValueKind::Unknown || elementKind == LocalInfo::ValueKind::String) {
+          error = "native backend only supports numeric/bool vector fields on " + structPath;
+          layoutStack.erase(structPath);
+          return false;
+        }
+        info.valueKind = elementKind;
+        info.structPath = "/vector";
+        info.slotCount = 3;
+      } else {
+        error = "native backend does not support templated struct fields on " + structPath;
+        layoutStack.erase(structPath);
+        return false;
+      }
     } else {
-      std::string nestedStruct;
-      if (!resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
-        error = "native backend does not support struct field type: " + binding.typeName + " on " +
-                structPath;
-        layoutStack.erase(structPath);
-        return false;
+      LocalInfo::ValueKind kind = valueKindFromTypeName(binding.typeName);
+      if (kind != LocalInfo::ValueKind::Unknown) {
+        info.valueKind = kind;
+        info.slotCount = 1;
+      } else {
+        std::string nestedStruct;
+        if (!resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
+          error = "native backend does not support struct field type: " + binding.typeName + " on " +
+                  structPath;
+          layoutStack.erase(structPath);
+          return false;
+        }
+        StructSlotLayoutInfo nestedLayout;
+        if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
+                                                         collectStructLayoutFields,
+                                                         resolveDefinitionNamespacePrefix,
+                                                         resolveStructTypeName,
+                                                         valueKindFromTypeName,
+                                                         layoutCache,
+                                                         layoutStack,
+                                                         nestedLayout,
+                                                         error)) {
+          layoutStack.erase(structPath);
+          return false;
+        }
+        info.structPath = nestedStruct;
+        info.slotCount = nestedLayout.totalSlots;
       }
-      StructSlotLayoutInfo nestedLayout;
-      if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
-                                                       collectStructLayoutFields,
-                                                       resolveDefinitionNamespacePrefix,
-                                                       resolveStructTypeName,
-                                                       valueKindFromTypeName,
-                                                       layoutCache,
-                                                       layoutStack,
-                                                       nestedLayout,
-                                                       error)) {
-        layoutStack.erase(structPath);
-        return false;
-      }
-      info.structPath = nestedStruct;
-      info.slotCount = nestedLayout.totalSlots;
     }
     layout.fields.push_back(info);
     offset += info.slotCount;
@@ -722,23 +739,23 @@ ResolveStructSlotLayoutFn makeResolveStructSlotLayoutFromDefinitionFieldIndex(
     std::string &error) {
   const auto *fieldIndexPtr = &fieldIndex;
   const auto *defMapPtr = &defMap;
-  const auto *resolveStructTypeNamePtr = &resolveStructTypeName;
-  const auto *valueKindFromTypeNamePtr = &valueKindFromTypeName;
+  const ResolveStructTypeNameFn resolveStructTypeNameCopy = resolveStructTypeName;
+  const ValueKindFromTypeNameFn valueKindFromTypeNameCopy = valueKindFromTypeName;
   auto *layoutCachePtr = &layoutCache;
   auto *layoutStackPtr = &layoutStack;
   auto *errorPtr = &error;
   return [fieldIndexPtr,
           defMapPtr,
-          resolveStructTypeNamePtr,
-          valueKindFromTypeNamePtr,
+          resolveStructTypeNameCopy,
+          valueKindFromTypeNameCopy,
           layoutCachePtr,
           layoutStackPtr,
           errorPtr](const std::string &structPath, StructSlotLayoutInfo &out) {
     return resolveStructSlotLayoutFromDefinitionFieldIndex(structPath,
                                                            *fieldIndexPtr,
                                                            *defMapPtr,
-                                                           *resolveStructTypeNamePtr,
-                                                           *valueKindFromTypeNamePtr,
+                                                           resolveStructTypeNameCopy,
+                                                           valueKindFromTypeNameCopy,
                                                            *layoutCachePtr,
                                                            *layoutStackPtr,
                                                            out,
@@ -756,15 +773,15 @@ ResolveStructFieldSlotFn makeResolveStructFieldSlotFromDefinitionFieldIndex(
     std::string &error) {
   const auto *fieldIndexPtr = &fieldIndex;
   const auto *defMapPtr = &defMap;
-  const auto *resolveStructTypeNamePtr = &resolveStructTypeName;
-  const auto *valueKindFromTypeNamePtr = &valueKindFromTypeName;
+  const ResolveStructTypeNameFn resolveStructTypeNameCopy = resolveStructTypeName;
+  const ValueKindFromTypeNameFn valueKindFromTypeNameCopy = valueKindFromTypeName;
   auto *layoutCachePtr = &layoutCache;
   auto *layoutStackPtr = &layoutStack;
   auto *errorPtr = &error;
   return [fieldIndexPtr,
           defMapPtr,
-          resolveStructTypeNamePtr,
-          valueKindFromTypeNamePtr,
+          resolveStructTypeNameCopy,
+          valueKindFromTypeNameCopy,
           layoutCachePtr,
           layoutStackPtr,
           errorPtr](const std::string &structPath, const std::string &fieldName, StructSlotFieldInfo &out) {
@@ -772,8 +789,8 @@ ResolveStructFieldSlotFn makeResolveStructFieldSlotFromDefinitionFieldIndex(
                                                           fieldName,
                                                           *fieldIndexPtr,
                                                           *defMapPtr,
-                                                          *resolveStructTypeNamePtr,
-                                                          *valueKindFromTypeNamePtr,
+                                                          resolveStructTypeNameCopy,
+                                                          valueKindFromTypeNameCopy,
                                                           *layoutCachePtr,
                                                           *layoutStackPtr,
                                                           out,
@@ -988,6 +1005,12 @@ std::string inferStructPathFromCallTarget(
     return "";
   }
 
+  std::string collectionName;
+  if (getBuiltinCollectionName(expr, collectionName) && collectionName == "vector" &&
+      expr.templateArgs.size() == 1) {
+    return "/vector";
+  }
+
   const std::string resolved = resolveExprPath(expr);
   if (isKnownStructPath(resolved)) {
     return resolved;
@@ -1003,6 +1026,9 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
   auto localIt = localsIn.find(expr.name);
   if (localIt == localsIn.end()) {
     return "";
+  }
+  if (localIt->second.kind == LocalInfo::Kind::Vector) {
+    return "/vector";
   }
   return localIt->second.structTypeName;
 }

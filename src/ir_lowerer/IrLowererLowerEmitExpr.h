@@ -607,6 +607,7 @@
                 size_t &lengthOut) {
               return resolveStringTableTarget(targetExpr, localMap, stringIndexOut, lengthOut);
             },
+            stringTable.size(),
             [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
               return emitExpr(valueExpr, localMap);
             },
@@ -631,6 +632,19 @@
             },
             [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
               targetInfoOut = {};
+              if (targetCallExpr.isFieldAccess && targetCallExpr.args.size() == 1) {
+                const std::string receiverStruct = inferStructExprPath(targetCallExpr.args.front(), localsIn);
+                if (!receiverStruct.empty()) {
+                  StructSlotFieldInfo fieldInfo;
+                  if (resolveStructFieldSlot(receiverStruct, targetCallExpr.name, fieldInfo) &&
+                      fieldInfo.structPath == "/vector") {
+                    targetInfoOut.isArrayOrVectorTarget = true;
+                    targetInfoOut.isVectorTarget = true;
+                    targetInfoOut.elemKind = fieldInfo.valueKind;
+                    return true;
+                  }
+                }
+              }
               const Definition *callee = resolveDefinitionCall(targetCallExpr);
               if (callee == nullptr) {
                 return false;

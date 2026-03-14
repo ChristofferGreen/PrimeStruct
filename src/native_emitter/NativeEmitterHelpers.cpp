@@ -386,7 +386,6 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return 0;
     }
   };
-
   const int64_t kUnset = std::numeric_limits<int64_t>::min();
   std::vector<int64_t> depth(fn.instructions.size(), kUnset);
   std::vector<size_t> worklist;

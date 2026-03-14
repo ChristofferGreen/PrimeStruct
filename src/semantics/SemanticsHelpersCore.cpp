@@ -942,6 +942,14 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     }
     return false;
   }
+  if (name.rfind("vector/", 0) == 0) {
+    std::string alias = name.substr(std::string("vector/").size());
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
   if (name.rfind("array/", 0) == 0) {
     return false;
   }

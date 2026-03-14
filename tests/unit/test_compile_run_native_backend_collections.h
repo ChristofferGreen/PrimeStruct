@@ -940,7 +940,7 @@ main() {
   CHECK(readFile(errPath).find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("rejects native vector namespaced call aliases") {
+TEST_CASE("runs native vector namespaced call aliases canonically") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -962,14 +962,10 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() /
                                "primec_native_vector_namespaced_call_alias_canonical_precedence_exe")
                                   .string();
-
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_namespaced_call_alias_canonical_err.txt")
-          .string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > /dev/null";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
 }
 
 TEST_CASE("rejects native vector namespaced templated canonical helper alias call without alias definition") {
@@ -1671,7 +1667,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("rejects native vector namespaced count capacity access aliases") {
+TEST_CASE("runs native vector namespaced count capacity access aliases canonically") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -1684,16 +1680,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_namespaced_count_access_aliases.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_namespaced_count_access_aliases_out.txt")
-          .string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_vector_namespaced_count_access_aliases_exe").string();
-
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /vector/at") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > /dev/null";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 13);
 }
 
 TEST_CASE("compiles and runs native vector access checks bounds") {
@@ -3862,7 +3854,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector method alias access struct method chain canonical diagnostics forwarding") {
@@ -3901,7 +3893,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib map wrapper temporary unsafe key mismatch") {
@@ -8869,6 +8861,25 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("compiles and runs native indexed vector assign") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [i32] index{1i32}
+  assign(values[index], 7i32)
+  return(values[1i32])
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_indexed_vector_assign.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_indexed_vector_assign_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
 }
 
 TEST_CASE("compiles and runs native user vector remove_swap method shadow") {

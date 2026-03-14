@@ -141,7 +141,8 @@ LocalInfo::ValueKind inferArrayElementValueKind(
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
     if (it != localsIn.end()) {
-      if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Buffer ||
+      if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
+          it->second.kind == LocalInfo::Kind::Map || it->second.kind == LocalInfo::Kind::Buffer ||
           (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray)) {
         return it->second.valueKind;
       }

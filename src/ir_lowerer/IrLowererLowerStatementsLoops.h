@@ -316,6 +316,9 @@
           function.instructions,
           [&]() { return allocTempLocal(); },
           [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+          [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+            return inferStructExprPath(valueExpr, valueLocals);
+          },
           [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
           [&](const Expr &candidate) {
             if (candidate.isMethodCall && !isArrayCountCall(candidate, localsIn) &&

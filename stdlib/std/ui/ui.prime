@@ -1,3 +1,5 @@
+import /std/math/*
+
 namespace std {
   namespace ui {
   [public struct]

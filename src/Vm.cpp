@@ -2639,7 +2639,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         error = "IR stack underflow on file read";
         return finishFault();
       }
-      if (inst.imm >= locals_.size()) {
+      if (inst.imm >= locals.size()) {
         error = "invalid local index in IR";
         return finishFault();
       }
@@ -2654,7 +2654,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       } else if (rc == 0) {
         err = FileReadEofCode;
       } else {
-        locals_[static_cast<size_t>(inst.imm)] = static_cast<uint64_t>(value);
+        locals[static_cast<size_t>(inst.imm)] = static_cast<uint64_t>(value);
       }
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;

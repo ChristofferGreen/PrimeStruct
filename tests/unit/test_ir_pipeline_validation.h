@@ -3420,6 +3420,12 @@ TEST_CASE("ir lowerer inference expr-kind call-fallback setup wires callback") {
           .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .inferStructExprPath =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
+                return false;
+              },
       },
       state,
       error));
@@ -3483,6 +3489,12 @@ TEST_CASE("ir lowerer inference expr-kind call-fallback setup validates dependen
           .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .inferStructExprPath =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
+                return false;
+              },
       },
       state,
       error));
@@ -13703,6 +13715,72 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
   CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions.back().op == primec::IrOpcode::LoadStringByte);
   CHECK(instructions.back().imm == 4);
+
+  instructions.clear();
+  error.clear();
+  primec::Expr runtimeStringTarget;
+  runtimeStringTarget.kind = primec::Expr::Kind::Name;
+  runtimeStringTarget.name = "text";
+  primec::ir_lowerer::LocalInfo runtimeStringInfo;
+  runtimeStringInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  runtimeStringInfo.valueKind = Kind::String;
+  runtimeStringInfo.stringSource = primec::ir_lowerer::LocalInfo::StringSource::RuntimeIndex;
+  locals.clear();
+  locals.emplace("text", runtimeStringInfo);
+  int runtimeEmitExprCalls = 0;
+  int stringIndexOutOfBoundsCalls = 0;
+  int nextTempLocal = 30;
+  CHECK(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at",
+      runtimeStringTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      3,
+      {},
+      {},
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Name && expr.name == "idx") {
+          return Kind::Int32;
+        }
+        return Kind::String;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&]() { return nextTempLocal++; },
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        ++runtimeEmitExprCalls;
+        if (expr.kind == primec::Expr::Kind::Name && expr.name == "text") {
+          instructions.push_back({primec::IrOpcode::PushI64, 2});
+          return true;
+        }
+        instructions.push_back({primec::IrOpcode::PushI32, 1});
+        return true;
+      },
+      [&]() { ++stringIndexOutOfBoundsCalls; },
+      []() {},
+      []() {},
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error.empty());
+  CHECK(runtimeEmitExprCalls == 2);
+  CHECK(stringIndexOutOfBoundsCalls == 1);
+  REQUIRE(instructions.size() == 25);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 2);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 30);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[2].imm == 1);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 31);
+  CHECK(instructions[9].op == primec::IrOpcode::LoadStringByte);
+  CHECK(instructions[9].imm == 0);
+  CHECK(instructions[16].op == primec::IrOpcode::LoadStringByte);
+  CHECK(instructions[16].imm == 1);
+  CHECK(instructions[23].op == primec::IrOpcode::LoadStringByte);
+  CHECK(instructions[23].imm == 2);
 
   instructions.clear();
   error.clear();
@@ -24350,6 +24428,7 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
 
   primec::ir_lowerer::LocalInfo stringInfo;
   stringInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  stringInfo.stringSource = primec::ir_lowerer::LocalInfo::StringSource::TableIndex;
   locals.emplace("text", stringInfo);
   primec::Expr textName;
   textName.kind = primec::Expr::Kind::Name;
@@ -36169,6 +36248,7 @@ TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
       primec::IrOpcode::FileOpenRead,
       primec::IrOpcode::FileOpenWrite,
       primec::IrOpcode::FileOpenAppend,
+      primec::IrOpcode::FileReadByte,
       primec::IrOpcode::FileClose,
       primec::IrOpcode::FileFlush,
       primec::IrOpcode::FileWriteI32,
@@ -36492,7 +36572,7 @@ TEST_CASE("ir validator wasm target rejects unsupported opcodes") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushI64, 1});
+  fn.instructions.push_back({primec::IrOpcode::HeapAlloc, 1});
   fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(fn);
 

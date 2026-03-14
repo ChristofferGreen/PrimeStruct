@@ -1,5 +1,6 @@
 #include "IrLowererOperatorConversionsAndCallsHelpers.h"
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 
@@ -74,6 +75,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const AllocConversionsAndCallsTempLocalFn &allocTempLocal,
     const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite,
     const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds,
+    const EmitConversionsAndCallsArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
     const ResolveConversionsAndCallsStringTableTargetFn &resolveStringTableTarget,
     const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
     const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,
@@ -812,7 +814,6 @@ bool emitConversionsAndCallsOperatorExpr(
               instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
               instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
               instructions.push_back({IrOpcode::StoreIndirect, 0});
-              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
               return true;
             }
             if (it->second.kind != LocalInfo::Kind::Value) {
@@ -867,7 +868,6 @@ bool emitConversionsAndCallsOperatorExpr(
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
             instructions.push_back({IrOpcode::StoreIndirect, 0});
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
             return true;
           }
           error = std::string(mutateName) + " target must be a mutable binding";
@@ -901,7 +901,6 @@ bool emitConversionsAndCallsOperatorExpr(
               instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
               instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
               instructions.push_back({IrOpcode::StoreIndirect, 0});
-              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
               return true;
             }
             if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
@@ -967,7 +966,98 @@ bool emitConversionsAndCallsOperatorExpr(
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
             instructions.push_back({IrOpcode::StoreIndirect, 0});
+            return true;
+          }
+          std::string accessName;
+          if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+            const Expr &collectionTarget = target.args.front();
+            const Expr &indexExpr = target.args[1];
+            auto targetInfo = resolveArrayVectorAccessTargetInfo(collectionTarget, localsIn);
+            if (!targetInfo.isArrayOrVectorTarget) {
+              const std::string collectionPath = inferStructExprPath(collectionTarget, localsIn);
+              if (collectionPath == "/array" || collectionPath == "/vector") {
+                targetInfo.isArrayOrVectorTarget = true;
+                targetInfo.isVectorTarget = (collectionPath == "/vector");
+              }
+            }
+            if (!targetInfo.isArrayOrVectorTarget) {
+              error = "native backend only supports assign to array/vector elements";
+              return false;
+            }
+
+            const LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(indexExpr, localsIn));
+            if (!isSupportedIndexKind(indexKind)) {
+              error = "native backend requires integer indices for " + accessName;
+              return false;
+            }
+
+            const int32_t ptrLocal = allocTempLocal();
+            if (!emitExpr(collectionTarget, localsIn)) {
+              return false;
+            }
+            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+
+            const int32_t indexLocal = allocTempLocal();
+            if (!emitExpr(indexExpr, localsIn)) {
+              return false;
+            }
+            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+
+            if (accessName == "at") {
+              const int32_t countLocal = allocTempLocal();
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              instructions.push_back({IrOpcode::LoadIndirect, 0});
+              instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+              if (indexKind != LocalInfo::ValueKind::UInt64) {
+                instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+                instructions.push_back({pushZeroForIndex(indexKind), 0});
+                instructions.push_back({cmpLtForIndex(indexKind), 0});
+                const size_t jumpNonNegative = instructions.size();
+                instructions.push_back({IrOpcode::JumpIfZero, 0});
+                emitArrayIndexOutOfBounds();
+                instructions[jumpNonNegative].imm = static_cast<uint64_t>(instructions.size());
+              }
+
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+              instructions.push_back({cmpGeForIndex(indexKind), 0});
+              const size_t jumpInRange = instructions.size();
+              instructions.push_back({IrOpcode::JumpIfZero, 0});
+              emitArrayIndexOutOfBounds();
+              instructions[jumpInRange].imm = static_cast<uint64_t>(instructions.size());
+            }
+
+            int32_t basePtrLocal = ptrLocal;
+            if (targetInfo.isVectorTarget) {
+              basePtrLocal = allocTempLocal();
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2 * IrSlotBytes)});
+              instructions.push_back({IrOpcode::AddI64, 0});
+              instructions.push_back({IrOpcode::LoadIndirect, 0});
+              instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(basePtrLocal)});
+            }
+
+            const int32_t destPtrLocal = allocTempLocal();
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(basePtrLocal)});
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            if (!targetInfo.isVectorTarget) {
+              instructions.push_back({pushOneForIndex(indexKind), 1});
+              instructions.push_back({addForIndex(indexKind), 0});
+            }
+            instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
+            instructions.push_back({mulForIndex(indexKind), 0});
+            instructions.push_back({IrOpcode::AddI64, 0});
+            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+
+            const int32_t valueLocal = allocTempLocal();
+            if (!emitExpr(expr.args[1], localsIn)) {
+              return false;
+            }
+            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            instructions.push_back({IrOpcode::StoreIndirect, 0});
             return true;
           }
           if (target.kind == Expr::Kind::Call && target.isFieldAccess) {
@@ -1040,7 +1130,6 @@ bool emitConversionsAndCallsOperatorExpr(
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
             instructions.push_back({IrOpcode::StoreIndirect, 0});
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
             return true;
           }
           error = "native backend only supports assign to local names or dereference";

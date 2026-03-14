@@ -147,6 +147,7 @@ bool isGlslOpcodeAllowed(IrOpcode op) {
 bool isWasmOpcodeAllowedWasi(IrOpcode op) {
   switch (op) {
     case IrOpcode::PushI32:
+    case IrOpcode::PushI64:
     case IrOpcode::LoadLocal:
     case IrOpcode::StoreLocal:
     case IrOpcode::Dup:
@@ -156,12 +157,28 @@ bool isWasmOpcodeAllowedWasi(IrOpcode op) {
     case IrOpcode::MulI32:
     case IrOpcode::DivI32:
     case IrOpcode::NegI32:
+    case IrOpcode::AddI64:
+    case IrOpcode::SubI64:
+    case IrOpcode::MulI64:
+    case IrOpcode::DivI64:
+    case IrOpcode::DivU64:
+    case IrOpcode::NegI64:
     case IrOpcode::CmpEqI32:
     case IrOpcode::CmpNeI32:
     case IrOpcode::CmpLtI32:
     case IrOpcode::CmpLeI32:
     case IrOpcode::CmpGtI32:
     case IrOpcode::CmpGeI32:
+    case IrOpcode::CmpEqI64:
+    case IrOpcode::CmpNeI64:
+    case IrOpcode::CmpLtI64:
+    case IrOpcode::CmpLeI64:
+    case IrOpcode::CmpGtI64:
+    case IrOpcode::CmpGeI64:
+    case IrOpcode::CmpLtU64:
+    case IrOpcode::CmpLeU64:
+    case IrOpcode::CmpGtU64:
+    case IrOpcode::CmpGeU64:
     case IrOpcode::PushF32:
     case IrOpcode::PushF64:
     case IrOpcode::AddF32:
@@ -200,8 +217,12 @@ bool isWasmOpcodeAllowedWasi(IrOpcode op) {
     case IrOpcode::ConvertF64ToU64:
     case IrOpcode::ConvertF32ToF64:
     case IrOpcode::ConvertF64ToF32:
+    case IrOpcode::PrintI32:
+    case IrOpcode::PrintI64:
+    case IrOpcode::PrintU64:
     case IrOpcode::PushArgc:
     case IrOpcode::PrintString:
+    case IrOpcode::PrintStringDynamic:
     case IrOpcode::PrintArgv:
     case IrOpcode::PrintArgvUnsafe:
     case IrOpcode::FileOpenRead:
@@ -222,6 +243,7 @@ bool isWasmOpcodeAllowedWasi(IrOpcode op) {
     case IrOpcode::CallVoid:
     case IrOpcode::ReturnVoid:
     case IrOpcode::ReturnI32:
+    case IrOpcode::ReturnI64:
     case IrOpcode::ReturnF32:
     case IrOpcode::ReturnF64:
       return true;
@@ -232,8 +254,12 @@ bool isWasmOpcodeAllowedWasi(IrOpcode op) {
 
 bool isWasiOnlyOpcode(IrOpcode op) {
   switch (op) {
+    case IrOpcode::PrintI32:
+    case IrOpcode::PrintI64:
+    case IrOpcode::PrintU64:
     case IrOpcode::PushArgc:
     case IrOpcode::PrintString:
+    case IrOpcode::PrintStringDynamic:
     case IrOpcode::PrintArgv:
     case IrOpcode::PrintArgvUnsafe:
     case IrOpcode::FileOpenRead:

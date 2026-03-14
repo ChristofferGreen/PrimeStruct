@@ -731,8 +731,9 @@ TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i64] value{plus(1i64, 2i64)}
-  return(3i32)
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  return(dereference(ref))
 }
 )";
   const std::string srcPath = writeTemp("compile_emit_wasm_diagnostics.prime", source);
@@ -759,23 +760,24 @@ TEST_CASE("primec emit-diagnostics rejects unsupported wasm IR features with sta
 
   const std::vector<NegativeCase> cases = {
       {
-          "unsupported_opcode_i64",
+          "unsupported_opcode_reference",
           R"(
 [return<int>]
 main() {
-  [i64] value{plus(1i64, 2i64)}
-  return(3i32)
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  return(dereference(ref))
 }
 )",
           "unsupported opcode for wasm target",
       },
       {
-          "unsupported_opcode_print_i32",
+          "unsupported_opcode_reference_alias",
           R"(
-[return<int> effects(io_out)]
+[return<int>]
 main() {
-  print(1i32)
-  return(0i32)
+  [i32 mut] value{1i32}
+  return(dereference(location(value)))
 }
 )",
           "unsupported opcode for wasm target",
@@ -1163,8 +1165,9 @@ main([array<string>] args) {
           R"(
 [return<int>]
 main() {
-  [i64] value{plus(1i64, 2i64)}
-  return(3i32)
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  return(dereference(ref))
 }
 )",
           "unsupported opcode for wasm target",

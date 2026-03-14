@@ -435,6 +435,46 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
                                                   const std::unordered_map<std::string, BindingInfo> &locals,
                                                   ResultTypeInfo &out) const {
   out = ResultTypeInfo{};
+  auto resolveMethodResultPath = [&]() -> std::string {
+    if (!expr.isMethodCall || expr.args.empty()) {
+      return "";
+    }
+    const Expr &receiver = expr.args.front();
+    const std::string receiverTypeName = [&]() -> std::string {
+      if (receiver.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+          return paramBinding->typeName;
+        }
+        auto localIt = locals.find(receiver.name);
+        if (localIt != locals.end()) {
+          return localIt->second.typeName;
+        }
+      }
+      if (receiver.kind == Expr::Kind::Call && !receiver.isMethodCall) {
+        const std::string resolvedReceiverPath = resolveCalleePath(receiver);
+        if (!resolvedReceiverPath.empty()) {
+          return resolvedReceiverPath;
+        }
+      }
+      return std::string();
+    }();
+    if (receiverTypeName.empty()) {
+      return "";
+    }
+    if (receiverTypeName == "File") {
+      return "";
+    }
+    if (isPrimitiveBindingTypeName(receiverTypeName)) {
+      return "/" + normalizeBindingTypeName(receiverTypeName) + "/" + expr.name;
+    }
+    const std::string resolvedType =
+        (!receiverTypeName.empty() && receiverTypeName.front() == '/') ? receiverTypeName
+                                                                       : resolveTypePath(receiverTypeName, receiver.namespacePrefix);
+    if (resolvedType.empty()) {
+      return "";
+    }
+    return resolvedType + "/" + expr.name;
+  };
   if (expr.kind == Expr::Kind::Name) {
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
       if (paramBinding->typeName == "Result") {
@@ -464,6 +504,18 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       out.hasValue = false;
       out.errorType = "FileError";
       return true;
+    }
+    const std::string resolvedMethodPath = resolveMethodResultPath();
+    if (!resolvedMethodPath.empty()) {
+      auto it = defMap_.find(resolvedMethodPath);
+      if (it != defMap_.end()) {
+        for (const auto &transform : it->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          return resolveResultTypeFromTypeName(transform.templateArgs.front(), out);
+        }
+      }
     }
   }
   if (!expr.isMethodCall) {

@@ -2,6 +2,7 @@
 
 #include "primec/Ir.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <sstream>
@@ -45,6 +46,23 @@ struct EmitContext {
   size_t functionCount = 0;
   std::vector<size_t> stringLengths;
 };
+
+size_t computeLocalCount(const IrFunction &function) {
+  size_t localCount = 0;
+  for (const IrInstruction &instruction : function.instructions) {
+    switch (instruction.op) {
+      case IrOpcode::LoadLocal:
+      case IrOpcode::StoreLocal:
+      case IrOpcode::AddressOfLocal:
+      case IrOpcode::FileReadByte:
+        localCount = std::max(localCount, static_cast<size_t>(instruction.imm) + 1);
+        break;
+      default:
+        break;
+    }
+  }
+  return localCount;
+}
 
 bool usesF32Helpers(IrOpcode opcode) {
   switch (opcode) {
@@ -224,10 +242,10 @@ bool emitInstruction(const IrInstruction &instruction,
                      size_t index,
                      size_t nextIndex,
                      size_t instructionCount,
+                     size_t localCount,
                      const EmitContext &context,
                      std::ostringstream &out,
                      std::string &error) {
-  constexpr uint64_t MaxLocalIndex = 1023;
   const auto emitStackUnderflowGuard = [&](size_t required, const char *operation) {
     if (required == 1) {
       out << "        if (sp == 0) {\n";
@@ -344,7 +362,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::LoadLocal:
-      if (instruction.imm > MaxLocalIndex) {
+      if (instruction.imm >= localCount) {
         error = "IrToCppEmitter local index out of range at instruction " + std::to_string(index);
         return false;
       }
@@ -353,7 +371,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::StoreLocal:
-      if (instruction.imm > MaxLocalIndex) {
+      if (instruction.imm >= localCount) {
         error = "IrToCppEmitter local index out of range at instruction " + std::to_string(index);
         return false;
       }
@@ -362,7 +380,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::AddressOfLocal:
-      if (instruction.imm > MaxLocalIndex) {
+      if (instruction.imm >= localCount) {
         error = "IrToCppEmitter local index out of range at instruction " + std::to_string(index);
         return false;
       }
@@ -386,7 +404,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "          stack[sp++] = heapSlots[loadHeapIndex];\n";
       out << "        } else {\n";
       out << "          uint64_t loadIndirectIndex = loadIndirectAddress / " << IrSlotBytes << "ull;\n";
-      out << "          if (loadIndirectIndex > " << MaxLocalIndex << "ull) {\n";
+      out << "          if (loadIndirectIndex >= " << localCount << "ull) {\n";
       out << "            std::cerr << \"invalid indirect address in IR\\n\";\n";
       out << "            return 1;\n";
       out << "          }\n";
@@ -411,7 +429,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "          heapSlots[storeHeapIndex] = storeIndirectValue;\n";
       out << "        } else {\n";
       out << "          uint64_t storeIndirectIndex = storeIndirectAddress / " << IrSlotBytes << "ull;\n";
-      out << "          if (storeIndirectIndex > " << MaxLocalIndex << "ull) {\n";
+      out << "          if (storeIndirectIndex >= " << localCount << "ull) {\n";
       out << "            std::cerr << \"invalid indirect address in IR\\n\";\n";
       out << "            return 1;\n";
       out << "          }\n";
@@ -941,7 +959,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::FileReadByte:
-      if (instruction.imm >= context.localCount) {
+      if (instruction.imm >= localCount) {
         error = "IrToCppEmitter local index out of range at instruction " + std::to_string(index);
         return false;
       }
@@ -1358,10 +1376,11 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   };
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     const IrFunction &function = module.functions[functionIndex];
+    const size_t localCount = computeLocalCount(function);
     body << "static int64_t " << irFunctionSymbol(functionIndex)
          << "(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
             "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv) {\n";
-    body << "  uint64_t locals[1024] = {};\n";
+    body << "  std::vector<uint64_t> locals(" << localCount << "ull, 0ull);\n";
     body << "  std::size_t pc = 0;\n";
     body << "  while (true) {\n";
     body << "    switch (pc) {\n";
@@ -1370,7 +1389,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     for (size_t i = 0; i < instructionCount; ++i) {
       const size_t next = i + 1;
       body << "      case " << i << ": {\n";
-      if (!emitInstruction(function.instructions[i], i, next, instructionCount, context, body, error)) {
+      if (!emitInstruction(function.instructions[i], i, next, instructionCount, localCount, context, body, error)) {
         return false;
       }
       body << "      }\n";

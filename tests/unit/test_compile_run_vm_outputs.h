@@ -166,10 +166,10 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  print_line(Result.why(ppm.read(width, height, pixels, "input.ppm"utf8)))
-  print_line(Result.why(ppm.write("output.ppm"utf8, width, height, pixels)))
-  print_line(Result.why(png.read(width, height, pixels, "input.png"utf8)))
-  print_line(Result.why(png.write("output.png"utf8, width, height, pixels)))
+  print_line(Result.why(/std/image/ppm/read(width, height, pixels, "input.ppm"utf8)))
+  print_line(Result.why(/std/image/ppm/write("output.ppm"utf8, width, height, pixels)))
+  print_line(Result.why(/std/image/png/read(width, height, pixels, "input.png"utf8)))
+  print_line(Result.why(/std/image/png/write("output.png"utf8, width, height, pixels)))
   return(plus(width, height))
 }
 )";

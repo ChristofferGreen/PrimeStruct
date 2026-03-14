@@ -1960,6 +1960,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("push validates on mutable vector field access") {
+  const std::string source = R"(
+[struct]
+Buffer() {
+  [vector<i32> mut] values{vector<i32>()}
+}
+
+namespace Buffer {
+  [effects(heap_alloc), return<void>]
+  append([Buffer mut] self, [i32] value) {
+    push(self.values, value)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Buffer mut] buffer{Buffer()}
+  buffer.append(2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("push validates on mutable soa_vector parameter") {
   const std::string source = R"(
 Particle() {
@@ -5604,7 +5630,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map method access keeps canonical non-struct inference failure over alias helper") {
+TEST_CASE("map method access reports canonical builtin result type over alias helper") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -5638,7 +5664,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("map method alias access rejects canonical struct-return forwarding during inference") {
@@ -5856,7 +5882,7 @@ main() {
   CHECK(error.find("template arguments") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced call aliases keep count but leave access unresolved") {
+TEST_CASE("vector namespaced call aliases validate count and access builtins") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -5875,8 +5901,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count alias keeps canonical helper diagnostics") {
@@ -7179,7 +7205,7 @@ main() {
   CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count and capacity helpers are builtin-alias validated while access stays unresolved") {
+TEST_CASE("vector namespaced count capacity and access helpers validate as builtin aliases") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -7192,8 +7218,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced vector count rejects template arguments as builtin alias") {

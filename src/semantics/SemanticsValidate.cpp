@@ -245,6 +245,84 @@ bool stripSharedScopeTransform(std::vector<Transform> &transforms,
 
 bool rewriteSharedScopeStatements(std::vector<Expr> &statements, std::string &error);
 
+bool shouldRewriteIndexedAccessSugar(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
+    return false;
+  }
+  std::string ignoredName;
+  return semantics::isAssignCall(expr) || semantics::getBuiltinOperatorName(expr, ignoredName) ||
+         semantics::getBuiltinComparisonName(expr, ignoredName) ||
+         semantics::getBuiltinClampName(expr, ignoredName, true) ||
+         semantics::getBuiltinMinMaxName(expr, ignoredName, true) ||
+         semantics::getBuiltinAbsSignName(expr, ignoredName, true) ||
+         semantics::getBuiltinSaturateName(expr, ignoredName, true) ||
+         semantics::getBuiltinMathName(expr, ignoredName, true);
+}
+
+void rewriteIndexedAccessSugar(Expr &expr) {
+  for (auto &arg : expr.args) {
+    rewriteIndexedAccessSugar(arg);
+  }
+  for (auto &arg : expr.bodyArguments) {
+    rewriteIndexedAccessSugar(arg);
+  }
+  if (!shouldRewriteIndexedAccessSugar(expr) || expr.args.size() < 2) {
+    return;
+  }
+  if (!expr.templateArgs.empty() || expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+    return;
+  }
+  if (expr.argNames.size() < expr.args.size()) {
+    expr.argNames.resize(expr.args.size());
+  }
+  for (size_t argIndex = 1; argIndex < expr.args.size(); ++argIndex) {
+    if (expr.argNames[argIndex - 1].has_value() || !expr.argNames[argIndex].has_value()) {
+      continue;
+    }
+    const std::string &indexName = *expr.argNames[argIndex];
+    if (indexName.empty()) {
+      continue;
+    }
+
+    Expr accessExpr;
+    accessExpr.kind = Expr::Kind::Call;
+    accessExpr.name = "at";
+    accessExpr.namespacePrefix = expr.namespacePrefix;
+    accessExpr.args.push_back(std::move(expr.args[argIndex - 1]));
+
+    Expr indexExpr;
+    indexExpr.kind = Expr::Kind::Name;
+    indexExpr.name = indexName;
+    indexExpr.namespacePrefix = expr.namespacePrefix;
+    accessExpr.args.push_back(std::move(indexExpr));
+    accessExpr.argNames.resize(2);
+
+    expr.args[argIndex - 1] = std::move(accessExpr);
+    expr.argNames[argIndex] = std::nullopt;
+  }
+}
+
+void rewriteIndexedAccessSugar(Definition &def) {
+  for (auto &param : def.parameters) {
+    rewriteIndexedAccessSugar(param);
+  }
+  for (auto &stmt : def.statements) {
+    rewriteIndexedAccessSugar(stmt);
+  }
+  if (def.returnExpr.has_value()) {
+    rewriteIndexedAccessSugar(*def.returnExpr);
+  }
+}
+
+void rewriteIndexedAccessSugar(Execution &exec) {
+  for (auto &arg : exec.arguments) {
+    rewriteIndexedAccessSugar(arg);
+  }
+  for (auto &arg : exec.bodyArguments) {
+    rewriteIndexedAccessSugar(arg);
+  }
+}
+
 bool rewriteSharedScopeStatement(Expr &stmt, std::string &error) {
   if (stmt.kind == Expr::Kind::Call) {
     bool hasSharedScope = false;
@@ -3165,9 +3243,11 @@ bool applySemanticTransforms(Program &program,
 
   for (auto &def : program.definitions) {
     stripTextTransforms(def);
+    rewriteIndexedAccessSugar(def);
   }
   for (auto &exec : program.executions) {
     stripTextTransforms(exec);
+    rewriteIndexedAccessSugar(exec);
   }
   if (!rewriteEnumDefinitions(program, error)) {
     return false;
@@ -3385,6 +3465,7 @@ bool Semantics::validate(Program &program,
                          const std::vector<std::string> &semanticTransforms,
                          SemanticDiagnosticInfo *diagnosticInfo,
                          bool collectDiagnostics) const {
+  error.clear();
   if (!applySemanticTransforms(program, semanticTransforms, error)) {
     return false;
   }
@@ -3411,6 +3492,7 @@ bool Semantics::validate(Program &program,
   if (!rewriteOmittedStructInitializers(program, error)) {
     return false;
   }
+  error.clear();
   return true;
 }
 

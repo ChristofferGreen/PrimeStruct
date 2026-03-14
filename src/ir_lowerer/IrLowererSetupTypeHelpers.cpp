@@ -1190,6 +1190,32 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const std::unordered_set<std::string> &structNames,
     const InferReceiverExprKindFn &inferExprKind,
     const ResolveReceiverExprPathFn &resolveExprPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut) {
+  return resolveMethodCallDefinitionFromExpr(callExpr,
+                                             localsIn,
+                                             isArrayCountCall,
+                                             isVectorCapacityCall,
+                                             isEntryArgsName,
+                                             importAliases,
+                                             structNames,
+                                             inferExprKind,
+                                             resolveExprPath,
+                                             {},
+                                             defMap,
+                                             errorOut);
+}
+
+const Definition *resolveMethodCallDefinitionFromExpr(
+    const Expr &callExpr,
+    const LocalMap &localsIn,
+    const IsMethodCallClassifierFn &isArrayCountCall,
+    const IsMethodCallClassifierFn &isVectorCapacityCall,
+    const IsMethodCallClassifierFn &isEntryArgsName,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const InferReceiverExprKindFn &inferExprKind,
+    const ResolveReceiverExprPathFn &resolveExprPath,
     const GetReturnInfoForPathFn &getReturnInfo,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
@@ -1268,24 +1294,34 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   if (resolvedDef == nullptr && typeName.empty() && resolvedTypePath.empty() &&
       receiver->kind == Expr::Kind::Call) {
     std::string nestedError = lookupError;
-    const Definition *receiverMethodDef = resolveMethodCallDefinitionFromExpr(*receiver,
-                                                                              localsIn,
-                                                                              isArrayCountCall,
-                                                                              isVectorCapacityCall,
-                                                                              isEntryArgsName,
-                                                                              importAliases,
-                                                                              structNames,
-                                                                              inferExprKind,
-                                                                              resolveExprPath,
-                                                                              getReturnInfo,
-                                                                              defMap,
-                                                                              nestedError);
-    if (receiverMethodDef != nullptr && inferReceiverTypeFromDeclaredReturn(*receiverMethodDef, typeName)) {
+    const Definition *receiverDef = nullptr;
+    const std::string receiverPath = resolveExprPath(*receiver);
+    if (!receiverPath.empty()) {
+      auto receiverDefIt = defMap.find(receiverPath);
+      if (receiverDefIt != defMap.end()) {
+        receiverDef = receiverDefIt->second;
+      }
+    }
+    if (receiverDef == nullptr && receiver->isMethodCall) {
+      receiverDef = resolveMethodCallDefinitionFromExpr(*receiver,
+                                                        localsIn,
+                                                        isArrayCountCall,
+                                                        isVectorCapacityCall,
+                                                        isEntryArgsName,
+                                                        importAliases,
+                                                        structNames,
+                                                        inferExprKind,
+                                                        resolveExprPath,
+                                                        getReturnInfo,
+                                                        defMap,
+                                                        nestedError);
+    }
+    if (receiverDef != nullptr && inferReceiverTypeFromDeclaredReturn(*receiverDef, typeName)) {
       lookupError.clear();
       resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(typeName, lookupError);
-    } else if (receiverMethodDef != nullptr) {
+    } else if (receiverDef != nullptr) {
       LocalInfo::ValueKind receiverKind = LocalInfo::ValueKind::Unknown;
-      if (resolveReturnInfoKindForPath(receiverMethodDef->fullPath, getReturnInfo, false, receiverKind)) {
+      if (resolveReturnInfoKindForPath(receiverDef->fullPath, getReturnInfo, false, receiverKind)) {
         typeName = typeNameForValueKind(receiverKind);
         if (!typeName.empty()) {
           lookupError.clear();
@@ -1343,12 +1379,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         }
         receiverPaths.push_back(candidate);
       };
-      if (receiverMethodDef != nullptr) {
-        const auto resolvedReceiverPaths = collectionHelperPathCandidates(receiverMethodDef->fullPath);
+      if (receiverDef != nullptr) {
+        const auto resolvedReceiverPaths = collectionHelperPathCandidates(receiverDef->fullPath);
         for (const auto &resolvedReceiverPath : resolvedReceiverPaths) {
           appendUniqueReceiverPath(resolvedReceiverPath);
         }
-        pruneMapAccessReceiverPaths(receiverMethodDef->fullPath);
+        pruneMapAccessReceiverPaths(receiverDef->fullPath);
       }
       for (const auto &receiverPath : receiverPaths) {
         auto receiverDefIt = defMap.find(receiverPath);

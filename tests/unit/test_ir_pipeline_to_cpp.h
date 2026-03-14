@@ -667,7 +667,7 @@ TEST_CASE("ir to cpp emitter rejects empty non-entry function bodies") {
   CHECK(error == "IrToCppEmitter function has no instructions at index 1");
 }
 
-TEST_CASE("ir to cpp emitter rejects out-of-range local indices") {
+TEST_CASE("ir to cpp emitter supports large local indices") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
   module.entryIndex = 0;
@@ -675,16 +675,20 @@ TEST_CASE("ir to cpp emitter rejects out-of-range local indices") {
   fn.name = "/main";
   fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
   fn.instructions.push_back({primec::IrOpcode::StoreLocal, 2048});
+  fn.instructions.push_back({primec::IrOpcode::LoadLocal, 2048});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);
 
   std::string cpp;
   std::string error;
-  CHECK_FALSE(emitter.emitSource(module, cpp, error));
-  CHECK(error.find("local index out of range") != std::string::npos);
+  CHECK(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("std::vector<uint64_t> locals(2049ull, 0ull);") != std::string::npos);
+  CHECK(cpp.find("locals[2048] = stack[--sp];") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = locals[2048];") != std::string::npos);
 }
 
-TEST_CASE("ir to cpp emitter rejects out-of-range address-of-local index") {
+TEST_CASE("ir to cpp emitter supports large address-of-local index") {
   primec::IrToCppEmitter emitter;
   primec::IrModule module;
   module.entryIndex = 0;
@@ -696,8 +700,28 @@ TEST_CASE("ir to cpp emitter rejects out-of-range address-of-local index") {
 
   std::string cpp;
   std::string error;
-  CHECK_FALSE(emitter.emitSource(module, cpp, error));
-  CHECK(error.find("local index out of range") != std::string::npos);
+  CHECK(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("std::vector<uint64_t> locals(4097ull, 0ull);") != std::string::npos);
+}
+
+TEST_CASE("ir to cpp emitter supports large file-read local index") {
+  primec::IrToCppEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::FileReadByte, 2048});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string cpp;
+  std::string error;
+  CHECK(emitter.emitSource(module, cpp, error));
+  CHECK(error.empty());
+  CHECK(cpp.find("std::vector<uint64_t> locals(2049ull, 0ull);") != std::string::npos);
+  CHECK(cpp.find("locals[2048] = static_cast<uint64_t>(fileReadByte);") != std::string::npos);
 }
 
 TEST_CASE("ir to cpp emitter rejects out-of-range call targets") {

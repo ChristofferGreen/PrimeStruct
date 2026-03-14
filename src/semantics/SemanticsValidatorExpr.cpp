@@ -788,106 +788,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = "if condition requires bool";
         return false;
       }
-      auto isStringValue = [&](const Expr &valueExpr,
-                               const std::unordered_map<std::string, BindingInfo> &localsIn) -> bool {
-        if (valueExpr.kind == Expr::Kind::StringLiteral) {
-          return true;
-        }
-        if (valueExpr.kind == Expr::Kind::Name) {
-          if (const BindingInfo *paramBinding = findParamBinding(params, valueExpr.name)) {
-            return paramBinding->typeName == "string";
-          }
-          auto it = localsIn.find(valueExpr.name);
-          return it != localsIn.end() && it->second.typeName == "string";
-        }
-        if (valueExpr.kind != Expr::Kind::Call) {
-          return false;
-        }
-        std::string accessName;
-        if (defMap_.find(resolveCalleePath(valueExpr)) != defMap_.end() ||
-            !getBuiltinArrayAccessName(valueExpr, accessName) || valueExpr.args.size() != 2) {
-          return false;
-        }
-        const Expr &target = valueExpr.args.front();
-        auto isStringCollectionTarget = [&](const Expr &collectionExpr) -> bool {
-          if (collectionExpr.kind == Expr::Kind::StringLiteral) {
-            return true;
-          }
-          if (collectionExpr.kind == Expr::Kind::Name) {
-            const BindingInfo *binding = findParamBinding(params, collectionExpr.name);
-            if (!binding) {
-              auto it = localsIn.find(collectionExpr.name);
-              if (it != localsIn.end()) {
-                binding = &it->second;
-              }
-            }
-            if (!binding) {
-              return false;
-            }
-            if (binding->typeName == "string") {
-              return true;
-            }
-            if (binding->typeName == "array" || binding->typeName == "vector") {
-              return normalizeBindingTypeName(binding->typeTemplateArg) == "string";
-            }
-            std::string keyType;
-            std::string valueType;
-            if (extractMapKeyValueTypes(*binding, keyType, valueType)) {
-              return normalizeBindingTypeName(valueType) == "string";
-            }
-            return false;
-          }
-          if (collectionExpr.kind == Expr::Kind::Call) {
-            auto returnsStringCollection = [&](const std::string &typeName) -> bool {
-              std::string normalizedType = normalizeBindingTypeName(typeName);
-              while (true) {
-                std::string base;
-                std::string arg;
-                if (!splitTemplateTypeName(normalizedType, base, arg)) {
-                  return normalizedType == "string";
-                }
-                std::vector<std::string> args;
-                if (!splitTopLevelTemplateArgs(arg, args)) {
-                  return false;
-                }
-                if ((base == "array" || base == "vector") && args.size() == 1) {
-                  return normalizeBindingTypeName(args.front()) == "string";
-                }
-                if (base == "map" && args.size() == 2) {
-                  return normalizeBindingTypeName(args[1]) == "string";
-                }
-                if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
-                  normalizedType = normalizeBindingTypeName(args.front());
-                  continue;
-                }
-                return false;
-              }
-            };
-            auto defIt = defMap_.find(resolveCalleePath(collectionExpr));
-            if (defIt == defMap_.end() || !defIt->second) {
-              std::string collection;
-              if (!getBuiltinCollectionName(collectionExpr, collection)) {
-                return false;
-              }
-              if ((collection == "array" || collection == "vector") && collectionExpr.templateArgs.size() == 1) {
-                return normalizeBindingTypeName(collectionExpr.templateArgs.front()) == "string";
-              }
-              if (collection == "map" && collectionExpr.templateArgs.size() == 2) {
-                return normalizeBindingTypeName(collectionExpr.templateArgs[1]) == "string";
-              }
-              return false;
-            }
-            for (const auto &transform : defIt->second->transforms) {
-              if (transform.name != "return" || transform.templateArgs.size() != 1) {
-                continue;
-              }
-              return returnsStringCollection(transform.templateArgs.front());
-            }
-          }
-          return false;
-        };
-        return isStringCollectionTarget(target);
-      };
       auto validateBranchValueKind =
           [&](const Expr &branch, const char *label, ReturnKind &kindOut, bool &stringOut) -> bool {
         kindOut = ReturnKind::Unknown;
@@ -1008,7 +908,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
           kindOut = inferExprReturnKind(*valueExpr, params, branchLocals);
-          stringOut = isStringValue(*valueExpr, branchLocals);
+          stringOut = (kindOut == ReturnKind::String);
           if (kindOut == ReturnKind::Void) {
             if (isStructConstructorValueExpr(*valueExpr)) {
               kindOut = ReturnKind::Unknown;
@@ -1706,6 +1606,66 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
+      if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
+        return false;
+      }
+      std::string structPath;
+      const Expr &receiver = target.args.front();
+      if (receiver.kind == Expr::Kind::Name) {
+        const BindingInfo *receiverBinding = findParamBinding(params, receiver.name);
+        if (!receiverBinding) {
+          auto it = locals.find(receiver.name);
+          if (it != locals.end()) {
+            receiverBinding = &it->second;
+          }
+        }
+        if (receiverBinding != nullptr) {
+          std::string receiverType = receiverBinding->typeName;
+          if ((receiverType == "Reference" || receiverType == "Pointer") && !receiverBinding->typeTemplateArg.empty()) {
+            receiverType = receiverBinding->typeTemplateArg;
+          }
+          structPath = resolveStructTypePath(receiverType, receiver.namespacePrefix, structNames_);
+          if (structPath.empty()) {
+            auto importIt = importAliases_.find(receiverType);
+            if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+              structPath = importIt->second;
+            }
+          }
+        }
+      } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+        std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
+        if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
+          structPath = inferredStruct;
+        } else {
+          const std::string resolvedType = resolveCalleePath(receiver);
+          if (structNames_.count(resolvedType) > 0) {
+            structPath = resolvedType;
+          }
+        }
+      }
+      if (structPath.empty()) {
+        return false;
+      }
+      auto defIt = defMap_.find(structPath);
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        return false;
+      }
+      for (const auto &fieldStmt : defIt->second->statements) {
+        bool isStaticField = false;
+        for (const auto &transform : fieldStmt.transforms) {
+          if (transform.name == "static") {
+            isStaticField = true;
+            break;
+          }
+        }
+        if (!fieldStmt.isBinding || isStaticField || fieldStmt.name != target.name) {
+          continue;
+        }
+        return resolveStructFieldBinding(*defIt->second, fieldStmt, bindingOut);
+      }
+      return false;
+    };
     auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
         auto resolveReference = [&](const BindingInfo &binding) -> bool {
@@ -1749,6 +1709,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return false;
       }
+      BindingInfo fieldBinding;
+      if (resolveFieldBindingTarget(target, fieldBinding)) {
+        std::string base;
+        std::string arg;
+        if (fieldBinding.typeName == "Reference" && !fieldBinding.typeTemplateArg.empty() &&
+            splitTemplateTypeName(fieldBinding.typeTemplateArg, base, arg) && base == "array") {
+          std::vector<std::string> args;
+          if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+            elemType = args.front();
+            return true;
+          }
+        }
+        if ((fieldBinding.typeName == "array" || fieldBinding.typeName == "vector") && !fieldBinding.typeTemplateArg.empty()) {
+          elemType = fieldBinding.typeTemplateArg;
+          return true;
+        }
+      }
       if (target.kind == Expr::Kind::Call) {
         std::string collectionTypePath;
         if (resolveCallCollectionTypePath(target, collectionTypePath) &&
@@ -1781,6 +1758,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return true;
         }
         return false;
+      }
+      BindingInfo fieldBinding;
+      if (resolveFieldBindingTarget(target, fieldBinding)) {
+        if (fieldBinding.typeName != "vector" || fieldBinding.typeTemplateArg.empty()) {
+          return false;
+        }
+        elemType = fieldBinding.typeTemplateArg;
+        return true;
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collectionTypePath;
@@ -1874,6 +1859,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return false;
       }
+      BindingInfo fieldBinding;
+      if (resolveFieldBindingTarget(target, fieldBinding)) {
+        if (fieldBinding.typeName != "soa_vector" || fieldBinding.typeTemplateArg.empty()) {
+          return false;
+        }
+        elemType = fieldBinding.typeTemplateArg;
+        return true;
+      }
       if (target.kind == Expr::Kind::Call) {
         std::string collectionTypePath;
         if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/soa_vector") {
@@ -1904,6 +1897,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         auto it = locals.find(target.name);
         return it != locals.end() && it->second.typeName == "string";
+      }
+      BindingInfo fieldBinding;
+      if (resolveFieldBindingTarget(target, fieldBinding)) {
+        return fieldBinding.typeName == "string";
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collectionTypePath;
@@ -1953,6 +1950,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                   return true;
                 }
               }
+              BindingInfo mapFieldBinding;
+              if (resolveFieldBindingTarget(target.args.front(), mapFieldBinding) &&
+                  extractMapKeyValueTypes(mapFieldBinding, keyType, valueType) &&
+                  normalizeBindingTypeName(valueType) == "string") {
+                return true;
+              }
             }
           }
         }
@@ -1973,6 +1976,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         std::string keyType;
         std::string valueType;
         return extractMapKeyValueTypes(it->second, keyType, valueType);
+      }
+      BindingInfo fieldBinding;
+      if (resolveFieldBindingTarget(target, fieldBinding)) {
+        std::string keyType;
+        std::string valueType;
+        return extractMapKeyValueTypes(fieldBinding, keyType, valueType);
       }
       if (target.kind == Expr::Kind::Call) {
         auto returnsMapCollection = [&](const std::string &typeName) {
@@ -6192,6 +6201,77 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         const Expr &target = expr.args.front();
         const bool targetIsName = target.kind == Expr::Kind::Name;
+        auto isLifecycleHelperPath = [](const std::string &fullPath) -> bool {
+          static const std::array<std::string_view, 10> suffixes = {
+              "/Create",       "/Destroy",       "/Copy",       "/Move",       "/CreateStack",
+              "/DestroyStack", "/CreateHeap",    "/DestroyHeap","/CreateBuffer","/DestroyBuffer"};
+          for (std::string_view suffix : suffixes) {
+            if (fullPath.size() < suffix.size()) {
+              continue;
+            }
+            if (fullPath.compare(fullPath.size() - suffix.size(), suffix.size(), suffix.data(), suffix.size()) == 0) {
+              return true;
+            }
+          }
+          return false;
+        };
+        auto isNamedFieldTarget = [&](const Expr &candidate, std::string_view rootName) -> bool {
+          if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess || candidate.args.size() != 1) {
+            return false;
+          }
+          const Expr *receiver = &candidate.args.front();
+          while (receiver->kind == Expr::Kind::Call && receiver->isFieldAccess && receiver->args.size() == 1) {
+            receiver = &receiver->args.front();
+          }
+          return receiver->kind == Expr::Kind::Name && receiver->name == rootName;
+        };
+        auto resolveFieldTargetRootName = [&](const Expr &candidate, std::string &rootNameOut) -> bool {
+          if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess || candidate.args.size() != 1) {
+            return false;
+          }
+          const Expr *receiver = &candidate.args.front();
+          while (receiver->kind == Expr::Kind::Call && receiver->isFieldAccess && receiver->args.size() == 1) {
+            receiver = &receiver->args.front();
+          }
+          if (receiver->kind != Expr::Kind::Name) {
+            return false;
+          }
+          rootNameOut = receiver->name;
+          return true;
+        };
+        auto validateMutableFieldAccessTarget = [&](const Expr &fieldTarget) -> bool {
+          if (fieldTarget.kind != Expr::Kind::Call || !fieldTarget.isFieldAccess || fieldTarget.args.size() != 1) {
+            error_ = "assign target must be a mutable binding";
+            return false;
+          }
+          if (!validateExpr(params, locals, fieldTarget.args.front())) {
+            return false;
+          }
+          BindingInfo fieldBinding;
+          if (!resolveStructFieldBinding(fieldTarget.args.front(), fieldTarget.name, fieldBinding)) {
+            if (error_.empty()) {
+              error_ = "assign target must be a mutable binding";
+            }
+            return false;
+          }
+          std::string fieldTargetRootName;
+          const bool allowMutableReceiverFieldWrite =
+              resolveFieldTargetRootName(fieldTarget, fieldTargetRootName) &&
+              isMutableBinding(params, locals, fieldTargetRootName);
+          const bool allowLifecycleFieldWrite =
+              !fieldBinding.isMutable && isNamedFieldTarget(fieldTarget, "this") &&
+              isLifecycleHelperPath(currentDefinitionPath_);
+          if (!fieldBinding.isMutable && !allowLifecycleFieldWrite && !allowMutableReceiverFieldWrite) {
+            error_ = "assign target must be a mutable binding";
+            return false;
+          }
+          if (fieldTarget.args.front().kind == Expr::Kind::Name &&
+              hasActiveBorrowForBinding(fieldTarget.args.front().name)) {
+            formatBorrowedBindingError(fieldTarget.args.front().name, fieldTarget.args.front().name);
+            return false;
+          }
+          return true;
+        };
         if (target.kind == Expr::Kind::Name) {
           if (!isMutableBinding(params, locals, target.name)) {
             error_ = "assign target must be a mutable binding: " + target.name;
@@ -6202,74 +6282,39 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
         } else if (target.kind == Expr::Kind::Call && target.isFieldAccess) {
-          if (target.args.size() != 1) {
-            error_ = "assign target must be a mutable binding";
-            return false;
-          }
-          if (!validateExpr(params, locals, target.args.front())) {
-            return false;
-          }
-          BindingInfo fieldBinding;
-          if (!resolveStructFieldBinding(target.args.front(), target.name, fieldBinding)) {
-            if (error_.empty()) {
-              error_ = "assign target must be a mutable binding";
-            }
-            return false;
-          }
-          auto isLifecycleHelperPath = [](const std::string &fullPath) -> bool {
-            static const std::array<std::string_view, 10> suffixes = {
-                "/Create",       "/Destroy",       "/Copy",       "/Move",       "/CreateStack",
-                "/DestroyStack", "/CreateHeap",    "/DestroyHeap","/CreateBuffer","/DestroyBuffer"};
-            for (std::string_view suffix : suffixes) {
-              if (fullPath.size() < suffix.size()) {
-                continue;
-              }
-              if (fullPath.compare(fullPath.size() - suffix.size(), suffix.size(), suffix.data(), suffix.size()) == 0) {
-                return true;
-              }
-            }
-            return false;
-          };
-          auto isNamedFieldTarget = [&](const Expr &candidate, std::string_view rootName) -> bool {
-            if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess || candidate.args.size() != 1) {
-              return false;
-            }
-            const Expr *receiver = &candidate.args.front();
-            while (receiver->kind == Expr::Kind::Call && receiver->isFieldAccess && receiver->args.size() == 1) {
-              receiver = &receiver->args.front();
-            }
-            return receiver->kind == Expr::Kind::Name && receiver->name == rootName;
-          };
-          auto resolveFieldTargetRootName = [&](const Expr &candidate, std::string &rootNameOut) -> bool {
-            if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess || candidate.args.size() != 1) {
-              return false;
-            }
-            const Expr *receiver = &candidate.args.front();
-            while (receiver->kind == Expr::Kind::Call && receiver->isFieldAccess && receiver->args.size() == 1) {
-              receiver = &receiver->args.front();
-            }
-            if (receiver->kind != Expr::Kind::Name) {
-              return false;
-            }
-            rootNameOut = receiver->name;
-            return true;
-          };
-          std::string fieldTargetRootName;
-          const bool allowMutableReceiverFieldWrite =
-              resolveFieldTargetRootName(target, fieldTargetRootName) &&
-              isMutableBinding(params, locals, fieldTargetRootName);
-          const bool allowLifecycleFieldWrite =
-              !fieldBinding.isMutable && isNamedFieldTarget(target, "this") && isLifecycleHelperPath(currentDefinitionPath_);
-          if (!fieldBinding.isMutable && !allowLifecycleFieldWrite && !allowMutableReceiverFieldWrite) {
-            error_ = "assign target must be a mutable binding";
-            return false;
-          }
-          if (target.args.front().kind == Expr::Kind::Name &&
-              hasActiveBorrowForBinding(target.args.front().name)) {
-            formatBorrowedBindingError(target.args.front().name, target.args.front().name);
+          if (!validateMutableFieldAccessTarget(target)) {
             return false;
           }
         } else if (target.kind == Expr::Kind::Call) {
+          std::string accessName;
+          if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+            const Expr &collectionTarget = target.args.front();
+            std::string elemType;
+            if (!(resolveVectorTarget(collectionTarget, elemType) || resolveArrayTarget(collectionTarget, elemType))) {
+              error_ = "assign target must be a mutable binding";
+              return false;
+            }
+            if (collectionTarget.kind == Expr::Kind::Name) {
+              if (!isMutableBinding(params, locals, collectionTarget.name)) {
+                error_ = "assign target must be a mutable binding: " + collectionTarget.name;
+                return false;
+              }
+              if (hasActiveBorrowForBinding(collectionTarget.name)) {
+                formatBorrowedBindingError(collectionTarget.name, collectionTarget.name);
+                return false;
+              }
+            } else if (collectionTarget.kind == Expr::Kind::Call && collectionTarget.isFieldAccess) {
+              if (!validateMutableFieldAccessTarget(collectionTarget)) {
+                return false;
+              }
+            } else {
+              error_ = "assign target must be a mutable binding";
+              return false;
+            }
+            if (!validateExpr(params, locals, target)) {
+              return false;
+            }
+          } else {
           std::string pointerName;
           if (!getBuiltinPointerName(target, pointerName) || pointerName != "dereference" || target.args.size() != 1) {
             error_ = "assign target must be a mutable binding";
@@ -6347,6 +6392,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           if (!validateExpr(params, locals, pointerExpr)) {
             return false;
+          }
           }
         } else {
           error_ = "assign target must be a mutable binding";
