@@ -1083,6 +1083,38 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return false;
   };
+  auto isExplicitMapAccessCompatibilityCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "map/at" && normalized != "map/at_unsafe") {
+      return false;
+    }
+    if (defMap.find("/" + normalized) != defMap.end()) {
+      return false;
+    }
+    const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
+    return receiverIndex < candidate.args.size() && isMapValue(candidate.args[receiverIndex], localTypes);
+  };
+  auto inferExplicitMapAccessCompatibilityTypeName = [&](const Expr &candidate) -> std::string {
+    if (!isExplicitMapAccessCompatibilityCall(candidate)) {
+      return "";
+    }
+    const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
+    if (receiverIndex >= candidate.args.size()) {
+      return "";
+    }
+    std::string elementType;
+    if (inferCollectionElementTypeNameFromExpr(
+            candidate.args[receiverIndex], localTypes, resolveCollectionElementTypeFromCall, elementType)) {
+      return normalizeBindingTypeName(elementType);
+    }
+    return "";
+  };
   inferPrimitiveTypeName = [&](const Expr &expr) -> std::string {
     switch (expr.kind) {
       case Expr::Kind::Literal:
@@ -1105,6 +1137,10 @@ bool resolveMethodCallPath(const Expr &call,
       }
       case Expr::Kind::Call: {
         if (!expr.isMethodCall) {
+          if (const std::string explicitMapAccessType = inferExplicitMapAccessCompatibilityTypeName(expr);
+              !explicitMapAccessType.empty()) {
+            return explicitMapAccessType;
+          }
           const std::string resolvedExprPath = resolveExprPath(expr);
           std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
           pruneMapAccessStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);

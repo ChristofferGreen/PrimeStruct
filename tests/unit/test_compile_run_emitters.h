@@ -2766,6 +2766,51 @@ TEST_CASE("C++ emitter helper keeps bare map access canonical struct forwarding"
   CHECK(resolved == "/i32/tag");
 }
 
+TEST_CASE("C++ emitter helper keeps direct map access compatibility call primitive fallback") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/map/at";
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  receiverCall.args.push_back(receiverName);
+  receiverCall.args.push_back(keyLiteral);
+  receiverCall.argNames.push_back(std::nullopt);
+  receiverCall.argNames.push_back(std::nullopt);
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "tag";
+  methodCall.args.push_back(receiverCall);
+  methodCall.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "map";
+  receiverInfo.typeTemplateArg = "i32, i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  returnStructs.emplace("/std/collections/map/at", "/CanonicalMarker");
+
+  std::string resolved;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/i32/tag");
+}
+
 TEST_CASE("C++ emitter helper keeps slash-path map access struct forwarding") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
@@ -5923,8 +5968,8 @@ Marker {
 }
 
 [return<int>]
-/Marker/tag([Marker] self, [bool] marker) {
-  return(self.value)
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
 }
 
 [effects(heap_alloc), return<int>]
@@ -5942,7 +5987,77 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+}
+
+TEST_CASE("rejects map unsafe compatibility call struct method chain canonical forwarding in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/map/at_unsafe(values, 2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_map_access_alias_unsafe_struct_method_chain_canonical_forwarding_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_map_access_alias_unsafe_struct_method_chain_canonical_forwarding_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("rejects map unsafe compatibility call struct method chain primitive argument diagnostics in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/map/at_unsafe(values, 2i32).tag(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_map_access_alias_unsafe_struct_method_chain_canonical_diagnostic.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_map_access_alias_unsafe_struct_method_chain_canonical_diagnostic.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias access auto wrapper canonical struct-return forwarding in C++ emitter") {

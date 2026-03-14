@@ -5466,6 +5466,60 @@ main() {
   CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
+TEST_CASE("map namespaced unsafe access alias chained method rejects canonical struct-return forwarding") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/map/at_unsafe(values, 2i32).tag())
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("map namespaced unsafe access alias chained method keeps downstream tag diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/map/at_unsafe(values, 2i32).tag(1i32))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced access alias field expression keeps removed-alias diagnostics") {
   const std::string source = R"(
 Marker {

@@ -3885,6 +3885,75 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
+TEST_CASE("rejects native map unsafe compatibility call struct method chain with primitive receiver diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/map/at_unsafe(values, 2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_map_access_alias_unsafe_struct_method_chain_canonical_forwarding_reject.prime",
+                source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_map_access_alias_unsafe_struct_method_chain_canonical_forwarding_reject.err")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+}
+
+TEST_CASE("rejects native map unsafe compatibility call struct method chain with primitive argument diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/i32/tag([i32] self, [bool] marker) {
+  return(self)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/map/at_unsafe(values, 2i32).tag(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_map_access_alias_unsafe_struct_method_chain_canonical_diagnostic.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_map_access_alias_unsafe_struct_method_chain_canonical_diagnostic.err")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+}
+
 TEST_CASE("rejects native vector method alias access struct method chain with primitive receiver diagnostics") {
   const std::string source = R"(
 Marker {
