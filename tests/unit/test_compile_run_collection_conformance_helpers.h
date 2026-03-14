@@ -49,6 +49,8 @@ inline void expectSharedVectorConformanceHarness(const std::string &emitMode) {
     expectCanonicalVectorAccessImportRequirement(emitMode, "at_unsafe");
     expectCanonicalVectorPushNamedArgsConformance(emitMode);
     expectCanonicalVectorPushImportRequirement(emitMode);
+    expectCanonicalVectorPopNamedArgsConformance(emitMode);
+    expectCanonicalVectorPopImportRequirement(emitMode);
     expectCanonicalVectorNamespaceCountShadow(emitMode);
     expectCanonicalVectorNamespacePushShadow(emitMode);
   }

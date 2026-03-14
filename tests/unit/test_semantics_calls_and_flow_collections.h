@@ -3264,6 +3264,22 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector pop accepts named arguments through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /std/collections/vector/pop([values] values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced vector push requires imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -3276,6 +3292,20 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector pop requires imported stdlib helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /std/collections/vector/pop(values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/pop") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector push expression requires imported stdlib helper") {

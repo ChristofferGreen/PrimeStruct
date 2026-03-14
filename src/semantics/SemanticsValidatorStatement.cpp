@@ -2454,6 +2454,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
          namespacedHelper == "at_unsafe" || namespacedHelper == "push" || namespacedHelper == "pop" ||
          namespacedHelper == "reserve" || namespacedHelper == "clear" || namespacedHelper == "remove_at" ||
          namespacedHelper == "remove_swap");
+    const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback =
+        isStdNamespacedVectorCanonicalHelperCall && !namespacedHelper.empty() &&
+        defMap_.find("/vector/" + namespacedHelper) != defMap_.end();
     const bool isUserMethodTarget =
         stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
         vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
@@ -2467,6 +2470,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       resolvedReceiverIndex = 0;
     }
     const bool shouldProbeVectorHelperReceiver =
+        !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(vectorHelperResolved) == defMap_.end() &&
+          !shouldAllowStdNamespacedVectorHelperCompatibilityFallback) &&
         (defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
         !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(vectorHelperResolved) != defMap_.end());
     if (shouldProbeVectorHelperReceiver && !stmt.args.empty()) {
@@ -2555,6 +2560,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return validateExpr(params, locals, helperCall, enclosingStatements, statementIndex);
     }
     if (defMap_.find(vectorHelperResolved) == defMap_.end()) {
+      if (isStdNamespacedVectorCanonicalHelperCall &&
+          !shouldAllowStdNamespacedVectorHelperCompatibilityFallback) {
+        error_ = "unknown call target: " + vectorHelperResolved;
+        return false;
+      }
       auto validateBuiltinNamedReceiverShape = [&](const std::string &helperName) -> bool {
         if (!hasNamedArguments(stmt.argNames) || stmt.args.empty()) {
           return true;
