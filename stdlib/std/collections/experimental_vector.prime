@@ -1,0 +1,135 @@
+namespace std {
+  namespace collections {
+  namespace experimental_vector {
+  [public struct]
+  Vector<T>() {
+    [public i32] count
+    [public i32] capacity
+    [public Pointer<T>] data
+  }
+
+  [effects(heap_alloc), return<Vector<T>>]
+  vectorAlloc<T>([i32] count, [i32] capacity) {
+    [i32 mut] allocCount{capacity}
+    if(equal(allocCount, 0i32),
+       then() { assign(allocCount, 1i32) },
+       else() { })
+    return(Vector<T>(count, capacity, /std/collections/experimental_buffer_checked/bufferAlloc<T>(allocCount)))
+  }
+
+  [return<void>]
+  vectorWrite<T>([Vector<T> mut] values, [i32] index, [T] value) {
+    /std/collections/experimental_buffer_unchecked/bufferWriteUnsafe<T>(values.data, index, value)
+  }
+
+  [public effects(heap_alloc), return<Vector<T>>]
+  vectorNew<T>() {
+    return(vectorAlloc<T>(0i32, 0i32))
+  }
+
+  [public effects(heap_alloc), return<Vector<T>>]
+  vectorSingle<T>([T] value) {
+    [Vector<T> mut] out{vectorAlloc<T>(1i32, 1i32)}
+    vectorWrite<T>(out, 0i32, value)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<Vector<T>>]
+  vectorPair<T>([T] first, [T] second) {
+    [Vector<T> mut] out{vectorAlloc<T>(2i32, 2i32)}
+    vectorWrite<T>(out, 0i32, first)
+    vectorWrite<T>(out, 1i32, second)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<Vector<T>>]
+  vectorTriple<T>([T] first, [T] second, [T] third) {
+    [Vector<T> mut] out{vectorAlloc<T>(3i32, 3i32)}
+    vectorWrite<T>(out, 0i32, first)
+    vectorWrite<T>(out, 1i32, second)
+    vectorWrite<T>(out, 2i32, third)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<Vector<T>>]
+  vectorQuad<T>([T] first, [T] second, [T] third, [T] fourth) {
+    [Vector<T> mut] out{vectorAlloc<T>(4i32, 4i32)}
+    vectorWrite<T>(out, 0i32, first)
+    vectorWrite<T>(out, 1i32, second)
+    vectorWrite<T>(out, 2i32, third)
+    vectorWrite<T>(out, 3i32, fourth)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<Vector<T>>]
+  vectorQuint<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth) {
+    [Vector<T> mut] out{vectorAlloc<T>(5i32, 5i32)}
+    vectorWrite<T>(out, 0i32, first)
+    vectorWrite<T>(out, 1i32, second)
+    vectorWrite<T>(out, 2i32, third)
+    vectorWrite<T>(out, 3i32, fourth)
+    vectorWrite<T>(out, 4i32, fifth)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<Vector<T>>]
+  vectorSext<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth) {
+    [Vector<T> mut] out{vectorAlloc<T>(6i32, 6i32)}
+    vectorWrite<T>(out, 0i32, first)
+    vectorWrite<T>(out, 1i32, second)
+    vectorWrite<T>(out, 2i32, third)
+    vectorWrite<T>(out, 3i32, fourth)
+    vectorWrite<T>(out, 4i32, fifth)
+    vectorWrite<T>(out, 5i32, sixth)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<Vector<T>>]
+  vectorSept<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth, [T] seventh) {
+    [Vector<T> mut] out{vectorAlloc<T>(7i32, 7i32)}
+    vectorWrite<T>(out, 0i32, first)
+    vectorWrite<T>(out, 1i32, second)
+    vectorWrite<T>(out, 2i32, third)
+    vectorWrite<T>(out, 3i32, fourth)
+    vectorWrite<T>(out, 4i32, fifth)
+    vectorWrite<T>(out, 5i32, sixth)
+    vectorWrite<T>(out, 6i32, seventh)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<Vector<T>>]
+  vectorOct<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth, [T] seventh, [T] eighth) {
+    [Vector<T> mut] out{vectorAlloc<T>(8i32, 8i32)}
+    vectorWrite<T>(out, 0i32, first)
+    vectorWrite<T>(out, 1i32, second)
+    vectorWrite<T>(out, 2i32, third)
+    vectorWrite<T>(out, 3i32, fourth)
+    vectorWrite<T>(out, 4i32, fifth)
+    vectorWrite<T>(out, 5i32, sixth)
+    vectorWrite<T>(out, 6i32, seventh)
+    vectorWrite<T>(out, 7i32, eighth)
+    return(out)
+  }
+
+  [public return<i32>]
+  vectorCount<T>([Vector<T>] values) {
+    return(values.count)
+  }
+
+  [public return<i32>]
+  vectorCapacity<T>([Vector<T>] values) {
+    return(values.capacity)
+  }
+
+  [public return<T>]
+  vectorAt<T>([Vector<T>] values, [i32] index) {
+    return(/std/collections/experimental_buffer_checked/bufferReadChecked<T>(values.data, index, values.count))
+  }
+
+  [public return<T>]
+  vectorAtUnsafe<T>([Vector<T>] values, [i32] index) {
+    return(/std/collections/experimental_buffer_unchecked/bufferReadUnsafe<T>(values.data, index))
+  }
+  }
+  }
+}

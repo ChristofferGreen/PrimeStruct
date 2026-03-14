@@ -3,6 +3,7 @@
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
 #include "test_compile_run_map_conformance_helpers.h"
 #include "test_compile_run_unchecked_pointer_conformance_helpers.h"
+#include "test_compile_run_vector_conformance_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
@@ -2040,6 +2041,20 @@ TEST_CASE("compiles and runs native shared map conformance harness for stdlib an
     expectMapOverwriteConformance("native", "/std/collections/experimental_map/*");
     expectMapTryAtConformance("native", "/std/collections/experimental_map/*", false);
     expectMapTryAtConformance("native", "/std/collections/experimental_map/*", true);
+  }
+}
+
+TEST_CASE("compiles and runs native shared vector conformance harness for stdlib and experimental helpers") {
+  SUBCASE("stdlib") {
+    expectVectorHelperSurfaceConformance("native", "/std/collections/*");
+    expectVectorExtendedConstructorConformance("native", "/std/collections/*");
+    expectVectorTypeMismatchReject("native", "/std/collections/*");
+  }
+
+  SUBCASE("experimental") {
+    expectVectorHelperSurfaceConformance("native", "/std/collections/experimental_vector/*");
+    expectVectorExtendedConstructorConformance("native", "/std/collections/experimental_vector/*");
+    expectVectorTypeMismatchReject("native", "/std/collections/experimental_vector/*");
   }
 }
 

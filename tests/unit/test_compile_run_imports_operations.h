@@ -2,6 +2,7 @@
 #include "test_compile_run_checked_pointer_conformance_helpers.h"
 #include "test_compile_run_map_conformance_helpers.h"
 #include "test_compile_run_unchecked_pointer_conformance_helpers.h"
+#include "test_compile_run_vector_conformance_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
@@ -71,6 +72,20 @@ TEST_CASE("compiles and runs shared map conformance harness in C++ emitter") {
     expectMapOverwriteConformance("exe", "/std/collections/experimental_map/*");
     expectMapTryAtConformance("exe", "/std/collections/experimental_map/*", false);
     expectMapTryAtConformance("exe", "/std/collections/experimental_map/*", true);
+  }
+}
+
+TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") {
+  SUBCASE("stdlib") {
+    expectVectorHelperSurfaceConformance("exe", "/std/collections/*");
+    expectVectorExtendedConstructorConformance("exe", "/std/collections/*");
+    expectVectorTypeMismatchReject("exe", "/std/collections/*");
+  }
+
+  SUBCASE("experimental") {
+    expectVectorHelperSurfaceConformance("exe", "/std/collections/experimental_vector/*");
+    expectVectorExtendedConstructorConformance("exe", "/std/collections/experimental_vector/*");
+    expectVectorTypeMismatchReject("exe", "/std/collections/experimental_vector/*");
   }
 }
 
