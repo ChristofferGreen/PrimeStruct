@@ -1833,49 +1833,27 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (!normalized.empty() && normalized.front() == '/') {
         normalized.erase(normalized.begin());
       }
-      std::string helperName;
-      if (normalized == "map/at") {
-        helperName = "at";
-      } else if (normalized == "map/at_unsafe") {
-        helperName = "at_unsafe";
-      } else {
+      if (normalized != "map/at" && normalized != "map/at_unsafe") {
+        std::string namespacePrefix = candidate.namespacePrefix;
+        if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
+          namespacePrefix.erase(namespacePrefix.begin());
+        }
+        if (namespacePrefix == "map" &&
+            (normalized == "at" || normalized == "at_unsafe")) {
+          normalized = "map/" + normalized;
+        }
+      }
+      if (normalized != "map/at" && normalized != "map/at_unsafe") {
         const std::string resolvedPath = resolveCalleePath(candidate);
         if (resolvedPath == "/map/at") {
-          helperName = "at";
+          normalized = "map/at";
         } else if (resolvedPath == "/map/at_unsafe") {
-          helperName = "at_unsafe";
+          normalized = "map/at_unsafe";
         } else {
           return false;
         }
       }
-      if (defMap_.find("/map/" + helperName) != defMap_.end()) {
-        return false;
-      }
-      if (candidate.args.empty()) {
-        return false;
-      }
-      const bool hasNamedArgs = hasNamedArguments(candidate.argNames);
-      size_t receiverIndex = 0;
-      if (hasNamedArgs) {
-        bool foundValues = false;
-        for (size_t i = 0; i < candidate.args.size(); ++i) {
-          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
-              *candidate.argNames[i] == "values") {
-            receiverIndex = i;
-            foundValues = true;
-            break;
-          }
-        }
-        if (!foundValues) {
-          receiverIndex = 0;
-        }
-      }
-      if (receiverIndex >= candidate.args.size()) {
-        return false;
-      }
-      std::string keyType;
-      std::string valueType;
-      return resolveMapTarget(candidate.args[receiverIndex], keyType, valueType);
+      return defMap_.find("/" + normalized) == defMap_.end();
     };
     auto explicitRemovedCollectionMethodPath = [&](const Expr &candidate) -> std::string {
       if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
@@ -1895,10 +1873,30 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (!normalized.empty() && normalized.front() == '/') {
         normalized.erase(normalized.begin());
       }
+      std::string normalizedPrefix = candidate.namespacePrefix;
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+        normalizedPrefix.erase(normalizedPrefix.begin());
+      }
       std::string_view helperName;
       bool isStdNamespacedVectorHelper = false;
       std::string compatibilityCollection;
-      if (normalized.rfind("array/", 0) == 0) {
+      if (normalizedPrefix == "array") {
+        helperName = normalized;
+        compatibilityCollection = "array";
+      } else if (normalizedPrefix == "vector") {
+        helperName = normalized;
+        compatibilityCollection = "vector";
+      } else if (normalizedPrefix == "std/collections/vector") {
+        helperName = normalized;
+        isStdNamespacedVectorHelper = true;
+        compatibilityCollection = "vector";
+      } else if (normalizedPrefix == "map") {
+        helperName = normalized;
+        compatibilityCollection = "map";
+      } else if (normalizedPrefix == "std/collections/map") {
+        helperName = normalized;
+        compatibilityCollection = "map";
+      } else if (normalized.rfind("array/", 0) == 0) {
         helperName = std::string_view(normalized).substr(std::string_view("array/").size());
         compatibilityCollection = "array";
       } else if (normalized.rfind("vector/", 0) == 0) {
@@ -2180,7 +2178,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
         const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-        if (suffix != "map") {
+        if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+            suffix != "at" && suffix != "at_unsafe") {
           appendUnique("/map/" + suffix);
         }
       }
@@ -2459,6 +2458,18 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
         !isMapNamespacedCountCompatibilityCall(expr) && !isStdNamespacedMapCountCall;
+    const bool prefersExplicitDirectMapAccessAliasDefinition =
+        !expr.isMethodCall &&
+        (((isNamespacedMapHelperCall && (namespacedHelper == "at" || namespacedHelper == "at_unsafe")) ||
+          (((expr.namespacePrefix == "map") || (expr.namespacePrefix == "/map")) &&
+           (expr.name == "at" || expr.name == "at_unsafe")))) &&
+        defMap_.find("/map/" +
+                     ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : namespacedHelper)) !=
+            defMap_.end();
+    if (prefersExplicitDirectMapAccessAliasDefinition) {
+      resolved = "/map/" + ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : namespacedHelper);
+      hasResolvedPath = true;
+    }
     const bool isUnnamespacedMapCountFallbackCall =
         !expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr);
     const bool isResolvedMapCountCall =
@@ -2499,6 +2510,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isNamespacedMapAccessCall =
         !expr.isMethodCall && isBuiltinAccess && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
+        !prefersExplicitDirectMapAccessAliasDefinition &&
         !isMapNamespacedAccessCompatibilityCall(expr);
     auto resolveBuiltinCollectionCountCapacityReturnKind = [&](const Expr &callExpr, ReturnKind &kindOut) -> bool {
       kindOut = ReturnKind::Unknown;

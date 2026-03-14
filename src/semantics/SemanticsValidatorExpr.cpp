@@ -2476,6 +2476,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (!normalized.empty() && normalized.front() == '/') {
         normalized.erase(normalized.begin());
       }
+      std::string normalizedPrefix = candidate.namespacePrefix;
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+        normalizedPrefix.erase(normalizedPrefix.begin());
+      }
       std::string helperName;
       if (normalized == "map/count") {
         helperName = "count";
@@ -2489,6 +2493,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         helperName = "at";
       } else if (normalized == "std/collections/map/at_unsafe") {
         helperName = "at_unsafe";
+      } else if (normalizedPrefix == "map" &&
+                 (normalized == "count" || normalized == "at" || normalized == "at_unsafe")) {
+        helperName = normalized;
+      } else if (normalizedPrefix == "std/collections/map" &&
+                 (normalized == "count" || normalized == "at" || normalized == "at_unsafe")) {
+        helperName = normalized;
       } else {
         return "";
       }
@@ -2510,6 +2520,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         normalized.erase(normalized.begin());
       }
       std::string helperName;
+      std::string normalizedPrefix = candidate.namespacePrefix;
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+        normalizedPrefix.erase(normalizedPrefix.begin());
+      }
       if (normalized == "map/count") {
         helperName = "count";
       } else if (normalized == "map/contains") {
@@ -2520,12 +2534,32 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         helperName = "at";
       } else if (normalized == "map/at_unsafe") {
         helperName = "at_unsafe";
+      } else if (normalizedPrefix == "map" &&
+                 (normalized == "count" || normalized == "contains" || normalized == "tryAt" ||
+                  normalized == "at" || normalized == "at_unsafe")) {
+        helperName = normalized;
       } else {
-        return "";
+        const std::string resolvedPath = resolveCalleePath(candidate);
+        if (resolvedPath == "/map/count") {
+          helperName = "count";
+        } else if (resolvedPath == "/map/contains") {
+          helperName = "contains";
+        } else if (resolvedPath == "/map/tryAt") {
+          helperName = "tryAt";
+        } else if (resolvedPath == "/map/at") {
+          helperName = "at";
+        } else if (resolvedPath == "/map/at_unsafe") {
+          helperName = "at_unsafe";
+        } else {
+          return "";
+        }
       }
       const std::string removedPath = "/map/" + helperName;
       if (defMap_.find(removedPath) != defMap_.end() || candidate.args.empty()) {
         return "";
+      }
+      if (helperName == "at" || helperName == "at_unsafe") {
+        return removedPath;
       }
       size_t receiverIndex = 0;
       if (hasNamedArguments(candidate.argNames)) {
@@ -2666,10 +2700,30 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (!candidate.empty() && candidate.front() == '/') {
           candidate.erase(candidate.begin());
         }
+        std::string normalizedPrefix = expr.namespacePrefix;
+        if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+          normalizedPrefix.erase(normalizedPrefix.begin());
+        }
         std::string_view helperName;
         bool isStdNamespacedVectorHelper = false;
         std::string compatibilityCollection;
-        if (candidate.rfind("array/", 0) == 0) {
+        if (normalizedPrefix == "array") {
+          helperName = candidate;
+          compatibilityCollection = "array";
+        } else if (normalizedPrefix == "vector") {
+          helperName = candidate;
+          compatibilityCollection = "vector";
+        } else if (normalizedPrefix == "std/collections/vector") {
+          helperName = candidate;
+          isStdNamespacedVectorHelper = true;
+          compatibilityCollection = "vector";
+        } else if (normalizedPrefix == "map") {
+          helperName = candidate;
+          compatibilityCollection = "map";
+        } else if (normalizedPrefix == "std/collections/map") {
+          helperName = candidate;
+          compatibilityCollection = "map";
+        } else if (candidate.rfind("array/", 0) == 0) {
           helperName = std::string_view(candidate).substr(std::string_view("array/").size());
           compatibilityCollection = "array";
         } else if (candidate.rfind("vector/", 0) == 0) {
@@ -2891,6 +2945,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
         std::string accessHelperName;
         if (getBuiltinArrayAccessName(receiver, accessHelperName) && !receiver.args.empty()) {
+          const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(receiver);
+          if (!removedMapCompatibilityPath.empty()) {
+            error_ = "unknown call target: " + removedMapCompatibilityPath;
+            return false;
+          }
           size_t accessReceiverIndex = receiver.isMethodCall ? 0 : 0;
           if (!receiver.isMethodCall && hasNamedArguments(receiver.argNames)) {
             bool foundValues = false;
@@ -3438,6 +3497,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isStdNamespacedMapAccessCall =
         hasBuiltinAccessSpelling && !expr.isMethodCall &&
         resolveCalleePath(expr).rfind("/std/collections/map/at", 0) == 0;
+    const bool prefersExplicitDirectMapAccessAliasDefinition =
+        !expr.isMethodCall &&
+        (((isNamespacedMapHelperCall && (namespacedHelper == "at" || namespacedHelper == "at_unsafe")) ||
+          (((expr.namespacePrefix == "map") || (expr.namespacePrefix == "/map")) &&
+           (expr.name == "at" || expr.name == "at_unsafe")))) &&
+        defMap_.find("/map/" +
+                     ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : namespacedHelper)) !=
+            defMap_.end();
     const bool shouldAllowStdAccessCompatibilityFallback =
         isStdNamespacedVectorAccessCall && !accessHelperName.empty() &&
         defMap_.find("/vector/" + accessHelperName) != defMap_.end();
@@ -3454,7 +3521,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         defMap_.find("/vector/" + accessHelperName) != defMap_.end();
     const bool isNamespacedMapAccessCall =
         isBuiltinAccessName && isNamespacedMapHelperCall &&
-        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
+        !prefersExplicitDirectMapAccessAliasDefinition;
     const bool isDirectStdNamespacedVectorCountWrapperMapTarget =
         !expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Call && resolveMapTarget(expr.args.front());
@@ -3466,6 +3534,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         defMap_.find("/std/collections/vector/count") != defMap_.end();
     if (prefersCanonicalVectorCountAliasDefinition) {
       resolved = "/std/collections/vector/count";
+    }
+    if (prefersExplicitDirectMapAccessAliasDefinition) {
+      resolved = "/map/" + ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : namespacedHelper);
     }
     auto normalizeCollectionMethodName = [](const std::string &methodName) {
       std::string normalized = methodName;

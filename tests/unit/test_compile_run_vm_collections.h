@@ -308,7 +308,7 @@ TEST_CASE("runs vm unchecked pointer conformance harness for imported .prime hel
   expectUncheckedPointerGrowthConformance("vm");
 }
 
-TEST_CASE("runs vm map namespaced at compatibility alias") {
+TEST_CASE("rejects vm map namespaced at compatibility alias without explicit alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -326,8 +326,32 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_map_namespaced_at_compatibility_alias_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 17);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /map/at") != std::string::npos);
+}
+
+TEST_CASE("rejects vm map namespaced at unsafe compatibility alias without explicit alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{/map/at_unsafe(values, 1i32)}
+  return(inferred)
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_map_namespaced_at_unsafe_compatibility_alias_reject.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_map_namespaced_at_unsafe_compatibility_alias_reject_out.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("runs vm stdlib namespaced map helpers on canonical map references") {
@@ -1690,9 +1714,8 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("template arguments required for /std/collections/map/at") !=
-        std::string::npos);
+  CHECK(runCommand(runCmd) == 10);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm with templated stdlib wrapper temporary call forms") {
@@ -1870,9 +1893,8 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("template arguments required for /std/collections/map/at") !=
-        std::string::npos);
+  CHECK(runCommand(runCmd) == 27);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm with templated stdlib wrapper temporary unsafe parity") {
@@ -1906,9 +1928,8 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("template arguments required for /std/collections/map/at_unsafe") !=
-        std::string::npos);
+  CHECK(runCommand(runCmd) == 18);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm with templated stdlib wrapper temporary count capacity parity") {
@@ -3494,7 +3515,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm vector alias access struct method chain canonical forwarding") {
@@ -3561,7 +3583,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm vector alias access field expression with struct receiver diagnostics") {
@@ -3688,7 +3711,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map access compatibility call struct method chain with primitive argument diagnostics") {
@@ -3721,7 +3744,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map unsafe compatibility call struct method chain with primitive receiver diagnostics") {
@@ -3754,7 +3777,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map unsafe compatibility call struct method chain with primitive argument diagnostics") {
@@ -3787,7 +3810,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector method alias access struct method chain with primitive receiver diagnostics") {

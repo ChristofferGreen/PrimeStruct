@@ -4011,10 +4011,33 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced at call resolves compatibility alias") {
+TEST_CASE("map compatibility at call requires explicit alias definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/map/at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+}
+
+TEST_CASE("map compatibility at call keeps explicit alias precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at([map<i32, i32>] values, [i32] index) {
+  return(19i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/at([map<i32, i32>] values, [bool] index) {
   return(17i32)
 }
 
@@ -4029,10 +4052,34 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced at_unsafe auto inference resolves compatibility alias") {
+TEST_CASE("map compatibility at_unsafe auto inference requires explicit alias definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{/map/at_unsafe(values, 1i32)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("map compatibility at_unsafe keeps explicit alias precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(23i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [bool] index) {
   return(17i32)
 }
 
@@ -5844,7 +5891,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced access alias chained method rejects canonical struct-return forwarding") {
+TEST_CASE("map namespaced access alias chained method requires explicit alias definition") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -5865,13 +5912,13 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
   return(/map/at(values, 2i32).tag())
 }
-  )";
+)";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("map namespaced access alias chained method keeps downstream tag diagnostics") {
+TEST_CASE("map namespaced access alias chained method rejects before downstream tag diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -5892,13 +5939,13 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
   return(/map/at(values, 2i32).tag(1i32))
 }
-  )";
+)";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("map namespaced unsafe access alias chained method rejects canonical struct-return forwarding") {
+TEST_CASE("map namespaced unsafe access alias chained method requires explicit alias definition") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -5919,13 +5966,13 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
   return(/map/at_unsafe(values, 2i32).tag())
 }
-  )";
+)";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("map namespaced unsafe access alias chained method keeps downstream tag diagnostics") {
+TEST_CASE("map namespaced unsafe access alias chained method rejects before downstream tag diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -5946,10 +5993,10 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
   return(/map/at_unsafe(values, 2i32).tag(1i32))
 }
-  )";
+)";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Marker/tag") != std::string::npos);
+  CHECK(error.find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access alias field expression keeps removed-alias diagnostics") {
