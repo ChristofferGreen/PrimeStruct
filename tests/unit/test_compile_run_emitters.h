@@ -3283,7 +3283,7 @@ TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibil
   CHECK(resolved == "/map/count");
 }
 
-TEST_CASE("C++ emitter helper rejects canonical vector alias access struct-return forwarding resolution") {
+TEST_CASE("C++ emitter helper keeps primitive vector alias access method resolution") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.name = "/vector/at";
@@ -3323,9 +3323,9 @@ TEST_CASE("C++ emitter helper rejects canonical vector alias access struct-retur
   returnStructs.emplace("/std/collections/vector/at", "/Marker");
 
   std::string resolved;
-  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+  CHECK(primec::emitter::resolveMethodCallPath(
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved.empty());
+  CHECK(resolved == "/i32/tag");
 }
 
 TEST_CASE("C++ emitter helper keeps vector element method unresolved without canonical metadata") {
@@ -5770,7 +5770,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias access struct method chain canonical diagnostics forwarding in C++ emitter") {

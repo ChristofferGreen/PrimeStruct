@@ -1100,6 +1100,27 @@ bool resolveMethodCallPath(const Expr &call,
     const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
     return receiverIndex < candidate.args.size() && isMapValue(candidate.args[receiverIndex], localTypes);
   };
+  auto isExplicitVectorAccessCompatibilityCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "vector/at" && normalized != "vector/at_unsafe") {
+      return false;
+    }
+    if (defMap.find("/" + normalized) != defMap.end()) {
+      return false;
+    }
+    const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
+    if (receiverIndex >= candidate.args.size()) {
+      return false;
+    }
+    return isArrayValue(candidate.args[receiverIndex], localTypes) || isVectorValue(candidate.args[receiverIndex], localTypes) ||
+           isStringValue(candidate.args[receiverIndex], localTypes);
+  };
   auto inferExplicitMapAccessCompatibilityTypeName = [&](const Expr &candidate) -> std::string {
     if (!isExplicitMapAccessCompatibilityCall(candidate)) {
       return "";
@@ -1111,6 +1132,30 @@ bool resolveMethodCallPath(const Expr &call,
     std::string elementType;
     if (inferCollectionElementTypeNameFromExpr(
             candidate.args[receiverIndex], localTypes, resolveCollectionElementTypeFromCall, elementType)) {
+      return normalizeBindingTypeName(elementType);
+    }
+    return "";
+  };
+  auto inferExplicitVectorAccessCompatibilityTypeName = [&](const Expr &candidate) -> std::string {
+    if (!isExplicitVectorAccessCompatibilityCall(candidate)) {
+      return "";
+    }
+    const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
+    if (receiverIndex >= candidate.args.size()) {
+      return "";
+    }
+    const Expr &receiver = candidate.args[receiverIndex];
+    if (isStringValue(receiver, localTypes)) {
+      return "i32";
+    }
+    if (inferPrimitiveTypeName) {
+      const std::string inferredReceiverType = normalizeBindingTypeName(inferPrimitiveTypeName(receiver));
+      if (inferredReceiverType == "string") {
+        return "i32";
+      }
+    }
+    std::string elementType;
+    if (inferCollectionElementTypeNameFromExpr(receiver, localTypes, resolveCollectionElementTypeFromCall, elementType)) {
       return normalizeBindingTypeName(elementType);
     }
     return "";
@@ -1137,6 +1182,10 @@ bool resolveMethodCallPath(const Expr &call,
       }
       case Expr::Kind::Call: {
         if (!expr.isMethodCall) {
+          if (const std::string explicitVectorAccessType = inferExplicitVectorAccessCompatibilityTypeName(expr);
+              !explicitVectorAccessType.empty()) {
+            return explicitVectorAccessType;
+          }
           if (const std::string explicitMapAccessType = inferExplicitMapAccessCompatibilityTypeName(expr);
               !explicitMapAccessType.empty()) {
             return explicitMapAccessType;
