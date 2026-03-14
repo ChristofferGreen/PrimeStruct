@@ -7965,6 +7965,41 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
+TEST_CASE("native keeps direct wrapper-returned canonical map access count diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return("abc"raw_utf8)
+}
+
+[return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(/std/collections/map/at(wrapMap(), 1i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_direct_wrapper_canonical_map_access_count_diag.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_direct_wrapper_canonical_map_access_count_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("native keeps wrapper-returned slash-method map access primitive count diagnostics") {
   const std::string source = R"(
 [return<int>]

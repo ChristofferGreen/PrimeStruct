@@ -1161,6 +1161,28 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return "";
   };
+  auto inferCanonicalMapAccessTypeName = [&](const Expr &candidate) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return "";
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "std/collections/map/at" && normalized != "std/collections/map/at_unsafe") {
+      return "";
+    }
+    const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
+    if (receiverIndex >= candidate.args.size()) {
+      return "";
+    }
+    std::string elementType;
+    if (inferCollectionElementTypeNameFromExpr(
+            candidate.args[receiverIndex], localTypes, resolveCollectionElementTypeFromCall, elementType)) {
+      return normalizeBindingTypeName(elementType);
+    }
+    return "";
+  };
   inferPrimitiveTypeName = [&](const Expr &expr) -> std::string {
     switch (expr.kind) {
       case Expr::Kind::Literal:
@@ -1190,6 +1212,10 @@ bool resolveMethodCallPath(const Expr &call,
           if (const std::string explicitMapAccessType = inferExplicitMapAccessCompatibilityTypeName(expr);
               !explicitMapAccessType.empty()) {
             return explicitMapAccessType;
+          }
+          if (const std::string canonicalMapAccessType = inferCanonicalMapAccessTypeName(expr);
+              !canonicalMapAccessType.empty()) {
+            return canonicalMapAccessType;
           }
           const std::string resolvedExprPath = resolveExprPath(expr);
           std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);

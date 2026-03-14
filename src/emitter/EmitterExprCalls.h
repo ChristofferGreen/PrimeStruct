@@ -505,6 +505,54 @@
     }
     return "";
   };
+  auto builtinCanonicalMapAccessReceiverTypePath = [&](const Expr &candidate) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return "";
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "std/collections/map/at" && normalized != "std/collections/map/at_unsafe") {
+      return "";
+    }
+    if (candidate.args.empty()) {
+      return "";
+    }
+    size_t receiverIndex = 0;
+    if (hasNamedArguments(candidate.argNames)) {
+      bool foundValues = false;
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          receiverIndex = i;
+          foundValues = true;
+          break;
+        }
+      }
+      if (!foundValues) {
+        receiverIndex = 0;
+      }
+    }
+    if (receiverIndex >= candidate.args.size()) {
+      return "";
+    }
+    const Expr &receiver = candidate.args[receiverIndex];
+    if (isMapValue(receiver, localTypes)) {
+      return "/map";
+    }
+    if (receiver.kind == Expr::Kind::Call) {
+      std::string collectionName;
+      if (getBuiltinCollectionName(receiver, collectionName) && collectionName == "map") {
+        return "/map";
+      }
+      const std::string receiverTypePath = resolvedTypePathForResolvedCall(resolveExprPath(receiver));
+      if (receiverTypePath == "/map") {
+        return receiverTypePath;
+      }
+    }
+    return "";
+  };
   auto builtinVectorAccessMethodReceiverTypePath = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() || candidate.args.empty()) {
       return "";
@@ -580,7 +628,9 @@
       const bool shouldProbeBuiltinVectorAccessType =
           isExplicitVectorAccessCompatibilityCall(targetExpr) ||
           !builtinCanonicalVectorAccessReceiverTypePath(targetExpr).empty();
-      if (shouldProbeBuiltinVectorAccessType) {
+      const bool shouldProbeBuiltinMapAccessType =
+          !builtinCanonicalMapAccessReceiverTypePath(targetExpr).empty();
+      if (shouldProbeBuiltinVectorAccessType || shouldProbeBuiltinMapAccessType) {
         const std::string probedTypePath = probedTypePathForTarget(targetExpr);
         if (probedTypePath == "/string" || probedTypePath == "/array" || probedTypePath == "/vector" ||
             probedTypePath == "/map") {
