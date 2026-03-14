@@ -19688,6 +19688,72 @@ TEST_CASE("ir lowerer setup type helper rejects canonical map contains fallback 
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer setup type helper rejects canonical map tryAt fallback while keeping access fallback to compatibility defs") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  primec::Definition aliasTryAtDef;
+  aliasTryAtDef.fullPath = "/map/tryAt";
+  primec::Definition aliasAtUnsafeDef;
+  aliasAtUnsafeDef.fullPath = "/map/at_unsafe";
+  defMap.emplace("/map/tryAt", &aliasTryAtDef);
+  defMap.emplace("/map/at_unsafe", &aliasAtUnsafeDef);
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo tryAtInfo;
+  tryAtInfo.returnsVoid = false;
+  tryAtInfo.returnsArray = false;
+  tryAtInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  infoByPath.emplace("/map/tryAt", tryAtInfo);
+
+  primec::ir_lowerer::ReturnInfo accessInfo;
+  accessInfo.returnsVoid = false;
+  accessInfo.returnsArray = false;
+  accessInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  infoByPath.emplace("/map/at_unsafe", accessInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr tryAtCall;
+  tryAtCall.kind = primec::Expr::Kind::Call;
+  tryAtCall.name = "/std/collections/map/tryAt";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  bool definitionMatched = false;
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+      tryAtCall,
+      defMap,
+      [](const primec::Expr &expr) { return expr.name; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &definitionMatched));
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr atUnsafeCall;
+  atUnsafeCall.kind = primec::Expr::Kind::Call;
+  atUnsafeCall.name = "/std/collections/map/at_unsafe";
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  definitionMatched = false;
+  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+      atUnsafeCall,
+      defMap,
+      [](const primec::Expr &expr) { return expr.name; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &definitionMatched));
+  CHECK(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
 TEST_CASE("ir lowerer setup type helper rejects canonical map constructor fallback to compatibility defs") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition aliasCtorDef;

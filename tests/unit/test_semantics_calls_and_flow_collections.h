@@ -3767,6 +3767,19 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced map tryAt requires imported stdlib helper or explicit definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(try(/std/collections/map/tryAt(values, 1i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map access helpers are builtin-alias validated") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

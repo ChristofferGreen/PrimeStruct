@@ -803,10 +803,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
     }
     if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-      const std::string mapAlias =
-          "/map/" + preferred.substr(std::string("/std/collections/map/").size());
-      if (defMap_.count(mapAlias) > 0) {
-        preferred = mapAlias;
+      const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
+      if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+        const std::string mapAlias = "/map/" + suffix;
+        if (defMap_.count(mapAlias) > 0) {
+          preferred = mapAlias;
+        }
       }
     }
     return preferred;
@@ -2979,7 +2981,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         } else if (path.rfind("/map/", 0) == 0) {
           appendUnique("/std/collections/map/" + path.substr(std::string("/map/").size()));
         } else if (path.rfind("/std/collections/map/", 0) == 0) {
-          appendUnique("/map/" + path.substr(std::string("/std/collections/map/").size()));
+          const std::string suffix = path.substr(std::string("/std/collections/map/").size());
+          if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+            appendUnique("/map/" + suffix);
+          }
         }
         return candidates;
       };
