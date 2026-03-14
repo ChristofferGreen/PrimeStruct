@@ -18352,6 +18352,84 @@ TEST_CASE("ir lowerer setup type helper infers slash-method vector alias primiti
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper infers wrapper string access primitive receiver kinds") {
+  primec::Definition i32TagDef;
+  i32TagDef.fullPath = "/i32/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {i32TagDef.fullPath, &i32TagDef},
+  };
+
+  primec::Expr wrapTextCall;
+  wrapTextCall.kind = primec::Expr::Kind::Call;
+  wrapTextCall.name = "wrapText";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/std/collections/vector/at";
+  receiverCall.args = {wrapTextCall, indexExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  auto getReturnInfo = [&](const std::string &path, primec::ir_lowerer::ReturnInfo &infoOut) {
+    if (path != "/wrapText") {
+      return false;
+    }
+    infoOut.kind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+    infoOut.returnsVoid = false;
+    infoOut.returnsArray = false;
+    return true;
+  };
+
+  auto inferExprKind = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "wrapText") {
+      return primec::ir_lowerer::LocalInfo::ValueKind::String;
+    }
+    primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    if (primec::ir_lowerer::resolveMethodCallReturnKind(
+            expr,
+            localsIn,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return nullptr; },
+            getReturnInfo,
+            false,
+            kindOut,
+            nullptr)) {
+      return kindOut;
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      inferExprKind,
+      [](const primec::Expr &expr) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "wrapText") {
+          return std::string("/wrapText");
+        }
+        return expr.name;
+      },
+      getReturnInfo,
+      defMap,
+      error);
+  CHECK(resolved == &i32TagDef);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper infers slash-method map alias primitive receiver kinds") {
   primec::Definition i32TagDef;
   i32TagDef.fullPath = "/i32/tag";

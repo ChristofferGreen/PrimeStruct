@@ -1083,6 +1083,10 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
     return localsIn.find(candidate.name) != localsIn.end();
   };
+  auto isStringAccessReceiverExpr = [&](const Expr &candidate) {
+    return !requireArrayReturn && inferExprKind &&
+           inferExprKind(candidate, localsIn) == LocalInfo::ValueKind::String;
+  };
   auto buildMethodExprForReceiverIndex = [&](size_t receiverIndex) {
     Expr methodExpr = callExpr;
     methodExpr.isMethodCall = true;
@@ -1196,6 +1200,13 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     if (methodResolvedOut != nullptr) {
       *methodResolvedOut = true;
     }
+    if (isAccessCall && isStringAccessReceiverExpr(methodExpr.args.front())) {
+      if (methodResolvedOut != nullptr) {
+        *methodResolvedOut = true;
+      }
+      kindOut = LocalInfo::ValueKind::Int32;
+      return true;
+    }
     if (isCountCall && !requireArrayReturn && inferExprKind &&
         inferExprKind(methodExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
       if (methodResolvedOut != nullptr) {
@@ -1209,6 +1220,10 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
 
   if (isCountCall && !requireArrayReturn && inferExprKind &&
       inferExprKind(callExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+    kindOut = LocalInfo::ValueKind::Int32;
+    return true;
+  }
+  if (isAccessCall && isStringAccessReceiverExpr(callExpr.args.front())) {
     kindOut = LocalInfo::ValueKind::Int32;
     return true;
   }

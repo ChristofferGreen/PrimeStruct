@@ -5705,7 +5705,7 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("rejects namespaced wrapper string access method chain compatibility fallback in C++ emitter") {
+TEST_CASE("runs namespaced wrapper string access method chain compatibility fallback in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -5726,17 +5726,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_namespaced_wrapper_string_access_method_chain_compatibility_fallback_reject.prime",
+      writeTemp("compile_cpp_namespaced_wrapper_string_access_method_chain_compatibility_fallback.prime",
                 source);
-  const std::string outPath =
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_namespaced_wrapper_string_access_method_chain_compatibility_fallback_reject_out.txt")
+       "primec_cpp_namespaced_wrapper_string_access_method_chain_compatibility_fallback_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method target for tag") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 197);
 }
 
 TEST_CASE("rejects vector alias access struct method chain canonical forwarding in C++ emitter") {

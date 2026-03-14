@@ -911,6 +911,29 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("namespaced access wrapper temporaries infer i32 for chained methods") {
+  const std::string source = R"(
+wrapText() {
+  [string] text{"abc"utf8}
+  return(text)
+}
+
+[return<int>]
+/i32/tag([i32] value) {
+  return(plus(value, 10i32))
+}
+
+[return<int>]
+main() {
+  return(plus(/std/collections/vector/at(wrapText(), 1i32).tag(),
+              /vector/at_unsafe(wrapText(), 2i32).tag()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("reordered access wrapper temporaries infer i32 for chained methods") {
   const std::string source = R"(
 [return<map<string, i32>>]
@@ -949,6 +972,23 @@ wrapText() {
 [return<int>]
 main() {
   return(at(wrapText(), 1i32).missing_tag())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/missing_tag") != std::string::npos);
+}
+
+TEST_CASE("namespaced access wrapper temporary chained method reports i32 path diagnostics") {
+  const std::string source = R"(
+wrapText() {
+  [string] text{"abc"utf8}
+  return(text)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/at(wrapText(), 1i32).missing_tag())
 }
 )";
   std::string error;

@@ -67,6 +67,32 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
+TEST_CASE("runs vm namespaced wrapper string access method chain compatibility fallback") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(plus(/std/collections/vector/at(wrapText(), 1i32).tag(),
+              /vector/at_unsafe(wrapText(), 0i32).tag()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_namespaced_wrapper_string_access_method_chain_compatibility_fallback.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 197);
+}
+
 TEST_CASE("rejects vm array namespaced vector constructor alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

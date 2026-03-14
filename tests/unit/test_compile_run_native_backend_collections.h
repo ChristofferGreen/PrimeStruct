@@ -200,6 +200,38 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs native namespaced wrapper string access method chain compatibility fallback") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(plus(/std/collections/vector/at(wrapText(), 1i32).tag(),
+              /vector/at_unsafe(wrapText(), 0i32).tag()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_namespaced_wrapper_string_access_method_chain_compatibility_fallback.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_namespaced_wrapper_string_access_method_chain_compatibility_fallback_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 197);
+}
+
 TEST_CASE("compiles and runs native unchecked pointer conformance harness for imported .prime helpers") {
   expectUncheckedPointerHelperSurfaceConformance("native");
   expectUncheckedPointerGrowthConformance("native");
