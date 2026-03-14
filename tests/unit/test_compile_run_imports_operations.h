@@ -103,6 +103,25 @@ TEST_CASE("compiles and runs experimental vector helper runtime contracts in C++
   expectVectorHelperRuntimeContract("exe", "/std/collections/experimental_vector/*", "remove_swap_oob");
 }
 
+TEST_CASE("rejects experimental vector ownership-sensitive helpers in C++ emitter") {
+  expectExperimentalVectorOwnershipReject(
+      "exe",
+      "constructor",
+      "clear requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipReject(
+      "exe",
+      "push",
+      "push requires relocation-trivial vector element type until container move/reallocation semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipReject(
+      "exe",
+      "pop",
+      "pop requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipReject(
+      "exe",
+      "remove_swap",
+      "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+}
+
 TEST_CASE("compiles and runs vector pop empty runtime contract in C++ emitter") {
   SUBCASE("call") {
     expectVectorPopEmptyRuntimeContract("exe", false);

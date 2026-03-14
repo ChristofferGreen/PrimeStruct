@@ -149,6 +149,49 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
   return source;
 }
 
+inline std::string makeExperimentalVectorOwnershipRejectSource(const std::string &mode) {
+  std::string source;
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[struct]\n";
+  source += "Owned() {\n";
+  source += "  [i32] value{1i32}\n\n";
+  source += "  Destroy() {\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  if (mode == "constructor") {
+    source += "  [Vector<Owned>] values{vectorSingle<Owned>(Owned())}\n";
+    source += "  return(vectorCount<Owned>(values))\n";
+  } else if (mode == "push") {
+    source += "  [Vector<Owned> mut] values{vectorNew<Owned>()}\n";
+    source += "  vectorPush<Owned>(values, Owned())\n";
+    source += "  return(vectorCount<Owned>(values))\n";
+  } else if (mode == "reserve") {
+    source += "  [Vector<Owned> mut] values{vectorNew<Owned>()}\n";
+    source += "  vectorReserve<Owned>(values, 4i32)\n";
+    source += "  return(vectorCapacity<Owned>(values))\n";
+  } else if (mode == "pop") {
+    source += "  [Vector<Owned> mut] values{vectorSingle<Owned>(Owned())}\n";
+    source += "  vectorPop<Owned>(values)\n";
+    source += "  return(vectorCount<Owned>(values))\n";
+  } else if (mode == "clear") {
+    source += "  [Vector<Owned> mut] values{vectorSingle<Owned>(Owned())}\n";
+    source += "  vectorClear<Owned>(values)\n";
+    source += "  return(vectorCount<Owned>(values))\n";
+  } else if (mode == "remove_at") {
+    source += "  [Vector<Owned> mut] values{vectorPair<Owned>(Owned(), Owned())}\n";
+    source += "  vectorRemoveAt<Owned>(values, 0i32)\n";
+    source += "  return(vectorCount<Owned>(values))\n";
+  } else {
+    source += "  [Vector<Owned> mut] values{vectorPair<Owned>(Owned(), Owned())}\n";
+    source += "  vectorRemoveSwap<Owned>(values, 0i32)\n";
+    source += "  return(vectorCount<Owned>(values))\n";
+  }
+  source += "}\n";
+  return source;
+}
+
 inline void expectVectorConformanceProgramRuns(const std::string &source,
                                                const std::string &nameStem,
                                                const std::string &emitMode,
@@ -293,6 +336,25 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
   const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == expectedError);
+}
+
+inline void expectExperimentalVectorOwnershipReject(const std::string &emitMode,
+                                                    const std::string &mode,
+                                                    const std::string &expectedError) {
+  const std::string source = makeExperimentalVectorOwnershipRejectSource(mode);
+  const std::string srcPath = writeTemp("experimental_vector_ownership_" + mode + "_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_experimental_vector_ownership_" + mode + "_" + emitMode + "_out.txt"))
+          .string();
+
+  const std::string command = emitMode == "vm"
+                                  ? "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                                        quoteShellArg(outPath) + " 2>&1"
+                                  : "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                        " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(command) == 2);
+  CHECK(readFile(outPath).find(expectedError) != std::string::npos);
 }
 
 inline std::string makeVectorPopEmptyRuntimeContractSource(bool methodForm) {

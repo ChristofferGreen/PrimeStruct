@@ -2073,6 +2073,25 @@ TEST_CASE("compiles and runs native experimental vector helper runtime contracts
   expectVectorHelperRuntimeContract("native", "/std/collections/experimental_vector/*", "remove_swap_oob");
 }
 
+TEST_CASE("rejects native experimental vector ownership-sensitive helpers") {
+  expectExperimentalVectorOwnershipReject(
+      "native",
+      "constructor",
+      "clear requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipReject(
+      "native",
+      "push",
+      "push requires relocation-trivial vector element type until container move/reallocation semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipReject(
+      "native",
+      "pop",
+      "pop requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipReject(
+      "native",
+      "remove_swap",
+      "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+}
+
 TEST_CASE("compiles and runs native vector pop empty runtime contract") {
   SUBCASE("call") {
     expectVectorPopEmptyRuntimeContract("native", false);

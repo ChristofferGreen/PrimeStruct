@@ -22,6 +22,76 @@ namespace std {
     /std/collections/experimental_buffer_unchecked/bufferWriteUnsafe<T>(values.data, index, value)
   }
 
+  [effects(heap_alloc), return<void>]
+  vectorValidateConstructorElementType<T>([T] value) {
+    if(false,
+       then() {
+         [vector<T> mut] guard{vector<T>(value)}
+         clear(guard)
+       },
+       else() { })
+  }
+
+  [effects(heap_alloc), return<void>]
+  vectorValidatePushElementType<T>([T] value) {
+    if(false,
+       then() {
+         [vector<T> mut] guard{vector<T>()}
+         push(guard, value)
+       },
+       else() { })
+  }
+
+  [effects(heap_alloc), return<void>]
+  vectorValidateReserveElementType<T>([i32] capacity) {
+    if(false,
+       then() {
+         [vector<T> mut] guard{vector<T>()}
+         reserve(guard, capacity)
+       },
+       else() { })
+  }
+
+  [effects(heap_alloc), return<void>]
+  vectorValidatePopElementType<T>() {
+    if(false,
+       then() {
+         [vector<T> mut] guard{vector<T>()}
+         pop(guard)
+       },
+       else() { })
+  }
+
+  [effects(heap_alloc), return<void>]
+  vectorValidateClearElementType<T>() {
+    if(false,
+       then() {
+         [vector<T> mut] guard{vector<T>()}
+         clear(guard)
+       },
+       else() { })
+  }
+
+  [effects(heap_alloc), return<void>]
+  vectorValidateRemoveAtElementType<T>([i32] index) {
+    if(false,
+       then() {
+         [vector<T> mut] guard{vector<T>()}
+         remove_at(guard, index)
+       },
+       else() { })
+  }
+
+  [effects(heap_alloc), return<void>]
+  vectorValidateRemoveSwapElementType<T>([i32] index) {
+    if(false,
+       then() {
+         [vector<T> mut] guard{vector<T>()}
+         remove_swap(guard, index)
+       },
+       else() { })
+  }
+
   [return<void>]
   vectorCheckIndex<T>([Vector<T>] values, [i32] index) {
     [Pointer<T>] checked{/std/collections/experimental_buffer_checked/bufferOffsetChecked<T>(
@@ -49,6 +119,7 @@ namespace std {
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorSingle<T>([T] value) {
+    vectorValidateConstructorElementType<T>(value)
     [Vector<T> mut] out{vectorAlloc<T>(1i32, 1i32)}
     vectorWrite<T>(out, 0i32, value)
     return(out)
@@ -56,6 +127,7 @@ namespace std {
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorPair<T>([T] first, [T] second) {
+    vectorValidateConstructorElementType<T>(first)
     [Vector<T> mut] out{vectorAlloc<T>(2i32, 2i32)}
     vectorWrite<T>(out, 0i32, first)
     vectorWrite<T>(out, 1i32, second)
@@ -64,6 +136,7 @@ namespace std {
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorTriple<T>([T] first, [T] second, [T] third) {
+    vectorValidateConstructorElementType<T>(first)
     [Vector<T> mut] out{vectorAlloc<T>(3i32, 3i32)}
     vectorWrite<T>(out, 0i32, first)
     vectorWrite<T>(out, 1i32, second)
@@ -73,6 +146,7 @@ namespace std {
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorQuad<T>([T] first, [T] second, [T] third, [T] fourth) {
+    vectorValidateConstructorElementType<T>(first)
     [Vector<T> mut] out{vectorAlloc<T>(4i32, 4i32)}
     vectorWrite<T>(out, 0i32, first)
     vectorWrite<T>(out, 1i32, second)
@@ -83,6 +157,7 @@ namespace std {
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorQuint<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth) {
+    vectorValidateConstructorElementType<T>(first)
     [Vector<T> mut] out{vectorAlloc<T>(5i32, 5i32)}
     vectorWrite<T>(out, 0i32, first)
     vectorWrite<T>(out, 1i32, second)
@@ -94,6 +169,7 @@ namespace std {
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorSext<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth) {
+    vectorValidateConstructorElementType<T>(first)
     [Vector<T> mut] out{vectorAlloc<T>(6i32, 6i32)}
     vectorWrite<T>(out, 0i32, first)
     vectorWrite<T>(out, 1i32, second)
@@ -106,6 +182,7 @@ namespace std {
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorSept<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth, [T] seventh) {
+    vectorValidateConstructorElementType<T>(first)
     [Vector<T> mut] out{vectorAlloc<T>(7i32, 7i32)}
     vectorWrite<T>(out, 0i32, first)
     vectorWrite<T>(out, 1i32, second)
@@ -119,6 +196,7 @@ namespace std {
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorOct<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth, [T] seventh, [T] eighth) {
+    vectorValidateConstructorElementType<T>(first)
     [Vector<T> mut] out{vectorAlloc<T>(8i32, 8i32)}
     vectorWrite<T>(out, 0i32, first)
     vectorWrite<T>(out, 1i32, second)
@@ -143,11 +221,13 @@ namespace std {
 
   [public effects(heap_alloc), return<void>]
   vectorReserve<T>([Vector<T> mut] values, [i32] capacity) {
+    vectorValidateReserveElementType<T>(capacity)
     vectorReserveInternal<T>(values, capacity)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorPush<T>([Vector<T> mut] values, [T] value) {
+    vectorValidatePushElementType<T>(value)
     if(equal(values.count, values.capacity),
        then() {
          [i32 mut] nextCapacity{values.capacity}
@@ -163,6 +243,7 @@ namespace std {
 
   [public effects(heap_alloc), return<void>]
   vectorPop<T>([Vector<T> mut] values) {
+    vectorValidatePopElementType<T>()
     if(equal(values.count, 0i32),
        then() {
          [vector<T> mut] empty{vector<T>()}
@@ -173,11 +254,13 @@ namespace std {
 
   [public effects(heap_alloc), return<void>]
   vectorClear<T>([Vector<T> mut] values) {
+    vectorValidateClearElementType<T>()
     assign(values.count, 0i32)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorRemoveAt<T>([Vector<T> mut] values, [i32] index) {
+    vectorValidateRemoveAtElementType<T>(index)
     vectorCheckIndex<T>(values, index)
     [i32] lastIndex{minus(values.count, 1i32)}
     [i32 mut] current{index}
@@ -190,6 +273,7 @@ namespace std {
 
   [public effects(heap_alloc), return<void>]
   vectorRemoveSwap<T>([Vector<T> mut] values, [i32] index) {
+    vectorValidateRemoveSwapElementType<T>(index)
     vectorCheckIndex<T>(values, index)
     [i32] lastIndex{minus(values.count, 1i32)}
     if(less_than(index, lastIndex),
