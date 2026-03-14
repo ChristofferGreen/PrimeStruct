@@ -9717,6 +9717,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("wrapper-returned canonical map method access count keeps builtin string helper shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<i32>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return(7i32)
+}
+
+[return<i32>]
+/std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return(8i32)
+}
+
+[return</std/collections/map<i32, string>>]
+wrapMap() {
+  return(map<i32, string>(1i32, "hello"utf8))
+}
+
+[return<int>]
+main() {
+  return(plus(wrapMap().at(1i32).count(),
+              wrapMap().at_unsafe(1i32).count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("wrapper-returned direct canonical map access count keeps primitive diagnostics") {
   const std::string source = R"(
 [return<int>]
@@ -9737,6 +9770,39 @@ wrapMap() {
 [return<int>]
 main() {
   return(count(/std/collections/map/at(wrapMap(), 1i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+}
+
+TEST_CASE("wrapper-returned canonical map method access count keeps primitive diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return("abc"utf8)
+}
+
+[return<string>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return("abc"utf8)
+}
+
+[return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[return<int>]
+main() {
+  return(plus(wrapMap().at(1i32).count(),
+              wrapMap().at_unsafe(1i32).count()))
 }
 )";
   std::string error;

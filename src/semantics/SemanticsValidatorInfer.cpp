@@ -944,7 +944,31 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
              isBuiltinStringReceiverExpr(candidate.args[receiverIndexOut]);
     };
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
-    auto resolveStringTarget = [&](const Expr &target) -> bool {
+    auto resolveBuiltinAccessReceiverExpr = [&](const Expr &accessExpr) -> const Expr * {
+      if (accessExpr.kind != Expr::Kind::Call || accessExpr.args.size() != 2) {
+        return nullptr;
+      }
+      if (accessExpr.isMethodCall) {
+        return accessExpr.args.empty() ? nullptr : &accessExpr.args.front();
+      }
+      size_t receiverIndex = 0;
+      if (hasNamedArguments(accessExpr.argNames)) {
+        bool foundValues = false;
+        for (size_t i = 0; i < accessExpr.args.size(); ++i) {
+          if (i < accessExpr.argNames.size() && accessExpr.argNames[i].has_value() &&
+              *accessExpr.argNames[i] == "values") {
+            receiverIndex = i;
+            foundValues = true;
+            break;
+          }
+        }
+        if (!foundValues) {
+          receiverIndex = 0;
+        }
+      }
+      return receiverIndex < accessExpr.args.size() ? &accessExpr.args[receiverIndex] : nullptr;
+    };
+    std::function<bool(const Expr &)> resolveStringTarget = [&](const Expr &target) -> bool {
       if (target.kind == Expr::Kind::StringLiteral) {
         return true;
       }
@@ -962,6 +986,20 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         std::string builtinName;
         if (getBuiltinArrayAccessName(target, builtinName) && target.args.size() == 2) {
+          if (const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(target)) {
+            std::string elemType;
+            std::string keyType;
+            std::string valueType;
+            if (resolveArrayTarget(*accessReceiver, elemType) || resolveVectorTarget(*accessReceiver, elemType)) {
+              return normalizeBindingTypeName(elemType) == "string";
+            }
+            if (resolveMapTarget(*accessReceiver, keyType, valueType)) {
+              return normalizeBindingTypeName(valueType) == "string";
+            }
+            if (resolveStringTarget(*accessReceiver)) {
+              return false;
+            }
+          }
           size_t receiverIndex = 0;
           if (isDirectCanonicalVectorAccessCallOnBuiltinReceiver(target, receiverIndex)) {
             std::string elemType;

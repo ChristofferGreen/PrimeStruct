@@ -1139,6 +1139,57 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
           return false;
         }
 
+        if (candidate.isMethodCall && candidate.args.size() == 2 &&
+            (isSimpleCallName(candidate, "at") || isSimpleCallName(candidate, "at_unsafe"))) {
+          const Expr &receiver = candidate.args.front();
+          auto assignReceiverCollectionValueKind = [&](const std::string &collectionName,
+                                                      const std::vector<std::string> &collectionArgs) {
+            if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+                collectionArgs.size() == 1) {
+              kindOut = valueKindFromTypeName(collectionArgs.front());
+              return kindOut != LocalInfo::ValueKind::Unknown;
+            }
+            if (collectionName == "map" && collectionArgs.size() == 2) {
+              kindOut = valueKindFromTypeName(collectionArgs.back());
+              return kindOut != LocalInfo::ValueKind::Unknown;
+            }
+            if (collectionName == "string") {
+              kindOut = LocalInfo::ValueKind::Int32;
+              return true;
+            }
+            return false;
+          };
+
+          if (receiver.kind == Expr::Kind::Call) {
+            std::string collectionName;
+            if (getBuiltinCollectionName(receiver, collectionName)) {
+              if (assignReceiverCollectionValueKind(collectionName, receiver.templateArgs)) {
+                return true;
+              }
+            }
+
+            const Definition *receiverDef = nullptr;
+            if (receiver.isMethodCall) {
+              if (stateInOut.resolveMethodCallDefinition) {
+                receiverDef = stateInOut.resolveMethodCallDefinition(receiver, candidateLocals);
+              }
+            } else if (defMap != nullptr && resolveExprPath) {
+              const std::string path = resolveExprPath(receiver);
+              auto defIt = defMap->find(path);
+              if (defIt != defMap->end()) {
+                receiverDef = defIt->second;
+              }
+            }
+            if (receiverDef != nullptr) {
+              std::vector<std::string> collectionArgs;
+              if (inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs) &&
+                  assignReceiverCollectionValueKind(collectionName, collectionArgs)) {
+                return true;
+              }
+            }
+          }
+        }
+
         std::string fieldStructPath;
         if (resolveFieldAccessCollectionInfo(candidate, candidateLocals, fieldStructPath, kindOut) &&
             fieldStructPath == "/vector") {

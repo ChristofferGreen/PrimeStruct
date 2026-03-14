@@ -27221,6 +27221,44 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
               return true;
             }) == Resolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+
+  accessExpr.isMethodCall = true;
+  accessExpr.name = "at";
+  accessExpr.args = {wrapMapCall, indexExpr};
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut,
+            [](const primec::Expr &candidate,
+               const primec::ir_lowerer::LocalMap &,
+               primec::ir_lowerer::LocalInfo::ValueKind &candidateKindOut) {
+              if (candidate.kind != primec::Expr::Kind::Call || candidate.name != "wrapMap") {
+                return false;
+              }
+              candidateKindOut = primec::ir_lowerer::LocalInfo::ValueKind::String;
+              return true;
+            }) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+
+  accessExpr.name = "at_unsafe";
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut,
+            [](const primec::Expr &candidate,
+               const primec::ir_lowerer::LocalMap &,
+               primec::ir_lowerer::LocalInfo::ValueKind &candidateKindOut) {
+              if (candidate.kind != primec::Expr::Kind::Call || candidate.name != "wrapMap") {
+                return false;
+              }
+              candidateKindOut = primec::ir_lowerer::LocalInfo::ValueKind::String;
+              return true;
+            }) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
 TEST_CASE("ir lowerer setup inference helper resolves canonical vector access string kinds") {

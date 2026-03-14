@@ -1883,7 +1883,63 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     };
     std::function<bool(const Expr &)> resolveMapTarget;
-    auto resolveStringTarget = [&](const Expr &target) -> bool {
+    auto resolveBuiltinAccessReceiverExpr = [&](const Expr &accessExpr) -> const Expr * {
+      if (accessExpr.kind != Expr::Kind::Call || accessExpr.args.size() != 2) {
+        return nullptr;
+      }
+      if (accessExpr.isMethodCall) {
+        return accessExpr.args.empty() ? nullptr : &accessExpr.args.front();
+      }
+      size_t receiverIndex = 0;
+      if (hasNamedArguments(accessExpr.argNames)) {
+        bool foundValues = false;
+        for (size_t i = 0; i < accessExpr.args.size(); ++i) {
+          if (i < accessExpr.argNames.size() && accessExpr.argNames[i].has_value() &&
+              *accessExpr.argNames[i] == "values") {
+            receiverIndex = i;
+            foundValues = true;
+            break;
+          }
+        }
+        if (!foundValues) {
+          receiverIndex = 0;
+        }
+      }
+      return receiverIndex < accessExpr.args.size() ? &accessExpr.args[receiverIndex] : nullptr;
+    };
+    auto resolveMapValueTypeForStringTarget = [&](const Expr &target, std::string &valueTypeOut) -> bool {
+      valueTypeOut.clear();
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          std::string keyType;
+          return extractMapKeyValueTypes(*paramBinding, keyType, valueTypeOut);
+        }
+        auto it = locals.find(target.name);
+        if (it == locals.end()) {
+          return false;
+        }
+        std::string keyType;
+        return extractMapKeyValueTypes(it->second, keyType, valueTypeOut);
+      }
+      BindingInfo fieldBinding;
+      if (resolveFieldBindingTarget(target, fieldBinding)) {
+        std::string keyType;
+        return extractMapKeyValueTypes(fieldBinding, keyType, valueTypeOut);
+      }
+      if (target.kind != Expr::Kind::Call) {
+        return false;
+      }
+      std::string collectionTypePath;
+      if (!resolveCallCollectionTypePath(target, collectionTypePath) || collectionTypePath != "/map") {
+        return false;
+      }
+      std::vector<std::string> args;
+      if (resolveCallCollectionTemplateArgs(target, "map", args) && args.size() == 2) {
+        valueTypeOut = args[1];
+      }
+      return true;
+    };
+    std::function<bool(const Expr &)> resolveStringTarget = [&](const Expr &target) -> bool {
       if (target.kind == Expr::Kind::StringLiteral) {
         return true;
       }
@@ -1909,6 +1965,19 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         std::string builtinName;
         if (getBuiltinArrayAccessName(target, builtinName) && target.args.size() == 2) {
+          if (const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(target)) {
+            std::string elemType;
+            std::string mapValueType;
+            if (resolveArrayTarget(*accessReceiver, elemType) || resolveVectorTarget(*accessReceiver, elemType)) {
+              return normalizeBindingTypeName(elemType) == "string";
+            }
+            if (resolveMapValueTypeForStringTarget(*accessReceiver, mapValueType)) {
+              return normalizeBindingTypeName(mapValueType) == "string";
+            }
+            if (resolveStringTarget(*accessReceiver)) {
+              return false;
+            }
+          }
           const std::string resolvedTarget = resolveCalleePath(target);
           auto defIt = defMap_.find(resolvedTarget);
           if (defIt != defMap_.end() && defIt->second != nullptr) {
