@@ -3694,6 +3694,50 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("imported stdlib namespaced map helpers accept ordinary named arguments") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(io_err)]
+unexpectedMapNamedArgsError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedMapNamedArgsError>]
+main() {
+  [map<string, i32>] values{/std/collections/map/map<string, i32>(
+      [secondKey] "right"raw_utf8, [secondValue] 7i32, [firstKey] "left"raw_utf8, [firstValue] 4i32)}
+  [i32] found{try(/std/collections/map/tryAt<string, i32>([key] "left"raw_utf8, [values] values))}
+  [i32 mut] total{/std/collections/map/count<string, i32>([values] values)}
+  assign(total, plus(total, /std/collections/map/at<string, i32>([key] "right"raw_utf8, [values] values)))
+  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>([key] "left"raw_utf8, [values] values)))
+  if(/std/collections/map/contains<string, i32>([key] "right"raw_utf8, [values] values),
+     then() { assign(total, plus(total, found)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("imported stdlib namespaced map constructor keeps mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)}
+  return(/std/collections/map/count<string, i32>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mismatch") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map access and count helpers are builtin-alias validated") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

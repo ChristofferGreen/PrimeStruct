@@ -173,6 +173,114 @@ inline std::string makeMapTryAtConformanceImportSource(const std::string &import
   return source;
 }
 
+inline std::string makeCanonicalMapNamespaceConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedCanonicalMapError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalMapError>]\n";
+  source += "main() {\n";
+  source +=
+      "  [map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  [i32] found{try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8))}\n";
+  source +=
+      "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt<string, i32>(values, \"missing\"raw_utf8)}\n";
+  source += "  [i32 mut] total{plus(/std/collections/map/count<string, i32>(values), found)}\n";
+  source += "  assign(total, plus(total, /std/collections/map/at<string, i32>(values, \"left\"raw_utf8)))\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>(values, \"right\"raw_utf8)))\n";
+  source += "  if(/std/collections/map/contains<string, i32>(values, \"left\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  if(not(/std/collections/map/contains<string, i32>(values, \"missing\"raw_utf8)),\n";
+  source += "     then() { assign(total, plus(total, 2i32)) },\n";
+  source += "     else() { })\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalMapNamespaceNamedArgsSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedCanonicalMapNamedArgsError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalMapNamedArgsError>]\n";
+  source += "main() {\n";
+  source +=
+      "  [map<string, i32>] values{/std/collections/map/map<string, i32>([secondKey] \"right\"raw_utf8, [secondValue] 7i32, [firstKey] \"left\"raw_utf8, [firstValue] 4i32)}\n";
+  source +=
+      "  [i32] found{try(/std/collections/map/tryAt<string, i32>([key] \"left\"raw_utf8, [values] values))}\n";
+  source += "  [i32 mut] total{/std/collections/map/count<string, i32>([values] values)}\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/map/at<string, i32>([key] \"right\"raw_utf8, [values] values)))\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>([key] \"left\"raw_utf8, [values] values)))\n";
+  source += "  if(/std/collections/map/contains<string, i32>([key] \"right\"raw_utf8, [values] values),\n";
+  source += "     then() { assign(total, plus(total, found)) },\n";
+  source += "     else() { })\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalMapNamespaceTypeMismatchRejectSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source +=
+      "  [map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, false)}\n";
+  source += "  return(/std/collections/map/count<string, i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalMapNamespaceCountShadowSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[return<int>]\n";
+  source += "/count([map<string, i32>] values) {\n";
+  source += "  return(91i32)\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source +=
+      "  [map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  return(/std/collections/map/count<string, i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalMapNamespaceAccessShadowSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[return<int>]\n";
+  source += "/at([map<string, i32>] values, [string] key) {\n";
+  source += "  return(88i32)\n";
+  source += "}\n\n";
+  source += "[return<int>]\n";
+  source += "/at_unsafe([map<string, i32>] values, [string] key) {\n";
+  source += "  return(33i32)\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source +=
+      "  [map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  return(plus(/std/collections/map/at<string, i32>(values, \"left\"raw_utf8),\n";
+  source += "      /std/collections/map/at_unsafe<string, i32>(values, \"right\"raw_utf8)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline void expectMapConformanceProgramRuns(const std::string &source,
                                             const std::string &nameStem,
                                             const std::string &emitMode,
@@ -254,6 +362,60 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == expectedExitCode);
   CHECK(readFile(outPath) == "container missing key\n");
+}
+
+inline void expectCanonicalMapNamespaceConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeCanonicalMapNamespaceConformanceSource(),
+      "map_namespace_canonical_" + emitMode,
+      emitMode,
+      20);
+}
+
+inline void expectCanonicalMapNamespaceNamedArgsConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeCanonicalMapNamespaceNamedArgsSource(),
+      "map_namespace_canonical_named_args_" + emitMode,
+      emitMode,
+      17);
+}
+
+inline void expectCanonicalMapNamespaceTypeMismatchReject(const std::string &emitMode) {
+  const std::string source = makeCanonicalMapNamespaceTypeMismatchRejectSource();
+  const std::string srcPath = writeTemp("map_namespace_canonical_type_mismatch_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_map_namespace_canonical_type_mismatch_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(outPath).find("mismatch") != std::string::npos);
+    return;
+  }
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("mismatch") != std::string::npos);
+}
+
+inline void expectCanonicalMapNamespaceCountShadow(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeCanonicalMapNamespaceCountShadowSource(),
+      "map_namespace_canonical_count_shadow_" + emitMode,
+      emitMode,
+      91);
+}
+
+inline void expectCanonicalMapNamespaceAccessShadow(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeCanonicalMapNamespaceAccessShadowSource(),
+      "map_namespace_canonical_access_shadow_" + emitMode,
+      emitMode,
+      121);
 }
 
 inline std::string makeExperimentalMapTryAtStringConformanceSource() {

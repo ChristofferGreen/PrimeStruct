@@ -1,0 +1,90 @@
+[public return<map<K, V>>]
+/std/collections/map/map<K, V>() {
+  return(/std/collections/mapNew<K, V>())
+}
+
+[public return<map<K, V>>]
+/std/collections/map/map<K, V>([K] key, [V] value) {
+  return(/std/collections/mapSingle<K, V>(key, value))
+}
+
+[public return<map<K, V>>]
+/std/collections/map/map<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
+  return(/std/collections/mapPair<K, V>(firstKey, firstValue, secondKey, secondValue))
+}
+
+[public return<map<K, V>>]
+/std/collections/map/map<K, V>(
+    [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue) {
+  return(/std/collections/mapTriple<K, V>(firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue))
+}
+
+[public return<map<K, V>>]
+/std/collections/map/map<K, V>(
+    [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
+    [V] fourthValue) {
+  return(/std/collections/mapQuad<K, V>(
+      firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue))
+}
+
+[public return<map<K, V>>]
+/std/collections/map/map<K, V>(
+    [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
+    [V] fourthValue, [K] fifthKey, [V] fifthValue) {
+  return(/std/collections/mapQuint<K, V>(
+      firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
+      fifthValue))
+}
+
+[public return<map<K, V>>]
+/std/collections/map/map<K, V>(
+    [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
+    [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue) {
+  return(/std/collections/mapSext<K, V>(
+      firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
+      fifthValue, sixthKey, sixthValue))
+}
+
+[public return<map<K, V>>]
+/std/collections/map/map<K, V>(
+    [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
+    [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey, [V] seventhValue) {
+  return(/std/collections/mapSept<K, V>(
+      firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
+      fifthValue, sixthKey, sixthValue, seventhKey, seventhValue))
+}
+
+[public return<map<K, V>>]
+/std/collections/map/map<K, V>(
+    [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
+    [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey, [V] seventhValue,
+    [K] eighthKey, [V] eighthValue) {
+  return(/std/collections/mapOct<K, V>(
+      firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
+      fifthValue, sixthKey, sixthValue, seventhKey, seventhValue, eighthKey, eighthValue))
+}
+
+[public return<i32>]
+/std/collections/map/count<K, V>([map<K, V>] values) {
+  return(/std/collections/mapCount<K, V>(values))
+}
+
+[public return<bool>]
+/std/collections/map/contains<K, V>([map<K, V>] values, [K] key) {
+  return(/std/collections/mapContains<K, V>(values, key))
+}
+
+[public return<Result<V, ContainerError>>]
+/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {
+  return(/std/collections/mapTryAt<K, V>(values, key))
+}
+
+[public return<V>]
+/std/collections/map/at<K, V>([map<K, V>] values, [K] key) {
+  return(/std/collections/mapAt<K, V>(values, key))
+}
+
+[public return<V>]
+/std/collections/map/at_unsafe<K, V>([map<K, V>] values, [K] key) {
+  return(/std/collections/mapAtUnsafe<K, V>(values, key))
+}

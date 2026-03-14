@@ -10,6 +10,11 @@ inline void expectSharedMapConformanceHarness(const std::string &emitMode) {
     expectMapOverwriteConformance(emitMode, "/std/collections/*");
     expectMapTryAtConformance(emitMode, "/std/collections/*", false);
     expectMapTryAtConformance(emitMode, "/std/collections/*", true);
+    expectCanonicalMapNamespaceConformance(emitMode);
+    expectCanonicalMapNamespaceNamedArgsConformance(emitMode);
+    expectCanonicalMapNamespaceTypeMismatchReject(emitMode);
+    expectCanonicalMapNamespaceCountShadow(emitMode);
+    expectCanonicalMapNamespaceAccessShadow(emitMode);
   }
 
   SUBCASE("experimental") {
