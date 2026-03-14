@@ -8310,6 +8310,27 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with auto-inferred std namespaced vector push canonical definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/push([vector<i32> mut] values, [string] value) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [string] payload{"tag"raw_utf8}
+  [auto] inferred{/std/collections/vector/push([value] payload, [values] values)}
+  return(inferred)
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_std_namespaced_vector_push_expr_named_receiver_canonical_definition_auto.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+}
+
 TEST_CASE("runs vm with auto-inferred std namespaced count helper receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

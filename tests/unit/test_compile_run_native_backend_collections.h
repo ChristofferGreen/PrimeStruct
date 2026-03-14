@@ -9555,6 +9555,34 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("compiles and runs native auto-inferred std namespaced vector push canonical definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/push([vector<i32> mut] values, [string] value) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [string] payload{"tag"raw_utf8}
+  [auto] inferred{/std/collections/vector/push([value] payload, [values] values)}
+  return(inferred)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_std_namespaced_vector_push_expr_named_receiver_canonical_definition_auto.prime",
+                source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_std_namespaced_vector_push_expr_named_receiver_canonical_definition_auto_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("compiles and runs native auto-inferred std namespaced count helper receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -3248,7 +3248,37 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced vector helper is statement-only in expressions") {
+TEST_CASE("stdlib namespaced vector push accepts named arguments through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /std/collections/vector/push([value] 2i32, [values] values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector push requires imported stdlib helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /std/collections/vector/push(values, 2i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector push expression requires imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3258,10 +3288,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("only supported as a statement") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector helper named args stay statement-only in expressions") {
+TEST_CASE("stdlib namespaced vector push named args require imported stdlib helper in expressions") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3271,7 +3301,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("only supported as a statement") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector mutator alias named args stay statement-only in expressions") {
@@ -8516,6 +8546,26 @@ TEST_CASE("vector stdlib namespaced helper auto inference keeps receiver helper 
 }
 
 [effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  [string] payload{"tag"raw_utf8}
+  [auto] inferred{/std/collections/vector/push([value] payload, [values] values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector stdlib namespaced push auto inference uses canonical helper definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/push([vector<i32> mut] values, [string] value) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   [string] payload{"tag"raw_utf8}

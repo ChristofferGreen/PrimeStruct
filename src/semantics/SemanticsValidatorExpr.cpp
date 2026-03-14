@@ -1375,8 +1375,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
            namespacedHelper == "at_unsafe" || namespacedHelper == "push" || namespacedHelper == "pop" ||
            namespacedHelper == "reserve" || namespacedHelper == "clear" || namespacedHelper == "remove_at" ||
            namespacedHelper == "remove_swap");
+      const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback =
+          isStdNamespacedVectorCanonicalHelperCall && !namespacedHelper.empty() &&
+          defMap_.find("/vector/" + namespacedHelper) != defMap_.end();
       size_t resolvedReceiverIndex = 0;
       const bool shouldProbeVectorHelperReceiver =
+          !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(resolved) == defMap_.end() &&
+            !shouldAllowStdNamespacedVectorHelperCompatibilityFallback) &&
           (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
           !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(resolved) != defMap_.end());
       if (shouldProbeVectorHelperReceiver && !expr.args.empty()) {
@@ -1454,12 +1459,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (defMap_.find(resolved) == defMap_.end()) {
-        error_ = vectorHelper + " is only supported as a statement";
-        return false;
+        if (!(isStdNamespacedVectorCanonicalHelperCall &&
+              !shouldAllowStdNamespacedVectorHelperCompatibilityFallback)) {
+          error_ = vectorHelper + " is only supported as a statement";
+          return false;
+        }
+      } else {
+        hasVectorHelperCallResolution = true;
+        vectorHelperCallResolvedPath = resolved;
+        vectorHelperCallReceiverIndex = resolvedReceiverIndex;
       }
-      hasVectorHelperCallResolution = true;
-      vectorHelperCallResolvedPath = resolved;
-      vectorHelperCallReceiverIndex = resolvedReceiverIndex;
     }
     if (isReturnCall(expr)) {
       error_ = "return not allowed in expression context";
@@ -4592,6 +4601,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         auto isLegacyVectorHelperBuiltinCall = [&]() {
           std::string helperName;
           if (!resolveLegacyVectorHelperName(helperName)) {
+            return false;
+          }
+          const bool isStdNamespacedVectorCanonicalHelperCall =
+              !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/", 0) == 0;
+          if (isStdNamespacedVectorCanonicalHelperCall &&
+              defMap_.find("/vector/" + helperName) == defMap_.end()) {
             return false;
           }
           if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {

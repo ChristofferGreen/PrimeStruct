@@ -2173,7 +2173,17 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
         const bool isNamespacedVectorHelperCall =
             isNamespacedCollectionHelperCall && namespacedCollection == "vector";
-        if (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall) {
+        const bool isStdNamespacedVectorCanonicalHelperCall =
+            !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/", 0) == 0 &&
+            (namespacedHelper == "push" || namespacedHelper == "pop" || namespacedHelper == "reserve" ||
+             namespacedHelper == "clear" || namespacedHelper == "remove_at" ||
+             namespacedHelper == "remove_swap");
+        const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback =
+            isStdNamespacedVectorCanonicalHelperCall && !namespacedHelper.empty() &&
+            defMap_.find("/vector/" + namespacedHelper) != defMap_.end();
+        if ((defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
+            !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(resolved) == defMap_.end() &&
+              !shouldAllowStdNamespacedVectorHelperCompatibilityFallback)) {
           auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
             if (candidate.kind != Expr::Kind::Name) {
               return false;
