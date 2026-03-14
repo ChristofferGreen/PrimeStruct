@@ -9106,8 +9106,10 @@ main() {
   CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("rejects native namespaced vector count named arguments") {
+TEST_CASE("compiles and runs native namespaced vector count named arguments through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
@@ -9115,12 +9117,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("native_namespaced_vector_count_named_args.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_namespaced_vector_count_named_args_err.txt").string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_namespaced_vector_count_named_args_exe").string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects native namespaced vector capacity named arguments") {
@@ -9643,31 +9645,27 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("rejects native std namespaced count wrapper map target") {
+TEST_CASE("rejects native std namespaced count without imported helper") {
   const std::string source = R"(
-[return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
-}
-
 [effects(heap_alloc), return<int>]
 main() {
-  return(/std/collections/vector/count(wrapMap()))
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/std/collections/vector/count(values))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_std_namespaced_count_wrapper_map_target_reject.prime", source);
+      writeTemp("compile_native_std_namespaced_count_import_requirement.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() /
-                               "primec_native_std_namespaced_count_wrapper_map_target_reject_exe")
+                               "primec_native_std_namespaced_count_import_requirement_exe")
                                   .string();
   const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_native_std_namespaced_count_wrapper_map_target_reject_out.txt")
+                               "primec_native_std_namespaced_count_import_requirement_out.txt")
                                   .string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("count requires vector target") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("compiles native std namespaced count expression canonical fallback") {

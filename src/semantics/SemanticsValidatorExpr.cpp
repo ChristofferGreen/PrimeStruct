@@ -1188,7 +1188,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (!getNamespacedCollectionHelperName(candidate, namespacedCollection, namespacedHelper)) {
         return false;
       }
-      return namespacedCollection == "vector" && namespacedHelper == helper;
+      if (!(namespacedCollection == "vector" && namespacedHelper == helper)) {
+        return false;
+      }
+      if (resolveCalleePath(candidate) != "/std/collections/vector/" + namespacedHelper) {
+        return true;
+      }
+      return defMap_.find("/std/collections/vector/" + namespacedHelper) != defMap_.end() ||
+             defMap_.find("/vector/" + namespacedHelper) != defMap_.end();
     };
     auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call) {
@@ -3004,6 +3011,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isDirectStdNamespacedVectorCountWrapperMapTarget =
         !expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Call && resolveMapTarget(expr.args.front());
+    const bool hasStdNamespacedVectorCountDefinition =
+        defMap_.find("/std/collections/vector/count") != defMap_.end() ||
+        defMap_.find("/vector/count") != defMap_.end();
     const bool prefersCanonicalVectorCountAliasDefinition =
         !expr.isMethodCall && resolved == "/vector/count" && defMap_.find(resolved) == defMap_.end() &&
         defMap_.find("/std/collections/vector/count") != defMap_.end();
@@ -3193,7 +3203,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         resolvedMethod = false;
       }
     } else if (isDirectStdNamespacedVectorCountWrapperMapTarget &&
-               defMap_.find("/std/collections/vector/count") == defMap_.end()) {
+               defMap_.find("/std/collections/vector/count") == defMap_.end() &&
+               hasStdNamespacedVectorCountDefinition) {
       error_ = "count requires vector target";
       return false;
     } else if (!isStdNamespacedVectorCountCall &&

@@ -7890,8 +7890,10 @@ main() {
   CHECK(error.find("capacity does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector count rejects named arguments as builtin alias") {
+TEST_CASE("stdlib namespaced vector count accepts named arguments through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 5i32)}
@@ -7899,8 +7901,21 @@ main() {
 }
 )";
   std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector count requires imported stdlib helper or explicit definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/std/collections/vector/count(values))
+}
+)";
+  std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count rejects named arguments as builtin alias") {

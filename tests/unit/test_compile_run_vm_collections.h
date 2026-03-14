@@ -7956,8 +7956,10 @@ main() {
   CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("rejects vm namespaced vector count named arguments") {
+TEST_CASE("runs vm namespaced vector count named arguments through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
@@ -7965,11 +7967,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_namespaced_vector_count_named_args.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_namespaced_vector_count_named_args_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("rejects vm namespaced vector capacity named arguments") {
@@ -8381,25 +8380,21 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("rejects vm std namespaced count wrapper map target") {
+TEST_CASE("rejects vm std namespaced count without imported helper") {
   const std::string source = R"(
-[return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
-}
-
 [effects(heap_alloc), return<int>]
 main() {
-  return(/std/collections/vector/count(wrapMap()))
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/std/collections/vector/count(values))
 }
 )";
-  const std::string srcPath = writeTemp("vm_std_namespaced_count_wrapper_map_target_reject.prime", source);
+  const std::string srcPath = writeTemp("vm_std_namespaced_count_import_requirement.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_count_wrapper_map_target_reject_out.txt")
+      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_count_import_requirement_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("count requires vector target") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm with std namespaced count expression canonical fallback") {

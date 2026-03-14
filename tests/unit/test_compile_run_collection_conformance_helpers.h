@@ -40,6 +40,8 @@ inline void expectSharedVectorConformanceHarness(const std::string &emitMode) {
     expectCanonicalVectorNamespaceNamedArgsConformance(emitMode);
     expectCanonicalVectorNamespaceTypeMismatchReject(emitMode);
     expectCanonicalVectorNamespaceImportRequirement(emitMode);
+    expectCanonicalVectorCountNamedArgsConformance(emitMode);
+    expectCanonicalVectorCountImportRequirement(emitMode);
     expectCanonicalVectorNamespaceCountShadow(emitMode);
     expectCanonicalVectorNamespacePushShadow(emitMode);
   }

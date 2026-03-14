@@ -1559,7 +1559,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (!getNamespacedCollectionHelperName(candidate, namespacedCollection, namespacedHelper)) {
         return false;
       }
-      return namespacedCollection == "vector" && namespacedHelper == helper;
+      if (!(namespacedCollection == "vector" && namespacedHelper == helper)) {
+        return false;
+      }
+      if (resolveCalleePath(candidate) != "/std/collections/vector/" + namespacedHelper) {
+        return true;
+      }
+      return defMap_.find("/std/collections/vector/" + namespacedHelper) != defMap_.end() ||
+             defMap_.find("/vector/" + namespacedHelper) != defMap_.end();
     };
     auto isArrayNamespacedVectorCountCompatibilityCall = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
