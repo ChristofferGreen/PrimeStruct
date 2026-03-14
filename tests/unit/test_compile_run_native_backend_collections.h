@@ -7697,6 +7697,67 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
+TEST_CASE("compiles and runs native canonical vector method access builtin string count shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<i32>]
+/std/collections/vector/at([vector<string>] values, [i32] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<string>] values{vector<string>("hello"raw_utf8)}
+  return(values.at(0i32).count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_vector_method_access_builtin_string_count_shadow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_canonical_vector_method_access_builtin_string_count_shadow_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
+}
+
+TEST_CASE("native keeps primitive diagnostics on canonical vector unsafe method access count shadow") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return("abc"raw_utf8)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  return(values.at_unsafe(0i32).count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_vector_unsafe_method_access_count_shadow_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_canonical_vector_unsafe_method_access_count_shadow_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native user vector count method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

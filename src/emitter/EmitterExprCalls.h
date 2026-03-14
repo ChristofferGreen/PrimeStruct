@@ -505,6 +505,41 @@
     }
     return "";
   };
+  auto builtinVectorAccessMethodReceiverTypePath = [&](const Expr &candidate) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() || candidate.args.empty()) {
+      return "";
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "at" && normalized != "at_unsafe") {
+      return "";
+    }
+    const Expr &receiver = candidate.args.front();
+    if (receiver.kind == Expr::Kind::StringLiteral || isStringValue(receiver, localTypes)) {
+      return "/string";
+    }
+    if (isVectorValue(receiver, localTypes)) {
+      return "/vector";
+    }
+    if (isArrayValue(receiver, localTypes)) {
+      return "/array";
+    }
+    if (receiver.kind == Expr::Kind::Call) {
+      std::string collectionName;
+      if (getBuiltinCollectionName(receiver, collectionName)) {
+        if (collectionName == "vector" || collectionName == "array") {
+          return "/" + collectionName;
+        }
+      }
+      const std::string receiverTypePath = resolvedTypePathForResolvedCall(resolveExprPath(receiver));
+      if (receiverTypePath == "/vector" || receiverTypePath == "/array" || receiverTypePath == "/string") {
+        return receiverTypePath;
+      }
+    }
+    return "";
+  };
   auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
     if (isStringValue(targetExpr, localTypes)) {
       return "/string";
@@ -542,6 +577,16 @@
         }
       }
       return resolvedTypePathForResolvedCall(resolveExprPath(targetExpr));
+    }
+    if (!builtinVectorAccessMethodReceiverTypePath(targetExpr).empty()) {
+      const std::string probedTypePath = probedTypePathForTarget(targetExpr);
+      if (probedTypePath == "/string" || probedTypePath == "/array" || probedTypePath == "/vector" ||
+          probedTypePath == "/map") {
+        return probedTypePath;
+      }
+      if (!probedTypePath.empty()) {
+        return "";
+      }
     }
     std::string methodPath;
     if (!resolveMethodCallPath(

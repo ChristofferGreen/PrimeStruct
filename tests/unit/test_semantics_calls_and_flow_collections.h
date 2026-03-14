@@ -9597,6 +9597,52 @@ main() {
   CHECK(error.find("unknown method: /i32/count") != std::string::npos);
 }
 
+TEST_CASE("canonical vector method access count keeps builtin string fallback") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<i32>]
+/std/collections/vector/at([vector<string>] values, [i32] index) {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  [vector<string>] values{vector<string>("hello"utf8)}
+  return(values.at(0i32).count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical vector unsafe method access count keeps primitive diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return("abc"utf8)
+}
+
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  return(values.at_unsafe(0i32).count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("wrapper-returned canonical map access count call auto inference keeps string helper mismatch diagnostics") {
   const std::string source = R"(
 [return<bool>]

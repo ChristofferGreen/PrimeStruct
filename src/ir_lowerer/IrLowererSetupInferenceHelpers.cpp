@@ -384,7 +384,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
         elementKind = valueKindFromTypeName(target.templateArgs.front());
       }
     }
-    if (elementKind != LocalInfo::ValueKind::Unknown && elementKind != LocalInfo::ValueKind::String) {
+    if (elementKind != LocalInfo::ValueKind::Unknown) {
       kindOut = elementKind;
       return ArrayMapAccessElementKindResolution::Resolved;
     }
