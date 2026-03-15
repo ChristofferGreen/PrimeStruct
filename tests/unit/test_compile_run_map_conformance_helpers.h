@@ -205,6 +205,38 @@ inline std::string makeCanonicalMapNamespaceConformanceSource() {
   return source;
 }
 
+inline std::string makeCanonicalMapNamespaceExperimentalConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedCanonicalExperimentalMapError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapError>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  [i32] found{try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8))}\n";
+  source +=
+      "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt<string, i32>(values, \"missing\"raw_utf8)}\n";
+  source += "  [i32 mut] total{plus(/std/collections/map/count<string, i32>(values), found)}\n";
+  source += "  assign(total, plus(total, /std/collections/map/at<string, i32>(values, \"left\"raw_utf8)))\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>(values, \"right\"raw_utf8)))\n";
+  source += "  if(/std/collections/map/contains<string, i32>(values, \"left\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  if(not(/std/collections/map/contains<string, i32>(values, \"missing\"raw_utf8)),\n";
+  source += "     then() { assign(total, plus(total, 2i32)) },\n";
+  source += "     else() { })\n";
+  source += "  print_line(Result.why(missing))\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceNamedArgsSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -424,6 +456,34 @@ inline void expectCanonicalMapNamespaceConformance(const std::string &emitMode) 
       "map_namespace_canonical_" + emitMode,
       emitMode,
       20);
+}
+
+inline void expectCanonicalMapNamespaceExperimentalConformance(const std::string &emitMode) {
+  const std::string source = makeCanonicalMapNamespaceExperimentalConformanceSource();
+  const std::string srcPath = writeTemp("map_namespace_canonical_experimental_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_map_namespace_canonical_experimental_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 20);
+    CHECK(readFile(outPath) == "container missing key\n");
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_map_namespace_canonical_experimental_" + emitMode + "_exe"))
+          .string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == 20);
+  CHECK(readFile(outPath) == "container missing key\n");
 }
 
 inline void expectCanonicalMapNamespaceNamedArgsConformance(const std::string &emitMode) {

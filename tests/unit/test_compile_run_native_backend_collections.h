@@ -2196,6 +2196,10 @@ TEST_CASE("compiles and runs native shared map conformance harness for stdlib an
   expectSharedMapConformanceHarness("native");
 }
 
+TEST_CASE("compiles and runs native canonical namespaced map helpers on experimental map values") {
+  expectCanonicalMapNamespaceExperimentalConformance("native");
+}
+
 TEST_CASE("compiles and runs native experimental map with custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*

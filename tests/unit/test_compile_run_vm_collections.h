@@ -1812,6 +1812,10 @@ TEST_CASE("runs vm shared map conformance harness for stdlib and experimental he
   expectSharedMapConformanceHarness("vm");
 }
 
+TEST_CASE("runs vm canonical namespaced map helpers on experimental map values") {
+  expectCanonicalMapNamespaceExperimentalConformance("vm");
+}
+
 TEST_CASE("runs vm experimental map with custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*

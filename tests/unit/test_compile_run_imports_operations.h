@@ -60,6 +60,10 @@ TEST_CASE("compiles and runs shared map conformance harness in C++ emitter") {
   expectSharedMapConformanceHarness("exe");
 }
 
+TEST_CASE("compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter") {
+  expectCanonicalMapNamespaceExperimentalConformance("exe");
+}
+
 TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") {
   expectSharedVectorConformanceHarness("exe");
 }
