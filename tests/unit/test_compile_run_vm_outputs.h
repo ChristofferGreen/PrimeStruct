@@ -458,6 +458,71 @@ main() {
         "128\n");
 }
 
+TEST_CASE("runs vm png read for stored sub-filter rgba inputs") {
+  const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_sub.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = {
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x14, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x01, 0x01, 0x09, 0x00, 0xf6, 0xff, 0x01,
+        0x0a, 0x14, 0x1e, 0x28, 0x05, 0x07, 0x09, 0x0b,
+        0x02, 0xb0, 0x00, 0x86, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x00,
+    };
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = std::string(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  print_line(pixels[3i32])
+  print_line(pixels[4i32])
+  print_line(pixels[5i32])
+  return(plus(width, height))
+}
+)");
+  const std::string srcPath = writeTemp("vm_image_read_sub_png.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_sub_png.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath) ==
+        "2\n"
+        "1\n"
+        "6\n"
+        "10\n"
+        "20\n"
+        "30\n"
+        "15\n"
+        "27\n"
+        "39\n");
+}
+
 TEST_CASE("rejects malformed vm png inputs deterministically") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid.png").string();
   {

@@ -4314,13 +4314,13 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("invalid dimensions, payload mismatches, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures/chunks and fully decodes the first PNG read subset") !=
+  CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures/chunks and fully decodes the current PNG read subset") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("non-interlaced 8-bit RGB/RGBA images whose `IDAT` payload uses stored/no-compression deflate blocks and filter-`0` scanlines") !=
+  CHECK(primeStructDoc.find("non-interlaced 8-bit RGB/RGBA images whose `IDAT` payload uses stored/no-compression deflate blocks plus filter-`0` and filter-`1` (`Sub`) scanlines") !=
         std::string::npos);
   CHECK(primeStructDoc.find("dropping alpha when decoding RGBA inputs") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Malformed or missing PNGs still return `image_invalid_operation`, while still-valid PNGs that require compressed Huffman deflate blocks, non-zero scanline filters, or broader color/interlace handling currently return `image_read_unsupported`") !=
+  CHECK(primeStructDoc.find("Malformed or missing PNGs still return `image_invalid_operation`, while still-valid PNGs that require Huffman-compressed deflate blocks, remaining PNG scanline filters, or broader color/interlace handling currently return `image_read_unsupported`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`png.write` still deterministically returns unsupported `ImageError` values") !=
         std::string::npos);
