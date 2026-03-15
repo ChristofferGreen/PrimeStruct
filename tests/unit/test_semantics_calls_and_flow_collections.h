@@ -5209,6 +5209,58 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("stdlib map constructors accept explicit experimental map struct fields") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[struct]
+Holder() {
+  [Map<string, i32>] primary{}
+  [Map<string, i32>] secondary{}
+}
+
+[effects(io_err)]
+unexpectedExperimentalMapStructFieldError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapStructFieldError>]
+main() {
+  [Holder] holder{Holder(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32),
+                        /std/collections/mapPair("other"raw_utf8, 2i32, "extra"raw_utf8, 9i32))}
+  [i32] left{try(/std/collections/map/tryAt(holder.primary, "left"raw_utf8))}
+  [i32] extra{try(/std/collections/map/tryAt(holder.secondary, "extra"raw_utf8))}
+  return(Result.ok(plus(left, extra)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib map constructors keep mismatch diagnostics on experimental map struct fields") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[struct]
+Holder() {
+  [Map<string, i32>] values{}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*

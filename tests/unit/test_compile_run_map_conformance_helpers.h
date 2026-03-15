@@ -762,6 +762,34 @@ inline std::string makeInferredExperimentalMapCallReceiverConformanceSource() {
   return source;
 }
 
+inline std::string makeExperimentalMapStructFieldConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[struct]\n";
+  source += "Holder() {\n";
+  source += "  [Map<string, i32>] primary{}\n";
+  source += "  [Map<string, i32>] secondary{}\n";
+  source += "}\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedExperimentalMapStructFieldError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapStructFieldError>]\n";
+  source += "main() {\n";
+  source +=
+      "  [Holder] holder{Holder(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32),\n";
+  source +=
+      "                        /std/collections/mapPair(\"other\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32))}\n";
+  source += "  [i32] left{try(/std/collections/map/tryAt(holder.primary, \"left\"raw_utf8))}\n";
+  source += "  [i32] extra{try(/std/collections/map/tryAt(holder.secondary, \"extra\"raw_utf8))}\n";
+  source += "  return(Result.ok(plus(left, extra)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1242,6 +1270,14 @@ inline void expectInferredExperimentalMapCallReceiverConformance(const std::stri
       "map_inferred_experimental_call_receiver_" + emitMode,
       emitMode,
       7);
+}
+
+inline void expectExperimentalMapStructFieldConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeExperimentalMapStructFieldConformanceSource(),
+      "map_experimental_struct_fields_" + emitMode,
+      emitMode,
+      13);
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {

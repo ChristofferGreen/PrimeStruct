@@ -112,6 +112,10 @@ TEST_CASE("compiles and runs inferred experimental map call receivers in C++ emi
   expectInferredExperimentalMapCallReceiverConformance("exe");
 }
 
+TEST_CASE("compiles and runs experimental map struct fields in C++ emitter") {
+  expectExperimentalMapStructFieldConformance("exe");
+}
+
 TEST_CASE("rejects canonical namespaced map helpers on borrowed experimental map values in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("exe");
 }

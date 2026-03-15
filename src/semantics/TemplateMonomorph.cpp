@@ -2498,15 +2498,33 @@ bool rewriteExpr(Expr &expr,
     }
     auto rewriteCanonicalExperimentalMapConstructorArgs = [&](const Definition &targetDef) -> bool {
       std::vector<ParameterInfo> callParams;
-      callParams.reserve(targetDef.parameters.size());
-      for (const auto &paramExpr : targetDef.parameters) {
-        ParameterInfo paramInfo;
-        paramInfo.name = paramExpr.name;
-        extractExplicitBindingType(paramExpr, paramInfo.binding);
-        if (paramExpr.args.size() == 1) {
-          paramInfo.defaultExpr = &paramExpr.args.front();
+      if (!targetDef.parameters.empty()) {
+        callParams.reserve(targetDef.parameters.size());
+        for (const auto &paramExpr : targetDef.parameters) {
+          ParameterInfo paramInfo;
+          paramInfo.name = paramExpr.name;
+          extractExplicitBindingType(paramExpr, paramInfo.binding);
+          if (paramExpr.args.size() == 1) {
+            paramInfo.defaultExpr = &paramExpr.args.front();
+          }
+          callParams.push_back(std::move(paramInfo));
         }
-        callParams.push_back(std::move(paramInfo));
+      } else if (isStructDefinition(targetDef)) {
+        for (const auto &fieldExpr : targetDef.statements) {
+          if (!fieldExpr.isBinding) {
+            continue;
+          }
+          ParameterInfo fieldInfo;
+          fieldInfo.name = fieldExpr.name;
+          extractExplicitBindingType(fieldExpr, fieldInfo.binding);
+          if (fieldExpr.args.size() == 1) {
+            fieldInfo.defaultExpr = &fieldExpr.args.front();
+          }
+          callParams.push_back(std::move(fieldInfo));
+        }
+      }
+      if (callParams.empty()) {
+        return true;
       }
       std::vector<const Expr *> orderedArgs;
       std::string orderError;
