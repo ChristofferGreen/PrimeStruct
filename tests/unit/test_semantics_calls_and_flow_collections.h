@@ -5508,6 +5508,264 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("helper-wrapped map constructors accept experimental map struct storage fields") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+Holder() {
+  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  init(holder.storage, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                           "right"raw_utf8, 7i32)))
+  [Map<string, i32>] values{take(holder.storage)}
+  return(plus(/std/collections/map/count(values),
+              /std/collections/map/at(values, "right"raw_utf8)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped map struct storage fields keep mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+Holder() {
+  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  init(holder.storage, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                           "wrong"raw_utf8, false)))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped Result.ok payloads accept experimental result struct storage fields") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+Holder() {
+  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] status{
+      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  init(holder.status, wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                    "right"raw_utf8, 7i32))))
+  [Result<Map<string, i32>, ContainerError>] status{take(holder.status)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped Result.ok struct storage fields keep mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+Holder() {
+  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] status{
+      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  init(holder.status, wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                    "wrong"raw_utf8, false))))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped map constructors accept dereferenced experimental map struct storage fields") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+Holder() {
+  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+}
+
+[return<Reference<Holder>>]
+borrowHolder([Reference<Holder>] holder) {
+  return(holder)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  init(dereference(borrowHolder(location(holder))).storage,
+       wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                           "right"raw_utf8, 7i32)))
+  [Map<string, i32>] values{take(holder.storage)}
+  return(plus(/std/collections/map/count(values),
+              /std/collections/map/at(values, "right"raw_utf8)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped dereferenced map struct storage fields keep mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+Holder() {
+  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+}
+
+[return<Reference<Holder>>]
+borrowHolder([Reference<Holder>] holder) {
+  return(holder)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  init(dereference(borrowHolder(location(holder))).storage,
+       wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                           "wrong"raw_utf8, false)))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced result struct storage fields") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+Holder() {
+  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] status{
+      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+}
+
+[return<Reference<Holder>>]
+borrowHolder([Reference<Holder>] holder) {
+  return(holder)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  init(dereference(borrowHolder(location(holder))).status,
+       wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                    "right"raw_utf8, 7i32))))
+  [Result<Map<string, i32>, ContainerError>] status{take(holder.status)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped dereferenced Result.ok struct storage fields keep mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+Holder() {
+  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] status{
+      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+}
+
+[return<Reference<Holder>>]
+borrowHolder([Reference<Holder>] holder) {
+  return(holder)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  init(dereference(borrowHolder(location(holder))).status,
+       wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                    "wrong"raw_utf8, false))))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("helper-wrapped Result.ok payloads infer experimental result auto bindings") {
   const std::string source = R"(
 import /std/collections/*

@@ -1725,17 +1725,51 @@ bool SemanticsValidator::resolveUninitializedStorageBinding(const std::vector<Pa
   if (!storage.isFieldAccess || storage.args.size() != 1) {
     return true;
   }
+  auto resolveStructReceiverPath = [&](const Expr &receiver, std::string &structPathOut) -> bool {
+    structPathOut.clear();
+    auto assignStructPathFromType = [&](std::string receiverType, const std::string &namespacePrefix) {
+      receiverType = normalizeBindingTypeName(receiverType);
+      if (receiverType.empty()) {
+        return false;
+      }
+      structPathOut = resolveStructTypePath(receiverType, namespacePrefix, structNames_);
+      if (structPathOut.empty()) {
+        auto importIt = importAliases_.find(receiverType);
+        if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+          structPathOut = importIt->second;
+        }
+      }
+      return !structPathOut.empty();
+    };
+    if (receiver.kind == Expr::Kind::Name) {
+      const BindingInfo *receiverBinding = findBinding(params, locals, receiver.name);
+      if (!receiverBinding) {
+        return false;
+      }
+      std::string receiverType = receiverBinding->typeName;
+      if ((receiverType == "Reference" || receiverType == "Pointer") && !receiverBinding->typeTemplateArg.empty()) {
+        receiverType = receiverBinding->typeTemplateArg;
+      }
+      return assignStructPathFromType(receiverType, receiver.namespacePrefix);
+    }
+    if (receiver.kind != Expr::Kind::Call || receiver.isBinding) {
+      return false;
+    }
+    std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
+    if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
+      structPathOut = inferredStruct;
+      return true;
+    }
+    const std::string resolvedType = resolveCalleePath(receiver);
+    if (structNames_.count(resolvedType) > 0) {
+      structPathOut = resolvedType;
+      return true;
+    }
+    return false;
+  };
   const Expr &receiver = storage.args.front();
-  if (receiver.kind != Expr::Kind::Name) {
-    return true;
-  }
-  const BindingInfo *receiverBinding = findBinding(params, locals, receiver.name);
-  if (!receiverBinding || receiverBinding->typeName != "Reference" || receiverBinding->typeTemplateArg.empty()) {
-    return true;
-  }
-  std::string structPath =
-      resolveStructTypePath(receiverBinding->typeTemplateArg, receiver.namespacePrefix, structNames_);
-  if (structPath.empty()) {
+  std::string structPath;
+  if (!resolveStructReceiverPath(receiver, structPath)) {
     return true;
   }
   auto defIt = defMap_.find(structPath);
