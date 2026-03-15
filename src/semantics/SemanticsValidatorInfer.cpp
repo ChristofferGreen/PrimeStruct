@@ -249,6 +249,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return false;
         };
         std::string structPath;
+        const bool isTypeReceiver =
+            receiver.kind == Expr::Kind::Name &&
+            findParamBinding(params, receiver.name) == nullptr &&
+            locals.find(receiver.name) == locals.end() &&
+            resolveStructPathFromType(receiver.name, receiver.namespacePrefix, structPath);
         if (receiver.kind == Expr::Kind::Name) {
           const BindingInfo *binding = findParamBinding(params, receiver.name);
           if (!binding) {
@@ -279,7 +284,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return ReturnKind::Unknown;
         }
         for (const auto &stmt : defIt->second->statements) {
-          if (!stmt.isBinding || isStaticField(stmt)) {
+          if (!stmt.isBinding) {
+            continue;
+          }
+          if (isTypeReceiver ? !isStaticField(stmt) : isStaticField(stmt)) {
             continue;
           }
           if (stmt.name != fieldName) {
@@ -882,6 +890,22 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             elemType = args.front();
           }
           return true;
+        }
+      }
+      return false;
+    };
+    auto resolveArgsPackCountTarget = [&](const Expr &target, std::string &elemType) -> bool {
+      elemType.clear();
+      auto resolveBinding = [&](const BindingInfo &binding) {
+        return getArgsPackElementType(binding, elemType);
+      };
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          return resolveBinding(*paramBinding);
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          return resolveBinding(it->second);
         }
       }
       return false;
@@ -1779,6 +1803,31 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return true;
         }
       }
+      if (receiver.kind == Expr::Kind::Name &&
+          findParamBinding(params, receiver.name) == nullptr &&
+          locals.find(receiver.name) == locals.end()) {
+        std::string resolvedReceiverPath;
+        const std::string rootReceiverPath = "/" + receiver.name;
+        if (defMap_.find(rootReceiverPath) != defMap_.end()) {
+          resolvedReceiverPath = rootReceiverPath;
+        } else {
+          auto importIt = importAliases_.find(receiver.name);
+          if (importIt != importAliases_.end()) {
+            resolvedReceiverPath = importIt->second;
+          }
+        }
+        if (!resolvedReceiverPath.empty() &&
+            (structNames_.count(resolvedReceiverPath) > 0 ||
+             defMap_.find(resolvedReceiverPath + "/" + normalizedMethodName) != defMap_.end())) {
+          resolvedOut = resolvedReceiverPath + "/" + normalizedMethodName;
+          return true;
+        }
+        const std::string resolvedType = resolveStructTypePath(receiver.name, receiver.namespacePrefix);
+        if (!resolvedType.empty()) {
+          resolvedOut = resolvedType + "/" + normalizedMethodName;
+          return true;
+        }
+      }
       {
         std::string elemType;
         std::string keyType;
@@ -2525,6 +2574,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       rewrittenOut = candidate;
       rewrittenOut.name = preferredCanonicalExperimentalMapHelperTarget(helperName);
       rewrittenOut.namespacePrefix.clear();
+      if (rewrittenOut.templateArgs.empty()) {
+        rewrittenOut.templateArgs.push_back(keyType);
+        rewrittenOut.templateArgs.push_back(valueType);
+      }
       return true;
     };
     const std::string resolvedCallee = resolveCalleePath(expr);
@@ -2967,11 +3020,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return false;
       }
       const bool isCountLike =
-          (isVectorBuiltinName(callExpr, "count") || isNamespacedMapCountCall ||
-           isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
+          (isVectorBuiltinName(callExpr, "count") || isStdNamespacedMapCountCall ||
+           isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
           callExpr.args.size() == 1 && !isArrayNamespacedVectorCountCompatibilityCall(callExpr) &&
           (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-          !isStdNamespacedMapCountCall &&
           !prefersCanonicalVectorCountAliasDefinition;
       const bool isCapacityLike =
           isVectorBuiltinName(callExpr, "capacity") && callExpr.args.size() == 1 &&
@@ -3039,18 +3091,55 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (shouldUseResolvedStdNamespacedVectorCountDefinition) {
       shouldDeferResolvedNamespacedCollectionHelperReturn = false;
     }
+    auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {
+      if (!callExpr.isMethodCall || callExpr.args.empty() || resolvedPath.empty()) {
+        return false;
+      }
+      const Expr &receiver = callExpr.args.front();
+      if (receiver.kind != Expr::Kind::Name) {
+        return false;
+      }
+      if (findParamBinding(params, receiver.name) != nullptr || locals.find(receiver.name) != locals.end()) {
+        return false;
+      }
+      const size_t methodSlash = resolvedPath.find_last_of('/');
+      if (methodSlash == std::string::npos || methodSlash == 0) {
+        return false;
+      }
+      const std::string receiverPath = resolvedPath.substr(0, methodSlash);
+      const size_t receiverSlash = receiverPath.find_last_of('/');
+      const std::string receiverTypeName =
+          receiverSlash == std::string::npos ? receiverPath : receiverPath.substr(receiverSlash + 1);
+      return receiverTypeName == receiver.name;
+    };
     if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedCollectionHelperReturn) {
       if (expr.isMethodCall) {
         const auto &calleeParams = paramsByDef_[resolved];
+        Expr trimmedTypeNamespaceCallExpr;
+        const std::vector<Expr> *orderedCallArgs = &expr.args;
+        const std::vector<std::optional<std::string>> *orderedCallArgNames = &expr.argNames;
+        if (isTypeNamespaceMethodCall(expr, resolved)) {
+          trimmedTypeNamespaceCallExpr = expr;
+          trimmedTypeNamespaceCallExpr.args.erase(trimmedTypeNamespaceCallExpr.args.begin());
+          if (!trimmedTypeNamespaceCallExpr.argNames.empty()) {
+            trimmedTypeNamespaceCallExpr.argNames.erase(trimmedTypeNamespaceCallExpr.argNames.begin());
+          }
+          orderedCallArgs = &trimmedTypeNamespaceCallExpr.args;
+          orderedCallArgNames = &trimmedTypeNamespaceCallExpr.argNames;
+        }
         std::string orderedArgError;
-        if (!validateNamedArgumentsAgainstParams(calleeParams, expr.argNames, orderedArgError)) {
+        if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, orderedArgError)) {
           error_ = orderedArgError.find("argument count mismatch") != std::string::npos
                        ? "argument count mismatch for " + resolved
                        : orderedArgError;
           return ReturnKind::Unknown;
         }
         std::vector<const Expr *> orderedArgs;
-        if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, orderedArgError)) {
+        if (!buildOrderedArguments(calleeParams,
+                                   *orderedCallArgs,
+                                   *orderedCallArgNames,
+                                   orderedArgs,
+                                   orderedArgError)) {
           error_ = orderedArgError.find("argument count mismatch") != std::string::npos
                        ? "argument count mismatch for " + resolved
                        : orderedArgError;
@@ -3111,14 +3200,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Unknown;
     }
     if (!expr.isMethodCall &&
-        (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall ||
-         isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
+        (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
+         isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
         expr.args.size() == 1 &&
         !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
         (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-        !isStdNamespacedMapCountCall &&
         !prefersCanonicalVectorCountAliasDefinition &&
-        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall ||
+        ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
+         isNamespacedVectorCountCall || isStdNamespacedMapCountCall || isNamespacedMapCountCall ||
          isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
       if (!shouldInferBuiltinBareMapCountCall) {
         Expr rewrittenMapHelperCall;
@@ -3165,14 +3254,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Int;
     }
     if (!expr.isMethodCall &&
-        (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall ||
-         isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
+        (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
+         isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
         !expr.args.empty() && expr.args.size() != 1 &&
         !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
         (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-        !isStdNamespacedMapCountCall &&
         !prefersCanonicalVectorCountAliasDefinition &&
-        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall ||
+        ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
+         isNamespacedVectorCountCall || isStdNamespacedMapCountCall || isNamespacedMapCountCall ||
          isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
       if (!shouldInferBuiltinBareMapCountCall) {
         Expr rewrittenMapHelperCall;
@@ -4608,7 +4697,15 @@ std::string SemanticsValidator::inferStructReturnPath(
         }
         return false;
       };
-      std::string receiverStruct = inferStructReturnPath(expr.args.front(), params, locals);
+      std::string receiverStruct;
+      if (expr.args.front().kind == Expr::Kind::Name &&
+          findParamBinding(params, expr.args.front().name) == nullptr &&
+          locals.find(expr.args.front().name) == locals.end()) {
+        receiverStruct = resolveStructTypePath(expr.args.front().name, expr.args.front().namespacePrefix);
+      }
+      if (receiverStruct.empty()) {
+        receiverStruct = inferStructReturnPath(expr.args.front(), params, locals);
+      }
       if (receiverStruct.empty()) {
         return "";
       }
@@ -4616,8 +4713,15 @@ std::string SemanticsValidator::inferStructReturnPath(
       if (defIt == defMap_.end() || !defIt->second) {
         return "";
       }
+      const bool isTypeReceiver =
+          expr.args.front().kind == Expr::Kind::Name &&
+          findParamBinding(params, expr.args.front().name) == nullptr &&
+          locals.find(expr.args.front().name) == locals.end();
       for (const auto &stmt : defIt->second->statements) {
-        if (!stmt.isBinding || isStaticField(stmt) || stmt.name != expr.name) {
+        if (!stmt.isBinding || stmt.name != expr.name) {
+          continue;
+        }
+        if (isTypeReceiver ? !isStaticField(stmt) : isStaticField(stmt)) {
           continue;
         }
         BindingInfo fieldBinding;

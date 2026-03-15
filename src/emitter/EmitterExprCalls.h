@@ -1344,7 +1344,7 @@
   std::vector<const Expr *> orderedArgs;
   auto paramIt = paramMap.find(resolvedFull);
   if (paramIt != paramMap.end()) {
-    orderedArgs = orderCallArguments(expr, paramIt->second);
+    orderedArgs = orderCallArguments(expr, resolvedFull, paramIt->second, localTypes);
   } else {
     for (const auto &arg : expr.args) {
       orderedArgs.push_back(&arg);

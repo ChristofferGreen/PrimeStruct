@@ -46,11 +46,14 @@ semantics after canonicalization.
 - Top-level bindings are not allowed; represent reusable asset payloads as helper
   definitions (for example `cube_vertices()`) or initialize them inside `main`.
 - Prefer compile-target profile deduction over source-level profile literals.
-  Example: `device{Device()}` is preferred over
-  `device{Device([profile] "...")}`.
+  Canonical `/std/gfx/*` contract example: `device{Device()?}` is preferred
+  over `device{Device([profile] "...")?}`.
+  Current `/std/gfx/experimental/*` status: the constructor-shaped `Device()`
+  entry point is still intentionally rejected until the canonical entry points
+  land, so use the explicit experimental wrappers/substrate-backed forms there.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
-  Example: `window{Window(...) ?}` with
+  Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with
   `on_error<GfxError, /log_gfx_error>`.
 - Do not use `.expect(...)` in PrimeStruct examples; model fallible flows with
   `?` and explicit handlers.

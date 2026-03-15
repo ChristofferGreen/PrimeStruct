@@ -1172,6 +1172,41 @@ main() {
   CHECK(readFile(outPath) == "custom error\n");
 }
 
+TEST_CASE("compiles and runs native direct type namespace string helpers") {
+  const std::string source = R"(
+[struct]
+GfxError() {
+  [i32] code{0i32}
+}
+
+namespace GfxError {
+  [return<string>]
+  why([GfxError] err) {
+    return("queue_submit_failed"utf8)
+  }
+}
+
+[return<int> effects(io_out)]
+main() {
+  [GfxError] err{GfxError(8i32)}
+  [string] whyText{GfxError.why(err)}
+  print_line(GfxError.why(err))
+  return(count(whyText))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_type_namespace_string_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_type_namespace_string_helper_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_type_namespace_string_helper_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 19);
+  CHECK(readFile(outPath) == "queue_submit_failed\n");
+}
+
 TEST_CASE("native backend supports graphics-style int return propagation with on_error") {
   const std::string source = R"(
 [struct]

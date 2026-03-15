@@ -702,6 +702,7 @@ bool buildInlineCallParameterList(const Definition &callee,
 bool buildInlineCallOrderedArguments(const Expr &callExpr,
                                      const Definition &callee,
                                      const std::unordered_set<std::string> &structNames,
+                                     const LocalMap &callerLocals,
                                      std::vector<Expr> &paramsOut,
                                      std::vector<const Expr *> &orderedArgsOut,
                                      std::string &error);

@@ -1592,6 +1592,31 @@ log_gfx_error([GfxError] err) {
   CHECK(error.empty());
 }
 
+TEST_CASE("type namespace helper call drops synthetic receiver") {
+  const std::string source = R"(
+[struct]
+Foo() {
+  [i32] value{0i32}
+}
+
+namespace Foo {
+  [return<i32>]
+  project([Foo] item) {
+    return(item.value)
+  }
+}
+
+[return<int>]
+main() {
+  [Foo] foo{Foo([value] 7i32)}
+  return(Foo.project(foo))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("on_error rejects non-Result non-int return type") {
   const std::string source = R"(
 [struct]

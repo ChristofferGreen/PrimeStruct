@@ -5463,7 +5463,8 @@ TEST_CASE("emitter expr control field-access step formats receiver access") {
   notCallExpr.name = "value";
   CHECK_FALSE(primec::emitter::runEmitterExprControlFieldAccessStep(
       notCallExpr,
-      [&](const primec::Expr &) { return "unused"; }).has_value());
+      [&](const primec::Expr &) { return "unused"; },
+      {}).has_value());
 
   primec::Expr fieldAccessNoReceiver;
   fieldAccessNoReceiver.kind = primec::Expr::Kind::Call;
@@ -5471,7 +5472,8 @@ TEST_CASE("emitter expr control field-access step formats receiver access") {
   fieldAccessNoReceiver.name = "count";
   CHECK_FALSE(primec::emitter::runEmitterExprControlFieldAccessStep(
       fieldAccessNoReceiver,
-      [&](const primec::Expr &) { return "unused"; }).has_value());
+      [&](const primec::Expr &) { return "unused"; },
+      {}).has_value());
 
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;
@@ -5487,12 +5489,24 @@ TEST_CASE("emitter expr control field-access step formats receiver access") {
         CHECK(receiver.kind == primec::Expr::Kind::Name);
         CHECK(receiver.name == "buffer");
         return "buffer";
-      });
+      },
+      {});
   REQUIRE(fieldAccessValue.has_value());
   CHECK(*fieldAccessValue == "buffer.count");
   CHECK(receiverCalls == 1);
 
-  CHECK_FALSE(primec::emitter::runEmitterExprControlFieldAccessStep(fieldAccessExpr, {}).has_value());
+  CHECK_FALSE(primec::emitter::runEmitterExprControlFieldAccessStep(fieldAccessExpr, {}, {}).has_value());
+
+  const auto staticFieldAccessValue = primec::emitter::runEmitterExprControlFieldAccessStep(
+      fieldAccessExpr,
+      [&](const primec::Expr &) { return "unused"; },
+      [&](const primec::Expr &receiver) -> std::optional<std::string> {
+        CHECK(receiver.kind == primec::Expr::Kind::Name);
+        CHECK(receiver.name == "buffer");
+        return std::string("BufferType");
+      });
+  REQUIRE(staticFieldAccessValue.has_value());
+  CHECK(*staticFieldAccessValue == "BufferType::count");
 }
 
 TEST_CASE("emitter expr control call-path step rewrites non-method call names") {
@@ -12067,9 +12081,10 @@ TEST_CASE("ir lowerer call helpers build inline call ordered arguments") {
   callExpr.name = "doThing";
   callExpr.args = {receiverArg, valueArg};
   callExpr.argNames = {std::nullopt, std::nullopt};
+  const primec::ir_lowerer::LocalMap callerLocals;
 
   REQUIRE(primec::ir_lowerer::buildInlineCallOrderedArguments(
-      callExpr, helperDef, structNames, paramsOut, orderedArgs, error));
+      callExpr, helperDef, structNames, callerLocals, paramsOut, orderedArgs, error));
   CHECK(error.empty());
   REQUIRE(paramsOut.size() == 2);
   CHECK(paramsOut[0].name == "this");
@@ -12084,7 +12099,7 @@ TEST_CASE("ir lowerer call helpers build inline call ordered arguments") {
   badCall.args = {valueArg};
   badCall.argNames = {std::nullopt};
   CHECK_FALSE(primec::ir_lowerer::buildInlineCallOrderedArguments(
-      badCall, helperDef, structNames, paramsOut, orderedArgs, error));
+      badCall, helperDef, structNames, callerLocals, paramsOut, orderedArgs, error));
   CHECK(error == "argument count mismatch");
 }
 

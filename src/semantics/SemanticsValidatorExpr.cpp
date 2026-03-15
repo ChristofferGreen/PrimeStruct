@@ -2674,6 +2674,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       rewrittenOut = candidate;
       rewrittenOut.name = preferredCanonicalExperimentalMapHelperTarget(helperName);
       rewrittenOut.namespacePrefix.clear();
+      if (rewrittenOut.templateArgs.empty()) {
+        rewrittenOut.templateArgs.push_back(keyType);
+        rewrittenOut.templateArgs.push_back(valueType);
+      }
       return true;
     };
     auto hasResolvableMapHelperPath = [&](const std::string &path) {
@@ -3195,6 +3199,31 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         isBuiltinOut = true;
         return true;
       }
+      if (receiver.kind == Expr::Kind::Name &&
+          findParamBinding(params, receiver.name) == nullptr &&
+          locals.find(receiver.name) == locals.end()) {
+        std::string resolvedReceiverPath;
+        const std::string rootReceiverPath = "/" + receiver.name;
+        if (defMap_.find(rootReceiverPath) != defMap_.end()) {
+          resolvedReceiverPath = rootReceiverPath;
+        } else {
+          auto importIt = importAliases_.find(receiver.name);
+          if (importIt != importAliases_.end()) {
+            resolvedReceiverPath = importIt->second;
+          }
+        }
+        if (!resolvedReceiverPath.empty() &&
+            (structNames_.count(resolvedReceiverPath) > 0 ||
+             defMap_.find(resolvedReceiverPath + "/" + normalizedMethodName) != defMap_.end())) {
+          resolvedOut = resolvedReceiverPath + "/" + normalizedMethodName;
+          return true;
+        }
+        const std::string resolvedType = resolveStructTypePath(receiver.name, receiver.namespacePrefix);
+        if (!resolvedType.empty()) {
+          resolvedOut = resolvedType + "/" + normalizedMethodName;
+          return true;
+        }
+      }
       std::string elemType;
       auto setCollectionMethodTarget = [&](const std::string &path) {
         if (!explicitRemovedMethodPath.empty() && path.rfind("/string/", 0) != 0) {
@@ -3466,6 +3495,27 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       resolvedOut = resolvedType + "/" + normalizedMethodName;
       return true;
     };
+    auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {
+      if (!callExpr.isMethodCall || callExpr.args.empty() || resolvedPath.empty()) {
+        return false;
+      }
+      const Expr &receiver = callExpr.args.front();
+      if (receiver.kind != Expr::Kind::Name) {
+        return false;
+      }
+      if (findParamBinding(params, receiver.name) != nullptr || locals.find(receiver.name) != locals.end()) {
+        return false;
+      }
+      const size_t methodSlash = resolvedPath.find_last_of('/');
+      if (methodSlash == std::string::npos || methodSlash == 0) {
+        return false;
+      }
+      const std::string receiverPath = resolvedPath.substr(0, methodSlash);
+      const size_t receiverSlash = receiverPath.find_last_of('/');
+      const std::string receiverTypeName =
+          receiverSlash == std::string::npos ? receiverPath : receiverPath.substr(receiverSlash + 1);
+      return receiverTypeName == receiver.name;
+    };
     auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
       if (binding.typeName == "Reference") {
         std::string base;
@@ -3637,6 +3687,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             typeName = binding->typeTemplateArg;
           }
           (void)resolveStructPathFromType(typeName, receiver.namespacePrefix, structPathOut);
+        } else {
+          (void)resolveStructPathFromType(receiver.name, receiver.namespacePrefix, structPathOut);
         }
       } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
         std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
@@ -3652,14 +3704,43 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return !structPathOut.empty();
     };
 
+    auto isTypeNamespaceFieldReceiver = [&](const Expr &receiver, std::string &structPathOut) -> bool {
+      structPathOut.clear();
+      if (receiver.kind != Expr::Kind::Name) {
+        return false;
+      }
+      if (findParamBinding(params, receiver.name) != nullptr || locals.find(receiver.name) != locals.end()) {
+        return false;
+      }
+      return resolveStructFieldReceiverPath(receiver, structPathOut);
+    };
+
     auto resolveStructFieldBinding =
         [&](const Expr &receiver, const std::string &fieldName, BindingInfo &bindingOut) -> bool {
       std::string structPath;
-      if (!resolveStructFieldReceiverPath(receiver, structPath)) {
+      const bool isTypeReceiver = isTypeNamespaceFieldReceiver(receiver, structPath);
+      if (!isTypeReceiver && !resolveStructFieldReceiverPath(receiver, structPath)) {
         return false;
       }
       auto defIt = defMap_.find(structPath);
       if (defIt == defMap_.end() || !defIt->second) {
+        return false;
+      }
+      if (isTypeReceiver) {
+        auto isStaticField = [](const Expr &stmt) {
+          for (const auto &transform : stmt.transforms) {
+            if (transform.name == "static") {
+              return true;
+            }
+          }
+          return false;
+        };
+        for (const auto &stmt : defIt->second->statements) {
+          if (!stmt.isBinding || !isStaticField(stmt) || stmt.name != fieldName) {
+            continue;
+          }
+          return SemanticsValidator::resolveStructFieldBinding(*defIt->second, stmt, bindingOut);
+        }
         return false;
       }
       BindingInfo inferred;
@@ -3793,6 +3874,24 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return structNames_.count(receiverPath) > 0;
     };
+    auto experimentalGfxUnavailableConstructorDiagnostic = [&](const Expr &callExpr,
+                                                               const std::string &resolvedPath) -> std::string {
+      if (resolvedPath != "/std/gfx/experimental/Device" || callExpr.isMethodCall ||
+          callExpr.kind != Expr::Kind::Call) {
+        return "";
+      }
+      if (!callExpr.templateArgs.empty() || hasNamedArguments(callExpr.argNames) || !callExpr.bodyArguments.empty() ||
+          callExpr.hasBodyArguments || !callExpr.args.empty()) {
+        return "";
+      }
+      return "experimental gfx entry point not implemented yet: Device()";
+    };
+    auto experimentalGfxUnavailableMethodDiagnostic = [&](const std::string &resolvedPath) -> std::string {
+      if (resolvedPath == "/std/gfx/experimental/Device/create_pipeline") {
+        return "experimental gfx entry point not implemented yet: Device.create_pipeline([vertex_type] type, ...)";
+      }
+      return "";
+    };
     if (expr.isFieldAccess) {
       if (expr.args.size() != 1) {
         error_ = "field access requires a receiver";
@@ -3810,7 +3909,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = "field access does not accept block arguments";
         return false;
       }
-      if (!validateExpr(params, locals, expr.args.front())) {
+      std::string typeReceiverPath;
+      const bool typeNamespaceReceiver = isTypeNamespaceFieldReceiver(expr.args.front(), typeReceiverPath);
+      if (!typeNamespaceReceiver && !validateExpr(params, locals, expr.args.front())) {
         return false;
       }
       BindingInfo fieldBinding;
@@ -4127,7 +4228,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
         }
         if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() && !hasBlockArgs) {
-          error_ = "unknown method: " + resolved;
+          if (const std::string diagnostic = experimentalGfxUnavailableMethodDiagnostic(resolved);
+              !diagnostic.empty()) {
+            error_ = diagnostic;
+          } else {
+            error_ = "unknown method: " + resolved;
+          }
           return false;
         }
         resolvedMethod = isBuiltinMethod;
@@ -4145,14 +4251,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     } else if (!hasNamedArguments(expr.argNames) &&
                (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-               (isVectorBuiltinName(expr, "count") || isNamespacedMapCountCall ||
-                isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
+               (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
+                isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
                expr.args.size() == 1 &&
                !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
                !prefersCanonicalVectorCountAliasDefinition &&
-               (defMap_.find(resolved) == defMap_.end() ||
+               ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
                 (isNamespacedVectorCountCall && !isStdNamespacedVectorCountCall) ||
-                isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall ||
+                isStdNamespacedMapCountCall || isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall ||
                 isResolvedMapCountCall)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
@@ -4190,12 +4296,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
                ((isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall &&
                  (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall)) ||
-                isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall ||
-                isResolvedMapCountCall) &&
+                isStdNamespacedMapCountCall || isNamespacedMapCountCall ||
+                isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
                !expr.args.empty() && expr.args.size() != 1 &&
                !prefersCanonicalVectorCountAliasDefinition &&
-               (defMap_.find(resolved) != defMap_.end() || isNamespacedMapCountCall ||
-                isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
+               (defMap_.find(resolved) != defMap_.end() || isStdNamespacedMapCountCall ||
+                isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;
@@ -5992,8 +6098,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
       if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" ||
                              resolved == "/soa_vector/count" || resolved == "/string/count" ||
-                             resolved == "/map/count" ||
-                             (resolved == "/std/collections/map/count" && !isStdNamespacedMapCountCall))) {
+                             resolved == "/map/count" || resolved == "/std/collections/map/count")) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;
@@ -7725,6 +7830,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const auto &calleeParams = paramsByDef_[resolved];
     const std::string diagnosticResolved = diagnosticCallTargetPath(resolved);
     if (calleeParams.empty() && structNames_.count(resolved) > 0) {
+      if (expr.args.empty() && !hasNamedArguments(expr.argNames) && !expr.hasBodyArguments &&
+          expr.bodyArguments.empty()) {
+        if (const std::string diagnostic = experimentalGfxUnavailableConstructorDiagnostic(expr, resolved);
+            !diagnostic.empty()) {
+          error_ = diagnostic;
+          return false;
+        }
+      }
       std::vector<ParameterInfo> fieldParams;
       fieldParams.reserve(it->second->statements.size());
       auto isStaticField = [](const Expr &stmt) -> bool {
@@ -7790,9 +7903,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     Expr reorderedCallExpr;
+    Expr trimmedTypeNamespaceCallExpr;
     const std::vector<Expr> *orderedCallArgs = &expr.args;
     const std::vector<std::optional<std::string>> *orderedCallArgNames = &expr.argNames;
-    if (hasMethodReceiverIndex && methodReceiverIndex > 0 && methodReceiverIndex < expr.args.size()) {
+    if (isTypeNamespaceMethodCall(expr, resolved)) {
+      trimmedTypeNamespaceCallExpr = expr;
+      trimmedTypeNamespaceCallExpr.args.erase(trimmedTypeNamespaceCallExpr.args.begin());
+      if (!trimmedTypeNamespaceCallExpr.argNames.empty()) {
+        trimmedTypeNamespaceCallExpr.argNames.erase(trimmedTypeNamespaceCallExpr.argNames.begin());
+      }
+      orderedCallArgs = &trimmedTypeNamespaceCallExpr.args;
+      orderedCallArgNames = &trimmedTypeNamespaceCallExpr.argNames;
+    } else if (hasMethodReceiverIndex && methodReceiverIndex > 0 && methodReceiverIndex < expr.args.size()) {
       reorderedCallExpr = expr;
       std::swap(reorderedCallExpr.args[0], reorderedCallExpr.args[methodReceiverIndex]);
       if (reorderedCallExpr.argNames.size() < reorderedCallExpr.args.size()) {

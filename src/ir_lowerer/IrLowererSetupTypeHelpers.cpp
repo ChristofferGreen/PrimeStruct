@@ -1769,9 +1769,64 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
   typeNameOut.clear();
   resolvedTypePathOut.clear();
 
+  auto resolveStructTypePathFromName = [&](const std::string &typeName,
+                                           const std::string &namespacePrefix) -> std::string {
+    if (typeName.empty()) {
+      return "";
+    }
+    if (typeName.front() == '/') {
+      return structNames.count(typeName) > 0 ? typeName : "";
+    }
+    std::string current = namespacePrefix;
+    while (true) {
+      if (!current.empty()) {
+        const std::string scoped = current + "/" + typeName;
+        if (structNames.count(scoped) > 0) {
+          return scoped;
+        }
+        if (current.size() > typeName.size()) {
+          const size_t start = current.size() - typeName.size();
+          if (start > 0 && current[start - 1] == '/' &&
+              current.compare(start, typeName.size(), typeName) == 0 &&
+              structNames.count(current) > 0) {
+            return current;
+          }
+        }
+      } else {
+        const std::string root = "/" + typeName;
+        if (structNames.count(root) > 0) {
+          return root;
+        }
+      }
+      if (current.empty()) {
+        break;
+      }
+      const size_t slash = current.find_last_of('/');
+      if (slash == std::string::npos || slash == 0) {
+        current.clear();
+      } else {
+        current.erase(slash);
+      }
+    }
+    auto importIt = importAliases.find(typeName);
+    if (importIt != importAliases.end()) {
+      return importIt->second;
+    }
+    return "";
+  };
+
   if (receiverExpr.kind == Expr::Kind::Name) {
-    return resolveMethodReceiverTypeFromNameExpr(
-        receiverExpr, localsIn, methodName, typeNameOut, resolvedTypePathOut, errorOut);
+    if (resolveMethodReceiverTypeFromNameExpr(
+            receiverExpr, localsIn, methodName, typeNameOut, resolvedTypePathOut, errorOut)) {
+      return true;
+    }
+    const std::string resolvedStructType = resolveStructTypePathFromName(receiverExpr.name, receiverExpr.namespacePrefix);
+    if (!resolvedStructType.empty()) {
+      errorOut.clear();
+      resolvedTypePathOut = resolvedStructType;
+      return true;
+    }
+    return false;
   }
   if (receiverExpr.kind == Expr::Kind::Call) {
     const LocalInfo::ValueKind inferredKind =

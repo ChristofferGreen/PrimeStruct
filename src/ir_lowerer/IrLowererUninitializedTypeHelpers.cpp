@@ -545,10 +545,35 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
   std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
   inferStructExprPath = [&](const Expr &exprIn, const LocalMap &localsInExpr) -> std::string {
     const std::string nameStructPath = inferStructPathFromNameExpr(exprIn, localsInExpr);
-    if (!nameStructPath.empty() || exprIn.kind == Expr::Kind::Name) {
+    if (!nameStructPath.empty()) {
       return nameStructPath;
     }
+    if (exprIn.kind == Expr::Kind::Name) {
+      std::string resolvedTypePath;
+      if (resolveStructTypeName(exprIn.name, exprIn.namespacePrefix, resolvedTypePath)) {
+        return resolvedTypePath;
+      }
+      return "";
+    }
     if (exprIn.kind == Expr::Kind::Call) {
+      if (exprIn.isFieldAccess && exprIn.args.size() == 1) {
+        const std::string receiverStruct = inferStructExprPath(exprIn.args.front(), localsInExpr);
+        if (!receiverStruct.empty()) {
+          auto fieldIt = fieldIndex.find(receiverStruct);
+          if (fieldIt != fieldIndex.end()) {
+            for (const auto &field : fieldIt->second) {
+              if (!field.isStatic || field.name != exprIn.name) {
+                continue;
+              }
+              std::string staticFieldStruct;
+              if (resolveStructTypeName(field.typeName, exprIn.namespacePrefix, staticFieldStruct)) {
+                return staticFieldStruct;
+              }
+              return "";
+            }
+          }
+        }
+      }
       const std::string fieldAccessStruct = inferStructPathFromFieldAccessCall(
           exprIn, localsInExpr, inferStructExprPath, resolveStructFieldSlot);
       if (!fieldAccessStruct.empty() || exprIn.isFieldAccess) {

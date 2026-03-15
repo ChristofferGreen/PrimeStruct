@@ -314,6 +314,41 @@ ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
   return ResolvedInlineCallResult::Emitted;
 }
 
+bool isTypeNamespaceMethodCallForInlineEmit(const Expr &callExpr,
+                                            const Definition &callee,
+                                            const LocalMap &callerLocals) {
+  if (!callExpr.isMethodCall || callExpr.args.empty()) {
+    return false;
+  }
+  const Expr &receiver = callExpr.args.front();
+  if (receiver.kind != Expr::Kind::Name || callerLocals.count(receiver.name) > 0) {
+    return false;
+  }
+  const size_t methodSlash = callee.fullPath.find_last_of('/');
+  if (methodSlash == std::string::npos || methodSlash == 0) {
+    return false;
+  }
+  const std::string receiverPath = callee.fullPath.substr(0, methodSlash);
+  const size_t receiverSlash = receiverPath.find_last_of('/');
+  const std::string receiverTypeName =
+      receiverSlash == std::string::npos ? receiverPath : receiverPath.substr(receiverSlash + 1);
+  return receiverTypeName == receiver.name;
+}
+
+Expr makeInlineEmitDirectTypeNamespaceCall(const Expr &callExpr, const Definition &callee) {
+  Expr directCallExpr = callExpr;
+  directCallExpr.name = callee.fullPath;
+  directCallExpr.namespacePrefix.clear();
+  directCallExpr.isMethodCall = false;
+  if (!directCallExpr.args.empty()) {
+    directCallExpr.args.erase(directCallExpr.args.begin());
+  }
+  if (!directCallExpr.argNames.empty()) {
+    directCallExpr.argNames.erase(directCallExpr.argNames.begin());
+  }
+  return directCallExpr;
+}
+
 InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
@@ -429,6 +464,13 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCallFn,
     std::string &error) {
+  auto emitCanonicalInlineDefinitionCall = [&](const Expr &callExpr, const Definition &callee) {
+    if (isTypeNamespaceMethodCallForInlineEmit(callExpr, callee, localsIn)) {
+      const Expr directCallExpr = makeInlineEmitDirectTypeNamespaceCall(callExpr, callee);
+      return emitInlineDefinitionCallFn(directCallExpr, callee, localsIn);
+    }
+    return emitInlineDefinitionCallFn(callExpr, callee, localsIn);
+  };
   if (!expr.isMethodCall && expr.args.size() == 1 &&
       isSoaVectorTarget(expr.args.front(), localsIn)) {
     Expr methodExpr = expr;
@@ -439,7 +481,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         error = "native backend does not support block arguments on calls";
         return InlineCallDispatchResult::Error;
       }
-      if (!emitInlineDefinitionCallFn(methodExpr, *callee, localsIn)) {
+      if (!emitCanonicalInlineDefinitionCall(methodExpr, *callee)) {
         return InlineCallDispatchResult::Error;
       }
       return InlineCallDispatchResult::Emitted;
@@ -455,7 +497,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         error = "native backend does not support block arguments on calls";
         return InlineCallDispatchResult::Error;
       }
-      if (!emitInlineDefinitionCallFn(expr, *callee, localsIn)) {
+      if (!emitCanonicalInlineDefinitionCall(expr, *callee)) {
         return InlineCallDispatchResult::Error;
       }
       return InlineCallDispatchResult::Emitted;
@@ -469,7 +511,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         error = "native backend does not support block arguments on calls";
         return InlineCallDispatchResult::Error;
       }
-      if (!emitInlineDefinitionCallFn(expr, *callee, localsIn)) {
+      if (!emitCanonicalInlineDefinitionCall(expr, *callee)) {
         return InlineCallDispatchResult::Error;
       }
       return InlineCallDispatchResult::Emitted;
@@ -502,7 +544,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       [&](const Expr &callExpr) { return resolveMethodCallDefinitionFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return resolveDefinitionCallFn(callExpr); },
       [&](const Expr &callExpr, const Definition &callee) {
-        return emitInlineDefinitionCallFn(callExpr, callee, localsIn);
+        return emitCanonicalInlineDefinitionCall(callExpr, callee);
       },
       error);
 }
@@ -2641,11 +2683,32 @@ bool buildInlineCallParameterList(const Definition &callee,
 bool buildInlineCallOrderedArguments(const Expr &callExpr,
                                      const Definition &callee,
                                      const std::unordered_set<std::string> &structNames,
+                                     const LocalMap &callerLocals,
                                      std::vector<Expr> &paramsOut,
                                      std::vector<const Expr *> &orderedArgsOut,
                                      std::string &error) {
   if (!buildInlineCallParameterList(callee, structNames, paramsOut, error)) {
     return false;
+  }
+  if (callExpr.isMethodCall && !callExpr.args.empty()) {
+    const Expr &receiver = callExpr.args.front();
+    if (receiver.kind == Expr::Kind::Name && callerLocals.find(receiver.name) == callerLocals.end()) {
+      const size_t methodSlash = callee.fullPath.find_last_of('/');
+      if (methodSlash != std::string::npos && methodSlash > 0) {
+        const std::string receiverPath = callee.fullPath.substr(0, methodSlash);
+        const size_t receiverSlash = receiverPath.find_last_of('/');
+        const std::string receiverTypeName =
+            receiverSlash == std::string::npos ? receiverPath : receiverPath.substr(receiverSlash + 1);
+        if (receiverTypeName == receiver.name) {
+          Expr trimmedCallExpr = callExpr;
+          trimmedCallExpr.args.erase(trimmedCallExpr.args.begin());
+          if (!trimmedCallExpr.argNames.empty()) {
+            trimmedCallExpr.argNames.erase(trimmedCallExpr.argNames.begin());
+          }
+          return buildOrderedCallArguments(trimmedCallExpr, paramsOut, orderedArgsOut, error);
+        }
+      }
+    }
   }
   return buildOrderedCallArguments(callExpr, paramsOut, orderedArgsOut, error);
 }

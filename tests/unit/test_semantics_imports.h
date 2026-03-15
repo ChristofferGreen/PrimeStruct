@@ -633,4 +633,276 @@ main() {
   CHECK(error.find("unknown call target: second") != std::string::npos);
 }
 
+TEST_CASE("import resolves std gfx experimental type surface") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+[return<int>]
+main() {
+  [Window] window{Window([token] 1i32, [width] 1280i32, [height] 720i32)}
+  [ColorFormat] colorFormat{ColorFormat.Bgra8Unorm}
+  [PresentMode] presentMode{PresentMode.Fifo}
+  [Buffer<i32>] buffer{Buffer<i32>([token] 2i32, [elementCount] 4i32)}
+  [Texture2D<i32>] texture{Texture2D<i32>([token] 3i32, [width] 64i32, [height] 32i32)}
+  [VertexColored] vertex{
+    VertexColored(
+      [px] 1.0f32,
+      [py] 2.0f32,
+      [pz] 3.0f32,
+      [pw] 1.0f32,
+      [r] 0.25f32,
+      [g] 0.50f32,
+      [b] 0.75f32,
+      [a] 1.0f32
+    )
+  }
+  [GfxError] err{deviceCreateFailed()}
+  [string] whyText{GfxError.why(err)}
+  return(plus(plus(plus(window.width, colorFormat.value), presentMode.value), count(whyText)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("import resolves std collections experimental map wildcard surface") {
+  const std::string source = R"(
+import /std/collections/experimental_map/*
+[return<int> effects(heap_alloc)]
+main() {
+  [Map<i32, i32>] values{mapPair<i32, i32>(1i32, 7i32, 2i32, 11i32)}
+  return(plus(mapCount<i32, i32>(values), mapAt<i32, i32>(values, 2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("import resolves std gfx experimental substrate boundary") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [SubstrateWindowConfig] windowConfig{
+    SubstrateWindowConfig([hostToken] 11i32, [width] 1280i32, [height] 720i32)
+  }
+  [i32] windowToken{GraphicsSubstrate.createWindow(windowConfig)?}
+  [Window] window{Window([token] windowToken, [width] windowConfig.width, [height] windowConfig.height)}
+  [SubstrateDeviceConfig] deviceConfig{
+    SubstrateDeviceConfig([window] window, [deviceToken] 13i32, [queueToken] 17i32)
+  }
+  [i32] deviceToken{GraphicsSubstrate.createDevice(deviceConfig)?}
+  [i32] queueToken{GraphicsSubstrate.createQueue(deviceConfig)?}
+  [Device] device{Device([token] deviceToken)}
+  [Queue] queue{Queue([token] queueToken)}
+  [SubstrateSwapchainConfig] swapchainConfig{
+    SubstrateSwapchainConfig(
+      [window] window,
+      [device] device,
+      [swapchainToken] 19i32,
+      [colorFormat] ColorFormat.Bgra8Unorm,
+      [depthFormat] DepthFormat.Depth32F,
+      [presentMode] PresentMode.Fifo
+    )
+  }
+  [i32] swapchainToken{GraphicsSubstrate.createSwapchain(swapchainConfig)?}
+  [Swapchain] swapchain{
+    Swapchain(
+      [token] swapchainToken,
+      [colorFormat] swapchainConfig.colorFormat,
+      [depthFormat] swapchainConfig.depthFormat,
+      [presentMode] swapchainConfig.presentMode
+    )
+  }
+  [SubstrateFrameConfig] frameConfig{SubstrateFrameConfig([swapchain] swapchain, [frameToken] 23i32)}
+  [i32] frameToken{GraphicsSubstrate.acquireFrame(frameConfig)?}
+  [Frame] frame{Frame([token] frameToken)}
+  GraphicsSubstrate.submitFrame(frame.token, queue.token)?
+  GraphicsSubstrate.presentFrame(frame.token)?
+  return(plus(window.width, device.token))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("import resolves std gfx experimental method wrapper surface") {
+  const std::string source = R"(
+import /std/math/*
+import /std/gfx/experimental/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Window] window{Window([token] 11i32, [width] 1280i32, [height] 720i32)}
+  [Device] device{Device([token] 13i32)}
+  [Queue] queue{device.default_queue()}
+  [Swapchain] swapchain{
+    device.create_swapchain(
+      window,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F,
+      [present_mode] PresentMode.Fifo
+    )?
+  }
+  [array<VertexColored>] vertices{
+    array<VertexColored>(
+      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
+      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
+      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+    )
+  }
+  [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
+  [Mesh] mesh{device.create_mesh([vertices] vertices, [indices] indices)?}
+  [Pipeline] pipeline{Pipeline([token] 23i32)}
+  [Material] material{pipeline.material()?}
+  if(window.is_open(), then() { window.poll_events() }, else() { })
+  [f32] aspect{window.aspect_ratio()}
+  [Frame] frame{swapchain.frame()?}
+  [RenderPass] pass{
+    frame.render_pass(
+      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_depth] 1.0f32
+    )
+  }
+  pass.draw_mesh(mesh, material)
+  pass.end()
+  frame.submit(queue)?
+  frame.present()?
+  return(plus(plus(queue.token, frame.token), convert<i32>(aspect)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental gfx result wrappers reject bare explicit struct bindings") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int>]
+main() {
+  [Window] window{Window([token] 11i32, [width] 1280i32, [height] 720i32)}
+  [Device] device{Device([token] 13i32)}
+  [Swapchain] swapchain{
+    device.create_swapchain(
+      window,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F,
+      [present_mode] PresentMode.Fifo
+    )
+  }
+  return(swapchain.token)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
+}
+
+TEST_CASE("experimental gfx window constructor-like entry point keeps deterministic reject") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Window] window{Window([title] "PrimeStruct"utf8, [width] 1280i32, [height] 720i32)?}
+  return(window.width)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown named argument: title") != std::string::npos);
+}
+
+TEST_CASE("experimental gfx profile literals keep deterministic reject") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Device] device{Device([profile] "metal-osx"utf8)?}
+  return(device.token)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown named argument: profile") != std::string::npos);
+}
+
+TEST_CASE("experimental gfx device constructor entry point keeps deterministic reject") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int>]
+main() {
+  [Device] device{Device()}
+  return(device.token)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("experimental gfx entry point not implemented yet: Device()") != std::string::npos);
+}
+
+TEST_CASE("experimental gfx pipeline entry point keeps deterministic reject") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int>]
+main() {
+  [Device] device{Device([token] 13i32)}
+  [Pipeline] pipeline{
+    device.create_pipeline(
+      [shader] ShaderLibrary.CubeBasic,
+      [vertex_type] VertexColored,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F
+    )
+  }
+  return(pipeline.token)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("experimental gfx entry point not implemented yet: Device.create_pipeline([vertex_type] type, ...)") !=
+        std::string::npos);
+}
+
+TEST_CASE("import rejects missing std gfx experimental path") {
+  const std::string source = R"(
+import /std/gfx/experimental/nope
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown import path: /std/gfx/experimental/nope") != std::string::npos);
+}
+
 TEST_SUITE_END();

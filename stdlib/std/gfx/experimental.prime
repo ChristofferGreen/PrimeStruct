@@ -1,0 +1,466 @@
+import /std/math/*
+
+namespace std {
+  namespace gfx {
+  namespace experimental {
+  [public struct]
+  ColorFormat() {
+    [public i32] value{0i32}
+
+    [public static ColorFormat] Bgra8Unorm{ColorFormat(0i32)}
+  }
+
+  [public struct]
+  DepthFormat() {
+    [public i32] value{0i32}
+
+    [public static DepthFormat] Depth32F{DepthFormat(0i32)}
+  }
+
+  [public struct]
+  PresentMode() {
+    [public i32] value{0i32}
+
+    [public static PresentMode] Fifo{PresentMode(0i32)}
+  }
+
+  [public struct]
+  ShaderLibrary() {
+    [public i32] value{0i32}
+
+    [public static ShaderLibrary] CubeBasic{ShaderLibrary(0i32)}
+  }
+
+  [public struct]
+  Window() {
+    [public i32] token{0i32}
+    [public i32] width{0i32}
+    [public i32] height{0i32}
+
+    [public return<bool>]
+    is_open() {
+      return(less_than(0i32, this.token))
+    }
+
+    [public return<void>]
+    poll_events() {
+      return()
+    }
+
+    [public return<f32>]
+    aspect_ratio() {
+      if(less_than(this.height, 1i32)) {
+        return(1.0f32)
+      }
+      return(convert<f32>(this.width) / convert<f32>(this.height))
+    }
+  }
+
+  [public struct]
+  Device() {
+    [public i32] token{0i32}
+
+    [public return<Queue>]
+    default_queue() {
+      return(Queue([token] plus(this.token, 1i32)))
+    }
+
+    [public return<Result<Swapchain, GfxError>>]
+    create_swapchain([Window] window,
+                     [ColorFormat] color_format,
+                     [DepthFormat] depth_format,
+                     [PresentMode] present_mode) {
+      if(or(less_than(this.token, 1i32), less_than(window.token, 1i32))) {
+        return(gfxErrorResult<Swapchain>(swapchainCreateFailed()))
+      }
+      return(Result.ok(
+          Swapchain(
+              [token] plus(plus(this.token, window.token), 1i32),
+              [colorFormat] color_format,
+              [depthFormat] depth_format,
+              [presentMode] present_mode)))
+    }
+
+    [public return<Result<Mesh, GfxError>>]
+    create_mesh([array<VertexColored>] vertices, [array<i32>] indices) {
+      [i32] vertexCount{count(vertices)}
+      [i32] indexCount{count(indices)}
+      if(or(less_than(this.token, 1i32),
+            or(less_than(vertexCount, 1i32), less_than(indexCount, 1i32)))) {
+        return(gfxErrorResult<Mesh>(meshCreateFailed()))
+      }
+      return(Result.ok(
+          Mesh(
+              [token] plus(plus(this.token, vertexCount), indexCount),
+              [vertexCount] vertexCount,
+              [indexCount] indexCount)))
+    }
+  }
+
+  [public struct]
+  Queue() {
+    [public i32] token{0i32}
+  }
+
+  [public struct]
+  Swapchain() {
+    [public i32] token{0i32}
+    [public ColorFormat] colorFormat{ColorFormat(0i32)}
+    [public DepthFormat] depthFormat{DepthFormat(0i32)}
+    [public PresentMode] presentMode{PresentMode(0i32)}
+
+    [public return<Result<Frame, GfxError>>]
+    frame() {
+      if(less_than(this.token, 1i32)) {
+        return(gfxErrorResult<Frame>(frameAcquireFailed()))
+      }
+      return(Result.ok(Frame([token] plus(this.token, 1i32))))
+    }
+  }
+
+  [public struct]
+  Frame() {
+    [public i32] token{0i32}
+
+    [public return<RenderPass>]
+    render_pass([ColorRGBA] clear_color, [f32] clear_depth) {
+      return(RenderPass([token] plus(this.token, 1i32)))
+    }
+
+    [public return<Result<GfxError>>]
+    submit([Queue] queue) {
+      return(GraphicsSubstrate.submitFrame(this.token, queue.token))
+    }
+
+    [public return<Result<GfxError>>]
+    present() {
+      return(GraphicsSubstrate.presentFrame(this.token))
+    }
+  }
+
+  [public struct]
+  RenderPass() {
+    [public i32] token{0i32}
+
+    [public return<void>]
+    draw_mesh([Mesh] mesh, [Material] material) {
+      return()
+    }
+
+    [public return<void>]
+    end() {
+      return()
+    }
+  }
+
+  [public struct]
+  Buffer<T>() {
+    [public i32] token{0i32}
+    [public i32] elementCount{0i32}
+  }
+
+  [public struct]
+  Texture2D<T>() {
+    [public i32] token{0i32}
+    [public i32] width{0i32}
+    [public i32] height{0i32}
+  }
+
+  [public struct]
+  Sampler() {
+    [public i32] token{0i32}
+  }
+
+  [public struct]
+  ShaderModule() {
+    [public i32] token{0i32}
+  }
+
+  [public struct]
+  Pipeline() {
+    [public i32] token{0i32}
+
+    [public return<Result<Material, GfxError>>]
+    material() {
+      if(less_than(this.token, 1i32)) {
+        return(gfxErrorResult<Material>(materialCreateFailed()))
+      }
+      return(Result.ok(Material([token] plus(this.token, 1i32))))
+    }
+  }
+
+  [public struct]
+  Material() {
+    [public i32] token{0i32}
+  }
+
+  [public struct]
+  Mesh() {
+    [public i32] token{0i32}
+    [public i32] vertexCount{0i32}
+    [public i32] indexCount{0i32}
+  }
+
+  [public struct]
+  BindGroupLayout() {
+    [public i32] token{0i32}
+  }
+
+  [public struct]
+  BindGroup() {
+    [public i32] token{0i32}
+  }
+
+  [public struct]
+  CommandEncoder() {
+    [public i32] token{0i32}
+  }
+
+  [public struct]
+  GraphicsSubstrate() {
+  }
+
+  [public struct]
+  SubstrateWindowConfig() {
+    [public i32] hostToken{0i32}
+    [public i32] width{0i32}
+    [public i32] height{0i32}
+  }
+
+  [public struct]
+  SubstrateDeviceConfig() {
+    [public Window] window{Window([token] 0i32, [width] 0i32, [height] 0i32)}
+    [public i32] deviceToken{0i32}
+    [public i32] queueToken{0i32}
+  }
+
+  [public struct]
+  SubstrateSwapchainConfig() {
+    [public Window] window{Window([token] 0i32, [width] 0i32, [height] 0i32)}
+    [public Device] device{Device([token] 0i32)}
+    [public i32] swapchainToken{0i32}
+    [public ColorFormat] colorFormat{ColorFormat(0i32)}
+    [public DepthFormat] depthFormat{DepthFormat(0i32)}
+    [public PresentMode] presentMode{PresentMode(0i32)}
+  }
+
+  [public struct]
+  SubstrateMeshConfig() {
+    [public i32] meshToken{0i32}
+    [public i32] vertexCount{0i32}
+    [public i32] indexCount{0i32}
+  }
+
+  [public struct]
+  SubstratePipelineConfig() {
+    [public i32] pipelineToken{0i32}
+    [public ShaderLibrary] shader{ShaderLibrary(0i32)}
+    [public ColorFormat] colorFormat{ColorFormat(0i32)}
+    [public DepthFormat] depthFormat{DepthFormat(0i32)}
+  }
+
+  [public struct]
+  SubstrateFrameConfig() {
+    [public Swapchain] swapchain{Swapchain([token] 0i32)}
+    [public i32] frameToken{0i32}
+  }
+
+  [public struct]
+  SubstrateRenderPassConfig() {
+    [public Frame] frame{Frame([token] 0i32)}
+    [public i32] renderPassToken{0i32}
+  }
+
+  [public struct]
+  VertexColored() {
+    [public f32] px{0.0f32}
+    [public f32] py{0.0f32}
+    [public f32] pz{0.0f32}
+    [public f32] pw{0.0f32}
+    [public f32] r{0.0f32}
+    [public f32] g{0.0f32}
+    [public f32] b{0.0f32}
+    [public f32] a{1.0f32}
+  }
+
+  [public struct]
+  GfxError() {
+    [public i32] code{0i32}
+  }
+
+  [return<GfxError>]
+  gfxError([i32] code) {
+    return(GfxError(code))
+  }
+
+  [public return<Result<T, GfxError>>]
+  gfxErrorResult<T>([GfxError] err) {
+    return(multiply(convert<i64>(err.code), 4294967296i64))
+  }
+
+  namespace GraphicsSubstrate {
+    [public return<Result<i32, GfxError>>]
+    createWindow([SubstrateWindowConfig] config) {
+      if(or(less_than(config.hostToken, 1i32),
+            or(less_than(config.width, 1i32), less_than(config.height, 1i32)))) {
+        return(gfxErrorResult<i32>(windowCreateFailed()))
+      }
+      return(Result.ok(config.hostToken))
+    }
+
+    [public return<Result<i32, GfxError>>]
+    createDevice([SubstrateDeviceConfig] config) {
+      if(or(less_than(config.window.token, 1i32), less_than(config.deviceToken, 1i32))) {
+        return(gfxErrorResult<i32>(deviceCreateFailed()))
+      }
+      return(Result.ok(config.deviceToken))
+    }
+
+    [public return<Result<i32, GfxError>>]
+    createQueue([SubstrateDeviceConfig] config) {
+      if(or(less_than(config.window.token, 1i32), less_than(config.queueToken, 1i32))) {
+        return(gfxErrorResult<i32>(deviceCreateFailed()))
+      }
+      return(Result.ok(config.queueToken))
+    }
+
+    [public return<Result<i32, GfxError>>]
+    createSwapchain([SubstrateSwapchainConfig] config) {
+      if(or(less_than(config.window.token, 1i32),
+            or(less_than(config.device.token, 1i32), less_than(config.swapchainToken, 1i32)))) {
+        return(gfxErrorResult<i32>(swapchainCreateFailed()))
+      }
+      return(Result.ok(config.swapchainToken))
+    }
+
+    [public return<Result<i32, GfxError>>]
+    createMesh([SubstrateMeshConfig] config) {
+      if(or(less_than(config.meshToken, 1i32),
+            or(less_than(config.vertexCount, 1i32), less_than(config.indexCount, 1i32)))) {
+        return(gfxErrorResult<i32>(meshCreateFailed()))
+      }
+      return(Result.ok(config.meshToken))
+    }
+
+    [public return<Result<i32, GfxError>>]
+    createPipeline([SubstratePipelineConfig] config) {
+      if(less_than(config.pipelineToken, 1i32)) {
+        return(gfxErrorResult<i32>(pipelineCreateFailed()))
+      }
+      return(Result.ok(config.pipelineToken))
+    }
+
+    [public return<Result<i32, GfxError>>]
+    acquireFrame([SubstrateFrameConfig] config) {
+      if(or(less_than(config.swapchain.token, 1i32), less_than(config.frameToken, 1i32))) {
+        return(gfxErrorResult<i32>(frameAcquireFailed()))
+      }
+      return(Result.ok(config.frameToken))
+    }
+
+    [public return<Result<i32, GfxError>>]
+    beginRenderPass([SubstrateRenderPassConfig] config) {
+      if(or(less_than(config.frame.token, 1i32), less_than(config.renderPassToken, 1i32))) {
+        return(gfxErrorResult<i32>(frameAcquireFailed()))
+      }
+      return(Result.ok(config.renderPassToken))
+    }
+
+    [public return<Result<GfxError>>]
+    submitFrame([i32] frameToken, [i32] queueToken) {
+      if(or(less_than(frameToken, 1i32), less_than(queueToken, 1i32))) {
+        return(queueSubmitFailed().code)
+      }
+      return(Result.ok())
+    }
+
+    [public return<Result<GfxError>>]
+    presentFrame([i32] frameToken) {
+      if(less_than(frameToken, 1i32)) {
+        return(framePresentFailed().code)
+      }
+      return(Result.ok())
+    }
+  }
+
+  namespace GfxError {
+    [public return<string>]
+    why([GfxError] err) {
+      if(equal(err.code, 1i32)) {
+        return("window_create_failed"utf8)
+      }
+      if(equal(err.code, 2i32)) {
+        return("device_create_failed"utf8)
+      }
+      if(equal(err.code, 3i32)) {
+        return("swapchain_create_failed"utf8)
+      }
+      if(equal(err.code, 4i32)) {
+        return("mesh_create_failed"utf8)
+      }
+      if(equal(err.code, 5i32)) {
+        return("pipeline_create_failed"utf8)
+      }
+      if(equal(err.code, 6i32)) {
+        return("material_create_failed"utf8)
+      }
+      if(equal(err.code, 7i32)) {
+        return("frame_acquire_failed"utf8)
+      }
+      if(equal(err.code, 8i32)) {
+        return("queue_submit_failed"utf8)
+      }
+      if(equal(err.code, 9i32)) {
+        return("frame_present_failed"utf8)
+      }
+      return("gfx_error"utf8)
+    }
+  }
+
+  [public return<GfxError>]
+  windowCreateFailed() {
+    return(gfxError(1i32))
+  }
+
+  [public return<GfxError>]
+  deviceCreateFailed() {
+    return(gfxError(2i32))
+  }
+
+  [public return<GfxError>]
+  swapchainCreateFailed() {
+    return(gfxError(3i32))
+  }
+
+  [public return<GfxError>]
+  meshCreateFailed() {
+    return(gfxError(4i32))
+  }
+
+  [public return<GfxError>]
+  pipelineCreateFailed() {
+    return(gfxError(5i32))
+  }
+
+  [public return<GfxError>]
+  materialCreateFailed() {
+    return(gfxError(6i32))
+  }
+
+  [public return<GfxError>]
+  frameAcquireFailed() {
+    return(gfxError(7i32))
+  }
+
+  [public return<GfxError>]
+  queueSubmitFailed() {
+    return(gfxError(8i32))
+  }
+
+  [public return<GfxError>]
+  framePresentFailed() {
+    return(gfxError(9i32))
+  }
+  }
+  }
+}

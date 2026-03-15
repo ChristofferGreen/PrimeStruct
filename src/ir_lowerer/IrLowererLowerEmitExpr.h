@@ -111,6 +111,36 @@
             return false;
           }
           const Expr &receiver = expr.args.front();
+          if (receiver.kind == Expr::Kind::Name && localsIn.find(receiver.name) == localsIn.end()) {
+            std::string receiverStructPath;
+            if (resolveStructTypeName(receiver.name, receiver.namespacePrefix, receiverStructPath)) {
+              auto defIt = defMap.find(receiverStructPath);
+              if (defIt == defMap.end() || defIt->second == nullptr) {
+                error = "field access requires struct receiver";
+                return false;
+              }
+              auto isStaticField = [](const Expr &stmt) {
+                for (const auto &transform : stmt.transforms) {
+                  if (transform.name == "static") {
+                    return true;
+                  }
+                }
+                return false;
+              };
+              for (const auto &stmt : defIt->second->statements) {
+                if (!stmt.isBinding || !isStaticField(stmt) || stmt.name != expr.name) {
+                  continue;
+                }
+                if (stmt.args.empty()) {
+                  error = "static field missing initializer: " + receiverStructPath + "/" + expr.name;
+                  return false;
+                }
+                return emitExpr(stmt.args.front(), localsIn);
+              }
+              error = "unknown struct field: " + expr.name;
+              return false;
+            }
+          }
           std::string structPath = inferStructExprPath(receiver, localsIn);
           if (structPath.empty()) {
             error = "field access requires struct receiver";

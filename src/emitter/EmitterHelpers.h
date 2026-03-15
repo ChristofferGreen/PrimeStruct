@@ -90,7 +90,10 @@ bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std
 bool getVectorMutatorName(const Expr &expr,
                           const std::unordered_map<std::string, std::string> &nameMap,
                           std::string &out);
-std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector<Expr> &params);
+std::vector<const Expr *> orderCallArguments(const Expr &expr,
+                                             const std::string &resolvedPath,
+                                             const std::vector<Expr> &params,
+                                             const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isBuiltinIf(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap);
 bool isBuiltinBlock(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap);
 bool isLoopCall(const Expr &expr);

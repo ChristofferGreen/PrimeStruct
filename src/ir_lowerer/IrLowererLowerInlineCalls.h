@@ -23,7 +23,7 @@
     std::vector<Expr> callParams;
     std::vector<const Expr *> orderedArgs;
     if (!ir_lowerer::buildInlineCallOrderedArguments(
-            callExpr, callee, structNames, callParams, orderedArgs, error)) {
+            callExpr, callee, structNames, callerLocals, callParams, orderedArgs, error)) {
       inlineStack.erase(callee.fullPath);
       return false;
     }

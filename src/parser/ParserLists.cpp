@@ -818,6 +818,12 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
   }
   ArgumentLabelGuard labelGuard(*this);
   bool sawSpreadArg = false;
+  auto nextNonCommentToken = [&](size_t index) -> size_t {
+    while (index < tokens_.size() && tokens_[index].kind == TokenKind::Comment) {
+      ++index;
+    }
+    return index;
+  };
   while (true) {
     if (matchRaw(TokenKind::Semicolon)) {
       ++pos_;
@@ -915,15 +921,22 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     }
     out.push_back(std::move(arg));
     argNames.push_back(std::move(argName));
-    if (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
+    size_t separatorIndex = nextNonCommentToken(pos_);
+    if (separatorIndex < tokens_.size() &&
+        (tokens_[separatorIndex].kind == TokenKind::Comma || tokens_[separatorIndex].kind == TokenKind::Semicolon)) {
       if (sawSpreadArg) {
         return fail("spread argument must be final");
       }
-      ++pos_;
-      while (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
-        ++pos_;
+      pos_ = separatorIndex;
+      while (pos_ < tokens_.size()) {
+        if (tokens_[pos_].kind == TokenKind::Comment || tokens_[pos_].kind == TokenKind::Comma ||
+            tokens_[pos_].kind == TokenKind::Semicolon) {
+          ++pos_;
+          continue;
+        }
+        break;
       }
-      if (matchRaw(TokenKind::RParen)) {
+      if (match(TokenKind::RParen)) {
         break;
       }
     } else {

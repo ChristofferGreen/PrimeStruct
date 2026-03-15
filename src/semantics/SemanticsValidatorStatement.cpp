@@ -1104,6 +1104,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       (void)inferBindingTypeFromInitializer(initializer, params, locals, info);
     } else {
       const std::string expectedType = normalizeBindingTypeName(info.typeName);
+      ResultTypeInfo resultInfo;
+      if (expectedType != "Result" &&
+          resolveResultTypeForExpr(initializer, params, locals, resultInfo) &&
+          resultInfo.isResult) {
+        error_ = "binding initializer type mismatch";
+        return false;
+      }
       if (expectedType == "string") {
         if (!isStringExpr(initializer, params, locals)) {
           error_ = "binding initializer type mismatch";

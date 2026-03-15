@@ -28,6 +28,35 @@
                             resultInfos,
                             returnStructs,
                             allowMathBare);
+          },
+          [&](const Expr &receiverExpr) -> std::optional<std::string> {
+            if (receiverExpr.kind != Expr::Kind::Name || localTypes.count(receiverExpr.name) > 0) {
+              return std::nullopt;
+            }
+            std::string resolvedPath;
+            if (!receiverExpr.name.empty() && receiverExpr.name[0] == '/') {
+              resolvedPath = receiverExpr.name;
+            } else {
+              auto importIt = importAliases.find(receiverExpr.name);
+              if (importIt != importAliases.end()) {
+                resolvedPath = importIt->second;
+              } else {
+                const std::string rootPath = "/" + receiverExpr.name;
+                if (structTypeMap.count(rootPath) > 0) {
+                  resolvedPath = rootPath;
+                } else if (!receiverExpr.namespacePrefix.empty()) {
+                  const std::string scopedPath = receiverExpr.namespacePrefix + "/" + receiverExpr.name;
+                  if (structTypeMap.count(scopedPath) > 0) {
+                    resolvedPath = scopedPath;
+                  }
+                }
+              }
+            }
+            auto structIt = structTypeMap.find(resolvedPath);
+            if (structIt == structTypeMap.end()) {
+              return std::nullopt;
+            }
+            return structIt->second;
           });
       fieldAccessExpr.has_value()) {
     return *fieldAccessExpr;
