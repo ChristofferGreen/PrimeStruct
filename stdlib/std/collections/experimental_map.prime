@@ -69,9 +69,21 @@ namespace std {
     return(limit)
   }
 
-  [effects(heap_alloc), return<void> Comparable<K>]
+  [public effects(heap_alloc), return<void> Comparable<K>]
   mapInsert<K, V>([Map<K, V> mut] entries, [K] key, [V] value) {
     [i32] index{mapFindIndex<K, V>(entries, key)}
+    [i32] limit{count(entries.keys)}
+    if(less_than(index, limit),
+       then() { assign(entries.payloads[index], value) },
+       else() {
+         push(entries.keys, key)
+         push(entries.payloads, value)
+       })
+  }
+
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  mapInsertRef<K, V>([Reference<Map<K, V>> mut] entries, [K] key, [V] value) {
+    [i32] index{mapFindIndexRef<K, V>(entries, key)}
     [i32] limit{count(entries.keys)}
     if(less_than(index, limit),
        then() { assign(entries.payloads[index], value) },
@@ -221,6 +233,16 @@ namespace std {
   [public return<i32>]
   /std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] values) {
     return(mapCountRef<K, V>(values))
+  }
+
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  /Map/insert<K, V>([Map<K, V> mut] self, [K] key, [V] value) {
+    mapInsert<K, V>(self, key, value)
+  }
+
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  /Reference/insert<K, V>([Reference<Map<K, V>> mut] self, [K] key, [V] value) {
+    mapInsertRef<K, V>(self, key, value)
   }
 
   [public return<bool> Comparable<K>]

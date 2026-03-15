@@ -1883,6 +1883,10 @@ TEST_CASE("runs vm borrowed experimental map methods") {
   expectExperimentalMapReferenceMethodConformance("vm");
 }
 
+TEST_CASE("runs vm experimental map inserts") {
+  expectExperimentalMapInsertConformance("vm");
+}
+
 TEST_CASE("runs vm experimental map bracket access") {
   expectExperimentalMapIndexConformance("vm");
 }

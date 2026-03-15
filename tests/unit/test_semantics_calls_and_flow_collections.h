@@ -341,6 +341,29 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental map exposes insert helper parity on value and borrowed mutation surfaces") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32> mut] values{mapSingle<string, i32>("left"raw_utf8, 4i32)}
+  mapInsert<string, i32>(values, "right"raw_utf8, 7i32)
+  values.insert("left"raw_utf8, 9i32)
+  [Reference<Map<string, i32>> mut] ref{location(values)}
+  mapInsertRef<string, i32>(ref, "third"raw_utf8, 11i32)
+  ref.insert("right"raw_utf8, 13i32)
+  return(plus(values.count(),
+              plus(values.at("left"raw_utf8),
+                   plus(ref.at("right"raw_utf8), values.at("third"raw_utf8)))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental map bracket access validates on value and borrowed call receivers") {
   const std::string source = R"(
 import /std/collections/*
@@ -514,6 +537,61 @@ main() {
   if(ref.contains(Key(1i32)),
      then() { return(1i32) },
      else() { return(0i32) })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Comparable") != std::string::npos);
+  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+}
+
+TEST_CASE("experimental map insert helper calls keep Comparable diagnostics") {
+  const std::string source = R"(
+import /std/collections/experimental_map/*
+
+[struct]
+Key() {
+  [i32] value{0i32}
+}
+
+[return<bool>]
+/Key/equal([Key] left, [Key] right) {
+  return(equal(left.value, right.value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<Key, i32> mut] values{mapNew<Key, i32>()}
+  mapInsert<Key, i32>(values, Key(1i32), 4i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Comparable") != std::string::npos);
+  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+}
+
+TEST_CASE("experimental map borrowed insert methods keep Comparable diagnostics") {
+  const std::string source = R"(
+import /std/collections/experimental_map/*
+
+[struct]
+Key() {
+  [i32] value{0i32}
+}
+
+[return<bool>]
+/Key/equal([Key] left, [Key] right) {
+  return(equal(left.value, right.value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<Key, i32> mut] values{mapNew<Key, i32>()}
+  [Reference<Map<Key, i32>> mut] ref{location(values)}
+  ref.insert(Key(1i32), 4i32)
+  return(0i32)
 }
 )";
   std::string error;

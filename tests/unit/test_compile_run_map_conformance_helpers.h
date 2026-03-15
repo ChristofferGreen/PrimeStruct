@@ -270,6 +270,25 @@ inline std::string makeExperimentalMapReferenceMethodConformanceSource() {
   return source;
 }
 
+inline std::string makeExperimentalMapInsertConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32> mut] values{mapSingle<string, i32>(\"left\"raw_utf8, 4i32)}\n";
+  source += "  mapInsert<string, i32>(values, \"right\"raw_utf8, 7i32)\n";
+  source += "  values.insert(\"left\"raw_utf8, 9i32)\n";
+  source += "  [Reference<Map<string, i32>> mut] ref{location(values)}\n";
+  source += "  mapInsertRef<string, i32>(ref, \"third\"raw_utf8, 11i32)\n";
+  source += "  ref.insert(\"right\"raw_utf8, 13i32)\n";
+  source += "  return(plus(values.count(),\n";
+  source += "              plus(values.at(\"left\"raw_utf8),\n";
+  source += "                   plus(ref.at(\"right\"raw_utf8), values.at(\"third\"raw_utf8)))))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapIndexConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -783,6 +802,14 @@ inline void expectExperimentalMapReferenceMethodConformance(const std::string &e
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == 20);
   CHECK(readFile(outPath) == "container missing key\n");
+}
+
+inline void expectExperimentalMapInsertConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeExperimentalMapInsertConformanceSource(),
+      "experimental_map_insert_" + emitMode,
+      emitMode,
+      36);
 }
 
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {

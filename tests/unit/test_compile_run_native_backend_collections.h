@@ -2280,6 +2280,10 @@ TEST_CASE("compiles and runs native borrowed experimental map methods") {
   expectExperimentalMapReferenceMethodConformance("native");
 }
 
+TEST_CASE("compiles and runs native experimental map inserts") {
+  expectExperimentalMapInsertConformance("native");
+}
+
 TEST_CASE("compiles and runs native experimental map bracket access") {
   expectExperimentalMapIndexConformance("native");
 }

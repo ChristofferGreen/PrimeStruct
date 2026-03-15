@@ -96,6 +96,10 @@ TEST_CASE("compiles and runs borrowed experimental map methods in C++ emitter") 
   expectExperimentalMapReferenceMethodConformance("exe");
 }
 
+TEST_CASE("compiles and runs experimental map inserts in C++ emitter") {
+  expectExperimentalMapInsertConformance("exe");
+}
+
 TEST_CASE("compiles and runs experimental map bracket access in C++ emitter") {
   expectExperimentalMapIndexConformance("exe");
 }
