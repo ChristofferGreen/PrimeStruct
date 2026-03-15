@@ -775,8 +775,30 @@
     }
     return preferVectorStdlibHelperPath(path, nameMap);
   };
-  const std::string resolvedFull = preferStructReturningCollectionHelperPath(full);
+  auto preferBareMapContainsHelperPath = [&](const Expr &candidate) {
+    if (candidate.isMethodCall || !isSimpleCallName(candidate, "contains") || candidate.args.size() != 2) {
+      return std::string{};
+    }
+    if (!isResolvedMapTarget(candidate.args.front())) {
+      return std::string{};
+    }
+    if (nameMap.count("/std/collections/map/contains") > 0) {
+      return std::string("/std/collections/map/contains");
+    }
+    if (nameMap.count("/map/contains") > 0) {
+      return std::string("/map/contains");
+    }
+    return std::string{};
+  };
+  std::string resolvedFull = preferStructReturningCollectionHelperPath(full);
   auto it = nameMap.find(resolvedFull);
+  if (it == nameMap.end()) {
+    const std::string preferredBareMapContainsPath = preferBareMapContainsHelperPath(expr);
+    if (!preferredBareMapContainsPath.empty()) {
+      resolvedFull = preferredBareMapContainsPath;
+      it = nameMap.find(resolvedFull);
+    }
+  }
   if (it == nameMap.end()) {
     if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 && isResolvedMapTarget(expr.args.front())) {
       std::ostringstream out;
