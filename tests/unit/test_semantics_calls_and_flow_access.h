@@ -72,6 +72,57 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("count helper validates on variadic args parameter") {
+  const std::string source = R"(
+[return<int>]
+collect(values...) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  return(collect(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("count method validates on variadic args parameter") {
+  const std::string source = R"(
+[return<int>]
+collect(values...) {
+  return(values.count())
+}
+
+[return<int>]
+main() {
+  return(collect(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("count on variadic args still rejects extra arguments") {
+  const std::string source = R"(
+[return<int>]
+collect(values...) {
+  return(count(values, 1i32))
+}
+
+[return<int>]
+main() {
+  return(collect(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+}
+
 TEST_CASE("count rejects missing type method") {
   const std::string source = R"(
 [struct]

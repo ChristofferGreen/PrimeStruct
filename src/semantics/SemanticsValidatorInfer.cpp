@@ -1748,6 +1748,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         std::string keyType;
         std::string valueType;
         if (normalizedMethodName == "count") {
+          if (resolveArgsPackCountTarget(receiver, elemType)) {
+            resolvedOut = preferVectorStdlibHelperPathForCall("/array/count");
+            return true;
+          }
           if (resolveVectorTarget(receiver, elemType)) {
             resolvedOut = preferVectorStdlibHelperPathForCall("/vector/count");
             return true;
@@ -2575,7 +2579,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string elemType;
       std::string keyType;
       std::string valueType;
-      if (resolveVectorTarget(expr.args.front(), elemType)) {
+      if (resolveArgsPackCountTarget(expr.args.front(), elemType)) {
+        const std::string methodPath = preferVectorStdlibHelperPath("/array/count");
+        if (defMap_.find(methodPath) == defMap_.end()) {
+          return ReturnKind::Int;
+        }
+        resolved = methodPath;
+        hasResolvedPath = true;
+      } else if (resolveVectorTarget(expr.args.front(), elemType)) {
         const std::string methodPath = preferVectorStdlibHelperPath("/vector/count");
         if (defMap_.find(methodPath) == defMap_.end()) {
           return ReturnKind::Int;
@@ -3104,7 +3115,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string elemType;
       std::string keyType;
       std::string valueType;
-      if (!resolveVectorTarget(expr.args.front(), elemType) && !resolveArrayTarget(expr.args.front(), elemType) &&
+      if (!resolveArgsPackCountTarget(expr.args.front(), elemType) &&
+          !resolveVectorTarget(expr.args.front(), elemType) && !resolveArrayTarget(expr.args.front(), elemType) &&
           !resolveStringTarget(expr.args.front()) &&
           !resolveMapTarget(expr.args.front(), keyType, valueType)) {
         return ReturnKind::Unknown;
