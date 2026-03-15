@@ -29,10 +29,202 @@ namespace std {
     return(2i32)
   }
 
+  [return<Result<ImageError>>]
+  invalidOperation() {
+    return(3i32)
+  }
+
+  [return<void>]
+  ignoreFileError([FileError] err) {
+  }
+
+  [return<bool>]
+  ppmIsWhitespace([i32] value) {
+    return(or(or(equal(value, 32i32), equal(value, 9i32)), or(equal(value, 10i32), equal(value, 13i32))))
+  }
+
+  [return<bool>]
+  ppmIsDigit([i32] value) {
+    return(and(greater_equal(value, 48i32), less_equal(value, 57i32)))
+  }
+
+  [return<i32>]
+  ppmDigitValue([i32] value) {
+    return(minus(value, 48i32))
+  }
+
+  [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+  ppmOpenRead([uninitialized<File<Read>> mut] storage, [string] path) {
+    init(storage, File<Read>(path)?)
+    return(0i32)
+  }
+
+  [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+  ppmReadByteStatus([File<Read>] file, [i32 mut] value) {
+    file.read_byte(value)?
+    return(0i32)
+  }
+
+  [effects(file_write), return<int>]
+  ppmSkipComment([File<Read>] file) {
+    [i32 mut] byte{0i32}
+    while(true, do() {
+      [i32] status{ppmReadByteStatus(file, byte)}
+      if(not_equal(status, 0i32),
+         then() {
+           if(equal(status, 65536i32),
+              then() { return(0i32) },
+              else() { return(status) })
+         },
+         else() { })
+      if(or(equal(byte, 10i32), equal(byte, 13i32)),
+         then() { return(0i32) },
+         else() { })
+    })
+    return(0i32)
+  }
+
+  [effects(file_write), return<int>]
+  ppmNextByte([File<Read>] file, [i32 mut] hasPending, [i32 mut] pendingByte, [i32 mut] value) {
+    if(equal(hasPending, 1i32),
+       then() {
+         assign(value, pendingByte)
+         assign(hasPending, 0i32)
+         return(0i32)
+       },
+       else() { })
+    return(ppmReadByteStatus(file, value))
+  }
+
+  [effects(file_write), return<int>]
+  ppmReadAsciiInt([File<Read>] file, [i32 mut] hasPending, [i32 mut] pendingByte, [i32 mut] value) {
+    assign(value, 0i32)
+    [i32 mut] started{0i32}
+    [i32 mut] byte{0i32}
+    while(true, do() {
+      [i32] status{ppmNextByte(file, hasPending, pendingByte, byte)}
+      if(not_equal(status, 0i32),
+         then() {
+           if(equal(started, 1i32),
+              then() {
+                if(equal(status, 65536i32),
+                   then() { return(0i32) },
+                   else() { return(status) })
+              },
+              else() { return(status) })
+         },
+         else() { })
+      if(equal(started, 0i32),
+         then() {
+           if(ppmIsWhitespace(byte),
+              then() { },
+              else() {
+                if(equal(byte, 35i32),
+                   then() {
+                     [i32] commentStatus{ppmSkipComment(file)}
+                     if(not_equal(commentStatus, 0i32),
+                        then() { return(commentStatus) },
+                        else() { })
+                   },
+                   else() {
+                     if(ppmIsDigit(byte),
+                        then() {
+                          assign(started, 1i32)
+                          assign(value, ppmDigitValue(byte))
+                        },
+                        else() { return(1i32) })
+                   })
+              })
+         },
+         else() {
+           if(ppmIsDigit(byte),
+              then() { assign(value, plus(multiply(value, 10i32), ppmDigitValue(byte))) },
+              else() {
+                assign(hasPending, 1i32)
+                assign(pendingByte, byte)
+                return(0i32)
+              })
+         })
+    })
+    return(0i32)
+  }
+
+  [effects(heap_alloc), return<void>]
+  resetReadOutputs([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels) {
+    assign(width, 0i32)
+    assign(height, 0i32)
+    clear(pixels)
+  }
+
   namespace ppm {
-    [public return<Result<ImageError>> effects(file_write)]
+    [public return<Result<ImageError>> effects(file_write, heap_alloc)]
     read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
-      return(unsupported_read())
+      resetReadOutputs(width, height, pixels)
+
+      [uninitialized<File<Read>> mut] fileStorage{uninitialized<File<Read>>()}
+      [i32] openStatus{ppmOpenRead(fileStorage, path)}
+      if(not_equal(openStatus, 0i32),
+         then() { return(invalidOperation()) },
+         else() { })
+
+      [File<Read>] file{take(fileStorage)}
+      [i32 mut] hasPending{0i32}
+      [i32 mut] pendingByte{0i32}
+      [i32 mut] byte{0i32}
+      [i32 mut] status{ppmNextByte(file, hasPending, pendingByte, byte)}
+      if(or(not_equal(status, 0i32), not_equal(byte, 80i32)),
+         then() { return(invalidOperation()) },
+         else() { })
+
+      assign(status, ppmNextByte(file, hasPending, pendingByte, byte))
+      if(or(not_equal(status, 0i32), not_equal(byte, 51i32)),
+         then() { return(invalidOperation()) },
+         else() { })
+      assign(status, ppmNextByte(file, hasPending, pendingByte, byte))
+      if(not_equal(status, 0i32),
+         then() { return(invalidOperation()) },
+         else() { })
+      if(or(ppmIsWhitespace(byte), equal(byte, 35i32)),
+         then() {
+           assign(hasPending, 1i32)
+           assign(pendingByte, byte)
+         },
+         else() { return(invalidOperation()) })
+
+      [i32 mut] parsedWidth{0i32}
+      [i32 mut] parsedHeight{0i32}
+      [i32 mut] maxValue{0i32}
+      assign(status, ppmReadAsciiInt(file, hasPending, pendingByte, parsedWidth))
+      if(not_equal(status, 0i32),
+         then() { return(invalidOperation()) },
+         else() { })
+      assign(status, ppmReadAsciiInt(file, hasPending, pendingByte, parsedHeight))
+      if(not_equal(status, 0i32),
+         then() { return(invalidOperation()) },
+         else() { })
+      assign(status, ppmReadAsciiInt(file, hasPending, pendingByte, maxValue))
+      if(or(not_equal(status, 0i32), not_equal(maxValue, 255i32)),
+         then() { return(invalidOperation()) },
+         else() { })
+
+      [i32] pixelCount{multiply(multiply(parsedWidth, parsedHeight), 3i32)}
+      [i32 mut] index{0i32}
+      while(less_than(index, pixelCount), do() {
+        [i32 mut] component{0i32}
+        assign(status, ppmReadAsciiInt(file, hasPending, pendingByte, component))
+        if(or(not_equal(status, 0i32), or(less_than(component, 0i32), greater_than(component, 255i32))),
+           then() {
+             resetReadOutputs(width, height, pixels)
+             return(invalidOperation())
+           },
+           else() { })
+        push(pixels, component)
+        increment(index)
+      })
+
+      assign(width, parsedWidth)
+      assign(height, parsedHeight)
+      return(Result.ok())
     }
 
     [public return<Result<ImageError>> effects(file_write)]

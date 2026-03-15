@@ -345,7 +345,7 @@ main() {
   CHECK(readFile(outPath) == "custom error\n");
 }
 
-TEST_CASE("C++ emitter supports image api unsupported contract deterministically") {
+TEST_CASE("C++ emitter supports image api contract deterministically") {
   const std::string source = R"(
 import /std/image/*
 
@@ -371,7 +371,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath + " > " + outPath) == 0);
   CHECK(readFile(outPath) ==
-        "image_read_unsupported\n"
+        "image_invalid_operation\n"
         "image_write_unsupported\n"
         "image_read_unsupported\n"
         "image_write_unsupported\n");

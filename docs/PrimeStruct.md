@@ -738,9 +738,9 @@ sum_two_files([string] a, [string] b) {
   - `png.read(width, height, pixels, path) -> Result<ImageError>`
   - `png.write(path, width, height, pixels) -> Result<ImageError>`
 - **Buffer contract:** `width` and `height` are `i32` out-parameters, and `pixels` is a flat `vector<i32>` in RGB byte order (`r, g, b, r, g, b, ...`).
-- **Current effect requirement:** image file I/O currently follows `File<...>` behavior and therefore requires `effects(file_write)` for both read and write calls.
-- **Current unsupported contract:** until backend image file-I/O support lands, `ppm.read`, `ppm.write`, `png.read`, and `png.write` deterministically return unsupported `ImageError` values in VM/native/Wasm/C++ emitter flows instead of ad-hoc compile-time or runtime failures.
-- **Error strings:** `ImageError.why()` currently returns `image_read_unsupported` or `image_write_unsupported`.
+- **Current effect requirement:** image file I/O follows `File<...>` behavior and therefore requires `effects(file_write)`; `ppm.read(...)` also requires `heap_alloc` because it materializes the pixel buffer.
+- **Current backend contract:** `ppm.read(...)` currently parses ASCII `P3` PPM files in VM/native/Wasm (and C++ emitter flows via the shared stdlib implementation). Missing files, malformed headers, unsupported variants such as `P6`, truncated payloads, and out-of-range component values deterministically return `image_invalid_operation`. `ppm.write`, `png.read`, and `png.write` still deterministically return unsupported `ImageError` values.
+- **Error strings:** `ImageError.why()` currently returns `image_read_unsupported`, `image_write_unsupported`, or `image_invalid_operation`.
 - **Example:**
   ```
   import /std/image/*

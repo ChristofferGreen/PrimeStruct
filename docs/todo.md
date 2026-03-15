@@ -146,8 +146,9 @@ Type-resolution graph rollout note: keep the graph migration blocked on the rema
 Deferred graph follow-up note: explicit/implicit template inference, local `auto`, omitted-envelope inference, illegal-cycle diagnostics, performance guardrails, optional parallel solve, query/invalidation work, CT-eval interaction, remaining inference-island migration, sustained performance suites, legacy removal, and end-to-end graph conformance expansion stay parked until the return-kind graph path is stable.
 
 **Backends & IR**
-- ○ Add `/std/image/ppm/*` read implementations and conformance tests for VM/native/Wasm on top of `File<Read>.read_byte(...)`.
+- ✓ Add `/std/image/ppm/*` read implementations and conformance tests for VM/native/Wasm on top of `File<Read>.read_byte(...)`. Progress: `/std/image/ppm/read(...)` now parses ASCII `P3` inputs through shared stdlib byte-reading helpers built on `File<Read>.read_byte(...)`, successful reads materialize `width`/`height` plus flat RGB `vector<i32>` payloads, missing/malformed/unsupported inputs deterministically return `image_invalid_operation`, and compile-run coverage now locks that behavior across VM/native/Wasm plus the shared source-lock/docs expectations.
 - ○ Add `/std/image/ppm/*` write implementations and conformance tests for VM/native/Wasm.
+- ○ Extend `/std/image/ppm/read(...)` beyond ASCII `P3` inputs to binary `P6` and broader format edge cases once the initial parser path is stabilized.
 - ○ Add `/std/image/png/*` read implementations and conformance tests for VM/native/Wasm.
 - ○ Add `/std/image/png/*` write implementations and conformance tests for VM/native/Wasm.
 - ○ Add GLSL reject/diagnostic coverage for image file I/O.

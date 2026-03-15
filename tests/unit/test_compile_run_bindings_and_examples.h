@@ -4304,11 +4304,13 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(primeStructDoc.find("`png.write(path, width, height, pixels) -> Result<ImageError>`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`pixels` is a flat `vector<i32>` in RGB byte order") != std::string::npos);
-  CHECK(primeStructDoc.find("requires `effects(file_write)` for both read and write calls") !=
+  CHECK(primeStructDoc.find("requires `effects(file_write)`; `ppm.read(...)` also requires `heap_alloc`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`ppm.read`, `ppm.write`, `png.read`, and `png.write` deterministically return unsupported `ImageError` values in VM/native/Wasm/C++ emitter flows") !=
+  CHECK(primeStructDoc.find("`ppm.read(...)` currently parses ASCII `P3` PPM files in VM/native/Wasm") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`ImageError.why()` currently returns `image_read_unsupported` or `image_write_unsupported`") !=
+  CHECK(primeStructDoc.find("`ppm.write`, `png.read`, and `png.write` still deterministically return unsupported `ImageError` values") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`ImageError.why()` currently returns `image_read_unsupported`, `image_write_unsupported`, or `image_invalid_operation`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("print_line(Result.why(ppm.read(width, height, pixels, \"input.ppm\"utf8)))") !=
         std::string::npos);
@@ -4318,11 +4320,13 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(imageStdlib.find("[public struct]\n  ImageError()") != std::string::npos);
   CHECK(imageStdlib.find("return(1i32)") != std::string::npos);
   CHECK(imageStdlib.find("return(2i32)") != std::string::npos);
+  CHECK(imageStdlib.find("return(3i32)") != std::string::npos);
   CHECK(imageStdlib.find("\"image_read_unsupported\"utf8") != std::string::npos);
   CHECK(imageStdlib.find("\"image_write_unsupported\"utf8") != std::string::npos);
+  CHECK(imageStdlib.find("\"image_invalid_operation\"utf8") != std::string::npos);
   CHECK(imageStdlib.find("namespace ppm") != std::string::npos);
   CHECK(imageStdlib.find("namespace png") != std::string::npos);
-  CHECK(imageStdlib.find("[public return<Result<ImageError>> effects(file_write)]\n    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path)") !=
+  CHECK(imageStdlib.find("[public return<Result<ImageError>> effects(file_write, heap_alloc)]\n    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path)") !=
         std::string::npos);
   CHECK(imageStdlib.find("[public return<Result<ImageError>> effects(file_write)]\n    write([string] path, [i32] width, [i32] height, [vector<i32>] pixels)") !=
         std::string::npos);
@@ -4333,7 +4337,9 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   REQUIRE(pngStart != std::string::npos);
   REQUIRE(pngStart > ppmStart);
   const std::string ppmBody = imageStdlib.substr(ppmStart, pngStart - ppmStart);
-  CHECK(ppmBody.find("return(unsupported_read())") != std::string::npos);
+  CHECK(ppmBody.find("ppmReadAsciiInt") != std::string::npos);
+  CHECK(ppmBody.find("ppmOpenRead") != std::string::npos);
+  CHECK(ppmBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(ppmBody.find("return(unsupported_write())") != std::string::npos);
   CHECK(ppmBody.find("return(1i32)") == std::string::npos);
   CHECK(ppmBody.find("return(2i32)") == std::string::npos);

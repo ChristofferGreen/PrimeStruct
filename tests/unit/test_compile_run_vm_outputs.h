@@ -157,7 +157,7 @@ TEST_CASE("runs vm file read_byte with deterministic eof") {
   CHECK(readFile(outPath) == "65\n66\nEOF\n99\n");
 }
 
-TEST_CASE("runs vm image api unsupported contract deterministically") {
+TEST_CASE("runs vm image api contract deterministically") {
   const std::string source = R"(
 import /std/image/*
 
@@ -178,10 +178,63 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
-        "image_read_unsupported\n"
+        "image_invalid_operation\n"
         "image_write_unsupported\n"
         "image_read_unsupported\n"
         "image_write_unsupported\n");
+}
+
+TEST_CASE("runs vm ppm read for ascii p3 inputs") {
+  const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read.ppm").string();
+  {
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file << "P3\n2 1\n255\n255 0 0 0 255 128\n";
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = std::string(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/ppm/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  print_line(pixels[3i32])
+  print_line(pixels[4i32])
+  print_line(pixels[5i32])
+  return(plus(width, height))
+}
+)");
+  const std::string srcPath = writeTemp("vm_image_read_ppm.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_ppm.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath) ==
+        "2\n"
+        "1\n"
+        "6\n"
+        "255\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "255\n"
+        "128\n");
 }
 
 TEST_CASE("defaults to cpp extension for emit=cpp") {
