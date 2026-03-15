@@ -1294,6 +1294,40 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
              extractExperimentalMapFieldTypes(inferredReturn, keyTypeOut, valueTypeOut);
     };
+    auto resolveExperimentalMapValueTarget = [&](const Expr &target,
+                                                 std::string &keyTypeOut,
+                                                 std::string &valueTypeOut) -> bool {
+      auto extractValueBinding = [&](const BindingInfo &binding) {
+        const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+        if (normalizedType == "Reference" || normalizedType == "Pointer") {
+          return false;
+        }
+        return extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
+      };
+      keyTypeOut.clear();
+      valueTypeOut.clear();
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          return extractValueBinding(*paramBinding);
+        }
+        auto it = locals.find(target.name);
+        return it != locals.end() && extractValueBinding(it->second);
+      }
+      BindingInfo fieldBinding;
+      if (resolveFieldBindingTarget(target, fieldBinding)) {
+        return extractValueBinding(fieldBinding);
+      }
+      if (target.kind != Expr::Kind::Call) {
+        return false;
+      }
+      auto defIt = defMap_.find(resolveCalleePath(target));
+      if (defIt == defMap_.end() || !defIt->second) {
+        return false;
+      }
+      BindingInfo inferredReturn;
+      return inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+             extractValueBinding(inferredReturn);
+    };
     auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {
       if (helperName == "count") {
         return std::string("mapCount");
@@ -1311,6 +1345,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return std::string("mapAtUnsafe");
       }
       return std::string(helperName);
+    };
+    auto preferredCanonicalExperimentalMapHelperTarget = [&](std::string_view helperName) {
+      return "/std/collections/experimental_map/" + preferredExperimentalMapHelperTarget(helperName);
     };
     resolveMapTarget = [&](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
       keyTypeOut.clear();
@@ -2340,7 +2377,57 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return !def.templateArgs.empty() && def.templateArgs.size() == expr.templateArgs.size();
     };
+    auto explicitMapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {
+      size_t receiverIndex = 0;
+      if (hasNamedArguments(candidate.argNames)) {
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+              *candidate.argNames[i] == "values") {
+            return i;
+          }
+        }
+      }
+      return receiverIndex;
+    };
+    auto tryRewriteExplicitCanonicalExperimentalMapHelperCall = [&](const Expr &candidate, Expr &rewrittenOut) {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
+        return false;
+      }
+      const std::string resolvedPath = resolveCalleePath(candidate);
+      std::string helperName;
+      if (resolvedPath == "/std/collections/map/count") {
+        helperName = "count";
+      } else if (resolvedPath == "/std/collections/map/contains") {
+        helperName = "contains";
+      } else if (resolvedPath == "/std/collections/map/tryAt") {
+        helperName = "tryAt";
+      } else if (resolvedPath == "/std/collections/map/at") {
+        helperName = "at";
+      } else if (resolvedPath == "/std/collections/map/at_unsafe") {
+        helperName = "at_unsafe";
+      } else {
+        return false;
+      }
+      const size_t receiverIndex = explicitMapHelperReceiverIndex(candidate);
+      if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      std::string keyType;
+      std::string valueType;
+      if (!resolveExperimentalMapValueTarget(candidate.args[receiverIndex], keyType, valueType)) {
+        return false;
+      }
+      rewrittenOut = candidate;
+      rewrittenOut.name = preferredCanonicalExperimentalMapHelperTarget(helperName);
+      rewrittenOut.namespacePrefix.clear();
+      return true;
+    };
     const std::string resolvedCallee = resolveCalleePath(expr);
+    Expr rewrittenCanonicalExperimentalMapHelperCall;
+    if (!expr.isMethodCall &&
+        tryRewriteExplicitCanonicalExperimentalMapHelperCall(expr, rewrittenCanonicalExperimentalMapHelperCall)) {
+      return inferExprReturnKind(rewrittenCanonicalExperimentalMapHelperCall, params, locals);
+    }
     if (!expr.isMethodCall && isArrayNamespacedVectorCountCompatibilityCall(expr)) {
       return ReturnKind::Unknown;
     }

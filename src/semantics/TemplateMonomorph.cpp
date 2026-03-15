@@ -2132,6 +2132,63 @@ bool rewriteExpr(Expr &expr,
     }
     return resolvesBuiltinMapReceiver(mapHelperReceiverExpr(expr));
   };
+  auto resolvesExperimentalMapValueReceiver = [&](const Expr *receiverExpr) {
+    if (receiverExpr == nullptr) {
+      return false;
+    }
+    auto unwrapBindingTypeText = [&](const BindingInfo &binding) -> std::string {
+      if (binding.typeName == "Reference" || binding.typeName == "Pointer") {
+        return {};
+      }
+      std::string typeText = binding.typeName;
+      if (!binding.typeTemplateArg.empty()) {
+        typeText += "<" + binding.typeTemplateArg + ">";
+      }
+      return typeText;
+    };
+    auto resolvesExperimentalMapValueTypeText = [&](const std::string &typeText) {
+      if (typeText.empty()) {
+        return false;
+      }
+      std::string localError;
+      ResolvedType resolvedType =
+          resolveTypeString(typeText, mapping, allowedParams, namespacePrefix, ctx, localError);
+      if (!localError.empty()) {
+        return false;
+      }
+      std::string normalized = normalizeBindingTypeName(resolvedType.text);
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      return normalized.rfind("std/collections/experimental_map/Map__", 0) == 0;
+    };
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
+        resolvesExperimentalMapValueTypeText(unwrapBindingTypeText(receiverInfo))) {
+      return true;
+    }
+    const std::string inferredReceiverType =
+        inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare);
+    return resolvesExperimentalMapValueTypeText(inferredReceiverType);
+  };
+  auto experimentalMapHelperPathForCanonicalHelper = [&](const std::string &path) -> std::string {
+    if (path == "/std/collections/map/count") {
+      return "/std/collections/experimental_map/mapCount";
+    }
+    if (path == "/std/collections/map/contains") {
+      return "/std/collections/experimental_map/mapContains";
+    }
+    if (path == "/std/collections/map/tryAt") {
+      return "/std/collections/experimental_map/mapTryAt";
+    }
+    if (path == "/std/collections/map/at") {
+      return "/std/collections/experimental_map/mapAt";
+    }
+    if (path == "/std/collections/map/at_unsafe") {
+      return "/std/collections/experimental_map/mapAtUnsafe";
+    }
+    return {};
+  };
 
   bool allConcrete = true;
   for (auto &templArg : expr.templateArgs) {
@@ -2147,6 +2204,13 @@ bool rewriteExpr(Expr &expr,
 
   if (!expr.isMethodCall) {
     std::string resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx);
+    const std::string experimentalMapPath = experimentalMapHelperPathForCanonicalHelper(resolvedPath);
+    if (!experimentalMapPath.empty() && ctx.sourceDefs.count(experimentalMapPath) > 0 &&
+        resolvesExperimentalMapValueReceiver(mapHelperReceiverExpr(expr))) {
+      resolvedPath = experimentalMapPath;
+      expr.name = experimentalMapPath;
+      expr.namespacePrefix.clear();
+    }
     const std::string originalResolvedPath = resolvedPath;
     const std::string preferredPath = preferVectorStdlibHelperPath(resolvedPath, ctx.sourceDefs);
     if (preferredPath != resolvedPath && ctx.sourceDefs.count(preferredPath) > 0) {

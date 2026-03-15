@@ -1847,6 +1847,10 @@ TEST_CASE("runs vm shared map conformance harness for stdlib and experimental he
   expectSharedMapConformanceHarness("vm");
 }
 
+TEST_CASE("runs vm canonical namespaced map helpers on experimental map values") {
+  expectCanonicalMapNamespaceExperimentalValueConformance("vm");
+}
+
 TEST_CASE("rejects vm canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("vm");
 }

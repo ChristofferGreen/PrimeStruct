@@ -2415,6 +2415,40 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
              extractExperimentalMapFieldTypes(inferredReturn, keyTypeOut, valueTypeOut);
     };
+    auto resolveExperimentalMapValueTarget = [&](const Expr &target,
+                                                 std::string &keyTypeOut,
+                                                 std::string &valueTypeOut) -> bool {
+      auto extractValueBinding = [&](const BindingInfo &binding) {
+        const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+        if (normalizedType == "Reference" || normalizedType == "Pointer") {
+          return false;
+        }
+        return extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
+      };
+      keyTypeOut.clear();
+      valueTypeOut.clear();
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          return extractValueBinding(*paramBinding);
+        }
+        auto it = locals.find(target.name);
+        return it != locals.end() && extractValueBinding(it->second);
+      }
+      BindingInfo fieldBinding;
+      if (resolveFieldBindingTarget(target, fieldBinding)) {
+        return extractValueBinding(fieldBinding);
+      }
+      if (target.kind != Expr::Kind::Call) {
+        return false;
+      }
+      auto defIt = defMap_.find(resolveCalleePath(target));
+      if (defIt == defMap_.end() || !defIt->second) {
+        return false;
+      }
+      BindingInfo inferredReturn;
+      return inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+             extractValueBinding(inferredReturn);
+    };
     resolveMapTarget = [&](const Expr &target) -> bool {
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -2527,6 +2561,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return std::string(helperName);
     };
+    auto preferredCanonicalExperimentalMapHelperTarget = [&](std::string_view helperName) {
+      return "/std/collections/experimental_map/" + preferredExperimentalMapHelperTarget(helperName);
+    };
     auto shouldBuiltinValidateCurrentMapWrapperHelper = [&](std::string_view helperName) {
       if (helperName == "count") {
         return definitionPathContains("/mapCount");
@@ -2568,6 +2605,39 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         rewrittenOut.name = preferredBareMapHelperTarget(helperName);
       }
+      rewrittenOut.namespacePrefix.clear();
+      return true;
+    };
+    auto tryRewriteCanonicalExperimentalMapHelperCall = [&](const Expr &candidate, Expr &rewrittenOut) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
+        return false;
+      }
+      const std::string resolvedPath = resolveCalleePath(candidate);
+      std::string helperName;
+      if (resolvedPath == "/std/collections/map/count") {
+        helperName = "count";
+      } else if (resolvedPath == "/std/collections/map/contains") {
+        helperName = "contains";
+      } else if (resolvedPath == "/std/collections/map/tryAt") {
+        helperName = "tryAt";
+      } else if (resolvedPath == "/std/collections/map/at") {
+        helperName = "at";
+      } else if (resolvedPath == "/std/collections/map/at_unsafe") {
+        helperName = "at_unsafe";
+      } else {
+        return false;
+      }
+      const size_t receiverIndex = mapHelperReceiverIndex(candidate);
+      if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      std::string keyType;
+      std::string valueType;
+      if (!resolveExperimentalMapValueTarget(candidate.args[receiverIndex], keyType, valueType)) {
+        return false;
+      }
+      rewrittenOut = candidate;
+      rewrittenOut.name = preferredCanonicalExperimentalMapHelperTarget(helperName);
       rewrittenOut.namespacePrefix.clear();
       return true;
     };
@@ -3579,6 +3649,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     };
 
     std::string resolved = resolveCalleePath(expr);
+    Expr rewrittenCanonicalExperimentalMapHelperCall;
+    if (!expr.isMethodCall &&
+        tryRewriteCanonicalExperimentalMapHelperCall(expr, rewrittenCanonicalExperimentalMapHelperCall)) {
+      return validateExpr(params, locals, rewrittenCanonicalExperimentalMapHelperCall);
+    }
     bool resolvedMethod = false;
     bool usedMethodTarget = false;
     bool hasMethodReceiverIndex = false;

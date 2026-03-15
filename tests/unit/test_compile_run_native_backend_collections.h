@@ -2244,6 +2244,10 @@ TEST_CASE("compiles and runs native shared map conformance harness for stdlib an
   expectSharedMapConformanceHarness("native");
 }
 
+TEST_CASE("compiles and runs native canonical namespaced map helpers on experimental map values") {
+  expectCanonicalMapNamespaceExperimentalValueConformance("native");
+}
+
 TEST_CASE("rejects native canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("native");
 }
