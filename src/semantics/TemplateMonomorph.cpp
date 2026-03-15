@@ -3102,7 +3102,7 @@ bool rewriteExpr(Expr &expr,
 
   if (!expr.isMethodCall) {
     if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
-      if (!rewriteCanonicalExperimentalMapConstructorExpr(*receiverExpr)) {
+      if (!rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
         return false;
       }
     }
@@ -3126,7 +3126,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
-        if (!rewriteCanonicalExperimentalMapConstructorExpr(*receiverExpr)) {
+        if (!rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
           return false;
         }
       }
@@ -3144,7 +3144,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
-        if (!rewriteCanonicalExperimentalMapConstructorExpr(*receiverExpr)) {
+        if (!rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
           return false;
         }
       }
@@ -3271,7 +3271,7 @@ bool rewriteExpr(Expr &expr,
   }
   if (expr.isMethodCall) {
     if (!expr.args.empty()) {
-      if (!rewriteCanonicalExperimentalMapConstructorExpr(expr.args.front())) {
+      if (!rewriteNestedExperimentalMapConstructorValue(expr.args.front())) {
         return false;
       }
     }

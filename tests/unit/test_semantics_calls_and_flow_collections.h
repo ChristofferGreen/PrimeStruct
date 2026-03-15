@@ -5973,6 +5973,71 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("helper-wrapped canonical map helpers accept direct experimental constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(io_err)]
+unexpectedWrappedExperimentalMapHelperReceiverError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedWrappedExperimentalMapHelperReceiverError>]
+main() {
+  [i32] found{try(/std/collections/map/tryAt(wrapValues(/std/collections/map/map("left"raw_utf8, 4i32,
+                                                                                  "right"raw_utf8, 7i32)),
+                                            "left"raw_utf8))}
+  [i32 mut] total{plus(/std/collections/map/count(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                                      "right"raw_utf8, 7i32))),
+                          found)}
+  assign(total, plus(total, /std/collections/map/at(wrapValues(/std/collections/mapPair("extra"raw_utf8, 9i32,
+                                                                                        "other"raw_utf8, 2i32)),
+                                                    "extra"raw_utf8)))
+  assign(total, plus(total, /std/collections/map/at_unsafe(wrapValues(/std/collections/mapPair("bonus"raw_utf8, 5i32,
+                                                                                               "keep"raw_utf8, 1i32)),
+                                                           "bonus"raw_utf8)))
+  if(/std/collections/map/contains(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                       "right"raw_utf8, 7i32)),
+                                   "right"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped canonical map helpers keep mismatch diagnostics on direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/count(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                        "wrong"raw_utf8, false))))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("experimental map methods accept direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
@@ -6009,6 +6074,64 @@ import /std/collections/experimental_map/*
 [effects(heap_alloc), return<int>]
 main() {
   return(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false).count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped experimental map methods accept direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(io_err)]
+unexpectedWrappedExperimentalMapMethodReceiverError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedWrappedExperimentalMapMethodReceiverError>]
+main() {
+  [i32] found{try(wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+                  .tryAt("left"raw_utf8))}
+  [i32 mut] total{plus(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)).count(),
+                          found)}
+  assign(total, plus(total, wrapValues(/std/collections/mapPair("extra"raw_utf8, 9i32, "other"raw_utf8, 2i32))
+                                .at("extra"raw_utf8)))
+  assign(total, plus(total, wrapValues(/std/collections/mapPair("bonus"raw_utf8, 5i32, "keep"raw_utf8, 1i32))
+                                .at_unsafe("bonus"raw_utf8)))
+  if(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)).contains("right"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped experimental map methods keep mismatch diagnostics on direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)).count())
 }
 )";
   std::string error;
