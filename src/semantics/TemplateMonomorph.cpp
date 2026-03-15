@@ -2311,6 +2311,24 @@ bool rewriteExpr(Expr &expr,
     }
     return {};
   };
+  auto experimentalMapHelperPathForWrapperHelper = [&](const std::string &path) -> std::string {
+    if (path == "/std/collections/mapCount") {
+      return "/std/collections/experimental_map/mapCount";
+    }
+    if (path == "/std/collections/mapContains") {
+      return "/std/collections/experimental_map/mapContains";
+    }
+    if (path == "/std/collections/mapTryAt") {
+      return "/std/collections/experimental_map/mapTryAt";
+    }
+    if (path == "/std/collections/mapAt") {
+      return "/std/collections/experimental_map/mapAt";
+    }
+    if (path == "/std/collections/mapAtUnsafe") {
+      return "/std/collections/experimental_map/mapAtUnsafe";
+    }
+    return {};
+  };
   auto experimentalMapConstructorHelperPath = [&](size_t argumentCount) -> std::string {
     switch (argumentCount) {
     case 0:
@@ -2499,6 +2517,16 @@ bool rewriteExpr(Expr &expr,
         resolvesExperimentalMapValueReceiver(mapHelperReceiverExpr(expr))) {
       resolvedPath = experimentalMapPath;
       expr.name = experimentalMapPath;
+      expr.namespacePrefix.clear();
+      if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
+        rewriteCanonicalExperimentalMapConstructorExpr(*receiverExpr);
+      }
+    }
+    const std::string experimentalWrapperMapPath = experimentalMapHelperPathForWrapperHelper(resolvedPath);
+    if (!experimentalWrapperMapPath.empty() && ctx.sourceDefs.count(experimentalWrapperMapPath) > 0 &&
+        resolvesExperimentalMapValueReceiver(mapHelperReceiverExpr(expr))) {
+      resolvedPath = experimentalWrapperMapPath;
+      expr.name = experimentalWrapperMapPath;
       expr.namespacePrefix.clear();
       if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
         rewriteCanonicalExperimentalMapConstructorExpr(*receiverExpr);
