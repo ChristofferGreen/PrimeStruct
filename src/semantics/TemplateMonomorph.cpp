@@ -3022,6 +3022,64 @@ bool rewriteExpr(Expr &expr,
     }
     return false;
   };
+  std::function<bool(const Expr &, BindingInfo &)> resolveAssignmentTargetBinding;
+  auto resolveDereferenceBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
+    if (target.kind != Expr::Kind::Call || target.args.size() != 1) {
+      return false;
+    }
+    std::string pointerBuiltin;
+    if (!getBuiltinPointerName(target, pointerBuiltin) || pointerBuiltin != "dereference") {
+      return false;
+    }
+    std::function<bool(const Expr &, BindingInfo &)> inferPointerBinding =
+        [&](const Expr &pointerExpr, BindingInfo &pointerOut) -> bool {
+      if (inferBindingTypeForMonomorph(pointerExpr, params, locals, allowMathBare, ctx, pointerOut)) {
+        return true;
+      }
+      if (pointerExpr.kind != Expr::Kind::Call || pointerExpr.args.size() != 1) {
+        return false;
+      }
+      std::string nestedPointerBuiltin;
+      if (!getBuiltinPointerName(pointerExpr, nestedPointerBuiltin) || nestedPointerBuiltin != "location") {
+        return false;
+      }
+      BindingInfo pointeeInfo;
+      if (!resolveAssignmentTargetBinding(pointerExpr.args.front(), pointeeInfo)) {
+        return false;
+      }
+      const std::string pointeeTypeText = bindingTypeToString(pointeeInfo);
+      if (pointeeTypeText.empty()) {
+        return false;
+      }
+      pointerOut.typeName = "Reference";
+      pointerOut.typeTemplateArg = pointeeTypeText;
+      return true;
+    };
+    BindingInfo pointerInfo;
+    if (!inferPointerBinding(target.args.front(), pointerInfo)) {
+      return false;
+    }
+    const std::string normalizedPointerType = normalizeBindingTypeName(pointerInfo.typeName);
+    if ((normalizedPointerType != "Reference" && normalizedPointerType != "Pointer") ||
+        pointerInfo.typeTemplateArg.empty()) {
+      return false;
+    }
+    std::string pointeeBase;
+    std::string pointeeArgText;
+    if (splitTemplateTypeName(pointerInfo.typeTemplateArg, pointeeBase, pointeeArgText) && !pointeeBase.empty()) {
+      bindingOut.typeName = pointeeBase;
+      bindingOut.typeTemplateArg = pointeeArgText;
+    } else {
+      bindingOut.typeName = pointerInfo.typeTemplateArg;
+      bindingOut.typeTemplateArg.clear();
+    }
+    return true;
+  };
+  resolveAssignmentTargetBinding = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
+    return inferBindingTypeForMonomorph(target, params, locals, allowMathBare, ctx, bindingOut) ||
+           resolveFieldBindingTarget(target, bindingOut) ||
+           resolveDereferenceBindingTarget(target, bindingOut);
+  };
 
   rewriteNestedExperimentalMapConstructorValue = [&](Expr &candidate) -> bool {
     if (candidate.isBinding && candidate.args.size() == 1) {
@@ -3326,8 +3384,7 @@ bool rewriteExpr(Expr &expr,
         return;
       }
       BindingInfo targetInfo;
-      if (!inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, targetInfo) &&
-          !resolveFieldBindingTarget(expr.args.front(), targetInfo)) {
+      if (!resolveAssignmentTargetBinding(expr.args.front(), targetInfo)) {
         return;
       }
       std::string targetTypeText = targetInfo.typeName;
