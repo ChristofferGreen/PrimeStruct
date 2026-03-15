@@ -237,6 +237,109 @@ main() {
         "128\n");
 }
 
+TEST_CASE("runs vm ppm read for binary p6 inputs") {
+  const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_p6.ppm").string();
+  {
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file << "P6\n2 1\n255\n";
+    file.put(static_cast<char>(255));
+    file.put(static_cast<char>(0));
+    file.put(static_cast<char>(0));
+    file.put(static_cast<char>(0));
+    file.put(static_cast<char>(255));
+    file.put(static_cast<char>(128));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = std::string(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/ppm/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  print_line(pixels[3i32])
+  print_line(pixels[4i32])
+  print_line(pixels[5i32])
+  return(plus(width, height))
+}
+)");
+  const std::string srcPath = writeTemp("vm_image_read_p6.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_p6.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath) ==
+        "2\n"
+        "1\n"
+        "6\n"
+        "255\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "255\n"
+        "128\n");
+}
+
+TEST_CASE("rejects truncated vm binary ppm reads deterministically") {
+  const std::string inPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_p6_truncated.ppm").string();
+  {
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file << "P6\n2 1\n255\n";
+    file.put(static_cast<char>(255));
+    file.put(static_cast<char>(0));
+    file.put(static_cast<char>(0));
+    file.put(static_cast<char>(0));
+    file.put(static_cast<char>(255));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = std::string(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{7i32}
+  [i32 mut] height{9i32}
+  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [Result<ImageError>] status{/std/image/ppm/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  print_line(Result.why(status))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  return(0i32)
+}
+)");
+  const std::string srcPath = writeTemp("vm_image_read_p6_truncated.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_p6_truncated.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) ==
+        "image_invalid_operation\n"
+        "0\n"
+        "0\n"
+        "0\n");
+}
+
 TEST_CASE("runs vm ppm write for ascii p3 outputs") {
   const std::filesystem::path outPath = std::filesystem::temp_directory_path() / "primec_vm_image_write.ppm";
   std::error_code ec;

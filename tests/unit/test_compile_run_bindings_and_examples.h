@@ -4306,7 +4306,9 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(primeStructDoc.find("`pixels` is a flat `vector<i32>` in RGB byte order") != std::string::npos);
   CHECK(primeStructDoc.find("requires `effects(file_write)`; `ppm.read(...)` also requires `heap_alloc`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`ppm.read(...)` currently parses ASCII `P3` PPM files in VM/native/Wasm") !=
+  CHECK(primeStructDoc.find("`ppm.read(...)` currently parses ASCII `P3` and binary `P6` PPM files in VM/native/Wasm") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("unsupported max values, non-positive dimensions, missing binary-raster separators, truncated payloads, and out-of-range ASCII component values deterministically return `image_invalid_operation`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`ppm.write(...)` now emits ASCII `P3` PPM files in VM/native/Wasm") !=
         std::string::npos);
@@ -4342,6 +4344,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   REQUIRE(pngStart > ppmStart);
   const std::string ppmBody = imageStdlib.substr(ppmStart, pngStart - ppmStart);
   CHECK(ppmBody.find("ppmReadAsciiInt") != std::string::npos);
+  CHECK(ppmBody.find("ppmReadBinaryRasterLead") != std::string::npos);
   CHECK(ppmBody.find("ppmOpenRead") != std::string::npos);
   CHECK(ppmBody.find("ppmOpenWrite") != std::string::npos);
   CHECK(ppmBody.find("ppmWriteInputValid") != std::string::npos);

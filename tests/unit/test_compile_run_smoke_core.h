@@ -513,8 +513,8 @@ main() {
   }
 }
 
-TEST_CASE("primec wasm wasi rejects unsupported ppm variants deterministically") {
-  const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_ppm_invalid_runtime";
+TEST_CASE("primec wasm wasi supports binary p6 ppm inputs") {
+  const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_ppm_p6_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
   std::filesystem::create_directories(tempRoot, ec);
@@ -523,10 +523,86 @@ TEST_CASE("primec wasm wasi rejects unsupported ppm variants deterministically")
   {
     std::ofstream input(tempRoot / "input.ppm", std::ios::binary);
     REQUIRE(input.good());
-    input << "P6\n1 1\n255\n";
+    input << "P6\n2 1\n255\n";
     input.put(static_cast<char>(255));
     input.put(static_cast<char>(0));
     input.put(static_cast<char>(0));
+    input.put(static_cast<char>(0));
+    input.put(static_cast<char>(255));
+    input.put(static_cast<char>(128));
+    REQUIRE(input.good());
+  }
+
+  const std::string source = R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/ppm/read(width, height, pixels, "input.ppm"utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  print_line(pixels[3i32])
+  print_line(pixels[4i32])
+  print_line(pixels[5i32])
+  return(plus(width, height))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_ppm_p6.prime", source);
+  const std::string wasmPath = (tempRoot / "ppm_p6.wasm").string();
+  const std::string compileErrPath = (tempRoot / "ppm_p6_compile_err.txt").string();
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+
+  if (hasWasmtime()) {
+    const std::string outPath = (tempRoot / "ppm_p6_stdout.txt").string();
+    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
+                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(wasmRunCmd) == 3);
+    CHECK(readFile(outPath) ==
+          "2\n"
+          "1\n"
+          "6\n"
+          "255\n"
+          "0\n"
+          "0\n"
+          "0\n"
+          "255\n"
+          "128\n");
+  }
+}
+
+TEST_CASE("primec wasm wasi rejects truncated binary ppm reads deterministically") {
+  const std::filesystem::path tempRoot =
+      std::filesystem::temp_directory_path() / "primec_wasm_ppm_p6_truncated_runtime";
+  std::error_code ec;
+  std::filesystem::remove_all(tempRoot, ec);
+  std::filesystem::create_directories(tempRoot, ec);
+  REQUIRE(!ec);
+
+  {
+    std::ofstream input(tempRoot / "input.ppm", std::ios::binary);
+    REQUIRE(input.good());
+    input << "P6\n2 1\n255\n";
+    input.put(static_cast<char>(255));
+    input.put(static_cast<char>(0));
+    input.put(static_cast<char>(0));
+    input.put(static_cast<char>(0));
+    input.put(static_cast<char>(255));
     REQUIRE(input.good());
   }
 
@@ -546,16 +622,16 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_emit_wasm_ppm_invalid.prime", source);
-  const std::string wasmPath = (tempRoot / "ppm_invalid.wasm").string();
-  const std::string compileErrPath = (tempRoot / "ppm_invalid_compile_err.txt").string();
+  const std::string srcPath = writeTemp("compile_emit_wasm_ppm_p6_truncated.prime", source);
+  const std::string wasmPath = (tempRoot / "ppm_p6_truncated.wasm").string();
+  const std::string compileErrPath = (tempRoot / "ppm_p6_truncated_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
   CHECK(runCommand(wasmCmd) == 0);
   CHECK(std::filesystem::exists(wasmPath));
 
   if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "ppm_invalid_stdout.txt").string();
+    const std::string outPath = (tempRoot / "ppm_p6_truncated_stdout.txt").string();
     const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
                                    quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
     CHECK(runCommand(wasmRunCmd) == 0);
