@@ -417,6 +417,80 @@ inline std::string makeCanonicalMapWrapperExperimentalReferenceConformanceSource
   return source;
 }
 
+inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<Reference<Map<string, i32>>>]\n";
+  source += "borrowExperimentalMap([Reference<Map<string, i32>>] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedCanonicalExperimentalMapBorrowedRefError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapBorrowedRefError>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}\n";
+  source += "  [i32] found{try(/std/collections/map/tryAt_ref<string, i32>(ref, \"left\"raw_utf8))}\n";
+  source +=
+      "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt_ref<string, i32>(ref, \"missing\"raw_utf8)}\n";
+  source += "  [i32 mut] total{plus(/std/collections/map/count_ref<string, i32>(ref), found)}\n";
+  source += "  assign(total, plus(total, /std/collections/map/at_ref<string, i32>(ref, \"left\"raw_utf8)))\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/map/at_unsafe_ref<string, i32>(ref, \"right\"raw_utf8)))\n";
+  source += "  if(/std/collections/map/contains_ref<string, i32>(ref, \"left\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  if(not(/std/collections/map/contains_ref<string, i32>(ref, \"missing\"raw_utf8)),\n";
+  source += "     then() { assign(total, plus(total, 2i32)) },\n";
+  source += "     else() { })\n";
+  source += "  print_line(Result.why(missing))\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalMapWrapperExperimentalBorrowedRefConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<Reference<Map<string, i32>>>]\n";
+  source += "borrowExperimentalMap([Reference<Map<string, i32>>] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedCanonicalExperimentalMapWrapperBorrowedRefError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapWrapperBorrowedRefError>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}\n";
+  source += "  [i32] found{try(/std/collections/mapTryAtRef<string, i32>(ref, \"left\"raw_utf8))}\n";
+  source +=
+      "  [Result<i32, ContainerError>] missing{/std/collections/mapTryAtRef<string, i32>(ref, \"missing\"raw_utf8)}\n";
+  source += "  [i32 mut] total{plus(/std/collections/mapCountRef<string, i32>(ref), found)}\n";
+  source += "  assign(total, plus(total, /std/collections/mapAtRef<string, i32>(ref, \"left\"raw_utf8)))\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/mapAtUnsafeRef<string, i32>(ref, \"right\"raw_utf8)))\n";
+  source += "  if(/std/collections/mapContainsRef<string, i32>(ref, \"left\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  if(not(/std/collections/mapContainsRef<string, i32>(ref, \"missing\"raw_utf8)),\n";
+  source += "     then() { assign(total, plus(total, 2i32)) },\n";
+  source += "     else() { })\n";
+  source += "  print_line(Result.why(missing))\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceNamedArgsSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -827,6 +901,64 @@ inline void expectCanonicalMapWrapperExperimentalReferenceConformance(const std:
                                  " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/mapCount") != std::string::npos);
+}
+
+inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {
+  const std::string source = makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource();
+  const std::string srcPath =
+      writeTemp("map_namespace_canonical_experimental_borrowed_ref_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_map_namespace_canonical_experimental_borrowed_ref_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 20);
+    CHECK(readFile(outPath) == "container missing key\n");
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_map_namespace_canonical_experimental_borrowed_ref_" + emitMode + "_exe"))
+          .string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == 20);
+  CHECK(readFile(outPath) == "container missing key\n");
+}
+
+inline void expectCanonicalMapWrapperExperimentalBorrowedRefConformance(const std::string &emitMode) {
+  const std::string source = makeCanonicalMapWrapperExperimentalBorrowedRefConformanceSource();
+  const std::string srcPath =
+      writeTemp("map_wrapper_canonical_experimental_borrowed_ref_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_map_wrapper_canonical_experimental_borrowed_ref_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 20);
+    CHECK(readFile(outPath) == "container missing key\n");
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_map_wrapper_canonical_experimental_borrowed_ref_" + emitMode + "_exe"))
+          .string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == 20);
+  CHECK(readFile(outPath) == "container missing key\n");
 }
 
 inline void expectCanonicalMapNamespaceNamedArgsConformance(const std::string &emitMode) {

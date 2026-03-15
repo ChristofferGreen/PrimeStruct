@@ -1855,12 +1855,20 @@ TEST_CASE("rejects vm canonical namespaced map helpers on borrowed experimental 
   expectCanonicalMapNamespaceExperimentalReferenceConformance("vm");
 }
 
+TEST_CASE("runs vm canonical namespaced map _ref helpers on borrowed experimental map values") {
+  expectCanonicalMapNamespaceExperimentalBorrowedRefConformance("vm");
+}
+
 TEST_CASE("runs vm canonical map wrapper helpers on experimental map values") {
   expectCanonicalMapWrapperExperimentalConformance("vm");
 }
 
 TEST_CASE("rejects vm canonical map wrapper helpers on borrowed experimental map values") {
   expectCanonicalMapWrapperExperimentalReferenceConformance("vm");
+}
+
+TEST_CASE("runs vm canonical map wrapper Ref helpers on borrowed experimental map values") {
+  expectCanonicalMapWrapperExperimentalBorrowedRefConformance("vm");
 }
 
 TEST_CASE("runs vm experimental map methods") {
