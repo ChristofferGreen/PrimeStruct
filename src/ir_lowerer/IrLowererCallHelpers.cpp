@@ -608,6 +608,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     error = "native backend does not support to_aos";
     return NativeCallTailDispatchResult::Error;
   }
+  if (isExplicitMapHelperFallbackPath(expr)) {
+    return NativeCallTailDispatchResult::NotHandled;
+  }
 
   const auto countAccessResult = tryEmitCountAccessCall(
       expr,
