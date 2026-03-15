@@ -38,6 +38,7 @@ bool emitInlineDefinitionCallParameters(
       auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Array ||
             paramInfo.argsPackElementKind == LocalInfo::Kind::Vector ||
+            (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference && paramInfo.referenceToArray) ||
             paramInfo.argsPackElementKind == LocalInfo::Kind::Map) {
           if (!emitExpr(argExpr, callerLocals)) {
             return false;
@@ -97,6 +98,11 @@ bool emitInlineDefinitionCallParameters(
           error = "variadic parameter type mismatch";
           return false;
         }
+        if (callerIt->second.referenceToArray != paramInfo.referenceToArray ||
+            callerIt->second.referenceToMap != paramInfo.referenceToMap) {
+          error = "variadic parameter type mismatch";
+          return false;
+        }
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Map &&
             (callerIt->second.mapKeyKind != paramInfo.mapKeyKind ||
              callerIt->second.mapValueKind != paramInfo.mapValueKind)) {
@@ -114,6 +120,8 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.structSlotCount = callerIt->second.structSlotCount;
         paramInfo.mapKeyKind = callerIt->second.mapKeyKind;
         paramInfo.mapValueKind = callerIt->second.mapValueKind;
+        paramInfo.referenceToArray = callerIt->second.referenceToArray;
+        paramInfo.referenceToMap = callerIt->second.referenceToMap;
         calleeLocals.emplace(param.name, paramInfo);
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(callerIt->second.index));
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));

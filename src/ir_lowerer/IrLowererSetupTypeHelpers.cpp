@@ -1843,6 +1843,11 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
             typeNameOut = "vector";
             return true;
           }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+              localIt->second.referenceToArray) {
+            typeNameOut = "array";
+            return true;
+          }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Array) {
             typeNameOut = "array";
             return true;

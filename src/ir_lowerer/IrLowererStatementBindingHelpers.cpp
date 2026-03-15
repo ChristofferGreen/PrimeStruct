@@ -67,6 +67,20 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
     return;
   }
+  if (base == "Reference") {
+    std::string refBase;
+    std::string refArg;
+    if (!splitTemplateTypeName(trimTemplateTypeText(arg), refBase, refArg)) {
+      return;
+    }
+    refBase = normalizeCollectionBindingTypeName(refBase);
+    if (refBase == "array") {
+      infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
+      infoOut.referenceToArray = true;
+      infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(refArg));
+      return;
+    }
+  }
   if (base == "vector") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Vector;
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
