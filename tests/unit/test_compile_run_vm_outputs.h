@@ -194,7 +194,7 @@ TEST_CASE("runs vm ppm read for ascii p3 inputs") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -202,7 +202,7 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  [Result<ImageError>] status{/std/image/ppm/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/ppm/read(width, height, pixels, "__PATH__"utf8)}
   if(Result.error(status),
      then() {
        print_line(Result.why(status))
@@ -220,7 +220,7 @@ main() {
   print_line(pixels[5i32])
   return(plus(width, height))
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_ppm.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_ppm.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
@@ -253,7 +253,7 @@ TEST_CASE("runs vm ppm read for binary p6 inputs") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -261,7 +261,7 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  [Result<ImageError>] status{/std/image/ppm/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/ppm/read(width, height, pixels, "__PATH__"utf8)}
   if(Result.error(status),
      then() {
        print_line(Result.why(status))
@@ -279,7 +279,7 @@ main() {
   print_line(pixels[5i32])
   return(plus(width, height))
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_p6.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_p6.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
@@ -312,7 +312,7 @@ TEST_CASE("rejects truncated vm binary ppm reads deterministically") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -320,14 +320,14 @@ main() {
   [i32 mut] width{7i32}
   [i32 mut] height{9i32}
   [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
-  [Result<ImageError>] status{/std/image/ppm/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/ppm/read(width, height, pixels, "__PATH__"utf8)}
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
   print_line(count(pixels))
   return(0i32)
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_p6_truncated.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_p6_truncated.txt").string();
@@ -346,19 +346,19 @@ TEST_CASE("runs vm ppm write for ascii p3 outputs") {
   std::filesystem::remove(outPath, ec);
 
   const std::string escapedPath = escapeStringLiteral(outPath.string());
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(file_write), return<int>]
 main() {
   [vector<i32>] pixels{vector<i32>(255i32, 0i32, 0i32, 0i32, 255i32, 128i32)}
-  [Result<ImageError>] status{/std/image/ppm/write(")") + escapedPath + R"("utf8, 2i32, 1i32, pixels)}
+  [Result<ImageError>] status{/std/image/ppm/write("__PATH__"utf8, 2i32, 1i32, pixels)}
   if(Result.error(status),
      then() { return(1i32) },
      else() { })
   return(0i32)
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_write_ppm.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
@@ -380,17 +380,17 @@ TEST_CASE("rejects invalid vm ppm write inputs deterministically") {
   std::filesystem::remove(outPath, ec);
 
   const std::string escapedPath = escapeStringLiteral(outPath.string());
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(io_out, file_write), return<int>]
 main() {
   [vector<i32>] pixels{vector<i32>(255i32, 0i32, 0i32)}
-  [Result<ImageError>] status{/std/image/ppm/write(")") + escapedPath + R"("utf8, 2i32, 1i32, pixels)}
+  [Result<ImageError>] status{/std/image/ppm/write("__PATH__"utf8, 2i32, 1i32, pixels)}
   print_line(Result.why(status))
   return(0i32)
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_write_invalid.prime", source);
   const std::string stdoutPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_write_invalid.txt").string();
@@ -421,7 +421,7 @@ TEST_CASE("runs vm png read for stored rgba inputs") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -429,7 +429,7 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
   if(Result.error(status),
      then() {
        print_line(Result.why(status))
@@ -444,7 +444,7 @@ main() {
   print_line(pixels[2i32])
   return(plus(width, height))
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_png.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
@@ -480,7 +480,7 @@ TEST_CASE("runs vm png read for stored sub-filter rgba inputs") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -488,7 +488,7 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
   if(Result.error(status),
      then() {
        print_line(Result.why(status))
@@ -506,7 +506,7 @@ main() {
   print_line(pixels[5i32])
   return(plus(width, height))
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_sub_png.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_sub_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
@@ -545,7 +545,7 @@ TEST_CASE("runs vm png read for stored up-filter rgba inputs") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -553,7 +553,7 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
   if(Result.error(status),
      then() {
        print_line(Result.why(status))
@@ -571,7 +571,7 @@ main() {
   print_line(pixels[5i32])
   return(plus(width, height))
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_up_png.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_up_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
@@ -611,7 +611,7 @@ TEST_CASE("runs vm png read for stored average-filter rgba inputs") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -619,7 +619,7 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
   if(Result.error(status),
      then() {
        print_line(Result.why(status))
@@ -637,7 +637,7 @@ main() {
   print_line(pixels[5i32])
   return(plus(width, height))
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_average_png.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_average_png.txt").string();
@@ -676,7 +676,7 @@ TEST_CASE("runs vm png read for fixed-huffman backreference rgba inputs") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -684,7 +684,7 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
   if(Result.error(status),
      then() {
        print_line(Result.why(status))
@@ -705,7 +705,7 @@ main() {
   print_line(pixels[8i32])
   return(plus(width, height))
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_fixed_sub_png.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_fixed_sub_png.txt").string();
@@ -750,7 +750,7 @@ TEST_CASE("runs vm png read for dynamic-huffman literal rgb inputs") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -758,7 +758,7 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
   if(Result.error(status),
      then() {
        print_line(Result.why(status))
@@ -776,7 +776,7 @@ main() {
   print_line(pixels[5i32])
   return(plus(width, height))
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_dynamic_literal_png.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_dynamic_literal_png.txt").string();
@@ -818,7 +818,7 @@ TEST_CASE("runs vm png read for dynamic-huffman backreference rgba inputs") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -826,7 +826,7 @@ main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}
   [vector<i32> mut] pixels{vector<i32>()}
-  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
   if(Result.error(status),
      then() {
        print_line(Result.why(status))
@@ -847,7 +847,7 @@ main() {
   print_line(pixels[8i32])
   return(plus(width, height))
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_dynamic_backref_png.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_dynamic_backref_png.txt").string();
@@ -879,7 +879,7 @@ TEST_CASE("rejects malformed vm png inputs deterministically") {
   }
 
   const std::string escapedPath = escapeStringLiteral(inPath);
-  const std::string source = std::string(R"(
+  const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
@@ -887,14 +887,14 @@ main() {
   [i32 mut] width{7i32}
   [i32 mut] height{9i32}
   [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
-  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
   print_line(count(pixels))
   return(0i32)
 }
-)");
+)", escapedPath);
   const std::string srcPath = writeTemp("vm_image_read_invalid_png.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid_png.txt").string();

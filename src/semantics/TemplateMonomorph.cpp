@@ -683,6 +683,9 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
   if (value == "std/collections/map") {
     return "map";
   }
+  if (value == "std/collections/experimental_map/Map") {
+    return "map";
+  }
   return value;
 }
 
@@ -2048,10 +2051,22 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
   }
   const size_t helperSlash = def.fullPath.find_last_of('/');
   const std::string helperName = helperSlash == std::string::npos ? def.fullPath : def.fullPath.substr(helperSlash + 1);
+  auto splitInlineTemplateType = [](BindingInfo &info) {
+    if (!info.typeTemplateArg.empty()) {
+      return;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(info.typeName, base, argText) && !base.empty()) {
+      info.typeName = base;
+      info.typeTemplateArg = argText;
+    }
+  };
   BindingInfo receiverParamInfo;
   if (!extractExplicitBindingType(def.parameters.front(), receiverParamInfo)) {
     return false;
   }
+  splitInlineTemplateType(receiverParamInfo);
   const std::string normalizedReceiverParamType = normalizeCollectionReceiverTypeName(receiverParamInfo.typeName);
   size_t expectedTemplateArgCount = 0;
   if (family == HelperFamily::Vector) {
@@ -2109,6 +2124,7 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
   const bool inferredReceiverBinding =
       inferBindingTypeForMonomorph(*orderedArgs.front(), params, locals, allowMathBare, ctx, receiverArgInfo);
   if (inferredReceiverBinding) {
+    splitInlineTemplateType(receiverArgInfo);
     receiverArgType = normalizeCollectionReceiverTypeName(receiverArgInfo.typeName);
     receiverArgTemplateArg = receiverArgInfo.typeTemplateArg;
   }
@@ -2263,6 +2279,16 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/map/tryAt" || path == "/std/collections/map/at" ||
            path == "/std/collections/map/at_unsafe";
   };
+  auto isCanonicalStdlibCollectionHelperPath = [&](const std::string &path) {
+    if (isCanonicalBuiltinMapHelperPath(path)) {
+      return true;
+    }
+    return path == "/std/collections/vector/count" || path == "/std/collections/vector/capacity" ||
+           path == "/std/collections/vector/push" || path == "/std/collections/vector/pop" ||
+           path == "/std/collections/vector/reserve" || path == "/std/collections/vector/clear" ||
+           path == "/std/collections/vector/remove_at" || path == "/std/collections/vector/remove_swap" ||
+           path == "/std/collections/vector/at" || path == "/std/collections/vector/at_unsafe";
+  };
   auto mapHelperReceiverExpr = [&](const Expr &candidate) -> const Expr * {
     if (candidate.isMethodCall) {
       return candidate.args.empty() ? nullptr : &candidate.args.front();
@@ -2327,11 +2353,14 @@ bool rewriteExpr(Expr &expr,
     }
     return normalizeCollectionReceiverTypeName(inferredReceiverType) == "map";
   };
-  auto shouldDeferCanonicalBuiltinMapHelperTemplateRewrite = [&](const std::string &path) {
-    if (!expr.templateArgs.empty() || !isCanonicalBuiltinMapHelperPath(path)) {
+  auto shouldDeferStdlibCollectionHelperTemplateRewrite = [&](const std::string &path) {
+    if (!expr.templateArgs.empty() || !isCanonicalStdlibCollectionHelperPath(path)) {
       return false;
     }
-    return resolvesBuiltinMapReceiver(mapHelperReceiverExpr(expr));
+    if (isCanonicalBuiltinMapHelperPath(path)) {
+      return resolvesBuiltinMapReceiver(mapHelperReceiverExpr(expr));
+    }
+    return true;
   };
   auto resolvesExperimentalMapValueReceiver = [&](const Expr *receiverExpr) {
     if (receiverExpr == nullptr) {
@@ -2769,7 +2798,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (expr.templateArgs.empty()) {
-        if (shouldDeferCanonicalBuiltinMapHelperTemplateRewrite(resolvedPath)) {
+        if (shouldDeferStdlibCollectionHelperTemplateRewrite(resolvedPath)) {
           return true;
         }
         error = "template arguments required for " + resolvedPath;
@@ -2871,7 +2900,7 @@ bool rewriteExpr(Expr &expr,
           }
         }
         if (expr.templateArgs.empty()) {
-          if (shouldDeferCanonicalBuiltinMapHelperTemplateRewrite(methodPath)) {
+          if (shouldDeferStdlibCollectionHelperTemplateRewrite(methodPath)) {
             return true;
           }
           error = "template arguments required for " + methodPath;

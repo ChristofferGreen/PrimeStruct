@@ -73,6 +73,19 @@ std::string quoteShellArg(const std::string &value) {
   return quoted;
 }
 
+std::string escapeStringLiteral(const std::string &text);
+
+std::string injectEscapedPath(std::string source, const std::string &escapedPath) {
+  const std::string needle = "__PATH__";
+  const size_t pos = source.find(needle);
+  CHECK(pos != std::string::npos);
+  if (pos == std::string::npos) {
+    return source;
+  }
+  source.replace(pos, needle.size(), escapedPath);
+  return source;
+}
+
 std::string makeDapFrame(const std::string &payload) {
   return "Content-Length: " + std::to_string(payload.size()) + "\r\n\r\n" + payload;
 }

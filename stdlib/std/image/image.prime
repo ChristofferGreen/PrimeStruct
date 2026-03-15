@@ -54,20 +54,8 @@ namespace std {
   }
 
   [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
-  ppmOpenRead([uninitialized<File<Read>> mut] storage, [string] path) {
-    init(storage, File<Read>(path)?)
-    return(0i32)
-  }
-
-  [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
   ppmReadByteStatus([File<Read>] file, [i32 mut] value) {
     file.read_byte(value)?
-    return(0i32)
-  }
-
-  [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
-  ppmOpenWrite([uninitialized<File<Write>> mut] storage, [string] path) {
-    init(storage, File<Write>(path)?)
     return(0i32)
   }
 
@@ -284,8 +272,8 @@ namespace std {
   }
 
   [return<bool>]
-  pngBitDepthAllowed([i32] bitDepth, [i32] a, [i32] b, [i32] c, [i32] d, [i32] e) {
-    return(or(or(equal(bitDepth, a), equal(bitDepth, b)), or(or(equal(bitDepth, c), equal(bitDepth, d)), equal(bitDepth, e))))
+  pngBitDepthAllowed([i32] bitDepth, [i32] a, [i32] b, [i32] c, [i32] d, [i32] valueE) {
+    return(or(or(equal(bitDepth, a), equal(bitDepth, b)), or(or(equal(bitDepth, c), equal(bitDepth, d)), equal(bitDepth, valueE))))
   }
 
   [return<bool>]
@@ -1112,14 +1100,17 @@ namespace std {
                 assign(byteIndex, plus(byteIndex, 1i32))
               },
               else() { })
-           if(not_equal(minus(compressedCount, byteIndex), 4i32),
-              then() { return(1i32) },
-              else() { })
-           if(not(pngAdlerValid(output, compressed[byteIndex], compressed[plus(byteIndex, 1i32)],
-                                 compressed[plus(byteIndex, 2i32)], compressed[plus(byteIndex, 3i32)])),
-              then() { return(1i32) },
-              else() { })
-           return(0i32)
+	          if(not_equal(minus(compressedCount, byteIndex), 4i32),
+	             then() { return(1i32) },
+	             else() { })
+	          [i32] adlerBHigh{compressed[byteIndex]}
+	          [i32] adlerBLow{compressed[plus(byteIndex, 1i32)]}
+	          [i32] adlerAHigh{compressed[plus(byteIndex, 2i32)]}
+	          [i32] adlerALow{compressed[plus(byteIndex, 3i32)]}
+	          if(not(pngAdlerValid(output, adlerBHigh, adlerBLow, adlerAHigh, adlerALow)),
+	             then() { return(1i32) },
+	             else() { })
+	          return(0i32)
          },
          else() { })
     })
@@ -1206,56 +1197,48 @@ namespace std {
   }
 
   namespace ppm {
-    [public return<Result<ImageError>> effects(file_write, heap_alloc)]
-    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
-      resetReadOutputs(width, height, pixels)
-
-      [uninitialized<File<Read>> mut] fileStorage{uninitialized<File<Read>>()}
-      [i32] openStatus{ppmOpenRead(fileStorage, path)}
-      if(not_equal(openStatus, 0i32),
-         then() { return(invalidOperation()) },
-         else() { })
-
-      [File<Read>] file{take(fileStorage)}
+    [effects(file_write, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
+    readImpl([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
+      [File<Read>] file{File<Read>(path)?}
       [i32 mut] hasPending{0i32}
       [i32 mut] pendingByte{0i32}
       [i32 mut] byte{0i32}
       [i32 mut] formatByte{0i32}
       [i32 mut] status{ppmNextByte(file, hasPending, pendingByte, byte)}
       if(or(not_equal(status, 0i32), not_equal(byte, 80i32)),
-         then() { return(invalidOperation()) },
+         then() { return(1i32) },
          else() { })
 
       assign(status, ppmNextByte(file, hasPending, pendingByte, byte))
       if(or(not_equal(status, 0i32), and(not_equal(byte, 51i32), not_equal(byte, 54i32))),
-         then() { return(invalidOperation()) },
+         then() { return(1i32) },
          else() { assign(formatByte, byte) })
       assign(status, ppmNextByte(file, hasPending, pendingByte, byte))
       if(not_equal(status, 0i32),
-         then() { return(invalidOperation()) },
+         then() { return(1i32) },
          else() { })
       if(or(ppmIsWhitespace(byte), equal(byte, 35i32)),
          then() {
            assign(hasPending, 1i32)
            assign(pendingByte, byte)
          },
-         else() { return(invalidOperation()) })
+         else() { return(1i32) })
 
       [i32 mut] parsedWidth{0i32}
       [i32 mut] parsedHeight{0i32}
       [i32 mut] maxValue{0i32}
       assign(status, ppmReadAsciiInt(file, hasPending, pendingByte, parsedWidth))
       if(not_equal(status, 0i32),
-         then() { return(invalidOperation()) },
+         then() { return(1i32) },
          else() { })
       assign(status, ppmReadAsciiInt(file, hasPending, pendingByte, parsedHeight))
       if(not_equal(status, 0i32),
-         then() { return(invalidOperation()) },
+         then() { return(1i32) },
          else() { })
       assign(status, ppmReadAsciiInt(file, hasPending, pendingByte, maxValue))
       if(or(or(not_equal(status, 0i32), not_equal(maxValue, 255i32)),
             or(less_equal(parsedWidth, 0i32), less_equal(parsedHeight, 0i32))),
-         then() { return(invalidOperation()) },
+         then() { return(1i32) },
          else() { })
 
       [i32] pixelCount{multiply(multiply(parsedWidth, parsedHeight), 3i32)}
@@ -1268,7 +1251,7 @@ namespace std {
              if(or(not_equal(status, 0i32), or(less_than(component, 0i32), greater_than(component, 255i32))),
                 then() {
                   resetReadOutputs(width, height, pixels)
-                  return(invalidOperation())
+                  return(1i32)
                 },
                 else() { })
              push(pixels, component)
@@ -1278,7 +1261,7 @@ namespace std {
          else() {
            assign(status, ppmReadBinaryRasterLead(file, hasPending, pendingByte, component))
            if(not_equal(status, 0i32),
-              then() { return(invalidOperation()) },
+              then() { return(1i32) },
               else() { })
            push(pixels, component)
            assign(index, 1i32)
@@ -1287,7 +1270,7 @@ namespace std {
              if(not_equal(status, 0i32),
                 then() {
                   resetReadOutputs(width, height, pixels)
-                  return(invalidOperation())
+                  return(1i32)
                 },
                 else() { })
              push(pixels, component)
@@ -1297,25 +1280,32 @@ namespace std {
 
       assign(width, parsedWidth)
       assign(height, parsedHeight)
+      return(0i32)
+    }
+
+    [public return<Result<ImageError>> effects(file_write, heap_alloc)]
+    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
+      resetReadOutputs(width, height, pixels)
+      [i32] status{readImpl(width, height, pixels, path)}
+      if(not_equal(status, 0i32),
+         then() {
+           resetReadOutputs(width, height, pixels)
+           return(invalidOperation())
+         },
+         else() { })
       return(Result.ok())
     }
 
-    [public return<Result<ImageError>> effects(file_write)]
-    write([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
+    [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+    writeImpl([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
       if(not(ppmWriteInputValid(width, height, pixels)),
-         then() { return(invalidOperation()) },
+         then() { return(1i32) },
          else() { })
 
-      [uninitialized<File<Write>> mut] fileStorage{uninitialized<File<Write>>()}
-      [i32] openStatus{ppmOpenWrite(fileStorage, path)}
-      if(not_equal(openStatus, 0i32),
-         then() { return(invalidOperation()) },
-         else() { })
-
-      [File<Write>] file{take(fileStorage)}
+      [File<Write>] file{File<Write>(path)?}
       [i32 mut] status{ppmWriteHeader(file, width, height)}
       if(not_equal(status, 0i32),
-         then() { return(invalidOperation()) },
+         then() { return(1i32) },
          else() { })
 
       [i32] pixelCount{count(pixels)}
@@ -1323,29 +1313,30 @@ namespace std {
       while(less_than(index, pixelCount), do() {
         assign(status, ppmWriteComponent(file, pixels[index]))
         if(not_equal(status, 0i32),
-           then() { return(invalidOperation()) },
+           then() { return(1i32) },
            else() { })
         increment(index)
       })
+      return(0i32)
+    }
+
+    [public return<Result<ImageError>> effects(file_write)]
+    write([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
+      [i32] status{writeImpl(path, width, height, pixels)}
+      if(not_equal(status, 0i32),
+         then() { return(invalidOperation()) },
+         else() { })
       return(Result.ok())
     }
   }
 
   namespace png {
-    [public return<Result<ImageError>> effects(file_write, heap_alloc)]
-    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
-      resetReadOutputs(width, height, pixels)
-
-      [uninitialized<File<Read>> mut] fileStorage{uninitialized<File<Read>>()}
-      [i32] openStatus{ppmOpenRead(fileStorage, path)}
-      if(not_equal(openStatus, 0i32),
-         then() { return(invalidOperation()) },
-         else() { })
-
-      [File<Read>] file{take(fileStorage)}
+    [effects(file_write, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
+    readImpl([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
+      [File<Read>] file{File<Read>(path)?}
       [i32] signatureStatus{pngValidateSignature(file)}
       if(not_equal(signatureStatus, 0i32),
-         then() { return(invalidOperation()) },
+         then() { return(1i32) },
          else() { })
 
       [i32 mut] sawIhdr{0i32}
@@ -1361,7 +1352,7 @@ namespace std {
         [i32 mut] chunkLength{0i32}
         [i32] lengthStatus{pngReadU32Be(file, chunkLength)}
         if(or(not_equal(lengthStatus, 0i32), less_than(chunkLength, 0i32)),
-           then() { return(invalidOperation()) },
+           then() { return(1i32) },
            else() { })
 
         [i32 mut] typeA{0i32}
@@ -1370,34 +1361,34 @@ namespace std {
         [i32 mut] typeD{0i32}
         [i32] typeStatus{pngReadChunkType(file, typeA, typeB, typeC, typeD)}
         if(not_equal(typeStatus, 0i32),
-           then() { return(invalidOperation()) },
+           then() { return(1i32) },
            else() { })
 
         if(equal(sawIhdr, 0i32),
            then() {
              if(or(not(pngChunkIsIhdr(typeA, typeB, typeC, typeD)), not_equal(chunkLength, 13i32)),
-                then() { return(invalidOperation()) },
+                then() { return(1i32) },
                 else() { })
              assign(sawIhdr, 1i32)
              [i32] ihdrStatus{pngReadIhdr(file, parsedWidth, parsedHeight, bitDepth, colorType, interlace)}
              if(not_equal(ihdrStatus, 0i32),
-                then() { return(invalidOperation()) },
+                then() { return(1i32) },
                 else() { })
              [i32] ihdrCrcStatus{pngSkipBytes(file, 4i32)}
              if(not_equal(ihdrCrcStatus, 0i32),
-                then() { return(invalidOperation()) },
+                then() { return(1i32) },
                 else() { })
            },
            else() {
              if(pngChunkIsIhdr(typeA, typeB, typeC, typeD),
-                then() { return(invalidOperation()) },
+                then() { return(1i32) },
                 else() { })
              if(pngChunkIsIdat(typeA, typeB, typeC, typeD),
                 then() {
                   assign(sawIdat, 1i32)
                   [i32] payloadStatus{pngAppendBytes(file, chunkLength, idatBytes)}
                   if(not_equal(payloadStatus, 0i32),
-                     then() { return(invalidOperation()) },
+                     then() { return(1i32) },
                      else() { })
                 },
                 else() { })
@@ -1405,50 +1396,69 @@ namespace std {
                 then() {
                   [i32] payloadStatus{pngSkipBytes(file, chunkLength)}
                   if(not_equal(payloadStatus, 0i32),
-                     then() { return(invalidOperation()) },
+                     then() { return(1i32) },
                      else() { })
                 },
                 else() { })
              [i32] crcStatus{pngSkipBytes(file, 4i32)}
              if(not_equal(crcStatus, 0i32),
-                then() { return(invalidOperation()) },
+                then() { return(1i32) },
                 else() { })
              if(pngChunkIsIend(typeA, typeB, typeC, typeD),
                 then() {
                   if(or(not_equal(chunkLength, 0i32), equal(sawIdat, 0i32)),
-                     then() { return(invalidOperation()) },
+                     then() { return(1i32) },
                      else() {
                        [i32] inflateStatus{pngInflateDeflateBlocks(idatBytes, rawBytes)}
                        if(equal(inflateStatus, 1i32),
-                          then() { return(invalidOperation()) },
+                          then() { return(1i32) },
                           else() { })
                        if(equal(inflateStatus, 2i32),
-                          then() { return(unsupported_read()) },
+                          then() { return(2i32) },
                           else() { })
 
                        [i32] decodeStatus{pngDecodeScanlines(rawBytes, parsedWidth, parsedHeight, bitDepth, colorType, interlace, pixels)}
                        if(equal(decodeStatus, 1i32),
                           then() {
                             resetReadOutputs(width, height, pixels)
-                            return(invalidOperation())
+                            return(1i32)
                           },
                           else() { })
                        if(equal(decodeStatus, 2i32),
                           then() {
                             resetReadOutputs(width, height, pixels)
-                            return(unsupported_read())
+                            return(2i32)
                           },
                           else() { })
 
                        assign(width, parsedWidth)
                        assign(height, parsedHeight)
-                       return(Result.ok())
+                       return(0i32)
                      })
                 },
                 else() { })
            })
       })
-      return(invalidOperation())
+      return(1i32)
+    }
+
+    [public return<Result<ImageError>> effects(file_write, heap_alloc)]
+    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
+      resetReadOutputs(width, height, pixels)
+      [i32] status{readImpl(width, height, pixels, path)}
+      if(equal(status, 1i32),
+         then() {
+           resetReadOutputs(width, height, pixels)
+           return(invalidOperation())
+         },
+         else() { })
+      if(equal(status, 2i32),
+         then() {
+           resetReadOutputs(width, height, pixels)
+           return(unsupported_read())
+         },
+         else() { })
+      return(Result.ok())
     }
 
     [public return<Result<ImageError>> effects(file_write)]
