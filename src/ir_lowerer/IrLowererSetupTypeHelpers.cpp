@@ -156,7 +156,8 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path);
 
 bool isBuiltinMapHelperSuffix(const std::string &suffix) {
-  return suffix == "count" || suffix == "at" || suffix == "at_unsafe";
+  return suffix == "count" || suffix == "contains" || suffix == "tryAt" || suffix == "at" ||
+         suffix == "at_unsafe";
 }
 
 void pruneRemovedMapCompatibilityCallReturnCandidates(std::vector<std::string> &candidates,

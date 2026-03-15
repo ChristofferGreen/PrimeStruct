@@ -19497,9 +19497,15 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition canonicalCountDef;
   canonicalCountDef.fullPath = "/std/collections/map/count";
+  primec::Definition canonicalContainsDef;
+  canonicalContainsDef.fullPath = "/std/collections/map/contains";
+  primec::Definition canonicalTryAtDef;
+  canonicalTryAtDef.fullPath = "/std/collections/map/tryAt";
   primec::Definition canonicalAtDef;
   canonicalAtDef.fullPath = "/std/collections/map/at";
   defMap.emplace("/std/collections/map/count", &canonicalCountDef);
+  defMap.emplace("/std/collections/map/contains", &canonicalContainsDef);
+  defMap.emplace("/std/collections/map/tryAt", &canonicalTryAtDef);
   defMap.emplace("/std/collections/map/at", &canonicalAtDef);
 
   std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
@@ -19508,6 +19514,18 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
   countInfo.returnsArray = false;
   countInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
   infoByPath.emplace("/std/collections/map/count", countInfo);
+
+  primec::ir_lowerer::ReturnInfo containsInfo;
+  containsInfo.returnsVoid = false;
+  containsInfo.returnsArray = false;
+  containsInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+  infoByPath.emplace("/std/collections/map/contains", containsInfo);
+
+  primec::ir_lowerer::ReturnInfo tryAtInfo;
+  tryAtInfo.returnsVoid = false;
+  tryAtInfo.returnsArray = false;
+  tryAtInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  infoByPath.emplace("/std/collections/map/tryAt", tryAtInfo);
 
   primec::ir_lowerer::ReturnInfo accessInfo;
   accessInfo.returnsVoid = false;
@@ -19532,6 +19550,40 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
   bool definitionMatched = false;
   CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       countCall,
+      defMap,
+      [](const primec::Expr &expr) { return expr.name; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &definitionMatched));
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr containsCall;
+  containsCall.kind = primec::Expr::Kind::Call;
+  containsCall.name = "/map/contains";
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  definitionMatched = false;
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+      containsCall,
+      defMap,
+      [](const primec::Expr &expr) { return expr.name; },
+      getReturnInfo,
+      false,
+      kindOut,
+      &definitionMatched));
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr tryAtCall;
+  tryAtCall.kind = primec::Expr::Kind::Call;
+  tryAtCall.name = "/map/tryAt";
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  definitionMatched = false;
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+      tryAtCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
       getReturnInfo,
