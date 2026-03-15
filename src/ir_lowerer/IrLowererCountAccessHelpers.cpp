@@ -230,6 +230,22 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
            it->second.kind == LocalInfo::Kind::Map;
   }
   if (target.kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
+        target.args.front().kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(target.args.front().name);
+      if (localIt != localsIn.end() && localIt->second.isArgsPack) {
+        const LocalInfo &info = localIt->second;
+        if (info.argsPackElementKind == LocalInfo::Kind::Array ||
+            info.argsPackElementKind == LocalInfo::Kind::Vector ||
+            info.argsPackElementKind == LocalInfo::Kind::Map ||
+            (info.argsPackElementKind == LocalInfo::Kind::Reference &&
+             (info.referenceToArray || info.referenceToMap)) ||
+            info.isSoaVector) {
+          return true;
+        }
+      }
+    }
     std::string collection;
     if (!getBuiltinCollectionName(target, collection)) {
       return false;

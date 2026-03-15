@@ -222,7 +222,12 @@
         }
         return true;
       }
-      if (valueKind == LocalInfo::ValueKind::Unknown && kind != LocalInfo::Kind::Map) {
+      if (valueKind == LocalInfo::ValueKind::Unknown &&
+          kind != LocalInfo::Kind::Map &&
+          info.structTypeName.empty() &&
+          !info.isSoaVector &&
+          info.kind != LocalInfo::Kind::Pointer &&
+          info.kind != LocalInfo::Kind::Reference) {
         error = "native backend requires typed bindings";
         return false;
       }

@@ -595,7 +595,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 24);
+  CHECK(result == 30);
 }
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed count methods") {

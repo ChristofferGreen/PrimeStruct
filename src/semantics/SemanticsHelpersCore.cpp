@@ -94,6 +94,26 @@ std::string normalizeBindingTypeName(const std::string &name) {
   return name;
 }
 
+std::string unwrapReferencePointerTypeText(const std::string &typeText) {
+  std::string current = normalizeBindingTypeName(typeText);
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(current, base, argText)) {
+      return current;
+    }
+    base = normalizeBindingTypeName(base);
+    if (base != "Reference" && base != "Pointer") {
+      return current;
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+      return current;
+    }
+    current = normalizeBindingTypeName(args.front());
+  }
+}
+
 bool isBuiltinMapComparableKeyTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
   return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "f32" ||
@@ -1199,6 +1219,37 @@ bool isPointerLikeExpr(const Expr &expr,
   }
   if (expr.kind != Expr::Kind::Call) {
     return false;
+  }
+  std::string accessName;
+  if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
+    size_t receiverIndex = 0;
+    if (!expr.isMethodCall) {
+      bool foundValues = false;
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
+          receiverIndex = i;
+          foundValues = true;
+          break;
+        }
+      }
+      if (!foundValues) {
+        receiverIndex = 0;
+      }
+    }
+    if (receiverIndex < expr.args.size() && expr.args[receiverIndex].kind == Expr::Kind::Name) {
+      const BindingInfo *binding = findBinding(params, locals, expr.args[receiverIndex].name);
+      std::string elementType;
+      if (binding != nullptr && getArgsPackElementType(*binding, elementType)) {
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(normalizeBindingTypeName(elementType), base, argText)) {
+          base = normalizeBindingTypeName(base);
+          if (base == "Pointer" || base == "Reference") {
+            return true;
+          }
+        }
+      }
+    }
   }
   std::string builtinName;
   if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {

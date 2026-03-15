@@ -35,6 +35,10 @@ bool emitInlineDefinitionCallParameters(
       StructSlotLayoutInfo structLayout;
       const bool isStructPack =
           !paramInfo.structTypeName.empty() && paramInfo.argsPackElementKind == LocalInfo::Kind::Value;
+      const bool isWrappedStructPack =
+          !paramInfo.structTypeName.empty() &&
+          (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
+           paramInfo.argsPackElementKind == LocalInfo::Kind::Reference);
 
       auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Array ||
@@ -145,7 +149,8 @@ bool emitInlineDefinitionCallParameters(
           error = "variadic parameter type mismatch";
           return false;
         }
-        if (paramInfo.argsPackElementKind == LocalInfo::Kind::Map &&
+        if ((paramInfo.argsPackElementKind == LocalInfo::Kind::Map ||
+             (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference && paramInfo.referenceToMap)) &&
             (callerIt->second.mapKeyKind != paramInfo.mapKeyKind ||
              callerIt->second.mapValueKind != paramInfo.mapValueKind)) {
           error = "variadic parameter type mismatch";
@@ -177,7 +182,9 @@ bool emitInlineDefinitionCallParameters(
           continue;
         }
         if (packedArg.isSpread) {
-          error = "native backend requires spread variadic forwarding to use an args<T> parameter";
+          if (error.empty()) {
+            error = "native backend requires spread variadic forwarding to use an args<T> parameter";
+          }
           return false;
         }
       }
@@ -194,7 +201,9 @@ bool emitInlineDefinitionCallParameters(
           return false;
         }
         paramInfo.structSlotCount = structLayout.totalSlots;
-      } else if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown && !paramInfo.isSoaVector) {
+      } else if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown &&
+                 !paramInfo.isSoaVector &&
+                 !isWrappedStructPack) {
         error = "native backend only supports numeric/bool/string variadic args parameters";
         return false;
       }

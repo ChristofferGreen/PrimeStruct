@@ -72,6 +72,7 @@ bool isPrimitiveBindingTypeName(const std::string &name);
 bool isSoftwareNumericTypeName(const std::string &name);
 std::optional<std::string> findSoftwareNumericType(const std::string &typeName);
 std::string normalizeBindingTypeName(const std::string &name);
+std::string unwrapReferencePointerTypeText(const std::string &typeText);
 bool isBuiltinMapComparableKeyTypeName(const std::string &name);
 bool validateBuiltinMapKeyType(const std::string &typeName,
                                const std::vector<std::string> *templateArgs,

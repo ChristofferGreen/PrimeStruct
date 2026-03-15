@@ -2,6 +2,7 @@
 
 #include "IrLowererHelpers.h"
 #include "IrLowererCallHelpers.h"
+#include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererSetupTypeHelpers.h"
@@ -526,6 +527,11 @@ bool buildCallableDefinitionCallContext(
     if (!inferParameterLocalInfo(param, definitionLocals, info, error)) {
       return false;
     }
+    if (info.isArgsPack && info.argsPackElementCount < 0) {
+      // Synthetic callable lowering has no concrete caller, but mixed forwarding still
+      // needs a non-negative pack size to lower deterministically.
+      info.argsPackElementCount = 0;
+    }
     if (info.valueKind == LocalInfo::ValueKind::Unknown && info.structTypeName.empty()) {
       error = "native backend requires typed parameters on " + def.fullPath;
       return false;
@@ -561,6 +567,16 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
   for (const auto &def : program.definitions) {
     if (def.fullPath == entryDef.fullPath || isStructDefinition(def) ||
         loweredCallTargets.find(def.fullPath) == loweredCallTargets.end()) {
+      continue;
+    }
+    bool hasArgsPackParam = false;
+    for (const auto &param : def.parameters) {
+      if (isArgsPackBinding(param)) {
+        hasArgsPackParam = true;
+        break;
+      }
+    }
+    if (hasArgsPackParam) {
       continue;
     }
 

@@ -2530,7 +2530,7 @@ bool rewriteExpr(Expr &expr,
       return false;
     }
     if (isCanonicalBuiltinMapHelperPath(path)) {
-      return resolvesBuiltinMapReceiver(mapHelperReceiverExpr(expr));
+      return resolvesBuiltinMapReceiver(mapHelperReceiverExpr(expr)) && ctx.templateDefs.count(path) == 0;
     }
     return true;
   };
@@ -3124,6 +3124,7 @@ bool rewriteExpr(Expr &expr,
           return false;
         }
       }
+    }
     const std::string originalResolvedPath = resolvedPath;
     const std::string preferredPath = preferVectorStdlibHelperPath(resolvedPath, ctx.sourceDefs);
     if (preferredPath != resolvedPath && ctx.sourceDefs.count(preferredPath) > 0) {

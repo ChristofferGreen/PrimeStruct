@@ -883,12 +883,6 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
   }
   ArgumentLabelGuard labelGuard(*this);
   bool sawSpreadArg = false;
-  auto nextNonCommentToken = [&](size_t index) -> size_t {
-    while (index < tokens_.size() && tokens_[index].kind == TokenKind::Comment) {
-      ++index;
-    }
-    return index;
-  };
   while (true) {
     if (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
       if (matchRaw(TokenKind::Comma)) {

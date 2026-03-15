@@ -2,7 +2,7 @@
   CHECK(result == 5);
 }
 
-TEST_CASE("ir lowerer rejects string vector literals") {
+TEST_CASE("ir lowerer supports string vector literals") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -16,8 +16,14 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("native backend only supports numeric/bool vector literals") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 1);
 }
 
 TEST_CASE("ir lowerer supports float bindings") {

@@ -1156,7 +1156,9 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       if (accessReceiver.kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(accessReceiver.name);
         if (localIt != localsIn.end() && localIt->second.isArgsPack &&
-            localIt->second.argsPackElementKind == LocalInfo::Kind::Map) {
+            (localIt->second.argsPackElementKind == LocalInfo::Kind::Map ||
+             (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+              localIt->second.referenceToMap))) {
           info.isMapTarget = true;
           info.mapKeyKind = localIt->second.mapKeyKind;
           info.mapValueKind = localIt->second.mapValueKind;
@@ -1523,6 +1525,28 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     return info;
   }
   if (target.kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+      const Expr &accessReceiver = target.args.front();
+      if (accessReceiver.kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(accessReceiver.name);
+        if (localIt != localsIn.end() && localIt->second.isArgsPack) {
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Vector) {
+            info.isArrayOrVectorTarget = true;
+            info.elemKind = localIt->second.valueKind;
+            info.isVectorTarget = true;
+            return info;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Array ||
+              (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+               localIt->second.referenceToArray)) {
+            info.isArrayOrVectorTarget = true;
+            info.elemKind = localIt->second.valueKind;
+            return info;
+          }
+        }
+      }
+    }
     std::string collection;
     if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
         target.templateArgs.size() == 1) {
@@ -1621,6 +1645,11 @@ bool emitArrayVectorIndexedAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm);
+  if (arrayVectorTargetInfo.isArgsPackTarget &&
+      arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
+      !arrayVectorTargetInfo.structTypeName.empty()) {
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+  }
   return true;
 }
 
@@ -2242,11 +2271,11 @@ void emitArrayVectorAccessLoad(
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(basePtrLocal));
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
   if (!isVectorTarget) {
-    emitInstruction(pushOneForIndex(indexKind), arrayHeaderSlots);
     if (elementSlotCount > 1) {
       emitInstruction(pushOneForIndex(indexKind), static_cast<uint64_t>(elementSlotCount));
       emitInstruction(mulForIndex(indexKind), 0);
     }
+    emitInstruction(pushOneForIndex(indexKind), arrayHeaderSlots);
     emitInstruction(addForIndex(indexKind), 0);
   } else if (elementSlotCount > 1) {
     emitInstruction(pushOneForIndex(indexKind), static_cast<uint64_t>(elementSlotCount));

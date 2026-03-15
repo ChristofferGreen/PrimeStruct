@@ -12084,8 +12084,6 @@ TEST_CASE("ir lowerer call helpers build inline call ordered arguments") {
   callExpr.args = {receiverArg, valueArg};
   callExpr.argNames = {std::nullopt, std::nullopt};
   const primec::ir_lowerer::LocalMap callerLocals;
-  std::vector<const primec::Expr *> packedArgs;
-  size_t packedParamIndex = 0;
 
   REQUIRE(primec::ir_lowerer::buildInlineCallOrderedArguments(
       callExpr,
@@ -12168,9 +12166,10 @@ TEST_CASE("ir lowerer call helpers collect packed variadic inline call arguments
   callExpr.name = "collect";
   callExpr.args = {headArg, firstPackedArg, spreadPackedArg};
   callExpr.argNames = {std::nullopt, std::nullopt, std::nullopt};
+  const primec::ir_lowerer::LocalMap callerLocals;
 
   REQUIRE(primec::ir_lowerer::buildInlineCallOrderedArguments(
-      callExpr, helperDef, structNames, paramsOut, orderedArgs, packedArgs, packedParamIndex, error));
+      callExpr, helperDef, structNames, callerLocals, paramsOut, orderedArgs, packedArgs, packedParamIndex, error));
   CHECK(error.empty());
   REQUIRE(orderedArgs.size() == 2u);
   REQUIRE(orderedArgs[0] != nullptr);
@@ -13873,7 +13872,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   error.clear();
   CHECK_FALSE(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error ==
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<vector<T>> packs");
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Reference<Struct>>/args<vector<T>> packs");
 
   primec::ir_lowerer::ArrayVectorAccessTargetInfo stringElem;
   stringElem.isArrayOrVectorTarget = true;
@@ -14303,7 +14302,7 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
       [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
       error));
   CHECK(error ==
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<vector<T>> packs");
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Reference<Struct>>/args<vector<T>> packs");
   CHECK(inferCalls == 0);
   CHECK(allocCalls == 0);
   CHECK(emitExprCalls == 0);

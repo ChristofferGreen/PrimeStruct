@@ -524,6 +524,23 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     out.errorType = "FileError";
     return true;
   }
+  std::string accessName;
+  if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 && !expr.args.empty()) {
+    const Expr &receiver = expr.args.front();
+    if (receiver.kind == Expr::Kind::Name) {
+      const BindingInfo *binding = findParamBinding(params, receiver.name);
+      if (!binding) {
+        auto it = locals.find(receiver.name);
+        if (it != locals.end()) {
+          binding = &it->second;
+        }
+      }
+      std::string elemType;
+      if (binding != nullptr && getArgsPackElementType(*binding, elemType)) {
+        return resolveResultTypeFromTypeName(unwrapReferencePointerTypeText(elemType), out);
+      }
+    }
+  }
   if (expr.isMethodCall) {
     if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
         expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {

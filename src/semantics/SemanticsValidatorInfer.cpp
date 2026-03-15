@@ -1169,22 +1169,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
-    auto resolveArgsPackCountTarget = [&](const Expr &target, std::string &elemType) -> bool {
-      elemType.clear();
-      auto resolveBinding = [&](const BindingInfo &binding) {
-        return getArgsPackElementType(binding, elemType);
-      };
-      if (target.kind == Expr::Kind::Name) {
-        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          return resolveBinding(*paramBinding);
-        }
-        auto it = locals.find(target.name);
-        if (it != locals.end()) {
-          return resolveBinding(it->second);
-        }
-      }
-      return false;
-    };
     auto resolveVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -2963,7 +2947,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     };
     std::string resolvedCallee = resolveCalleePath(expr);
     std::string canonicalExperimentalMapHelperResolved;
-    if (!expr.isMethodCall &&
+    if (!expr.isMethodCall && defMap_.count(resolvedCallee) == 0 &&
         canonicalizeExperimentalMapHelperResolvedPath(resolvedCallee, canonicalExperimentalMapHelperResolved)) {
       resolvedCallee = canonicalExperimentalMapHelperResolved;
     }
@@ -3276,13 +3260,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool shouldBuiltinValidateStdNamespacedVectorCountCall =
         isStdNamespacedVectorCountCall && hasStdNamespacedVectorCountDefinition;
     const bool isStdNamespacedMapCountCall =
-        !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/map/count", 0) == 0;
+        !expr.isMethodCall && resolveCalleePath(expr) == "/std/collections/map/count";
     const bool isNamespacedVectorCountCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
         isVectorBuiltinName(expr, "count") && !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
-        !isMapNamespacedCountCompatibilityCall(expr) && !isStdNamespacedMapCountCall;
+        !isMapNamespacedCountCompatibilityCall(expr) && !isStdNamespacedMapCountCall &&
+        defMap_.find(resolved) == defMap_.end();
     const bool prefersExplicitDirectMapAccessAliasDefinition =
         !expr.isMethodCall &&
         (((isNamespacedMapHelperCall && (namespacedHelper == "at" || namespacedHelper == "at_unsafe")) ||
@@ -3320,7 +3305,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         hasImportedDefinitionPath(resolveCalleePath(expr));
     const bool isStdNamespacedMapAccessSpelling =
         hasBuiltinAccessSpelling && !expr.isMethodCall &&
-        resolveCalleePath(expr).rfind("/std/collections/map/at", 0) == 0;
+        (resolveCalleePath(expr) == "/std/collections/map/at" ||
+         resolveCalleePath(expr) == "/std/collections/map/at_unsafe");
     const bool hasStdNamespacedMapAccessDefinition =
         isStdNamespacedMapAccessSpelling &&
         hasImportedDefinitionPath(resolveCalleePath(expr));
@@ -3342,7 +3328,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         !expr.isMethodCall && isBuiltinAccess && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
         !prefersExplicitDirectMapAccessAliasDefinition &&
-        !isMapNamespacedAccessCompatibilityCall(expr);
+        !isMapNamespacedAccessCompatibilityCall(expr) &&
+        defMap_.find(resolved) == defMap_.end();
     auto definitionPathContains = [&](std::string_view needle) {
       return currentDefinitionPath_.find(std::string(needle)) != std::string::npos;
     };
@@ -4974,10 +4961,45 @@ std::string SemanticsValidator::inferStructReturnPath(
       }
       return extractAnyMapKeyValueTypes(it->second, keyTypeOut, valueTypeOut);
     }
-    if (target.kind == Expr::Kind::Call) {
-      std::string collectionTypePath;
-      if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/map") {
-        std::vector<std::string> args;
+      if (target.kind == Expr::Kind::Call) {
+        std::string accessName;
+        if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+          size_t receiverIndex = target.isMethodCall ? 0 : 0;
+          if (!target.isMethodCall) {
+            bool foundValues = false;
+            for (size_t i = 0; i < target.args.size(); ++i) {
+              if (i < target.argNames.size() && target.argNames[i].has_value() &&
+                  *target.argNames[i] == "values") {
+                receiverIndex = i;
+                foundValues = true;
+                break;
+              }
+            }
+            if (!foundValues) {
+              receiverIndex = 0;
+            }
+          }
+          if (receiverIndex < target.args.size() && target.args[receiverIndex].kind == Expr::Kind::Name) {
+            if (const BindingInfo *paramBinding = findParamBinding(params, target.args[receiverIndex].name)) {
+              std::string elemType;
+              if (getArgsPackElementType(*paramBinding, elemType) &&
+                  extractMapKeyValueTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
+                return true;
+              }
+            }
+            auto it = locals.find(target.args[receiverIndex].name);
+            if (it != locals.end()) {
+              std::string elemType;
+              if (getArgsPackElementType(it->second, elemType) &&
+                  extractMapKeyValueTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
+                return true;
+              }
+            }
+          }
+        }
+        std::string collectionTypePath;
+        if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/map") {
+          std::vector<std::string> args;
         if (resolveCallCollectionTemplateArgs(target, "map", args) && args.size() == 2) {
           keyTypeOut = args[0];
           valueTypeOut = args[1];
