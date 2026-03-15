@@ -1832,6 +1832,10 @@ TEST_CASE("runs vm borrowed experimental map methods") {
   expectExperimentalMapReferenceMethodConformance("vm");
 }
 
+TEST_CASE("runs vm experimental map bracket access") {
+  expectExperimentalMapIndexConformance("vm");
+}
+
 TEST_CASE("runs vm experimental map with custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*

@@ -82,7 +82,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Array;
       }
     }
-    if (splitTemplateTypeName(templateArg, base, arg) && normalizeBindingTypeName(base) == "map") {
+    if (splitTemplateTypeName(templateArg, base, arg) && isMapCollectionTypeName(base)) {
       std::vector<std::string> args;
       if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
         return ReturnKind::Array;
@@ -109,7 +109,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Array;
       }
     }
-    if (splitTemplateTypeName(templateArg, base, arg) && normalizeBindingTypeName(base) == "map") {
+    if (splitTemplateTypeName(templateArg, base, arg) && isMapCollectionTypeName(base)) {
       std::vector<std::string> args;
       if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
         return ReturnKind::Array;
@@ -153,7 +153,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       const std::string normalizedTypeName = normalizeBindingTypeName(paramBinding->typeName);
       if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-           normalizedTypeName == "soa_vector" || normalizedTypeName == "map") &&
+           normalizedTypeName == "soa_vector" || isMapCollectionTypeName(normalizedTypeName)) &&
           !paramBinding->typeTemplateArg.empty()) {
         return ReturnKind::Array;
       }
@@ -174,7 +174,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     const std::string normalizedTypeName = normalizeBindingTypeName(it->second.typeName);
     if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-         normalizedTypeName == "soa_vector" || normalizedTypeName == "map") &&
+         normalizedTypeName == "soa_vector" || isMapCollectionTypeName(normalizedTypeName)) &&
         !it->second.typeTemplateArg.empty()) {
       return ReturnKind::Array;
     }
@@ -549,8 +549,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (typePath == "/soa_vector" || typePath == "soa_vector") {
         return "/soa_vector";
       }
-      if (typePath == "/map" || typePath == "map" || typePath == "/std/collections/map" ||
-          typePath == "std/collections/map") {
+      if (isMapCollectionTypeName(typePath) || typePath == "/map" || typePath == "/std/collections/map") {
         return "/map";
       }
       if (typePath == "/string" || typePath == "string") {
@@ -717,7 +716,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
           return "/" + base;
         }
-        if (base == "map" && args.size() == 2) {
+        if (isMapCollectionTypeName(base) && args.size() == 2) {
           return "/map";
         }
         return {};
@@ -795,7 +794,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return false;
         }
         base = normalizeBindingTypeName(base);
-        if (base == expectedBase) {
+        if (base == expectedBase || (expectedBase == "map" && isMapCollectionTypeName(base))) {
           return splitTopLevelTemplateArgs(arg, argsOut);
         }
         std::vector<std::string> args;
@@ -1198,29 +1197,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return extractMapKeyValueTypes(it->second, keyTypeOut, valueTypeOut);
       }
       if (target.kind == Expr::Kind::Call) {
-        auto returnsMapCollection = [&](const std::string &typeName) {
-          std::string normalizedType = normalizeBindingTypeName(typeName);
-          while (true) {
-            std::string base;
-            std::string arg;
-            if (!splitTemplateTypeName(normalizedType, base, arg)) {
-              return normalizedType == "map";
-            }
-            if (base == "map") {
-              std::vector<std::string> args;
-              return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
-            }
-            if (base == "Reference" || base == "Pointer") {
-              std::vector<std::string> args;
-              if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-                return false;
-              }
-              normalizedType = normalizeBindingTypeName(args.front());
-              continue;
-            }
-            return false;
-          }
-        };
         std::string collectionTypePath;
         if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/map") {
           std::vector<std::string> args;
@@ -1238,7 +1214,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           if (transform.name != "return" || transform.templateArgs.size() != 1) {
             continue;
           }
-          if (!returnsMapCollection(transform.templateArgs.front())) {
+          if (!returnsMapCollectionType(transform.templateArgs.front())) {
             return false;
           }
           std::string normalizedType = normalizeBindingTypeName(transform.templateArgs.front());
@@ -1248,7 +1224,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             if (!splitTemplateTypeName(normalizedType, base, arg)) {
               return true;
             }
-            if (base == "map") {
+            if (isMapCollectionTypeName(base)) {
               std::vector<std::string> args;
               if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
                 keyTypeOut = args[0];
@@ -3147,9 +3123,11 @@ std::string SemanticsValidator::inferStructReturnPath(
     if (typeName == "string") {
       return "/string";
     }
-    if ((typeName == "array" || typeName == "vector" || typeName == "soa_vector" || typeName == "map") &&
-        !typeTemplateArg.empty()) {
+    if ((typeName == "array" || typeName == "vector" || typeName == "soa_vector") && !typeTemplateArg.empty()) {
       return "/" + typeName;
+    }
+    if (isMapCollectionTypeName(typeName) && !typeTemplateArg.empty()) {
+      return "/map";
     }
     std::string base;
     std::string arg;
@@ -3159,7 +3137,7 @@ std::string SemanticsValidator::inferStructReturnPath(
         if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
           return "/" + base;
         }
-        if (base == "map" && args.size() == 2) {
+        if (isMapCollectionTypeName(base) && args.size() == 2) {
           return "/map";
         }
       }
@@ -3222,8 +3200,7 @@ std::string SemanticsValidator::inferStructReturnPath(
     if (typePath == "/soa_vector" || typePath == "soa_vector") {
       return std::string("/soa_vector");
     }
-    if (typePath == "/map" || typePath == "map" || typePath == "/std/collections/map" ||
-        typePath == "std/collections/map") {
+    if (isMapCollectionTypeName(typePath) || typePath == "/map" || typePath == "/std/collections/map") {
       return std::string("/map");
     }
     if (typePath == "/string" || typePath == "string") {
@@ -3260,7 +3237,7 @@ std::string SemanticsValidator::inferStructReturnPath(
       if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
         return "/" + base;
       }
-      if (base == "map" && args.size() == 2) {
+      if (isMapCollectionTypeName(base) && args.size() == 2) {
         return "/map";
       }
       return {};
@@ -3374,7 +3351,7 @@ std::string SemanticsValidator::inferStructReturnPath(
       if (!splitTemplateTypeName(normalizedType, base, arg)) {
         return false;
       }
-      if (base == expectedBase) {
+      if (base == expectedBase || (expectedBase == "map" && isMapCollectionTypeName(base))) {
         return splitTopLevelTemplateArgs(arg, argsOut);
       }
       std::vector<std::string> args;
@@ -3692,29 +3669,6 @@ std::string SemanticsValidator::inferStructReturnPath(
       return extractMapKeyValueTypes(it->second, keyTypeOut, valueTypeOut);
     }
     if (target.kind == Expr::Kind::Call) {
-      auto returnsMapCollection = [&](const std::string &typeName) {
-        std::string normalizedType = normalizeBindingTypeName(typeName);
-        while (true) {
-          std::string base;
-          std::string arg;
-          if (!splitTemplateTypeName(normalizedType, base, arg)) {
-            return normalizedType == "map";
-          }
-          if (base == "map") {
-            std::vector<std::string> args;
-            return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
-          }
-          if (base == "Reference" || base == "Pointer") {
-            std::vector<std::string> args;
-            if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-              return false;
-            }
-            normalizedType = normalizeBindingTypeName(args.front());
-            continue;
-          }
-          return false;
-        }
-      };
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/map") {
         std::vector<std::string> args;
@@ -3732,7 +3686,7 @@ std::string SemanticsValidator::inferStructReturnPath(
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
         }
-        if (!returnsMapCollection(transform.templateArgs.front())) {
+        if (!returnsMapCollectionType(transform.templateArgs.front())) {
           return false;
         }
         std::string base;

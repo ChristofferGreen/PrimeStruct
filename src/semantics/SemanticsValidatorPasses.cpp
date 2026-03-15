@@ -2888,9 +2888,11 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
       if (typeName == "string") {
         return "/string";
       }
-      if ((typeName == "array" || typeName == "vector" || typeName == "soa_vector" || typeName == "map") &&
-          !typeTemplateArg.empty()) {
+      if ((typeName == "array" || typeName == "vector" || typeName == "soa_vector") && !typeTemplateArg.empty()) {
         return "/" + typeName;
+      }
+      if (isMapCollectionTypeName(typeName) && !typeTemplateArg.empty()) {
+        return "/map";
       }
       std::string base;
       std::string argsText;
@@ -2904,7 +2906,7 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
       if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
         return "/" + base;
       }
-      if (base == "map" && args.size() == 2) {
+      if (isMapCollectionTypeName(base) && args.size() == 2) {
         return "/map";
       }
       if ((base == "Reference" || base == "Pointer") && args.size() == 1) {

@@ -79,6 +79,11 @@ bool validateBuiltinMapKeyType(const std::string &typeName,
 bool validateBuiltinMapKeyType(const BindingInfo &binding,
                                const std::vector<std::string> *templateArgs,
                                std::string &error);
+bool isMapCollectionTypeName(const std::string &name);
+bool returnsMapCollectionType(const std::string &typeText);
+bool extractMapKeyValueTypesFromTypeText(const std::string &typeText,
+                                         std::string &keyTypeOut,
+                                         std::string &valueTypeOut);
 bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut);
 std::string joinTemplateArgs(const std::vector<std::string> &args);
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);

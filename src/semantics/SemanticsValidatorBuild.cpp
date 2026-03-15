@@ -829,8 +829,11 @@ bool SemanticsValidator::buildDefinitionMaps() {
       return "";
     }
     auto normalizeCollectionPath = [](const std::string &baseName) -> std::string {
-      if (baseName == "array" || baseName == "vector" || baseName == "map" || baseName == "string") {
+      if (baseName == "array" || baseName == "vector" || baseName == "string") {
         return "/" + baseName;
+      }
+      if (isMapCollectionTypeName(baseName)) {
+        return "/map";
       }
       return "";
     };
@@ -849,7 +852,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
         if (collectionBase == "vector" && args.size() == 1) {
           return "/vector";
         }
-        if (collectionBase == "map" && args.size() == 2) {
+        if (isMapCollectionTypeName(collectionBase) && args.size() == 2) {
           return "/map";
         }
       }
@@ -1806,7 +1809,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
         bindingOut.typeTemplateArg = argText;
         return true;
       }
-      if (base == "map" && args.size() == 2) {
+      if (isMapCollectionTypeName(base) && args.size() == 2) {
         bindingOut.typeName = base;
         bindingOut.typeTemplateArg = argText;
         return true;
@@ -2030,7 +2033,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
         return false;
       }
       return ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) ||
-             (base == "map" && args.size() == 2);
+             (isMapCollectionTypeName(base) && args.size() == 2);
     };
     for (const auto &transform : definition.transforms) {
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
@@ -2052,7 +2055,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
         bindingOut.typeTemplateArg = argText;
         return true;
       }
-      if (base == "map" && args.size() == 2) {
+      if (isMapCollectionTypeName(base) && args.size() == 2) {
         bindingOut.typeName = base;
         bindingOut.typeTemplateArg = argText;
         return true;

@@ -251,6 +251,70 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental map bracket access validates on value and borrowed call receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<Reference<Map<string, i32>>>]
+borrowExperimentalMap([Reference<Map<string, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  return(plus(values["left"raw_utf8],
+              borrowExperimentalMap(location(values))["right"raw_utf8]))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper-returned experimental map bracket access keeps print statement string validation") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(heap_alloc), return<Map<i32, string>>]
+wrapMap() {
+  return(mapSingle<i32, string>(1i32, "hello"utf8))
+}
+
+[effects(io_out), return<int>]
+main() {
+  print_line(wrapMap()[1i32])
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental map bracket access keeps key diagnostics on borrowed call receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<Reference<Map<string, i32>>>]
+borrowExperimentalMap([Reference<Map<string, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32>] values{mapSingle<string, i32>("only"raw_utf8, 4i32)}
+  return(borrowExperimentalMap(location(values))[true])
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires map key type string") != std::string::npos);
+}
+
 TEST_CASE("experimental map missing comparable trait reports trait diagnostics instead of builtin map key rejects") {
   const std::string source = R"(
 import /std/collections/experimental_map/*

@@ -129,46 +129,78 @@ bool validateBuiltinMapKeyType(const BindingInfo &binding,
   return validateBuiltinMapKeyType(keyType, templateArgs, error);
 }
 
-bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut) {
-  keyTypeOut.clear();
-  valueTypeOut.clear();
+bool isMapCollectionTypeName(const std::string &name) {
+  const std::string normalized = normalizeBindingTypeName(name);
+  return normalized == "map" || normalized == "std/collections/map" || normalized == "Map" ||
+         normalized == "std/collections/experimental_map/Map";
+}
 
-  auto normalizeMapBase = [](const std::string &typeName) {
-    std::string normalized = normalizeBindingTypeName(typeName);
-    if (normalized == "std/collections/map") {
-      return std::string("map");
-    }
-    return normalized;
-  };
-
-  std::string typeName = normalizeBindingTypeName(binding.typeName);
-  std::string argsText = binding.typeTemplateArg;
-  if (typeName == "Reference") {
-    if (binding.typeTemplateArg.empty()) {
-      return false;
-    }
+bool returnsMapCollectionType(const std::string &typeText) {
+  std::string normalizedType = normalizeBindingTypeName(typeText);
+  while (true) {
     std::string base;
-    if (!splitTemplateTypeName(binding.typeTemplateArg, base, argsText) ||
-        normalizeMapBase(base) != "map") {
-      return false;
+    std::string arg;
+    if (!splitTemplateTypeName(normalizedType, base, arg)) {
+      return isMapCollectionTypeName(normalizedType);
     }
-    typeName = "map";
-  }
-
-  std::string base;
-  if (normalizeMapBase(typeName) != "map") {
-    if (!splitTemplateTypeName(typeName, base, argsText) || normalizeMapBase(base) != "map") {
-      return false;
+    base = normalizeBindingTypeName(base);
+    if (isMapCollectionTypeName(base)) {
+      std::vector<std::string> args;
+      return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
     }
-  }
-
-  std::vector<std::string> parts;
-  if (!splitTopLevelTemplateArgs(argsText, parts) || parts.size() != 2) {
+    if (base == "Reference" || base == "Pointer") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+        return false;
+      }
+      normalizedType = normalizeBindingTypeName(args.front());
+      continue;
+    }
     return false;
   }
-  keyTypeOut = parts[0];
-  valueTypeOut = parts[1];
-  return true;
+}
+
+bool extractMapKeyValueTypesFromTypeText(const std::string &typeText,
+                                         std::string &keyTypeOut,
+                                         std::string &valueTypeOut) {
+  keyTypeOut.clear();
+  valueTypeOut.clear();
+  std::string normalizedType = normalizeBindingTypeName(typeText);
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(normalizedType, base, argText)) {
+      return false;
+    }
+    base = normalizeBindingTypeName(base);
+    if (isMapCollectionTypeName(base)) {
+      std::vector<std::string> parts;
+      if (!splitTopLevelTemplateArgs(argText, parts) || parts.size() != 2) {
+        return false;
+      }
+      keyTypeOut = parts[0];
+      valueTypeOut = parts[1];
+      return true;
+    }
+    if (base == "Reference" || base == "Pointer") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      normalizedType = normalizeBindingTypeName(args.front());
+      continue;
+    }
+    return false;
+  }
+}
+
+bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut) {
+  if (binding.typeTemplateArg.empty()) {
+    return extractMapKeyValueTypesFromTypeText(binding.typeName, keyTypeOut, valueTypeOut);
+  }
+  return extractMapKeyValueTypesFromTypeText(binding.typeName + "<" + binding.typeTemplateArg + ">",
+                                             keyTypeOut,
+                                             valueTypeOut);
 }
 
 std::string joinTemplateArgs(const std::vector<std::string> &args) {

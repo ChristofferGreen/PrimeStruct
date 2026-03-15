@@ -270,6 +270,24 @@ inline std::string makeExperimentalMapReferenceMethodConformanceSource() {
   return source;
 }
 
+inline std::string makeExperimentalMapIndexConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<Reference<Map<string, i32>>>]\n";
+  source += "borrowExperimentalMap([Reference<Map<string, i32>>] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  [i32] left{values[\"left\"raw_utf8]}\n";
+  source += "  [i32] right{borrowExperimentalMap(location(values))[\"right\"raw_utf8]}\n";
+  source += "  return(plus(left, right))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -662,6 +680,14 @@ inline void expectExperimentalMapReferenceMethodConformance(const std::string &e
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == 20);
   CHECK(readFile(outPath) == "container missing key\n");
+}
+
+inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeExperimentalMapIndexConformanceSource(),
+      "experimental_map_index_" + emitMode,
+      emitMode,
+      11);
 }
 
 inline void expectCanonicalMapNamespaceConformance(const std::string &emitMode) {

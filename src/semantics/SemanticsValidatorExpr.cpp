@@ -1516,8 +1516,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (typePath == "/soa_vector" || typePath == "soa_vector") {
         return "/soa_vector";
       }
-      if (typePath == "/map" || typePath == "map" || typePath == "/std/collections/map" ||
-          typePath == "std/collections/map") {
+      if (isMapCollectionTypeName(typePath) || typePath == "/map" || typePath == "/std/collections/map") {
         return "/map";
       }
       if (typePath == "/string" || typePath == "string") {
@@ -1665,7 +1664,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
           return "/" + base;
         }
-        if (base == "map" && args.size() == 2) {
+        if (isMapCollectionTypeName(base) && args.size() == 2) {
           return "/map";
         }
         return {};
@@ -1790,7 +1789,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
         base = normalizeBindingTypeName(base);
-        if (base == expectedBase) {
+        if (base == expectedBase || (expectedBase == "map" && isMapCollectionTypeName(base))) {
           return splitTopLevelTemplateArgs(arg, argsOut);
         }
         std::vector<std::string> args;
@@ -2323,29 +2322,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return extractMapKeyValueTypes(fieldBinding, keyType, valueType);
       }
       if (target.kind == Expr::Kind::Call) {
-        auto returnsMapCollection = [&](const std::string &typeName) {
-          std::string normalizedType = normalizeBindingTypeName(typeName);
-          while (true) {
-            std::string base;
-            std::string arg;
-            if (!splitTemplateTypeName(normalizedType, base, arg)) {
-              return normalizedType == "map";
-            }
-            if (base == "map") {
-              std::vector<std::string> args;
-              return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
-            }
-            if (base == "Reference" || base == "Pointer") {
-              std::vector<std::string> args;
-              if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-                return false;
-              }
-              normalizedType = normalizeBindingTypeName(args.front());
-              continue;
-            }
-            return false;
-          }
-        };
         std::string collectionTypePath;
         if (resolveCallCollectionTypePath(target, collectionTypePath) && collectionTypePath == "/map") {
           return true;
@@ -2365,7 +2341,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (transform.name != "return" || transform.templateArgs.size() != 1) {
             continue;
           }
-          return returnsMapCollection(transform.templateArgs.front());
+          return returnsMapCollectionType(transform.templateArgs.front());
         }
         return false;
       }
@@ -4208,34 +4184,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             if (defIt == defMap_.end() || defIt->second == nullptr) {
               return false;
             }
-            auto returnsMapCollection = [&](const std::string &typeName) {
-              std::string normalizedType = normalizeBindingTypeName(typeName);
-              while (true) {
-                std::string base;
-                std::string arg;
-                if (!splitTemplateTypeName(normalizedType, base, arg)) {
-                  return normalizedType == "map";
-                }
-                if (base == "map") {
-                  std::vector<std::string> args;
-                  return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
-                }
-                if (base == "Reference" || base == "Pointer") {
-                  std::vector<std::string> args;
-                  if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-                    return false;
-                  }
-                  normalizedType = normalizeBindingTypeName(args.front());
-                  continue;
-                }
-                return false;
-              }
-            };
             for (const auto &transform : defIt->second->transforms) {
               if (transform.name != "return" || transform.templateArgs.size() != 1) {
                 continue;
               }
-              return returnsMapCollection(transform.templateArgs.front());
+              return returnsMapCollectionType(transform.templateArgs.front());
             }
             return false;
           };

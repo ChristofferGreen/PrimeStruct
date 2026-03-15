@@ -650,17 +650,9 @@ bool isMapValue(const Expr &target, const std::unordered_map<std::string, Bindin
     if (it == localTypes.end()) {
       return false;
     }
-    if (normalizeBindingTypeName(it->second.typeName) == "map") {
-      return true;
-    }
-    if (normalizeBindingTypeName(it->second.typeName) == "Reference") {
-      std::string base;
-      std::string arg;
-      if (splitTemplateTypeName(it->second.typeTemplateArg, base, arg)) {
-        return normalizeBindingTypeName(base) == "map";
-      }
-    }
-    return false;
+    std::string keyType;
+    std::string valueType;
+    return extractMapKeyValueTypes(it->second, keyType, valueType);
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
@@ -762,10 +754,10 @@ bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::
     typeOut = normalizeBindingTypeName(templateArg);
     return true;
   }
-  if (typeName == "map" && !templateArg.empty()) {
-    std::vector<std::string> templateParts;
-    if (splitTopLevelTemplateArgs(templateArg, templateParts) && templateParts.size() == 2) {
-      typeOut = normalizeBindingTypeName(templateParts[1]);
+  if (isMapCollectionTypeName(typeName) && !templateArg.empty()) {
+    std::string keyType;
+    if (extractMapKeyValueTypes(binding, keyType, typeOut)) {
+      typeOut = normalizeBindingTypeName(typeOut);
       return true;
     }
   }
@@ -906,7 +898,7 @@ bool resolveMethodCallPath(const Expr &call,
     if (typePath == "/vector" || typePath == "vector") {
       return "vector";
     }
-    if (typePath == "/map" || typePath == "map") {
+    if (isMapCollectionTypeName(typePath) || typePath == "/map") {
       return "map";
     }
     return typePath;
@@ -1118,7 +1110,7 @@ bool resolveMethodCallPath(const Expr &call,
           typeOut = normalizeBindingTypeName(args.front());
           return true;
         }
-        if (base == "map" && args.size() == 2) {
+        if (isMapCollectionTypeName(base) && args.size() == 2) {
           typeOut = normalizeBindingTypeName(args[1]);
           return true;
         }
@@ -1507,7 +1499,7 @@ std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector
   };
   auto isCollectionBindingType = [](const std::string &typeName) {
     const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
-    return normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "map" ||
+    return normalizedTypeName == "array" || normalizedTypeName == "vector" || isMapCollectionTypeName(normalizedTypeName) ||
            normalizedTypeName == "string" || normalizedTypeName == "soa_vector";
   };
   if (!hasNamedArguments(expr.argNames) && expr.args.size() == 2 && params.size() == 2 &&
