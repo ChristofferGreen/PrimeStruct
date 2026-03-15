@@ -1863,6 +1863,18 @@ TEST_CASE("runs vm canonical namespaced map constructors through explicit experi
   expectCanonicalMapNamespaceExperimentalParameterConformance("vm");
 }
 
+TEST_CASE("runs vm wrapper map constructors on explicit experimental map bindings") {
+  expectWrapperMapConstructorExperimentalBindingConformance("vm");
+}
+
+TEST_CASE("runs vm wrapper map constructors through explicit experimental map returns") {
+  expectWrapperMapConstructorExperimentalReturnConformance("vm");
+}
+
+TEST_CASE("runs vm wrapper map constructors through explicit experimental map parameters") {
+  expectWrapperMapConstructorExperimentalParameterConformance("vm");
+}
+
 TEST_CASE("rejects vm canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("vm");
 }

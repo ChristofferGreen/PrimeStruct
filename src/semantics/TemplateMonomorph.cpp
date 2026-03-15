@@ -2213,6 +2213,43 @@ bool rewriteExpr(Expr &expr,
       return {};
     }
   };
+  auto experimentalMapConstructorRewritePath =
+      [&](const std::string &resolvedPath, size_t argumentCount) -> std::string {
+    if (resolvedPath == "/std/collections/map/map") {
+      return experimentalMapConstructorHelperPath(argumentCount);
+    }
+    if (resolvedPath == "/std/collections/mapNew") {
+      return "/std/collections/experimental_map/mapNew";
+    }
+    if (resolvedPath == "/std/collections/mapSingle") {
+      return "/std/collections/experimental_map/mapSingle";
+    }
+    if (resolvedPath == "/std/collections/mapDouble") {
+      return "/std/collections/experimental_map/mapDouble";
+    }
+    if (resolvedPath == "/std/collections/mapPair") {
+      return "/std/collections/experimental_map/mapPair";
+    }
+    if (resolvedPath == "/std/collections/mapTriple") {
+      return "/std/collections/experimental_map/mapTriple";
+    }
+    if (resolvedPath == "/std/collections/mapQuad") {
+      return "/std/collections/experimental_map/mapQuad";
+    }
+    if (resolvedPath == "/std/collections/mapQuint") {
+      return "/std/collections/experimental_map/mapQuint";
+    }
+    if (resolvedPath == "/std/collections/mapSext") {
+      return "/std/collections/experimental_map/mapSext";
+    }
+    if (resolvedPath == "/std/collections/mapSept") {
+      return "/std/collections/experimental_map/mapSept";
+    }
+    if (resolvedPath == "/std/collections/mapOct") {
+      return "/std/collections/experimental_map/mapOct";
+    }
+    return {};
+  };
   auto rewriteCanonicalExperimentalMapConstructorBinding = [&](Expr &bindingExpr) {
     if (!bindingExpr.isBinding || bindingExpr.args.size() != 1) {
       return;
@@ -2234,10 +2271,8 @@ bool rewriteExpr(Expr &expr,
     if (initializer.kind != Expr::Kind::Call || initializer.isBinding || initializer.isMethodCall) {
       return;
     }
-    if (resolveCalleePath(initializer, namespacePrefix, ctx) != "/std/collections/map/map") {
-      return;
-    }
-    const std::string helperPath = experimentalMapConstructorHelperPath(initializer.args.size());
+    const std::string helperPath =
+        experimentalMapConstructorRewritePath(resolveCalleePath(initializer, namespacePrefix, ctx), initializer.args.size());
     if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
       return;
     }
@@ -2392,10 +2427,8 @@ bool rewriteExpr(Expr &expr,
           if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding || argExpr.isMethodCall) {
             break;
           }
-          if (resolveCalleePath(argExpr, namespacePrefix, ctx) != "/std/collections/map/map") {
-            break;
-          }
-          const std::string helperPath = experimentalMapConstructorHelperPath(argExpr.args.size());
+          const std::string helperPath =
+              experimentalMapConstructorRewritePath(resolveCalleePath(argExpr, namespacePrefix, ctx), argExpr.args.size());
           if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
             break;
           }
@@ -2548,14 +2581,49 @@ bool rewriteDefinition(Definition &def,
       return {};
     }
   };
+  auto experimentalMapConstructorRewritePath =
+      [&](const std::string &resolvedPath, size_t argumentCount) -> std::string {
+    if (resolvedPath == "/std/collections/map/map") {
+      return experimentalMapConstructorHelperPath(argumentCount);
+    }
+    if (resolvedPath == "/std/collections/mapNew") {
+      return "/std/collections/experimental_map/mapNew";
+    }
+    if (resolvedPath == "/std/collections/mapSingle") {
+      return "/std/collections/experimental_map/mapSingle";
+    }
+    if (resolvedPath == "/std/collections/mapDouble") {
+      return "/std/collections/experimental_map/mapDouble";
+    }
+    if (resolvedPath == "/std/collections/mapPair") {
+      return "/std/collections/experimental_map/mapPair";
+    }
+    if (resolvedPath == "/std/collections/mapTriple") {
+      return "/std/collections/experimental_map/mapTriple";
+    }
+    if (resolvedPath == "/std/collections/mapQuad") {
+      return "/std/collections/experimental_map/mapQuad";
+    }
+    if (resolvedPath == "/std/collections/mapQuint") {
+      return "/std/collections/experimental_map/mapQuint";
+    }
+    if (resolvedPath == "/std/collections/mapSext") {
+      return "/std/collections/experimental_map/mapSext";
+    }
+    if (resolvedPath == "/std/collections/mapSept") {
+      return "/std/collections/experimental_map/mapSept";
+    }
+    if (resolvedPath == "/std/collections/mapOct") {
+      return "/std/collections/experimental_map/mapOct";
+    }
+    return {};
+  };
   auto rewriteCanonicalExperimentalMapConstructorValue = [&](Expr &valueExpr) {
     if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
       return;
     }
-    if (resolveCalleePath(valueExpr, def.namespacePrefix, ctx) != "/std/collections/map/map") {
-      return;
-    }
-    const std::string helperPath = experimentalMapConstructorHelperPath(valueExpr.args.size());
+    const std::string helperPath =
+        experimentalMapConstructorRewritePath(resolveCalleePath(valueExpr, def.namespacePrefix, ctx), valueExpr.args.size());
     if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
       return;
     }
