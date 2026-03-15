@@ -5045,6 +5045,100 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs map unnamespaced tryAt through canonical helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(17i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(try(tryAt(values, 1i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_map_unnamespaced_try_at_prefers_canonical_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_try_at_prefers_canonical_helper_exe")
+          .string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
+}
+
+TEST_CASE("compiles and runs map unnamespaced tryAt through compatibility helper when canonical helper is absent in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(19i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(try(tryAt(values, 1i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_map_unnamespaced_try_at_prefers_compatibility_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_map_unnamespaced_try_at_prefers_compatibility_helper_exe")
+          .string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 19);
+}
+
+TEST_CASE("compiles and runs map unnamespaced tryAt preferring canonical helper over compatibility alias in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(17i32))
+}
+
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(19i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(try(tryAt(values, 1i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_map_unnamespaced_try_at_prefers_canonical_over_alias.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_map_unnamespaced_try_at_prefers_canonical_over_alias_exe")
+          .string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
+}
+
+TEST_CASE("rejects bare map tryAt call without imported canonical helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(try(tryAt(values, 1i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_map_try_at_call_without_import.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_try_at_call_without_import.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
+}
+
 TEST_CASE("rejects map namespaced count method compatibility alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

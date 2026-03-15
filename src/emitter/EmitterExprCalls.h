@@ -775,27 +775,36 @@
     }
     return preferVectorStdlibHelperPath(path, nameMap);
   };
-  auto preferBareMapContainsHelperPath = [&](const Expr &candidate) {
-    if (candidate.isMethodCall || !isSimpleCallName(candidate, "contains") || candidate.args.size() != 2) {
+  auto preferBareMapHelperPath = [&](const Expr &candidate, const char *helperName) {
+    if (candidate.isMethodCall || !isSimpleCallName(candidate, helperName) || candidate.args.size() != 2) {
       return std::string{};
     }
     if (!isResolvedMapTarget(candidate.args.front())) {
       return std::string{};
     }
-    if (nameMap.count("/std/collections/map/contains") > 0) {
-      return std::string("/std/collections/map/contains");
+    const std::string canonicalPath = std::string("/std/collections/map/") + helperName;
+    if (nameMap.count(canonicalPath) > 0) {
+      return canonicalPath;
     }
-    if (nameMap.count("/map/contains") > 0) {
-      return std::string("/map/contains");
+    const std::string compatibilityPath = std::string("/map/") + helperName;
+    if (nameMap.count(compatibilityPath) > 0) {
+      return compatibilityPath;
     }
     return std::string{};
   };
   std::string resolvedFull = preferStructReturningCollectionHelperPath(full);
   auto it = nameMap.find(resolvedFull);
   if (it == nameMap.end()) {
-    const std::string preferredBareMapContainsPath = preferBareMapContainsHelperPath(expr);
+    const std::string preferredBareMapContainsPath = preferBareMapHelperPath(expr, "contains");
     if (!preferredBareMapContainsPath.empty()) {
       resolvedFull = preferredBareMapContainsPath;
+      it = nameMap.find(resolvedFull);
+    }
+  }
+  if (it == nameMap.end()) {
+    const std::string preferredBareMapTryAtPath = preferBareMapHelperPath(expr, "tryAt");
+    if (!preferredBareMapTryAtPath.empty()) {
+      resolvedFull = preferredBareMapTryAtPath;
       it = nameMap.find(resolvedFull);
     }
   }
