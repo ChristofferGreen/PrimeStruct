@@ -2200,6 +2200,10 @@ TEST_CASE("compiles and runs native canonical namespaced map helpers on experime
   expectCanonicalMapNamespaceExperimentalConformance("native");
 }
 
+TEST_CASE("compiles and runs native experimental map methods") {
+  expectExperimentalMapMethodConformance("native");
+}
+
 TEST_CASE("compiles and runs native experimental map with custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*

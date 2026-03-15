@@ -174,6 +174,36 @@ inline std::string makeMapTryAtConformanceImportSource(const std::string &import
   return source;
 }
 
+inline std::string makeExperimentalMapMethodConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedExperimentalMapMethodError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapMethodError>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  [i32] found{try(values.tryAt(\"left\"raw_utf8))}\n";
+  source += "  [Result<i32, ContainerError>] missing{values.tryAt(\"missing\"raw_utf8)}\n";
+  source += "  [i32 mut] total{plus(values.count(), found)}\n";
+  source += "  assign(total, plus(total, values.at(\"left\"raw_utf8)))\n";
+  source += "  assign(total, plus(total, values.at_unsafe(\"right\"raw_utf8)))\n";
+  source += "  if(values.contains(\"left\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  if(not(values.contains(\"missing\"raw_utf8)),\n";
+  source += "     then() { assign(total, plus(total, 2i32)) },\n";
+  source += "     else() { })\n";
+  source += "  print_line(Result.why(missing))\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -447,6 +477,31 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == expectedExitCode);
+  CHECK(readFile(outPath) == "container missing key\n");
+}
+
+inline void expectExperimentalMapMethodConformance(const std::string &emitMode) {
+  const std::string source = makeExperimentalMapMethodConformanceSource();
+  const std::string srcPath = writeTemp("experimental_map_methods_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / ("primec_experimental_map_methods_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 20);
+    CHECK(readFile(outPath) == "container missing key\n");
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / ("primec_experimental_map_methods_" + emitMode + "_exe")).string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == 20);
   CHECK(readFile(outPath) == "container missing key\n");
 }
 

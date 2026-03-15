@@ -1816,6 +1816,10 @@ TEST_CASE("runs vm canonical namespaced map helpers on experimental map values")
   expectCanonicalMapNamespaceExperimentalConformance("vm");
 }
 
+TEST_CASE("runs vm experimental map methods") {
+  expectExperimentalMapMethodConformance("vm");
+}
+
 TEST_CASE("runs vm experimental map with custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*

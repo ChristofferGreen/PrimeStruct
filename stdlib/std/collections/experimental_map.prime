@@ -5,6 +5,31 @@ namespace std {
   Map<K, V>() {
     [public vector<K> mut] keys{vector<K>()}
     [public vector<V> mut] payloads{vector<V>()}
+
+    [public return<i32>]
+    count() {
+      return(mapCount<K, V>(this))
+    }
+
+    [public return<bool> Comparable<K>]
+    contains([K] key) {
+      return(mapContains<K, V>(this, key))
+    }
+
+    [public return<Result<V, ContainerError>> Comparable<K>]
+    tryAt([K] key) {
+      return(mapTryAt<K, V>(this, key))
+    }
+
+    [public return<V> Comparable<K>]
+    at([K] key) {
+      return(mapAt<K, V>(this, key))
+    }
+
+    [public return<V> Comparable<K>]
+    at_unsafe([K] key) {
+      return(mapAtUnsafe<K, V>(this, key))
+    }
   }
 
   [return<void> Comparable<K>]
