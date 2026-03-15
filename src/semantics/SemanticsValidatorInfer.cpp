@@ -2948,8 +2948,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return ReturnKind::Unknown;
     }
+    const bool shouldInferBuiltinBareMapContainsCall =
+        currentDefinitionPath_ == "/std/collections/mapContains" ||
+        currentDefinitionPath_ == "/std/collections/mapTryAt";
     if (defMap_.find(resolved) == defMap_.end() && !expr.isMethodCall &&
-        isSimpleCallName(expr, "contains") && expr.args.size() == 2) {
+        isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
+        shouldInferBuiltinBareMapContainsCall) {
       std::string keyType;
       std::string valueType;
       if (resolveMapTarget(expr.args.front(), keyType, valueType)) {

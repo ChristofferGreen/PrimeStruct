@@ -1414,6 +1414,35 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     }
     return rewriteCanonicalCollectionHelperPath(resolvedPath);
   };
+  auto bareMapContainsHelperPath = [&]() -> std::string {
+    if (expr.isMethodCall || !expr.namespacePrefix.empty() || expr.args.size() != 2) {
+      return {};
+    }
+    std::string normalizedName = expr.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    if (normalizedName != "contains" || defMap_.count("/contains") > 0) {
+      return {};
+    }
+    std::string keyType;
+    std::string valueType;
+    if (!resolveMapTarget(expr.args.front(), keyType, valueType)) {
+      return {};
+    }
+    if (currentDefinitionPath_ == "/std/collections/mapContains" ||
+        currentDefinitionPath_ == "/std/collections/mapTryAt") {
+      return {};
+    }
+    if (defMap_.count("/std/collections/map/contains") > 0 ||
+        hasImportedDefinitionPath("/std/collections/map/contains")) {
+      return "/std/collections/map/contains";
+    }
+    if (defMap_.count("/map/contains") > 0) {
+      return "/map/contains";
+    }
+    return "/std/collections/map/contains";
+  };
   if (expr.name.empty()) {
     return "";
   }
@@ -1473,6 +1502,9 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   std::string root = "/" + expr.name;
   if (defMap_.count(root) > 0) {
     return rewriteCanonicalCollectionConstructorPath(root);
+  }
+  if (const std::string helperPath = bareMapContainsHelperPath(); !helperPath.empty()) {
+    return helperPath;
   }
   auto it = importAliases_.find(expr.name);
   if (it != importAliases_.end()) {
@@ -1876,7 +1908,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
           defMap_.find("/std/collections/map/count") != defMap_.end())) &&
         expr.args.size() == 1;
     const bool isMapContainsLike =
-        !expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2;
+        !expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
+        (currentDefinitionPath_ == "/std/collections/mapContains" ||
+         currentDefinitionPath_ == "/std/collections/mapTryAt");
     if (isMapContainsLike) {
       BindingInfo collectionBinding;
       if (!inferCollectionBindingFromExpr(expr.args.front())) {

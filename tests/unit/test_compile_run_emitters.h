@@ -5121,7 +5121,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs map unnamespaced contains builtin fallback without helper in C++ emitter") {
+TEST_CASE("rejects map unnamespaced contains without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 main() {
@@ -5130,14 +5130,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_map_unnamespaced_contains_builtin_fallback_without_helper.prime", source);
-  const std::string exePath =
+      writeTemp("compile_cpp_map_unnamespaced_contains_without_helper_reject.prime", source);
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_map_unnamespaced_contains_builtin_fallback_without_helper_exe")
+       "primec_cpp_map_unnamespaced_contains_without_helper_reject.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs map unnamespaced tryAt through canonical helper in C++ emitter") {

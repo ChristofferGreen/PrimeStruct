@@ -52,8 +52,26 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("contains builtin validates on map binding") {
+TEST_CASE("bare map contains call requires imported canonical helper or explicit definition") {
   const std::string source = R"(
+[return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(contains(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/contains") != std::string::npos);
+}
+
+TEST_CASE("bare map contains call resolves through canonical helper definition") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
 [return<bool>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
@@ -65,30 +83,50 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("contains builtin rejects non-map target") {
+TEST_CASE("bare map contains call resolves through compatibility alias when canonical helper is absent") {
   const std::string source = R"(
 [return<bool>]
+/map/contains([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[return<bool>]
 main() {
-  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(contains(values, 1i32))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("contains requires map target") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("contains builtin rejects mismatched map key type") {
+TEST_CASE("bare map contains call keeps explicit root helper precedence") {
   const std::string source = R"(
+[return<bool>]
+/contains([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [bool] key) {
+  return(true)
+}
+
+[return<bool>]
+/map/contains([map<i32, i32>] values, [bool] key) {
+  return(true)
+}
+
 [return<bool>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(contains(values, true))
+  return(contains(values, 1i32))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("contains requires map key type i32") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map binding rejects unsupported builtin Comparable key contract") {
@@ -494,6 +532,8 @@ main() {
 
 TEST_CASE("mapTryAt helper validates for supported i32 container result payloads") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 ContainerError() {
   [i32] code{0i32}
@@ -529,6 +569,8 @@ main() {
 
 TEST_CASE("mapTryAt helper validates for supported bool container result payloads") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 ContainerError() {
   [i32] code{0i32}
@@ -564,6 +606,8 @@ main() {
 
 TEST_CASE("mapTryAt helper validates for supported string container result payloads") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 ContainerError() {
   [i32] code{0i32}

@@ -732,6 +732,44 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
+TEST_CASE("compiles and runs vm bare map contains through canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(contains(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_bare_map_contains_call_with_canonical_helper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_bare_map_contains_call_with_canonical_helper_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 0);
+}
+
+TEST_CASE("rejects vm bare map contains call without imported canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(contains(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_bare_map_contains_call_without_import.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_bare_map_contains_call_without_import_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
+}
+
 TEST_CASE("rejects vm bare map contains method without imported canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]

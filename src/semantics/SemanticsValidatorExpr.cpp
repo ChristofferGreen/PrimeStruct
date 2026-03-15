@@ -5606,7 +5606,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (!resolvedMethod && !expr.isMethodCall && isSimpleCallName(expr, "contains") && it == defMap_.end()) {
+      const bool shouldBuiltinValidateBareMapContainsCall =
+          currentDefinitionPath_ == "/std/collections/mapContains" ||
+          currentDefinitionPath_ == "/std/collections/mapTryAt";
+      if (!resolvedMethod && !expr.isMethodCall && isSimpleCallName(expr, "contains") &&
+          shouldBuiltinValidateBareMapContainsCall && it == defMap_.end()) {
         if (!expr.templateArgs.empty()) {
           error_ = "contains does not accept template arguments";
           return false;

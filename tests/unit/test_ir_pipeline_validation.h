@@ -95,6 +95,8 @@ main() {
 
 TEST_CASE("ir lowerer map contains avoids missing-key runtime helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
@@ -120,6 +122,8 @@ main() {
 
 TEST_CASE("ir lowerer guarded map Result lookup avoids missing-key runtime helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 MyError() {
   [i32] code{0i32}
