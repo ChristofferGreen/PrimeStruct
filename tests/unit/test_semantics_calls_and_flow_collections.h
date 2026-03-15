@@ -4135,6 +4135,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical namespaced map helpers accept borrowed experimental map receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<Reference<Map<string, i32>>>]
+borrowExperimentalMap([Reference<Map<string, i32>>] values) {
+  return(values)
+}
+
+[effects(io_err)]
+unexpectedCanonicalExperimentalMapReferenceError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapReferenceError>]
+main() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}
+  [i32] found{try(/std/collections/map/tryAt<string, i32>(ref, "left"raw_utf8))}
+  [i32 mut] total{plus(/std/collections/map/count<string, i32>(ref), found)}
+  assign(total, plus(total, /std/collections/map/at<string, i32>(ref, "left"raw_utf8)))
+  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>(ref, "right"raw_utf8)))
+  if(/std/collections/map/contains<string, i32>(ref, "left"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical namespaced map helpers keep Comparable diagnostics for experimental map receivers") {
   const std::string source = R"(
 import /std/collections/*
@@ -4154,6 +4189,41 @@ Key() {
 main() {
   [Map<Key, i32>] values{mapSingle<Key, i32>(Key(1i32), 4i32)}
   if(/std/collections/map/contains<Key, i32>(values, Key(1i32)),
+     then() { return(1i32) },
+     else() { return(0i32) })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Comparable") != std::string::npos);
+  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+}
+
+TEST_CASE("canonical namespaced map helpers keep Comparable diagnostics for borrowed experimental map receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[struct]
+Key() {
+  [i32] value{0i32}
+}
+
+[return<bool>]
+/Key/equal([Key] left, [Key] right) {
+  return(equal(left.value, right.value))
+}
+
+[return<Reference<Map<Key, i32>>>]
+borrowExperimentalMap([Reference<Map<Key, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<Key, i32>] values{mapNew<Key, i32>()}
+  [Reference<Map<Key, i32>>] ref{borrowExperimentalMap(location(values))}
+  if(/std/collections/map/contains<Key, i32>(ref, Key(1i32)),
      then() { return(1i32) },
      else() { return(0i32) })
 }
