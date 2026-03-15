@@ -2966,6 +2966,7 @@ bool rewriteExpr(Expr &expr,
     bindingOut = inferredBinding;
     return true;
   };
+  std::function<bool(const Expr &, BindingInfo &)> resolveAssignmentTargetBinding;
   auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
       return false;
@@ -2973,7 +2974,9 @@ bool rewriteExpr(Expr &expr,
     const Expr &receiver = target.args.front();
     std::string receiverTypeText;
     BindingInfo receiverInfo;
-    if (inferBindingTypeForMonomorph(receiver, params, locals, allowMathBare, ctx, receiverInfo)) {
+    if (resolveAssignmentTargetBinding && resolveAssignmentTargetBinding(receiver, receiverInfo)) {
+      receiverTypeText = bindingTypeToString(receiverInfo);
+    } else if (inferBindingTypeForMonomorph(receiver, params, locals, allowMathBare, ctx, receiverInfo)) {
       receiverTypeText = bindingTypeToString(receiverInfo);
     }
     if (receiverTypeText.empty()) {
@@ -3022,7 +3025,6 @@ bool rewriteExpr(Expr &expr,
     }
     return false;
   };
-  std::function<bool(const Expr &, BindingInfo &)> resolveAssignmentTargetBinding;
   auto resolveDereferenceBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (target.kind != Expr::Kind::Call || target.args.size() != 1) {
       return false;

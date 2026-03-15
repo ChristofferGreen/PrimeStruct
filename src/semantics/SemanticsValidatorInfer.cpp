@@ -4112,6 +4112,12 @@ std::string SemanticsValidator::inferStructReturnPath(
     const Expr &expr,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals) {
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
   auto normalizeCollectionPath = [&](std::string typeName, std::string typeTemplateArg) -> std::string {
     if ((typeName == "Reference" || typeName == "Pointer") && !typeTemplateArg.empty()) {
       typeName = normalizeBindingTypeName(typeTemplateArg);
@@ -4214,6 +4220,105 @@ std::string SemanticsValidator::inferStructReturnPath(
     }
     return std::string();
   };
+  std::function<std::string(const Expr &)> resolvePointerTargetTypeText;
+  resolvePointerTargetTypeText = [&](const Expr &pointerExpr) -> std::string {
+    auto resolveBindingTargetTypeText = [&](const Expr &target) -> std::string {
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          return bindingTypeText(*paramBinding);
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          return bindingTypeText(it->second);
+        }
+        return {};
+      }
+      if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
+        return {};
+      }
+      std::string receiverStruct = inferStructReturnPath(target.args.front(), params, locals);
+      if (receiverStruct.empty() || structNames_.count(receiverStruct) == 0) {
+        return {};
+      }
+      auto defIt = defMap_.find(receiverStruct);
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        return {};
+      }
+      for (const auto &stmt : defIt->second->statements) {
+        if (!stmt.isBinding || stmt.name != target.name) {
+          continue;
+        }
+        BindingInfo fieldBinding;
+        if (!resolveStructFieldBinding(*defIt->second, stmt, fieldBinding)) {
+          return {};
+        }
+        return bindingTypeText(fieldBinding);
+      }
+      return {};
+    };
+    if (pointerExpr.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, pointerExpr.name)) {
+        if ((paramBinding->typeName == "Reference" || paramBinding->typeName == "Pointer") &&
+            !paramBinding->typeTemplateArg.empty()) {
+          return paramBinding->typeTemplateArg;
+        }
+        return {};
+      }
+      auto it = locals.find(pointerExpr.name);
+      if (it != locals.end() &&
+          (it->second.typeName == "Reference" || it->second.typeName == "Pointer") &&
+          !it->second.typeTemplateArg.empty()) {
+        return it->second.typeTemplateArg;
+      }
+      return {};
+    }
+    if (pointerExpr.kind != Expr::Kind::Call) {
+      return {};
+    }
+    std::string pointerBuiltin;
+    if (getBuiltinPointerName(pointerExpr, pointerBuiltin) && pointerExpr.args.size() == 1 &&
+        pointerBuiltin == "location") {
+      return resolveBindingTargetTypeText(pointerExpr.args.front());
+    }
+    auto defIt = defMap_.find(resolveCalleePath(pointerExpr));
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return {};
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string base;
+      std::string argText;
+      const std::string normalizedReturnType = normalizeBindingTypeName(transform.templateArgs.front());
+      if (!splitTemplateTypeName(normalizedReturnType, base, argText) || argText.empty()) {
+        return {};
+      }
+      base = normalizeBindingTypeName(base);
+      if (base == "Reference" || base == "Pointer") {
+        return argText;
+      }
+      return {};
+    }
+    return {};
+  };
+  if (expr.kind == Expr::Kind::Call) {
+    std::string pointerBuiltin;
+    if (getBuiltinPointerName(expr, pointerBuiltin) && pointerBuiltin == "dereference" && expr.args.size() == 1) {
+      const std::string pointeeType = resolvePointerTargetTypeText(expr.args.front());
+      if (!pointeeType.empty()) {
+        const std::string collectionPath = normalizeCollectionTypePath(pointeeType);
+        if (!collectionPath.empty()) {
+          return collectionPath;
+        }
+        std::string unwrappedType = unwrapReferencePointerTypeText(pointeeType);
+        std::string structPath = resolveStructTypePath(unwrappedType, expr.namespacePrefix);
+        if (!structPath.empty()) {
+          return structPath;
+        }
+      }
+    }
+  }
   auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {
     typePathOut.clear();
     auto inferCollectionTypePathFromType =
