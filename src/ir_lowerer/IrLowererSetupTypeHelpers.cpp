@@ -576,11 +576,11 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Reference &&
-      (localInfo.referenceToArray || localInfo.referenceToMap)) {
+      (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToMap)) {
     if (!localInfo.structTypeName.empty()) {
       resolvedTypePathOut = localInfo.structTypeName;
     } else {
-      typeNameOut = localInfo.referenceToMap ? "map" : "array";
+      typeNameOut = localInfo.referenceToMap ? "map" : (localInfo.referenceToVector ? "vector" : "array");
     }
     return true;
   }
@@ -660,7 +660,8 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
     }
     const LocalInfo &receiverInfo = localIt->second;
     if (receiverInfo.kind == LocalInfo::Kind::Vector || receiverInfo.kind == LocalInfo::Kind::Array ||
-        (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToArray)) {
+        (receiverInfo.kind == LocalInfo::Kind::Reference &&
+         (receiverInfo.referenceToArray || receiverInfo.referenceToVector))) {
       return assignKind(receiverInfo.valueKind);
     }
     if (receiverInfo.kind == LocalInfo::Kind::Map ||
@@ -1088,7 +1089,8 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
             normalizedName == "std/collections/vector/at" ||
             normalizedName == "std/collections/vector/at_unsafe") {
           if (receiverInfo.kind == LocalInfo::Kind::Vector || receiverInfo.kind == LocalInfo::Kind::Array ||
-              (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToArray)) {
+              (receiverInfo.kind == LocalInfo::Kind::Reference &&
+               (receiverInfo.referenceToArray || receiverInfo.referenceToVector))) {
             return assignKnownElementKind(receiverInfo.valueKind);
           }
           return false;
@@ -1255,7 +1257,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
     const LocalInfo &info = it->second;
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
-           (info.kind == LocalInfo::Kind::Reference && (info.referenceToArray || info.referenceToMap)) ||
+           (info.kind == LocalInfo::Kind::Reference &&
+            (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
            info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
   };
@@ -1846,6 +1849,11 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
               localIt->second.referenceToArray) {
             typeNameOut = "array";
+            return true;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+              localIt->second.referenceToVector) {
+            typeNameOut = "vector";
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&

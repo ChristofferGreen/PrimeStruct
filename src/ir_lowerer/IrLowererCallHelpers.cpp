@@ -553,7 +553,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             info.kind == LocalInfo::Kind::Map) {
           return true;
         }
-        if (info.kind == LocalInfo::Kind::Reference && (info.referenceToArray || info.referenceToMap)) {
+        if (info.kind == LocalInfo::Kind::Reference &&
+            (info.referenceToArray || info.referenceToVector || info.referenceToMap)) {
           return true;
         }
         return info.valueKind == LocalInfo::ValueKind::String;
@@ -1513,9 +1514,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       return info;
     }
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference &&
-        it->second.referenceToArray) {
+        (it->second.referenceToArray || it->second.referenceToVector)) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
+      info.isVectorTarget = it->second.referenceToVector;
       info.isArgsPackTarget = it->second.isArgsPack;
       info.argsPackElementKind = it->second.argsPackElementKind;
       info.elemSlotCount = it->second.structSlotCount;
@@ -1539,9 +1541,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Array ||
               (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
-               localIt->second.referenceToArray)) {
+               (localIt->second.referenceToArray || localIt->second.referenceToVector))) {
             info.isArrayOrVectorTarget = true;
             info.elemKind = localIt->second.valueKind;
+            info.isVectorTarget =
+                localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+                localIt->second.referenceToVector;
             return info;
           }
         }
@@ -1584,7 +1589,7 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
       (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget &&
        !isWrappedStructArgsPackTarget && !isVectorArgsPackTarget)) {
     error =
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Reference<Struct>>/args<vector<T>> packs";
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Reference<Struct>>/args<vector<T>>/args<Reference<vector<T>>> packs";
     return false;
   }
   return true;

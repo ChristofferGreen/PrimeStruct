@@ -29,6 +29,7 @@ struct LocalInfo {
   bool isArgsPack = false;
   int32_t argsPackElementCount = -1;
   bool referenceToArray = false;
+  bool referenceToVector = false;
   bool referenceToMap = false;
   bool isUninitializedStorage = false;
   bool isSoaVector = false;

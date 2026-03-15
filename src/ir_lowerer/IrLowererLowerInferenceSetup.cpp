@@ -46,7 +46,7 @@ bool inferLiteralOrNameExprKindImpl(const Expr &expr,
         return true;
       }
       if (it->second.kind == LocalInfo::Kind::Reference) {
-        kindOut = (it->second.referenceToArray || it->second.referenceToMap)
+        kindOut = (it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap)
                       ? LocalInfo::ValueKind::Unknown
                       : it->second.valueKind;
         return true;

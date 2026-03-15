@@ -44,7 +44,7 @@ bool emitInlineDefinitionCallParameters(
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Array ||
             paramInfo.argsPackElementKind == LocalInfo::Kind::Vector ||
             (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
-             (paramInfo.referenceToArray || paramInfo.referenceToMap)) ||
+             (paramInfo.referenceToArray || paramInfo.referenceToVector || paramInfo.referenceToMap)) ||
             paramInfo.argsPackElementKind == LocalInfo::Kind::Map) {
           if (!emitExpr(argExpr, callerLocals)) {
             return false;
@@ -53,14 +53,14 @@ bool emitInlineDefinitionCallParameters(
           return true;
         }
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
-            !paramInfo.referenceToArray && !paramInfo.referenceToMap) {
+            !paramInfo.referenceToArray && !paramInfo.referenceToVector && !paramInfo.referenceToMap) {
           if (argExpr.kind != Expr::Kind::Name) {
             error = "variadic parameter type mismatch";
             return false;
           }
           auto it = callerLocals.find(argExpr.name);
           if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Reference ||
-              it->second.referenceToArray || it->second.referenceToMap ||
+              it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap ||
               it->second.valueKind != paramInfo.valueKind ||
               it->second.structTypeName != paramInfo.structTypeName) {
             error = "variadic parameter type mismatch";
@@ -145,6 +145,7 @@ bool emitInlineDefinitionCallParameters(
           return false;
         }
         if (callerIt->second.referenceToArray != paramInfo.referenceToArray ||
+            callerIt->second.referenceToVector != paramInfo.referenceToVector ||
             callerIt->second.referenceToMap != paramInfo.referenceToMap) {
           error = "variadic parameter type mismatch";
           return false;
@@ -168,6 +169,7 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.mapKeyKind = callerIt->second.mapKeyKind;
         paramInfo.mapValueKind = callerIt->second.mapValueKind;
         paramInfo.referenceToArray = callerIt->second.referenceToArray;
+        paramInfo.referenceToVector = callerIt->second.referenceToVector;
         paramInfo.referenceToMap = callerIt->second.referenceToMap;
         paramInfo.isSoaVector = callerIt->second.isSoaVector;
         calleeLocals.emplace(param.name, paramInfo);

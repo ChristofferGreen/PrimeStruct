@@ -182,6 +182,13 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
       }
       return;
     }
+    if (base == "vector") {
+      info.referenceToVector = true;
+      if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+        info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+      }
+      return;
+    }
     if (base == "map") {
       std::vector<std::string> args;
       if (!splitTemplateArgs(arg, args) || args.size() != 2) {

@@ -58,7 +58,7 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
     }
     if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
       if (it->second.kind == LocalInfo::Kind::Reference &&
-          (it->second.referenceToArray || it->second.referenceToMap)) {
+          (it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap)) {
         return LocalInfo::ValueKind::Unknown;
       }
       return it->second.valueKind;
@@ -73,7 +73,7 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
       if (it != localsIn.end() && it->second.isArgsPack &&
           ((it->second.argsPackElementKind == LocalInfo::Kind::Pointer) ||
            (it->second.argsPackElementKind == LocalInfo::Kind::Reference &&
-            !it->second.referenceToArray && !it->second.referenceToMap))) {
+            !it->second.referenceToArray && !it->second.referenceToVector && !it->second.referenceToMap))) {
         return it->second.valueKind;
       }
     }
@@ -83,7 +83,7 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
         auto it = localsIn.find(target.name);
         if (it != localsIn.end()) {
           if (it->second.kind == LocalInfo::Kind::Reference &&
-              (it->second.referenceToArray || it->second.referenceToMap)) {
+              (it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap)) {
             return LocalInfo::ValueKind::Unknown;
           }
           return it->second.valueKind;
@@ -154,7 +154,8 @@ LocalInfo::ValueKind inferArrayElementValueKind(
     if (it != localsIn.end()) {
       if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
           it->second.kind == LocalInfo::Kind::Map || it->second.kind == LocalInfo::Kind::Buffer ||
-          (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray)) {
+          (it->second.kind == LocalInfo::Kind::Reference &&
+           (it->second.referenceToArray || it->second.referenceToVector))) {
         return it->second.valueKind;
       }
     }
@@ -277,7 +278,8 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     }
     const LocalInfo &info = it->second;
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
-           (info.kind == LocalInfo::Kind::Reference && (info.referenceToArray || info.referenceToMap)) ||
+           (info.kind == LocalInfo::Kind::Reference &&
+            (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
            info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
   };
@@ -385,7 +387,8 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
       if (it != localsIn.end()) {
         if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector) {
           elementKind = it->second.valueKind;
-        } else if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
+        } else if (it->second.kind == LocalInfo::Kind::Reference &&
+                   (it->second.referenceToArray || it->second.referenceToVector)) {
           elementKind = it->second.valueKind;
         }
       }

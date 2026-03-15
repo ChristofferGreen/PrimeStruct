@@ -41,7 +41,10 @@ bool isExplicitVectorCompatibilityName(const Expr &expr, std::string_view helper
 bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
-    return it != localsIn.end() && (it->second.kind == LocalInfo::Kind::Vector || it->second.isSoaVector);
+    return it != localsIn.end() &&
+           (it->second.kind == LocalInfo::Kind::Vector ||
+            (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
+            it->second.isSoaVector);
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
@@ -220,7 +223,7 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
       return false;
     }
     if (it->second.kind == LocalInfo::Kind::Reference) {
-      return it->second.referenceToArray || it->second.referenceToMap;
+      return it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap;
     }
     if (it->second.isSoaVector && isExplicitVectorCompatibilityName(expr, "count")) {
       return false;
@@ -240,7 +243,7 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
             info.argsPackElementKind == LocalInfo::Kind::Vector ||
             info.argsPackElementKind == LocalInfo::Kind::Map ||
             (info.argsPackElementKind == LocalInfo::Kind::Reference &&
-             (info.referenceToArray || info.referenceToMap)) ||
+             (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
             info.isSoaVector) {
           return true;
         }
