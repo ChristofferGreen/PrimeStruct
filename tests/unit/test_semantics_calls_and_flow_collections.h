@@ -5383,6 +5383,131 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("helper-wrapped map constructors accept dereferenced experimental map uninitialized storage") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[return<Reference<uninitialized<Map<string, i32>>>>]
+borrowStorage([Reference<uninitialized<Map<string, i32>>>] storage) {
+  return(storage)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+  init(dereference(borrowStorage(location(storage))),
+       wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                           "right"raw_utf8, 7i32)))
+  [Map<string, i32>] values{take(storage)}
+  return(plus(/std/collections/map/count(values),
+              /std/collections/map/at(values, "right"raw_utf8)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped dereferenced map storage keeps mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[return<Reference<uninitialized<Map<string, i32>>>>]
+borrowStorage([Reference<uninitialized<Map<string, i32>>>] storage) {
+  return(storage)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+  init(dereference(borrowStorage(location(storage))),
+       wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                           "wrong"raw_utf8, false)))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced experimental result storage") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[return<Reference<uninitialized<Result<Map<string, i32>, ContainerError>>>>]
+borrowStorage([Reference<uninitialized<Result<Map<string, i32>, ContainerError>>>] storage) {
+  return(storage)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] storage{
+      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+  init(dereference(borrowStorage(location(storage))),
+       wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                    "right"raw_utf8, 7i32))))
+  [Result<Map<string, i32>, ContainerError>] status{take(storage)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped dereferenced Result.ok storage keeps mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[return<Reference<uninitialized<Result<Map<string, i32>, ContainerError>>>>]
+borrowStorage([Reference<uninitialized<Result<Map<string, i32>, ContainerError>>>] storage) {
+  return(storage)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] storage{
+      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+  init(dereference(borrowStorage(location(storage))),
+       wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                    "wrong"raw_utf8, false))))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("helper-wrapped Result.ok payloads infer experimental result auto bindings") {
   const std::string source = R"(
 import /std/collections/*

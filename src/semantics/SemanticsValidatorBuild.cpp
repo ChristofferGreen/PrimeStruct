@@ -1627,12 +1627,100 @@ bool SemanticsValidator::resolveUninitializedStorageBinding(const std::vector<Pa
                                                             BindingInfo &bindingOut,
                                                             bool &resolvedOut) {
   resolvedOut = false;
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto assignBindingTypeFromText = [&](const std::string &typeText) {
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+      bindingOut.typeName = normalizeBindingTypeName(base);
+      bindingOut.typeTemplateArg = argText;
+      return;
+    }
+    bindingOut.typeName = normalizedType;
+    bindingOut.typeTemplateArg.clear();
+  };
+  std::function<bool(const Expr &, BindingInfo &)> resolvePointerBinding;
+  resolvePointerBinding = [&](const Expr &pointerExpr, BindingInfo &pointerBinding) -> bool {
+    if (pointerExpr.kind == Expr::Kind::Name) {
+      if (const BindingInfo *binding = findBinding(params, locals, pointerExpr.name)) {
+        pointerBinding = *binding;
+        return true;
+      }
+      return false;
+    }
+    if (pointerExpr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string pointerBuiltin;
+    if (getBuiltinPointerName(pointerExpr, pointerBuiltin) && pointerBuiltin == "location" && pointerExpr.args.size() == 1) {
+      BindingInfo pointeeBinding;
+      bool pointeeResolved = false;
+      if (!resolveUninitializedStorageBinding(params, locals, pointerExpr.args.front(), pointeeBinding, pointeeResolved)) {
+        return false;
+      }
+      if (!pointeeResolved) {
+        return false;
+      }
+      pointerBinding.typeName = "Reference";
+      pointerBinding.typeTemplateArg = bindingTypeText(pointeeBinding);
+      return true;
+    }
+    if (inferBindingTypeFromInitializer(pointerExpr, params, locals, pointerBinding)) {
+      return true;
+    }
+    auto defIt = defMap_.find(resolveCalleePath(pointerExpr));
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string normalizedReturnType = normalizeBindingTypeName(transform.templateArgs.front());
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(normalizedReturnType, base, argText) || argText.empty()) {
+        return false;
+      }
+      base = normalizeBindingTypeName(base);
+      if (base != "Reference" && base != "Pointer") {
+        return false;
+      }
+      pointerBinding.typeName = base;
+      pointerBinding.typeTemplateArg = argText;
+      return true;
+    }
+    return false;
+  };
   if (storage.kind == Expr::Kind::Name) {
     if (const BindingInfo *binding = findBinding(params, locals, storage.name)) {
       bindingOut = *binding;
       resolvedOut = true;
     }
     return true;
+  }
+  if (storage.kind == Expr::Kind::Call) {
+    std::string pointerBuiltin;
+    if (getBuiltinPointerName(storage, pointerBuiltin) && pointerBuiltin == "dereference" && storage.args.size() == 1) {
+      const Expr &pointerExpr = storage.args.front();
+      BindingInfo pointerBinding;
+      if (resolvePointerBinding(pointerExpr, pointerBinding)) {
+        const std::string normalizedPointerType = normalizeBindingTypeName(pointerBinding.typeName);
+        if ((normalizedPointerType == "Reference" || normalizedPointerType == "Pointer") &&
+            !pointerBinding.typeTemplateArg.empty()) {
+          assignBindingTypeFromText(pointerBinding.typeTemplateArg);
+          resolvedOut = true;
+          return true;
+        }
+      }
+      return true;
+    }
   }
   if (!storage.isFieldAccess || storage.args.size() != 1) {
     return true;

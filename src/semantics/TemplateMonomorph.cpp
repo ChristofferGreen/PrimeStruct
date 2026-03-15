@@ -3401,8 +3401,7 @@ bool rewriteExpr(Expr &expr,
         return;
       }
       BindingInfo targetInfo;
-      if (!inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, targetInfo) &&
-          !resolveFieldBindingTarget(expr.args.front(), targetInfo)) {
+      if (!resolveAssignmentTargetBinding(expr.args.front(), targetInfo)) {
         return;
       }
       std::string targetTypeText = targetInfo.typeName;
