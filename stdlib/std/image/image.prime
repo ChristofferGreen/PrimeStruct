@@ -1146,7 +1146,8 @@ namespace std {
     [vector<i32> mut] previousRowBytes{vector<i32>()}
     while(less_than(row, height), do() {
       [i32] filterType{rawBytes[offset]}
-      if(and(and(not_equal(filterType, 0i32), not_equal(filterType, 1i32)), not_equal(filterType, 2i32)),
+      if(and(and(and(not_equal(filterType, 0i32), not_equal(filterType, 1i32)), not_equal(filterType, 2i32)),
+             not_equal(filterType, 3i32)),
          then() {
            clear(pixels)
            return(2i32)
@@ -1158,14 +1159,27 @@ namespace std {
       [i32 mut] byteIndex{0i32}
       while(less_than(byteIndex, scanlineBytes), do() {
         [i32 mut] reconstructed{rawBytes[plus(offset, byteIndex)]}
+        [i32 mut] leftByte{0i32}
+        [i32 mut] upByte{0i32}
+        if(greater_equal(byteIndex, bytesPerPixel),
+           then() { assign(leftByte, rowBytes[minus(byteIndex, bytesPerPixel)]) },
+           else() { })
+        if(less_than(byteIndex, count(previousRowBytes)),
+           then() { assign(upByte, previousRowBytes[byteIndex]) },
+           else() { })
         if(and(equal(filterType, 1i32), greater_equal(byteIndex, bytesPerPixel)),
            then() {
-             assign(reconstructed, pngMod(plus(reconstructed, rowBytes[minus(byteIndex, bytesPerPixel)]), 256i32))
+             assign(reconstructed, pngMod(plus(reconstructed, leftByte), 256i32))
            },
            else() { })
         if(and(equal(filterType, 2i32), less_than(byteIndex, count(previousRowBytes))),
            then() {
-             assign(reconstructed, pngMod(plus(reconstructed, previousRowBytes[byteIndex]), 256i32))
+             assign(reconstructed, pngMod(plus(reconstructed, upByte), 256i32))
+           },
+           else() { })
+        if(equal(filterType, 3i32),
+           then() {
+             assign(reconstructed, pngMod(plus(reconstructed, divide(plus(leftByte, upByte), 2i32)), 256i32))
            },
            else() { })
         push(rowBytes, reconstructed)
