@@ -2316,6 +2316,10 @@ TEST_CASE("compiles and runs native experimental map helper receivers") {
   expectExperimentalMapHelperReceiverConformance("native");
 }
 
+TEST_CASE("compiles and runs native experimental map method receivers") {
+  expectExperimentalMapMethodReceiverConformance("native");
+}
+
 TEST_CASE("compiles and runs native experimental map field assignments") {
   expectExperimentalMapFieldAssignConformance("native");
 }

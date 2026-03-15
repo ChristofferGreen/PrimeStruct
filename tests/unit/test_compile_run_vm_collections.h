@@ -1919,6 +1919,10 @@ TEST_CASE("runs vm experimental map helper receivers") {
   expectExperimentalMapHelperReceiverConformance("vm");
 }
 
+TEST_CASE("runs vm experimental map method receivers") {
+  expectExperimentalMapMethodReceiverConformance("vm");
+}
+
 TEST_CASE("runs vm experimental map field assignments") {
   expectExperimentalMapFieldAssignConformance("vm");
 }

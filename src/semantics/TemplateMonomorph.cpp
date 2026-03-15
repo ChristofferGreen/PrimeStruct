@@ -2715,6 +2715,9 @@ bool rewriteExpr(Expr &expr,
     const bool methodCallSyntax = expr.isMethodCall;
     std::string methodPath;
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
+      if (!expr.args.empty() && resolvesExperimentalMapValueReceiver(&expr.args.front())) {
+        rewriteCanonicalExperimentalMapConstructorExpr(expr.args.front());
+      }
       const bool methodWasTemplate = ctx.templateDefs.count(methodPath) > 0;
       if (!expr.templateArgs.empty() && !methodWasTemplate) {
         if (!shouldPreserveCompatibilityTemplatePath(methodPath, ctx) &&

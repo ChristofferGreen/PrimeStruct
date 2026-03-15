@@ -888,6 +888,35 @@ inline std::string makeExperimentalMapHelperReceiverConformanceSource() {
   return source;
 }
 
+inline std::string makeExperimentalMapMethodReceiverConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedExperimentalMapMethodReceiverError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapMethodReceiverError>]\n";
+  source += "main() {\n";
+  source +=
+      "  [i32] found{try(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32).tryAt(\"left\"raw_utf8))}\n";
+  source +=
+      "  [i32 mut] total{plus(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32).count(), found)}\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32).at(\"extra\"raw_utf8)))\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/mapPair(\"bonus\"raw_utf8, 5i32, \"keep\"raw_utf8, 1i32).at_unsafe(\"bonus\"raw_utf8)))\n";
+  source +=
+      "  if(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32).contains(\"right\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapFieldAssignConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1427,6 +1456,14 @@ inline void expectExperimentalMapHelperReceiverConformance(const std::string &em
   expectMapConformanceProgramRuns(
       makeExperimentalMapHelperReceiverConformanceSource(),
       "map_experimental_helper_receiver_" + emitMode,
+      emitMode,
+      21);
+}
+
+inline void expectExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeExperimentalMapMethodReceiverConformanceSource(),
+      "map_experimental_method_receiver_" + emitMode,
       emitMode,
       21);
 }

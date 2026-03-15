@@ -5457,6 +5457,49 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("experimental map methods accept direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(io_err)]
+unexpectedExperimentalMapMethodReceiverError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapMethodReceiverError>]
+main() {
+  [i32] found{try(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32).tryAt("left"raw_utf8))}
+  [i32 mut] total{plus(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32).count(), found)}
+  assign(total, plus(total, /std/collections/mapPair("extra"raw_utf8, 9i32, "other"raw_utf8, 2i32).at("extra"raw_utf8)))
+  assign(total, plus(total, /std/collections/mapPair("bonus"raw_utf8, 5i32, "keep"raw_utf8, 1i32).at_unsafe("bonus"raw_utf8)))
+  if(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32).contains("right"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental map methods keep mismatch diagnostics on direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false).count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib map constructor assignments accept explicit experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
