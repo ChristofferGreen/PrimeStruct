@@ -120,6 +120,10 @@ TEST_CASE("compiles and runs experimental map method parameters in C++ emitter")
   expectExperimentalMapMethodParameterConformance("exe");
 }
 
+TEST_CASE("compiles and runs inferred experimental map parameters in C++ emitter") {
+  expectInferredExperimentalMapParameterConformance("exe");
+}
+
 TEST_CASE("compiles and runs experimental map field assignments in C++ emitter") {
   expectExperimentalMapFieldAssignConformance("exe");
 }

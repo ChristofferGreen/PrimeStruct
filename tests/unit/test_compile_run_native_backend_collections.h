@@ -2304,6 +2304,10 @@ TEST_CASE("compiles and runs native experimental map method parameters") {
   expectExperimentalMapMethodParameterConformance("native");
 }
 
+TEST_CASE("compiles and runs native inferred experimental map parameters") {
+  expectInferredExperimentalMapParameterConformance("native");
+}
+
 TEST_CASE("compiles and runs native experimental map field assignments") {
   expectExperimentalMapFieldAssignConformance("native");
 }

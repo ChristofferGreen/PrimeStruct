@@ -5309,6 +5309,60 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("stdlib map constructors accept inferred experimental map default parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+Holder() {}
+
+[return<int> effects(heap_alloc)]
+scoreValues([auto mut] values{mapNew<string, i32>()}) {
+  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  return(plus(/std/collections/map/count(values),
+              /std/collections/map/at(values, "left"raw_utf8)))
+}
+
+[return<int> effects(heap_alloc)]
+/Holder/score([Holder] self, [auto mut] values{mapNew<string, i32>()}) {
+  mapInsert<string, i32>(values, "bonus"raw_utf8, 5i32)
+  return(plus(/std/collections/map/count(values),
+              /std/collections/map/at(values, "extra"raw_utf8)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(plus(scoreValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)),
+              holder.score(/std/collections/mapPair("left"raw_utf8, 2i32, "extra"raw_utf8, 9i32))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib map constructors keep mismatch diagnostics on inferred experimental map default parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<int> effects(heap_alloc)]
+scoreValues([auto mut] values{mapNew<string, i32>()}) {
+  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  return(/std/collections/map/count(values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(scoreValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib map constructor assignments accept explicit experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*

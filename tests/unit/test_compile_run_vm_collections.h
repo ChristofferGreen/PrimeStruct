@@ -1907,6 +1907,10 @@ TEST_CASE("runs vm experimental map method parameters") {
   expectExperimentalMapMethodParameterConformance("vm");
 }
 
+TEST_CASE("runs vm inferred experimental map parameters") {
+  expectInferredExperimentalMapParameterConformance("vm");
+}
+
 TEST_CASE("runs vm experimental map field assignments") {
   expectExperimentalMapFieldAssignConformance("vm");
 }

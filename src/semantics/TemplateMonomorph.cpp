@@ -2554,13 +2554,28 @@ bool rewriteExpr(Expr &expr,
     }
     auto rewriteCanonicalExperimentalMapConstructorArgs = [&](const Definition &targetDef,
                                                              bool methodCallSyntax) -> bool {
+      auto inferCallTargetBinding = [&](const Expr &bindingExpr, BindingInfo &bindingOut) -> bool {
+        const bool hasExplicitBinding = extractExplicitBindingType(bindingExpr, bindingOut);
+        if (hasExplicitBinding && bindingOut.typeName != "auto") {
+          return true;
+        }
+        if (bindingExpr.args.size() != 1) {
+          return hasExplicitBinding;
+        }
+        BindingInfo inferredBinding;
+        if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), {}, {}, allowMathBare, ctx, inferredBinding)) {
+          return hasExplicitBinding;
+        }
+        bindingOut = inferredBinding;
+        return true;
+      };
       std::vector<ParameterInfo> callParams;
       if (!targetDef.parameters.empty()) {
         callParams.reserve(targetDef.parameters.size());
         for (const auto &paramExpr : targetDef.parameters) {
           ParameterInfo paramInfo;
           paramInfo.name = paramExpr.name;
-          extractExplicitBindingType(paramExpr, paramInfo.binding);
+          inferCallTargetBinding(paramExpr, paramInfo.binding);
           if (paramExpr.args.size() == 1) {
             paramInfo.defaultExpr = &paramExpr.args.front();
           }
