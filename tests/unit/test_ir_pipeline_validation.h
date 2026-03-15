@@ -17986,6 +17986,14 @@ TEST_CASE("ir lowerer setup type helper rejects slash-path map methods from expr
   expectUnknownMethod("/map/count", {receiverExpr}, "unknown method: /map/count");
   expectUnknownMethod(
       "/std/collections/map/count", {receiverExpr}, "unknown method: /std/collections/map/count");
+  expectUnknownMethod("/map/contains", {receiverExpr, keyExpr}, "unknown method: /map/contains");
+  expectUnknownMethod("/std/collections/map/contains",
+                      {receiverExpr, keyExpr},
+                      "unknown method: /std/collections/map/contains");
+  expectUnknownMethod("/map/tryAt", {receiverExpr, keyExpr}, "unknown method: /map/tryAt");
+  expectUnknownMethod("/std/collections/map/tryAt",
+                      {receiverExpr, keyExpr},
+                      "unknown method: /std/collections/map/tryAt");
   expectUnknownMethod("/map/at", {receiverExpr, keyExpr}, "unknown method: /map/at");
   expectUnknownMethod(
       "/std/collections/map/at", {receiverExpr, keyExpr}, "unknown method: /std/collections/map/at");
@@ -18107,6 +18115,66 @@ TEST_CASE("ir lowerer setup type helper keeps explicit map contains and tryAt sl
 
   expectResolvedMethod("/map/contains", &aliasContainsDef);
   expectResolvedMethod("/map/tryAt", &aliasTryAtDef);
+}
+
+TEST_CASE("ir lowerer setup type helper keeps canonical map contains and tryAt slash-method precedence") {
+  primec::Definition aliasContainsDef;
+  aliasContainsDef.fullPath = "/map/contains";
+  primec::Definition canonicalContainsDef;
+  canonicalContainsDef.fullPath = "/std/collections/map/contains";
+  primec::Definition aliasTryAtDef;
+  aliasTryAtDef.fullPath = "/map/tryAt";
+  primec::Definition canonicalTryAtDef;
+  canonicalTryAtDef.fullPath = "/std/collections/map/tryAt";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {aliasContainsDef.fullPath, &aliasContainsDef},
+      {canonicalContainsDef.fullPath, &canonicalContainsDef},
+      {aliasTryAtDef.fullPath, &aliasTryAtDef},
+      {canonicalTryAtDef.fullPath, &canonicalTryAtDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  locals.emplace("values", valuesLocal);
+
+  auto expectResolvedMethod = [&](const char *methodName, const primec::Definition *expected) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiverExpr, keyExpr};
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &) { return std::string(); },
+        defMap,
+        error);
+    CHECK(resolved == expected);
+    CHECK(error.empty());
+  };
+
+  expectResolvedMethod("/std/collections/map/contains", &canonicalContainsDef);
+  expectResolvedMethod("/std/collections/map/tryAt", &canonicalTryAtDef);
 }
 
 TEST_CASE("ir lowerer setup type helper resolves declared receiver aliases through slashless map imports") {
