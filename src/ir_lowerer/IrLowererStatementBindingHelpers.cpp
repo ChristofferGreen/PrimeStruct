@@ -65,6 +65,17 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
   if (base == "vector") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Vector;
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+    return;
+  }
+  if (base == "map") {
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(arg, args) || args.size() != 2) {
+      return;
+    }
+    infoOut.argsPackElementKind = LocalInfo::Kind::Map;
+    infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+    infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+    infoOut.valueKind = infoOut.mapValueKind;
   }
 }
 

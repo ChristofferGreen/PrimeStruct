@@ -1843,6 +1843,10 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
             typeNameOut = "vector";
             return true;
           }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Map) {
+            typeNameOut = "map";
+            return true;
+          }
         }
       }
     }

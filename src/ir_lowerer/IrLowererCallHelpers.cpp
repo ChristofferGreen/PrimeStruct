@@ -1150,6 +1150,20 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     return info;
   }
   if (target.kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+      const Expr &accessReceiver = target.args.front();
+      if (accessReceiver.kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(accessReceiver.name);
+        if (localIt != localsIn.end() && localIt->second.isArgsPack &&
+            localIt->second.argsPackElementKind == LocalInfo::Kind::Map) {
+          info.isMapTarget = true;
+          info.mapKeyKind = localIt->second.mapKeyKind;
+          info.mapValueKind = localIt->second.mapValueKind;
+          return info;
+        }
+      }
+    }
     std::string collection;
     if (getBuiltinCollectionName(target, collection) && collection == "map" &&
         target.templateArgs.size() == 2) {
