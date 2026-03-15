@@ -292,7 +292,7 @@ main() {
   CHECK(result == 5);
 }
 
-TEST_CASE("ir lowerer rejects non-string struct variadic packs") {
+TEST_CASE("ir lowerer materializes direct struct variadic args packs for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -316,8 +316,120 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 2);
+}
+
+TEST_CASE("ir lowerer forwards pure spread struct variadic packs for count") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{0i32}
+}
+
+[return<int>]
+count_values([args<Pair>] values) {
+  return(count(values))
+}
+
+[return<int>]
+forward([args<Pair>] values) {
+  return(count_values([spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward(Pair(), Pair()))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 2);
+}
+
+TEST_CASE("ir lowerer materializes mixed struct spread variadic forwarding for count") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{0i32}
+}
+
+[return<int>]
+count_values([args<Pair>] values) {
+  return(count(values))
+}
+
+[return<int>]
+forward([args<Pair>] values) {
+  return(count_values(Pair(), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward(Pair(), Pair()))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
+}
+
+TEST_CASE("ir lowerer still rejects struct variadic pack indexing") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<int>]
+first_value([args<Pair>] values) {
+  return(values[0i32].value)
+}
+
+[return<int>]
+main() {
+  return(first_value(Pair()))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("native backend only supports numeric/bool/string variadic args parameters") !=
+  CHECK(error.find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
         std::string::npos);
 }
 

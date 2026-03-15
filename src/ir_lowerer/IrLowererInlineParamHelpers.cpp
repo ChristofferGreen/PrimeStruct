@@ -32,6 +32,9 @@ bool emitInlineDefinitionCallParameters(
     }
 
     if (i == packedParamIndex) {
+      StructSlotLayoutInfo structLayout;
+      const bool isStructPack = !paramInfo.structTypeName.empty();
+
       auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
         if (paramInfo.valueKind == LocalInfo::ValueKind::String) {
           LocalInfo::StringSource source = LocalInfo::StringSource::None;
@@ -53,6 +56,20 @@ bool emitInlineDefinitionCallParameters(
         }
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
         return true;
+      };
+
+      auto emitStructPackedValueToSlots = [&](const Expr &argExpr, int32_t destBaseLocal) -> bool {
+        const std::string argStruct = inferStructExprPath(argExpr, callerLocals);
+        if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
+          error = "variadic parameter type mismatch";
+          return false;
+        }
+        if (!emitExpr(argExpr, callerLocals)) {
+          return false;
+        }
+        const int32_t srcPtrLocal = allocTempLocal();
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
+        return emitStructCopySlots(destBaseLocal, srcPtrLocal, structLayout.totalSlots);
       };
 
       auto emitArgsPackAlias = [&](const Expr &argExpr,
@@ -101,7 +118,11 @@ bool emitInlineDefinitionCallParameters(
           }
         }
       }
-      if (paramInfo.structTypeName.size() > 0 || paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+      if (isStructPack) {
+        if (!resolveStructSlotLayout(paramInfo.structTypeName, structLayout)) {
+          return false;
+        }
+      } else if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
         error = "native backend only supports numeric/bool/string variadic args parameters";
         return false;
       }
@@ -126,14 +147,22 @@ bool emitInlineDefinitionCallParameters(
       const int32_t totalPackedCount =
           static_cast<int32_t>(explicitPackedCount) +
           (hasSpreadSuffix ? spreadSourceInfo.argsPackElementCount : 0);
-      nextLocal += 1 + totalPackedCount;
+      const int32_t elementSlotCount = isStructPack ? structLayout.totalSlots : 1;
+      nextLocal += 1 + totalPackedCount * elementSlotCount;
       emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(totalPackedCount));
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal));
 
       for (size_t packedIndex = 0; packedIndex < explicitPackedCount; ++packedIndex) {
         const Expr &argExpr = *packedArgs[packedIndex];
-        if (!emitPackedValueToLocal(argExpr, baseLocal + 1 + static_cast<int32_t>(packedIndex))) {
-          return false;
+        const int32_t destLocal = baseLocal + 1 + static_cast<int32_t>(packedIndex) * elementSlotCount;
+        if (isStructPack) {
+          if (!emitStructPackedValueToSlots(argExpr, destLocal)) {
+            return false;
+          }
+        } else {
+          if (!emitPackedValueToLocal(argExpr, destLocal)) {
+            return false;
+          }
         }
       }
 
@@ -142,15 +171,30 @@ bool emitInlineDefinitionCallParameters(
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(spreadSourceInfo.index));
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(sourcePtrLocal));
         for (int32_t spreadIndex = 0; spreadIndex < spreadSourceInfo.argsPackElementCount; ++spreadIndex) {
+          const int32_t destLocal =
+              baseLocal + 1 + (static_cast<int32_t>(explicitPackedCount) + spreadIndex) * elementSlotCount;
+          const uint64_t offsetBytes =
+              static_cast<uint64_t>(1 + spreadIndex * elementSlotCount) * IrSlotBytes;
+          if (isStructPack) {
+            const int32_t srcElementPtrLocal = allocTempLocal();
+            emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(sourcePtrLocal));
+            if (offsetBytes != 0) {
+              emitInstruction(IrOpcode::PushI64, offsetBytes);
+              emitInstruction(IrOpcode::AddI64, 0);
+            }
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcElementPtrLocal));
+            if (!emitStructCopySlots(destLocal, srcElementPtrLocal, structLayout.totalSlots)) {
+              return false;
+            }
+            continue;
+          }
           emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(sourcePtrLocal));
-          const uint64_t offsetBytes = static_cast<uint64_t>(spreadIndex + 1) * IrSlotBytes;
           if (offsetBytes != 0) {
             emitInstruction(IrOpcode::PushI64, offsetBytes);
             emitInstruction(IrOpcode::AddI64, 0);
           }
           emitInstruction(IrOpcode::LoadIndirect, 0);
-          emitInstruction(IrOpcode::StoreLocal,
-                          static_cast<uint64_t>(baseLocal + 1 + static_cast<int32_t>(explicitPackedCount) + spreadIndex));
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
         }
       }
 

@@ -215,7 +215,7 @@ main() {
   CHECK(runCommand(exePath) == 101);
 }
 
-TEST_CASE("native rejects non-string struct variadic packs") {
+TEST_CASE("native materializes direct struct variadic args packs for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -232,16 +232,104 @@ main() {
   return(count_values(Pair(), Pair()))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_variadic_args_struct.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct.txt").string();
+  const std::string srcPath = writeTemp("compile_native_variadic_args_struct_count.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct").string();
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct_count").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("native forwards pure spread struct variadic packs for count") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{0i32}
+}
+
+[return<int>]
+count_values([args<Pair>] values) {
+  return(count(values))
+}
+
+[return<int>]
+forward([args<Pair>] values) {
+  return(count_values([spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward(Pair(), Pair()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_struct_spread.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct_spread").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("native materializes mixed struct spread variadic forwarding for count") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{0i32}
+}
+
+[return<int>]
+count_values([args<Pair>] values) {
+  return(count(values))
+}
+
+[return<int>]
+forward([args<Pair>] values) {
+  return(count_values(Pair(), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward(Pair(), Pair()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_struct_mixed.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct_mixed").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("native still rejects struct variadic pack indexing") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<int>]
+first_value([args<Pair>] values) {
+  return(values[0i32].value)
+}
+
+[return<int>]
+main() {
+  return(first_value(Pair()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_struct_index.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct_index.txt").string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct_index").string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("native backend only supports numeric/bool/string variadic args parameters") !=
+  CHECK(readFile(errPath).find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
         std::string::npos);
 }
 

@@ -396,7 +396,9 @@ Bottom-level form therefore has:
   legacy C++ emitter (including final-spread forwarding into a trailing variadic slot). IR-backed VM/native lowering
   now covers direct numeric/bool/string pack materialization, pure final-spread forwarding of an existing pack, and
   mixed explicit-prefix + final-spread rebuilding from known-size numeric/bool/string packs, including indexed
-  downstream string helpers; remaining non-string element support remains a separate follow-up slice.
+  downstream string helpers. Struct packs now also materialize for direct calls plus pure/mixed forwarding when the
+  body only needs `count(...)`; struct element access/indexing and other unsupported non-string element support remain
+  separate follow-up slices.
 
 ## 5. Desugaring and Canonical Core
 
