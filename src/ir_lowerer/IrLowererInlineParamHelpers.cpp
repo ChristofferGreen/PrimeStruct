@@ -38,7 +38,8 @@ bool emitInlineDefinitionCallParameters(
       auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Array ||
             paramInfo.argsPackElementKind == LocalInfo::Kind::Vector ||
-            (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference && paramInfo.referenceToArray) ||
+            (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
+             (paramInfo.referenceToArray || paramInfo.referenceToMap)) ||
             paramInfo.argsPackElementKind == LocalInfo::Kind::Map) {
           if (!emitExpr(argExpr, callerLocals)) {
             return false;

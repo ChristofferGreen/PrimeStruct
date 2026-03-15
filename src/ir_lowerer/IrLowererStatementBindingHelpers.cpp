@@ -80,6 +80,18 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(refArg));
       return;
     }
+    if (refBase == "map") {
+      std::vector<std::string> args;
+      if (!splitTemplateArgs(refArg, args) || args.size() != 2) {
+        return;
+      }
+      infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
+      infoOut.referenceToMap = true;
+      infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+      infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+      infoOut.valueKind = infoOut.mapValueKind;
+      return;
+    }
   }
   if (base == "vector") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Vector;
