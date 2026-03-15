@@ -5367,6 +5367,80 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("double helper-wrapped inferred experimental map returns rewrite nested constructor arguments") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapOnce<T>([T] values) {
+  return(values)
+}
+
+[return<T> effects(heap_alloc)]
+wrapTwice<T>([T] values) {
+  return(wrapOnce(values))
+}
+
+[return<auto> effects(heap_alloc)]
+buildValues([bool] useCanonical) {
+  if(useCanonical,
+     then() { return(wrapTwice(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))) },
+     else() { return(wrapTwice(/std/collections/mapPair("extra"raw_utf8, 9i32, "bonus"raw_utf8, 5i32))) })
+}
+
+[effects(io_err)]
+unexpectedDoubleWrappedExperimentalMapReturnError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedDoubleWrappedExperimentalMapReturnError>]
+main() {
+  [Map<string, i32>] canonical{buildValues(true)}
+  [Map<string, i32>] wrapped{buildValues(false)}
+  [i32] left{try(/std/collections/map/tryAt(canonical, "left"raw_utf8))}
+  [i32] bonus{try(/std/collections/map/tryAt(wrapped, "bonus"raw_utf8))}
+  return(Result.ok(plus(/std/collections/map/count(canonical), plus(left, bonus))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("double helper-wrapped inferred experimental map returns keep nested constructor mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapOnce<T>([T] values) {
+  return(values)
+}
+
+[return<T> effects(heap_alloc)]
+wrapTwice<T>([T] values) {
+  return(wrapOnce(values))
+}
+
+[return<auto> effects(heap_alloc)]
+buildValues() {
+  return(wrapTwice(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32>] values{buildValues()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("inferred experimental map call receivers resolve method sugar") {
   const std::string source = R"(
 import /std/collections/*

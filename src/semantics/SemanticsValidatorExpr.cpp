@@ -1594,11 +1594,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, parseError)) {
             defLocals[stmt.name] = binding;
           } else if (stmt.args.size() == 1 &&
-                     tryInferBindingTypeFromInitializer(stmt.args.front(),
-                                                        defParams,
-                                                        defLocals,
-                                                        binding,
-                                                        hasAnyMathImport())) {
+                     inferBindingTypeFromInitializer(stmt.args.front(), defParams, defLocals, binding)) {
             defLocals[stmt.name] = binding;
           }
           continue;
@@ -1632,8 +1628,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return true;
         }
       }
-      return tryInferBindingTypeFromInitializer(
-          *valueExpr, defParams, defLocals, bindingOut, hasAnyMathImport());
+      return inferBindingTypeFromInitializer(*valueExpr, defParams, defLocals, bindingOut);
     };
     auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {
       typePathOut.clear();

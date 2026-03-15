@@ -2963,15 +2963,10 @@ bool rewriteExpr(Expr &expr,
       if (candidate.kind != Expr::Kind::Call) {
         return;
       }
-      const std::string originalPath = resolveCalleePath(candidate, namespacePrefix, ctx);
-      const bool isDirectConstructor =
-          !experimentalMapConstructorRewritePath(originalPath, candidate.args.size()).empty();
-      const bool isUnspecializedTemplatedCall =
-          !isDirectConstructor && candidate.templateArgs.empty() && ctx.templateDefs.count(originalPath) > 0;
       rewriteCanonicalExperimentalMapConstructorExpr(candidate);
-      if (isUnspecializedTemplatedCall) {
-        return;
-      }
+      // When an outer destination already requires an experimental Map value,
+      // keep walking through generic wrapper calls so nested canonical map
+      // constructors are rewritten before template inference binds the wrapper.
       for (auto &arg : candidate.args) {
         self(self, arg);
       }
