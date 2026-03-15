@@ -576,6 +576,34 @@ inline std::string makeWrapperMapConstructorExperimentalParameterConformanceSour
   return source;
 }
 
+inline std::string makeWrapperMapHelperExperimentalValueConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedWrapperMapHelperExperimentalValueError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperMapHelperExperimentalValueError>]\n";
+  source += "main() {\n";
+  source +=
+      "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  [i32] found{try(/std/collections/mapTryAt(values, \"left\"raw_utf8))}\n";
+  source += "  [i32 mut] total{plus(/std/collections/mapCount(values), found)}\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/mapAt(/std/collections/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32), \"extra\"raw_utf8)))\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/mapAtUnsafe(/std/collections/map/map(\"bonus\"raw_utf8, 5i32, \"keep\"raw_utf8, 1i32), \"bonus\"raw_utf8)))\n";
+  source += "  if(/std/collections/mapContains(values, \"left\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapAssignConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1370,6 +1398,14 @@ inline void expectWrapperMapConstructorExperimentalParameterConformance(const st
       "map_wrapper_constructor_experimental_parameter_" + emitMode,
       emitMode,
       20);
+}
+
+inline void expectWrapperMapHelperExperimentalValueConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeWrapperMapHelperExperimentalValueConformanceSource(),
+      "map_wrapper_helper_experimental_value_" + emitMode,
+      emitMode,
+      21);
 }
 
 inline void expectExperimentalMapAssignConformance(const std::string &emitMode) {

@@ -4543,6 +4543,78 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib wrapper map helpers accept experimental map value receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(io_err)]
+unexpectedWrapperExperimentalMapValueError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapValueError>]
+main() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  [i32] found{try(/std/collections/mapTryAt(values, "left"raw_utf8))}
+  [i32 mut] total{plus(/std/collections/mapCount(values), found)}
+  assign(total, plus(total, /std/collections/mapAt(values, "left"raw_utf8)))
+  assign(total, plus(total, /std/collections/mapAtUnsafe(values, "right"raw_utf8)))
+  if(/std/collections/mapContains(values, "left"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib wrapper map helpers accept experimental constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(io_err)]
+unexpectedWrapperExperimentalMapReceiverError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapReceiverError>]
+main() {
+  [i32] found{try(/std/collections/mapTryAt(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32), "left"raw_utf8))}
+  [i32 mut] total{plus(/std/collections/mapCount(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)), found)}
+  assign(total, plus(total, /std/collections/mapAt(/std/collections/mapPair("extra"raw_utf8, 9i32, "other"raw_utf8, 2i32), "extra"raw_utf8)))
+  assign(total, plus(total, /std/collections/mapAtUnsafe(/std/collections/map/map("bonus"raw_utf8, 5i32, "keep"raw_utf8, 1i32), "bonus"raw_utf8)))
+  if(/std/collections/mapContains(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32), "right"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib wrapper map helpers keep constructor mismatch diagnostics on experimental constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/mapCount(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map constructor accepts explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
