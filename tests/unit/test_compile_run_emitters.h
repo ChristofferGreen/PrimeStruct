@@ -3570,6 +3570,101 @@ TEST_CASE("C++ emitter helper keeps same-path map slash-method metadata preceden
   expectResolved("/std/collections/map/tryAt", true, "/CanonicalTryAtMarker/tag");
 }
 
+TEST_CASE("C++ emitter helper rejects canonical return-struct fallback for direct map tryAt compatibility calls") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/map/tryAt";
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  receiverCall.args.push_back(receiverName);
+  receiverCall.args.push_back(keyLiteral);
+  receiverCall.argNames.push_back(std::nullopt);
+  receiverCall.argNames.push_back(std::nullopt);
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "tag";
+  methodCall.args.push_back(receiverCall);
+  methodCall.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "map";
+  receiverInfo.typeTemplateArg = "i32, i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs = {
+      {"/std/collections/map/tryAt", "/CanonicalTryAtMarker"},
+  };
+
+  std::string resolved = "/stale/path";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved.empty());
+}
+
+TEST_CASE("C++ emitter helper keeps same-path map tryAt direct-call return metadata precedence") {
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  auto expectResolved = [&](const char *receiverPath, const char *expectedPath) {
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.name = receiverPath;
+    receiverCall.args = {receiverName, keyLiteral};
+    receiverCall.argNames = {std::nullopt, std::nullopt};
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.isMethodCall = true;
+    methodCall.name = "tag";
+    methodCall.args = {receiverCall};
+    methodCall.argNames = {std::nullopt};
+
+    std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+    primec::emitter::BindingInfo receiverInfo;
+    receiverInfo.typeName = "map";
+    receiverInfo.typeTemplateArg = "i32, i32";
+    localTypes.emplace("values", receiverInfo);
+
+    std::unordered_map<std::string, const primec::Definition *> defMap;
+    std::unordered_map<std::string, std::string> importAliases;
+    std::unordered_map<std::string, std::string> structTypeMap;
+    std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+    std::unordered_map<std::string, std::string> returnStructs = {
+        {"/map/tryAt", "/AliasTryAtMarker"},
+        {"/std/collections/map/tryAt", "/CanonicalTryAtMarker"},
+    };
+
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == expectedPath);
+  };
+
+  expectResolved("/map/tryAt", "/AliasTryAtMarker/tag");
+  expectResolved("/std/collections/map/tryAt", "/CanonicalTryAtMarker/tag");
+}
+
 TEST_CASE("C++ emitter helper keeps primitive vector alias access method resolution") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
@@ -5137,6 +5232,89 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
+}
+
+TEST_CASE("rejects map tryAt compatibility call struct method chain canonical forwarding in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/map/tryAt(values, 2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_map_try_at_alias_struct_method_chain_canonical_forwarding_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_map_try_at_alias_struct_method_chain_canonical_forwarding_reject.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /map/tryAt") != std::string::npos);
+}
+
+TEST_CASE("keeps same-path direct map tryAt struct method chain precedence in C++ emitter") {
+  const std::string source = R"(
+CanonicalMarker {
+  [i32] value
+}
+
+AliasMarker {
+  [i32] value
+}
+
+[return<AliasMarker>]
+/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(AliasMarker(plus(key, 40i32)))
+}
+
+[return<CanonicalMarker>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(CanonicalMarker(key))
+}
+
+[return<int>]
+/CanonicalMarker/tag([CanonicalMarker] self) {
+  return(self.value)
+}
+
+[return<int>]
+/AliasMarker/tag([AliasMarker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(plus(/std/collections/map/tryAt(values, 2i32).tag(),
+              /map/tryAt(values, 2i32).tag()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_direct_map_try_at_struct_method_chain_same_path_precedence.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_direct_map_try_at_struct_method_chain_same_path_precedence_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 44);
 }
 
 TEST_CASE("rejects map namespaced count method compatibility alias in C++ emitter") {
