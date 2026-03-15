@@ -2368,6 +2368,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    const bool shouldBuiltinValidateBareMapCountCall =
+        currentDefinitionPath_ == "/std/collections/mapCount";
     auto isUnnamespacedMapCountBuiltinFallbackCall = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
         return false;
@@ -2403,6 +2405,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      if (!shouldBuiltinValidateBareMapCountCall) {
         return false;
       }
       return resolveMapTarget(candidate.args[receiverIndex]);
@@ -3799,6 +3804,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         (void)validateExpr(params, locals, expr.args.front());
         return false;
       }
+      if (isBuiltinMethod && methodResolved == "/std/collections/map/count" &&
+          !hasDeclaredDefinitionPath("/map/count") &&
+          !hasImportedDefinitionPath("/std/collections/map/count") &&
+          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+          !shouldBuiltinValidateBareMapCountCall) {
+        error_ = "unknown call target: /std/collections/map/count";
+        return false;
+      }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
         error_ = "unknown method: " + methodResolved;
         return false;
@@ -3829,6 +3842,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         isBuiltinMethod = true;
       } else if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
         (void)validateExpr(params, locals, expr.args.front());
+        return false;
+      }
+      if (isBuiltinMethod && methodResolved == "/std/collections/map/count" &&
+          !hasDeclaredDefinitionPath("/map/count") &&
+          !hasImportedDefinitionPath("/std/collections/map/count") &&
+          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+          !shouldBuiltinValidateBareMapCountCall) {
+        error_ = "unknown call target: /std/collections/map/count";
         return false;
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {

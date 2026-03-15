@@ -1776,6 +1776,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    const bool shouldInferBuiltinBareMapCountCall =
+        currentDefinitionPath_ == "/std/collections/mapCount";
     auto isUnnamespacedMapCountBuiltinFallbackCall = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
         return false;
@@ -1811,6 +1813,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
       if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      if (!shouldInferBuiltinBareMapCountCall) {
         return false;
       }
       std::string keyType;
@@ -2568,6 +2573,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return false;
       }
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
+      if (isCountLike && methodResolved == "/std/collections/map/count" &&
+          !hasDeclaredDefinitionPath("/map/count") &&
+          !hasImportedDefinitionPath("/std/collections/map/count") &&
+          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+          !shouldInferBuiltinBareMapCountCall) {
+        error_ = "unknown call target: /std/collections/map/count";
+        return false;
+      }
       auto methodIt = defMap_.find(methodResolved);
       if (methodIt != defMap_.end()) {
         if (!inferDefinitionReturnKind(*methodIt->second)) {
@@ -2689,6 +2702,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string methodResolved;
       if (resolveMethodCallPath("count", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
+        if (methodResolved == "/std/collections/map/count" &&
+            !hasDeclaredDefinitionPath("/map/count") &&
+            !hasImportedDefinitionPath("/std/collections/map/count") &&
+            !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+            !shouldInferBuiltinBareMapCountCall) {
+          error_ = "unknown call target: /std/collections/map/count";
+          return ReturnKind::Unknown;
+        }
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
             resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
@@ -2728,6 +2749,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string methodResolved;
       if (resolveMethodCallPath("count", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
+        if (methodResolved == "/std/collections/map/count" &&
+            !hasDeclaredDefinitionPath("/map/count") &&
+            !hasImportedDefinitionPath("/std/collections/map/count") &&
+            !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+            !shouldInferBuiltinBareMapCountCall) {
+          error_ = "unknown call target: /std/collections/map/count";
+          return ReturnKind::Unknown;
+        }
         ReturnKind helperReturnKind = ReturnKind::Unknown;
         if (inferResolvedPathReturnKind(methodResolved, helperReturnKind)) {
           return helperReturnKind;

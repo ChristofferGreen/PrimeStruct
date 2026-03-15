@@ -571,7 +571,7 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
-TEST_CASE("runs vm map unnamespaced count builtin fallback with canonical helper") {
+TEST_CASE("runs vm bare map count through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -593,7 +593,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("runs vm map unnamespaced count builtin fallback without canonical helper") {
+TEST_CASE("rejects vm bare map count without imported canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -608,8 +608,8 @@ main() {
        "primec_vm_map_unnamespaced_count_builtin_fallback_no_canonical_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 1);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm bare map at through canonical helper") {

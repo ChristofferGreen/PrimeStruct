@@ -27,11 +27,30 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count builtin validates on map literals") {
+TEST_CASE("bare map count call requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(count(map<i32, i32>(1i32, 2i32)))
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+}
+
+TEST_CASE("bare map count call resolves through canonical helper definition") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(count(values))
 }
 )";
   std::string error;
@@ -39,8 +58,41 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count helper validates on map binding") {
+TEST_CASE("bare map count call resolves through compatibility alias when canonical helper is absent") {
   const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(19i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare map count call keeps explicit root helper precedence") {
+  const std::string source = R"(
+[return<int>]
+/count([map<i32, i32>] values) {
+  return(23i32)
+}
+
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(19i32)
+}
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
@@ -4952,7 +5004,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/map") != std::string::npos);
 }
 
-TEST_CASE("map unnamespaced count call resolves builtin fallback with canonical helper") {
+TEST_CASE("map unnamespaced count call resolves through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -4970,7 +5022,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map unnamespaced count auto inference resolves builtin fallback with canonical helper") {
+TEST_CASE("map unnamespaced count auto inference resolves through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -4989,8 +5041,13 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map unnamespaced count call resolves builtin fallback without canonical helper") {
+TEST_CASE("map unnamespaced count call resolves through compatibility alias when canonical helper is absent") {
   const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/count([map<i32, i32>] values) {
+  return(19i32)
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
@@ -5000,6 +5057,33 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("map unnamespaced count call requires imported canonical helper or explicit alias definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+}
+
+TEST_CASE("map unnamespaced count auto inference keeps deterministic unknown call diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("bare map at call resolves through canonical helper") {
