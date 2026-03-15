@@ -1512,6 +1512,17 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         return "";
       };
+      auto preferredMapMethodTargetForCall = [&](const std::string &helperName) {
+        const std::string canonical = "/std/collections/map/" + helperName;
+        const std::string alias = "/map/" + helperName;
+        if (defMap_.count(canonical) > 0) {
+          return canonical;
+        }
+        if (defMap_.count(alias) > 0) {
+          return alias;
+        }
+        return canonical;
+      };
 
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
         const std::string resolvedType = resolveCalleePath(receiver);
@@ -1547,7 +1558,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return true;
         }
         if (normalizedMethodName == "count" && resolveMapTarget(receiver, keyType, valueType)) {
-          resolvedOut = preferVectorStdlibHelperPathForCall("/std/collections/map/count");
+          resolvedOut = preferredMapMethodTargetForCall("count");
           return true;
         }
         if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
@@ -1854,6 +1865,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
       return defMap_.find("/" + normalized) == defMap_.end();
+    };
+    auto hasDeclaredDefinitionPath = [&](const std::string &path) {
+      for (const auto &def : program_.definitions) {
+        if (def.fullPath == path) {
+          return true;
+        }
+      }
+      return false;
     };
     auto explicitRemovedCollectionMethodPath = [&](const Expr &candidate) -> std::string {
       if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
@@ -2300,10 +2319,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         resolved = "/string/count";
         hasResolvedPath = true;
       } else if (resolveMapTarget(expr.args.front(), keyType, valueType)) {
-        const std::string methodPath = preferVectorStdlibHelperPath("/std/collections/map/count");
-        if (defMap_.find(methodPath) == defMap_.end()) {
-          return ReturnKind::Int;
-        }
+        const std::string methodPath =
+            defMap_.find("/std/collections/map/count") != defMap_.end()
+                ? "/std/collections/map/count"
+                : (defMap_.find("/map/count") != defMap_.end() ? "/map/count"
+                                                               : "/std/collections/map/count");
         resolved = methodPath;
         hasResolvedPath = true;
       }
@@ -2325,6 +2345,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
         if (methodResolved == "/file_error/why") {
           return ReturnKind::String;
+        }
+        if (methodResolved == "/std/collections/map/count" && !hasDeclaredDefinitionPath(methodResolved) &&
+            !hasDeclaredDefinitionPath("/map/count") &&
+            !hasImportedDefinitionPath("/std/collections/map/count")) {
+          error_ = "unknown method: " + methodResolved;
+          return ReturnKind::Unknown;
         }
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
@@ -2529,6 +2555,16 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall);
       if (!isCountLike && !isCapacityLike) {
         return false;
+      }
+      std::string mapKeyType;
+      std::string mapValueType;
+      if (isUnnamespacedMapCountFallbackCall &&
+          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+          !hasDeclaredDefinitionPath("/map/count") &&
+          !hasImportedDefinitionPath("/std/collections/map/count") &&
+          resolveMapTarget(callExpr.args.front(), mapKeyType, mapValueType)) {
+        kindOut = ReturnKind::Int;
+        return true;
       }
       std::string methodResolved;
       if (!resolveMethodCallPath(isCountLike ? "count" : "capacity", methodResolved)) {

@@ -2684,6 +2684,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    auto hasDeclaredDefinitionPath = [&](const std::string &path) {
+      for (const auto &def : program_.definitions) {
+        if (def.fullPath == path) {
+          return true;
+        }
+      }
+      return false;
+    };
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
@@ -3716,6 +3724,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             isBuiltinMethod = false;
           }
         }
+        if (resolved == "/std/collections/map/count" && !hasDeclaredDefinitionPath(resolved) &&
+            !hasDeclaredDefinitionPath("/map/count") &&
+            !hasImportedDefinitionPath("/std/collections/map/count")) {
+          isBuiltinMethod = false;
+        }
         if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
             isVectorBuiltinName(expr, "capacity") && !isStdNamespacedVectorCapacityCall) {
           promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
@@ -3751,7 +3764,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       methodReceiverIndex = 0;
       bool isBuiltinMethod = false;
       std::string methodResolved;
-      if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
+      if (isUnnamespacedMapCountFallbackCall &&
+          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+          !hasDeclaredDefinitionPath("/map/count") &&
+          !hasImportedDefinitionPath("/std/collections/map/count") &&
+          resolveMapTarget(expr.args.front())) {
+        methodResolved = "/std/collections/map/count";
+        isBuiltinMethod = true;
+      } else if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
         // Preserve receiver diagnostics (for example unknown call target)
         // when collection-target resolution fails.
         (void)validateExpr(params, locals, expr.args.front());
@@ -3778,7 +3798,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       methodReceiverIndex = 0;
       bool isBuiltinMethod = false;
       std::string methodResolved;
-      if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
+      if (isUnnamespacedMapCountFallbackCall &&
+          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+          !hasDeclaredDefinitionPath("/map/count") &&
+          !hasImportedDefinitionPath("/std/collections/map/count") &&
+          resolveMapTarget(expr.args.front())) {
+        methodResolved = "/std/collections/map/count";
+        isBuiltinMethod = true;
+      } else if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
         (void)validateExpr(params, locals, expr.args.front());
         return false;
       }

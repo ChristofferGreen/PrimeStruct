@@ -859,8 +859,13 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count method validates on map binding") {
+TEST_CASE("count method validates on map binding with explicit alias helper") {
   const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(7i32)
+}
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
@@ -4366,6 +4371,33 @@ main() {
   CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
+TEST_CASE("bare map count method requires imported canonical helper or alias definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/map/count") != std::string::npos);
+}
+
+TEST_CASE("bare map count method auto inference keeps deterministic unknown method diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("map namespaced at method keeps slash-path rejection diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -5306,7 +5338,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("templated canonical map count wrapper method sugar keeps canonical diagnostics") {
+TEST_CASE("templated canonical map count wrapper method sugar rejects without explicit alias") {
   const std::string source = R"(
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapValues() {
@@ -5325,8 +5357,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
-  CHECK(error.find("/std/collections/map/count__t") == std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("bare map helper statement body arguments still validate") {
@@ -9485,7 +9516,7 @@ main() {
   CHECK(error.find("template arguments are only supported on templated definitions: /map/count") != std::string::npos);
 }
 
-TEST_CASE("wrapper reference templated map count method prefers canonical helper") {
+TEST_CASE("wrapper reference templated map count method rejects without explicit alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /Reference/count([Reference</std/collections/map<i32, i32>>] self) {
@@ -9510,7 +9541,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("wrapper reference templated map count method keeps canonical diagnostics") {

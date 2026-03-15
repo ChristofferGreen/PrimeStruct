@@ -405,6 +405,11 @@ main() {
 TEST_CASE("compiles and runs map count") {
   const std::string source = R"(
 [return<int>]
+/map/count([map<i32, i32>] values) {
+  return(count(values))
+}
+
+[return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
   return(plus(count(values), values.count()))

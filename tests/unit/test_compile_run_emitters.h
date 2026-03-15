@@ -4334,7 +4334,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("C++ emitter compiles map method sugar on wrapper-returned canonical map references") {
+TEST_CASE("C++ emitter rejects map method sugar on wrapper-returned canonical map references") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -4365,7 +4365,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports returning array values") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on wrapper-returned canonical map reference method sugar") {
@@ -4732,6 +4732,24 @@ main() {
   CHECK(readFile(errPath).find("Semantic error") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter rejects bare map count method without imported canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_map_count_method_without_import.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_count_method_without_import.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("rejects map namespaced at method compatibility alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -4866,7 +4884,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on templated wrapper slash return map count sugar") {
@@ -4897,7 +4915,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(diagnostics.find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter resolves direct canonical map count wrappers on map references") {

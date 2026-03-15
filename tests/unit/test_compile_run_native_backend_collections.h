@@ -972,6 +972,27 @@ main() {
   CHECK(readFile(outPath).find("Semantic error") != std::string::npos);
 }
 
+TEST_CASE("rejects native bare map count method without imported canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bare_map_count_method_without_import.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_bare_map_count_method_without_import_out.txt")
+          .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_bare_map_count_method_without_import_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("rejects native map namespaced at method compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -7834,7 +7855,7 @@ main() {
   CHECK_FALSE(readFile(outPath).empty());
 }
 
-TEST_CASE("compiles and runs native map method sugar on wrapper-returned canonical map references") {
+TEST_CASE("native rejects map method sugar on wrapper-returned canonical map references") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -7863,7 +7884,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("native backend only supports returning array values") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("native keeps non-string diagnostics on canonical map reference access count shadow") {
