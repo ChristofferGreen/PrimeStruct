@@ -698,6 +698,19 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       return candidates;
     }
     if (receiverStruct == "/map") {
+      const bool isExplicitCompatibilityMethod =
+          rawMethodName == "map/count" || rawMethodName == "map/contains" ||
+          rawMethodName == "map/tryAt";
+      const bool isExplicitCanonicalMethod =
+          rawMethodName == "std/collections/map/count" ||
+          rawMethodName == "std/collections/map/contains" ||
+          rawMethodName == "std/collections/map/tryAt";
+      if (isExplicitCompatibilityMethod) {
+        return {"/map/" + methodName};
+      }
+      if (isExplicitCanonicalMethod) {
+        return {"/std/collections/map/" + methodName};
+      }
       std::vector<std::string> candidates = {
           "/std/collections/map/" + methodName,
       };
