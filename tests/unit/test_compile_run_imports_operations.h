@@ -88,6 +88,10 @@ TEST_CASE("compiles and runs wrapper map constructors through explicit experimen
   expectWrapperMapConstructorExperimentalParameterConformance("exe");
 }
 
+TEST_CASE("compiles and runs experimental map constructor assignments in C++ emitter") {
+  expectExperimentalMapAssignConformance("exe");
+}
+
 TEST_CASE("rejects canonical namespaced map helpers on borrowed experimental map values in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("exe");
 }

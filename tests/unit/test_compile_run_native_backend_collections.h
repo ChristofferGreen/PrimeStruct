@@ -2272,6 +2272,10 @@ TEST_CASE("compiles and runs native wrapper map constructors through explicit ex
   expectWrapperMapConstructorExperimentalParameterConformance("native");
 }
 
+TEST_CASE("compiles and runs native experimental map constructor assignments") {
+  expectExperimentalMapAssignConformance("native");
+}
+
 TEST_CASE("rejects native canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("native");
 }

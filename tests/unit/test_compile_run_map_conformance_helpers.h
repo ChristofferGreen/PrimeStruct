@@ -576,6 +576,49 @@ inline std::string makeWrapperMapConstructorExperimentalParameterConformanceSour
   return source;
 }
 
+inline std::string makeExperimentalMapAssignConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedExperimentalMapAssignError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAssignError>]\n";
+  source += "scoreValues([Map<string, i32>] values) {\n";
+  source += "  [i32] found{try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8))}\n";
+  source += "  [i32 mut] total{plus(/std/collections/map/count<string, i32>(values), found)}\n";
+  source += "  assign(total, plus(total, /std/collections/map/at<string, i32>(values, \"left\"raw_utf8)))\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>(values, \"right\"raw_utf8)))\n";
+  source += "  if(/std/collections/map/contains<string, i32>(values, \"left\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAssignError>]\n";
+  source += "replaceAndScore([Map<string, i32> mut] values) {\n";
+  source +=
+      "  assign(values, /std/collections/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+  source += "  return(scoreValues(values))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAssignError>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32> mut] values{mapNew<string, i32>()}\n";
+  source += "  [Map<string, i32> mut] other{mapNew<string, i32>()}\n";
+  source +=
+      "  assign(values, /std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+  source += "  [i32] localScore{try(scoreValues(values))}\n";
+  source += "  [i32] paramScore{try(replaceAndScore(other))}\n";
+  source += "  return(Result.ok(plus(localScore, paramScore)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1008,6 +1051,14 @@ inline void expectWrapperMapConstructorExperimentalParameterConformance(const st
       "map_wrapper_constructor_experimental_parameter_" + emitMode,
       emitMode,
       20);
+}
+
+inline void expectExperimentalMapAssignConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeExperimentalMapAssignConformanceSource(),
+      "map_experimental_assign_" + emitMode,
+      emitMode,
+      36);
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {

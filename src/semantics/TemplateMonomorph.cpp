@@ -2445,6 +2445,34 @@ bool rewriteExpr(Expr &expr,
         return false;
       }
     }
+    auto rewriteCanonicalExperimentalMapConstructorAssign = [&]() {
+      if (!isAssignCall(expr) || expr.args.size() != 2) {
+        return;
+      }
+      BindingInfo targetInfo;
+      if (!inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, targetInfo)) {
+        return;
+      }
+      std::string targetTypeText = targetInfo.typeName;
+      if (!targetInfo.typeTemplateArg.empty()) {
+        targetTypeText += "<" + targetInfo.typeTemplateArg + ">";
+      }
+      if (!resolvesExperimentalMapValueTypeText(targetTypeText)) {
+        return;
+      }
+      Expr &valueExpr = expr.args[1];
+      if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
+        return;
+      }
+      const std::string helperPath =
+          experimentalMapConstructorRewritePath(resolveCalleePath(valueExpr, namespacePrefix, ctx), valueExpr.args.size());
+      if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
+        return;
+      }
+      valueExpr.name = helperPath;
+      valueExpr.namespacePrefix.clear();
+    };
+    rewriteCanonicalExperimentalMapConstructorAssign();
   }
   if (expr.isMethodCall) {
     std::string methodPath;
