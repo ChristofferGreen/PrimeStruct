@@ -2300,6 +2300,10 @@ TEST_CASE("compiles and runs native experimental map struct fields") {
   expectExperimentalMapStructFieldConformance("native");
 }
 
+TEST_CASE("compiles and runs native inferred experimental map struct fields") {
+  expectInferredExperimentalMapStructFieldConformance("native");
+}
+
 TEST_CASE("compiles and runs native experimental map method parameters") {
   expectExperimentalMapMethodParameterConformance("native");
 }

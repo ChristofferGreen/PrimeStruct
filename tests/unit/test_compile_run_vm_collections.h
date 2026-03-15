@@ -1903,6 +1903,10 @@ TEST_CASE("runs vm experimental map struct fields") {
   expectExperimentalMapStructFieldConformance("vm");
 }
 
+TEST_CASE("runs vm inferred experimental map struct fields") {
+  expectInferredExperimentalMapStructFieldConformance("vm");
+}
+
 TEST_CASE("runs vm experimental map method parameters") {
   expectExperimentalMapMethodParameterConformance("vm");
 }

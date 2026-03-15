@@ -2385,6 +2385,21 @@ bool rewriteExpr(Expr &expr,
     initializer.name = helperPath;
     initializer.namespacePrefix.clear();
   };
+  auto inferCallTargetBinding = [&](const Expr &bindingExpr, BindingInfo &bindingOut) -> bool {
+    const bool hasExplicitBinding = extractExplicitBindingType(bindingExpr, bindingOut);
+    if (hasExplicitBinding && bindingOut.typeName != "auto") {
+      return true;
+    }
+    if (bindingExpr.args.size() != 1) {
+      return hasExplicitBinding;
+    }
+    BindingInfo inferredBinding;
+    if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), {}, {}, allowMathBare, ctx, inferredBinding)) {
+      return hasExplicitBinding;
+    }
+    bindingOut = inferredBinding;
+    return true;
+  };
   auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
       return false;
@@ -2437,7 +2452,7 @@ bool rewriteExpr(Expr &expr,
       if (!fieldStmt.isBinding || fieldStmt.name != target.name) {
         continue;
       }
-      return extractExplicitBindingType(fieldStmt, bindingOut);
+      return inferCallTargetBinding(fieldStmt, bindingOut);
     }
     return false;
   };
@@ -2554,21 +2569,6 @@ bool rewriteExpr(Expr &expr,
     }
     auto rewriteCanonicalExperimentalMapConstructorArgs = [&](const Definition &targetDef,
                                                              bool methodCallSyntax) -> bool {
-      auto inferCallTargetBinding = [&](const Expr &bindingExpr, BindingInfo &bindingOut) -> bool {
-        const bool hasExplicitBinding = extractExplicitBindingType(bindingExpr, bindingOut);
-        if (hasExplicitBinding && bindingOut.typeName != "auto") {
-          return true;
-        }
-        if (bindingExpr.args.size() != 1) {
-          return hasExplicitBinding;
-        }
-        BindingInfo inferredBinding;
-        if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), {}, {}, allowMathBare, ctx, inferredBinding)) {
-          return hasExplicitBinding;
-        }
-        bindingOut = inferredBinding;
-        return true;
-      };
       std::vector<ParameterInfo> callParams;
       if (!targetDef.parameters.empty()) {
         callParams.reserve(targetDef.parameters.size());
@@ -2588,7 +2588,7 @@ bool rewriteExpr(Expr &expr,
           }
           ParameterInfo fieldInfo;
           fieldInfo.name = fieldExpr.name;
-          extractExplicitBindingType(fieldExpr, fieldInfo.binding);
+          inferCallTargetBinding(fieldExpr, fieldInfo.binding);
           if (fieldExpr.args.size() == 1) {
             fieldInfo.defaultExpr = &fieldExpr.args.front();
           }

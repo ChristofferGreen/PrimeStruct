@@ -116,6 +116,10 @@ TEST_CASE("compiles and runs experimental map struct fields in C++ emitter") {
   expectExperimentalMapStructFieldConformance("exe");
 }
 
+TEST_CASE("compiles and runs inferred experimental map struct fields in C++ emitter") {
+  expectInferredExperimentalMapStructFieldConformance("exe");
+}
+
 TEST_CASE("compiles and runs experimental map method parameters in C++ emitter") {
   expectExperimentalMapMethodParameterConformance("exe");
 }
