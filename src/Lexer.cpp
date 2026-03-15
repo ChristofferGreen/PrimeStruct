@@ -270,6 +270,12 @@ Token Lexer::readPunct() {
   int startLine = line_;
   int startColumn = column_;
   char c = source_[pos_];
+  if (c == '.' && pos_ + 2 < source_.size() && source_[pos_ + 1] == '.' && source_[pos_ + 2] == '.') {
+    advance();
+    advance();
+    advance();
+    return {TokenKind::Ellipsis, "...", startLine, startColumn};
+  }
   advance();
   switch (c) {
   case '[':

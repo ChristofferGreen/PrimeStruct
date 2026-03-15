@@ -220,10 +220,11 @@ module {
   - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`. Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms (no name references).
   - `{...}` holds runtime code for definition bodies and value blocks for binding initializers. Binding initializers evaluate the block and use its resulting value (last item or `return(value)`); use explicit constructor calls when passing multiple arguments (e.g., `[T] name{ T(arg1, arg2) }`).
   - Bindings are only valid inside definition bodies or parameter lists; top-level bindings are rejected.
-- **Draft variadic argument packs (planned, not implemented):** to support stdlib-owned `vector`/`map` implementations without hand-written `Single/Pair/Triple/...` constructor ladders, the planned surface syntax adds rest parameters and spread calls while keeping the canonical meaning inside the envelope system.
-  - Surface parameter sugar: `collect(values...) { ... }` desugars to `collect<__T>([args<__T>] values) { ... }`.
-  - Surface call sugar: `build(values...)` inside a call desugars to `[spread] values` on that argument node.
-  - Canonical semantic form therefore uses a real pack envelope plus an explicit spread marker instead of storing semantics in bare identifier spelling.
+- **Draft variadic argument packs (parser canonicalization landed; semantics/runtime still pending):** to support stdlib-owned `vector`/`map` implementations without hand-written `Single/Pair/Triple/...` constructor ladders, the surface syntax now parses rest parameters and spread calls while keeping the canonical meaning inside the envelope system.
+  - Surface parameter sugar: `collect(values...) { ... }` now desugars during parsing to `collect<__pack_T>([args<__pack_T>] values) { ... }`.
+  - Typed surface parameter sugar: `collect([string] values...) { ... }` now desugars during parsing to `collect([args<string>] values) { ... }`.
+  - Surface call sugar: `build(values...)` inside a call now desugars to `[spread] values` on that argument node, and explicit canonical `[spread] values` is accepted directly in call-argument position.
+  - Canonical parser form therefore uses a real pack envelope plus an explicit spread marker instead of storing syntax in bare identifier spelling; semantics/body APIs and backend lowering remain tracked by the follow-up arg-pack TODO slices below.
   - After monomorphisation, bottom-level form contains no templates. Example:
     - Surface:
       ```text

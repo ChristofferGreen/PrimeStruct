@@ -254,4 +254,34 @@ main() {
   CHECK(error.find("indexing sugar requires canonical at(value, index)") != std::string::npos);
 }
 
+TEST_CASE("variadic parameter must be final") {
+  const std::string source = R"(
+[return<int>]
+collect(values..., [i32] other) {
+  return(other)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("variadic parameter must be final") != std::string::npos);
+}
+
+TEST_CASE("spread argument must be final") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(vector(values..., 1i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("spread argument must be final") != std::string::npos);
+}
+
 TEST_SUITE_END();

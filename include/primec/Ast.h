@@ -39,6 +39,7 @@ struct Expr {
   bool isFieldAccess = false;
   bool isLambda = false;
   std::vector<std::string> lambdaCaptures;
+  bool isSpread = false;
   int sourceLine = 0;
   int sourceColumn = 0;
 };

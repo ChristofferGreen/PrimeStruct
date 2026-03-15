@@ -32,8 +32,12 @@ private:
   bool parseTransformList(std::vector<Transform> &out);
   bool parseTemplateList(std::vector<std::string> &out);
   bool parseTypeName(std::string &out);
-  bool parseParameterList(std::vector<Expr> &out, const std::string &namespacePrefix);
-  bool parseParameterBinding(Expr &out, const std::string &namespacePrefix);
+  bool parseParameterList(std::vector<Expr> &out,
+                          const std::string &namespacePrefix,
+                          std::vector<std::string> *implicitTemplateArgsOut = nullptr);
+  bool parseParameterBinding(Expr &out,
+                             const std::string &namespacePrefix,
+                             std::vector<std::string> *implicitTemplateArgsOut = nullptr);
   bool parseCallArgumentList(std::vector<Expr> &out,
                              std::vector<std::optional<std::string>> &argNames,
                              const std::string &namespacePrefix);

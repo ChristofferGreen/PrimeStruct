@@ -5,6 +5,7 @@
 #include "primec/StringLiteral.h"
 #include "primec/TransformRegistry.h"
 
+#include <algorithm>
 #include <sstream>
 #include <utility>
 
@@ -22,6 +23,41 @@ bool isArgumentLabelValueStart(TokenKind kind) {
     default:
       return false;
   }
+}
+
+bool isSimpleSpreadMarker(const std::vector<Token> &tokens, size_t index) {
+  return index + 2 < tokens.size() && tokens[index].kind == TokenKind::LBracket &&
+         tokens[index + 1].kind == TokenKind::Identifier && tokens[index + 1].text == "spread" &&
+         tokens[index + 2].kind == TokenKind::RBracket;
+}
+
+std::string renderTransformAsType(const Transform &transform) {
+  std::ostringstream out;
+  out << transform.name;
+  if (!transform.templateArgs.empty()) {
+    out << "<";
+    for (size_t i = 0; i < transform.templateArgs.size(); ++i) {
+      if (i > 0) {
+        out << ", ";
+      }
+      out << transform.templateArgs[i];
+    }
+    out << ">";
+  }
+  return out.str();
+}
+
+std::string nextVariadicPackTemplateName(const std::vector<std::string> &existing) {
+  std::string candidate = "__pack_T";
+  int suffix = 0;
+  auto exists = [&](const std::string &name) {
+    return std::find(existing.begin(), existing.end(), name) != existing.end();
+  };
+  while (exists(candidate)) {
+    ++suffix;
+    candidate = "__pack_T" + std::to_string(suffix);
+  }
+  return candidate;
 }
 
 bool isIgnorableToken(TokenKind kind) {
@@ -77,6 +113,9 @@ void printTemplateArgs(std::ostringstream &out, const std::vector<std::string> &
 }
 
 void printExpr(std::ostringstream &out, const Expr &expr) {
+  if (expr.isSpread) {
+    out << "[spread] ";
+  }
   switch (expr.kind) {
     case Expr::Kind::Literal:
       if (expr.isUnsigned) {
@@ -95,6 +134,9 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
       out << expr.stringValue;
       break;
     case Expr::Kind::Name:
+      if (!expr.transforms.empty()) {
+        printTransforms(out, expr.transforms);
+      }
       out << expr.name;
       break;
     case Expr::Kind::Call:
@@ -580,7 +622,9 @@ bool Parser::parseTypeName(std::string &out) {
   return true;
 }
 
-bool Parser::parseParameterBinding(Expr &out, const std::string &namespacePrefix) {
+bool Parser::parseParameterBinding(Expr &out,
+                                   const std::string &namespacePrefix,
+                                   std::vector<std::string> *implicitTemplateArgsOut) {
   if (!match(TokenKind::LBracket)) {
     return fail("expected '[' to start parameter");
   }
@@ -607,10 +651,46 @@ bool Parser::parseParameterBinding(Expr &out, const std::string &namespacePrefix
   param.sourceColumn = name.column;
   param.transforms = std::move(transforms);
   param.isBinding = true;
+  bool isVariadic = false;
+  if (match(TokenKind::Ellipsis)) {
+    expect(TokenKind::Ellipsis, "expected '...'");
+    isVariadic = true;
+    std::optional<Transform> explicitType;
+    for (const auto &transform : param.transforms) {
+      if (isBindingAuxTransformName(transform.name) || !transform.arguments.empty()) {
+        return fail("variadic parameter does not accept binding modifiers");
+      }
+      if (explicitType.has_value()) {
+        return fail("variadic parameter requires exactly one envelope");
+      }
+      explicitType = transform;
+    }
+    std::string packType;
+    if (!explicitType.has_value() || explicitType->name == "auto") {
+      if (implicitTemplateArgsOut == nullptr) {
+        return fail("variadic parameter sugar requires definition template context");
+      }
+      packType = nextVariadicPackTemplateName(*implicitTemplateArgsOut);
+      implicitTemplateArgsOut->push_back(packType);
+    } else {
+      if (explicitType->name == "args") {
+        return fail("variadic parameter cannot combine ... with args envelope");
+      }
+      packType = renderTransformAsType(*explicitType);
+    }
+    Transform packTransform;
+    packTransform.name = "args";
+    packTransform.templateArgs.push_back(std::move(packType));
+    param.transforms.clear();
+    param.transforms.push_back(std::move(packTransform));
+  }
   if (match(TokenKind::LParen)) {
     return fail("parameter defaults must use braces");
   }
   if (match(TokenKind::LBrace)) {
+    if (isVariadic) {
+      return fail("variadic parameter does not accept default initializer");
+    }
     if (!parseBindingInitializerList(param.args, param.argNames, namespacePrefix)) {
       return false;
     }
@@ -624,10 +704,13 @@ bool Parser::parseParameterBinding(Expr &out, const std::string &namespacePrefix
   return true;
 }
 
-bool Parser::parseParameterList(std::vector<Expr> &out, const std::string &namespacePrefix) {
+bool Parser::parseParameterList(std::vector<Expr> &out,
+                                const std::string &namespacePrefix,
+                                std::vector<std::string> *implicitTemplateArgsOut) {
   if (match(TokenKind::RParen)) {
     return true;
   }
+  bool sawVariadicParam = false;
   while (true) {
     if (match(TokenKind::Semicolon)) {
       expect(TokenKind::Semicolon, "expected ';'");
@@ -637,11 +720,59 @@ bool Parser::parseParameterList(std::vector<Expr> &out, const std::string &names
       continue;
     }
     Expr param;
-    if (!parseParameterBinding(param, namespacePrefix)) {
+    if (match(TokenKind::Identifier)) {
+      size_t next = pos_ + 1;
+      while (next < tokens_.size() && tokens_[next].kind == TokenKind::Comment) {
+        ++next;
+      }
+      if (next < tokens_.size() && tokens_[next].kind == TokenKind::Ellipsis) {
+        Token name = consume(TokenKind::Identifier, "expected parameter identifier");
+        if (name.kind == TokenKind::End) {
+          return false;
+        }
+        std::string nameError;
+        if (!validateIdentifierText(name.text, nameError)) {
+          return fail(nameError);
+        }
+        if (implicitTemplateArgsOut == nullptr) {
+          return fail("variadic parameter sugar requires definition template context");
+        }
+        if (!expect(TokenKind::Ellipsis, "expected '...' after variadic parameter")) {
+          return false;
+        }
+        Expr packParam;
+        packParam.kind = Expr::Kind::Call;
+        packParam.name = name.text;
+        packParam.namespacePrefix = namespacePrefix;
+        packParam.sourceLine = name.line;
+        packParam.sourceColumn = name.column;
+        packParam.isBinding = true;
+        Transform packTransform;
+        packTransform.name = "args";
+        packTransform.templateArgs.push_back(nextVariadicPackTemplateName(*implicitTemplateArgsOut));
+        implicitTemplateArgsOut->push_back(packTransform.templateArgs.front());
+        packParam.transforms.push_back(std::move(packTransform));
+        param = std::move(packParam);
+      } else if (!match(TokenKind::LBracket)) {
+        return fail("expected '[' to start parameter");
+      }
+    }
+    if (param.name.empty() && !parseParameterBinding(param, namespacePrefix, implicitTemplateArgsOut)) {
       return false;
+    }
+    const bool isVariadic =
+        !param.transforms.empty() && param.transforms.front().name == "args" && param.args.empty();
+    if (sawVariadicParam) {
+      return fail("variadic parameter must be final");
+    }
+    if (isVariadic) {
+      sawVariadicParam = true;
     }
     out.push_back(std::move(param));
     if (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+      if (sawVariadicParam) {
+        return fail("variadic parameter must be final");
+      }
       if (match(TokenKind::Comma)) {
         expect(TokenKind::Comma, "expected ','");
       } else {
@@ -674,6 +805,7 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     return true;
   }
   ArgumentLabelGuard labelGuard(*this);
+  bool sawSpreadArg = false;
   while (true) {
     if (match(TokenKind::Semicolon)) {
       expect(TokenKind::Semicolon, "expected ';'");
@@ -683,7 +815,7 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
       continue;
     }
     std::optional<std::string> argName;
-    if (match(TokenKind::LBracket)) {
+    if (match(TokenKind::LBracket) && !isSimpleSpreadMarker(tokens_, pos_)) {
       size_t savedPos = pos_;
       expect(TokenKind::LBracket, "expected '['");
       skipComments();
@@ -729,6 +861,21 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
         return fail("named arguments must use [name] syntax");
       }
     }
+    bool prefixedSpread = false;
+    if (isSimpleSpreadMarker(tokens_, pos_)) {
+      prefixedSpread = true;
+      expect(TokenKind::LBracket, "expected '['");
+      Token spread = consume(TokenKind::Identifier, "expected spread marker");
+      if (spread.kind == TokenKind::End) {
+        return false;
+      }
+      if (spread.text != "spread") {
+        return fail("expected spread marker");
+      }
+      if (!expect(TokenKind::RBracket, "expected ']' after spread marker")) {
+        return false;
+      }
+    }
     Expr arg;
     {
       BareBindingGuard bindingGuard(*this, false);
@@ -736,9 +883,30 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
         return false;
       }
     }
+    bool suffixedSpread = false;
+    if (match(TokenKind::Ellipsis)) {
+      expect(TokenKind::Ellipsis, "expected '...'");
+      suffixedSpread = true;
+    }
+    if (prefixedSpread && suffixedSpread) {
+      return fail("spread argument cannot use both [spread] and ...");
+    }
+    if (prefixedSpread || suffixedSpread) {
+      if (argName.has_value()) {
+        return fail("spread argument does not accept named label");
+      }
+      if (sawSpreadArg) {
+        return fail("call accepts at most one spread argument");
+      }
+      arg.isSpread = true;
+      sawSpreadArg = true;
+    }
     out.push_back(std::move(arg));
     argNames.push_back(std::move(argName));
     if (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+      if (sawSpreadArg) {
+        return fail("spread argument must be final");
+      }
       if (match(TokenKind::Comma)) {
         expect(TokenKind::Comma, "expected ','");
       } else {

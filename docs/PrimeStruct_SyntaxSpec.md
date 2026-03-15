@@ -328,10 +328,10 @@ Notes:
 - Placement transforms `[stack]`, `[heap]`, and `[buffer]` are reserved and rejected by the compiler.
 - Recursive struct layouts (structs containing themselves by value, directly or indirectly) are rejected.
 
-## 4A. Draft Variadic Pack Proposal (Planned, Not Implemented)
+## 4A. Draft Variadic Pack Proposal (Parser Canonicalization Implemented)
 
-This appendix records the planned canonical model for variadic user-defined calls. It is intentionally separate from
-the stable grammar above because the feature is not implemented yet.
+This appendix records the canonical model for variadic user-defined calls. Parser/canonicalization support is now
+implemented; semantics and lowering remain follow-up work beyond the stable grammar above.
 
 ### 4A.1 Surface forms
 
@@ -341,20 +341,20 @@ collect([string] values...) { ... }
 forward(values...) { return(collect(values...)) }
 ```
 
-- `name...` in parameter position is planned surface sugar for a trailing variadic pack parameter.
-- `expr...` in call-argument position is planned surface sugar for pack expansion.
+- `name...` in parameter position is surface sugar for a trailing variadic pack parameter.
+- `expr...` in call-argument position is surface sugar for pack expansion.
 
-### 4A.2 Canonical semantic form
+### 4A.2 Canonical parser form
 
-The planned canonical form keeps all meaning in the envelope system:
+The canonical parser form keeps all meaning in the envelope system:
 
 ```
-collect<__T>([args<__T>] values) { ... }
-forward<__T>([args<__T>] values) { return(collect<__T>([spread] values)) }
+collect<__pack_T>([args<__pack_T>] values) { ... }
+forward<__pack_T>([args<__pack_T>] values) { return(collect<__pack_T>([spread] values)) }
 ```
 
-- `args<T>` is the planned pack envelope.
-- `[spread]` is the planned explicit canonical spread marker on an argument expression.
+- `args<T>` is the pack envelope.
+- `[spread]` is the explicit canonical spread marker on an argument expression.
 - No raw `...` survives below surface syntax.
 
 ### 4A.3 Concrete envelope form after monomorphisation

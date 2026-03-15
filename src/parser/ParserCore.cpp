@@ -109,6 +109,14 @@ bool isBindingParamBracket(const std::vector<Token> &tokens, size_t index) {
   return true;
 }
 
+bool isVariadicIdentifierParam(const std::vector<Token> &tokens, size_t index) {
+  if (index >= tokens.size() || tokens[index].kind != TokenKind::Identifier) {
+    return false;
+  }
+  size_t scan = skipCommentTokens(tokens, index + 1);
+  return scan < tokens.size() && tokens[scan].kind == TokenKind::Ellipsis;
+}
+
 } // namespace
 
 Parser::Parser(std::vector<Token> tokens, bool allowSurfaceSyntax)
@@ -458,7 +466,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
         return false;
       }
     } else {
-      if (!parseParameterList(parameters, currentNamespacePrefix())) {
+      if (!parseParameterList(parameters, currentNamespacePrefix(), &templateArgs)) {
         return false;
       }
     }
@@ -633,6 +641,15 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
           }
         } else if (kind == TokenKind::Identifier) {
           sawIdentifier = true;
+          const bool atArgStart = (prevAtDepth1 == TokenKind::LParen || prevAtDepth1 == TokenKind::Comma);
+          if (atArgStart && isVariadicIdentifierParam(tokens_, index)) {
+            identifiersOnly = false;
+            sawBindingSyntax = true;
+          }
+        } else if (kind == TokenKind::Ellipsis) {
+          if (prevAtDepth1 != TokenKind::Identifier) {
+            identifiersOnly = false;
+          }
         } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
           identifiersOnly = false;
         }
@@ -704,6 +721,15 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
           }
         } else if (kind == TokenKind::Identifier) {
           sawIdentifier = true;
+          const bool atArgStart = (prevAtDepth1 == TokenKind::LParen || prevAtDepth1 == TokenKind::Comma);
+          if (atArgStart && isVariadicIdentifierParam(tokens_, index)) {
+            identifiersOnly = false;
+            sawBindingSyntax = true;
+          }
+        } else if (kind == TokenKind::Ellipsis) {
+          if (prevAtDepth1 != TokenKind::Identifier) {
+            identifiersOnly = false;
+          }
         } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
           identifiersOnly = false;
         }
@@ -858,7 +884,7 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
       return false;
     }
   } else {
-    if (!parseParameterList(parameters, parentPath)) {
+    if (!parseParameterList(parameters, parentPath, &templateArgs)) {
       return false;
     }
   }

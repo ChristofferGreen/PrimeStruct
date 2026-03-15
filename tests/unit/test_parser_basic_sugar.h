@@ -2,6 +2,8 @@
 
 #include "test_parser_basic_helpers.h"
 
+#include "primec/AstPrinter.h"
+
 TEST_CASE("normalizes string literals with double-quoted escapes") {
   const std::string source = R"(
 [return<void>]
@@ -105,6 +107,66 @@ main() {
   CHECK(expr.args[0].kind == primec::Expr::Kind::Name);
   CHECK(expr.args[0].name == "items");
   CHECK(expr.args[1].kind == primec::Expr::Kind::Literal);
+}
+
+TEST_CASE("parses variadic parameter and spread sugar into canonical arg-pack markers") {
+  const std::string source = R"(
+[return<int>]
+collect(values...) {
+  return(vector(values...))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &def = program.definitions[0];
+  REQUIRE(def.templateArgs.size() == 1);
+  CHECK(def.templateArgs[0] == "__pack_T");
+  REQUIRE(def.parameters.size() == 1);
+  const auto &param = def.parameters[0];
+  REQUIRE(param.transforms.size() == 1);
+  CHECK(param.transforms[0].name == "args");
+  REQUIRE(param.transforms[0].templateArgs.size() == 1);
+  CHECK(param.transforms[0].templateArgs[0] == "__pack_T");
+  REQUIRE(def.returnExpr.has_value());
+  const auto &returnExpr = *def.returnExpr;
+  REQUIRE(returnExpr.args.size() == 1);
+  const auto &vectorCall = returnExpr.args[0];
+  REQUIRE(vectorCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(vectorCall.args.size() == 1);
+  CHECK(vectorCall.args[0].isSpread);
+  CHECK(vectorCall.args[0].kind == primec::Expr::Kind::Name);
+  CHECK(vectorCall.args[0].name == "values");
+
+  primec::AstPrinter printer;
+  const std::string printed = printer.print(program);
+  CHECK(printed.find("[args<__pack_T>] values") != std::string::npos);
+  CHECK(printed.find("vector([spread] values)") != std::string::npos);
+}
+
+TEST_CASE("parses typed variadic parameters and canonical spread markers") {
+  const std::string source = R"(
+[return<int>]
+collect([string] values...) {
+  return(vector([spread] values))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &def = program.definitions[0];
+  CHECK(def.templateArgs.empty());
+  REQUIRE(def.parameters.size() == 1);
+  const auto &param = def.parameters[0];
+  REQUIRE(param.transforms.size() == 1);
+  CHECK(param.transforms[0].name == "args");
+  REQUIRE(param.transforms[0].templateArgs.size() == 1);
+  CHECK(param.transforms[0].templateArgs[0] == "string");
+  REQUIRE(def.returnExpr.has_value());
+  const auto &returnExpr = *def.returnExpr;
+  REQUIRE(returnExpr.args.size() == 1);
+  const auto &vectorCall = returnExpr.args[0];
+  REQUIRE(vectorCall.args.size() == 1);
+  CHECK(vectorCall.args[0].isSpread);
+  CHECK(vectorCall.args[0].name == "values");
 }
 
 TEST_CASE("parses push method and call forms with equivalent argument wiring") {

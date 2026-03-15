@@ -29,6 +29,9 @@ bool isReturnCall(const Expr &expr) {
 }
 
 void printExpr(std::ostringstream &out, const Expr &expr) {
+  if (expr.isSpread) {
+    out << "[spread] ";
+  }
   switch (expr.kind) {
   case Expr::Kind::Literal:
     if (!expr.isUnsigned && expr.intWidth == 32) {
@@ -53,6 +56,9 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
     out << expr.stringValue;
     break;
   case Expr::Kind::Name:
+    if (!expr.transforms.empty()) {
+      printTransforms(out, expr.transforms);
+    }
     out << expr.name;
     break;
   case Expr::Kind::Call:

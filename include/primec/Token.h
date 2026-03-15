@@ -17,6 +17,7 @@ enum class TokenKind {
   LAngle,
   RAngle,
   Comma,
+  Ellipsis,
   Dot,
   Equal,
   Star,

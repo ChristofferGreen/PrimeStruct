@@ -346,7 +346,7 @@ bool Parser::tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, b
     return false;
   }
   std::vector<Expr> params;
-  if (!parseParameterList(params, namespacePrefix)) {
+  if (!parseParameterList(params, namespacePrefix, nullptr)) {
     return false;
   }
   if (!expect(TokenKind::RParen, "expected ')' after lambda parameters")) {
