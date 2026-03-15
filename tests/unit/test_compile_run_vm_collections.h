@@ -457,7 +457,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("runs vm explicit canonical map typed bindings with builtin helpers") {
@@ -465,7 +465,7 @@ TEST_CASE("runs vm explicit canonical map typed bindings with builtin helpers") 
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
-  return(plus(plus(count(values), values.at(1i32)), values.at_unsafe(2i32)))
+  return(plus(plus(count(values), at(values, 1i32)), at_unsafe(values, 2i32)))
 }
 )";
   const std::string srcPath =
@@ -484,7 +484,7 @@ TEST_CASE("rejects vm explicit canonical map typed binding key mismatch") {
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
-  return(values.at(true))
+  return(at(values, true))
 }
 )";
   const std::string srcPath =
@@ -730,6 +730,23 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
   CHECK(readFile(outPath).find("unknown method: /std/collections/map/count") != std::string::npos);
+}
+
+TEST_CASE("rejects vm bare map access methods without imported canonical helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(plus(values.at(1i32), values.at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_bare_map_access_methods_without_import.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_bare_map_access_methods_without_import_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map namespaced at method compatibility alias") {
@@ -1573,28 +1590,28 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm with map at method helper") {
+TEST_CASE("runs vm with map at helper") {
   const std::string source = R"(
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
-  return(values.at(3i32))
+  return(at(values, 3i32))
 }
 )";
-  const std::string srcPath = writeTemp("vm_map_at_method.prime", source);
+  const std::string srcPath = writeTemp("vm_map_at.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 4);
 }
 
-TEST_CASE("runs vm with map at_unsafe method helper") {
+TEST_CASE("runs vm with map at_unsafe helper") {
   const std::string source = R"(
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
-  return(values.at_unsafe(1i32))
+  return(at_unsafe(values, 1i32))
 }
 )";
-  const std::string srcPath = writeTemp("vm_map_at_unsafe_method.prime", source);
+  const std::string srcPath = writeTemp("vm_map_at_unsafe.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
@@ -7018,7 +7035,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("at requires map key type i32") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("vm keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {

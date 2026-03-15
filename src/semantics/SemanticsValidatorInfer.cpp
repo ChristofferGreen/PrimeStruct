@@ -1577,7 +1577,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
             resolveMapTarget(receiver, keyType, valueType)) {
-          resolvedOut = preferVectorStdlibHelperPathForCall("/std/collections/map/" + normalizedMethodName);
+          resolvedOut = preferredMapMethodTargetForCall(normalizedMethodName);
           return true;
         }
         if ((normalizedMethodName == "get" || normalizedMethodName == "ref") &&
@@ -2346,9 +2346,16 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (methodResolved == "/file_error/why") {
           return ReturnKind::String;
         }
-        if (methodResolved == "/std/collections/map/count" && !hasDeclaredDefinitionPath(methodResolved) &&
-            !hasDeclaredDefinitionPath("/map/count") &&
-            !hasImportedDefinitionPath("/std/collections/map/count")) {
+        if (((methodResolved == "/std/collections/map/count" &&
+              !hasDeclaredDefinitionPath("/map/count") &&
+              !hasImportedDefinitionPath("/std/collections/map/count")) ||
+             (methodResolved == "/std/collections/map/at" &&
+              !hasDeclaredDefinitionPath("/map/at") &&
+              !hasImportedDefinitionPath("/std/collections/map/at")) ||
+             (methodResolved == "/std/collections/map/at_unsafe" &&
+              !hasDeclaredDefinitionPath("/map/at_unsafe") &&
+              !hasImportedDefinitionPath("/std/collections/map/at_unsafe"))) &&
+            !hasDeclaredDefinitionPath(methodResolved)) {
           error_ = "unknown method: " + methodResolved;
           return ReturnKind::Unknown;
         }

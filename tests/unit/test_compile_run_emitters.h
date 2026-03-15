@@ -4392,7 +4392,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("at requires map key type i32") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter treats canonical map reference string access as string receiver") {
@@ -4750,6 +4750,24 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter rejects bare map access methods without imported canonical helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(plus(values.at(1i32), values.at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_map_access_methods_without_import.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_access_methods_without_import.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/map/at") != std::string::npos);
+}
+
 TEST_CASE("rejects map namespaced at method compatibility alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -5027,7 +5045,7 @@ TEST_CASE("C++ emitter supports explicit canonical map typed bindings for builti
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
-  return(plus(plus(count(values), values.at(1i32)), values.at_unsafe(2i32)))
+  return(plus(plus(count(values), at(values, 1i32)), at_unsafe(values, 2i32)))
 }
 )";
   const std::string srcPath =
@@ -5162,7 +5180,7 @@ TEST_CASE("C++ emitter keeps builtin map diagnostics on explicit canonical typed
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
-  return(values.at(true))
+  return(at(values, true))
 }
 )";
   const std::string srcPath =

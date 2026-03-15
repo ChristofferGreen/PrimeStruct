@@ -64,7 +64,7 @@ main() {
   [map<i32, i32>] pairs{map<i32, i32>{7=10}}
   values.push(3)
   values.reserve(8)
-  return(values[0] + values.at(2) + values.count() + pairs.at(7))
+  return(values[0] + values.at(2) + values.count() + at(pairs, 7))
 }
 ```
 

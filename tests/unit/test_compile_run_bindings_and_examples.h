@@ -278,7 +278,7 @@ main() {
   [map<i32, i32>] pairs{map<i32, i32>{7i32=8i32, 9i32=10i32}}
   list.push(6i32)
   list.reserve(8i32)
-  return(values[1i32] + list.at(2i32) + list.count() + pairs.at(9i32))
+  return(values[1i32] + list.at(2i32) + list.count() + at(pairs, 9i32))
 }
 )",
        21},
@@ -290,7 +290,7 @@ main() {
   [vector<i32> mut] list{vector<i32>[3i32, 4i32]}
   [map<i32, i32>] pairs{map<i32, i32>[5i32=6i32, 7i32=8i32]}
   list.push(9i32)
-  return(values.at(0i32) + list[2i32] + pairs.at_unsafe(7i32))
+  return(values.at(0i32) + list[2i32] + at_unsafe(pairs, 7i32))
 }
 )",
        18},
@@ -302,7 +302,7 @@ main() {
   [map<i32, i32>] pairs{map<i32, i32>{7=10}}
   values.push(3)
   values.reserve(8)
-  return(values[0] + values.at(2) + values.count() + pairs.at(7))
+  return(values[0] + values.at(2) + values.count() + at(pairs, 7))
 }
 )",
        17},

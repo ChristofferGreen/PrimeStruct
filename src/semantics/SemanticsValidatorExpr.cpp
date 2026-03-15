@@ -3724,9 +3724,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             isBuiltinMethod = false;
           }
         }
-        if (resolved == "/std/collections/map/count" && !hasDeclaredDefinitionPath(resolved) &&
-            !hasDeclaredDefinitionPath("/map/count") &&
-            !hasImportedDefinitionPath("/std/collections/map/count")) {
+        if (((resolved == "/std/collections/map/count" &&
+              !hasDeclaredDefinitionPath("/map/count") &&
+              !hasImportedDefinitionPath("/std/collections/map/count")) ||
+             (resolved == "/std/collections/map/at" &&
+              !hasDeclaredDefinitionPath("/map/at") &&
+              !hasImportedDefinitionPath("/std/collections/map/at")) ||
+             (resolved == "/std/collections/map/at_unsafe" &&
+              !hasDeclaredDefinitionPath("/map/at_unsafe") &&
+              !hasImportedDefinitionPath("/std/collections/map/at_unsafe"))) &&
+            !hasDeclaredDefinitionPath(resolved)) {
           isBuiltinMethod = false;
         }
         if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&

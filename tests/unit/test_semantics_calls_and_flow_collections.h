@@ -1510,12 +1510,12 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("at_unsafe method validates on map binding") {
+TEST_CASE("at_unsafe call validates on map binding") {
   const std::string source = R"(
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(values.at_unsafe(1i32))
+  return(at_unsafe(values, 1i32))
 }
 )";
   std::string error;
@@ -4396,6 +4396,33 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown method: /std/collections/map/count") != std::string::npos);
+}
+
+TEST_CASE("bare map access methods require imported canonical helpers or alias definitions") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(plus(values.at(1i32), values.at_unsafe(2i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/map/at") != std::string::npos);
+}
+
+TEST_CASE("bare map access method auto inference keeps deterministic unknown method diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.at_unsafe(1i32)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("map namespaced at method keeps slash-path rejection diagnostics") {
@@ -9709,8 +9736,8 @@ wrapValues() {
 [effects(heap_alloc), return<int>]
 main() {
   [auto] values{wrapValues()}
-  return(plus(plus(count(values), values.at(1i32)),
-              plus(values.at_unsafe(2i32), values[1i32])))
+  return(plus(plus(count(values), at(values, 1i32)),
+              plus(at_unsafe(values, 2i32), values[1i32])))
 }
 )";
   std::string error;
@@ -9747,8 +9774,8 @@ borrowValues([Reference</std/collections/map<i32, i32>>] values) {
 main() {
   [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
   [auto] values{borrowValues(location(source))}
-  return(plus(plus(count(values), values.at(1i32)),
-              plus(values.at_unsafe(2i32), values[1i32])))
+  return(plus(plus(count(values), at(values, 1i32)),
+              plus(at_unsafe(values, 2i32), values[1i32])))
 }
 )";
   std::string error;
@@ -9767,7 +9794,7 @@ borrowValues([Reference</std/collections/map<i32, i32>>] values) {
 main() {
   [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32)}
   [auto] values{borrowValues(location(source))}
-  return(values.at(true))
+  return(at(values, true))
 }
 )";
   std::string error;
@@ -9780,8 +9807,8 @@ TEST_CASE("explicit canonical map binding keeps builtin helper validation") {
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
-  return(plus(plus(count(values), values.at(1i32)),
-              plus(values.at_unsafe(2i32), values[1i32])))
+  return(plus(plus(count(values), at(values, 1i32)),
+              plus(at_unsafe(values, 2i32), values[1i32])))
 }
 )";
   std::string error;
@@ -9793,8 +9820,8 @@ TEST_CASE("explicit canonical map parameter keeps builtin helper validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 sumValues([/std/collections/map<i32, i32>] values) {
-  [auto] first{values.at(1i32)}
-  [auto] second{values.at_unsafe(2i32)}
+  [auto] first{at(values, 1i32)}
+  [auto] second{at_unsafe(values, 2i32)}
   [auto] total{count(values)}
   return(plus(plus(total, first), plus(second, values[1i32])))
 }
@@ -9813,7 +9840,7 @@ TEST_CASE("explicit canonical map parameter keeps builtin key diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 sumValues([/std/collections/map<i32, i32>] values) {
-  return(values.at(true))
+  return(at(values, true))
 }
 
 [effects(heap_alloc), return<int>]
