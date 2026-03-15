@@ -17665,52 +17665,78 @@ TEST_CASE("ir lowerer setup type helper rejects removed slash-path vector method
 }
 
 TEST_CASE("ir lowerer setup type helper rejects slash-path map methods from expressions") {
+  primec::Definition mapCountDef;
+  mapCountDef.fullPath = "/map/count";
+  primec::Definition stdMapCountDef;
+  stdMapCountDef.fullPath = "/std/collections/map/count";
   primec::Definition mapAtDef;
   mapAtDef.fullPath = "/map/at";
+  primec::Definition mapAtUnsafeDef;
+  mapAtUnsafeDef.fullPath = "/map/at_unsafe";
   primec::Definition stdMapAtDef;
   stdMapAtDef.fullPath = "/std/collections/map/at";
+  primec::Definition stdMapAtUnsafeDef;
+  stdMapAtUnsafeDef.fullPath = "/std/collections/map/at_unsafe";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/map/count", &mapCountDef},
+      {"/std/collections/map/count", &stdMapCountDef},
       {"/map/at", &mapAtDef},
+      {"/map/at_unsafe", &mapAtUnsafeDef},
       {"/std/collections/map/at", &stdMapAtDef},
+      {"/std/collections/map/at_unsafe", &stdMapAtUnsafeDef},
   };
 
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;
   receiverExpr.name = "values";
 
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.intWidth = 32;
-  indexExpr.literalValue = 1;
-
-  primec::Expr methodCall;
-  methodCall.kind = primec::Expr::Kind::Call;
-  methodCall.name = "/map/at";
-  methodCall.isMethodCall = true;
-  methodCall.args = {receiverExpr, indexExpr};
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
   valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
   locals.emplace("values", valuesLocal);
 
-  std::string error;
-  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-      methodCall,
-      locals,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      {},
-      {},
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return std::string(); },
-      defMap,
-      error);
-  CHECK(resolved == nullptr);
-  CHECK(error.empty());
+  auto expectUnknownMethod = [&](const char *methodName, const std::vector<primec::Expr> &args,
+                                 const char *expectedError) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = args;
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &) { return std::string(); },
+        defMap,
+        error);
+    CHECK(resolved == nullptr);
+    CHECK(error == expectedError);
+  };
+
+  expectUnknownMethod("/map/count", {receiverExpr}, "unknown method: /map/count");
+  expectUnknownMethod(
+      "/std/collections/map/count", {receiverExpr}, "unknown method: /std/collections/map/count");
+  expectUnknownMethod("/map/at", {receiverExpr, keyExpr}, "unknown method: /map/at");
+  expectUnknownMethod(
+      "/std/collections/map/at", {receiverExpr, keyExpr}, "unknown method: /std/collections/map/at");
+  expectUnknownMethod("/map/at_unsafe", {receiverExpr, keyExpr}, "unknown method: /map/at_unsafe");
+  expectUnknownMethod("/std/collections/map/at_unsafe",
+                      {receiverExpr, keyExpr},
+                      "unknown method: /std/collections/map/at_unsafe");
 }
 
 TEST_CASE("ir lowerer setup type helper resolves declared receiver aliases through slashless map imports") {

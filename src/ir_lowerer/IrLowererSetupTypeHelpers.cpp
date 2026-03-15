@@ -512,10 +512,12 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
+  const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
   const bool allowBuiltinFallback =
-      isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
-      (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
-      (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall;
+      !isExplicitMapMethodAlias &&
+      (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
+       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
+       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall);
   const Expr &receiver = callExpr.args.front();
   if (isEntryArgsName && isEntryArgsName(receiver, localsIn)) {
     if (allowBuiltinFallback) {
@@ -1485,10 +1487,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
+  const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
   const bool allowBuiltinFallback =
-      isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
-      (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
-      (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall;
+      !isExplicitMapMethodAlias &&
+      (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
+       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
+       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall);
 
   const std::string priorError = errorOut;
   const Expr *receiver = nullptr;
