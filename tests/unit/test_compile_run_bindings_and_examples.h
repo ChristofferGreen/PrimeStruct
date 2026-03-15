@@ -4316,13 +4316,13 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures/chunks and fully decodes the current PNG read subset") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("non-interlaced 8-bit RGB/RGBA images whose `IDAT` payload uses stored/no-compression deflate blocks or fixed-Huffman deflate blocks, with filter-`0` and filter-`1` (`Sub`) scanlines") !=
+  CHECK(primeStructDoc.find("non-interlaced 8-bit RGB/RGBA images whose `IDAT` payload uses stored/no-compression deflate blocks, fixed-Huffman deflate blocks, or dynamic-Huffman literal-only deflate blocks, with filter-`0` and filter-`1` (`Sub`) scanlines") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Fixed-Huffman reads now cover both literal-only payloads and length/distance backreferences with overlapping copy semantics") !=
+  CHECK(primeStructDoc.find("Fixed-Huffman reads now cover both literal-only payloads and length/distance backreferences with overlapping copy semantics, while dynamic-Huffman reads now cover literal-only payloads with explicit code-length tables") !=
         std::string::npos);
   CHECK(primeStructDoc.find("dropping alpha when decoding RGBA inputs") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Malformed or missing PNGs still return `image_invalid_operation`, while still-valid PNGs that require dynamic-Huffman blocks, remaining PNG scanline filters, or broader color/interlace handling currently return `image_read_unsupported`") !=
+  CHECK(primeStructDoc.find("Malformed or missing PNGs still return `image_invalid_operation`, while still-valid PNGs that require dynamic-Huffman length/distance backreferences, remaining PNG scanline filters, or broader color/interlace handling currently return `image_read_unsupported`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`png.write` still deterministically returns unsupported `ImageError` values") !=
         std::string::npos);

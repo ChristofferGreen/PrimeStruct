@@ -623,6 +623,208 @@ namespace std {
     })
   }
 
+  [return<i32>]
+  pngHuffmanMaxBits([vector<i32>] lengths) {
+    [i32 mut] maxBits{0i32}
+    [i32 mut] index{0i32}
+    while(less_than(index, count(lengths)), do() {
+      if(greater_than(lengths[index], maxBits),
+         then() { assign(maxBits, lengths[index]) },
+         else() { })
+      increment(index)
+    })
+    return(maxBits)
+  }
+
+  [return<i32>]
+  pngCodeLengthCodeOrder([i32] index) {
+    if(equal(index, 0i32),
+       then() { return(16i32) },
+       else() { })
+    if(equal(index, 1i32),
+       then() { return(17i32) },
+       else() { })
+    if(equal(index, 2i32),
+       then() { return(18i32) },
+       else() { })
+    if(equal(index, 3i32),
+       then() { return(0i32) },
+       else() { })
+    if(equal(index, 4i32),
+       then() { return(8i32) },
+       else() { })
+    if(equal(index, 5i32),
+       then() { return(7i32) },
+       else() { })
+    if(equal(index, 6i32),
+       then() { return(9i32) },
+       else() { })
+    if(equal(index, 7i32),
+       then() { return(6i32) },
+       else() { })
+    if(equal(index, 8i32),
+       then() { return(10i32) },
+       else() { })
+    if(equal(index, 9i32),
+       then() { return(5i32) },
+       else() { })
+    if(equal(index, 10i32),
+       then() { return(11i32) },
+       else() { })
+    if(equal(index, 11i32),
+       then() { return(4i32) },
+       else() { })
+    if(equal(index, 12i32),
+       then() { return(12i32) },
+       else() { })
+    if(equal(index, 13i32),
+       then() { return(3i32) },
+       else() { })
+    if(equal(index, 14i32),
+       then() { return(13i32) },
+       else() { })
+    if(equal(index, 15i32),
+       then() { return(2i32) },
+       else() { })
+    if(equal(index, 16i32),
+       then() { return(14i32) },
+       else() { })
+    if(equal(index, 17i32),
+       then() { return(1i32) },
+       else() { })
+    if(equal(index, 18i32),
+       then() { return(15i32) },
+       else() { })
+    return(-1i32)
+  }
+
+  [effects(heap_alloc), return<int>]
+  pngReadDynamicHuffmanLengths([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
+                               [i32] codeLengthCodeCount, [i32] literalCount, [i32] distanceCount,
+                               [vector<i32> mut] literalLengths, [vector<i32> mut] distanceLengths) {
+    clear(literalLengths)
+    clear(distanceLengths)
+
+    [vector<i32> mut] codeLengthLengths{vector<i32>()}
+    [i32 mut] codeLengthIndex{0i32}
+    while(less_than(codeLengthIndex, 19i32), do() {
+      push(codeLengthLengths, 0i32)
+      increment(codeLengthIndex)
+    })
+
+    [i32 mut] orderIndex{0i32}
+    while(less_than(orderIndex, codeLengthCodeCount), do() {
+      [i32] codeLengthSymbol{pngCodeLengthCodeOrder(orderIndex)}
+      if(less_than(codeLengthSymbol, 0i32),
+         then() { return(1i32) },
+         else() { })
+      [i32 mut] lengthValue{0i32}
+      [i32] lengthStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, lengthValue)}
+      if(not_equal(lengthStatus, 0i32),
+         then() { return(1i32) },
+         else() { })
+      assign(codeLengthLengths[codeLengthSymbol], lengthValue)
+      increment(orderIndex)
+    })
+
+    [i32] codeLengthMaxBits{pngHuffmanMaxBits(codeLengthLengths)}
+    if(less_equal(codeLengthMaxBits, 0i32),
+       then() { return(1i32) },
+       else() { })
+
+    [i32] totalCodeCount{plus(literalCount, distanceCount)}
+    [vector<i32> mut] combinedLengths{vector<i32>()}
+    while(less_than(count(combinedLengths), totalCodeCount), do() {
+      [i32 mut] symbol{0i32}
+      [i32] symbolStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, codeLengthLengths, codeLengthMaxBits,
+                                                symbol)}
+      if(not_equal(symbolStatus, 0i32),
+         then() { return(1i32) },
+         else() { })
+      if(less_equal(symbol, 15i32),
+         then() { push(combinedLengths, symbol) },
+         else() {
+           if(equal(symbol, 16i32),
+              then() {
+                if(equal(count(combinedLengths), 0i32),
+                   then() { return(1i32) },
+                   else() { })
+                [i32 mut] repeatExtra{0i32}
+                [i32] repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 2i32, repeatExtra)}
+                if(not_equal(repeatStatus, 0i32),
+                   then() { return(1i32) },
+                   else() { })
+                [i32] repeatCount{plus(3i32, repeatExtra)}
+                if(greater_than(plus(count(combinedLengths), repeatCount), totalCodeCount),
+                   then() { return(1i32) },
+                   else() { })
+                [i32] previousLength{combinedLengths[minus(count(combinedLengths), 1i32)]}
+                [i32 mut] repeatIndex{0i32}
+                while(less_than(repeatIndex, repeatCount), do() {
+                  push(combinedLengths, previousLength)
+                  increment(repeatIndex)
+                })
+              },
+              else() {
+                if(equal(symbol, 17i32),
+                   then() {
+                     [i32 mut] repeatExtra{0i32}
+                     [i32] repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, repeatExtra)}
+                     if(not_equal(repeatStatus, 0i32),
+                        then() { return(1i32) },
+                        else() { })
+                     [i32] repeatCount{plus(3i32, repeatExtra)}
+                     if(greater_than(plus(count(combinedLengths), repeatCount), totalCodeCount),
+                        then() { return(1i32) },
+                        else() { })
+                     [i32 mut] repeatIndex{0i32}
+                     while(less_than(repeatIndex, repeatCount), do() {
+                       push(combinedLengths, 0i32)
+                       increment(repeatIndex)
+                     })
+                   },
+                   else() {
+                     if(equal(symbol, 18i32),
+                        then() {
+                          [i32 mut] repeatExtra{0i32}
+                          [i32] repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 7i32, repeatExtra)}
+                          if(not_equal(repeatStatus, 0i32),
+                             then() { return(1i32) },
+                             else() { })
+                          [i32] repeatCount{plus(11i32, repeatExtra)}
+                          if(greater_than(plus(count(combinedLengths), repeatCount), totalCodeCount),
+                             then() { return(1i32) },
+                             else() { })
+                          [i32 mut] repeatIndex{0i32}
+                          while(less_than(repeatIndex, repeatCount), do() {
+                            push(combinedLengths, 0i32)
+                            increment(repeatIndex)
+                          })
+                        },
+                        else() { return(1i32) })
+                   })
+              })
+         })
+    })
+
+    [i32 mut] literalIndex{0i32}
+    while(less_than(literalIndex, literalCount), do() {
+      push(literalLengths, combinedLengths[literalIndex])
+      increment(literalIndex)
+    })
+
+    [i32 mut] distanceIndex{0i32}
+    while(less_than(distanceIndex, distanceCount), do() {
+      push(distanceLengths, combinedLengths[plus(literalCount, distanceIndex)])
+      increment(distanceIndex)
+    })
+
+    if(or(less_equal(pngHuffmanMaxBits(literalLengths), 0i32), equal(literalLengths[256i32], 0i32)),
+       then() { return(1i32) },
+       else() { })
+    return(0i32)
+  }
+
   [return<int>]
   pngLengthInfo([i32] symbol, [i32 mut] baseOut, [i32 mut] extraBitsOut) {
     assign(baseOut, 0i32)
@@ -740,16 +942,18 @@ namespace std {
   }
 
   [effects(heap_alloc), return<int>]
-  pngInflateFixedHuffmanBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
-                              [vector<i32> mut] output) {
-    [vector<i32> mut] literalLengths{vector<i32>()}
-    [vector<i32> mut] distanceLengths{vector<i32>()}
-    pngBuildFixedLiteralLengths(literalLengths)
-    pngBuildFixedDistanceLengths(distanceLengths)
-
+  pngInflateHuffmanBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
+                         [vector<i32>] literalLengths, [i32] literalMaxBits, [vector<i32>] distanceLengths,
+                         [i32] distanceMaxBits, [i32] allowBackreferences, [vector<i32> mut] output) {
+    if(less_equal(literalMaxBits, 0i32),
+       then() { return(1i32) },
+       else() { })
+    if(and(equal(allowBackreferences, 1i32), less_equal(distanceMaxBits, 0i32)),
+       then() { return(1i32) },
+       else() { })
     while(true, do() {
       [i32 mut] symbol{0i32}
-      [i32] status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, 9i32, symbol)}
+      [i32] status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, literalMaxBits, symbol)}
       if(not_equal(status, 0i32),
          then() { return(1i32) },
          else() { })
@@ -759,6 +963,9 @@ namespace std {
            if(equal(symbol, 256i32),
               then() { return(0i32) },
               else() {
+                if(equal(allowBackreferences, 0i32),
+                   then() { return(2i32) },
+                   else() { })
                 [i32 mut] lengthBase{0i32}
                 [i32 mut] lengthExtraBits{0i32}
                 [i32] lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
@@ -778,7 +985,8 @@ namespace std {
                 [i32] matchLength{plus(lengthBase, lengthExtraValue)}
 
                 [i32 mut] distanceSymbol{0i32}
-                [i32] distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths, 5i32, distanceSymbol)}
+                [i32] distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
+                                                            distanceMaxBits, distanceSymbol)}
                 if(not_equal(distanceStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
@@ -808,6 +1016,49 @@ namespace std {
          })
     })
     return(1i32)
+  }
+
+  [effects(heap_alloc), return<int>]
+  pngInflateFixedHuffmanBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
+                              [vector<i32> mut] output) {
+    [vector<i32> mut] literalLengths{vector<i32>()}
+    [vector<i32> mut] distanceLengths{vector<i32>()}
+    pngBuildFixedLiteralLengths(literalLengths)
+    pngBuildFixedDistanceLengths(distanceLengths)
+    return(pngInflateHuffmanBlock(compressed, byteIndex, bitIndex, literalLengths, 9i32, distanceLengths, 5i32, 1i32,
+                                  output))
+  }
+
+  [effects(heap_alloc), return<int>]
+  pngInflateDynamicHuffmanBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
+                                [vector<i32> mut] output) {
+    [i32 mut] hlitBits{0i32}
+    [i32] hlitStatus{pngReadBits(compressed, byteIndex, bitIndex, 5i32, hlitBits)}
+    if(not_equal(hlitStatus, 0i32),
+       then() { return(1i32) },
+       else() { })
+    [i32 mut] hdistBits{0i32}
+    [i32] hdistStatus{pngReadBits(compressed, byteIndex, bitIndex, 5i32, hdistBits)}
+    if(not_equal(hdistStatus, 0i32),
+       then() { return(1i32) },
+       else() { })
+    [i32 mut] hclenBits{0i32}
+    [i32] hclenStatus{pngReadBits(compressed, byteIndex, bitIndex, 4i32, hclenBits)}
+    if(not_equal(hclenStatus, 0i32),
+       then() { return(1i32) },
+       else() { })
+
+    [vector<i32> mut] literalLengths{vector<i32>()}
+    [vector<i32> mut] distanceLengths{vector<i32>()}
+    [i32] lengthStatus{pngReadDynamicHuffmanLengths(compressed, byteIndex, bitIndex, plus(hclenBits, 4i32),
+                                                    plus(hlitBits, 257i32), plus(hdistBits, 1i32), literalLengths,
+                                                    distanceLengths)}
+    if(not_equal(lengthStatus, 0i32),
+       then() { return(lengthStatus) },
+       else() { })
+
+    return(pngInflateHuffmanBlock(compressed, byteIndex, bitIndex, literalLengths, pngHuffmanMaxBits(literalLengths),
+                                  distanceLengths, pngHuffmanMaxBits(distanceLengths), 0i32, output))
   }
 
   [effects(heap_alloc), return<int>]
@@ -845,7 +1096,7 @@ namespace std {
               then() { assign(inflateStatus, pngInflateFixedHuffmanBlock(compressed, byteIndex, bitIndex, output)) },
               else() {
                 if(equal(blockType, 2i32),
-                   then() { return(2i32) },
+                   then() { assign(inflateStatus, pngInflateDynamicHuffmanBlock(compressed, byteIndex, bitIndex, output)) },
                    else() { return(1i32) })
               })
          })
