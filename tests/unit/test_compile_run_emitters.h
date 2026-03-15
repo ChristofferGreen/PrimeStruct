@@ -373,7 +373,7 @@ main() {
   CHECK(readFile(outPath) ==
         "image_invalid_operation\n"
         "image_invalid_operation\n"
-        "image_read_unsupported\n"
+        "image_invalid_operation\n"
         "image_write_unsupported\n");
 }
 

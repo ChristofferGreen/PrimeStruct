@@ -725,6 +725,119 @@ main() {
   }
 }
 
+TEST_CASE("primec wasm wasi validates png containers deterministically") {
+  const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_read_runtime";
+  std::error_code ec;
+  std::filesystem::remove_all(tempRoot, ec);
+  std::filesystem::create_directories(tempRoot, ec);
+  REQUIRE(!ec);
+
+  {
+    const std::vector<unsigned char> pngBytes = {
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x01, 0x49, 0x44, 0x41, 0x54,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x00,
+    };
+    std::ofstream input(tempRoot / "input.png", std::ios::binary);
+    REQUIRE(input.good());
+    input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(input.good());
+  }
+
+  const std::string source = R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{7i32}
+  [i32 mut] height{9i32}
+  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "input.png"utf8)}
+  print_line(Result.why(status))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_png_read.prime", source);
+  const std::string wasmPath = (tempRoot / "png_read.wasm").string();
+  const std::string compileErrPath = (tempRoot / "png_read_compile_err.txt").string();
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+
+  if (hasWasmtime()) {
+    const std::string outPath = (tempRoot / "png_read_stdout.txt").string();
+    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
+                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(wasmRunCmd) == 0);
+    CHECK(readFile(outPath) ==
+          "image_read_unsupported\n"
+          "0\n"
+          "0\n"
+          "0\n");
+  }
+}
+
+TEST_CASE("primec wasm wasi rejects malformed png inputs deterministically") {
+  const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_invalid_runtime";
+  std::error_code ec;
+  std::filesystem::remove_all(tempRoot, ec);
+  std::filesystem::create_directories(tempRoot, ec);
+  REQUIRE(!ec);
+
+  {
+    const std::vector<unsigned char> pngBytes = {0x00, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
+    std::ofstream input(tempRoot / "input.png", std::ios::binary);
+    REQUIRE(input.good());
+    input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(input.good());
+  }
+
+  const std::string source = R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{7i32}
+  [i32 mut] height{9i32}
+  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "input.png"utf8)}
+  print_line(Result.why(status))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_png_invalid.prime", source);
+  const std::string wasmPath = (tempRoot / "png_invalid.wasm").string();
+  const std::string compileErrPath = (tempRoot / "png_invalid_compile_err.txt").string();
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+
+  if (hasWasmtime()) {
+    const std::string outPath = (tempRoot / "png_invalid_stdout.txt").string();
+    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
+                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(wasmRunCmd) == 0);
+    CHECK(readFile(outPath) ==
+          "image_invalid_operation\n"
+          "0\n"
+          "0\n"
+          "0\n");
+  }
+}
+
 TEST_CASE("primec wasm parity corpus matches vm outputs and exits deterministically") {
   struct ParityCase {
     std::string name;

@@ -4304,7 +4304,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(primeStructDoc.find("`png.write(path, width, height, pixels) -> Result<ImageError>`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`pixels` is a flat `vector<i32>` in RGB byte order") != std::string::npos);
-  CHECK(primeStructDoc.find("requires `effects(file_write)`; `ppm.read(...)` also requires `heap_alloc`") !=
+  CHECK(primeStructDoc.find("requires `effects(file_write)`; `ppm.read(...)` and `png.read(...)` also require `heap_alloc`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`ppm.read(...)` currently parses ASCII `P3` and binary `P6` PPM files in VM/native/Wasm") !=
         std::string::npos);
@@ -4314,7 +4314,11 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("invalid dimensions, payload mismatches, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`png.read` and `png.write` still deterministically return unsupported `ImageError` values") !=
+  CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures plus required chunk framing for structurally valid containers") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("returning `image_invalid_operation` for malformed or missing files and `image_read_unsupported` for well-formed PNGs until `IDAT` decompression/scanline reconstruction lands") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`png.write` still deterministically returns unsupported `ImageError` values") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`ImageError.why()` currently returns `image_read_unsupported`, `image_write_unsupported`, or `image_invalid_operation`") !=
         std::string::npos);
@@ -4358,6 +4362,11 @@ TEST_CASE("image api docs and stdlib stay source locked") {
 
   const std::string pngBody = imageStdlib.substr(pngStart);
   CHECK(pngBody.find("return(unsupported_read())") != std::string::npos);
+  CHECK(pngBody.find("pngValidateSignature") != std::string::npos);
+  CHECK(pngBody.find("pngReadU32Be") != std::string::npos);
+  CHECK(pngBody.find("pngReadChunkType") != std::string::npos);
+  CHECK(pngBody.find("pngReadIhdr") != std::string::npos);
+  CHECK(pngBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(pngBody.find("return(unsupported_write())") != std::string::npos);
   CHECK(pngBody.find("return(1i32)") == std::string::npos);
   CHECK(pngBody.find("return(2i32)") == std::string::npos);

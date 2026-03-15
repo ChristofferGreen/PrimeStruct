@@ -180,7 +180,7 @@ main() {
   CHECK(readFile(outPath) ==
         "image_invalid_operation\n"
         "image_invalid_operation\n"
-        "image_read_unsupported\n"
+        "image_invalid_operation\n"
         "image_write_unsupported\n");
 }
 
@@ -398,6 +398,92 @@ main() {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(stdoutPath) == "image_invalid_operation\n");
   CHECK(!std::filesystem::exists(outPath));
+}
+
+TEST_CASE("runs vm png container validation deterministically") {
+  const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = {
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x01, 0x49, 0x44, 0x41, 0x54,
+        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x00,
+    };
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = std::string(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{7i32}
+  [i32 mut] height{9i32}
+  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  print_line(Result.why(status))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  return(0i32)
+}
+)");
+  const std::string srcPath = writeTemp("vm_image_read_png.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_png.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) ==
+        "image_read_unsupported\n"
+        "0\n"
+        "0\n"
+        "0\n");
+}
+
+TEST_CASE("rejects malformed vm png inputs deterministically") {
+  const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = {0x00, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = std::string(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{7i32}
+  [i32 mut] height{9i32}
+  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  print_line(Result.why(status))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  return(0i32)
+}
+)");
+  const std::string srcPath = writeTemp("vm_image_read_invalid_png.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid_png.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) ==
+        "image_invalid_operation\n"
+        "0\n"
+        "0\n"
+        "0\n");
 }
 
 TEST_CASE("defaults to cpp extension for emit=cpp") {
