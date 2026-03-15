@@ -844,7 +844,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("compiles native map unnamespaced at builtin fallback with canonical helper") {
+TEST_CASE("compiles native bare map at through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -858,12 +858,12 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_map_unnamespaced_at_builtin_fallback_reject.prime", source);
+      writeTemp("compile_native_bare_map_at_with_canonical_helper.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_native_map_unnamespaced_at_builtin_fallback_reject_out.txt")
+                               "primec_native_bare_map_at_with_canonical_helper_out.txt")
                                   .string();
   const std::string exePath = (std::filesystem::temp_directory_path() /
-                               "primec_native_map_unnamespaced_at_builtin_fallback_reject_exe")
+                               "primec_native_bare_map_at_with_canonical_helper_exe")
                                   .string();
 
   const std::string compileCmd =
@@ -871,7 +871,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("compiles native map unnamespaced at_unsafe builtin fallback with canonical helper") {
+TEST_CASE("compiles native bare map at_unsafe through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
@@ -885,12 +885,12 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_map_unnamespaced_at_unsafe_builtin_fallback_reject.prime", source);
+      writeTemp("compile_native_bare_map_at_unsafe_with_canonical_helper.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_native_map_unnamespaced_at_unsafe_builtin_fallback_reject_out.txt")
+                               "primec_native_bare_map_at_unsafe_with_canonical_helper_out.txt")
                                   .string();
   const std::string exePath = (std::filesystem::temp_directory_path() /
-                               "primec_native_map_unnamespaced_at_unsafe_builtin_fallback_reject_exe")
+                               "primec_native_bare_map_at_unsafe_with_canonical_helper_exe")
                                   .string();
 
   const std::string compileCmd =
@@ -898,7 +898,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("compiles native map unnamespaced at builtin fallback without canonical helper") {
+TEST_CASE("rejects native bare map at call without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -907,20 +907,21 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_map_unnamespaced_at_builtin_fallback_no_canonical_reject.prime", source);
+      writeTemp("compile_native_bare_map_at_without_helper_reject.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_native_map_unnamespaced_at_builtin_fallback_no_canonical_reject_out.txt")
+                               "primec_native_bare_map_at_without_helper_reject_out.txt")
                                   .string();
   const std::string exePath = (std::filesystem::temp_directory_path() /
-                               "primec_native_map_unnamespaced_at_builtin_fallback_no_canonical_reject_exe")
+                               "primec_native_bare_map_at_without_helper_reject_exe")
                                   .string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles native map unnamespaced at_unsafe builtin fallback without canonical helper") {
+TEST_CASE("rejects native bare map at_unsafe call without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -929,19 +930,20 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_map_unnamespaced_at_unsafe_builtin_fallback_no_canonical_reject.prime", source);
+      writeTemp("compile_native_bare_map_at_unsafe_without_helper_reject.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_map_unnamespaced_at_unsafe_builtin_fallback_no_canonical_reject_out.txt")
+       "primec_native_bare_map_at_unsafe_without_helper_reject_out.txt")
           .string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_map_unnamespaced_at_unsafe_builtin_fallback_no_canonical_reject_exe")
+       "primec_native_bare_map_at_unsafe_without_helper_reject_exe")
           .string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects native map namespaced count method compatibility alias") {

@@ -3481,6 +3481,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isStdNamespacedMapAccessCall =
         hasBuiltinAccessSpelling && !expr.isMethodCall &&
         resolveCalleePath(expr).rfind("/std/collections/map/at", 0) == 0;
+    const bool isResolvedMapAccessCall =
+        !expr.isMethodCall && (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
+        !isMapNamespacedAccessCompatibilityCall(expr);
     const bool prefersExplicitDirectMapAccessAliasDefinition =
         !expr.isMethodCall &&
         (((isNamespacedMapHelperCall && (namespacedHelper == "at" || namespacedHelper == "at_unsafe")) ||
@@ -3496,7 +3499,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         hasBuiltinAccessSpelling &&
         (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback ||
          hasStdNamespacedVectorAccessDefinition) &&
-        !isStdNamespacedMapAccessCall;
+        !isStdNamespacedMapAccessCall && !isResolvedMapAccessCall;
     const bool isNamespacedVectorAccessCall =
         isBuiltinAccessName && isNamespacedVectorHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");

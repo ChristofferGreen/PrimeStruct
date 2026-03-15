@@ -1443,6 +1443,33 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     }
     return "/std/collections/map/contains";
   };
+  auto bareMapAccessHelperPath = [&]() -> std::string {
+    if (expr.isMethodCall || !expr.namespacePrefix.empty() || expr.args.size() != 2) {
+      return {};
+    }
+    std::string normalizedName = expr.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    if ((normalizedName != "at" && normalizedName != "at_unsafe") ||
+        defMap_.count("/" + normalizedName) > 0) {
+      return {};
+    }
+    std::string keyType;
+    std::string valueType;
+    if (!resolveMapTarget(expr.args.front(), keyType, valueType)) {
+      return {};
+    }
+    const std::string canonicalPath = "/std/collections/map/" + normalizedName;
+    if (defMap_.count(canonicalPath) > 0 || hasImportedDefinitionPath(canonicalPath)) {
+      return canonicalPath;
+    }
+    const std::string compatibilityPath = "/map/" + normalizedName;
+    if (defMap_.count(compatibilityPath) > 0) {
+      return compatibilityPath;
+    }
+    return canonicalPath;
+  };
   if (expr.name.empty()) {
     return "";
   }
@@ -1504,6 +1531,9 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return rewriteCanonicalCollectionConstructorPath(root);
   }
   if (const std::string helperPath = bareMapContainsHelperPath(); !helperPath.empty()) {
+    return helperPath;
+  }
+  if (const std::string helperPath = bareMapAccessHelperPath(); !helperPath.empty()) {
     return helperPath;
   }
   auto it = importAliases_.find(expr.name);

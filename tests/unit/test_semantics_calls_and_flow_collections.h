@@ -4890,7 +4890,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map unnamespaced at call resolves builtin fallback with canonical helper") {
+TEST_CASE("bare map at call resolves through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -4908,11 +4908,95 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map unnamespaced at_unsafe auto inference resolves builtin fallback with canonical helper") {
+TEST_CASE("bare map at call resolves through compatibility helper when canonical helper is absent") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare map at call prefers canonical helper over compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+/map/at([map<i32, i32>] values, [i32] index) {
+  return(99i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare map at_unsafe auto inference resolves through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{at_unsafe(values, 1i32)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare map at_unsafe auto inference resolves through compatibility helper when canonical helper is absent") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{at_unsafe(values, 1i32)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare map at_unsafe auto inference prefers canonical helper over compatibility alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(99i32)
 }
 
 [effects(heap_alloc), return<int>]
@@ -5013,30 +5097,31 @@ main() {
   CHECK(error.find("import creates name conflict: at") != std::string::npos);
 }
 
-TEST_CASE("map unnamespaced at call resolves builtin fallback without canonical helper") {
+TEST_CASE("bare map at call requires imported canonical helper or explicit alias definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
   return(at(values, 1i32))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("map unnamespaced at_unsafe call resolves builtin fallback without canonical helper") {
+TEST_CASE("bare map at_unsafe auto inference keeps deterministic unknown call target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
-  return(at_unsafe(values, 1i32))
+  [auto] inferred{at_unsafe(values, 1i32)}
+  return(inferred)
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("map namespaced count method keeps slash-path rejection diagnostics") {

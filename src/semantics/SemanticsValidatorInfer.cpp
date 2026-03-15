@@ -1676,6 +1676,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (!getBuiltinArrayAccessName(callExpr, builtinName)) {
         return false;
       }
+      const std::string resolvedPath = resolveCalleePath(callExpr);
       std::string elemType;
       if (resolveStringTarget(callExpr.args.front())) {
         kindOut = ReturnKind::Int;
@@ -1684,6 +1685,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string keyType;
       std::string valueType;
       if (resolveMapTarget(callExpr.args.front(), keyType, valueType)) {
+        if (resolvedPath == "/map/at" || resolvedPath == "/map/at_unsafe" ||
+            resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe") {
+          return false;
+        }
         ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
         if (kind != ReturnKind::Unknown) {
           kindOut = kind;
@@ -2511,6 +2516,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isStdNamespacedMapAccessSpelling =
         hasBuiltinAccessSpelling && !expr.isMethodCall &&
         resolveCalleePath(expr).rfind("/std/collections/map/at", 0) == 0;
+    const bool isResolvedMapAccessCall =
+        !expr.isMethodCall && (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
+        !isMapNamespacedAccessCompatibilityCall(expr);
     const bool shouldAllowStdAccessCompatibilityFallback =
         isStdNamespacedVectorAccessSpelling && !builtinAccessName.empty() &&
         defMap_.find("/vector/" + builtinAccessName) != defMap_.end();
@@ -2518,7 +2526,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         hasBuiltinAccessSpelling &&
         (!isStdNamespacedVectorAccessSpelling || shouldAllowStdAccessCompatibilityFallback ||
          hasStdNamespacedVectorAccessDefinition) &&
-        !isStdNamespacedMapAccessSpelling;
+        !isStdNamespacedMapAccessSpelling && !isResolvedMapAccessCall;
     const bool isNamespacedVectorAccessCall =
         !expr.isMethodCall && isBuiltinAccess && isNamespacedVectorHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe");

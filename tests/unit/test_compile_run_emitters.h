@@ -4965,7 +4965,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs map unnamespaced at builtin fallback in C++ emitter") {
+TEST_CASE("compiles and runs bare map at through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -4979,15 +4979,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_map_unnamespaced_at_builtin_fallback_reject.prime", source);
+      writeTemp("compile_cpp_bare_map_at_with_canonical_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_at_builtin_fallback_exe").string();
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_with_canonical_helper_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("compiles and runs map unnamespaced at_unsafe builtin fallback in C++ emitter") {
+TEST_CASE("compiles and runs bare map at_unsafe through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
@@ -5001,15 +5001,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_map_unnamespaced_at_unsafe_builtin_fallback_reject.prime", source);
+      writeTemp("compile_cpp_bare_map_at_unsafe_with_canonical_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_at_unsafe_builtin_fallback_exe").string();
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_unsafe_with_canonical_helper_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("compiles and runs map unnamespaced at builtin fallback without canonical helper in C++ emitter") {
+TEST_CASE("rejects bare map at call without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -5018,16 +5018,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_map_unnamespaced_at_builtin_fallback_no_canonical_reject.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_at_builtin_fallback_no_canonical_exe")
-          .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+      writeTemp("compile_cpp_bare_map_at_without_helper_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_without_helper_reject.err").string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs map unnamespaced at_unsafe builtin fallback without canonical helper in C++ emitter") {
+TEST_CASE("rejects bare map at_unsafe call without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -5036,13 +5036,14 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_map_unnamespaced_at_unsafe_builtin_fallback_no_canonical_reject.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_at_unsafe_builtin_fallback_no_canonical_exe")
+      writeTemp("compile_cpp_bare_map_at_unsafe_without_helper_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_unsafe_without_helper_reject.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs map unnamespaced contains through canonical helper in C++ emitter") {
