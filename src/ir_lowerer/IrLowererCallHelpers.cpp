@@ -1491,6 +1491,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = (it->second.kind == LocalInfo::Kind::Vector);
       info.isArgsPackTarget = it->second.isArgsPack;
+      info.argsPackElementKind = it->second.argsPackElementKind;
       info.elemSlotCount = it->second.structSlotCount;
       info.structTypeName = it->second.structTypeName;
       return info;
@@ -1500,6 +1501,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
       info.isArgsPackTarget = it->second.isArgsPack;
+      info.argsPackElementKind = it->second.argsPackElementKind;
       info.elemSlotCount = it->second.structSlotCount;
       info.structTypeName = it->second.structTypeName;
       return info;
@@ -1534,9 +1536,12 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
   const bool isStructArgsPackTarget =
       targetInfo.isArgsPackTarget && !targetInfo.isVectorTarget && !targetInfo.structTypeName.empty() &&
       targetInfo.elemSlotCount > 0;
+  const bool isVectorArgsPackTarget =
+      targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Vector;
   if (!targetInfo.isArrayOrVectorTarget ||
-      (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget)) {
-    error = "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct> packs";
+      (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget && !isVectorArgsPackTarget)) {
+    error =
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<vector<T>> packs";
     return false;
   }
   return true;

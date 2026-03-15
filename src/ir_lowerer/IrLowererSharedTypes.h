@@ -15,6 +15,7 @@ struct LocalInfo {
   int32_t structFieldCount = 0;
   ValueKind mapKeyKind = ValueKind::Unknown;
   ValueKind mapValueKind = ValueKind::Unknown;
+  Kind argsPackElementKind = Kind::Value;
   int32_t structSlotCount = 0;
   bool isFileHandle = false;
   bool isFileError = false;

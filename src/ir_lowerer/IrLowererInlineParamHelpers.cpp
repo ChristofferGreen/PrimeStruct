@@ -36,6 +36,13 @@ bool emitInlineDefinitionCallParameters(
       const bool isStructPack = !paramInfo.structTypeName.empty();
 
       auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
+        if (paramInfo.argsPackElementKind == LocalInfo::Kind::Vector) {
+          if (!emitExpr(argExpr, callerLocals)) {
+            return false;
+          }
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
+          return true;
+        }
         if (paramInfo.valueKind == LocalInfo::ValueKind::String) {
           LocalInfo::StringSource source = LocalInfo::StringSource::None;
           int32_t index = -1;
@@ -83,7 +90,8 @@ bool emitInlineDefinitionCallParameters(
           return false;
         }
         if (callerIt->second.valueKind != paramInfo.valueKind ||
-            callerIt->second.structTypeName != paramInfo.structTypeName) {
+            callerIt->second.structTypeName != paramInfo.structTypeName ||
+            callerIt->second.argsPackElementKind != paramInfo.argsPackElementKind) {
           error = "variadic parameter type mismatch";
           return false;
         }
@@ -94,6 +102,7 @@ bool emitInlineDefinitionCallParameters(
           return true;
         }
         paramInfo.argsPackElementCount = callerIt->second.argsPackElementCount;
+        paramInfo.argsPackElementKind = callerIt->second.argsPackElementKind;
         paramInfo.structSlotCount = callerIt->second.structSlotCount;
         calleeLocals.emplace(param.name, paramInfo);
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(callerIt->second.index));

@@ -465,6 +465,39 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
+TEST_CASE("native materializes variadic vector packs with indexed count methods") {
+  const std::string source = R"(
+[return<int>]
+score_vectors([args<vector<i32>>] values) {
+  return(plus(values[0i32].count(), values[2i32].count()))
+}
+
+[return<int>]
+forward([args<vector<i32>>] values) {
+  return(score_vectors([spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+forward_mixed([args<vector<i32>>] values) {
+  return(score_vectors(vector<i32>(1i32), [spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(score_vectors(vector<i32>(1i32, 2i32), vector<i32>(3i32), vector<i32>(4i32, 5i32, 6i32)),
+              plus(forward(vector<i32>(7i32), vector<i32>(8i32, 9i32), vector<i32>(10i32)),
+                   forward_mixed(vector<i32>(11i32, 12i32), vector<i32>(13i32, 14i32, 15i32)))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_vector.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_vector").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("native preserves if expression values in arithmetic context") {
   const std::string source = R"(
 [return<int>]

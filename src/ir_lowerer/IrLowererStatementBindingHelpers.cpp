@@ -1,6 +1,7 @@
 #include "IrLowererStatementBindingHelpers.h"
 
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
@@ -40,6 +41,31 @@ bool extractArgsPackElementTypeText(const Expr &expr, std::string &typeTextOut) 
     return !typeTextOut.empty();
   }
   return false;
+}
+
+void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut) {
+  bool resultHasValue = false;
+  LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+  std::string resultErrorType;
+  if (parseResultTypeName(typeText, resultHasValue, resultValueKind, resultErrorType)) {
+    infoOut.isResult = true;
+    infoOut.resultHasValue = resultHasValue;
+    infoOut.resultValueKind = resultValueKind;
+    infoOut.resultErrorType = resultErrorType;
+    infoOut.valueKind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+    return;
+  }
+
+  std::string base;
+  std::string arg;
+  if (!splitTemplateTypeName(typeText, base, arg)) {
+    return;
+  }
+  base = normalizeCollectionBindingTypeName(base);
+  if (base == "vector") {
+    infoOut.argsPackElementKind = LocalInfo::Kind::Vector;
+    infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+  }
 }
 
 bool isPointerMemoryIntrinsicCall(const Expr &expr) {
@@ -275,16 +301,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
   if (infoOut.isArgsPack) {
     std::string elementTypeText;
     if (extractArgsPackElementTypeText(param, elementTypeText)) {
-      bool resultHasValue = false;
-      LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
-      std::string resultErrorType;
-      if (parseResultTypeName(elementTypeText, resultHasValue, resultValueKind, resultErrorType)) {
-        infoOut.isResult = true;
-        infoOut.resultHasValue = resultHasValue;
-        infoOut.resultValueKind = resultValueKind;
-        infoOut.resultErrorType = resultErrorType;
-        infoOut.valueKind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
-      }
+      applyArgsPackElementMetadata(elementTypeText, infoOut);
     }
   }
 

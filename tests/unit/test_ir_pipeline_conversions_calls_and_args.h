@@ -598,6 +598,47 @@ main() {
   CHECK(result == 24);
 }
 
+TEST_CASE("ir lowerer materializes variadic vector packs with indexed count methods") {
+  const std::string source = R"(
+[return<int>]
+score_vectors([args<vector<i32>>] values) {
+  return(plus(values[0i32].count(), values[2i32].count()))
+}
+
+[return<int>]
+forward([args<vector<i32>>] values) {
+  return(score_vectors([spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+forward_mixed([args<vector<i32>>] values) {
+  return(score_vectors(vector<i32>(1i32), [spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(score_vectors(vector<i32>(1i32, 2i32), vector<i32>(3i32), vector<i32>(4i32, 5i32, 6i32)),
+              plus(forward(vector<i32>(7i32), vector<i32>(8i32, 9i32), vector<i32>(10i32)),
+                   forward_mixed(vector<i32>(11i32, 12i32), vector<i32>(13i32, 14i32, 15i32)))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 11);
+}
+
 TEST_CASE("ir lowerer forwards count to method calls") {
   const std::string source = R"(
 namespace i32 {
