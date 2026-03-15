@@ -71,8 +71,9 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
         expr.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.args.front().name);
       if (it != localsIn.end() && it->second.isArgsPack &&
-          it->second.argsPackElementKind == LocalInfo::Kind::Reference &&
-          !it->second.referenceToArray && !it->second.referenceToMap) {
+          ((it->second.argsPackElementKind == LocalInfo::Kind::Pointer) ||
+           (it->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+            !it->second.referenceToArray && !it->second.referenceToMap))) {
         return it->second.valueKind;
       }
     }

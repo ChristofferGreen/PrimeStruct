@@ -639,6 +639,60 @@ main() {
   CHECK(runCommand(exePath) == 23);
 }
 
+TEST_CASE("native materializes variadic scalar pointer packs with indexed dereference") {
+  const std::string source = R"(
+[return<int>]
+score_ptrs([args<Pointer<i32>>] values) {
+  return(plus(dereference(values[0i32]), dereference(values[2i32])))
+}
+
+[return<int>]
+forward([args<Pointer<i32>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<i32>>] values) {
+  [i32] extra{1i32}
+  [Pointer<i32>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [i32] a0{1i32}
+  [i32] a1{2i32}
+  [i32] a2{3i32}
+  [Pointer<i32>] p0{location(a0)}
+  [Pointer<i32>] p1{location(a1)}
+  [Pointer<i32>] p2{location(a2)}
+
+  [i32] b0{4i32}
+  [i32] b1{5i32}
+  [i32] b2{6i32}
+  [Pointer<i32>] q0{location(b0)}
+  [Pointer<i32>] q1{location(b1)}
+  [Pointer<i32>] q2{location(b2)}
+
+  [i32] c0{7i32}
+  [i32] c1{8i32}
+  [Pointer<i32>] r0{location(c0)}
+  [Pointer<i32>] r1{location(c1)}
+
+  return(plus(score_ptrs(p0, p1, p2),
+              plus(forward(q0, q1, q2),
+                   forward_mixed(r0, r1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_pointer.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_scalar_pointer").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 23);
+}
+
 TEST_CASE("native materializes variadic borrowed map packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]

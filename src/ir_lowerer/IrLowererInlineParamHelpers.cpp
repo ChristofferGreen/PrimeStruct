@@ -47,6 +47,24 @@ bool emitInlineDefinitionCallParameters(
           emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
           return true;
         }
+        if (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer) {
+          if (argExpr.kind != Expr::Kind::Name) {
+            error = "variadic parameter type mismatch";
+            return false;
+          }
+          auto it = callerLocals.find(argExpr.name);
+          if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Pointer ||
+              it->second.valueKind != paramInfo.valueKind ||
+              it->second.structTypeName != paramInfo.structTypeName) {
+            error = "variadic parameter type mismatch";
+            return false;
+          }
+          if (!emitExpr(argExpr, callerLocals)) {
+            return false;
+          }
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
+          return true;
+        }
         if (paramInfo.valueKind == LocalInfo::ValueKind::String) {
           LocalInfo::StringSource source = LocalInfo::StringSource::None;
           int32_t index = -1;

@@ -30078,6 +30078,27 @@ TEST_CASE("ir lowerer setup inference helper infers pointer target kinds") {
             [](const primec::Expr &expr, std::string &builtinName) {
               return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
             }) == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::ir_lowerer::LocalInfo argsPackPointerInfo;
+  argsPackPointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  argsPackPointerInfo.isArgsPack = true;
+  argsPackPointerInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  argsPackPointerInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("ptrValues", argsPackPointerInfo);
+
+  primec::Expr ptrValuesName;
+  ptrValuesName.kind = primec::Expr::Kind::Name;
+  ptrValuesName.name = "ptrValues";
+  primec::Expr atPointerCall;
+  atPointerCall.kind = primec::Expr::Kind::Call;
+  atPointerCall.name = "at";
+  atPointerCall.args = {ptrValuesName, one};
+  CHECK(primec::ir_lowerer::inferPointerTargetValueKind(
+            atPointerCall,
+            locals,
+            [](const primec::Expr &expr, std::string &builtinName) {
+              return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
 TEST_CASE("ir lowerer setup inference helper rejects invalid pointer targets") {
@@ -32684,6 +32705,43 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic scalar refere
   CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
   CHECK_FALSE(info.referenceToArray);
   CHECK_FALSE(info.referenceToMap);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
+TEST_CASE("ir lowerer statement binding helper classifies variadic scalar pointer parameters") {
+  primec::Expr param;
+  param.name = "values";
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  argsTransform.templateArgs.push_back("Pointer<i32>");
+  param.transforms.push_back(argsTransform);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 14;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
+  CHECK(info.isArgsPack);
+  CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 

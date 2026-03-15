@@ -67,6 +67,14 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
     return;
   }
+  if (base == "Pointer") {
+    const LocalInfo::ValueKind pointerValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+    if (pointerValueKind != LocalInfo::ValueKind::Unknown) {
+      infoOut.argsPackElementKind = LocalInfo::Kind::Pointer;
+      infoOut.valueKind = pointerValueKind;
+    }
+    return;
+  }
   if (base == "Reference") {
     std::string refBase;
     std::string refArg;
