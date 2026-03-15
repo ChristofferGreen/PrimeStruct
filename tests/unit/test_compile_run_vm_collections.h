@@ -1855,6 +1855,10 @@ TEST_CASE("runs vm wrapper map helpers on experimental map values") {
   expectWrapperMapHelperExperimentalValueConformance("vm");
 }
 
+TEST_CASE("runs vm helper-wrapped inferred experimental map returns") {
+  expectWrappedInferredExperimentalMapReturnConformance("vm");
+}
+
 TEST_CASE("runs vm canonical namespaced map constructors on explicit experimental map bindings") {
   expectCanonicalMapNamespaceExperimentalConstructorConformance("vm");
 }

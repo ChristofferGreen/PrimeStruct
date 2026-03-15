@@ -68,6 +68,10 @@ TEST_CASE("compiles and runs wrapper map helpers on experimental map values in C
   expectWrapperMapHelperExperimentalValueConformance("exe");
 }
 
+TEST_CASE("compiles and runs helper-wrapped inferred experimental map returns in C++ emitter") {
+  expectWrappedInferredExperimentalMapReturnConformance("exe");
+}
+
 TEST_CASE("compiles and runs canonical namespaced map constructors on explicit experimental map bindings in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalConstructorConformance("exe");
 }

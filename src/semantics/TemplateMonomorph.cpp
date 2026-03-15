@@ -2969,7 +2969,7 @@ bool rewriteDefinition(Definition &def,
   auto rewriteCanonicalExperimentalMapReturnConstructors = [&](auto &self, Expr &candidate) -> void {
     rewriteCanonicalExperimentalMapConstructorValue(candidate);
     for (auto &arg : candidate.args) {
-      if (arg.kind == Expr::Kind::Call && (isReturnCall(arg) || !arg.bodyArguments.empty())) {
+      if (arg.kind == Expr::Kind::Call) {
         self(self, arg);
       }
     }
@@ -3038,13 +3038,15 @@ bool rewriteDefinition(Definition &def,
   }
   for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
     auto &stmt = def.statements[stmtIndex];
+    const bool isReturnPathStmt =
+        isReturnCall(stmt) || (!sawExplicitReturnStmt && stmtIndex == implicitReturnStmtIndex);
+    if (expectedExperimentalMapReturn && isReturnPathStmt) {
+      rewriteCanonicalExperimentalMapReturnConstructors(rewriteCanonicalExperimentalMapReturnConstructors, stmt);
+    }
     if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
       return false;
     }
-    if (expectedExperimentalMapReturn) {
-      if (!sawExplicitReturnStmt && stmtIndex == implicitReturnStmtIndex) {
-        rewriteCanonicalExperimentalMapConstructorValue(stmt);
-      }
+    if (expectedExperimentalMapReturn && isReturnPathStmt) {
       rewriteCanonicalExperimentalMapReturnConstructors(rewriteCanonicalExperimentalMapReturnConstructors, stmt);
     }
     BindingInfo info;
@@ -3062,12 +3064,17 @@ bool rewriteDefinition(Definition &def,
     }
   }
   if (def.returnExpr.has_value()) {
+    if (expectedExperimentalMapReturn) {
+      rewriteCanonicalExperimentalMapReturnConstructors(rewriteCanonicalExperimentalMapReturnConstructors,
+                                                       *def.returnExpr);
+    }
     if (!rewriteExpr(*def.returnExpr, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params,
                      allowMathBare)) {
       return false;
     }
     if (expectedExperimentalMapReturn) {
-      rewriteCanonicalExperimentalMapConstructorValue(*def.returnExpr);
+      rewriteCanonicalExperimentalMapReturnConstructors(rewriteCanonicalExperimentalMapReturnConstructors,
+                                                       *def.returnExpr);
     }
   }
   return true;

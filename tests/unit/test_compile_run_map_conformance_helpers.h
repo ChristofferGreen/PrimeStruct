@@ -762,6 +762,37 @@ inline std::string makeAutoBlockInferredExperimentalMapReturnConformanceSource()
   return source;
 }
 
+inline std::string makeWrappedInferredExperimentalMapReturnConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapValues<T>([T] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[return<auto> effects(heap_alloc)]\n";
+  source += "buildValues([bool] useCanonical) {\n";
+  source += "  if(useCanonical,\n";
+  source += "     then() { return(wrapValues(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))) },\n";
+  source += "     else() { return(wrapValues(/std/collections/mapPair(\"extra\"raw_utf8, 9i32, \"bonus\"raw_utf8, 5i32))) })\n";
+  source += "}\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedWrappedExperimentalMapReturnError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapReturnError>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32>] canonical{buildValues(true)}\n";
+  source += "  [Map<string, i32>] wrapped{buildValues(false)}\n";
+  source += "  [i32] left{try(/std/collections/map/tryAt<string, i32>(canonical, \"left\"raw_utf8))}\n";
+  source += "  [i32] bonus{try(/std/collections/map/tryAt<string, i32>(wrapped, \"bonus\"raw_utf8))}\n";
+  source += "  return(Result.ok(plus(/std/collections/map/count<string, i32>(canonical), plus(left, bonus))))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeInferredExperimentalMapCallReceiverConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1446,6 +1477,14 @@ inline void expectAutoBlockInferredExperimentalMapReturnConformance(const std::s
       "map_auto_block_inferred_experimental_return_" + emitMode,
       emitMode,
       16);
+}
+
+inline void expectWrappedInferredExperimentalMapReturnConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeWrappedInferredExperimentalMapReturnConformanceSource(),
+      "map_wrapped_inferred_experimental_return_" + emitMode,
+      emitMode,
+      10);
 }
 
 inline void expectInferredExperimentalMapCallReceiverConformance(const std::string &emitMode) {
