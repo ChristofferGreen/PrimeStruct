@@ -3326,22 +3326,14 @@ TEST_CASE("C++ emitter helper normalizes slashless map type import alias method 
   CHECK(resolved == "pkg/Thing/tag");
 }
 
-TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibility alias") {
-  primec::Expr call;
-  call.kind = primec::Expr::Kind::Call;
-  call.isMethodCall = true;
-  call.name = "count";
-
+TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibility aliases") {
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;
   receiver.name = "values";
-  call.args.push_back(receiver);
-  call.argNames.push_back(std::nullopt);
-
-  primec::Definition aliasCountDef;
-  aliasCountDef.fullPath = "/map/count";
-  primec::Definition canonicalCountDef;
-  canonicalCountDef.fullPath = "/std/collections/map/count";
+  primec::Expr key;
+  key.kind = primec::Expr::Kind::Literal;
+  key.intWidth = 32;
+  key.literalValue = 1;
 
   std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
   primec::emitter::BindingInfo receiverInfo;
@@ -3349,24 +3341,59 @@ TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibil
   receiverInfo.typeTemplateArg = "i32, i32";
   localTypes.emplace("values", receiverInfo);
 
+  primec::Definition aliasCountDef;
+  aliasCountDef.fullPath = "/map/count";
+  primec::Definition canonicalCountDef;
+  canonicalCountDef.fullPath = "/std/collections/map/count";
+  primec::Definition aliasContainsDef;
+  aliasContainsDef.fullPath = "/map/contains";
+  primec::Definition canonicalContainsDef;
+  canonicalContainsDef.fullPath = "/std/collections/map/contains";
+  primec::Definition aliasTryAtDef;
+  aliasTryAtDef.fullPath = "/map/tryAt";
+  primec::Definition canonicalTryAtDef;
+  canonicalTryAtDef.fullPath = "/std/collections/map/tryAt";
+
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {aliasCountDef.fullPath, &aliasCountDef},
       {canonicalCountDef.fullPath, &canonicalCountDef},
+      {aliasContainsDef.fullPath, &aliasContainsDef},
+      {canonicalContainsDef.fullPath, &canonicalContainsDef},
+      {aliasTryAtDef.fullPath, &aliasTryAtDef},
+      {canonicalTryAtDef.fullPath, &canonicalTryAtDef},
   };
   std::unordered_map<std::string, std::string> importAliases;
   std::unordered_map<std::string, std::string> structTypeMap;
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs;
-  std::string resolved;
+  auto expectResolved = [&](const char *methodName, const char *expectedPath, bool includeKeyArg) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = methodName;
+    call.args = {receiver};
+    call.argNames = {std::nullopt};
+    if (includeKeyArg) {
+      call.args.push_back(key);
+      call.argNames.push_back(std::nullopt);
+    }
 
-  CHECK(primec::emitter::resolveMethodCallPath(
-      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/std/collections/map/count");
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == expectedPath);
+  };
+
+  expectResolved("count", "/std/collections/map/count", false);
+  expectResolved("contains", "/std/collections/map/contains", true);
+  expectResolved("tryAt", "/std/collections/map/tryAt", true);
 
   defMap.erase(canonicalCountDef.fullPath);
-  CHECK(primec::emitter::resolveMethodCallPath(
-      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/map/count");
+  defMap.erase(canonicalContainsDef.fullPath);
+  defMap.erase(canonicalTryAtDef.fullPath);
+  expectResolved("count", "/map/count", false);
+  expectResolved("contains", "/map/contains", true);
+  expectResolved("tryAt", "/map/tryAt", true);
 }
 
 TEST_CASE("C++ emitter helper keeps primitive vector alias access method resolution") {

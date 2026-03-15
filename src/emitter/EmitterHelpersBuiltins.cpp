@@ -1061,7 +1061,8 @@ bool resolveMethodCallPath(const Expr &call,
       return path;
     }
     const std::string suffix = path.substr(std::string("/map/").size());
-    if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
+    if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
+        suffix != "at" && suffix != "at_unsafe") {
       return path;
     }
     const std::string canonicalPath = "/std/collections/map/" + suffix;
