@@ -5309,6 +5309,51 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("stdlib map constructor assignments accept explicit experimental map struct fields") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+Holder() {
+  [Map<string, i32> mut] primary{mapNew<string, i32>()}
+  [Map<string, i32> mut] secondary{mapNew<string, i32>()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  assign(holder.primary, /std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+  assign(holder.secondary, /std/collections/mapPair("extra"raw_utf8, 9i32, "other"raw_utf8, 2i32))
+  return(plus(/std/collections/map/at(holder.primary, "left"raw_utf8),
+              /std/collections/map/at(holder.secondary, "extra"raw_utf8)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib map constructor assignments keep mismatch diagnostics on experimental map struct fields") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+Holder() {
+  [Map<string, i32> mut] values{mapNew<string, i32>()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  assign(holder.values, /std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*

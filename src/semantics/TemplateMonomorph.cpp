@@ -2385,6 +2385,62 @@ bool rewriteExpr(Expr &expr,
     initializer.name = helperPath;
     initializer.namespacePrefix.clear();
   };
+  auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
+    if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
+      return false;
+    }
+    const Expr &receiver = target.args.front();
+    std::string receiverTypeText;
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(receiver, params, locals, allowMathBare, ctx, receiverInfo)) {
+      receiverTypeText = bindingTypeToString(receiverInfo);
+    }
+    if (receiverTypeText.empty()) {
+      receiverTypeText =
+          inferExprTypeTextForTemplatedVectorFallback(receiver, locals, namespacePrefix, ctx, allowMathBare);
+    }
+    if (receiverTypeText.empty()) {
+      return false;
+    }
+    receiverTypeText = normalizeBindingTypeName(receiverTypeText);
+    while (true) {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
+        break;
+      }
+      base = normalizeBindingTypeName(base);
+      if (base != "Reference" && base != "Pointer") {
+        receiverTypeText = base;
+        break;
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      receiverTypeText = normalizeBindingTypeName(args.front());
+    }
+    std::string receiverStructPath = receiverTypeText;
+    std::string receiverBase;
+    std::string receiverArgText;
+    if (splitTemplateTypeName(receiverStructPath, receiverBase, receiverArgText) && !receiverBase.empty()) {
+      receiverStructPath = normalizeBindingTypeName(receiverBase);
+    }
+    if (!receiverStructPath.empty() && receiverStructPath.front() != '/') {
+      receiverStructPath = resolveTypePath(receiverStructPath, receiver.namespacePrefix);
+    }
+    auto structIt = ctx.sourceDefs.find(receiverStructPath);
+    if (structIt == ctx.sourceDefs.end() || !isStructDefinition(structIt->second)) {
+      return false;
+    }
+    for (const auto &fieldStmt : structIt->second.statements) {
+      if (!fieldStmt.isBinding || fieldStmt.name != target.name) {
+        continue;
+      }
+      return extractExplicitBindingType(fieldStmt, bindingOut);
+    }
+    return false;
+  };
 
   if (expr.isBinding) {
     rewriteCanonicalExperimentalMapConstructorBinding(expr);
@@ -2602,7 +2658,8 @@ bool rewriteExpr(Expr &expr,
         return;
       }
       BindingInfo targetInfo;
-      if (!inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, targetInfo)) {
+      if (!inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, targetInfo) &&
+          !resolveFieldBindingTarget(expr.args.front(), targetInfo)) {
         return;
       }
       std::string targetTypeText = targetInfo.typeName;
