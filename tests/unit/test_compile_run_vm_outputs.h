@@ -662,6 +662,80 @@ main() {
         "60\n");
 }
 
+TEST_CASE("runs vm png read for dynamic-huffman backreference rgba inputs") {
+  const std::string inPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_dynamic_backref.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = {
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x1e, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x01, 0x35, 0xc3, 0xa1, 0x00, 0x00, 0x00,
+        0x0c, 0xc0, 0x80, 0xff, 0xff, 0xff, 0xff, 0xf9,
+        0xf9, 0xfe, 0x96, 0x7f, 0xfa, 0xb6, 0x41, 0xf5,
+        0xec, 0x7f, 0x13, 0xae, 0x03, 0xb2, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45,
+        0x4e, 0x44, 0x00, 0x00, 0x00, 0x00,
+    };
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = std::string(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  print_line(pixels[3i32])
+  print_line(pixels[4i32])
+  print_line(pixels[5i32])
+  print_line(pixels[6i32])
+  print_line(pixels[7i32])
+  print_line(pixels[8i32])
+  return(plus(width, height))
+}
+)");
+  const std::string srcPath = writeTemp("vm_image_read_dynamic_backref_png.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_dynamic_backref_png.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(outPath) ==
+        "3\n"
+        "1\n"
+        "9\n"
+        "10\n"
+        "20\n"
+        "30\n"
+        "10\n"
+        "20\n"
+        "30\n"
+        "10\n"
+        "20\n"
+        "30\n");
+}
+
 TEST_CASE("rejects malformed vm png inputs deterministically") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid.png").string();
   {

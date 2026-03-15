@@ -948,9 +948,6 @@ namespace std {
     if(less_equal(literalMaxBits, 0i32),
        then() { return(1i32) },
        else() { })
-    if(and(equal(allowBackreferences, 1i32), less_equal(distanceMaxBits, 0i32)),
-       then() { return(1i32) },
-       else() { })
     while(true, do() {
       [i32 mut] symbol{0i32}
       [i32] status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, literalMaxBits, symbol)}
@@ -965,6 +962,9 @@ namespace std {
               else() {
                 if(equal(allowBackreferences, 0i32),
                    then() { return(2i32) },
+                   else() { })
+                if(less_equal(distanceMaxBits, 0i32),
+                   then() { return(1i32) },
                    else() { })
                 [i32 mut] lengthBase{0i32}
                 [i32 mut] lengthExtraBits{0i32}
@@ -1058,7 +1058,7 @@ namespace std {
        else() { })
 
     return(pngInflateHuffmanBlock(compressed, byteIndex, bitIndex, literalLengths, pngHuffmanMaxBits(literalLengths),
-                                  distanceLengths, pngHuffmanMaxBits(distanceLengths), 0i32, output))
+                                  distanceLengths, pngHuffmanMaxBits(distanceLengths), 1i32, output))
   }
 
   [effects(heap_alloc), return<int>]
