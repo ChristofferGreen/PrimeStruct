@@ -128,12 +128,13 @@ collect(values...) {
   REQUIRE(param.transforms[0].templateArgs.size() == 1);
   CHECK(param.transforms[0].templateArgs[0] == "__pack_T");
   REQUIRE(def.returnExpr.has_value());
-  const auto &vectorCall = *def.returnExpr;
-  REQUIRE(vectorCall.kind == primec::Expr::Kind::Call);
-  REQUIRE(vectorCall.args.size() == 1);
-  CHECK(vectorCall.args[0].isSpread);
-  CHECK(vectorCall.args[0].kind == primec::Expr::Kind::Name);
-  CHECK(vectorCall.args[0].name == "values");
+  const auto &returnExpr = *def.returnExpr;
+  REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.name == "vector");
+  REQUIRE(returnExpr.args.size() == 1);
+  CHECK(returnExpr.args[0].isSpread);
+  CHECK(returnExpr.args[0].kind == primec::Expr::Kind::Name);
+  CHECK(returnExpr.args[0].name == "values");
 
   primec::AstPrinter printer;
   const std::string printed = printer.print(program);
@@ -159,11 +160,12 @@ collect([string] values...) {
   REQUIRE(param.transforms[0].templateArgs.size() == 1);
   CHECK(param.transforms[0].templateArgs[0] == "string");
   REQUIRE(def.returnExpr.has_value());
-  const auto &vectorCall = *def.returnExpr;
-  REQUIRE(vectorCall.kind == primec::Expr::Kind::Call);
-  REQUIRE(vectorCall.args.size() == 1);
-  CHECK(vectorCall.args[0].isSpread);
-  CHECK(vectorCall.args[0].name == "values");
+  const auto &returnExpr = *def.returnExpr;
+  REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.name == "vector");
+  REQUIRE(returnExpr.args.size() == 1);
+  CHECK(returnExpr.args[0].isSpread);
+  CHECK(returnExpr.args[0].name == "values");
 }
 
 TEST_CASE("parses push method and call forms with equivalent argument wiring") {

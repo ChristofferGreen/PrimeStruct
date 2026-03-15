@@ -190,9 +190,19 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
 } // namespace
 
 bool Parser::parseTransformList(std::vector<Transform> &out) {
+  auto skipSeparators = [&]() {
+    while (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+      if (match(TokenKind::Comma)) {
+        expect(TokenKind::Comma, "expected ','");
+      } else {
+        expect(TokenKind::Semicolon, "expected ';'");
+      }
+    }
+  };
   if (!expect(TokenKind::LBracket, "expected '['")) {
     return false;
   }
+  skipSeparators();
   if (match(TokenKind::RBracket)) {
     return fail("transform list cannot be empty");
   }
@@ -269,6 +279,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
       return fail("text transform arguments must be identifiers or literals");
     };
     expect(TokenKind::LParen, "expected '('");
+    skipSeparators();
     if (match(TokenKind::RParen)) {
       return fail("transform argument list cannot be empty");
     }
@@ -290,6 +301,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
           return failTextTransformArgument();
         }
       }
+      skipSeparators();
       if (match(TokenKind::RParen)) {
         break;
       }
@@ -335,6 +347,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     if (!expect(TokenKind::LParen, "expected '('")) {
       return false;
     }
+    skipSeparators();
     if (match(TokenKind::RParen)) {
       return fail("transform " + groupName + " group cannot be empty");
     }
@@ -344,6 +357,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         return false;
       }
       out.push_back(std::move(nested));
+      skipSeparators();
       if (match(TokenKind::RParen)) {
         break;
       }
@@ -383,6 +397,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
       return false;
     }
     out.push_back(std::move(transform));
+    skipSeparators();
   }
   expect(TokenKind::RBracket, "expected ']'");
   return true;
@@ -716,6 +731,27 @@ bool Parser::parseParameterList(std::vector<Expr> &out,
     skipCommentsOnly();
     return tokens_[pos_].kind == kind;
   };
+  auto consumeRaw = [&](TokenKind kind, const std::string &message) -> Token {
+    if (matchRaw(TokenKind::Invalid)) {
+      fail(describeInvalidToken(tokens_[pos_]));
+      return {TokenKind::End, ""};
+    }
+    if (!matchRaw(kind)) {
+      fail(message);
+      return {TokenKind::End, ""};
+    }
+    return tokens_[pos_++];
+  };
+  auto expectRaw = [&](TokenKind kind, const std::string &message) -> bool {
+    if (matchRaw(TokenKind::Invalid)) {
+      return fail(describeInvalidToken(tokens_[pos_]));
+    }
+    if (!matchRaw(kind)) {
+      return fail(message);
+    }
+    ++pos_;
+    return true;
+  };
 
   if (matchRaw(TokenKind::RParen)) {
     return true;
@@ -723,20 +759,20 @@ bool Parser::parseParameterList(std::vector<Expr> &out,
   bool sawVariadicParam = false;
   while (true) {
     if (matchRaw(TokenKind::Semicolon)) {
-      ++pos_;
+      expectRaw(TokenKind::Semicolon, "expected ';'");
       if (matchRaw(TokenKind::RParen)) {
         break;
       }
       continue;
     }
     Expr param;
-    if (match(TokenKind::Identifier)) {
+    if (matchRaw(TokenKind::Identifier)) {
       size_t next = pos_ + 1;
       while (next < tokens_.size() && tokens_[next].kind == TokenKind::Comment) {
         ++next;
       }
       if (next < tokens_.size() && tokens_[next].kind == TokenKind::Ellipsis) {
-        Token name = consume(TokenKind::Identifier, "expected parameter identifier");
+        Token name = consumeRaw(TokenKind::Identifier, "expected parameter identifier");
         if (name.kind == TokenKind::End) {
           return false;
         }
@@ -747,7 +783,7 @@ bool Parser::parseParameterList(std::vector<Expr> &out,
         if (implicitTemplateArgsOut == nullptr) {
           return fail("variadic parameter sugar requires definition template context");
         }
-        if (!expect(TokenKind::Ellipsis, "expected '...' after variadic parameter")) {
+        if (!expectRaw(TokenKind::Ellipsis, "expected '...' after variadic parameter")) {
           return false;
         }
         Expr packParam;
@@ -763,7 +799,7 @@ bool Parser::parseParameterList(std::vector<Expr> &out,
         implicitTemplateArgsOut->push_back(packTransform.templateArgs.front());
         packParam.transforms.push_back(std::move(packTransform));
         param = std::move(packParam);
-      } else if (!match(TokenKind::LBracket)) {
+      } else if (!matchRaw(TokenKind::LBracket)) {
         return fail("expected '[' to start parameter");
       }
     }
@@ -783,9 +819,17 @@ bool Parser::parseParameterList(std::vector<Expr> &out,
       if (sawVariadicParam) {
         return fail("variadic parameter must be final");
       }
-      ++pos_;
+      if (matchRaw(TokenKind::Comma)) {
+        expectRaw(TokenKind::Comma, "expected ','");
+      } else {
+        expectRaw(TokenKind::Semicolon, "expected ';'");
+      }
       while (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
-        ++pos_;
+        if (matchRaw(TokenKind::Comma)) {
+          expectRaw(TokenKind::Comma, "expected ','");
+        } else {
+          expectRaw(TokenKind::Semicolon, "expected ';'");
+        }
       }
       if (matchRaw(TokenKind::RParen)) {
         break;
@@ -812,6 +856,27 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     skipCommentsOnly();
     return tokens_[pos_].kind == kind;
   };
+  auto consumeRaw = [&](TokenKind kind, const std::string &message) -> Token {
+    if (matchRaw(TokenKind::Invalid)) {
+      fail(describeInvalidToken(tokens_[pos_]));
+      return {TokenKind::End, ""};
+    }
+    if (!matchRaw(kind)) {
+      fail(message);
+      return {TokenKind::End, ""};
+    }
+    return tokens_[pos_++];
+  };
+  auto expectRaw = [&](TokenKind kind, const std::string &message) -> bool {
+    if (matchRaw(TokenKind::Invalid)) {
+      return fail(describeInvalidToken(tokens_[pos_]));
+    }
+    if (!matchRaw(kind)) {
+      return fail(message);
+    }
+    ++pos_;
+    return true;
+  };
 
   if (matchRaw(TokenKind::RParen)) {
     return true;
@@ -826,19 +891,19 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
   };
   while (true) {
     if (matchRaw(TokenKind::Semicolon)) {
-      ++pos_;
+      expectRaw(TokenKind::Semicolon, "expected ';'");
       if (matchRaw(TokenKind::RParen)) {
         break;
       }
       continue;
     }
     std::optional<std::string> argName;
-    if (match(TokenKind::LBracket) && !isSimpleSpreadMarker(tokens_, pos_)) {
+    if (matchRaw(TokenKind::LBracket) && !isSimpleSpreadMarker(tokens_, pos_)) {
       size_t savedPos = pos_;
-      expect(TokenKind::LBracket, "expected '['");
+      expectRaw(TokenKind::LBracket, "expected '['");
       skipComments();
-      if (match(TokenKind::Identifier)) {
-        Token name = consume(TokenKind::Identifier, "expected argument label");
+      if (matchRaw(TokenKind::Identifier)) {
+        Token name = consumeRaw(TokenKind::Identifier, "expected argument label");
         if (name.kind == TokenKind::End) {
           return false;
         }
@@ -850,8 +915,8 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
           return fail(nameError);
         }
         skipComments();
-        if (match(TokenKind::RBracket)) {
-          expect(TokenKind::RBracket, "expected ']' after argument label");
+        if (matchRaw(TokenKind::RBracket)) {
+          expectRaw(TokenKind::RBracket, "expected ']' after argument label");
           size_t nextIndex = pos_;
           while (nextIndex < tokens_.size() && isIgnorableToken(tokens_[nextIndex].kind)) {
             ++nextIndex;
@@ -867,10 +932,10 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
       } else {
         pos_ = savedPos;
       }
-    } else if (match(TokenKind::Identifier) && pos_ + 1 < tokens_.size() &&
+    } else if (matchRaw(TokenKind::Identifier) && pos_ + 1 < tokens_.size() &&
                tokens_[pos_ + 1].kind == TokenKind::Equal) {
       return fail("named arguments must use [name] syntax");
-    } else if (match(TokenKind::Identifier)) {
+    } else if (matchRaw(TokenKind::Identifier)) {
       size_t scan = pos_ + 1;
       while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
         ++scan;
@@ -882,15 +947,15 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     bool prefixedSpread = false;
     if (isSimpleSpreadMarker(tokens_, pos_)) {
       prefixedSpread = true;
-      expect(TokenKind::LBracket, "expected '['");
-      Token spread = consume(TokenKind::Identifier, "expected spread marker");
+      expectRaw(TokenKind::LBracket, "expected '['");
+      Token spread = consumeRaw(TokenKind::Identifier, "expected spread marker");
       if (spread.kind == TokenKind::End) {
         return false;
       }
       if (spread.text != "spread") {
         return fail("expected spread marker");
       }
-      if (!expect(TokenKind::RBracket, "expected ']' after spread marker")) {
+      if (!expectRaw(TokenKind::RBracket, "expected ']' after spread marker")) {
         return false;
       }
     }
@@ -902,8 +967,8 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
       }
     }
     bool suffixedSpread = false;
-    if (match(TokenKind::Ellipsis)) {
-      expect(TokenKind::Ellipsis, "expected '...'");
+    if (matchRaw(TokenKind::Ellipsis)) {
+      expectRaw(TokenKind::Ellipsis, "expected '...'");
       suffixedSpread = true;
     }
     if (prefixedSpread && suffixedSpread) {
@@ -921,22 +986,23 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     }
     out.push_back(std::move(arg));
     argNames.push_back(std::move(argName));
-    size_t separatorIndex = nextNonCommentToken(pos_);
-    if (separatorIndex < tokens_.size() &&
-        (tokens_[separatorIndex].kind == TokenKind::Comma || tokens_[separatorIndex].kind == TokenKind::Semicolon)) {
+    if (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
       if (sawSpreadArg) {
         return fail("spread argument must be final");
       }
-      pos_ = separatorIndex;
-      while (pos_ < tokens_.size()) {
-        if (tokens_[pos_].kind == TokenKind::Comment || tokens_[pos_].kind == TokenKind::Comma ||
-            tokens_[pos_].kind == TokenKind::Semicolon) {
-          ++pos_;
-          continue;
-        }
-        break;
+      if (matchRaw(TokenKind::Comma)) {
+        expectRaw(TokenKind::Comma, "expected ','");
+      } else {
+        expectRaw(TokenKind::Semicolon, "expected ';'");
       }
-      if (match(TokenKind::RParen)) {
+      while (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
+        if (matchRaw(TokenKind::Comma)) {
+          expectRaw(TokenKind::Comma, "expected ','");
+        } else {
+          expectRaw(TokenKind::Semicolon, "expected ';'");
+        }
+      }
+      if (matchRaw(TokenKind::RParen)) {
         break;
       }
     } else {
