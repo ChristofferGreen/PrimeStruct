@@ -2790,14 +2790,28 @@ bool rewriteDefinition(Definition &def,
     }
   }
   auto rewriteCanonicalExperimentalMapReturnConstructors = [&](auto &self, Expr &candidate) -> void {
-    if (isReturnCall(candidate) && candidate.args.size() == 1) {
-      rewriteCanonicalExperimentalMapConstructorValue(candidate.args.front());
-    }
+    rewriteCanonicalExperimentalMapConstructorValue(candidate);
     for (auto &arg : candidate.args) {
-      self(self, arg);
+      if (arg.kind == Expr::Kind::Call && (isReturnCall(arg) || !arg.bodyArguments.empty())) {
+        self(self, arg);
+      }
     }
-    for (auto &arg : candidate.bodyArguments) {
-      self(self, arg);
+    bool sawExplicitReturn = false;
+    size_t implicitReturnIndex = candidate.bodyArguments.size();
+    for (size_t argIndex = 0; argIndex < candidate.bodyArguments.size(); ++argIndex) {
+      if (isReturnCall(candidate.bodyArguments[argIndex])) {
+        sawExplicitReturn = true;
+        break;
+      }
+      if (!candidate.bodyArguments[argIndex].isBinding) {
+        implicitReturnIndex = argIndex;
+      }
+    }
+    for (size_t argIndex = 0; argIndex < candidate.bodyArguments.size(); ++argIndex) {
+      Expr &arg = candidate.bodyArguments[argIndex];
+      if (isReturnCall(arg) || (!sawExplicitReturn && argIndex == implicitReturnIndex)) {
+        self(self, arg);
+      }
     }
   };
   std::vector<ParameterInfo> params;

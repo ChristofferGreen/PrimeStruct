@@ -100,6 +100,10 @@ TEST_CASE("compiles and runs inferred experimental map returns in C++ emitter") 
   expectInferredExperimentalMapReturnConformance("exe");
 }
 
+TEST_CASE("compiles and runs block inferred experimental map returns in C++ emitter") {
+  expectBlockInferredExperimentalMapReturnConformance("exe");
+}
+
 TEST_CASE("rejects canonical namespaced map helpers on borrowed experimental map values in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("exe");
 }
