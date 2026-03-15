@@ -216,6 +216,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental map exposes method-call helper parity on borrowed Map references") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<Reference<Map<string, i32>>>]
+borrowExperimentalMap([Reference<Map<string, i32>>] values) {
+  return(values)
+}
+
+[effects(io_err)]
+unexpectedExperimentalMapReferenceMethodError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<i32, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapReferenceMethodError>]
+main() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}
+  [i32] found{try(ref.tryAt("left"raw_utf8))}
+  [i32 mut] total{plus(ref.count(), found)}
+  assign(total, plus(total, ref.at("left"raw_utf8)))
+  assign(total, plus(total, ref.at_unsafe("right"raw_utf8)))
+  if(ref.contains("left"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental map missing comparable trait reports trait diagnostics instead of builtin map key rejects") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
@@ -289,6 +324,40 @@ main() {
   [Map<Key, i32>] values{mapNew<Key, i32>()}
   [Reference<Map<Key, i32>>] ref{location(values)}
   if(mapContains<Key, i32>(ref, Key(1i32)),
+     then() { return(1i32) },
+     else() { return(0i32) })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Comparable") != std::string::npos);
+  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+}
+
+TEST_CASE("experimental map borrowed methods keep Comparable diagnostics") {
+  const std::string source = R"(
+import /std/collections/experimental_map/*
+
+[struct]
+Key() {
+  [i32] value{0i32}
+}
+
+[return<bool>]
+/Key/equal([Key] left, [Key] right) {
+  return(equal(left.value, right.value))
+}
+
+[return<Reference<Map<Key, i32>>>]
+borrowExperimentalMap([Reference<Map<Key, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<Key, i32>] values{mapNew<Key, i32>()}
+  [Reference<Map<Key, i32>>] ref{borrowExperimentalMap(location(values))}
+  if(ref.contains(Key(1i32)),
      then() { return(1i32) },
      else() { return(0i32) })
 }
