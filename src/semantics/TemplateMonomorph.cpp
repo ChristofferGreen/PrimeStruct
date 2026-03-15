@@ -2875,6 +2875,8 @@ bool rewriteExpr(Expr &expr,
     }
     return true;
   };
+  std::function<bool(Expr &)> rewriteNestedExperimentalMapConstructorValue;
+
   auto rewriteCanonicalExperimentalMapConstructorBinding = [&](Expr &bindingExpr) -> bool {
     if (!bindingExpr.isBinding || bindingExpr.args.size() != 1) {
       return true;
@@ -2893,7 +2895,7 @@ bool rewriteExpr(Expr &expr,
     if (!resolvesExperimentalMapValueTypeText(bindingTypeText, mapping, allowedParams, namespacePrefix, ctx)) {
       return true;
     }
-    return rewriteCanonicalExperimentalMapConstructorExpr(bindingExpr.args.front());
+    return rewriteNestedExperimentalMapConstructorValue(bindingExpr.args.front());
   };
   auto inferCallTargetBinding = [&](const Expr &bindingExpr, BindingInfo &bindingOut) -> bool {
     const bool hasExplicitBinding = extractExplicitBindingType(bindingExpr, bindingOut);
@@ -2967,14 +2969,7 @@ bool rewriteExpr(Expr &expr,
     return false;
   };
 
-  if (expr.isBinding) {
-    if (!rewriteCanonicalExperimentalMapConstructorBinding(expr)) {
-      return false;
-    }
-  }
-
-  std::function<bool(Expr &)> rewriteNestedExperimentalMapConstructorValue =
-      [&](Expr &candidate) -> bool {
+  rewriteNestedExperimentalMapConstructorValue = [&](Expr &candidate) -> bool {
     if (candidate.isBinding && candidate.args.size() == 1) {
       return rewriteNestedExperimentalMapConstructorValue(candidate.args.front());
     }
@@ -2998,6 +2993,12 @@ bool rewriteExpr(Expr &expr,
     }
     return true;
   };
+
+  if (expr.isBinding) {
+    if (!rewriteCanonicalExperimentalMapConstructorBinding(expr)) {
+      return false;
+    }
+  }
 
   std::function<bool(const Definition &, bool)> rewriteCanonicalExperimentalMapConstructorArgs =
       [&](const Definition &targetDef, bool methodCallSyntax) -> bool {

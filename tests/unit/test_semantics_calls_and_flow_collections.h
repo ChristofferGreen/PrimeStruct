@@ -4891,6 +4891,60 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
+TEST_CASE("helper-wrapped map constructors accept explicit experimental map bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(io_err)]
+unexpectedWrappedExperimentalMapBindingError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedWrappedExperimentalMapBindingError>]
+main() {
+  [Map<string, i32>] values{wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))}
+  [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
+  [i32 mut] total{plus(/std/collections/map/count(values), found)}
+  assign(total, plus(total, /std/collections/map/at(values, "right"raw_utf8)))
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on explicit experimental map bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32>] values{wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))}
+  return(/std/collections/map/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map returns") {
   const std::string source = R"(
 import /std/collections/*
@@ -5157,6 +5211,61 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped map constructors infer experimental auto locals") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(io_err)]
+unexpectedWrappedExperimentalMapAutoError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedWrappedExperimentalMapAutoError>]
+main() {
+  [auto mut] values{wrapValues(/std/collections/map/map("seed"raw_utf8, 1i32))}
+  mapInsert<string, i32>(values, "left"raw_utf8, 4i32)
+  mapInsert<string, i32>(values, "right"raw_utf8, 7i32)
+  [i32] left{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
+  [i32] right{try(/std/collections/map/tryAt(values, "right"raw_utf8))}
+  return(Result.ok(plus(/std/collections/map/count(values), plus(left, right))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped map constructor auto inference keeps template conflict diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] values{wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, false))}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
 TEST_CASE("implicit map constructor auto inference keeps template conflict diagnostics") {
