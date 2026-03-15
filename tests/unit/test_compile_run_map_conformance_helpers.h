@@ -734,6 +734,34 @@ inline std::string makeAutoBlockInferredExperimentalMapReturnConformanceSource()
   return source;
 }
 
+inline std::string makeInferredExperimentalMapCallReceiverConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<auto> effects(heap_alloc)]\n";
+  source += "buildValues([bool] useCanonical) {\n";
+  source += "  if(useCanonical,\n";
+  source += "     then() { /std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32) },\n";
+  source += "     else() { /std/collections/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32) })\n";
+  source += "}\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedInferredExperimentalMapReceiverError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedInferredExperimentalMapReceiverError>]\n";
+  source += "main() {\n";
+  source += "  [i32] left{try(buildValues(true).tryAt(\"left\"raw_utf8))}\n";
+  source += "  [i32 mut] total{plus(buildValues(true).count(), left)}\n";
+  source += "  if(buildValues(true).contains(\"right\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1206,6 +1234,14 @@ inline void expectAutoBlockInferredExperimentalMapReturnConformance(const std::s
       "map_auto_block_inferred_experimental_return_" + emitMode,
       emitMode,
       16);
+}
+
+inline void expectInferredExperimentalMapCallReceiverConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeInferredExperimentalMapCallReceiverConformanceSource(),
+      "map_inferred_experimental_call_receiver_" + emitMode,
+      emitMode,
+      7);
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {

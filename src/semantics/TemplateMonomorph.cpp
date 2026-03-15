@@ -1259,6 +1259,13 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
           typeName = unwrapCollectionReceiverEnvelope(returnType);
           break;
         }
+        if (typeName.empty()) {
+          BindingInfo inferredReturn;
+          if (inferDefinitionReturnBindingForTemplatedFallback(
+                  defIt->second, hasMathImport(ctx), const_cast<Context &>(ctx), inferredReturn)) {
+            typeName = unwrapCollectionReceiverEnvelope(inferredReturn.typeName, inferredReturn.typeTemplateArg);
+          }
+        }
       } else {
         std::string collection;
         if (getBuiltinCollectionName(receiver, collection)) {

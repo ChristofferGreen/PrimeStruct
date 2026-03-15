@@ -5154,6 +5154,61 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("inferred experimental map call receivers resolve method sugar") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<auto> effects(heap_alloc)]
+buildValues([bool] useCanonical) {
+  if(useCanonical,
+     then() { /std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32) },
+     else() { /std/collections/mapPair("left"raw_utf8, 4i32, "other"raw_utf8, 2i32) })
+}
+
+[effects(io_err)]
+unexpectedInferredExperimentalMapReceiverError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedInferredExperimentalMapReceiverError>]
+main() {
+  [i32] left{try(buildValues(true).tryAt("left"raw_utf8))}
+  [i32 mut] total{plus(buildValues(true).count(), left)}
+  if(buildValues(true).contains("right"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("inferred experimental map call receivers keep mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<auto> effects(heap_alloc)]
+buildValues([bool] useCanonical) {
+  if(useCanonical,
+     then() { /std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32) },
+     else() { /std/collections/mapPair("left"raw_utf8, 4i32, "other"raw_utf8, false) })
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(buildValues(false).count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*
