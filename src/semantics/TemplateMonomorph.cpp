@@ -140,6 +140,40 @@ std::string stripWhitespace(const std::string &text) {
   return out;
 }
 
+std::string experimentalMapConstructorInferencePath(const std::string &resolvedPath) {
+  if (resolvedPath == "/std/collections/map/map" || resolvedPath == "/std/collections/mapNew") {
+    return "/std/collections/experimental_map/mapNew";
+  }
+  if (resolvedPath == "/std/collections/mapSingle") {
+    return "/std/collections/experimental_map/mapSingle";
+  }
+  if (resolvedPath == "/std/collections/mapDouble") {
+    return "/std/collections/experimental_map/mapDouble";
+  }
+  if (resolvedPath == "/std/collections/mapPair") {
+    return "/std/collections/experimental_map/mapPair";
+  }
+  if (resolvedPath == "/std/collections/mapTriple") {
+    return "/std/collections/experimental_map/mapTriple";
+  }
+  if (resolvedPath == "/std/collections/mapQuad") {
+    return "/std/collections/experimental_map/mapQuad";
+  }
+  if (resolvedPath == "/std/collections/mapQuint") {
+    return "/std/collections/experimental_map/mapQuint";
+  }
+  if (resolvedPath == "/std/collections/mapSext") {
+    return "/std/collections/experimental_map/mapSext";
+  }
+  if (resolvedPath == "/std/collections/mapSept") {
+    return "/std/collections/experimental_map/mapSept";
+  }
+  if (resolvedPath == "/std/collections/mapOct") {
+    return "/std/collections/experimental_map/mapOct";
+  }
+  return {};
+}
+
 uint64_t fnv1a64(const std::string &text) {
   uint64_t hash = 1469598103934665603ULL;
   for (unsigned char c : text) {
@@ -759,6 +793,12 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
   } else {
     resolved = resolveCalleePath(expr, namespacePrefix, ctx);
   }
+  if (!expr.isMethodCall && expr.templateArgs.size() == 2) {
+    const std::string experimentalPath = experimentalMapConstructorInferencePath(resolved);
+    if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
+      return "/std/collections/experimental_map/Map<" + joinTemplateArgs(expr.templateArgs) + ">";
+    }
+  }
   const auto defIt = ctx.sourceDefs.find(resolved);
   if (defIt == ctx.sourceDefs.end()) {
     return {};
@@ -1291,6 +1331,14 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
       }
     } else {
       resolved = resolveCalleePath(initializer, initializer.namespacePrefix, ctx);
+    }
+    if (!initializer.isMethodCall && initializer.templateArgs.size() == 2) {
+      const std::string experimentalPath = experimentalMapConstructorInferencePath(resolved);
+      if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
+        infoOut.typeName = "/std/collections/experimental_map/Map";
+        infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
+        return true;
+      }
     }
     if (!resolved.empty()) {
       auto defIt = ctx.sourceDefs.find(resolved);

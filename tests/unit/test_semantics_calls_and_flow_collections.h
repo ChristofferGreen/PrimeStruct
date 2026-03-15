@@ -4932,6 +4932,56 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
+TEST_CASE("map constructors infer experimental auto locals and auto returns") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<auto> effects(heap_alloc)]
+buildValues() {
+  return(/std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+}
+
+[effects(io_err)]
+unexpectedExperimentalMapAutoError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAutoError>]
+main() {
+  [auto mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 1i32)}
+  mapInsert<string, i32>(values, "left"raw_utf8, 4i32)
+  mapInsert<string, i32>(values, "right"raw_utf8, 7i32)
+  [auto mut] built{buildValues()}
+  mapInsert<string, i32>(built, "extra"raw_utf8, 9i32)
+  [i32] left{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
+  [i32] extra{try(/std/collections/map/tryAt(built, "extra"raw_utf8))}
+  return(Result.ok(plus(plus(/std/collections/map/count(values), /std/collections/map/count(built)), plus(left, extra))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical map constructor auto inference keeps mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)}
+  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  return(/std/collections/map/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mismatch") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*
