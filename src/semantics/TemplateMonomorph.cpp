@@ -2876,6 +2876,39 @@ bool rewriteExpr(Expr &expr,
     return true;
   };
   std::function<bool(Expr &)> rewriteNestedExperimentalMapConstructorValue;
+  std::function<bool(Expr &)> rewriteNestedExperimentalMapResultOkPayloadValue;
+
+  auto isBuiltinResultOkValueCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name != "ok" ||
+        candidate.args.size() != 2) {
+      return false;
+    }
+    const Expr &receiver = candidate.args.front();
+    return receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "Result";
+  };
+
+  auto rewriteExperimentalMapTargetValueForType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
+    if (resolvesExperimentalMapValueTypeText(typeText, mapping, allowedParams, namespacePrefix, ctx)) {
+      return rewriteNestedExperimentalMapConstructorValue(valueExpr);
+    }
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(typeText, base, argText) || normalizeBindingTypeName(base) != "Result") {
+      return true;
+    }
+    std::vector<std::string> resultArgs;
+    if (!splitTopLevelTemplateArgs(argText, resultArgs) || resultArgs.size() != 2) {
+      return true;
+    }
+    if (!resolvesExperimentalMapValueTypeText(trimWhitespace(resultArgs.front()),
+                                              mapping,
+                                              allowedParams,
+                                              namespacePrefix,
+                                              ctx)) {
+      return true;
+    }
+    return rewriteNestedExperimentalMapResultOkPayloadValue(valueExpr);
+  };
 
   auto rewriteCanonicalExperimentalMapConstructorBinding = [&](Expr &bindingExpr) -> bool {
     if (!bindingExpr.isBinding || bindingExpr.args.size() != 1) {
@@ -2892,10 +2925,7 @@ bool rewriteExpr(Expr &expr,
     if (!bindingInfo.typeTemplateArg.empty()) {
       bindingTypeText += "<" + bindingInfo.typeTemplateArg + ">";
     }
-    if (!resolvesExperimentalMapValueTypeText(bindingTypeText, mapping, allowedParams, namespacePrefix, ctx)) {
-      return true;
-    }
-    return rewriteNestedExperimentalMapConstructorValue(bindingExpr.args.front());
+    return rewriteExperimentalMapTargetValueForType(bindingTypeText, bindingExpr.args.front());
   };
   auto inferCallTargetBinding = [&](const Expr &bindingExpr, BindingInfo &bindingOut) -> bool {
     const bool hasExplicitBinding = extractExplicitBindingType(bindingExpr, bindingOut);
@@ -2994,6 +3024,29 @@ bool rewriteExpr(Expr &expr,
     return true;
   };
 
+  rewriteNestedExperimentalMapResultOkPayloadValue = [&](Expr &candidate) -> bool {
+    if (candidate.isBinding && candidate.args.size() == 1) {
+      return rewriteNestedExperimentalMapResultOkPayloadValue(candidate.args.front());
+    }
+    if (candidate.kind != Expr::Kind::Call) {
+      return true;
+    }
+    if (isBuiltinResultOkValueCall(candidate)) {
+      return rewriteNestedExperimentalMapConstructorValue(candidate.args.back());
+    }
+    for (auto &arg : candidate.args) {
+      if (!rewriteNestedExperimentalMapResultOkPayloadValue(arg)) {
+        return false;
+      }
+    }
+    for (auto &bodyArg : candidate.bodyArguments) {
+      if (!rewriteNestedExperimentalMapResultOkPayloadValue(bodyArg)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   if (expr.isBinding) {
     if (!rewriteCanonicalExperimentalMapConstructorBinding(expr)) {
       return false;
@@ -3069,9 +3122,6 @@ bool rewriteExpr(Expr &expr,
       if (!paramBinding.typeTemplateArg.empty()) {
         typeText += "<" + paramBinding.typeTemplateArg + ">";
       }
-      if (!resolvesExperimentalMapValueTypeText(typeText, mapping, allowedParams, namespacePrefix, ctx)) {
-        continue;
-      }
       const Expr *orderedArg = orderedArgs[paramIndex];
       if (orderedArg == nullptr) {
         continue;
@@ -3080,7 +3130,7 @@ bool rewriteExpr(Expr &expr,
         if (&argExpr != orderedArg) {
           continue;
         }
-        if (!rewriteNestedExperimentalMapConstructorValue(argExpr)) {
+        if (!rewriteExperimentalMapTargetValueForType(typeText, argExpr)) {
           return false;
         }
         break;

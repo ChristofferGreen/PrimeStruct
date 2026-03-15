@@ -4846,6 +4846,79 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("helper-wrapped Result.ok payloads accept explicit experimental map parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[effects(io_err)]
+unexpectedWrappedExperimentalResultMapParameterError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedWrappedExperimentalResultMapParameterError>]
+scoreStatus([Result<Map<string, i32>, ContainerError>] status) {
+  [Map<string, i32>] values{try(status)}
+  return(Result.ok(plus(/std/collections/map/count(values),
+                        /std/collections/map/at(values, "left"raw_utf8))))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedWrappedExperimentalResultMapParameterError>]
+main() {
+  return(scoreStatus(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                  "right"raw_utf8, 7i32)))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped Result.ok payloads keep mismatch diagnostics on explicit experimental map parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[effects(io_err)]
+unexpectedWrappedExperimentalResultMapParameterError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedWrappedExperimentalResultMapParameterError>]
+scoreStatus([Result<Map<string, i32>, ContainerError>] status) {
+  [Map<string, i32>] values{try(status)}
+  return(Result.ok(/std/collections/map/count(values)))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedWrappedExperimentalResultMapParameterError>]
+main() {
+  return(scoreStatus(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                  "wrong"raw_utf8, false)))))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
@@ -4937,6 +5010,69 @@ wrapValues<T>([T] values) {
 main() {
   [Map<string, i32>] values{wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))}
   return(/std/collections/map/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped Result.ok payloads accept explicit experimental map bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[effects(io_err)]
+unexpectedWrappedExperimentalResultMapBindingError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedWrappedExperimentalResultMapBindingError>]
+main() {
+  [Result<Map<string, i32>, ContainerError>] status{
+      wrapStatus(Result.ok(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)))}
+  [Map<string, i32>] values{try(status)}
+  return(Result.ok(plus(/std/collections/map/count(values),
+                        /std/collections/map/at(values, "right"raw_utf8))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped Result.ok payloads keep mismatch diagnostics on explicit experimental map bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[effects(io_err)]
+unexpectedWrappedExperimentalResultMapBindingError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedWrappedExperimentalResultMapBindingError>]
+main() {
+  [Result<Map<string, i32>, ContainerError>] status{
+      wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))}
+  [Map<string, i32>] values{try(status)}
+  return(Result.ok(/std/collections/map/count(values)))
 }
 )";
   std::string error;
