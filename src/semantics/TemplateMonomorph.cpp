@@ -1616,13 +1616,33 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
     if (!resolved.empty()) {
       auto defIt = ctx.sourceDefs.find(resolved);
       if (defIt != ctx.sourceDefs.end()) {
+        std::vector<std::string> effectiveTemplateArgs = initializer.templateArgs;
+        if (effectiveTemplateArgs.empty() && !defIt->second.templateArgs.empty()) {
+          std::string inferError;
+          if (!inferImplicitTemplateArgs(defIt->second,
+                                         initializer,
+                                         locals,
+                                         params,
+                                         SubstMap{},
+                                         {},
+                                         initializer.namespacePrefix,
+                                         ctx,
+                                         allowMathBare,
+                                         effectiveTemplateArgs,
+                                         inferError)) {
+            if (!inferError.empty()) {
+              return false;
+            }
+            effectiveTemplateArgs.clear();
+          }
+        }
         std::unordered_set<std::string> allowedParams(defIt->second.templateArgs.begin(),
                                                       defIt->second.templateArgs.end());
         SubstMap returnTypeMapping;
-        if (initializer.templateArgs.size() == defIt->second.templateArgs.size()) {
-          returnTypeMapping.reserve(initializer.templateArgs.size());
-          for (size_t i = 0; i < initializer.templateArgs.size(); ++i) {
-            returnTypeMapping.emplace(defIt->second.templateArgs[i], initializer.templateArgs[i]);
+        if (effectiveTemplateArgs.size() == defIt->second.templateArgs.size()) {
+          returnTypeMapping.reserve(effectiveTemplateArgs.size());
+          for (size_t i = 0; i < effectiveTemplateArgs.size(); ++i) {
+            returnTypeMapping.emplace(defIt->second.templateArgs[i], effectiveTemplateArgs[i]);
           }
         }
         for (const auto &transform : defIt->second.transforms) {
