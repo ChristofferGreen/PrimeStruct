@@ -80,6 +80,8 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   return false;
 }
 
+std::string normalizeCollectionHelperPath(const std::string &path);
+
 std::string normalizeCollectionHelperPath(const std::string &path) {
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
@@ -151,6 +153,16 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
   }
   std::string aliasName;
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+bool isExplicitMapHelperFallbackPath(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
+    return false;
+  }
+  const std::string normalizedPath = normalizeCollectionHelperPath(expr.name);
+  return normalizedPath == "/map/count" || normalizedPath == "/map/at" || normalizedPath == "/map/at_unsafe" ||
+         normalizedPath == "/std/collections/map/count" || normalizedPath == "/std/collections/map/at" ||
+         normalizedPath == "/std/collections/map/at_unsafe";
 }
 
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path);
@@ -1130,6 +1142,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   }
 
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+    return false;
+  }
+  if (isExplicitMapHelperFallbackPath(callExpr)) {
     return false;
   }
   const bool isCountCall = (isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count")) &&

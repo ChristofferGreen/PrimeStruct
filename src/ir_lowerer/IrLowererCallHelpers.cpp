@@ -78,6 +78,8 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   return false;
 }
 
+std::string normalizeMapImportAliasPath(const std::string &path);
+
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
   if (isSimpleCallName(expr, name)) {
     return true;
@@ -92,6 +94,16 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
   }
   std::string aliasName;
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+bool isExplicitMapHelperFallbackPath(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
+    return false;
+  }
+  const std::string normalizedPath = normalizeMapImportAliasPath(expr.name);
+  return normalizedPath == "/map/count" || normalizedPath == "/map/at" || normalizedPath == "/map/at_unsafe" ||
+         normalizedPath == "/std/collections/map/count" || normalizedPath == "/std/collections/map/at" ||
+         normalizedPath == "/std/collections/map/at_unsafe";
 }
 
 std::string normalizeMapImportAliasPath(const std::string &path) {
@@ -2283,6 +2295,9 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error,
     std::function<bool(const Expr &)> isCollectionAccessReceiverExpr) {
+  if (isExplicitMapHelperFallbackPath(expr)) {
+    return CountMethodFallbackResult::NotHandled;
+  }
   std::string normalizedVectorHelperName;
   std::string normalizedMapHelperName;
   const bool hasVectorHelperAlias = resolveVectorHelperAliasName(expr, normalizedVectorHelperName);
