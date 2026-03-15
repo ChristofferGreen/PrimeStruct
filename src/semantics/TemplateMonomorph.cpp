@@ -1487,6 +1487,23 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
     return true;
   }
   if (initializer.kind == Expr::Kind::Call) {
+    if (initializer.isMethodCall && initializer.name == "ok" && initializer.args.size() == 2 &&
+        initializer.templateArgs.empty() && !initializer.hasBodyArguments && initializer.bodyArguments.empty()) {
+      const Expr &receiver = initializer.args.front();
+      if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "Result") {
+        BindingInfo payloadInfo;
+        if (!inferBindingTypeForMonomorph(initializer.args.back(), params, locals, allowMathBare, ctx, payloadInfo)) {
+          return false;
+        }
+        const std::string payloadTypeText = bindingTypeToString(payloadInfo);
+        if (payloadTypeText.empty()) {
+          return false;
+        }
+        infoOut.typeName = "Result";
+        infoOut.typeTemplateArg = payloadTypeText + ", _";
+        return true;
+      }
+    }
     if (isIfCall(initializer) && initializer.args.size() == 3) {
       BindingInfo thenInfo;
       BindingInfo elseInfo;

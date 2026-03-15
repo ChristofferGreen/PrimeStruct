@@ -1740,6 +1740,12 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     BindingInfo &bindingOut) {
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
   auto assignBindingTypeFromText = [&](const std::string &typeText) -> bool {
     const std::string normalizedType = normalizeBindingTypeName(typeText);
     if (normalizedType.empty()) {
@@ -1756,6 +1762,21 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     bindingOut.typeTemplateArg.clear();
     return true;
   };
+  auto assignBindingTypeFromResultInfo = [&](const ResultTypeInfo &resultInfo) -> bool {
+    if (!resultInfo.isResult || resultInfo.errorType.empty()) {
+      return false;
+    }
+    bindingOut.typeName = "Result";
+    if (!resultInfo.hasValue) {
+      bindingOut.typeTemplateArg = resultInfo.errorType;
+      return true;
+    }
+    if (resultInfo.valueType.empty()) {
+      return false;
+    }
+    bindingOut.typeTemplateArg = resultInfo.valueType + ", " + resultInfo.errorType;
+    return true;
+  };
   auto inferTryInitializerBinding = [&]() -> bool {
     if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall || !isSimpleCallName(initializer, "try") ||
         initializer.args.size() != 1 || !initializer.templateArgs.empty() || initializer.hasBodyArguments ||
@@ -1768,6 +1789,47 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       return false;
     }
     return assignBindingTypeFromText(resultInfo.valueType);
+  };
+  auto inferDirectResultOkBinding = [&]() -> bool {
+    if (initializer.kind != Expr::Kind::Call || !initializer.isMethodCall || initializer.name != "ok" ||
+        initializer.templateArgs.size() != 0 || initializer.hasBodyArguments || !initializer.bodyArguments.empty()) {
+      return false;
+    }
+    if (initializer.args.empty()) {
+      return false;
+    }
+    const Expr &receiver = initializer.args.front();
+    if (receiver.kind != Expr::Kind::Name || normalizeBindingTypeName(receiver.name) != "Result") {
+      return false;
+    }
+    auto inferCurrentErrorType = [&]() -> std::string {
+      if (currentResultType_.has_value() && currentResultType_->isResult && !currentResultType_->errorType.empty()) {
+        return currentResultType_->errorType;
+      }
+      if (currentOnError_.has_value() && !currentOnError_->errorType.empty()) {
+        return currentOnError_->errorType;
+      }
+      return "_";
+    };
+    if (initializer.args.size() == 1) {
+      bindingOut.typeName = "Result";
+      bindingOut.typeTemplateArg = inferCurrentErrorType();
+      return true;
+    }
+    if (initializer.args.size() != 2) {
+      return false;
+    }
+    BindingInfo payloadBinding;
+    if (!inferBindingTypeFromInitializer(initializer.args.back(), params, locals, payloadBinding)) {
+      return false;
+    }
+    const std::string payloadTypeText = bindingTypeText(payloadBinding);
+    if (payloadTypeText.empty()) {
+      return false;
+    }
+    bindingOut.typeName = "Result";
+    bindingOut.typeTemplateArg = payloadTypeText + ", " + inferCurrentErrorType();
+    return true;
   };
   auto inferCollectionBindingFromExpr = [&](const Expr &expr) -> bool {
     auto copyNamedBinding = [&](const std::string &name) -> bool {
@@ -2134,6 +2196,14 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     return true;
   }
   if (inferTryInitializerBinding()) {
+    return true;
+  }
+  if (inferDirectResultOkBinding()) {
+    return true;
+  }
+  ResultTypeInfo resultInfo;
+  if (resolveResultTypeForExpr(initializer, params, locals, resultInfo) &&
+      assignBindingTypeFromResultInfo(resultInfo)) {
     return true;
   }
   if (inferCallInitializerBinding()) {

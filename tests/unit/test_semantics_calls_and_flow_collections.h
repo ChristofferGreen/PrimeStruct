@@ -5145,6 +5145,52 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("helper-wrapped Result.ok payloads infer experimental result auto bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] status{wrapStatus(Result.ok(/std/collections/map/map("left"raw_utf8, 4i32,
+                                                             "right"raw_utf8, 7i32)))}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped Result.ok auto binding inference keeps template conflict diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] status{wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                             "wrong"raw_utf8, false)))}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map returns") {
   const std::string source = R"(
 import /std/collections/*
@@ -6003,6 +6049,62 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("helper-wrapped inferred experimental result map struct fields rewrite constructors") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[struct]
+Holder() {
+  status{wrapStatus(Result.ok(mapNew<string, i32>()))}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                      "right"raw_utf8, 7i32))))}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped inferred experimental result map struct fields keep mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[struct]
+Holder() {
+  status{wrapStatus(Result.ok(mapNew<string, i32>()))}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                      "wrong"raw_utf8, false))))}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib map constructors accept experimental map method-call parameters") {
   const std::string source = R"(
 import /std/collections/*
@@ -6279,6 +6381,60 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped inferred experimental result map default parameters rewrite constructors") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[effects(heap_alloc), return<int>]
+scoreStatus([auto] status{wrapStatus(Result.ok(mapNew<string, i32>()))}) {
+  return(0i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(scoreStatus(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                  "right"raw_utf8, 7i32)))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped inferred experimental result map default parameters keep mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapStatus<T>([T] status) {
+  return(status)
+}
+
+[effects(heap_alloc), return<int>]
+scoreStatus([auto] status{wrapStatus(Result.ok(mapNew<string, i32>()))}) {
+  return(0i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(scoreStatus(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                  "wrong"raw_utf8, false)))))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
