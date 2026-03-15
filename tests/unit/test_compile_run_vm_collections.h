@@ -1903,6 +1903,10 @@ TEST_CASE("runs vm experimental map struct fields") {
   expectExperimentalMapStructFieldConformance("vm");
 }
 
+TEST_CASE("runs vm experimental map method parameters") {
+  expectExperimentalMapMethodParameterConformance("vm");
+}
+
 TEST_CASE("rejects vm canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("vm");
 }

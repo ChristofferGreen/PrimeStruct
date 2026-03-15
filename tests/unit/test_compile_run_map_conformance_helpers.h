@@ -790,6 +790,27 @@ inline std::string makeExperimentalMapStructFieldConformanceSource() {
   return source;
 }
 
+inline std::string makeExperimentalMapMethodParameterConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "Holder() {}\n\n";
+  source += "[return<int> effects(heap_alloc)]\n";
+  source += "/Holder/score([Holder] self, [Map<string, i32>] values) {\n";
+  source +=
+      "  return(plus(/std/collections/map/count(values), /std/collections/map/at_unsafe(values, \"left\"raw_utf8)))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Holder] holder{Holder()}\n";
+  source +=
+      "  return(plus(holder.score(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)),\n";
+  source +=
+      "              holder.score(/std/collections/mapPair(\"left\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32))))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1278,6 +1299,14 @@ inline void expectExperimentalMapStructFieldConformance(const std::string &emitM
       "map_experimental_struct_fields_" + emitMode,
       emitMode,
       13);
+}
+
+inline void expectExperimentalMapMethodParameterConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeExperimentalMapMethodParameterConformanceSource(),
+      "map_experimental_method_parameter_" + emitMode,
+      emitMode,
+      10);
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {

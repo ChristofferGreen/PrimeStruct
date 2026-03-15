@@ -5261,6 +5261,54 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("stdlib map constructors accept experimental map method-call parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+Holder() {}
+
+[return<int> effects(heap_alloc)]
+/Holder/score([Holder] self, [Map<string, i32>] values) {
+  return(plus(/std/collections/map/count(values),
+              /std/collections/map/at_unsafe(values, "left"raw_utf8)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(plus(holder.score(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)),
+              holder.score(/std/collections/mapPair("left"raw_utf8, 2i32, "extra"raw_utf8, 9i32))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib map constructors keep mismatch diagnostics on experimental map method-call parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+Holder() {}
+
+[return<int> effects(heap_alloc)]
+/Holder/score([Holder] self, [Map<string, i32>] values) {
+  return(/std/collections/map/count(values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(holder.score(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*

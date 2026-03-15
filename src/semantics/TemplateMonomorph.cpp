@@ -2496,7 +2496,8 @@ bool rewriteExpr(Expr &expr,
       error = "template arguments are only supported on templated definitions: " + resolvedPath;
       return false;
     }
-    auto rewriteCanonicalExperimentalMapConstructorArgs = [&](const Definition &targetDef) -> bool {
+    auto rewriteCanonicalExperimentalMapConstructorArgs = [&](const Definition &targetDef,
+                                                             bool methodCallSyntax) -> bool {
       std::vector<ParameterInfo> callParams;
       if (!targetDef.parameters.empty()) {
         callParams.reserve(targetDef.parameters.size());
@@ -2526,10 +2527,37 @@ bool rewriteExpr(Expr &expr,
       if (callParams.empty()) {
         return true;
       }
-      std::vector<const Expr *> orderedArgs;
-      std::string orderError;
-      if (!buildOrderedArguments(callParams, expr.args, expr.argNames, orderedArgs, orderError)) {
-        return true;
+      std::vector<const Expr *> orderedArgs(callParams.size(), nullptr);
+      size_t callArgStart = 0;
+      if (methodCallSyntax && expr.args.size() == callParams.size() + 1) {
+        // Method-call sugar prepends the implicit receiver expression.
+        callArgStart = 1;
+      }
+      size_t positionalIndex = 0;
+      for (size_t i = callArgStart; i < expr.args.size(); ++i) {
+        if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+          const std::string &name = *expr.argNames[i];
+          size_t index = callParams.size();
+          for (size_t p = 0; p < callParams.size(); ++p) {
+            if (callParams[p].name == name) {
+              index = p;
+              break;
+            }
+          }
+          if (index >= callParams.size() || orderedArgs[index] != nullptr) {
+            return true;
+          }
+          orderedArgs[index] = &expr.args[i];
+          continue;
+        }
+        while (positionalIndex < orderedArgs.size() && orderedArgs[positionalIndex] != nullptr) {
+          ++positionalIndex;
+        }
+        if (positionalIndex >= orderedArgs.size()) {
+          return true;
+        }
+        orderedArgs[positionalIndex] = &expr.args[i];
+        ++positionalIndex;
       }
       for (size_t paramIndex = 0; paramIndex < callParams.size() && paramIndex < orderedArgs.size(); ++paramIndex) {
         const BindingInfo &paramBinding = callParams[paramIndex].binding;
@@ -2565,7 +2593,7 @@ bool rewriteExpr(Expr &expr,
     };
     auto defIt = ctx.sourceDefs.find(resolveCalleePath(expr, namespacePrefix, ctx));
     if (defIt != ctx.sourceDefs.end()) {
-      if (!rewriteCanonicalExperimentalMapConstructorArgs(defIt->second)) {
+      if (!rewriteCanonicalExperimentalMapConstructorArgs(defIt->second, false)) {
         return false;
       }
     }
@@ -2599,6 +2627,7 @@ bool rewriteExpr(Expr &expr,
     rewriteCanonicalExperimentalMapConstructorAssign();
   }
   if (expr.isMethodCall) {
+    const bool methodCallSyntax = expr.isMethodCall;
     std::string methodPath;
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
       const bool methodWasTemplate = ctx.templateDefs.count(methodPath) > 0;
@@ -2669,6 +2698,12 @@ bool rewriteExpr(Expr &expr,
       } else if (isKnownDef && !expr.templateArgs.empty()) {
         error = "template arguments are only supported on templated definitions: " + methodPath;
         return false;
+      }
+      auto methodDefIt = ctx.sourceDefs.find(resolveCalleePath(expr, namespacePrefix, ctx));
+      if (methodDefIt != ctx.sourceDefs.end()) {
+        if (!rewriteCanonicalExperimentalMapConstructorArgs(methodDefIt->second, methodCallSyntax)) {
+          return false;
+        }
       }
     }
   }
