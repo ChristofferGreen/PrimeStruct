@@ -2905,11 +2905,18 @@ bool rewriteExpr(Expr &expr,
   };
 
   auto rewriteExperimentalMapTargetValueForType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(typeText, base, argText) && normalizeBindingTypeName(base) == "uninitialized") {
+      std::vector<std::string> storageArgs;
+      if (!splitTopLevelTemplateArgs(argText, storageArgs) || storageArgs.size() != 1) {
+        return true;
+      }
+      return rewriteExperimentalMapTargetValueForType(trimWhitespace(storageArgs.front()), valueExpr);
+    }
     if (resolvesExperimentalMapValueTypeText(typeText, mapping, allowedParams, namespacePrefix, ctx)) {
       return rewriteNestedExperimentalMapConstructorValue(valueExpr);
     }
-    std::string base;
-    std::string argText;
     if (!splitTemplateTypeName(typeText, base, argText) || normalizeBindingTypeName(base) != "Result") {
       return true;
     }
@@ -3332,7 +3339,26 @@ bool rewriteExpr(Expr &expr,
         return;
       }
     };
+    auto rewriteCanonicalExperimentalMapConstructorInit = [&]() {
+      if (!isSimpleCallName(expr, "init") || expr.args.size() != 2) {
+        return;
+      }
+      BindingInfo targetInfo;
+      if (!inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, targetInfo) &&
+          !resolveFieldBindingTarget(expr.args.front(), targetInfo)) {
+        return;
+      }
+      std::string targetTypeText = targetInfo.typeName;
+      if (!targetInfo.typeTemplateArg.empty()) {
+        targetTypeText += "<" + targetInfo.typeTemplateArg + ">";
+      }
+      Expr &valueExpr = expr.args[1];
+      if (!rewriteExperimentalMapTargetValueForType(targetTypeText, valueExpr)) {
+        return;
+      }
+    };
     rewriteCanonicalExperimentalMapConstructorAssign();
+    rewriteCanonicalExperimentalMapConstructorInit();
   }
   if (expr.isMethodCall) {
     if (!expr.args.empty()) {
