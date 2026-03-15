@@ -189,11 +189,11 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("native rejects mixed explicit and spread variadic forwarding") {
+TEST_CASE("native materializes mixed explicit and spread variadic forwarding") {
   const std::string source = R"(
 [return<int>]
 count_values([args<i32>] values) {
-  return(count(values))
+  return(plus(values[0i32], values[2i32]))
 }
 
 [return<int>]
@@ -207,15 +207,41 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_mixed_spread.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_mixed_spread.txt").string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_variadic_args_mixed_spread").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 101);
+}
+
+TEST_CASE("native rejects non-string struct variadic packs") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{0i32}
+}
+
+[return<int>]
+count_values([args<Pair>] values) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  return(count_values(Pair(), Pair()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_struct.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct.txt").string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct").string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("native backend does not yet support mixed variadic values with spread forwarding") !=
+  CHECK(readFile(errPath).find("native backend only supports numeric/bool/string variadic args parameters") !=
         std::string::npos);
 }
 

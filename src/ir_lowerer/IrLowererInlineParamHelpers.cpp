@@ -32,53 +32,7 @@ bool emitInlineDefinitionCallParameters(
     }
 
     if (i == packedParamIndex) {
-      auto emitArgsPackAlias = [&](const Expr &argExpr) -> bool {
-        if (argExpr.kind != Expr::Kind::Name) {
-          return false;
-        }
-        auto callerIt = callerLocals.find(argExpr.name);
-        if (callerIt == callerLocals.end() || !callerIt->second.isArgsPack) {
-          return false;
-        }
-        if (callerIt->second.valueKind != paramInfo.valueKind ||
-            callerIt->second.structTypeName != paramInfo.structTypeName) {
-          error = "variadic parameter type mismatch";
-          return false;
-        }
-        calleeLocals.emplace(param.name, paramInfo);
-        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(callerIt->second.index));
-        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
-        return true;
-      };
-
-      if (packedArgs.size() == 1) {
-        const Expr &packedArg = *packedArgs.front();
-        if (emitArgsPackAlias(packedArg)) {
-          continue;
-        }
-        if (packedArg.isSpread) {
-          error = "native backend requires spread variadic forwarding to use an args<T> parameter";
-          return false;
-        }
-      }
-      for (const Expr *packedArg : packedArgs) {
-        if (packedArg != nullptr && packedArg->isSpread) {
-          error = "native backend does not yet support mixed variadic values with spread forwarding";
-          return false;
-        }
-      }
-      if (paramInfo.structTypeName.size() > 0 || paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
-        error = "native backend only supports numeric/bool/string variadic args parameters";
-        return false;
-      }
-
-      const int32_t baseLocal = nextLocal;
-      nextLocal += 1 + static_cast<int32_t>(packedArgs.size());
-      emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(packedArgs.size())));
-      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal));
-
-      for (size_t packedIndex = 0; packedIndex < packedArgs.size(); ++packedIndex) {
-        const Expr &argExpr = *packedArgs[packedIndex];
+      auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
         if (paramInfo.valueKind == LocalInfo::ValueKind::String) {
           LocalInfo::StringSource source = LocalInfo::StringSource::None;
           int32_t index = -1;
@@ -97,9 +51,110 @@ bool emitInlineDefinitionCallParameters(
             return false;
           }
         }
-        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1 + static_cast<int32_t>(packedIndex)));
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
+        return true;
+      };
+
+      auto emitArgsPackAlias = [&](const Expr &argExpr,
+                                  bool emitAliasInstructions,
+                                  LocalInfo *sourceInfoOut = nullptr) -> bool {
+        if (argExpr.kind != Expr::Kind::Name) {
+          return false;
+        }
+        auto callerIt = callerLocals.find(argExpr.name);
+        if (callerIt == callerLocals.end() || !callerIt->second.isArgsPack) {
+          return false;
+        }
+        if (callerIt->second.valueKind != paramInfo.valueKind ||
+            callerIt->second.structTypeName != paramInfo.structTypeName) {
+          error = "variadic parameter type mismatch";
+          return false;
+        }
+        if (sourceInfoOut != nullptr) {
+          *sourceInfoOut = callerIt->second;
+        }
+        if (!emitAliasInstructions) {
+          return true;
+        }
+        paramInfo.argsPackElementCount = callerIt->second.argsPackElementCount;
+        calleeLocals.emplace(param.name, paramInfo);
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(callerIt->second.index));
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
+        return true;
+      };
+
+      if (packedArgs.size() == 1) {
+        const Expr &packedArg = *packedArgs.front();
+        if (emitArgsPackAlias(packedArg, true)) {
+          continue;
+        }
+        if (packedArg.isSpread) {
+          error = "native backend requires spread variadic forwarding to use an args<T> parameter";
+          return false;
+        }
+      }
+      for (const Expr *packedArg : packedArgs) {
+        if (packedArg != nullptr && packedArg->isSpread) {
+          if (packedArg != packedArgs.back()) {
+            error = "native backend does not yet support mixed variadic values with spread forwarding";
+            return false;
+          }
+        }
+      }
+      if (paramInfo.structTypeName.size() > 0 || paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+        error = "native backend only supports numeric/bool/string variadic args parameters";
+        return false;
       }
 
+      LocalInfo spreadSourceInfo;
+      const bool hasSpreadSuffix = !packedArgs.empty() && packedArgs.back() != nullptr && packedArgs.back()->isSpread;
+      const size_t explicitPackedCount = hasSpreadSuffix ? (packedArgs.size() - 1) : packedArgs.size();
+      if (hasSpreadSuffix) {
+        if (!emitArgsPackAlias(*packedArgs.back(), false, &spreadSourceInfo)) {
+          if (error.empty()) {
+            error = "native backend requires spread variadic forwarding to use an args<T> parameter";
+          }
+          return false;
+        }
+        if (spreadSourceInfo.argsPackElementCount < 0) {
+          error = "native backend requires known-size args<T> packs for mixed variadic forwarding";
+          return false;
+        }
+      }
+
+      const int32_t baseLocal = nextLocal;
+      const int32_t totalPackedCount =
+          static_cast<int32_t>(explicitPackedCount) +
+          (hasSpreadSuffix ? spreadSourceInfo.argsPackElementCount : 0);
+      nextLocal += 1 + totalPackedCount;
+      emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(totalPackedCount));
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal));
+
+      for (size_t packedIndex = 0; packedIndex < explicitPackedCount; ++packedIndex) {
+        const Expr &argExpr = *packedArgs[packedIndex];
+        if (!emitPackedValueToLocal(argExpr, baseLocal + 1 + static_cast<int32_t>(packedIndex))) {
+          return false;
+        }
+      }
+
+      if (hasSpreadSuffix) {
+        const int32_t sourcePtrLocal = allocTempLocal();
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(spreadSourceInfo.index));
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(sourcePtrLocal));
+        for (int32_t spreadIndex = 0; spreadIndex < spreadSourceInfo.argsPackElementCount; ++spreadIndex) {
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(sourcePtrLocal));
+          const uint64_t offsetBytes = static_cast<uint64_t>(spreadIndex + 1) * IrSlotBytes;
+          if (offsetBytes != 0) {
+            emitInstruction(IrOpcode::PushI64, offsetBytes);
+            emitInstruction(IrOpcode::AddI64, 0);
+          }
+          emitInstruction(IrOpcode::LoadIndirect, 0);
+          emitInstruction(IrOpcode::StoreLocal,
+                          static_cast<uint64_t>(baseLocal + 1 + static_cast<int32_t>(explicitPackedCount) + spreadIndex));
+        }
+      }
+
+      paramInfo.argsPackElementCount = totalPackedCount;
       calleeLocals.emplace(param.name, paramInfo);
       emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal));
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));

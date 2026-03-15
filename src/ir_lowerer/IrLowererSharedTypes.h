@@ -25,6 +25,7 @@ struct LocalInfo {
   int32_t stringIndex = -1;
   bool argvChecked = true;
   bool isArgsPack = false;
+  int32_t argsPackElementCount = -1;
   bool referenceToArray = false;
   bool referenceToMap = false;
   bool isUninitializedStorage = false;

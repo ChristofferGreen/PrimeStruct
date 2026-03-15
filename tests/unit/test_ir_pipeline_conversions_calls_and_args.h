@@ -224,11 +224,11 @@ main() {
   CHECK(result == 5);
 }
 
-TEST_CASE("ir lowerer rejects mixed explicit and spread variadic forwarding") {
+TEST_CASE("ir lowerer materializes mixed explicit and spread variadic forwarding") {
   const std::string source = R"(
 [return<int>]
 count_values([args<i32>] values) {
-  return(count(values))
+  return(plus(values[0i32], values[2i32]))
 }
 
 [return<int>]
@@ -248,8 +248,76 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 101);
+}
+
+TEST_CASE("ir lowerer materializes mixed string spread variadic forwarding") {
+  const std::string source = R"(
+[return<int>]
+pack_score([args<string>] values) {
+  return(plus(count(values), values[0i32].count()))
+}
+
+[return<int>]
+forward([args<string>] values) {
+  return(pack_score("zz"raw_utf8, [spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward("a"raw_utf8, "bbb"raw_utf8))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 5);
+}
+
+TEST_CASE("ir lowerer rejects non-string struct variadic packs") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{0i32}
+}
+
+[return<int>]
+count_values([args<Pair>] values) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  return(count_values(Pair(), Pair()))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("native backend does not yet support mixed variadic values with spread forwarding") !=
+  CHECK(error.find("native backend only supports numeric/bool/string variadic args parameters") !=
         std::string::npos);
 }
 
