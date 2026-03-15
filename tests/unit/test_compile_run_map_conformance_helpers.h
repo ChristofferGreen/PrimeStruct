@@ -859,6 +859,35 @@ inline std::string makeInferredExperimentalMapParameterConformanceSource() {
   return source;
 }
 
+inline std::string makeExperimentalMapHelperReceiverConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedExperimentalMapHelperReceiverError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapHelperReceiverError>]\n";
+  source += "main() {\n";
+  source +=
+      "  [i32] found{try(/std/collections/map/tryAt(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32), \"left\"raw_utf8))}\n";
+  source +=
+      "  [i32 mut] total{plus(/std/collections/map/count(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)), found)}\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/map/at(/std/collections/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32), \"extra\"raw_utf8)))\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/map/at_unsafe(/std/collections/mapPair(\"bonus\"raw_utf8, 5i32, \"keep\"raw_utf8, 1i32), \"bonus\"raw_utf8)))\n";
+  source +=
+      "  if(/std/collections/map/contains(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32), \"right\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapFieldAssignConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1392,6 +1421,14 @@ inline void expectInferredExperimentalMapParameterConformance(const std::string 
       "map_experimental_inferred_parameter_" + emitMode,
       emitMode,
       19);
+}
+
+inline void expectExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeExperimentalMapHelperReceiverConformanceSource(),
+      "map_experimental_helper_receiver_" + emitMode,
+      emitMode,
+      21);
 }
 
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {

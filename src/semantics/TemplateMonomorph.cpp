@@ -2201,6 +2201,23 @@ bool rewriteExpr(Expr &expr,
     }
     return &candidate.args.front();
   };
+  auto mutableMapHelperReceiverExpr = [&](Expr &candidate) -> Expr * {
+    if (candidate.isMethodCall) {
+      return candidate.args.empty() ? nullptr : &candidate.args.front();
+    }
+    if (candidate.args.empty()) {
+      return nullptr;
+    }
+    if (hasNamedArguments(candidate.argNames)) {
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          return &candidate.args[i];
+        }
+      }
+    }
+    return &candidate.args.front();
+  };
   auto resolvesBuiltinMapReceiver = [&](const Expr *receiverExpr) {
     if (receiverExpr == nullptr) {
       return false;
@@ -2355,6 +2372,18 @@ bool rewriteExpr(Expr &expr,
     }
     return {};
   };
+  auto rewriteCanonicalExperimentalMapConstructorExpr = [&](Expr &valueExpr) {
+    if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
+      return;
+    }
+    const std::string helperPath =
+        experimentalMapConstructorRewritePath(resolveCalleePath(valueExpr, namespacePrefix, ctx), valueExpr.args.size());
+    if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
+      return;
+    }
+    valueExpr.name = helperPath;
+    valueExpr.namespacePrefix.clear();
+  };
   auto rewriteCanonicalExperimentalMapConstructorBinding = [&](Expr &bindingExpr) {
     if (!bindingExpr.isBinding || bindingExpr.args.size() != 1) {
       return;
@@ -2373,17 +2402,7 @@ bool rewriteExpr(Expr &expr,
     if (!resolvesExperimentalMapValueTypeText(bindingTypeText)) {
       return;
     }
-    Expr &initializer = bindingExpr.args.front();
-    if (initializer.kind != Expr::Kind::Call || initializer.isBinding || initializer.isMethodCall) {
-      return;
-    }
-    const std::string helperPath =
-        experimentalMapConstructorRewritePath(resolveCalleePath(initializer, namespacePrefix, ctx), initializer.args.size());
-    if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
-      return;
-    }
-    initializer.name = helperPath;
-    initializer.namespacePrefix.clear();
+    rewriteCanonicalExperimentalMapConstructorExpr(bindingExpr.args.front());
   };
   auto inferCallTargetBinding = [&](const Expr &bindingExpr, BindingInfo &bindingOut) -> bool {
     const bool hasExplicitBinding = extractExplicitBindingType(bindingExpr, bindingOut);
@@ -2481,6 +2500,9 @@ bool rewriteExpr(Expr &expr,
       resolvedPath = experimentalMapPath;
       expr.name = experimentalMapPath;
       expr.namespacePrefix.clear();
+      if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
+        rewriteCanonicalExperimentalMapConstructorExpr(*receiverExpr);
+      }
     }
     const std::string originalResolvedPath = resolvedPath;
     const std::string preferredPath = preferVectorStdlibHelperPath(resolvedPath, ctx.sourceDefs);
@@ -2685,16 +2707,7 @@ bool rewriteExpr(Expr &expr,
         return;
       }
       Expr &valueExpr = expr.args[1];
-      if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
-        return;
-      }
-      const std::string helperPath =
-          experimentalMapConstructorRewritePath(resolveCalleePath(valueExpr, namespacePrefix, ctx), valueExpr.args.size());
-      if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
-        return;
-      }
-      valueExpr.name = helperPath;
-      valueExpr.namespacePrefix.clear();
+      rewriteCanonicalExperimentalMapConstructorExpr(valueExpr);
     };
     rewriteCanonicalExperimentalMapConstructorAssign();
   }

@@ -128,6 +128,10 @@ TEST_CASE("compiles and runs inferred experimental map parameters in C++ emitter
   expectInferredExperimentalMapParameterConformance("exe");
 }
 
+TEST_CASE("compiles and runs experimental map helper receivers in C++ emitter") {
+  expectExperimentalMapHelperReceiverConformance("exe");
+}
+
 TEST_CASE("compiles and runs experimental map field assignments in C++ emitter") {
   expectExperimentalMapFieldAssignConformance("exe");
 }
