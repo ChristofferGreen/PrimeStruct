@@ -567,6 +567,88 @@ main() {
   }
 }
 
+TEST_CASE("primec wasm wasi writes ascii p3 ppm outputs deterministically") {
+  const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_ppm_write_runtime";
+  std::error_code ec;
+  std::filesystem::remove_all(tempRoot, ec);
+  std::filesystem::create_directories(tempRoot, ec);
+  REQUIRE(!ec);
+
+  const std::string source = R"(
+import /std/image/*
+
+[effects(file_write), return<int>]
+main() {
+  [vector<i32>] pixels{vector<i32>(255i32, 0i32, 0i32, 0i32, 255i32, 128i32)}
+  [Result<ImageError>] status{/std/image/ppm/write("output.ppm"utf8, 2i32, 1i32, pixels)}
+  if(Result.error(status),
+     then() { return(1i32) },
+     else() { })
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_ppm_write.prime", source);
+  const std::string wasmPath = (tempRoot / "ppm_write.wasm").string();
+  const std::string compileErrPath = (tempRoot / "ppm_write_compile_err.txt").string();
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+
+  if (hasWasmtime()) {
+    const std::string wasmRunCmd =
+        "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " + quoteShellArg(wasmPath);
+    CHECK(runCommand(wasmRunCmd) == 0);
+    CHECK(readFile((tempRoot / "output.ppm").string()) ==
+          "P3\n"
+          "2 1\n"
+          "255\n"
+          "255\n"
+          "0\n"
+          "0\n"
+          "0\n"
+          "255\n"
+          "128\n");
+  }
+}
+
+TEST_CASE("primec wasm wasi rejects invalid ppm write inputs deterministically") {
+  const std::filesystem::path tempRoot =
+      std::filesystem::temp_directory_path() / "primec_wasm_ppm_write_invalid_runtime";
+  std::error_code ec;
+  std::filesystem::remove_all(tempRoot, ec);
+  std::filesystem::create_directories(tempRoot, ec);
+  REQUIRE(!ec);
+
+  const std::string source = R"(
+import /std/image/*
+
+[effects(io_out, file_write), return<int>]
+main() {
+  [vector<i32>] pixels{vector<i32>(255i32, 0i32, 0i32)}
+  [Result<ImageError>] status{/std/image/ppm/write("output.ppm"utf8, 2i32, 1i32, pixels)}
+  print_line(Result.why(status))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_ppm_write_invalid.prime", source);
+  const std::string wasmPath = (tempRoot / "ppm_write_invalid.wasm").string();
+  const std::string compileErrPath = (tempRoot / "ppm_write_invalid_compile_err.txt").string();
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+
+  if (hasWasmtime()) {
+    const std::string outPath = (tempRoot / "ppm_write_invalid_stdout.txt").string();
+    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
+                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(wasmRunCmd) == 0);
+    CHECK(readFile(outPath) == "image_invalid_operation\n");
+    CHECK(!std::filesystem::exists(tempRoot / "output.ppm"));
+  }
+}
+
 TEST_CASE("primec wasm parity corpus matches vm outputs and exits deterministically") {
   struct ParityCase {
     std::string name;

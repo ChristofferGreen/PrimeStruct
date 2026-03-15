@@ -147,7 +147,7 @@ Deferred graph follow-up note: explicit/implicit template inference, local `auto
 
 **Backends & IR**
 - ✓ Add `/std/image/ppm/*` read implementations and conformance tests for VM/native/Wasm on top of `File<Read>.read_byte(...)`. Progress: `/std/image/ppm/read(...)` now parses ASCII `P3` inputs through shared stdlib byte-reading helpers built on `File<Read>.read_byte(...)`, successful reads materialize `width`/`height` plus flat RGB `vector<i32>` payloads, missing/malformed/unsupported inputs deterministically return `image_invalid_operation`, and compile-run coverage now locks that behavior across VM/native/Wasm plus the shared source-lock/docs expectations.
-- ○ Add `/std/image/ppm/*` write implementations and conformance tests for VM/native/Wasm.
+- ✓ Add `/std/image/ppm/*` write implementations and conformance tests for VM/native/Wasm. Progress: `/std/image/ppm/write(...)` now emits deterministic ASCII `P3` payloads through the shared stdlib `File<Write>` path, validates positive dimensions plus exact RGB byte counts/component ranges before opening the destination, maps file-open/write failures to `image_invalid_operation`, and compile-run coverage now locks successful writes plus invalid-input rejection across VM/native/Wasm alongside the shared docs/source-lock contract checks.
 - ○ Extend `/std/image/ppm/read(...)` beyond ASCII `P3` inputs to binary `P6` and broader format edge cases once the initial parser path is stabilized.
 - ○ Add `/std/image/png/*` read implementations and conformance tests for VM/native/Wasm.
 - ○ Add `/std/image/png/*` write implementations and conformance tests for VM/native/Wasm.

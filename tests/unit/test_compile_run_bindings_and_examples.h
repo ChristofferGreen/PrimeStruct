@@ -4308,7 +4308,11 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`ppm.read(...)` currently parses ASCII `P3` PPM files in VM/native/Wasm") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`ppm.write`, `png.read`, and `png.write` still deterministically return unsupported `ImageError` values") !=
+  CHECK(primeStructDoc.find("`ppm.write(...)` now emits ASCII `P3` PPM files in VM/native/Wasm") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("invalid dimensions, payload mismatches, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`png.read` and `png.write` still deterministically return unsupported `ImageError` values") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`ImageError.why()` currently returns `image_read_unsupported`, `image_write_unsupported`, or `image_invalid_operation`") !=
         std::string::npos);
@@ -4339,8 +4343,13 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   const std::string ppmBody = imageStdlib.substr(ppmStart, pngStart - ppmStart);
   CHECK(ppmBody.find("ppmReadAsciiInt") != std::string::npos);
   CHECK(ppmBody.find("ppmOpenRead") != std::string::npos);
+  CHECK(ppmBody.find("ppmOpenWrite") != std::string::npos);
+  CHECK(ppmBody.find("ppmWriteInputValid") != std::string::npos);
+  CHECK(ppmBody.find("ppmWriteHeader") != std::string::npos);
+  CHECK(ppmBody.find("ppmWriteComponent") != std::string::npos);
   CHECK(ppmBody.find("return(invalidOperation())") != std::string::npos);
-  CHECK(ppmBody.find("return(unsupported_write())") != std::string::npos);
+  CHECK(ppmBody.find("return(Result.ok())") != std::string::npos);
+  CHECK(ppmBody.find("return(unsupported_write())") == std::string::npos);
   CHECK(ppmBody.find("return(1i32)") == std::string::npos);
   CHECK(ppmBody.find("return(2i32)") == std::string::npos);
 

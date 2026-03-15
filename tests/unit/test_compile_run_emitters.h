@@ -372,7 +372,7 @@ main() {
   CHECK(runCommand(exePath + " > " + outPath) == 0);
   CHECK(readFile(outPath) ==
         "image_invalid_operation\n"
-        "image_write_unsupported\n"
+        "image_invalid_operation\n"
         "image_read_unsupported\n"
         "image_write_unsupported\n");
 }
