@@ -2443,6 +2443,36 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return resolveMapTarget(candidate.args[receiverIndex]);
     };
+    auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+        return false;
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      if (normalized != "map/at" && normalized != "map/at_unsafe") {
+        std::string namespacePrefix = candidate.namespacePrefix;
+        if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
+          namespacePrefix.erase(namespacePrefix.begin());
+        }
+        if (namespacePrefix == "map" &&
+            (normalized == "at" || normalized == "at_unsafe")) {
+          normalized = "map/" + normalized;
+        }
+      }
+      if (normalized != "map/at" && normalized != "map/at_unsafe") {
+        const std::string resolvedPath = resolveCalleePath(candidate);
+        if (resolvedPath == "/map/at") {
+          normalized = "map/at";
+        } else if (resolvedPath == "/map/at_unsafe") {
+          normalized = "map/at_unsafe";
+        } else {
+          return false;
+        }
+      }
+      return defMap_.find("/" + normalized) == defMap_.end();
+    };
     auto getMapNamespacedMethodCompatibilityPath = [&](const Expr &candidate) -> std::string {
       if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
           candidate.args.empty()) {
