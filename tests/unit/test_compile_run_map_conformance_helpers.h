@@ -649,6 +649,31 @@ inline std::string makeImplicitMapAutoInferenceConformanceSource() {
   return source;
 }
 
+inline std::string makeInferredExperimentalMapReturnConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<auto> effects(heap_alloc)]\n";
+  source += "buildValues() {\n";
+  source += "  return(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+  source += "}\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedInferredExperimentalMapReturnError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedInferredExperimentalMapReturnError>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32> mut] values{buildValues()}\n";
+  source += "  mapInsert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
+  source += "  [i32] left{try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8))}\n";
+  source += "  [i32] extra{try(/std/collections/map/tryAt<string, i32>(values, \"extra\"raw_utf8))}\n";
+  source += "  return(Result.ok(plus(/std/collections/map/count<string, i32>(values), plus(left, extra))))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1097,6 +1122,14 @@ inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMod
       "map_implicit_auto_inference_" + emitMode,
       emitMode,
       19);
+}
+
+inline void expectInferredExperimentalMapReturnConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeInferredExperimentalMapReturnConformanceSource(),
+      "map_inferred_experimental_return_" + emitMode,
+      emitMode,
+      16);
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {

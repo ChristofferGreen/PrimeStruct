@@ -2280,6 +2280,10 @@ TEST_CASE("compiles and runs native implicit map auto constructor inference") {
   expectImplicitMapAutoInferenceConformance("native");
 }
 
+TEST_CASE("compiles and runs native inferred experimental map returns") {
+  expectInferredExperimentalMapReturnConformance("native");
+}
+
 TEST_CASE("rejects native canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("native");
 }

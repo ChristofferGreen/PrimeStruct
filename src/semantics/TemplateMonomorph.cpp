@@ -2756,10 +2756,14 @@ bool rewriteDefinition(Definition &def,
     valueExpr.name = helperPath;
     valueExpr.namespacePrefix.clear();
   };
-  const auto expectedExperimentalMapReturn = [&]() {
+  bool hasExplicitNonAutoReturn = false;
+  bool expectedExperimentalMapReturn = [&]() {
     for (const auto &transform : def.transforms) {
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
         continue;
+      }
+      if (transform.templateArgs.front() != "auto") {
+        hasExplicitNonAutoReturn = true;
       }
       std::string base;
       std::string argText;
@@ -2775,6 +2779,16 @@ bool rewriteDefinition(Definition &def,
     }
     return false;
   }();
+  if (!expectedExperimentalMapReturn && !hasExplicitNonAutoReturn) {
+    BindingInfo inferredReturnInfo;
+    if (inferDefinitionReturnBindingForTemplatedFallback(def, allowMathBare, ctx, inferredReturnInfo)) {
+      std::string inferredReturnType = inferredReturnInfo.typeName;
+      if (!inferredReturnInfo.typeTemplateArg.empty()) {
+        inferredReturnType += "<" + inferredReturnInfo.typeTemplateArg + ">";
+      }
+      expectedExperimentalMapReturn = resolvesExperimentalMapValueTypeText(inferredReturnType);
+    }
+  }
   auto rewriteCanonicalExperimentalMapReturnConstructors = [&](auto &self, Expr &candidate) -> void {
     if (isReturnCall(candidate) && candidate.args.size() == 1) {
       rewriteCanonicalExperimentalMapConstructorValue(candidate.args.front());
@@ -2790,6 +2804,17 @@ bool rewriteDefinition(Definition &def,
   params.reserve(def.parameters.size());
   LocalTypeMap locals;
   locals.reserve(def.parameters.size() + def.statements.size());
+  bool sawExplicitReturnStmt = false;
+  size_t implicitReturnStmtIndex = def.statements.size();
+  for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
+    if (isReturnCall(def.statements[stmtIndex])) {
+      sawExplicitReturnStmt = true;
+      break;
+    }
+    if (!def.statements[stmtIndex].isBinding) {
+      implicitReturnStmtIndex = stmtIndex;
+    }
+  }
   for (auto &param : def.parameters) {
     if (!rewriteExpr(param, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
       return false;
@@ -2820,11 +2845,15 @@ bool rewriteDefinition(Definition &def,
       }
     }
   }
-  for (auto &stmt : def.statements) {
+  for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
+    auto &stmt = def.statements[stmtIndex];
     if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
       return false;
     }
     if (expectedExperimentalMapReturn) {
+      if (!sawExplicitReturnStmt && stmtIndex == implicitReturnStmtIndex) {
+        rewriteCanonicalExperimentalMapConstructorValue(stmt);
+      }
       rewriteCanonicalExperimentalMapReturnConstructors(rewriteCanonicalExperimentalMapReturnConstructors, stmt);
     }
     BindingInfo info;

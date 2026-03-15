@@ -4981,6 +4981,57 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("inferred experimental map returns rewrite canonical constructors") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<auto> effects(heap_alloc)]
+buildValues() {
+  return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+}
+
+[effects(io_err)]
+unexpectedInferredExperimentalMapReturnError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedInferredExperimentalMapReturnError>]
+main() {
+  [Map<string, i32> mut] values{buildValues()}
+  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  [i32] left{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
+  [i32] extra{try(/std/collections/map/tryAt(values, "extra"raw_utf8))}
+  return(Result.ok(plus(/std/collections/map/count(values), plus(left, extra))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("inferred experimental map returns keep constructor mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<auto> effects(heap_alloc)]
+buildValues() {
+  return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, false))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32>] values{buildValues()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*

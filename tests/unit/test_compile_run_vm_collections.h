@@ -1883,6 +1883,10 @@ TEST_CASE("runs vm implicit map auto constructor inference") {
   expectImplicitMapAutoInferenceConformance("vm");
 }
 
+TEST_CASE("runs vm inferred experimental map returns") {
+  expectInferredExperimentalMapReturnConformance("vm");
+}
+
 TEST_CASE("rejects vm canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("vm");
 }
