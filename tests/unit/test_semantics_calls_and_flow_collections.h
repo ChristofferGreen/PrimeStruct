@@ -4932,14 +4932,14 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
-TEST_CASE("map constructors infer experimental auto locals and auto returns") {
+TEST_CASE("implicit map constructors infer experimental auto locals and auto returns") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues() {
-  return(/std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+  return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
 }
 
 [effects(io_err)]
@@ -4950,7 +4950,7 @@ unexpectedExperimentalMapAutoError([ContainerError] err) {
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAutoError>]
 main() {
-  [auto mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 1i32)}
+  [auto mut] values{/std/collections/map/map("seed"raw_utf8, 1i32)}
   mapInsert<string, i32>(values, "left"raw_utf8, 4i32)
   mapInsert<string, i32>(values, "right"raw_utf8, 7i32)
   [auto mut] built{buildValues()}
@@ -4965,21 +4965,20 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical map constructor auto inference keeps mismatch diagnostics") {
+TEST_CASE("implicit map constructor auto inference keeps template conflict diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [auto mut] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)}
-  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
-  return(/std/collections/map/count(values))
+  [auto] values{/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, false)}
+  return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {

@@ -619,14 +619,14 @@ inline std::string makeExperimentalMapAssignConformanceSource() {
   return source;
 }
 
-inline std::string makeExperimentalMapAutoInferenceConformanceSource() {
+inline std::string makeImplicitMapAutoInferenceConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
   source +=
-      "  return(/std/collections/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+      "  return(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedExperimentalMapAutoError([ContainerError] err) {\n";
@@ -636,7 +636,7 @@ inline std::string makeExperimentalMapAutoInferenceConformanceSource() {
   source +=
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAutoError>]\n";
   source += "main() {\n";
-  source += "  [auto mut] values{/std/collections/map/map<string, i32>(\"seed\"raw_utf8, 1i32)}\n";
+  source += "  [auto mut] values{/std/collections/map/map(\"seed\"raw_utf8, 1i32)}\n";
   source += "  mapInsert<string, i32>(values, \"left\"raw_utf8, 4i32)\n";
   source += "  mapInsert<string, i32>(values, \"right\"raw_utf8, 7i32)\n";
   source += "  [auto mut] built{buildValues()}\n";
@@ -1091,10 +1091,10 @@ inline void expectExperimentalMapAssignConformance(const std::string &emitMode) 
       36);
 }
 
-inline void expectExperimentalMapAutoInferenceConformance(const std::string &emitMode) {
+inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMode) {
   expectMapConformanceProgramRuns(
-      makeExperimentalMapAutoInferenceConformanceSource(),
-      "map_experimental_auto_inference_" + emitMode,
+      makeImplicitMapAutoInferenceConformanceSource(),
+      "map_implicit_auto_inference_" + emitMode,
       emitMode,
       19);
 }

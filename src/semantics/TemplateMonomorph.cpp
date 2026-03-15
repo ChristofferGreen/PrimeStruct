@@ -799,6 +799,30 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
       return "/std/collections/experimental_map/Map<" + joinTemplateArgs(expr.templateArgs) + ">";
     }
   }
+  if (!expr.isMethodCall && expr.templateArgs.empty()) {
+    const std::string experimentalPath = experimentalMapConstructorInferencePath(resolved);
+    if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
+      const auto defIt = ctx.sourceDefs.find(resolved);
+      if (defIt != ctx.sourceDefs.end()) {
+        std::vector<std::string> inferredArgs;
+        std::string inferError;
+        if (inferImplicitTemplateArgs(defIt->second,
+                                      expr,
+                                      locals,
+                                      {},
+                                      SubstMap{},
+                                      {},
+                                      namespacePrefix,
+                                      const_cast<Context &>(ctx),
+                                      allowMathBare,
+                                      inferredArgs,
+                                      inferError) &&
+            inferredArgs.size() == 2) {
+          return "/std/collections/experimental_map/Map<" + joinTemplateArgs(inferredArgs) + ">";
+        }
+      }
+    }
+  }
   const auto defIt = ctx.sourceDefs.find(resolved);
   if (defIt == ctx.sourceDefs.end()) {
     return {};
@@ -1338,6 +1362,32 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
         infoOut.typeName = "/std/collections/experimental_map/Map";
         infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
         return true;
+      }
+    }
+    if (!initializer.isMethodCall && initializer.templateArgs.empty()) {
+      const std::string experimentalPath = experimentalMapConstructorInferencePath(resolved);
+      if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
+        auto defIt = ctx.sourceDefs.find(resolved);
+        if (defIt != ctx.sourceDefs.end()) {
+          std::vector<std::string> inferredArgs;
+          std::string inferError;
+          if (inferImplicitTemplateArgs(defIt->second,
+                                        initializer,
+                                        locals,
+                                        params,
+                                        SubstMap{},
+                                        {},
+                                        initializer.namespacePrefix,
+                                        ctx,
+                                        allowMathBare,
+                                        inferredArgs,
+                                        inferError) &&
+              inferredArgs.size() == 2) {
+            infoOut.typeName = "/std/collections/experimental_map/Map";
+            infoOut.typeTemplateArg = joinTemplateArgs(inferredArgs);
+            return true;
+          }
+        }
       }
     }
     if (!resolved.empty()) {

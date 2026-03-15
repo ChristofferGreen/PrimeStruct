@@ -1879,8 +1879,8 @@ TEST_CASE("runs vm experimental map constructor assignments") {
   expectExperimentalMapAssignConformance("vm");
 }
 
-TEST_CASE("runs vm experimental map auto constructor inference") {
-  expectExperimentalMapAutoInferenceConformance("vm");
+TEST_CASE("runs vm implicit map auto constructor inference") {
+  expectImplicitMapAutoInferenceConformance("vm");
 }
 
 TEST_CASE("rejects vm canonical namespaced map helpers on borrowed experimental map values") {

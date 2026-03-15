@@ -92,8 +92,8 @@ TEST_CASE("compiles and runs experimental map constructor assignments in C++ emi
   expectExperimentalMapAssignConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map auto constructor inference in C++ emitter") {
-  expectExperimentalMapAutoInferenceConformance("exe");
+TEST_CASE("compiles and runs implicit map auto constructor inference in C++ emitter") {
+  expectImplicitMapAutoInferenceConformance("exe");
 }
 
 TEST_CASE("rejects canonical namespaced map helpers on borrowed experimental map values in C++ emitter") {
