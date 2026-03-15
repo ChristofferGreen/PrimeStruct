@@ -328,6 +328,65 @@ Notes:
 - Placement transforms `[stack]`, `[heap]`, and `[buffer]` are reserved and rejected by the compiler.
 - Recursive struct layouts (structs containing themselves by value, directly or indirectly) are rejected.
 
+## 4A. Draft Variadic Pack Proposal (Planned, Not Implemented)
+
+This appendix records the planned canonical model for variadic user-defined calls. It is intentionally separate from
+the stable grammar above because the feature is not implemented yet.
+
+### 4A.1 Surface forms
+
+```
+collect(values...) { ... }
+collect([string] values...) { ... }
+forward(values...) { return(collect(values...)) }
+```
+
+- `name...` in parameter position is planned surface sugar for a trailing variadic pack parameter.
+- `expr...` in call-argument position is planned surface sugar for pack expansion.
+
+### 4A.2 Canonical semantic form
+
+The planned canonical form keeps all meaning in the envelope system:
+
+```
+collect<__T>([args<__T>] values) { ... }
+forward<__T>([args<__T>] values) { return(collect<__T>([spread] values)) }
+```
+
+- `args<T>` is the planned pack envelope.
+- `[spread]` is the planned explicit canonical spread marker on an argument expression.
+- No raw `...` survives below surface syntax.
+
+### 4A.3 Concrete envelope form after monomorphisation
+
+```
+[return<vector<i32>>]
+collect__i32([args<i32>] values) {
+  return(vector__i32([spread] values))
+}
+
+[return<void>]
+main() {
+  [vector<i32>] xs{collect__i32(1i32, 2i32, 3i32)}
+}
+```
+
+Bottom-level form therefore has:
+- no templates,
+- no `auto`,
+- no semantic meaning attached to bare identifier spelling,
+- one ordinary parameter whose envelope is `args<T>`.
+
+### 4A.4 Planned semantic restrictions
+
+- At most one `args<T>` parameter per definition.
+- The `args<T>` parameter must be last.
+- `args<T>` is homogeneous.
+- Named arguments bind only fixed parameters, never the `args<T>` parameter directly.
+- At most one spread argument per call in the first slice, and it must appear in the final positional slot.
+- The body API for `args<T>` is planned to mirror read-only sequence operations: `count(values)`, `values[index]`,
+  `at(values, index)`, and `at_unsafe(values, index)`.
+
 ## 5. Desugaring and Canonical Core
 
 The compiler rewrites surface forms into canonical call syntax. The core uses prefix calls:
@@ -395,6 +454,7 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `vector<T>{...}` / `vector<T>[...]` -> `vector<T>(...)`
   - `map<K, V>{...}` / `map<K, V>[...]` -> `map<K, V>(...)`
   - Map literals accept `key = value` pairs as shorthand for alternating arguments (e.g., `map<i32, i32>{1i32=2i32}` -> `map<i32, i32>(1i32, 2i32)`).
+  - Planned stdlib-owned map lowering target: once variadic packs are available for user-defined constructors, the intended canonical helper target is `map<K, V>(entry(key1, value1), entry(key2, value2), ...)` rather than alternating raw key/value user-defined variadic parameters.
 - `/std/math/*` builtins include the core set (`abs`, `sign`, `min`, `max`, `clamp`, `saturate`, `lerp`, `pow`, `sqrt`, `sin`, `cos`, etc.) plus `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, and `is_finite`.
 - Math builtin operand rules:
   - `abs`, `sign`, and `saturate` accept numeric operands (`i32`, `i64`, `u64`, `f32`, `f64`).
@@ -547,6 +607,8 @@ vector<i32>[1i32, 2i32]
 ```
 
 Vectors are C++-style dynamic contiguous sequences. Construction is variadic; zero or more arguments are accepted.
+Planned stdlib-owned replacement: the user-defined constructor surface is intended to become `vector(values...)`,
+canonically represented as a trailing `[args<T>]` parameter rather than fixed-arity helper families.
 Growth operations (`push`, `reserve`) may reallocate and invalidate references/pointers into vector storage.
 Binding forms:
 - `[vector<T> mut] v{vector<T>()}`

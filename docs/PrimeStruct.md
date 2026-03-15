@@ -220,6 +220,30 @@ module {
   - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`. Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms (no name references).
   - `{...}` holds runtime code for definition bodies and value blocks for binding initializers. Binding initializers evaluate the block and use its resulting value (last item or `return(value)`); use explicit constructor calls when passing multiple arguments (e.g., `[T] name{ T(arg1, arg2) }`).
   - Bindings are only valid inside definition bodies or parameter lists; top-level bindings are rejected.
+- **Draft variadic argument packs (planned, not implemented):** to support stdlib-owned `vector`/`map` implementations without hand-written `Single/Pair/Triple/...` constructor ladders, the planned surface syntax adds rest parameters and spread calls while keeping the canonical meaning inside the envelope system.
+  - Surface parameter sugar: `collect(values...) { ... }` desugars to `collect<__T>([args<__T>] values) { ... }`.
+  - Surface call sugar: `build(values...)` inside a call desugars to `[spread] values` on that argument node.
+  - Canonical semantic form therefore uses a real pack envelope plus an explicit spread marker instead of storing semantics in bare identifier spelling.
+  - After monomorphisation, bottom-level form contains no templates. Example:
+    - Surface:
+      ```text
+      collect(values...) { return(vector(values...)) }
+      main() { [auto] xs{collect(1i32, 2i32, 3i32)} }
+      ```
+    - Canonical envelope form:
+      ```text
+      [return<vector<i32>>]
+      collect__i32([args<i32>] values) {
+        return(vector__i32([spread] values))
+      }
+
+      [return<void>]
+      main() {
+        [vector<i32>] xs{collect__i32(1i32, 2i32, 3i32)}
+      }
+      ```
+  - Planned v1 constraints: one `args<T>` parameter per definition, it must be last, it is homogeneous, named arguments bind only fixed parameters, and `[spread]` is only valid in call-argument position.
+  - Planned body API: `count(values)`, `values[index]`, `at(values, index)`, and `at_unsafe(values, index)` should work on `args<T>` parameters so `.prime` container implementations can iterate packs directly.
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style (`execute_task<…>(args)`) with mandatory parentheses and no body, and map to an envelope with an implicit empty body. Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.
   - Executions accept the same argument syntax as calls, including labeled arguments (`[param] value`).
   - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>([first] 1i32)` is rejected).
@@ -1155,6 +1179,7 @@ bad_use_after_take() {
   - Example: `sum3(1i32 [c] 3i32 [b] 2i32)` is valid.
   - Example: `array<i32>([first] 1i32)` is rejected because collections are builtin calls.
   - Duplicate labeled arguments are rejected for definitions and executions (`execute_task([a] 1i32 [a] 2i32)`).
+  - Planned variadic-pack interaction: if a definition ends in `[args<T>] values`, positional arguments fill the fixed parameters first and the remaining positional arguments bind to `values`; named arguments do not target the `args<T>` parameter directly. A spread argument (`values...` surface, `[spread] values` canonical) is only legal in call-argument position and expands into that trailing variadic slot.
 - **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `vector<Type>{ … }` / `vector<Type>[ … ]`, `map<Key,Value>{ … }` / `map<Key,Value>[ … ]` rewrite to standard builder functions. The brace/bracket forms desugar to `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals supply alternating key/value forms.
   - Requires the `collections` text transform (enabled by default in `--text-transforms`).
   - Map literal entries are read left-to-right as alternating key/value forms; an odd number of entries is a diagnostic.
@@ -1165,8 +1190,10 @@ bad_use_after_take() {
   - PrimeStruct keeps `array<T>` as a runtime-count contract; envelope-level length forms like `array<T, N>` are intentionally unsupported.
   - Array helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)` (canonical equivalents: `count(value)`, `at(value, index)`, `at_unsafe(value, index)`).
   - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic constructors (0..N). Growth operations require `effects(heap_alloc)` (or the active default effects set), and `push`/`reserve` may reallocate and invalidate references/pointers into vector storage.
+  - Planned stdlib-owned constructor surface: once variadic packs land, the intended user-defined shape is `vector(values...)` on the surface and `[args<T>] values` in canonical form rather than fixed arity helper ladders.
   - Vector helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)`, `value.push(item)`, `value.pop()`, `value.reserve(capacity)`, `value.capacity()`, `value.clear()`, `value.remove_at(index)`, `value.remove_swap(index)` (canonical helper equivalents remain `count(value)`, `at(value, index)`, `push(value, item)`, etc.).
   - Map helpers: `count(value)`, `contains(value, key)`, `value.at(key)`, `value[key]`, `value.at_unsafe(key)` plus stdlib wrapper imports such as `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, and `mapAtUnsafe`. `mapTryAt` routes misses to `Result<ContainerError>` / `Result<T, ContainerError>` instead of the checked missing-key abort path and, on IR-backed backends, currently supports the same `i32`/`bool`/`string` value subset as `Result.ok(value)`.
+  - Planned stdlib-owned map constructor surface: prefer `map(entries...)` where each item is an `Entry<K, V>`/`entry(key, value)` pair, not alternating raw key/value variadic arguments. The corresponding literal rewrite target is therefore planned to become `map(entry(k1, v1), entry(k2, v2), ...)` for the user-defined `.prime` implementation.
   - Current discard contract: builtin `pop` and `clear` are only defined for drop-trivial element types while container-owned destruction is still being specified. Drop-trivial currently includes scalar primitives, `string`, `Pointer<T>`, `Reference<T>`, arrays of drop-trivial elements, and concrete structs that do not define `Destroy*` helpers and whose fields are also drop-trivial. Builtin `vector`/`map`/`soa_vector` elements and structs with `Destroy` hooks are rejected for builtin `pop`/`clear`.
   - Current indexed-removal contract: builtin `remove_at` and `remove_swap` are only defined for element types that are both drop-trivial and relocation-trivial while removed-element destruction plus survivor compaction/swap semantics for non-trivial types are still being specified.
   - Current relocation contract: builtin `push` and `reserve` are only defined for relocation-trivial element types while container move/reallocation semantics are still being specified. Relocation-trivial currently includes scalar primitives, `string`, `Pointer<T>`, `Reference<T>`, arrays of relocation-trivial elements, and concrete structs that do not define `Destroy*` or `Copy`/`Move` helpers and whose fields are also relocation-trivial. Builtin `vector`/`map`/`soa_vector` elements and structs with custom move/destroy hooks are rejected for builtin `push`/`reserve`.
