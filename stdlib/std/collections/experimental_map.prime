@@ -55,6 +55,20 @@ namespace std {
     return(limit)
   }
 
+  [return<i32> Comparable<K>]
+  mapFindIndex<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+    mapValidateKeyEnvelope<K>(key)
+    [i32 mut] index{0i32}
+    [i32] limit{count(entries.keys)}
+    while(less_than(index, limit), do() {
+      if(equal(entries.keys[index], key),
+         then() { return(index) },
+         else() { })
+      increment(index)
+    })
+    return(limit)
+  }
+
   [effects(heap_alloc), return<void> Comparable<K>]
   mapInsert<K, V>([Map<K, V> mut] entries, [K] key, [V] value) {
     [i32] index{mapFindIndex<K, V>(entries, key)}
@@ -180,6 +194,11 @@ namespace std {
   }
 
   [public return<i32>]
+  mapCount<K, V>([Reference<Map<K, V>>] entries) {
+    return(count(entries.keys))
+  }
+
+  [public return<i32>]
   /std/collections/map/count<K, V>([Map<K, V>] values) {
     return(mapCount<K, V>(values))
   }
@@ -190,12 +209,25 @@ namespace std {
   }
 
   [public return<bool> Comparable<K>]
+  mapContains<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+    return(less_than(mapFindIndex<K, V>(entries, key), count(entries.keys)))
+  }
+
+  [public return<bool> Comparable<K>]
   /std/collections/map/contains<K, V>([Map<K, V>] values, [K] key) {
     return(mapContains<K, V>(values, key))
   }
 
   [public return<Result<V, ContainerError>> Comparable<K>]
   mapTryAt<K, V>([Map<K, V>] entries, [K] key) {
+    [i32] index{mapFindIndex<K, V>(entries, key)}
+    if(less_than(index, count(entries.keys)),
+       then() { return(Result.ok(entries.payloads[index])) },
+       else() { return(containerErrorResult<V>(containerMissingKey())) })
+  }
+
+  [public return<Result<V, ContainerError>> Comparable<K>]
+  mapTryAt<K, V>([Reference<Map<K, V>>] entries, [K] key) {
     [i32] index{mapFindIndex<K, V>(entries, key)}
     if(less_than(index, count(entries.keys)),
        then() { return(Result.ok(entries.payloads[index])) },
@@ -216,12 +248,25 @@ namespace std {
   }
 
   [public return<V> Comparable<K>]
+  mapAt<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+    [i32] index{mapFindIndex<K, V>(entries, key)}
+    if(less_than(index, count(entries.keys)),
+       then() { return(entries.payloads[index]) },
+       else() { return(at(map<K, V>(), key)) })
+  }
+
+  [public return<V> Comparable<K>]
   /std/collections/map/at<K, V>([Map<K, V>] values, [K] key) {
     return(mapAt<K, V>(values, key))
   }
 
   [public return<V> Comparable<K>]
   mapAtUnsafe<K, V>([Map<K, V>] entries, [K] key) {
+    return(at_unsafe(entries.payloads, mapFindIndex<K, V>(entries, key)))
+  }
+
+  [public return<V> Comparable<K>]
+  mapAtUnsafe<K, V>([Reference<Map<K, V>>] entries, [K] key) {
     return(at_unsafe(entries.payloads, mapFindIndex<K, V>(entries, key)))
   }
 

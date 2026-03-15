@@ -68,6 +68,10 @@ TEST_CASE("compiles and runs experimental map methods in C++ emitter") {
   expectExperimentalMapMethodConformance("exe");
 }
 
+TEST_CASE("compiles and runs borrowed experimental map helpers in C++ emitter") {
+  expectExperimentalMapReferenceHelperConformance("exe");
+}
+
 TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") {
   expectSharedVectorConformanceHarness("exe");
 }

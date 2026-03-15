@@ -2204,6 +2204,10 @@ TEST_CASE("compiles and runs native experimental map methods") {
   expectExperimentalMapMethodConformance("native");
 }
 
+TEST_CASE("compiles and runs native borrowed experimental map helpers") {
+  expectExperimentalMapReferenceHelperConformance("native");
+}
+
 TEST_CASE("compiles and runs native experimental map with custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
