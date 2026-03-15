@@ -374,7 +374,8 @@ namespace std {
   }
 
   [effects(file_write), return<int>]
-  pngReadIhdr([File<Read>] file, [i32 mut] width, [i32 mut] height) {
+  pngReadIhdr([File<Read>] file, [i32 mut] width, [i32 mut] height, [i32 mut] bitDepthOut,
+              [i32 mut] colorTypeOut, [i32 mut] interlaceOut) {
     [i32 mut] parsedWidth{0i32}
     [i32 mut] parsedHeight{0i32}
     [i32] widthStatus{pngReadU32Be(file, parsedWidth)}
@@ -416,6 +417,203 @@ namespace std {
        else() { })
     assign(width, parsedWidth)
     assign(height, parsedHeight)
+    assign(bitDepthOut, bitDepth)
+    assign(colorTypeOut, colorType)
+    assign(interlaceOut, interlace)
+    return(0i32)
+  }
+
+  [return<i32>]
+  pngMod([i32] value, [i32] divisor) {
+    return(minus(value, multiply(divide(value, divisor), divisor)))
+  }
+
+  [return<bool>]
+  pngZlibHeaderValid([i32] cmf, [i32] flg) {
+    if(or(not_equal(pngMod(cmf, 16i32), 8i32), greater_than(divide(cmf, 16i32), 7i32)),
+       then() { return(false) },
+       else() { })
+    if(not_equal(pngMod(divide(flg, 32i32), 2i32), 0i32),
+       then() { return(false) },
+       else() { })
+    return(equal(pngMod(plus(multiply(cmf, 256i32), flg), 31i32), 0i32))
+  }
+
+  [effects(file_write, heap_alloc), return<int>]
+  pngAppendBytes([File<Read>] file, [i32] count, [vector<i32> mut] bytes) {
+    if(less_than(count, 0i32),
+       then() { return(1i32) },
+       else() { })
+    [i32 mut] remaining{count}
+    [i32 mut] byte{0i32}
+    while(greater_than(remaining, 0i32), do() {
+      [i32] status{ppmReadByteStatus(file, byte)}
+      if(not_equal(status, 0i32),
+         then() { return(status) },
+         else() { })
+      push(bytes, byte)
+      assign(remaining, minus(remaining, 1i32))
+    })
+    return(0i32)
+  }
+
+  [return<bool>]
+  pngAdlerValid([vector<i32>] bytes, [i32] bHigh, [i32] bLow, [i32] aHigh, [i32] aLow) {
+    [i32 mut] a{1i32}
+    [i32 mut] b{0i32}
+    [i32] len{count(bytes)}
+    [i32 mut] index{0i32}
+    while(less_than(index, len), do() {
+      assign(a, pngMod(plus(a, bytes[index]), 65521i32))
+      assign(b, pngMod(plus(b, a), 65521i32))
+      increment(index)
+    })
+    return(and(and(equal(divide(b, 256i32), bHigh), equal(pngMod(b, 256i32), bLow)),
+               and(equal(divide(a, 256i32), aHigh), equal(pngMod(a, 256i32), aLow))))
+  }
+
+  [return<i32>]
+  pngReadBits([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [i32] countBits, [i32 mut] value) {
+    assign(value, 0i32)
+    [i32] len{count(bytes)}
+    [i32 mut] factor{1i32}
+    [i32 mut] readCount{0i32}
+    while(less_than(readCount, countBits), do() {
+      if(greater_equal(byteIndex, len),
+         then() { return(1i32) },
+         else() { })
+      [i32 mut] shifted{bytes[byteIndex]}
+      [i32 mut] shiftCount{0i32}
+      while(less_than(shiftCount, bitIndex), do() {
+        assign(shifted, divide(shifted, 2i32))
+        increment(shiftCount)
+      })
+      assign(value, plus(value, multiply(pngMod(shifted, 2i32), factor)))
+      assign(factor, multiply(factor, 2i32))
+      assign(bitIndex, plus(bitIndex, 1i32))
+      if(equal(bitIndex, 8i32),
+         then() {
+           assign(bitIndex, 0i32)
+           assign(byteIndex, plus(byteIndex, 1i32))
+         },
+         else() { })
+      increment(readCount)
+    })
+    return(0i32)
+  }
+
+  [effects(heap_alloc), return<int>]
+  pngInflateStoredBlocks([vector<i32>] compressed, [vector<i32> mut] output) {
+    clear(output)
+    [i32] compressedCount{count(compressed)}
+    if(less_than(compressedCount, 7i32),
+       then() { return(1i32) },
+       else() { })
+
+    if(not(pngZlibHeaderValid(compressed[0i32], compressed[1i32])),
+       then() { return(1i32) },
+       else() { })
+
+    [i32 mut] byteIndex{2i32}
+    [i32 mut] bitIndex{0i32}
+    while(true, do() {
+      [i32 mut] isFinal{0i32}
+      [i32] finalStatus{pngReadBits(compressed, byteIndex, bitIndex, 1i32, isFinal)}
+      if(not_equal(finalStatus, 0i32),
+         then() { return(1i32) },
+         else() { })
+
+      [i32 mut] blockType{0i32}
+      [i32] blockStatus{pngReadBits(compressed, byteIndex, bitIndex, 2i32, blockType)}
+      if(not_equal(blockStatus, 0i32),
+         then() { return(1i32) },
+         else() { })
+      if(not_equal(blockType, 0i32),
+         then() { return(2i32) },
+         else() { })
+
+      if(not_equal(bitIndex, 0i32),
+         then() {
+           assign(bitIndex, 0i32)
+           assign(byteIndex, plus(byteIndex, 1i32))
+         },
+         else() { })
+
+      [i32] trailerStart{minus(compressedCount, 4i32)}
+      if(greater_than(plus(byteIndex, 4i32), trailerStart),
+         then() { return(1i32) },
+         else() { })
+
+      [i32] blockLen{plus(compressed[byteIndex], multiply(compressed[plus(byteIndex, 1i32)], 256i32))}
+      [i32] blockNlen{plus(compressed[plus(byteIndex, 2i32)], multiply(compressed[plus(byteIndex, 3i32)], 256i32))}
+      if(not_equal(plus(blockLen, blockNlen), 65535i32),
+         then() { return(1i32) },
+         else() { })
+      assign(byteIndex, plus(byteIndex, 4i32))
+
+      if(greater_than(plus(byteIndex, blockLen), trailerStart),
+         then() { return(1i32) },
+         else() { })
+      [i32 mut] blockIndex{0i32}
+      while(less_than(blockIndex, blockLen), do() {
+        push(output, compressed[plus(byteIndex, blockIndex)])
+        increment(blockIndex)
+      })
+      assign(byteIndex, plus(byteIndex, blockLen))
+
+      if(equal(isFinal, 1i32),
+         then() {
+           if(not_equal(minus(compressedCount, byteIndex), 4i32),
+              then() { return(1i32) },
+              else() { })
+           if(not(pngAdlerValid(output, compressed[byteIndex], compressed[plus(byteIndex, 1i32)],
+                                 compressed[plus(byteIndex, 2i32)], compressed[plus(byteIndex, 3i32)])),
+              then() { return(1i32) },
+              else() { })
+           return(0i32)
+         },
+         else() { })
+    })
+    return(1i32)
+  }
+
+  [effects(heap_alloc), return<int>]
+  pngDecodeScanlines([vector<i32>] rawBytes, [i32] width, [i32] height, [i32] bitDepth, [i32] colorType,
+                     [i32] interlace, [vector<i32> mut] pixels) {
+    clear(pixels)
+    if(or(not_equal(bitDepth, 8i32), or(not_equal(interlace, 0i32), and(not_equal(colorType, 2i32), not_equal(colorType, 6i32)))),
+       then() { return(2i32) },
+       else() { })
+
+    [i32] bytesPerPixel{if(equal(colorType, 2i32), then() { 3i32 }, else() { 4i32 })}
+    [i32] scanlineBytes{multiply(width, bytesPerPixel)}
+    if(not_equal(count(rawBytes), multiply(height, plus(scanlineBytes, 1i32))),
+       then() { return(1i32) },
+       else() { })
+
+    [i32 mut] offset{0i32}
+    [i32 mut] row{0i32}
+    while(less_than(row, height), do() {
+      [i32] filterType{rawBytes[offset]}
+      if(not_equal(filterType, 0i32),
+         then() {
+           clear(pixels)
+           return(2i32)
+         },
+         else() { })
+      assign(offset, plus(offset, 1i32))
+
+      [i32 mut] column{0i32}
+      while(less_than(column, width), do() {
+        [i32] pixelOffset{plus(offset, multiply(column, bytesPerPixel))}
+        push(pixels, rawBytes[pixelOffset])
+        push(pixels, rawBytes[plus(pixelOffset, 1i32)])
+        push(pixels, rawBytes[plus(pixelOffset, 2i32)])
+        increment(column)
+      })
+      assign(offset, plus(offset, scanlineBytes))
+      increment(row)
+    })
     return(0i32)
   }
 
@@ -566,6 +764,11 @@ namespace std {
       [i32 mut] sawIdat{0i32}
       [i32 mut] parsedWidth{0i32}
       [i32 mut] parsedHeight{0i32}
+      [i32 mut] bitDepth{0i32}
+      [i32 mut] colorType{0i32}
+      [i32 mut] interlace{0i32}
+      [vector<i32> mut] idatBytes{vector<i32>()}
+      [vector<i32> mut] rawBytes{vector<i32>()}
       while(true, do() {
         [i32 mut] chunkLength{0i32}
         [i32] lengthStatus{pngReadU32Be(file, chunkLength)}
@@ -588,7 +791,7 @@ namespace std {
                 then() { return(invalidOperation()) },
                 else() { })
              assign(sawIhdr, 1i32)
-             [i32] ihdrStatus{pngReadIhdr(file, parsedWidth, parsedHeight)}
+             [i32] ihdrStatus{pngReadIhdr(file, parsedWidth, parsedHeight, bitDepth, colorType, interlace)}
              if(not_equal(ihdrStatus, 0i32),
                 then() { return(invalidOperation()) },
                 else() { })
@@ -602,11 +805,21 @@ namespace std {
                 then() { return(invalidOperation()) },
                 else() { })
              if(pngChunkIsIdat(typeA, typeB, typeC, typeD),
-                then() { assign(sawIdat, 1i32) },
+                then() {
+                  assign(sawIdat, 1i32)
+                  [i32] payloadStatus{pngAppendBytes(file, chunkLength, idatBytes)}
+                  if(not_equal(payloadStatus, 0i32),
+                     then() { return(invalidOperation()) },
+                     else() { })
+                },
                 else() { })
-             [i32] payloadStatus{pngSkipBytes(file, chunkLength)}
-             if(not_equal(payloadStatus, 0i32),
-                then() { return(invalidOperation()) },
+             if(not(pngChunkIsIdat(typeA, typeB, typeC, typeD)),
+                then() {
+                  [i32] payloadStatus{pngSkipBytes(file, chunkLength)}
+                  if(not_equal(payloadStatus, 0i32),
+                     then() { return(invalidOperation()) },
+                     else() { })
+                },
                 else() { })
              [i32] crcStatus{pngSkipBytes(file, 4i32)}
              if(not_equal(crcStatus, 0i32),
@@ -616,7 +829,33 @@ namespace std {
                 then() {
                   if(or(not_equal(chunkLength, 0i32), equal(sawIdat, 0i32)),
                      then() { return(invalidOperation()) },
-                     else() { return(unsupported_read()) })
+                     else() {
+                       [i32] inflateStatus{pngInflateStoredBlocks(idatBytes, rawBytes)}
+                       if(equal(inflateStatus, 1i32),
+                          then() { return(invalidOperation()) },
+                          else() { })
+                       if(equal(inflateStatus, 2i32),
+                          then() { return(unsupported_read()) },
+                          else() { })
+
+                       [i32] decodeStatus{pngDecodeScanlines(rawBytes, parsedWidth, parsedHeight, bitDepth, colorType, interlace, pixels)}
+                       if(equal(decodeStatus, 1i32),
+                          then() {
+                            resetReadOutputs(width, height, pixels)
+                            return(invalidOperation())
+                          },
+                          else() { })
+                       if(equal(decodeStatus, 2i32),
+                          then() {
+                            resetReadOutputs(width, height, pixels)
+                            return(unsupported_read())
+                          },
+                          else() { })
+
+                       assign(width, parsedWidth)
+                       assign(height, parsedHeight)
+                       return(Result.ok())
+                     })
                 },
                 else() { })
            })

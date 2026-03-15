@@ -4314,9 +4314,13 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("invalid dimensions, payload mismatches, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures plus required chunk framing for structurally valid containers") !=
+  CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures/chunks and fully decodes the first PNG read subset") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("returning `image_invalid_operation` for malformed or missing files and `image_read_unsupported` for well-formed PNGs until `IDAT` decompression/scanline reconstruction lands") !=
+  CHECK(primeStructDoc.find("non-interlaced 8-bit RGB/RGBA images whose `IDAT` payload uses stored/no-compression deflate blocks and filter-`0` scanlines") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("dropping alpha when decoding RGBA inputs") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Malformed or missing PNGs still return `image_invalid_operation`, while still-valid PNGs that require compressed Huffman deflate blocks, non-zero scanline filters, or broader color/interlace handling currently return `image_read_unsupported`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`png.write` still deterministically returns unsupported `ImageError` values") !=
         std::string::npos);
@@ -4366,6 +4370,9 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngBody.find("pngReadU32Be") != std::string::npos);
   CHECK(pngBody.find("pngReadChunkType") != std::string::npos);
   CHECK(pngBody.find("pngReadIhdr") != std::string::npos);
+  CHECK(pngBody.find("pngInflateStoredBlocks") != std::string::npos);
+  CHECK(pngBody.find("pngDecodeScanlines") != std::string::npos);
+  CHECK(pngBody.find("pngAppendBytes") != std::string::npos);
   CHECK(pngBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(pngBody.find("return(unsupported_write())") != std::string::npos);
   CHECK(pngBody.find("return(1i32)") == std::string::npos);

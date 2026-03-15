@@ -400,7 +400,7 @@ main() {
   CHECK(!std::filesystem::exists(outPath));
 }
 
-TEST_CASE("runs vm png container validation deterministically") {
+TEST_CASE("runs vm png read for stored rgba inputs") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read.png").string();
   {
     const std::vector<unsigned char> pngBytes = {
@@ -408,8 +408,9 @@ TEST_CASE("runs vm png container validation deterministically") {
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
         0x08, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x01, 0x49, 0x44, 0x41, 0x54,
-        0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x10, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x01, 0x01, 0x05, 0x00, 0xfa, 0xff, 0x00,
+        0x00, 0xff, 0x80, 0x40, 0x04, 0x42, 0x01, 0xc0,
         0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
         0x00, 0x00, 0x00, 0x00,
     };
@@ -425,26 +426,36 @@ import /std/image/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
-  [i32 mut] width{7i32}
-  [i32 mut] height{9i32}
-  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
   [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
-  print_line(Result.why(status))
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
   print_line(width)
   print_line(height)
   print_line(count(pixels))
-  return(0i32)
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  return(plus(width, height))
 }
 )");
   const std::string srcPath = writeTemp("vm_image_read_png.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath) ==
-        "image_read_unsupported\n"
+        "1\n"
+        "1\n"
+        "3\n"
         "0\n"
-        "0\n"
-        "0\n");
+        "255\n"
+        "128\n");
 }
 
 TEST_CASE("rejects malformed vm png inputs deterministically") {
