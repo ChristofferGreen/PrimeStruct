@@ -1,5 +1,6 @@
 #include "IrLowererStatementBindingHelpers.h"
 
+#include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"

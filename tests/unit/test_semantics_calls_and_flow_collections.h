@@ -36,6 +36,7 @@ main() {
 }
 )";
   std::string error;
+  CAPTURE(error);
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
@@ -114,6 +115,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
@@ -4345,6 +4347,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
@@ -4452,6 +4455,7 @@ main() {
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 
@@ -4612,6 +4616,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
@@ -4641,6 +4646,7 @@ main() {
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 
@@ -4691,6 +4697,7 @@ main() {
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 
@@ -4809,6 +4816,7 @@ main() {
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 
@@ -4834,6 +4842,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
@@ -5674,6 +5683,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 

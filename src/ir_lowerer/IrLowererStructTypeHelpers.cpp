@@ -596,8 +596,8 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     if (!binding.typeTemplateArg.empty()) {
       if (isVectorTypeName(binding.typeName)) {
         const LocalInfo::ValueKind elementKind = valueKindFromTypeName(binding.typeTemplateArg);
-        if (elementKind == LocalInfo::ValueKind::Unknown || elementKind == LocalInfo::ValueKind::String) {
-          error = "native backend only supports numeric/bool vector fields on " + structPath;
+        if (elementKind == LocalInfo::ValueKind::Unknown) {
+          error = "native backend only supports numeric/bool/string vector fields on " + structPath;
           layoutStack.erase(structPath);
           return false;
         }

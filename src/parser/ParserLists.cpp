@@ -890,8 +890,19 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     return index;
   };
   while (true) {
-    if (matchRaw(TokenKind::Semicolon)) {
-      expectRaw(TokenKind::Semicolon, "expected ';'");
+    if (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
+      if (matchRaw(TokenKind::Comma)) {
+        expectRaw(TokenKind::Comma, "expected ','");
+      } else {
+        expectRaw(TokenKind::Semicolon, "expected ';'");
+      }
+      while (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
+        if (matchRaw(TokenKind::Comma)) {
+          expectRaw(TokenKind::Comma, "expected ','");
+        } else {
+          expectRaw(TokenKind::Semicolon, "expected ';'");
+        }
+      }
       if (matchRaw(TokenKind::RParen)) {
         break;
       }

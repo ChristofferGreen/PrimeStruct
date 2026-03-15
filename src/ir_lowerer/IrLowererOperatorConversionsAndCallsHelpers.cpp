@@ -583,9 +583,8 @@ bool emitConversionsAndCallsOperatorExpr(
             const bool isSoaVector = (builtin == "soa_vector");
             const bool isVectorLike = (builtin == "vector" || isSoaVector);
             LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
-            if (!isSoaVector &&
-                (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String)) {
-              error = "native backend only supports numeric/bool " + builtin + " literals";
+            if (!isSoaVector && elemKind == LocalInfo::ValueKind::Unknown) {
+              error = "native backend only supports numeric/bool/string " + builtin + " literals";
               return false;
             }
             if (isSoaVector && !expr.args.empty()) {
@@ -625,6 +624,29 @@ bool emitConversionsAndCallsOperatorExpr(
 
             for (size_t i = 0; i < expr.args.size(); ++i) {
               const Expr &arg = expr.args[i];
+              if (elemKind == LocalInfo::ValueKind::String) {
+                int32_t stringIndex = -1;
+                size_t length = 0;
+                if (!resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
+                  error = "native backend requires " + builtin +
+                          " literal string elements to be string literals or literal-backed bindings";
+                  return false;
+                }
+                if (isVectorLike) {
+                  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+                  const uint64_t offsetBytes = static_cast<uint64_t>(i) * IrSlotBytes;
+                  if (offsetBytes != 0) {
+                    instructions.push_back({IrOpcode::PushI32, offsetBytes});
+                    instructions.push_back({IrOpcode::AddI32, 0});
+                  }
+                  instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+                  instructions.push_back({IrOpcode::StoreIndirect, 0});
+                } else {
+                  instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+                  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataBaseLocal + static_cast<int32_t>(i))});
+                }
+                continue;
+              }
               LocalInfo::ValueKind argKind = inferExprKind(arg, localsIn);
               if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
                 error = "native backend requires " + builtin + " literal elements to be numeric/bool values";

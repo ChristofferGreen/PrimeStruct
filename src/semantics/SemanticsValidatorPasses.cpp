@@ -1885,8 +1885,13 @@ bool SemanticsValidator::validateExecutions() {
     }
     Expr execCall;
     execCall.kind = Expr::Kind::Call;
-    execCall.name = exec.name;
-    execCall.namespacePrefix = exec.namespacePrefix;
+    if (!exec.name.empty()) {
+      execCall.name = exec.name;
+      execCall.namespacePrefix = exec.namespacePrefix;
+    } else {
+      execCall.name = resolvedPath;
+      execCall.namespacePrefix.clear();
+    }
     execCall.templateArgs = exec.templateArgs;
     execCall.args = exec.arguments;
     execCall.argNames = exec.argumentNames;

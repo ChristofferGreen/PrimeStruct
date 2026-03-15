@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include <array>
+#include <cctype>
 #include <string_view>
 #include <utility>
 
@@ -23,6 +24,18 @@ bool SemanticsValidator::buildDefinitionMaps() {
     return getBuiltinMathName(probe, builtinName, true) || getBuiltinClampName(probe, builtinName, true) ||
            getBuiltinMinMaxName(probe, builtinName, true) || getBuiltinAbsSignName(probe, builtinName, true) ||
            getBuiltinSaturateName(probe, builtinName, true) || isBuiltinMathConstant(name, true);
+  };
+  const auto isGeneratedTemplateSpecializationName = [](const std::string &name) {
+    const size_t marker = name.rfind("__t");
+    if (marker == std::string::npos || marker + 3 >= name.size()) {
+      return false;
+    }
+    for (size_t i = marker + 3; i < name.size(); ++i) {
+      if (!std::isxdigit(static_cast<unsigned char>(name[i]))) {
+        return false;
+      }
+    }
+    return true;
   };
 
   for (const auto &effect : defaultEffects_) {
@@ -715,6 +728,9 @@ bool SemanticsValidator::buildDefinitionMaps() {
           continue;
         }
         sawImmediateDefinition = true;
+        if (isGeneratedTemplateSpecializationName(remainder)) {
+          continue;
+        }
         if (isRootBuiltinName(remainder)) {
           if (addImportDiagnostic("import creates name conflict: " + remainder, &def)) {
             return false;

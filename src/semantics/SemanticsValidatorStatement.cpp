@@ -1773,8 +1773,38 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         if (returnKind == ReturnKind::Array) {
           auto structIt = returnStructs_.find(currentDefinitionPath_);
           if (structIt != returnStructs_.end()) {
+            auto normalizeCollectionStructPath = [&](const std::string &typePath) -> std::string {
+              std::string normalizedTypePath = normalizeBindingTypeName(typePath);
+              if (!normalizedTypePath.empty() && normalizedTypePath.front() == '/') {
+                normalizedTypePath.erase(normalizedTypePath.begin());
+              }
+              if (normalizedTypePath.rfind("std/collections/experimental_map/Map__", 0) == 0) {
+                return "/map";
+              }
+              if (typePath == "/array" || typePath == "array") {
+                return "/array";
+              }
+              if (typePath == "/vector" || typePath == "vector" || typePath == "/std/collections/vector" ||
+                  typePath == "std/collections/vector") {
+                return "/vector";
+              }
+              if (typePath == "/soa_vector" || typePath == "soa_vector") {
+                return "/soa_vector";
+              }
+              if (isMapCollectionTypeName(typePath) || typePath == "/map" || typePath == "/std/collections/map") {
+                return "/map";
+              }
+              if (typePath == "/string" || typePath == "string") {
+                return "/string";
+              }
+              return "";
+            };
             std::string actualStruct = inferStructReturnPath(stmt.args.front(), params, locals);
-            if (actualStruct.empty() || actualStruct != structIt->second) {
+            const std::string normalizedExpectedStruct = normalizeCollectionStructPath(structIt->second);
+            const std::string normalizedActualStruct = normalizeCollectionStructPath(actualStruct);
+            if (actualStruct.empty() ||
+                (actualStruct != structIt->second &&
+                 (normalizedExpectedStruct.empty() || normalizedExpectedStruct != normalizedActualStruct))) {
               std::string expectedType = structIt->second;
               if (expectedType == "/array" || expectedType == "/vector" || expectedType == "/map" ||
                   expectedType == "/string") {
