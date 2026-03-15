@@ -705,6 +705,8 @@ bool buildInlineCallOrderedArguments(const Expr &callExpr,
                                      const LocalMap &callerLocals,
                                      std::vector<Expr> &paramsOut,
                                      std::vector<const Expr *> &orderedArgsOut,
+                                     std::vector<const Expr *> &packedArgsOut,
+                                     size_t &packedParamIndexOut,
                                      std::string &error);
 const Definition *resolveDefinitionByPath(
     const std::unordered_map<std::string, const Definition *> &defMap,

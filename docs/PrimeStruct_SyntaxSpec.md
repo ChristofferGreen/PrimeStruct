@@ -393,8 +393,9 @@ Bottom-level form therefore has:
 - `count(values)`, `values.count()`, `values[index]`, `at(values, index)`, `values.at(index)`, and
   `values.at_unsafe(index)` are available on `args<T>` parameters.
 - Backend/runtime materialization for concrete `args<T>` parameters and their read-only body API is now present in the
-  legacy C++ emitter (including final-spread forwarding into a trailing variadic slot); IR-backed VM/native lowering
-  remains a separate follow-up slice.
+  legacy C++ emitter (including final-spread forwarding into a trailing variadic slot). IR-backed VM/native lowering
+  now covers direct numeric/bool pack materialization plus pure final-spread forwarding of an existing pack; mixed
+  explicit-prefix forwarding and non-numeric element support remain a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 

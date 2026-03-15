@@ -24,6 +24,7 @@ struct LocalInfo {
   enum class StringSource { None, TableIndex, ArgvIndex, RuntimeIndex } stringSource = StringSource::None;
   int32_t stringIndex = -1;
   bool argvChecked = true;
+  bool isArgsPack = false;
   bool referenceToArray = false;
   bool referenceToMap = false;
   bool isUninitializedStorage = false;

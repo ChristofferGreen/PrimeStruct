@@ -6,6 +6,7 @@
 #include <string_view>
 #include <utility>
 
+#include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
@@ -74,6 +75,22 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (normalized.rfind(stdMapPrefix, 0) == 0) {
     helperNameOut = normalized.substr(stdMapPrefix.size());
     return true;
+  }
+  return false;
+}
+
+bool isArgsPackParam(const Expr &param) {
+  for (const auto &transform : param.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isBindingQualifierName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    return transform.name == "args";
   }
   return false;
 }
@@ -2534,6 +2551,88 @@ bool buildOrderedCallArguments(const Expr &callExpr,
   return true;
 }
 
+bool buildOrderedCallArgumentsWithPackedArgs(const Expr &callExpr,
+                                            const std::vector<Expr> &params,
+                                            std::vector<const Expr *> &ordered,
+                                            std::vector<const Expr *> &packedArgs,
+                                            size_t &packedParamIndex,
+                                            std::string &error) {
+  ordered.assign(params.size(), nullptr);
+  packedArgs.clear();
+  packedParamIndex = params.size();
+  if (!params.empty() && isArgsPackParam(params.back())) {
+    packedParamIndex = params.size() - 1;
+  }
+
+  size_t positionalIndex = 0;
+  for (size_t i = 0; i < callExpr.args.size(); ++i) {
+    if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value()) {
+      const std::string &name = *callExpr.argNames[i];
+      size_t index = params.size();
+      for (size_t p = 0; p < params.size(); ++p) {
+        if (params[p].name == name) {
+          index = p;
+          break;
+        }
+      }
+      if (index >= params.size()) {
+        error = "unknown named argument: " + name;
+        return false;
+      }
+      if (index == packedParamIndex) {
+        error = "named arguments cannot bind variadic parameter: " + name;
+        return false;
+      }
+      if (ordered[index] != nullptr) {
+        error = "named argument duplicates parameter: " + name;
+        return false;
+      }
+      ordered[index] = &callExpr.args[i];
+      continue;
+    }
+
+    if (callExpr.args[i].isSpread) {
+      if (packedParamIndex >= params.size()) {
+        error = "spread argument requires variadic parameter";
+        return false;
+      }
+      packedArgs.push_back(&callExpr.args[i]);
+      continue;
+    }
+
+    while (positionalIndex < params.size() && positionalIndex != packedParamIndex && ordered[positionalIndex] != nullptr) {
+      ++positionalIndex;
+    }
+    if (packedParamIndex < params.size() && positionalIndex >= packedParamIndex) {
+      packedArgs.push_back(&callExpr.args[i]);
+      continue;
+    }
+    if (positionalIndex >= params.size()) {
+      error = "argument count mismatch";
+      return false;
+    }
+    ordered[positionalIndex] = &callExpr.args[i];
+    ++positionalIndex;
+  }
+
+  for (size_t i = 0; i < params.size(); ++i) {
+    if (i == packedParamIndex) {
+      continue;
+    }
+    if (ordered[i] != nullptr) {
+      continue;
+    }
+    if (!params[i].args.empty()) {
+      ordered[i] = &params[i].args.front();
+      continue;
+    }
+    error = "argument count mismatch";
+    return false;
+  }
+
+  return true;
+}
+
 bool definitionHasTransform(const Definition &def, const std::string &transformName) {
   for (const auto &transform : def.transforms) {
     if (transform.name == transformName) {
@@ -2686,6 +2785,8 @@ bool buildInlineCallOrderedArguments(const Expr &callExpr,
                                      const LocalMap &callerLocals,
                                      std::vector<Expr> &paramsOut,
                                      std::vector<const Expr *> &orderedArgsOut,
+                                     std::vector<const Expr *> &packedArgsOut,
+                                     size_t &packedParamIndexOut,
                                      std::string &error) {
   if (!buildInlineCallParameterList(callee, structNames, paramsOut, error)) {
     return false;
@@ -2705,12 +2806,14 @@ bool buildInlineCallOrderedArguments(const Expr &callExpr,
           if (!trimmedCallExpr.argNames.empty()) {
             trimmedCallExpr.argNames.erase(trimmedCallExpr.argNames.begin());
           }
-          return buildOrderedCallArguments(trimmedCallExpr, paramsOut, orderedArgsOut, error);
+          return buildOrderedCallArgumentsWithPackedArgs(
+              trimmedCallExpr, paramsOut, orderedArgsOut, packedArgsOut, packedParamIndexOut, error);
         }
       }
     }
   }
-  return buildOrderedCallArguments(callExpr, paramsOut, orderedArgsOut, error);
+  return buildOrderedCallArgumentsWithPackedArgs(
+      callExpr, paramsOut, orderedArgsOut, packedArgsOut, packedParamIndexOut, error);
 }
 
 std::string resolveDefinitionNamespacePrefix(

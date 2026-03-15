@@ -127,6 +127,98 @@ main() {
   CHECK(result == 2);
 }
 
+TEST_CASE("ir lowerer materializes variadic args packs for direct calls") {
+  const std::string source = R"(
+[return<int>]
+score([i32] head, [args<i32>] values) {
+  return(plus(head, plus(values.count(), values[1i32])))
+}
+
+[return<int>]
+main() {
+  return(score(10i32, 20i32, 30i32, 40i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 43);
+}
+
+TEST_CASE("ir lowerer forwards pure spread variadic args packs") {
+  const std::string source = R"(
+[return<int>]
+count_values([args<i32>] values) {
+  return(plus(count(values), values[0i32]))
+}
+
+[return<int>]
+forward([args<i32>] values) {
+  return(count_values([spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward(7i32, 8i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 9);
+}
+
+TEST_CASE("ir lowerer rejects mixed explicit and spread variadic forwarding") {
+  const std::string source = R"(
+[return<int>]
+count_values([args<i32>] values) {
+  return(count(values))
+}
+
+[return<int>]
+forward([args<i32>] values) {
+  return(count_values(99i32, [spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward(1i32, 2i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("native backend does not yet support mixed variadic values with spread forwarding") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer forwards count to method calls") {
   const std::string source = R"(
 namespace i32 {

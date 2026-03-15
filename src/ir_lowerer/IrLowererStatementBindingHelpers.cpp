@@ -204,6 +204,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                  std::string &error) {
   infoOut.isMutable = isBindingMutable(param);
   infoOut.isSoaVector = hasSoaVectorTypeTransform(param);
+  infoOut.isArgsPack = isArgsPackBinding(param);
   infoOut.kind = bindingKind(param);
   if (hasExplicitBindingTypeTransform(param)) {
     infoOut.valueKind = bindingValueKind(param, infoOut.kind);

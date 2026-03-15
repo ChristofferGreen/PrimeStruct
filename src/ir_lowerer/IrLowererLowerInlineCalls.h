@@ -22,8 +22,18 @@
     pushFileScope();
     std::vector<Expr> callParams;
     std::vector<const Expr *> orderedArgs;
+    std::vector<const Expr *> packedArgs;
+    size_t packedParamIndex = 0;
     if (!ir_lowerer::buildInlineCallOrderedArguments(
-            callExpr, callee, structNames, callerLocals, callParams, orderedArgs, error)) {
+            callExpr,
+            callee,
+            structNames,
+            callerLocals,
+            callParams,
+            orderedArgs,
+            packedArgs,
+            packedParamIndex,
+            error)) {
       inlineStack.erase(callee.fullPath);
       return false;
     }
@@ -64,6 +74,8 @@
     if (!ir_lowerer::emitInlineDefinitionCallParameters(
             callParams,
             orderedArgs,
+            packedArgs,
+            packedParamIndex,
             callerLocals,
             nextLocal,
             calleeLocals,
@@ -92,6 +104,7 @@
               return emitStringValueForCall(argExpr, locals, sourceOut, indexOut, argvCheckedOut);
             },
             [&](const Expr &argExpr, const LocalMap &locals) { return inferStructExprPath(argExpr, locals); },
+            [&](const Expr &argExpr, const LocalMap &locals) { return inferExprKind(argExpr, locals); },
             [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
               return resolveStructSlotLayout(structPath, layoutOut);
             },

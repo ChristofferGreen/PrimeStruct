@@ -78,6 +78,22 @@ bool extractUninitializedTemplateArg(const Expr &expr, std::string &typeTextOut)
   return false;
 }
 
+bool isArgsPackBinding(const Expr &expr) {
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isBindingQualifierName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    return transform.name == "args";
+  }
+  return false;
+}
+
 bool isEntryArgsParam(const Expr &param) {
   std::string typeName;
   std::string templateArg;
