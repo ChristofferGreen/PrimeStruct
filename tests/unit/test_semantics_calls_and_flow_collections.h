@@ -4768,6 +4768,75 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
+TEST_CASE("helper-wrapped map constructors accept explicit experimental map parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+Holder() {}
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(io_err)]
+unexpectedWrappedExperimentalMapParameterError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapParameterError>]
+scoreValues([Map<string, i32>] values) {
+  [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
+  [i32 mut] total{plus(/std/collections/map/count(values), found)}
+  assign(total, plus(total, /std/collections/map/at(values, "left"raw_utf8)))
+  return(Result.ok(total))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapParameterError>]
+/Holder/score([Holder] self, [Map<string, i32>] values) {
+  [i32] bonus{try(/std/collections/map/tryAt(values, "bonus"raw_utf8))}
+  return(Result.ok(plus(/std/collections/map/count(values), bonus)))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapParameterError>]
+main() {
+  [Holder] holder{Holder()}
+  return(Result.ok(plus(try(scoreValues(wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)))),
+                        try(holder.score(wrapValues(/std/collections/mapPair("bonus"raw_utf8, 5i32, "other"raw_utf8, 2i32)))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on explicit experimental map parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+scoreValues([Map<string, i32>] values) {
+  return(/std/collections/map/count(values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(scoreValues(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
@@ -5537,6 +5606,70 @@ scoreValues([auto mut] values{mapNew<string, i32>()}) {
 [effects(heap_alloc), return<int>]
 main() {
   return(scoreValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped map constructors accept inferred experimental map default parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+Holder() {}
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[return<int> effects(heap_alloc)]
+scoreValues([auto mut] values{mapNew<string, i32>()}) {
+  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  return(plus(/std/collections/map/count(values),
+              /std/collections/map/at(values, "left"raw_utf8)))
+}
+
+[return<int> effects(heap_alloc)]
+/Holder/score([Holder] self, [auto mut] values{mapNew<string, i32>()}) {
+  mapInsert<string, i32>(values, "bonus"raw_utf8, 5i32)
+  return(plus(/std/collections/map/count(values),
+              /std/collections/map/at(values, "extra"raw_utf8)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(plus(scoreValues(wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))),
+              holder.score(wrapValues(/std/collections/mapPair("left"raw_utf8, 2i32, "extra"raw_utf8, 9i32)))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on inferred experimental map default parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[return<int> effects(heap_alloc)]
+scoreValues([auto mut] values{mapNew<string, i32>()}) {
+  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  return(/std/collections/map/count(values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(scoreValues(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))))
 }
 )";
   std::string error;

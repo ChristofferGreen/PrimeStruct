@@ -2256,6 +2256,10 @@ TEST_CASE("compiles and runs native helper-wrapped inferred experimental map ret
   expectWrappedInferredExperimentalMapReturnConformance("native");
 }
 
+TEST_CASE("compiles and runs native helper-wrapped experimental map parameters") {
+  expectWrappedExperimentalMapParameterConformance("native");
+}
+
 TEST_CASE("compiles and runs native canonical namespaced map constructors on explicit experimental map bindings") {
   expectCanonicalMapNamespaceExperimentalConstructorConformance("native");
 }

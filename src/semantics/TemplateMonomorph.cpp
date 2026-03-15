@@ -2619,6 +2619,22 @@ bool rewriteExpr(Expr &expr,
     }
     auto rewriteCanonicalExperimentalMapConstructorArgs = [&](const Definition &targetDef,
                                                              bool methodCallSyntax) -> bool {
+      auto rewriteNestedExperimentalMapConstructorArgs = [&](auto &self, Expr &candidate) -> void {
+        if (candidate.isBinding && candidate.args.size() == 1) {
+          self(self, candidate.args.front());
+          return;
+        }
+        if (candidate.kind != Expr::Kind::Call) {
+          return;
+        }
+        rewriteCanonicalExperimentalMapConstructorExpr(candidate);
+        for (auto &arg : candidate.args) {
+          self(self, arg);
+        }
+        for (auto &bodyArg : candidate.bodyArguments) {
+          self(self, bodyArg);
+        }
+      };
       std::vector<ParameterInfo> callParams;
       if (!targetDef.parameters.empty()) {
         callParams.reserve(targetDef.parameters.size());
@@ -2697,16 +2713,7 @@ bool rewriteExpr(Expr &expr,
           if (&argExpr != orderedArg) {
             continue;
           }
-          if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding || argExpr.isMethodCall) {
-            break;
-          }
-          const std::string helperPath =
-              experimentalMapConstructorRewritePath(resolveCalleePath(argExpr, namespacePrefix, ctx), argExpr.args.size());
-          if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
-            break;
-          }
-          argExpr.name = helperPath;
-          argExpr.namespacePrefix.clear();
+          rewriteNestedExperimentalMapConstructorArgs(rewriteNestedExperimentalMapConstructorArgs, argExpr);
           break;
         }
       }
