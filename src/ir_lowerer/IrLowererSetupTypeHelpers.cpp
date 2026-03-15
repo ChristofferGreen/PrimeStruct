@@ -1614,13 +1614,17 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         return resolvedDef;
       }
       std::vector<std::string> receiverPaths = collectionHelperPathCandidates(resolveExprPath(*receiver));
-      auto pruneMapAccessReceiverPaths = [&](const std::string &path) {
+      auto pruneRemovedMapCompatibilityReceiverPaths = [&](const std::string &path) {
         std::string normalizedPath = path;
         if (!normalizedPath.empty() && normalizedPath.front() != '/') {
           if (normalizedPath.rfind("map/", 0) == 0 || normalizedPath.rfind("std/collections/map/", 0) == 0) {
             normalizedPath.insert(normalizedPath.begin(), '/');
           }
         }
+        auto isRemovedMapCompatibilityHelper = [](const std::string &suffix) {
+          return suffix == "count" || suffix == "contains" || suffix == "tryAt" ||
+                 suffix == "at" || suffix == "at_unsafe";
+        };
         auto eraseCandidate = [&](const std::string &candidate) {
           for (auto it = receiverPaths.begin(); it != receiverPaths.end();) {
             if (*it == candidate) {
@@ -1632,17 +1636,17 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         };
         if (normalizedPath.rfind("/map/", 0) == 0) {
           const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-          if (suffix == "at" || suffix == "at_unsafe") {
+          if (isRemovedMapCompatibilityHelper(suffix)) {
             eraseCandidate("/std/collections/map/" + suffix);
           }
         } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
           const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-          if (suffix == "at" || suffix == "at_unsafe") {
+          if (isRemovedMapCompatibilityHelper(suffix)) {
             eraseCandidate("/map/" + suffix);
           }
         }
       };
-      pruneMapAccessReceiverPaths(resolveExprPath(*receiver));
+      pruneRemovedMapCompatibilityReceiverPaths(resolveExprPath(*receiver));
       auto appendUniqueReceiverPath = [&](const std::string &candidate) {
         if (candidate.empty()) {
           return;
@@ -1659,7 +1663,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         for (const auto &resolvedReceiverPath : resolvedReceiverPaths) {
           appendUniqueReceiverPath(resolvedReceiverPath);
         }
-        pruneMapAccessReceiverPaths(receiverDef->fullPath);
+        pruneRemovedMapCompatibilityReceiverPaths(receiverDef->fullPath);
       }
       for (const auto &receiverPath : receiverPaths) {
         auto receiverDefIt = defMap.find(receiverPath);

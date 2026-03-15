@@ -10999,6 +10999,262 @@ TEST_CASE("ir lowerer struct return helpers reject map access compatibility call
                                                           defMap).empty());
 }
 
+TEST_CASE("ir lowerer struct return helpers reject map tryAt compatibility call forwarding") {
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/Marker",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  primec::Definition canonicalTryAt;
+  canonicalTryAt.fullPath = "/std/collections/map/tryAt";
+  canonicalTryAt.namespacePrefix = "/std/collections/map";
+  primec::Transform returnMarker;
+  returnMarker.name = "return";
+  returnMarker.templateArgs = {"Marker"};
+  canonicalTryAt.transforms.push_back(returnMarker);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalTryAt.fullPath, &canonicalTryAt},
+  };
+  const std::unordered_map<std::string, primec::ir_lowerer::LayoutFieldBinding> knownFields;
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 2;
+
+  primec::Expr aliasTryAtCall;
+  aliasTryAtCall.kind = primec::Expr::Kind::Call;
+  aliasTryAtCall.name = "/map/tryAt";
+  aliasTryAtCall.args = {valuesName, keyLiteral};
+
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(aliasTryAtCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap).empty());
+}
+
+TEST_CASE("ir lowerer struct return helpers keep map tryAt alias precedence") {
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/AliasMarker",
+      "/pkg/CanonicalMarker",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  primec::Definition aliasTryAt;
+  aliasTryAt.fullPath = "/map/tryAt";
+  aliasTryAt.namespacePrefix = "/map";
+  primec::Transform returnAliasMarker;
+  returnAliasMarker.name = "return";
+  returnAliasMarker.templateArgs = {"AliasMarker"};
+  aliasTryAt.transforms.push_back(returnAliasMarker);
+
+  primec::Definition canonicalTryAt;
+  canonicalTryAt.fullPath = "/std/collections/map/tryAt";
+  canonicalTryAt.namespacePrefix = "/std/collections/map";
+  primec::Transform returnCanonicalMarker;
+  returnCanonicalMarker.name = "return";
+  returnCanonicalMarker.templateArgs = {"CanonicalMarker"};
+  canonicalTryAt.transforms.push_back(returnCanonicalMarker);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {aliasTryAt.fullPath, &aliasTryAt},
+      {canonicalTryAt.fullPath, &canonicalTryAt},
+  };
+  const std::unordered_map<std::string, primec::ir_lowerer::LayoutFieldBinding> knownFields;
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 2;
+
+  primec::Expr aliasTryAtCall;
+  aliasTryAtCall.kind = primec::Expr::Kind::Call;
+  aliasTryAtCall.name = "/map/tryAt";
+  aliasTryAtCall.args = {valuesName, keyLiteral};
+
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(aliasTryAtCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap) == "/pkg/AliasMarker");
+}
+
+TEST_CASE("ir lowerer struct return helpers reject explicit map tryAt method canonical forwarding") {
+  const std::unordered_set<std::string> structNames = {
+      "/map",
+      "/pkg/Marker",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  primec::Definition canonicalTryAt;
+  canonicalTryAt.fullPath = "/std/collections/map/tryAt";
+  canonicalTryAt.namespacePrefix = "/std/collections/map";
+  primec::Transform returnMarker;
+  returnMarker.name = "return";
+  returnMarker.templateArgs = {"Marker"};
+  canonicalTryAt.transforms.push_back(returnMarker);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalTryAt.fullPath, &canonicalTryAt},
+  };
+  std::unordered_map<std::string, primec::ir_lowerer::LayoutFieldBinding> knownFields;
+  knownFields["values"].typeName = "map";
+  knownFields["values"].typeTemplateArg = "i32, i32";
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 2;
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "/map/tryAt";
+  methodCall.args = {valuesName, keyLiteral};
+
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(methodCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap).empty());
+}
+
+TEST_CASE("ir lowerer struct return helpers keep explicit map tryAt method alias precedence") {
+  const std::unordered_set<std::string> structNames = {
+      "/map",
+      "/pkg/AliasMarker",
+      "/pkg/CanonicalMarker",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  primec::Definition aliasTryAt;
+  aliasTryAt.fullPath = "/map/tryAt";
+  aliasTryAt.namespacePrefix = "/map";
+  primec::Transform returnAliasMarker;
+  returnAliasMarker.name = "return";
+  returnAliasMarker.templateArgs = {"AliasMarker"};
+  aliasTryAt.transforms.push_back(returnAliasMarker);
+
+  primec::Definition canonicalTryAt;
+  canonicalTryAt.fullPath = "/std/collections/map/tryAt";
+  canonicalTryAt.namespacePrefix = "/std/collections/map";
+  primec::Transform returnCanonicalMarker;
+  returnCanonicalMarker.name = "return";
+  returnCanonicalMarker.templateArgs = {"CanonicalMarker"};
+  canonicalTryAt.transforms.push_back(returnCanonicalMarker);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {aliasTryAt.fullPath, &aliasTryAt},
+      {canonicalTryAt.fullPath, &canonicalTryAt},
+  };
+  std::unordered_map<std::string, primec::ir_lowerer::LayoutFieldBinding> knownFields;
+  knownFields["values"].typeName = "map";
+  knownFields["values"].typeTemplateArg = "i32, i32";
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 2;
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "/map/tryAt";
+  methodCall.args = {valuesName, keyLiteral};
+
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(methodCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap) == "/pkg/AliasMarker");
+}
+
 TEST_CASE("ir lowerer struct layout helpers parse and extract alignment transforms") {
   CHECK(primec::ir_lowerer::alignTo(7u, 4u) == 8u);
   CHECK(primec::ir_lowerer::alignTo(16u, 8u) == 16u);
@@ -19158,6 +19414,140 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper-ret
       error);
   CHECK(resolved == nullptr);
   CHECK(error == "unknown method target for tag");
+}
+
+TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit map tryAt receivers") {
+  primec::Definition canonicalTryAtDef;
+  canonicalTryAtDef.fullPath = "/std/collections/map/tryAt";
+  canonicalTryAtDef.namespacePrefix = "/std/collections/map";
+  primec::Transform returnResult;
+  returnResult.name = "return";
+  returnResult.templateArgs = {"/pkg/CanonicalResult"};
+  canonicalTryAtDef.transforms.push_back(returnResult);
+
+  primec::Definition resultTagDef;
+  resultTagDef.fullPath = "/pkg/CanonicalResult/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalTryAtDef.fullPath, &canonicalTryAtDef},
+      {resultTagDef.fullPath, &resultTagDef},
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/map/tryAt";
+  receiverCall.args = {valuesExpr, keyExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  locals.emplace("values", valuesLocal);
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr) { return expr.name; },
+      {},
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method target for tag");
+}
+
+TEST_CASE("ir lowerer setup type helper keeps explicit map tryAt receiver alias precedence") {
+  primec::Definition aliasTryAtDef;
+  aliasTryAtDef.fullPath = "/map/tryAt";
+  aliasTryAtDef.namespacePrefix = "/map";
+  primec::Transform returnAliasResult;
+  returnAliasResult.name = "return";
+  returnAliasResult.templateArgs = {"/pkg/AliasResult"};
+  aliasTryAtDef.transforms.push_back(returnAliasResult);
+
+  primec::Definition canonicalTryAtDef;
+  canonicalTryAtDef.fullPath = "/std/collections/map/tryAt";
+  canonicalTryAtDef.namespacePrefix = "/std/collections/map";
+  primec::Transform returnCanonicalResult;
+  returnCanonicalResult.name = "return";
+  returnCanonicalResult.templateArgs = {"/pkg/CanonicalResult"};
+  canonicalTryAtDef.transforms.push_back(returnCanonicalResult);
+
+  primec::Definition aliasTagDef;
+  aliasTagDef.fullPath = "/pkg/AliasResult/tag";
+  primec::Definition canonicalTagDef;
+  canonicalTagDef.fullPath = "/pkg/CanonicalResult/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {aliasTryAtDef.fullPath, &aliasTryAtDef},
+      {canonicalTryAtDef.fullPath, &canonicalTryAtDef},
+      {aliasTagDef.fullPath, &aliasTagDef},
+      {canonicalTagDef.fullPath, &canonicalTagDef},
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/map/tryAt";
+  receiverCall.args = {valuesExpr, keyExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  locals.emplace("values", valuesLocal);
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr) { return expr.name; },
+      {},
+      defMap,
+      error);
+  CHECK(resolved == &aliasTagDef);
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-method map access kinds") {

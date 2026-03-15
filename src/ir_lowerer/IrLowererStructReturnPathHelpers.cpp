@@ -18,6 +18,11 @@ bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
+bool isRemovedMapCompatibilityHelper(const std::string &suffix) {
+  return suffix == "count" || suffix == "contains" || suffix == "tryAt" ||
+         suffix == "at" || suffix == "at_unsafe";
+}
+
 std::string resolveUniqueStructByLeafName(const std::string &typeName,
                                           const std::unordered_set<std::string> &structNames) {
   if (typeName.empty() || typeName.front() == '/') {
@@ -133,14 +138,21 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
     return candidates;
   }
   if (receiverStruct == "/map") {
-    std::vector<std::string> candidates = {"/std/collections/map/" + methodName};
-    const bool blocksRemovedMapAliasStructReturnForwarding =
-        rawMethodName == "map/at" || rawMethodName == "map/at_unsafe" ||
-        rawMethodName == "std/collections/map/at" || rawMethodName == "std/collections/map/at_unsafe";
-    if (!blocksRemovedMapAliasStructReturnForwarding) {
-      candidates.push_back("/map/" + methodName);
+    std::string normalizedRawMethodName = rawMethodName;
+    if (!normalizedRawMethodName.empty() && normalizedRawMethodName.front() == '/') {
+      normalizedRawMethodName.erase(normalizedRawMethodName.begin());
     }
-    return candidates;
+    if (normalizedRawMethodName.rfind("map/", 0) == 0 &&
+        isRemovedMapCompatibilityHelper(
+            normalizedRawMethodName.substr(std::string("map/").size()))) {
+      return {"/map/" + methodName};
+    }
+    if (normalizedRawMethodName.rfind("std/collections/map/", 0) == 0 &&
+        isRemovedMapCompatibilityHelper(
+            normalizedRawMethodName.substr(std::string("std/collections/map/").size()))) {
+      return {"/std/collections/map/" + methodName};
+    }
+    return {"/std/collections/map/" + methodName, "/map/" + methodName};
   }
   return {receiverStruct + "/" + methodName};
 }
@@ -194,12 +206,12 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     }
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (suffix != "at" && suffix != "at_unsafe") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       appendUnique("/std/collections/map/" + suffix);
     }
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix != "at" && suffix != "at_unsafe") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       appendUnique("/map/" + suffix);
     }
   }
