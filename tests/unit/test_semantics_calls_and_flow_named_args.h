@@ -160,4 +160,77 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("named argument cannot bind variadic parameter") {
+  const std::string source = R"(
+[return<i32>]
+collect([i32] head, [i32] values...) {
+  return(head)
+}
+
+[return<i32>]
+main() {
+  return(collect([head] 1i32, [values] 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments cannot bind variadic parameter: values") != std::string::npos);
+}
+
+TEST_CASE("named fixed argument still allows trailing variadic positionals") {
+  const std::string source = R"(
+[return<i32>]
+collect([i32] head, [i32] values...) {
+  return(head)
+}
+
+[return<i32>]
+main() {
+  return(collect([head] 1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("execution named argument cannot bind variadic parameter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+job([i32] head, [i32] values...) {
+  return(head)
+}
+
+job([head] 1i32, [values] 2i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments cannot bind variadic parameter: values") != std::string::npos);
+}
+
+TEST_CASE("execution variadic parameter rejects mismatched trailing argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+job([i32] head, [i32] values...) {
+  return(head)
+}
+
+job(1i32, true)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /job parameter values: expected i32 got bool") !=
+        std::string::npos);
+}
+
 TEST_SUITE_END();

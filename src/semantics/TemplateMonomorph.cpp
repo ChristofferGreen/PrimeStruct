@@ -593,6 +593,7 @@ bool definitionAcceptsCallShape(const Definition &def, const Expr &expr) {
   for (const auto &paramExpr : def.parameters) {
     ParameterInfo param;
     param.name = paramExpr.name;
+    extractExplicitBindingType(paramExpr, param.binding);
     if (paramExpr.args.size() == 1) {
       param.defaultExpr = &paramExpr.args.front();
     }
@@ -609,6 +610,7 @@ bool definitionHasArgumentCountMismatch(const Definition &def, const Expr &expr)
   for (const auto &paramExpr : def.parameters) {
     ParameterInfo param;
     param.name = paramExpr.name;
+    extractExplicitBindingType(paramExpr, param.binding);
     if (paramExpr.args.size() == 1) {
       param.defaultExpr = &paramExpr.args.front();
     }
@@ -1575,43 +1577,42 @@ bool inferImplicitTemplateArgs(const Definition &def,
   }
   std::unordered_map<std::string, std::string> inferred;
   inferred.reserve(def.templateArgs.size());
-  std::vector<const Expr *> orderedArgs(def.parameters.size(), nullptr);
+  std::vector<ParameterInfo> callParams;
+  callParams.reserve(def.parameters.size());
+  for (const auto &paramExpr : def.parameters) {
+    ParameterInfo param;
+    param.name = paramExpr.name;
+    extractExplicitBindingType(paramExpr, param.binding);
+    if (paramExpr.args.size() == 1) {
+      param.defaultExpr = &paramExpr.args.front();
+    }
+    callParams.push_back(std::move(param));
+  }
+  std::vector<const Expr *> orderedArgs;
+  std::vector<const Expr *> packedArgs;
+  size_t packedParamIndex = callParams.size();
   size_t callArgStart = 0;
   if (callExpr.isMethodCall && callExpr.args.size() == def.parameters.size() + 1) {
     // Method-call sugar prepends the receiver expression.
     callArgStart = 1;
   }
-  size_t positionalIndex = 0;
-  for (size_t i = callArgStart; i < callExpr.args.size(); ++i) {
-    if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value()) {
-      const std::string &name = *callExpr.argNames[i];
-      size_t index = def.parameters.size();
-      for (size_t p = 0; p < def.parameters.size(); ++p) {
-        if (def.parameters[p].name == name) {
-          index = p;
-          break;
-        }
-      }
-      if (index >= def.parameters.size()) {
-        error = "unknown named argument: " + name;
-        return false;
-      }
-      if (orderedArgs[index] != nullptr) {
-        error = "named argument duplicates parameter: " + name;
-        return false;
-      }
-      orderedArgs[index] = &callExpr.args[i];
-      continue;
+  std::vector<Expr> reorderedArgs;
+  std::vector<std::optional<std::string>> reorderedArgNames;
+  const std::vector<Expr> *orderedCallArgs = &callExpr.args;
+  const std::vector<std::optional<std::string>> *orderedCallArgNames = &callExpr.argNames;
+  if (callArgStart > 0) {
+    reorderedArgs.assign(callExpr.args.begin() + static_cast<std::ptrdiff_t>(callArgStart), callExpr.args.end());
+    if (!callExpr.argNames.empty()) {
+      reorderedArgNames.assign(callExpr.argNames.begin() + static_cast<std::ptrdiff_t>(callArgStart), callExpr.argNames.end());
     }
-    while (positionalIndex < orderedArgs.size() && orderedArgs[positionalIndex] != nullptr) {
-      ++positionalIndex;
-    }
-    if (positionalIndex >= orderedArgs.size()) {
+    orderedCallArgs = &reorderedArgs;
+    orderedCallArgNames = &reorderedArgNames;
+  }
+  if (!buildOrderedArguments(callParams, *orderedCallArgs, *orderedCallArgNames, orderedArgs, packedArgs, packedParamIndex, error)) {
+    if (error.find("argument count mismatch") != std::string::npos) {
       error = "argument count mismatch for " + def.fullPath;
-      return false;
     }
-    orderedArgs[positionalIndex] = &callExpr.args[i];
-    ++positionalIndex;
+    return false;
   }
 
   for (size_t i = 0; i < def.parameters.size(); ++i) {
@@ -1620,47 +1621,65 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (!extractExplicitBindingType(param, paramInfo)) {
       continue;
     }
-    if (implicitSet.count(paramInfo.typeName) == 0) {
-      continue;
+    const bool inferFromPackedArgs = i == packedParamIndex && isArgsPackBinding(paramInfo) &&
+                                     implicitSet.count(paramInfo.typeTemplateArg) > 0;
+    std::string inferredParamName;
+    if (inferFromPackedArgs) {
+      inferredParamName = paramInfo.typeTemplateArg;
+    } else {
+      if (implicitSet.count(paramInfo.typeName) == 0) {
+        continue;
+      }
+      inferredParamName = paramInfo.typeName;
     }
-    const Expr *argExpr = i < orderedArgs.size() ? orderedArgs[i] : nullptr;
-    if (!argExpr && param.args.size() == 1) {
-      argExpr = &param.args.front();
+    std::vector<const Expr *> argsToInfer;
+    if (inferFromPackedArgs) {
+      argsToInfer = packedArgs;
+    } else {
+      const Expr *argExpr = i < orderedArgs.size() ? orderedArgs[i] : nullptr;
+      if (!argExpr && param.args.size() == 1) {
+        argExpr = &param.args.front();
+      }
+      if (argExpr) {
+        argsToInfer.push_back(argExpr);
+      }
     }
-    if (!argExpr) {
+    if (argsToInfer.empty()) {
       error = "implicit template arguments require values on " + def.fullPath;
       return false;
     }
-    BindingInfo argInfo;
-    if (!inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
-      if (isStdlibCollectionHelper) {
+    for (const Expr *argExpr : argsToInfer) {
+      BindingInfo argInfo;
+      if (!argExpr || !inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
+        if (isStdlibCollectionHelper) {
+          return false;
+        }
+        error = "unable to infer implicit template arguments for " + def.fullPath;
         return false;
       }
-      error = "unable to infer implicit template arguments for " + def.fullPath;
-      return false;
-    }
-    std::string argType = bindingTypeToString(argInfo);
-    if (argType.empty()) {
-      if (isStdlibCollectionHelper) {
+      std::string argType = bindingTypeToString(argInfo);
+      if (argType.empty()) {
+        if (isStdlibCollectionHelper) {
+          return false;
+        }
+        error = "unable to infer implicit template arguments for " + def.fullPath;
         return false;
       }
-      error = "unable to infer implicit template arguments for " + def.fullPath;
-      return false;
+      ResolvedType resolvedArg = resolveTypeString(argType, mapping, allowedParams, namespacePrefix, ctx, error);
+      if (!error.empty()) {
+        return false;
+      }
+      if (!resolvedArg.concrete) {
+        error = "implicit template arguments must be concrete on " + def.fullPath;
+        return false;
+      }
+      auto it = inferred.find(inferredParamName);
+      if (it != inferred.end() && it->second != resolvedArg.text) {
+        error = "implicit template arguments conflict on " + def.fullPath;
+        return false;
+      }
+      inferred[inferredParamName] = resolvedArg.text;
     }
-    ResolvedType resolvedArg = resolveTypeString(argType, mapping, allowedParams, namespacePrefix, ctx, error);
-    if (!error.empty()) {
-      return false;
-    }
-    if (!resolvedArg.concrete) {
-      error = "implicit template arguments must be concrete on " + def.fullPath;
-      return false;
-    }
-    auto it = inferred.find(paramInfo.typeName);
-    if (it != inferred.end() && it->second != resolvedArg.text) {
-      error = "implicit template arguments conflict on " + def.fullPath;
-      return false;
-    }
-    inferred[paramInfo.typeName] = resolvedArg.text;
   }
 
   outArgs.clear();

@@ -612,6 +612,18 @@ bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
                            const std::vector<std::optional<std::string>> &argNames,
                            std::vector<const Expr *> &ordered,
                            std::string &error) {
+  std::vector<const Expr *> packedArgs;
+  size_t packedParamIndex = params.size();
+  return buildOrderedArguments(params, args, argNames, ordered, packedArgs, packedParamIndex, error);
+}
+
+bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
+                           const std::vector<Expr> &args,
+                           const std::vector<std::optional<std::string>> &argNames,
+                           std::vector<const Expr *> &ordered,
+                           std::vector<const Expr *> &packedArgs,
+                           size_t &packedParamIndex,
+                           std::string &error) {
   auto resolveNamedParamIndex = [&](const std::string &name) -> size_t {
     for (size_t p = 0; p < params.size(); ++p) {
       if (params[p].name == name) {
@@ -636,6 +648,9 @@ bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
     }
     return params.size();
   };
+  packedArgs.clear();
+  packedParamIndex = params.size();
+  (void)findTrailingArgsPackParameter(params, packedParamIndex);
   ordered.assign(params.size(), nullptr);
   size_t positionalIndex = 0;
   for (size_t i = 0; i < args.size(); ++i) {
@@ -646,6 +661,10 @@ bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
         error = "unknown named argument: " + name;
         return false;
       }
+      if (index == packedParamIndex) {
+        error = "named arguments cannot bind variadic parameter: " + name;
+        return false;
+      }
       if (ordered[index] != nullptr) {
         error = "named argument duplicates parameter: " + name;
         return false;
@@ -653,8 +672,12 @@ bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
       ordered[index] = &args[i];
       continue;
     }
-    while (positionalIndex < params.size() && ordered[positionalIndex] != nullptr) {
+    while (positionalIndex < params.size() && positionalIndex != packedParamIndex && ordered[positionalIndex] != nullptr) {
       ++positionalIndex;
+    }
+    if (packedParamIndex < params.size() && positionalIndex >= packedParamIndex) {
+      packedArgs.push_back(&args[i]);
+      continue;
     }
     if (positionalIndex >= params.size()) {
       error = "argument count mismatch";
@@ -664,6 +687,9 @@ bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
     ++positionalIndex;
   }
   for (size_t i = 0; i < params.size(); ++i) {
+    if (i == packedParamIndex) {
+      continue;
+    }
     if (ordered[i] != nullptr) {
       continue;
     }
@@ -707,6 +733,8 @@ bool validateNamedArgumentsAgainstParams(const std::vector<ParameterInfo> &param
   if (argNames.empty()) {
     return true;
   }
+  size_t packedParamIndex = params.size();
+  (void)findTrailingArgsPackParameter(params, packedParamIndex);
   std::vector<bool> bound(params.size(), false);
   size_t positionalIndex = 0;
   for (const auto &argName : argNames) {
@@ -717,6 +745,10 @@ bool validateNamedArgumentsAgainstParams(const std::vector<ParameterInfo> &param
         error = "unknown named argument: " + name;
         return false;
       }
+      if (index == packedParamIndex) {
+        error = "named arguments cannot bind variadic parameter: " + name;
+        return false;
+      }
       if (bound[index]) {
         error = "named argument duplicates parameter: " + name;
         return false;
@@ -724,8 +756,11 @@ bool validateNamedArgumentsAgainstParams(const std::vector<ParameterInfo> &param
       bound[index] = true;
       continue;
     }
-    while (positionalIndex < params.size() && bound[positionalIndex]) {
+    while (positionalIndex < params.size() && positionalIndex != packedParamIndex && bound[positionalIndex]) {
       ++positionalIndex;
+    }
+    if (packedParamIndex < params.size() && positionalIndex >= packedParamIndex) {
+      continue;
     }
     if (positionalIndex >= params.size()) {
       error = "argument count mismatch";

@@ -203,6 +203,51 @@ bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut
                                              valueTypeOut);
 }
 
+bool getArgsPackElementType(const BindingInfo &binding, std::string &elementTypeOut) {
+  elementTypeOut.clear();
+  const std::string normalizedTypeName = normalizeBindingTypeName(binding.typeName);
+  if (normalizedTypeName == "args") {
+    if (binding.typeTemplateArg.empty()) {
+      return false;
+    }
+    elementTypeOut = binding.typeTemplateArg;
+    return true;
+  }
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalizedTypeName, base, argText) || normalizeBindingTypeName(base) != "args") {
+    return false;
+  }
+  elementTypeOut = argText;
+  return !elementTypeOut.empty();
+}
+
+bool isArgsPackBinding(const BindingInfo &binding) {
+  std::string elementType;
+  return getArgsPackElementType(binding, elementType);
+}
+
+bool findTrailingArgsPackParameter(const std::vector<ParameterInfo> &params,
+                                   size_t &indexOut,
+                                   std::string *elementTypeOut) {
+  indexOut = params.size();
+  if (elementTypeOut != nullptr) {
+    elementTypeOut->clear();
+  }
+  if (params.empty()) {
+    return false;
+  }
+  std::string elementType;
+  if (!getArgsPackElementType(params.back().binding, elementType)) {
+    return false;
+  }
+  indexOut = params.size() - 1;
+  if (elementTypeOut != nullptr) {
+    *elementTypeOut = std::move(elementType);
+  }
+  return true;
+}
+
 std::string joinTemplateArgs(const std::vector<std::string> &args) {
   std::string out;
   for (size_t i = 0; i < args.size(); ++i) {

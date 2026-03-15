@@ -427,8 +427,10 @@ bool SemanticsValidator::validateDefinitions() {
         return true;
       }
       std::vector<const Expr *> orderedArgs;
+      std::vector<const Expr *> packedArgs;
+      size_t packedParamIndex = calleeParams.size();
       std::string orderError;
-      if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, orderError)) {
+      if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, packedArgs, packedParamIndex, orderError)) {
         if (orderError.find("argument count mismatch") != std::string::npos) {
           message = "argument count mismatch for " + diagnosticResolved;
         } else {
@@ -442,51 +444,73 @@ bool SemanticsValidator::validateDefinitions() {
       for (const auto &arg : expr.args) {
         explicitArgs.insert(&arg);
       }
-      for (size_t paramIndex = 0; paramIndex < orderedArgs.size() && paramIndex < calleeParams.size(); ++paramIndex) {
-        const Expr *arg = orderedArgs[paramIndex];
-        if (arg == nullptr || explicitArgs.count(arg) == 0) {
-          continue;
-        }
-        const ParameterInfo &param = calleeParams[paramIndex];
-        const std::string &expectedTypeName = param.binding.typeName;
+      auto validateArgumentTypeMismatch = [&](const Expr &arg,
+                                             const ParameterInfo &param,
+                                             const std::string &expectedTypeName) {
         if (expectedTypeName.empty() || expectedTypeName == "auto") {
-          continue;
+          return;
         }
         ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
         if (expectedKind != ReturnKind::Unknown) {
-          ReturnKind actualKind = inferExprReturnKind(*arg, definitionParams, definitionLocals);
+          ReturnKind actualKind = inferExprReturnKind(arg, definitionParams, definitionLocals);
           if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array || actualKind == expectedKind) {
-            continue;
+            return;
           }
           const std::string expectedName = typeNameForReturnKind(expectedKind);
           const std::string actualName = typeNameForReturnKind(actualKind);
           if (expectedName.empty() || actualName.empty()) {
-            continue;
+            return;
           }
           appendArgumentTypeMismatch(param.name, expectedName, actualName);
-          continue;
+          return;
         }
         const std::string expectedStructPath =
             resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
         if (expectedStructPath.empty()) {
-          continue;
+          return;
         }
-        const std::string actualStructPath = inferStructReturnPath(*arg, definitionParams, definitionLocals);
+        const std::string actualStructPath = inferStructReturnPath(arg, definitionParams, definitionLocals);
         if (!actualStructPath.empty()) {
           if (actualStructPath != expectedStructPath) {
             appendArgumentTypeMismatch(param.name, expectedStructPath, actualStructPath);
           }
-          continue;
+          return;
         }
-        ReturnKind actualKind = inferExprReturnKind(*arg, definitionParams, definitionLocals);
+        ReturnKind actualKind = inferExprReturnKind(arg, definitionParams, definitionLocals);
         if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array) {
-          continue;
+          return;
         }
         const std::string actualName = typeNameForReturnKind(actualKind);
         if (actualName.empty()) {
-          continue;
+          return;
         }
         appendArgumentTypeMismatch(param.name, expectedStructPath, actualName);
+      };
+      for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
+        const ParameterInfo &param = calleeParams[paramIndex];
+        if (paramIndex == packedParamIndex) {
+          std::string packElementType;
+          if (!getArgsPackElementType(param.binding, packElementType)) {
+            continue;
+          }
+          std::string packElementBase = packElementType;
+          std::string packElementArgs;
+          if (splitTemplateTypeName(packElementType, packElementBase, packElementArgs)) {
+            packElementType = packElementBase;
+          }
+          for (const Expr *arg : packedArgs) {
+            if (arg == nullptr || explicitArgs.count(arg) == 0) {
+              continue;
+            }
+            validateArgumentTypeMismatch(*arg, param, packElementType);
+          }
+          continue;
+        }
+        const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+        if (arg == nullptr || explicitArgs.count(arg) == 0) {
+          continue;
+        }
+        validateArgumentTypeMismatch(*arg, param, param.binding.typeName);
       }
       return false;
     };
@@ -1505,8 +1529,10 @@ bool SemanticsValidator::validateExecutions() {
         return true;
       }
       std::vector<const Expr *> orderedArgs;
+      std::vector<const Expr *> packedArgs;
+      size_t packedParamIndex = calleeParams.size();
       std::string orderError;
-      if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, orderError)) {
+      if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, packedArgs, packedParamIndex, orderError)) {
         if (orderError.find("argument count mismatch") != std::string::npos) {
           message = "argument count mismatch for " + diagnosticResolved;
         } else {
@@ -1520,51 +1546,73 @@ bool SemanticsValidator::validateExecutions() {
       for (const auto &arg : expr.args) {
         explicitArgs.insert(&arg);
       }
-      for (size_t paramIndex = 0; paramIndex < orderedArgs.size() && paramIndex < calleeParams.size(); ++paramIndex) {
-        const Expr *arg = orderedArgs[paramIndex];
-        if (arg == nullptr || explicitArgs.count(arg) == 0) {
-          continue;
-        }
-        const ParameterInfo &param = calleeParams[paramIndex];
-        const std::string &expectedTypeName = param.binding.typeName;
+      auto validateArgumentTypeMismatch = [&](const Expr &arg,
+                                             const ParameterInfo &param,
+                                             const std::string &expectedTypeName) {
         if (expectedTypeName.empty() || expectedTypeName == "auto") {
-          continue;
+          return;
         }
         ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
         if (expectedKind != ReturnKind::Unknown) {
-          ReturnKind actualKind = inferExprReturnKind(*arg, executionParams, executionLocals);
+          ReturnKind actualKind = inferExprReturnKind(arg, executionParams, executionLocals);
           if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array || actualKind == expectedKind) {
-            continue;
+            return;
           }
           const std::string expectedName = typeNameForReturnKind(expectedKind);
           const std::string actualName = typeNameForReturnKind(actualKind);
           if (expectedName.empty() || actualName.empty()) {
-            continue;
+            return;
           }
           appendArgumentTypeMismatch(param.name, expectedName, actualName);
-          continue;
+          return;
         }
         const std::string expectedStructPath =
             resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
         if (expectedStructPath.empty()) {
-          continue;
+          return;
         }
-        const std::string actualStructPath = inferStructReturnPath(*arg, executionParams, executionLocals);
+        const std::string actualStructPath = inferStructReturnPath(arg, executionParams, executionLocals);
         if (!actualStructPath.empty()) {
           if (actualStructPath != expectedStructPath) {
             appendArgumentTypeMismatch(param.name, expectedStructPath, actualStructPath);
           }
-          continue;
+          return;
         }
-        ReturnKind actualKind = inferExprReturnKind(*arg, executionParams, executionLocals);
+        ReturnKind actualKind = inferExprReturnKind(arg, executionParams, executionLocals);
         if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array) {
-          continue;
+          return;
         }
         const std::string actualName = typeNameForReturnKind(actualKind);
         if (actualName.empty()) {
-          continue;
+          return;
         }
         appendArgumentTypeMismatch(param.name, expectedStructPath, actualName);
+      };
+      for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
+        const ParameterInfo &param = calleeParams[paramIndex];
+        if (paramIndex == packedParamIndex) {
+          std::string packElementType;
+          if (!getArgsPackElementType(param.binding, packElementType)) {
+            continue;
+          }
+          std::string packElementBase = packElementType;
+          std::string packElementArgs;
+          if (splitTemplateTypeName(packElementType, packElementBase, packElementArgs)) {
+            packElementType = packElementBase;
+          }
+          for (const Expr *arg : packedArgs) {
+            if (arg == nullptr || explicitArgs.count(arg) == 0) {
+              continue;
+            }
+            validateArgumentTypeMismatch(*arg, param, packElementType);
+          }
+          continue;
+        }
+        const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+        if (arg == nullptr || explicitArgs.count(arg) == 0) {
+          continue;
+        }
+        validateArgumentTypeMismatch(*arg, param, param.binding.typeName);
       }
       return false;
     };

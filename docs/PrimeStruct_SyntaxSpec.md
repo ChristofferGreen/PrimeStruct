@@ -330,8 +330,9 @@ Notes:
 
 ## 4A. Draft Variadic Pack Proposal (Parser Canonicalization Implemented)
 
-This appendix records the canonical model for variadic user-defined calls. Parser/canonicalization support is now
-implemented; semantics and lowering remain follow-up work beyond the stable grammar above.
+This appendix records the canonical model for variadic user-defined calls. Parser/canonicalization and call-binding
+semantics are now implemented; the body API and lowering/runtime remain follow-up work beyond the stable grammar
+above.
 
 ### 4A.1 Surface forms
 
@@ -377,13 +378,14 @@ Bottom-level form therefore has:
 - no semantic meaning attached to bare identifier spelling,
 - one ordinary parameter whose envelope is `args<T>`.
 
-### 4A.4 Planned semantic restrictions
+### 4A.4 Current semantic restrictions and remaining body API
 
 - At most one `args<T>` parameter per definition.
 - The `args<T>` parameter must be last.
 - `args<T>` is homogeneous.
 - Named arguments bind only fixed parameters, never the `args<T>` parameter directly.
 - At most one spread argument per call in the first slice, and it must appear in the final positional slot.
+- Trailing positional arguments bind to the `args<T>` parameter after all fixed parameters have been satisfied.
 - The body API for `args<T>` is planned to mirror read-only sequence operations: `count(values)`, `values[index]`,
   `at(values, index)`, and `at_unsafe(values, index)`.
 

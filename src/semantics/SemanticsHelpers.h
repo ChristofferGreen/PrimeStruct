@@ -85,6 +85,11 @@ bool extractMapKeyValueTypesFromTypeText(const std::string &typeText,
                                          std::string &keyTypeOut,
                                          std::string &valueTypeOut);
 bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut);
+bool getArgsPackElementType(const BindingInfo &binding, std::string &elementTypeOut);
+bool isArgsPackBinding(const BindingInfo &binding);
+bool findTrailingArgsPackParameter(const std::vector<ParameterInfo> &params,
+                                   size_t &indexOut,
+                                   std::string *elementTypeOut = nullptr);
 std::string joinTemplateArgs(const std::vector<std::string> &args);
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);
@@ -181,6 +186,13 @@ bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
                            const std::vector<Expr> &args,
                            const std::vector<std::optional<std::string>> &argNames,
                            std::vector<const Expr *> &ordered,
+                           std::string &error);
+bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
+                           const std::vector<Expr> &args,
+                           const std::vector<std::optional<std::string>> &argNames,
+                           std::vector<const Expr *> &ordered,
+                           std::vector<const Expr *> &packedArgs,
+                           size_t &packedParamIndex,
                            std::string &error);
 bool validateNamedArgumentsAgainstParams(const std::vector<ParameterInfo> &params,
                                          const std::vector<std::optional<std::string>> &argNames,

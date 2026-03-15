@@ -356,4 +356,90 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("typed variadic parameter accepts trailing positional arguments") {
+  const std::string source = R"(
+[return<i32>]
+keep_head([i32] head, [i32] values...) {
+  return(head)
+}
+
+[return<i32>]
+main() {
+  return(keep_head(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("typed variadic parameter allows empty trailing pack") {
+  const std::string source = R"(
+[return<i32>]
+keep_head([i32] head, [i32] values...) {
+  return(head)
+}
+
+[return<i32>]
+main() {
+  return(keep_head(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("typed variadic parameter rejects mismatched trailing argument") {
+  const std::string source = R"(
+[return<i32>]
+keep_head([i32] head, [i32] values...) {
+  return(head)
+}
+
+[return<i32>]
+main() {
+  return(keep_head(1i32, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /keep_head parameter values: expected i32 got bool") !=
+        std::string::npos);
+}
+
+TEST_CASE("implicit variadic pack infers homogeneous element type") {
+  const std::string source = R"(
+[return<i32>]
+keep_head([i32] head, values...) {
+  return(head)
+}
+
+[return<i32>]
+main() {
+  return(keep_head(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("implicit variadic pack rejects heterogeneous element types") {
+  const std::string source = R"(
+[return<i32>]
+keep_head([i32] head, values...) {
+  return(head)
+}
+
+[return<i32>]
+main() {
+  return(keep_head(1i32, 2i32, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /keep_head") != std::string::npos);
+}
+
 TEST_SUITE_END();

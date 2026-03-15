@@ -7763,8 +7763,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     std::vector<const Expr *> orderedArgs;
+    std::vector<const Expr *> packedArgs;
+    size_t packedParamIndex = calleeParams.size();
     std::string orderError;
-    if (!buildOrderedArguments(calleeParams, *orderedCallArgs, *orderedCallArgNames, orderedArgs, orderError)) {
+    if (!buildOrderedArguments(calleeParams,
+                               *orderedCallArgs,
+                               *orderedCallArgNames,
+                               orderedArgs,
+                               packedArgs,
+                               packedParamIndex,
+                               orderError)) {
       if (orderError.find("argument count mismatch") != std::string::npos) {
         error_ = "argument count mismatch for " + diagnosticResolved;
       } else {
@@ -7773,6 +7781,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     for (const auto *arg : orderedArgs) {
+      if (!arg) {
+        continue;
+      }
+      if (!validateExpr(params, locals, *arg)) {
+        return false;
+      }
+    }
+    for (const auto *arg : packedArgs) {
       if (!arg) {
         continue;
       }
@@ -7812,27 +7828,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string collectionName;
       return getBuiltinCollectionName(candidate, collectionName);
     };
-    for (size_t paramIndex = 0; paramIndex < orderedArgs.size() && paramIndex < calleeParams.size(); ++paramIndex) {
-      const Expr *arg = orderedArgs[paramIndex];
-      if (arg == nullptr) {
-        continue;
-      }
-      const ParameterInfo &param = calleeParams[paramIndex];
-      const std::string &expectedTypeName = param.binding.typeName;
-      const std::string expectedTypeText =
-          param.binding.typeTemplateArg.empty() ? expectedTypeName : expectedTypeName + "<" + param.binding.typeTemplateArg + ">";
+    auto validateArgumentTypeAgainstParam = [&](const Expr &arg,
+                                                const ParameterInfo &param,
+                                                const std::string &expectedTypeName,
+                                                const std::string &expectedTypeText) -> bool {
       if (expectedTypeName.empty() || expectedTypeName == "auto") {
-        continue;
+        return true;
       }
       if (isStringTypeName(expectedTypeName)) {
-        if (!isStringExpr(*arg)) {
+        if (!isStringExpr(arg)) {
           error_ =
               "argument type mismatch for " + diagnosticResolved + " parameter " + param.name + ": expected string";
           return false;
         }
-        continue;
+        return true;
       }
-      if (isStringExpr(*arg)) {
+      if (isStringExpr(arg)) {
         error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name + ": expected " +
                  expectedTypeText;
         return false;
@@ -7845,23 +7856,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (splitTopLevelTemplateArgs(expectedArgText, expectedTemplateArgs)) {
           if (normalizedExpectedBase == "array" && expectedTemplateArgs.size() == 1) {
             std::string actualElemType;
-            if (resolveArrayTarget(*arg, actualElemType)) {
+            if (resolveArrayTarget(arg, actualElemType)) {
               if (normalizeBindingTypeName(expectedTemplateArgs.front()) ==
                   normalizeBindingTypeName(actualElemType)) {
-                continue;
+                return true;
               }
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                        ": expected " +
                        expectedTypeText + " got array<" + actualElemType + ">";
               return false;
             }
-            if (resolveVectorTarget(*arg, actualElemType)) {
+            if (resolveVectorTarget(arg, actualElemType)) {
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                        ": expected " +
                        expectedTypeText + " got vector<" + actualElemType + ">";
               return false;
             }
-            if (resolveSoaVectorTarget(*arg, actualElemType)) {
+            if (resolveSoaVectorTarget(arg, actualElemType)) {
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                        ": expected " +
                        expectedTypeText + " got soa_vector<" + actualElemType + ">";
@@ -7869,23 +7880,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             }
           } else if (normalizedExpectedBase == "vector" && expectedTemplateArgs.size() == 1) {
             std::string actualElemType;
-            if (resolveVectorTarget(*arg, actualElemType)) {
+            if (resolveVectorTarget(arg, actualElemType)) {
               if (normalizeBindingTypeName(expectedTemplateArgs.front()) ==
                   normalizeBindingTypeName(actualElemType)) {
-                continue;
+                return true;
               }
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                        ": expected " +
                        expectedTypeText + " got vector<" + actualElemType + ">";
               return false;
             }
-            if (resolveSoaVectorTarget(*arg, actualElemType)) {
+            if (resolveSoaVectorTarget(arg, actualElemType)) {
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                        ": expected " +
                        expectedTypeText + " got soa_vector<" + actualElemType + ">";
               return false;
             }
-            if (resolveArrayTarget(*arg, actualElemType)) {
+            if (resolveArrayTarget(arg, actualElemType)) {
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                        ": expected " +
                        expectedTypeText + " got array<" + actualElemType + ">";
@@ -7893,23 +7904,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             }
           } else if (normalizedExpectedBase == "soa_vector" && expectedTemplateArgs.size() == 1) {
             std::string actualElemType;
-            if (resolveSoaVectorTarget(*arg, actualElemType)) {
+            if (resolveSoaVectorTarget(arg, actualElemType)) {
               if (normalizeBindingTypeName(expectedTemplateArgs.front()) ==
                   normalizeBindingTypeName(actualElemType)) {
-                continue;
+                return true;
               }
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                        ": expected " +
                        expectedTypeText + " got soa_vector<" + actualElemType + ">";
               return false;
             }
-            if (resolveVectorTarget(*arg, actualElemType)) {
+            if (resolveVectorTarget(arg, actualElemType)) {
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                        ": expected " +
                        expectedTypeText + " got vector<" + actualElemType + ">";
               return false;
             }
-            if (resolveArrayTarget(*arg, actualElemType)) {
+            if (resolveArrayTarget(arg, actualElemType)) {
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                        ": expected " +
                        expectedTypeText + " got array<" + actualElemType + ">";
@@ -7918,7 +7929,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           } else if (normalizedExpectedBase == "map" && expectedTemplateArgs.size() == 2) {
             std::string actualKeyType;
             std::string actualValueType;
-            if (resolveMapKeyType(*arg, actualKeyType) && resolveMapValueType(*arg, actualValueType) &&
+            if (resolveMapKeyType(arg, actualKeyType) && resolveMapValueType(arg, actualValueType) &&
                 (normalizeBindingTypeName(expectedTemplateArgs[0]) != normalizeBindingTypeName(actualKeyType) ||
                  normalizeBindingTypeName(expectedTemplateArgs[1]) != normalizeBindingTypeName(actualValueType))) {
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
@@ -7931,12 +7942,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       const ReturnKind expectedKind = returnKindForTypeName(normalizeBindingTypeName(expectedTypeName));
       if (expectedKind != ReturnKind::Unknown) {
-        const ReturnKind actualKind = inferExprReturnKind(*arg, params, locals);
-        if (actualKind == ReturnKind::Array && isBuiltinCollectionLiteralExpr(*arg)) {
-          continue;
+        const ReturnKind actualKind = inferExprReturnKind(arg, params, locals);
+        if (actualKind == ReturnKind::Array && isBuiltinCollectionLiteralExpr(arg)) {
+          return true;
         }
         if (isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
-          continue;
+          return true;
         }
         if (actualKind != ReturnKind::Unknown && actualKind != expectedKind) {
           error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
@@ -7944,20 +7955,72 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                    typeNameForReturnKind(expectedKind) + " got " + typeNameForReturnKind(actualKind);
           return false;
         }
-        continue;
+        return true;
       }
       const std::string expectedStructPath = resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
       if (expectedStructPath.empty()) {
-        continue;
+        return true;
       }
-      const std::string actualStructPath = inferStructReturnPath(*arg, params, locals);
+      const std::string actualStructPath = inferStructReturnPath(arg, params, locals);
       if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
         error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                  ": expected " +
                  expectedStructPath + " got " + actualStructPath;
         return false;
       }
+      return true;
+    };
+    auto validateArgumentsForParameter = [&](const ParameterInfo &param,
+                                            const std::string &expectedTypeName,
+                                            const std::string &expectedTypeText,
+                                            const std::vector<const Expr *> &argsToValidate) -> bool {
+      for (const Expr *arg : argsToValidate) {
+        if (arg == nullptr) {
+          continue;
+        }
+        if (!validateArgumentTypeAgainstParam(*arg, param, expectedTypeName, expectedTypeText)) {
+          return false;
+        }
+      }
+      return true;
+    };
+    for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
+      const ParameterInfo &param = calleeParams[paramIndex];
+      if (paramIndex == packedParamIndex) {
+        std::string packElementTypeText;
+        if (!getArgsPackElementType(param.binding, packElementTypeText)) {
+          continue;
+        }
+        std::string packElementTypeName = packElementTypeText;
+        std::string packBase;
+        std::string packArgs;
+        if (splitTemplateTypeName(packElementTypeText, packBase, packArgs)) {
+          packElementTypeName = packBase;
+        }
+        if (!validateArgumentsForParameter(param, packElementTypeName, packElementTypeText, packedArgs)) {
+          return false;
+        }
+        continue;
+      }
+      const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+      if (arg == nullptr) {
+        continue;
+      }
+      const std::string &expectedTypeName = param.binding.typeName;
+      const std::string expectedTypeText =
+          param.binding.typeTemplateArg.empty() ? expectedTypeName : expectedTypeName + "<" + param.binding.typeTemplateArg + ">";
+      if (!validateArgumentTypeAgainstParam(*arg, param, expectedTypeName, expectedTypeText)) {
+        return false;
+      }
     }
+    auto isReferenceTypeText = [](const std::string &typeName, const std::string &typeText) {
+      if (normalizeBindingTypeName(typeName) == "Reference") {
+        return true;
+      }
+      std::string base;
+      std::string argText;
+      return splitTemplateTypeName(typeText, base, argText) && normalizeBindingTypeName(base) == "Reference";
+    };
     bool calleeIsUnsafe = false;
     for (const auto &transform : it->second->transforms) {
       if (transform.name == "unsafe") {
@@ -7966,12 +8029,39 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     }
     if (currentDefinitionIsUnsafe_ && !calleeIsUnsafe) {
-      for (size_t i = 0; i < orderedArgs.size() && i < calleeParams.size(); ++i) {
-        const Expr *arg = orderedArgs[i];
+      for (size_t i = 0; i < calleeParams.size(); ++i) {
+        const ParameterInfo &param = calleeParams[i];
+        if (i == packedParamIndex) {
+          std::string packElementTypeText;
+          if (!getArgsPackElementType(param.binding, packElementTypeText)) {
+            continue;
+          }
+          std::string packElementTypeName = packElementTypeText;
+          std::string packBase;
+          std::string packArgs;
+          if (splitTemplateTypeName(packElementTypeText, packBase, packArgs)) {
+            packElementTypeName = packBase;
+          }
+          if (!isReferenceTypeText(packElementTypeName, packElementTypeText)) {
+            continue;
+          }
+          for (const Expr *arg : packedArgs) {
+            if (!arg || !isUnsafeReferenceExpr(*arg)) {
+              continue;
+            }
+            error_ = "unsafe reference escapes across safe boundary to " + resolved;
+            return false;
+          }
+          continue;
+        }
+        const Expr *arg = i < orderedArgs.size() ? orderedArgs[i] : nullptr;
         if (arg == nullptr) {
           continue;
         }
-        if (calleeParams[i].binding.typeName != "Reference") {
+        const std::string expectedTypeText = param.binding.typeTemplateArg.empty()
+                                                 ? param.binding.typeName
+                                                 : param.binding.typeName + "<" + param.binding.typeTemplateArg + ">";
+        if (!isReferenceTypeText(param.binding.typeName, expectedTypeText)) {
           continue;
         }
         if (!isUnsafeReferenceExpr(*arg)) {
