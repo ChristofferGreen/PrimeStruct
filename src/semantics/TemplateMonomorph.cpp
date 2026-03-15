@@ -1650,7 +1650,28 @@ bool inferImplicitTemplateArgs(const Definition &def,
     }
     for (const Expr *argExpr : argsToInfer) {
       BindingInfo argInfo;
-      if (!argExpr || !inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
+      if (!argExpr) {
+        if (isStdlibCollectionHelper) {
+          return false;
+        }
+        error = "unable to infer implicit template arguments for " + def.fullPath;
+        return false;
+      }
+      if (argExpr->isSpread) {
+        std::string spreadElementType;
+        if (!resolveArgsPackElementTypeForExpr(*argExpr, params, locals, spreadElementType)) {
+          error = "spread argument requires args<T> value";
+          return false;
+        }
+        argInfo.typeName = normalizeBindingTypeName(spreadElementType);
+        argInfo.typeTemplateArg.clear();
+        std::string spreadBase;
+        std::string spreadArgs;
+        if (splitTemplateTypeName(spreadElementType, spreadBase, spreadArgs)) {
+          argInfo.typeName = normalizeBindingTypeName(spreadBase);
+          argInfo.typeTemplateArg = spreadArgs;
+        }
+      } else if (!inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
         if (isStdlibCollectionHelper) {
           return false;
         }

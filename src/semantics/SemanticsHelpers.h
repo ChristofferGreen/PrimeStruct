@@ -87,6 +87,10 @@ bool extractMapKeyValueTypesFromTypeText(const std::string &typeText,
 bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut);
 bool getArgsPackElementType(const BindingInfo &binding, std::string &elementTypeOut);
 bool isArgsPackBinding(const BindingInfo &binding);
+bool resolveArgsPackElementTypeForExpr(const Expr &expr,
+                                       const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       std::string &elementTypeOut);
 bool findTrailingArgsPackParameter(const std::vector<ParameterInfo> &params,
                                    size_t &indexOut,
                                    std::string *elementTypeOut = nullptr);

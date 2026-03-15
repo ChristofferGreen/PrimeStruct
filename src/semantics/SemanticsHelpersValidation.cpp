@@ -672,6 +672,14 @@ bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
       ordered[index] = &args[i];
       continue;
     }
+    if (args[i].isSpread) {
+      if (packedParamIndex >= params.size()) {
+        error = "spread argument requires variadic parameter";
+        return false;
+      }
+      packedArgs.push_back(&args[i]);
+      continue;
+    }
     while (positionalIndex < params.size() && positionalIndex != packedParamIndex && ordered[positionalIndex] != nullptr) {
       ++positionalIndex;
     }

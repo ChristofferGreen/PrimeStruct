@@ -331,8 +331,8 @@ Notes:
 ## 4A. Draft Variadic Pack Proposal (Parser/Semantics Implemented)
 
 This appendix records the canonical model for variadic user-defined calls. Parser/canonicalization, call-binding
-semantics, and the read-only body API are now implemented; lowering/runtime remains follow-up work beyond the stable
-grammar above.
+semantics, spread-aware binding into trailing packs, and the read-only body API are now implemented; backend/runtime
+materialization remains follow-up work beyond the stable grammar above.
 
 ### 4A.1 Surface forms
 
@@ -386,9 +386,14 @@ Bottom-level form therefore has:
 - Named arguments bind only fixed parameters, never the `args<T>` parameter directly.
 - At most one spread argument per call in the first slice, and it must appear in the final positional slot.
 - Trailing positional arguments bind to the `args<T>` parameter after all fixed parameters have been satisfied.
+- A final spread argument only binds to a trailing `args<T>` parameter; otherwise validation rejects it
+  deterministically.
+- A spread argument must evaluate to an existing `args<T>` value, and forwarding that pack also feeds omitted
+  element-type inference for the callee's trailing variadic parameter.
 - `count(values)`, `values.count()`, `values[index]`, `at(values, index)`, `values.at(index)`, and
   `values.at_unsafe(index)` are available on `args<T>` parameters.
-- Lowering/runtime for concrete `args<T>` parameters and `[spread]` calls remains a separate follow-up slice.
+- Backend/runtime materialization for concrete `args<T>` parameters and their read-only body API remains a separate
+  follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 

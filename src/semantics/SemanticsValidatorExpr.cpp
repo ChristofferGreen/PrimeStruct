@@ -8014,12 +8014,62 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     };
+    auto validateSpreadArgumentTypeAgainstParam = [&](const Expr &arg,
+                                                      const ParameterInfo &param,
+                                                      const std::string &expectedTypeName,
+                                                      const std::string &expectedTypeText) -> bool {
+      std::string actualElementTypeText;
+      if (!resolveArgsPackElementTypeForExpr(arg, params, locals, actualElementTypeText)) {
+        error_ = "spread argument requires args<T> value";
+        return false;
+      }
+      const ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
+      if (expectedKind != ReturnKind::Unknown) {
+        const ReturnKind actualKind = returnKindForTypeName(actualElementTypeText);
+        if (actualKind == ReturnKind::Unknown || actualKind == expectedKind ||
+            isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
+          return true;
+        }
+        error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name + ": expected " +
+                 typeNameForReturnKind(expectedKind) + " got " + typeNameForReturnKind(actualKind);
+        return false;
+      }
+      const std::string expectedStructPath =
+          resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
+      if (!expectedStructPath.empty()) {
+        const std::string actualStructPath =
+            resolveStructTypePath(actualElementTypeText, arg.namespacePrefix, structNames_);
+        if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
+          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name + ": expected " +
+                   expectedStructPath + " got " + actualStructPath;
+          return false;
+        }
+        if (actualStructPath.empty() && normalizeBindingTypeName(actualElementTypeText) != expectedStructPath) {
+          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name + ": expected " +
+                   expectedStructPath + " got " + normalizeBindingTypeName(actualElementTypeText);
+          return false;
+        }
+        return true;
+      }
+      if (normalizeBindingTypeName(actualElementTypeText) != normalizeBindingTypeName(expectedTypeText)) {
+        error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name + ": expected " +
+                 expectedTypeText + " got " + normalizeBindingTypeName(actualElementTypeText);
+        return false;
+      }
+      return true;
+    };
     auto validateArgumentsForParameter = [&](const ParameterInfo &param,
                                             const std::string &expectedTypeName,
                                             const std::string &expectedTypeText,
                                             const std::vector<const Expr *> &argsToValidate) -> bool {
       for (const Expr *arg : argsToValidate) {
         if (arg == nullptr) {
+          continue;
+        }
+        if (arg->isSpread) {
+          if (!validateSpreadArgumentTypeAgainstParam(*arg, param, expectedTypeName, expectedTypeText)) {
+            return false;
+          }
           continue;
         }
         if (!validateArgumentTypeAgainstParam(*arg, param, expectedTypeName, expectedTypeText)) {

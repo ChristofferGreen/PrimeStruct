@@ -227,6 +227,20 @@ bool isArgsPackBinding(const BindingInfo &binding) {
   return getArgsPackElementType(binding, elementType);
 }
 
+bool resolveArgsPackElementTypeForExpr(const Expr &expr,
+                                       const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       std::string &elementTypeOut) {
+  if (expr.kind != Expr::Kind::Name) {
+    return false;
+  }
+  const BindingInfo *binding = findBinding(params, locals, expr.name);
+  if (binding == nullptr) {
+    return false;
+  }
+  return getArgsPackElementType(*binding, elementTypeOut);
+}
+
 bool findTrailingArgsPackParameter(const std::vector<ParameterInfo> &params,
                                    size_t &indexOut,
                                    std::string *elementTypeOut) {

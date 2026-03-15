@@ -442,4 +442,106 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /keep_head") != std::string::npos);
 }
 
+TEST_CASE("typed variadic parameter accepts spread args pack forwarding") {
+  const std::string source = R"(
+[return<i32>]
+keep_head([i32] head, [i32] values...) {
+  return(head)
+}
+
+[return<i32>]
+forward([i32] head, [i32] values...) {
+  return(keep_head(head, [spread] values))
+}
+
+[return<i32>]
+main() {
+  return(forward(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("implicit variadic pack infers from spread args pack") {
+  const std::string source = R"(
+[return<i32>]
+count_values(values...) {
+  return(count(values))
+}
+
+[return<i32>]
+forward([i32] values...) {
+  return(count_values([spread] values))
+}
+
+[return<i32>]
+main() {
+  return(forward(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("spread argument requires variadic parameter") {
+  const std::string source = R"(
+[return<i32>]
+take([i32] value) {
+  return(value)
+}
+
+[return<i32>]
+forward([i32] values...) {
+  return(take([spread] values))
+}
+
+[return<i32>]
+main() {
+  return(forward(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("spread argument requires variadic parameter") != std::string::npos);
+}
+
+TEST_CASE("spread argument requires args pack value") {
+  const std::string source = R"(
+[return<i32>]
+count_values([i32] values...) {
+  return(count(values))
+}
+
+[return<i32>]
+main() {
+  return(count_values([spread] 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("spread argument requires args<T> value") != std::string::npos);
+}
+
+TEST_CASE("execution spread argument requires args pack value") {
+  const std::string source = R"(
+[return<i32>]
+main() {
+  return(1i32)
+}
+
+[return<i32>]
+count_values([i32] values...) {
+  return(count(values))
+}
+
+count_values([spread] 1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("spread argument requires args<T> value") != std::string::npos);
+}
+
 TEST_SUITE_END();

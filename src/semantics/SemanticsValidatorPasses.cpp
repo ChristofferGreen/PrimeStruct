@@ -486,6 +486,63 @@ bool SemanticsValidator::validateDefinitions() {
         }
         appendArgumentTypeMismatch(param.name, expectedStructPath, actualName);
       };
+      auto validateSpreadArgumentTypeMismatch = [&](const Expr &arg,
+                                                    const ParameterInfo &param,
+                                                    const std::string &expectedTypeName) {
+        std::string actualElementType;
+        if (!resolveArgsPackElementTypeForExpr(arg, definitionParams, definitionLocals, actualElementType)) {
+          appendDefinitionRecord(arg, "spread argument requires args<T> value");
+          return;
+        }
+        ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
+        if (expectedKind != ReturnKind::Unknown) {
+          ReturnKind actualKind = returnKindForTypeName(actualElementType);
+          const bool softwareNumericCompatible =
+              (expectedKind == ReturnKind::Integer &&
+               (actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
+                actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+                actualKind == ReturnKind::Integer)) ||
+              (expectedKind == ReturnKind::Decimal &&
+               (actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
+                actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+                actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
+                actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal)) ||
+              (expectedKind == ReturnKind::Complex &&
+               (actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
+                actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+                actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
+                actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal ||
+                actualKind == ReturnKind::Complex));
+          if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array || actualKind == expectedKind ||
+              softwareNumericCompatible) {
+            return;
+          }
+          const std::string expectedName = typeNameForReturnKind(expectedKind);
+          const std::string actualName = typeNameForReturnKind(actualKind);
+          if (expectedName.empty() || actualName.empty()) {
+            return;
+          }
+          appendArgumentTypeMismatch(param.name, expectedName, actualName);
+          return;
+        }
+        const std::string expectedStructPath =
+            resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
+        if (expectedStructPath.empty()) {
+          if (normalizeBindingTypeName(actualElementType) != normalizeBindingTypeName(expectedTypeName)) {
+            appendArgumentTypeMismatch(param.name, expectedTypeName, normalizeBindingTypeName(actualElementType));
+          }
+          return;
+        }
+        const std::string actualStructPath =
+            resolveStructTypePath(actualElementType, expr.namespacePrefix, structNames_);
+        if (!actualStructPath.empty()) {
+          if (actualStructPath != expectedStructPath) {
+            appendArgumentTypeMismatch(param.name, expectedStructPath, actualStructPath);
+          }
+          return;
+        }
+        appendArgumentTypeMismatch(param.name, expectedStructPath, normalizeBindingTypeName(actualElementType));
+      };
       for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
         const ParameterInfo &param = calleeParams[paramIndex];
         if (paramIndex == packedParamIndex) {
@@ -500,6 +557,10 @@ bool SemanticsValidator::validateDefinitions() {
           }
           for (const Expr *arg : packedArgs) {
             if (arg == nullptr || explicitArgs.count(arg) == 0) {
+              continue;
+            }
+            if (arg->isSpread) {
+              validateSpreadArgumentTypeMismatch(*arg, param, packElementType);
               continue;
             }
             validateArgumentTypeMismatch(*arg, param, packElementType);
@@ -1588,6 +1649,63 @@ bool SemanticsValidator::validateExecutions() {
         }
         appendArgumentTypeMismatch(param.name, expectedStructPath, actualName);
       };
+      auto validateSpreadArgumentTypeMismatch = [&](const Expr &arg,
+                                                    const ParameterInfo &param,
+                                                    const std::string &expectedTypeName) {
+        std::string actualElementType;
+        if (!resolveArgsPackElementTypeForExpr(arg, executionParams, executionLocals, actualElementType)) {
+          appendExecutionRecord(arg, "spread argument requires args<T> value");
+          return;
+        }
+        ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
+        if (expectedKind != ReturnKind::Unknown) {
+          ReturnKind actualKind = returnKindForTypeName(actualElementType);
+          const bool softwareNumericCompatible =
+              (expectedKind == ReturnKind::Integer &&
+               (actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
+                actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+                actualKind == ReturnKind::Integer)) ||
+              (expectedKind == ReturnKind::Decimal &&
+               (actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
+                actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+                actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
+                actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal)) ||
+              (expectedKind == ReturnKind::Complex &&
+               (actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
+                actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+                actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
+                actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal ||
+                actualKind == ReturnKind::Complex));
+          if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array || actualKind == expectedKind ||
+              softwareNumericCompatible) {
+            return;
+          }
+          const std::string expectedName = typeNameForReturnKind(expectedKind);
+          const std::string actualName = typeNameForReturnKind(actualKind);
+          if (expectedName.empty() || actualName.empty()) {
+            return;
+          }
+          appendArgumentTypeMismatch(param.name, expectedName, actualName);
+          return;
+        }
+        const std::string expectedStructPath =
+            resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
+        if (expectedStructPath.empty()) {
+          if (normalizeBindingTypeName(actualElementType) != normalizeBindingTypeName(expectedTypeName)) {
+            appendArgumentTypeMismatch(param.name, expectedTypeName, normalizeBindingTypeName(actualElementType));
+          }
+          return;
+        }
+        const std::string actualStructPath =
+            resolveStructTypePath(actualElementType, expr.namespacePrefix, structNames_);
+        if (!actualStructPath.empty()) {
+          if (actualStructPath != expectedStructPath) {
+            appendArgumentTypeMismatch(param.name, expectedStructPath, actualStructPath);
+          }
+          return;
+        }
+        appendArgumentTypeMismatch(param.name, expectedStructPath, normalizeBindingTypeName(actualElementType));
+      };
       for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
         const ParameterInfo &param = calleeParams[paramIndex];
         if (paramIndex == packedParamIndex) {
@@ -1602,6 +1720,10 @@ bool SemanticsValidator::validateExecutions() {
           }
           for (const Expr *arg : packedArgs) {
             if (arg == nullptr || explicitArgs.count(arg) == 0) {
+              continue;
+            }
+            if (arg->isSpread) {
+              validateSpreadArgumentTypeMismatch(*arg, param, packElementType);
               continue;
             }
             validateArgumentTypeMismatch(*arg, param, packElementType);
