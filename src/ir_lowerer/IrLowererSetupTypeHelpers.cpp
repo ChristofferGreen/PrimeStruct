@@ -809,6 +809,14 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
+  std::string normalizedOriginalMethodName = methodName;
+  if (!normalizedOriginalMethodName.empty() && normalizedOriginalMethodName.front() == '/') {
+    normalizedOriginalMethodName.erase(normalizedOriginalMethodName.begin());
+  }
+  const bool isExplicitCanonicalMapMethodAlias =
+      normalizedOriginalMethodName.rfind("std/collections/map/", 0) == 0;
+  const bool isExplicitCompatibilityMapMethodAlias =
+      isExplicitMapMethodAlias && !isExplicitCanonicalMapMethodAlias;
   std::string normalizedTypeName = typeName;
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.erase(normalizedTypeName.begin());
@@ -820,9 +828,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return candidate == "map" || candidate == "std/collections/map";
   };
   auto shouldPreferCanonicalMapPath = [&](const std::string &candidate) {
-    return !isExplicitMapMethodAlias && !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
+    return !isExplicitCompatibilityMapMethodAlias && !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
            isMapReceiverTarget(candidate) &&
-           (normalizedMethodName == "count" || normalizedMethodName == "at" ||
+           (isExplicitCanonicalMapMethodAlias || normalizedMethodName == "count" || normalizedMethodName == "at" ||
             normalizedMethodName == "at_unsafe");
   };
   auto findMethodDefinitionByPath = [&](const std::string &path) -> const Definition * {

@@ -425,6 +425,40 @@ void indent(std::ostringstream &out, int depth) {
   }
 }
 
+void printTransforms(std::ostringstream &out, const std::vector<Transform> &transforms) {
+  if (transforms.empty()) {
+    return;
+  }
+  out << "[";
+  for (size_t i = 0; i < transforms.size(); ++i) {
+    if (i > 0) {
+      out << ", ";
+    }
+    out << transforms[i].name;
+    if (!transforms[i].templateArgs.empty()) {
+      out << "<";
+      for (size_t t = 0; t < transforms[i].templateArgs.size(); ++t) {
+        if (t > 0) {
+          out << ", ";
+        }
+        out << transforms[i].templateArgs[t];
+      }
+      out << ">";
+    }
+    if (!transforms[i].arguments.empty()) {
+      out << "(";
+      for (size_t argIndex = 0; argIndex < transforms[i].arguments.size(); ++argIndex) {
+        if (argIndex > 0) {
+          out << ", ";
+        }
+        out << transforms[i].arguments[argIndex];
+      }
+      out << ")";
+    }
+  }
+  out << "] ";
+}
+
 void printExpr(std::ostringstream &out, const Expr &expr) {
   if (expr.isSpread) {
     out << "[spread] ";

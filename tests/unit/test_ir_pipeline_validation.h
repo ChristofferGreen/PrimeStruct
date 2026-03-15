@@ -2084,7 +2084,7 @@ TEST_CASE("ir lowerer inference call-return setup resolves canonical namespaced 
   CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup keeps explicit compatibility map count unresolved without defs") {
+TEST_CASE("ir lowerer inference call-return setup keeps explicit compatibility map count on direct fallback") {
   primec::Definition receiverCountDef;
   receiverCountDef.fullPath = "/map/count";
   primec::Definition canonicalCountDef;
@@ -2148,16 +2148,16 @@ TEST_CASE("ir lowerer inference call-return setup keeps explicit compatibility m
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
   CHECK(resolveMethodCalls == 0);
 
   resolveReceiverHelper = false;
   resolveMethodCalls = 0;
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
   CHECK(resolveMethodCalls == 0);
 }
 
@@ -17467,7 +17467,7 @@ TEST_CASE("ir lowerer setup type helper rejects slash-path map helpers on map re
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "/std/collections/map/at", "map", "", defMap, error) == nullptr);
-  CHECK(error == "unknown method: /map/at");
+  CHECK(error == "unknown method: /std/collections/map/at");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
@@ -17510,7 +17510,7 @@ TEST_CASE("ir lowerer setup type helper reports method target lookup diagnostics
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "/std/collections/map/missing", "map", "", defMap, error) == nullptr);
-  CHECK(error == "unknown method: /map/missing");
+  CHECK(error == "unknown method: /std/collections/map/missing");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
@@ -17984,7 +17984,7 @@ TEST_CASE("ir lowerer setup type helper rejects slash-path map methods from expr
         defMap,
         error);
     CHECK(resolved == nullptr);
-    CHECK(error == expectedError);
+    CHECK(error == std::string(expectedError));
   };
 
   expectUnknownMethod("/map/count", {receiverExpr}, "unknown method: /map/count");
@@ -18054,7 +18054,7 @@ TEST_CASE("ir lowerer setup type helper rejects canonical fallback for explicit 
         defMap,
         error);
     CHECK(resolved == nullptr);
-    CHECK(error == expectedError);
+    CHECK(error == std::string(expectedError));
   };
 
   expectUnknownMethod("/map/contains", "unknown method: /map/contains");

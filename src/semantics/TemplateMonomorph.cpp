@@ -49,6 +49,24 @@ ResolvedType resolveTypeString(std::string input,
                                Context &ctx,
                                std::string &error);
 
+bool inferImplicitTemplateArgs(const Definition &def,
+                               const Expr &callExpr,
+                               const LocalTypeMap &locals,
+                               const std::vector<ParameterInfo> &params,
+                               const SubstMap &mapping,
+                               const std::unordered_set<std::string> &allowedParams,
+                               const std::string &namespacePrefix,
+                               Context &ctx,
+                               bool allowMathBare,
+                               std::vector<std::string> &outArgs,
+                               std::string &error);
+
+bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
+                                          const SubstMap &mapping,
+                                          const std::unordered_set<std::string> &allowedParams,
+                                          const std::string &namespacePrefix,
+                                          Context &ctx);
+
 bool isNonTypeTransformName(const std::string &name) {
   return name == "return" || name == "effects" || name == "capabilities" || name == "mut" || name == "copy" ||
          name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "on_error" ||
@@ -781,7 +799,8 @@ std::string resolveStructLikeTypePathForTemplatedVectorFallback(const std::strin
 std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr,
                                                                 const LocalTypeMap &locals,
                                                                 const std::string &namespacePrefix,
-                                                                const Context &ctx) {
+                                                                const Context &ctx,
+                                                                bool allowMathBare) {
   if (expr.kind != Expr::Kind::Call || expr.isBinding) {
     return {};
   }
@@ -841,6 +860,26 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
     return resolveStructLikeTypePathForTemplatedVectorFallback(returnType, defIt->second.namespacePrefix, ctx);
   }
   return {};
+}
+
+bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
+                                          const SubstMap &mapping,
+                                          const std::unordered_set<std::string> &allowedParams,
+                                          const std::string &namespacePrefix,
+                                          Context &ctx) {
+  if (typeText.empty()) {
+    return false;
+  }
+  std::string localError;
+  ResolvedType resolvedType = resolveTypeString(typeText, mapping, allowedParams, namespacePrefix, ctx, localError);
+  if (!localError.empty()) {
+    return false;
+  }
+  std::string normalized = normalizeBindingTypeName(resolvedType.text);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized.rfind("std/collections/experimental_map/Map__", 0) == 0;
 }
 
 bool inferDefinitionReturnBindingForTemplatedFallback(const Definition &def,
@@ -1086,7 +1125,7 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
         continue;
       }
       const std::string actualStructPath =
-          resolveStructLikeExprPathForTemplatedVectorFallback(*ordered[i], locals, namespacePrefix, ctx);
+          resolveStructLikeExprPathForTemplatedVectorFallback(*ordered[i], locals, namespacePrefix, ctx, allowMathBare);
       if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
         return true;
       }
@@ -2254,22 +2293,6 @@ bool rewriteExpr(Expr &expr,
     }
     return resolvesBuiltinMapReceiver(mapHelperReceiverExpr(expr));
   };
-  auto resolvesExperimentalMapValueTypeText = [&](const std::string &typeText) {
-    if (typeText.empty()) {
-      return false;
-    }
-    std::string localError;
-    ResolvedType resolvedType =
-        resolveTypeString(typeText, mapping, allowedParams, namespacePrefix, ctx, localError);
-    if (!localError.empty()) {
-      return false;
-    }
-    std::string normalized = normalizeBindingTypeName(resolvedType.text);
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    return normalized.rfind("std/collections/experimental_map/Map__", 0) == 0;
-  };
   auto resolvesExperimentalMapValueReceiver = [&](const Expr *receiverExpr) {
     if (receiverExpr == nullptr) {
       return false;
@@ -2286,12 +2309,16 @@ bool rewriteExpr(Expr &expr,
     };
     BindingInfo receiverInfo;
     if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
-        resolvesExperimentalMapValueTypeText(unwrapBindingTypeText(receiverInfo))) {
+        resolvesExperimentalMapValueTypeText(unwrapBindingTypeText(receiverInfo),
+                                             mapping,
+                                             allowedParams,
+                                             namespacePrefix,
+                                             ctx)) {
       return true;
     }
     const std::string inferredReceiverType =
         inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare);
-    return resolvesExperimentalMapValueTypeText(inferredReceiverType);
+    return resolvesExperimentalMapValueTypeText(inferredReceiverType, mapping, allowedParams, namespacePrefix, ctx);
   };
   auto experimentalMapHelperPathForCanonicalHelper = [&](const std::string &path) -> std::string {
     if (path == "/std/collections/map/count") {
@@ -2417,7 +2444,7 @@ bool rewriteExpr(Expr &expr,
     if (!bindingInfo.typeTemplateArg.empty()) {
       bindingTypeText += "<" + bindingInfo.typeTemplateArg + ">";
     }
-    if (!resolvesExperimentalMapValueTypeText(bindingTypeText)) {
+    if (!resolvesExperimentalMapValueTypeText(bindingTypeText, mapping, allowedParams, namespacePrefix, ctx)) {
       return;
     }
     rewriteCanonicalExperimentalMapConstructorExpr(bindingExpr.args.front());
@@ -2497,6 +2524,109 @@ bool rewriteExpr(Expr &expr,
   if (expr.isBinding) {
     rewriteCanonicalExperimentalMapConstructorBinding(expr);
   }
+
+  std::function<bool(const Definition &, bool)> rewriteCanonicalExperimentalMapConstructorArgs =
+      [&](const Definition &targetDef, bool methodCallSyntax) -> bool {
+    auto rewriteNestedExperimentalMapConstructorArgs = [&](auto &self, Expr &candidate) -> void {
+      if (candidate.isBinding && candidate.args.size() == 1) {
+        self(self, candidate.args.front());
+        return;
+      }
+      if (candidate.kind != Expr::Kind::Call) {
+        return;
+      }
+      rewriteCanonicalExperimentalMapConstructorExpr(candidate);
+      for (auto &arg : candidate.args) {
+        self(self, arg);
+      }
+      for (auto &bodyArg : candidate.bodyArguments) {
+        self(self, bodyArg);
+      }
+    };
+    std::vector<ParameterInfo> callParams;
+    if (!targetDef.parameters.empty()) {
+      callParams.reserve(targetDef.parameters.size());
+      for (const auto &paramExpr : targetDef.parameters) {
+        ParameterInfo paramInfo;
+        paramInfo.name = paramExpr.name;
+        inferCallTargetBinding(paramExpr, paramInfo.binding);
+        if (paramExpr.args.size() == 1) {
+          paramInfo.defaultExpr = &paramExpr.args.front();
+        }
+        callParams.push_back(std::move(paramInfo));
+      }
+    } else if (isStructDefinition(targetDef)) {
+      for (const auto &fieldExpr : targetDef.statements) {
+        if (!fieldExpr.isBinding) {
+          continue;
+        }
+        ParameterInfo fieldInfo;
+        fieldInfo.name = fieldExpr.name;
+        inferCallTargetBinding(fieldExpr, fieldInfo.binding);
+        if (fieldExpr.args.size() == 1) {
+          fieldInfo.defaultExpr = &fieldExpr.args.front();
+        }
+        callParams.push_back(std::move(fieldInfo));
+      }
+    }
+    if (callParams.empty()) {
+      return true;
+    }
+    std::vector<const Expr *> orderedArgs(callParams.size(), nullptr);
+    size_t callArgStart = 0;
+    if (methodCallSyntax && expr.args.size() == callParams.size() + 1) {
+      // Method-call sugar prepends the implicit receiver expression.
+      callArgStart = 1;
+    }
+    size_t positionalIndex = 0;
+    for (size_t i = callArgStart; i < expr.args.size(); ++i) {
+      if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+        const std::string &name = *expr.argNames[i];
+        size_t index = callParams.size();
+        for (size_t p = 0; p < callParams.size(); ++p) {
+          if (callParams[p].name == name) {
+            index = p;
+            break;
+          }
+        }
+        if (index >= callParams.size() || orderedArgs[index] != nullptr) {
+          return true;
+        }
+        orderedArgs[index] = &expr.args[i];
+        continue;
+      }
+      while (positionalIndex < orderedArgs.size() && orderedArgs[positionalIndex] != nullptr) {
+        ++positionalIndex;
+      }
+      if (positionalIndex >= orderedArgs.size()) {
+        return true;
+      }
+      orderedArgs[positionalIndex] = &expr.args[i];
+      ++positionalIndex;
+    }
+    for (size_t paramIndex = 0; paramIndex < callParams.size() && paramIndex < orderedArgs.size(); ++paramIndex) {
+      const BindingInfo &paramBinding = callParams[paramIndex].binding;
+      std::string typeText = paramBinding.typeName;
+      if (!paramBinding.typeTemplateArg.empty()) {
+        typeText += "<" + paramBinding.typeTemplateArg + ">";
+      }
+      if (!resolvesExperimentalMapValueTypeText(typeText, mapping, allowedParams, namespacePrefix, ctx)) {
+        continue;
+      }
+      const Expr *orderedArg = orderedArgs[paramIndex];
+      if (orderedArg == nullptr) {
+        continue;
+      }
+      for (auto &argExpr : expr.args) {
+        if (&argExpr != orderedArg) {
+          continue;
+        }
+        rewriteNestedExperimentalMapConstructorArgs(rewriteNestedExperimentalMapConstructorArgs, argExpr);
+        break;
+      }
+    }
+    return true;
+  };
 
   bool allConcrete = true;
   for (auto &templArg : expr.templateArgs) {
@@ -2617,108 +2747,6 @@ bool rewriteExpr(Expr &expr,
       error = "template arguments are only supported on templated definitions: " + resolvedPath;
       return false;
     }
-    auto rewriteCanonicalExperimentalMapConstructorArgs = [&](const Definition &targetDef,
-                                                             bool methodCallSyntax) -> bool {
-      auto rewriteNestedExperimentalMapConstructorArgs = [&](auto &self, Expr &candidate) -> void {
-        if (candidate.isBinding && candidate.args.size() == 1) {
-          self(self, candidate.args.front());
-          return;
-        }
-        if (candidate.kind != Expr::Kind::Call) {
-          return;
-        }
-        rewriteCanonicalExperimentalMapConstructorExpr(candidate);
-        for (auto &arg : candidate.args) {
-          self(self, arg);
-        }
-        for (auto &bodyArg : candidate.bodyArguments) {
-          self(self, bodyArg);
-        }
-      };
-      std::vector<ParameterInfo> callParams;
-      if (!targetDef.parameters.empty()) {
-        callParams.reserve(targetDef.parameters.size());
-        for (const auto &paramExpr : targetDef.parameters) {
-          ParameterInfo paramInfo;
-          paramInfo.name = paramExpr.name;
-          inferCallTargetBinding(paramExpr, paramInfo.binding);
-          if (paramExpr.args.size() == 1) {
-            paramInfo.defaultExpr = &paramExpr.args.front();
-          }
-          callParams.push_back(std::move(paramInfo));
-        }
-      } else if (isStructDefinition(targetDef)) {
-        for (const auto &fieldExpr : targetDef.statements) {
-          if (!fieldExpr.isBinding) {
-            continue;
-          }
-          ParameterInfo fieldInfo;
-          fieldInfo.name = fieldExpr.name;
-          inferCallTargetBinding(fieldExpr, fieldInfo.binding);
-          if (fieldExpr.args.size() == 1) {
-            fieldInfo.defaultExpr = &fieldExpr.args.front();
-          }
-          callParams.push_back(std::move(fieldInfo));
-        }
-      }
-      if (callParams.empty()) {
-        return true;
-      }
-      std::vector<const Expr *> orderedArgs(callParams.size(), nullptr);
-      size_t callArgStart = 0;
-      if (methodCallSyntax && expr.args.size() == callParams.size() + 1) {
-        // Method-call sugar prepends the implicit receiver expression.
-        callArgStart = 1;
-      }
-      size_t positionalIndex = 0;
-      for (size_t i = callArgStart; i < expr.args.size(); ++i) {
-        if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
-          const std::string &name = *expr.argNames[i];
-          size_t index = callParams.size();
-          for (size_t p = 0; p < callParams.size(); ++p) {
-            if (callParams[p].name == name) {
-              index = p;
-              break;
-            }
-          }
-          if (index >= callParams.size() || orderedArgs[index] != nullptr) {
-            return true;
-          }
-          orderedArgs[index] = &expr.args[i];
-          continue;
-        }
-        while (positionalIndex < orderedArgs.size() && orderedArgs[positionalIndex] != nullptr) {
-          ++positionalIndex;
-        }
-        if (positionalIndex >= orderedArgs.size()) {
-          return true;
-        }
-        orderedArgs[positionalIndex] = &expr.args[i];
-        ++positionalIndex;
-      }
-      for (size_t paramIndex = 0; paramIndex < callParams.size() && paramIndex < orderedArgs.size(); ++paramIndex) {
-        const BindingInfo &paramBinding = callParams[paramIndex].binding;
-        std::string typeText = paramBinding.typeName;
-        if (!paramBinding.typeTemplateArg.empty()) {
-          typeText += "<" + paramBinding.typeTemplateArg + ">";
-        }
-        if (!resolvesExperimentalMapValueTypeText(typeText)) {
-          continue;
-        }
-        const Expr *orderedArg = orderedArgs[paramIndex];
-        if (orderedArg == nullptr) {
-          continue;
-        }
-        for (auto &argExpr : expr.args) {
-          if (&argExpr != orderedArg) {
-            continue;
-          }
-          rewriteNestedExperimentalMapConstructorArgs(rewriteNestedExperimentalMapConstructorArgs, argExpr);
-          break;
-        }
-      }
-      return true;
-    };
     auto defIt = ctx.sourceDefs.find(resolveCalleePath(expr, namespacePrefix, ctx));
     if (defIt != ctx.sourceDefs.end()) {
       if (!rewriteCanonicalExperimentalMapConstructorArgs(defIt->second, false)) {
@@ -2738,7 +2766,7 @@ bool rewriteExpr(Expr &expr,
       if (!targetInfo.typeTemplateArg.empty()) {
         targetTypeText += "<" + targetInfo.typeTemplateArg + ">";
       }
-      if (!resolvesExperimentalMapValueTypeText(targetTypeText)) {
+      if (!resolvesExperimentalMapValueTypeText(targetTypeText, mapping, allowedParams, namespacePrefix, ctx)) {
         return;
       }
       Expr &valueExpr = expr.args[1];
@@ -2970,7 +2998,8 @@ bool rewriteDefinition(Definition &def,
       if (!inferredReturnInfo.typeTemplateArg.empty()) {
         inferredReturnType += "<" + inferredReturnInfo.typeTemplateArg + ">";
       }
-      expectedExperimentalMapReturn = resolvesExperimentalMapValueTypeText(inferredReturnType);
+      expectedExperimentalMapReturn =
+          resolvesExperimentalMapValueTypeText(inferredReturnType, mapping, allowedParams, def.namespacePrefix, ctx);
     }
   }
   auto rewriteCanonicalExperimentalMapReturnConstructors = [&](auto &self, Expr &candidate) -> void {
