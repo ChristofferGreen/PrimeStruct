@@ -3310,11 +3310,8 @@ bool rewriteExpr(Expr &expr,
       if (!targetInfo.typeTemplateArg.empty()) {
         targetTypeText += "<" + targetInfo.typeTemplateArg + ">";
       }
-      if (!resolvesExperimentalMapValueTypeText(targetTypeText, mapping, allowedParams, namespacePrefix, ctx)) {
-        return;
-      }
       Expr &valueExpr = expr.args[1];
-      if (!rewriteNestedExperimentalMapConstructorValue(valueExpr)) {
+      if (!rewriteExperimentalMapTargetValueForType(targetTypeText, valueExpr)) {
         return;
       }
     };
