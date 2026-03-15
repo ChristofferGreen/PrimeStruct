@@ -2189,6 +2189,65 @@ bool rewriteExpr(Expr &expr,
     }
     return {};
   };
+  auto experimentalMapConstructorHelperPath = [&](size_t argumentCount) -> std::string {
+    switch (argumentCount) {
+    case 0:
+      return "/std/collections/experimental_map/mapNew";
+    case 2:
+      return "/std/collections/experimental_map/mapSingle";
+    case 4:
+      return "/std/collections/experimental_map/mapPair";
+    case 6:
+      return "/std/collections/experimental_map/mapTriple";
+    case 8:
+      return "/std/collections/experimental_map/mapQuad";
+    case 10:
+      return "/std/collections/experimental_map/mapQuint";
+    case 12:
+      return "/std/collections/experimental_map/mapSext";
+    case 14:
+      return "/std/collections/experimental_map/mapSept";
+    case 16:
+      return "/std/collections/experimental_map/mapOct";
+    default:
+      return {};
+    }
+  };
+  auto rewriteCanonicalExperimentalMapConstructorBinding = [&](Expr &bindingExpr) {
+    if (!bindingExpr.isBinding || bindingExpr.args.size() != 1) {
+      return;
+    }
+    BindingInfo bindingInfo;
+    if (!extractExplicitBindingType(bindingExpr, bindingInfo) || bindingInfo.typeTemplateArg.empty()) {
+      return;
+    }
+    const std::string resolvedBindingPath =
+        resolveNameToPath(bindingInfo.typeName, namespacePrefix, ctx.importAliases, ctx.sourceDefs);
+    if (resolvedBindingPath != "/std/collections/experimental_map/Map") {
+      return;
+    }
+    std::vector<std::string> mapArgs;
+    if (!splitTopLevelTemplateArgs(bindingInfo.typeTemplateArg, mapArgs) || mapArgs.size() != 2) {
+      return;
+    }
+    Expr &initializer = bindingExpr.args.front();
+    if (initializer.kind != Expr::Kind::Call || initializer.isBinding || initializer.isMethodCall) {
+      return;
+    }
+    if (resolveCalleePath(initializer, namespacePrefix, ctx) != "/std/collections/map/map") {
+      return;
+    }
+    const std::string helperPath = experimentalMapConstructorHelperPath(initializer.args.size());
+    if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
+      return;
+    }
+    initializer.name = helperPath;
+    initializer.namespacePrefix.clear();
+  };
+
+  if (expr.isBinding) {
+    rewriteCanonicalExperimentalMapConstructorBinding(expr);
+  }
 
   bool allConcrete = true;
   for (auto &templArg : expr.templateArgs) {
