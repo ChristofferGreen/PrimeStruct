@@ -498,6 +498,39 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("native materializes variadic array packs with indexed count methods") {
+  const std::string source = R"(
+[return<int>]
+score_arrays([args<array<i32>>] values) {
+  return(plus(values[0i32].count(), values[2i32].count()))
+}
+
+[return<int>]
+forward([args<array<i32>>] values) {
+  return(score_arrays([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<array<i32>>] values) {
+  return(score_arrays(array<i32>(1i32), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(plus(score_arrays(array<i32>(1i32, 2i32), array<i32>(3i32), array<i32>(4i32, 5i32, 6i32)),
+              plus(forward(array<i32>(7i32), array<i32>(8i32, 9i32), array<i32>(10i32)),
+                   forward_mixed(array<i32>(11i32, 12i32), array<i32>(13i32, 14i32, 15i32)))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_array.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_array").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("native materializes variadic map packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]

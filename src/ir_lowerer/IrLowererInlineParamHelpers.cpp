@@ -36,7 +36,8 @@ bool emitInlineDefinitionCallParameters(
       const bool isStructPack = !paramInfo.structTypeName.empty();
 
       auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
-        if (paramInfo.argsPackElementKind == LocalInfo::Kind::Vector ||
+        if (paramInfo.argsPackElementKind == LocalInfo::Kind::Array ||
+            paramInfo.argsPackElementKind == LocalInfo::Kind::Vector ||
             paramInfo.argsPackElementKind == LocalInfo::Kind::Map) {
           if (!emitExpr(argExpr, callerLocals)) {
             return false;

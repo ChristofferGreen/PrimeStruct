@@ -62,6 +62,11 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     return;
   }
   base = normalizeCollectionBindingTypeName(base);
+  if (base == "array") {
+    infoOut.argsPackElementKind = LocalInfo::Kind::Array;
+    infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+    return;
+  }
   if (base == "vector") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Vector;
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));

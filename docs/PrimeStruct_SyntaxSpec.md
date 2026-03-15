@@ -399,8 +399,9 @@ Bottom-level form therefore has:
   downstream string helpers. Struct packs now also materialize for direct calls plus pure/mixed forwarding across
   `count(...)`, checked/unchecked indexed access, and downstream field/helper resolution. `Result<T, Error>` packs now
   preserve indexed `Result.why(...)` and `?` behavior across direct, pure-spread, and mixed-forwarded IR-backed
-  materialization, and `vector<T>` plus `map<K, V>` packs preserve indexed downstream `count()` resolution across
-  those same forwarding modes; other unsupported non-string element support remains a separate follow-up slice.
+  materialization, and `array<T>` plus `vector<T>` plus `map<K, V>` packs preserve indexed downstream `count()`
+  resolution across those same forwarding modes; other unsupported non-string element support remains a separate
+  follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 

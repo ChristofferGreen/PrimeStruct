@@ -639,6 +639,47 @@ main() {
   CHECK(result == 11);
 }
 
+TEST_CASE("ir lowerer materializes variadic array packs with indexed count methods") {
+  const std::string source = R"(
+[return<int>]
+score_arrays([args<array<i32>>] values) {
+  return(plus(values[0i32].count(), values[2i32].count()))
+}
+
+[return<int>]
+forward([args<array<i32>>] values) {
+  return(score_arrays([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<array<i32>>] values) {
+  return(score_arrays(array<i32>(1i32), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(plus(score_arrays(array<i32>(1i32, 2i32), array<i32>(3i32), array<i32>(4i32, 5i32, 6i32)),
+              plus(forward(array<i32>(7i32), array<i32>(8i32, 9i32), array<i32>(10i32)),
+                   forward_mixed(array<i32>(11i32, 12i32), array<i32>(13i32, 14i32, 15i32)))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 11);
+}
+
 TEST_CASE("ir lowerer materializes variadic map packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]
