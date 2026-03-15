@@ -873,6 +873,8 @@ main() {
 
 TEST_CASE("if rejects builtin string map access mixed with numeric branch") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}

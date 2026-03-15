@@ -805,7 +805,12 @@ bool inferDefinitionReturnBindingForTemplatedFallback(const Definition &def,
     if (stmt.isBinding) {
       BindingInfo binding;
       if (extractExplicitBindingType(stmt, binding)) {
-        locals[stmt.name] = binding;
+        if (binding.typeName == "auto" && stmt.args.size() == 1 &&
+            inferBindingTypeForMonomorph(stmt.args.front(), defParams, locals, allowMathBare, ctx, binding)) {
+          locals[stmt.name] = binding;
+        } else {
+          locals[stmt.name] = binding;
+        }
       } else if (stmt.args.size() == 1 &&
                  inferBindingTypeForMonomorph(stmt.args.front(), defParams, locals, allowMathBare, ctx, binding)) {
         locals[stmt.name] = binding;
@@ -1351,7 +1356,12 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
     if (bodyExpr.isBinding) {
       BindingInfo binding;
       if (extractExplicitBindingType(bodyExpr, binding)) {
-        blockLocals[bodyExpr.name] = binding;
+        if (binding.typeName == "auto" && bodyExpr.args.size() == 1 &&
+            inferBindingTypeForMonomorph(bodyExpr.args.front(), params, blockLocals, allowMathBare, ctx, binding)) {
+          blockLocals[bodyExpr.name] = binding;
+        } else {
+          blockLocals[bodyExpr.name] = binding;
+        }
       } else if (bodyExpr.args.size() == 1) {
         if (inferBindingTypeForMonomorph(bodyExpr.args.front(), params, blockLocals, allowMathBare, ctx, binding)) {
           blockLocals[bodyExpr.name] = binding;
@@ -2016,7 +2026,12 @@ bool rewriteExpr(Expr &expr,
       }
       BindingInfo info;
       if (extractExplicitBindingType(param, info)) {
-        lambdaLocals[param.name] = info;
+        if (info.typeName == "auto" && param.args.size() == 1 &&
+            inferBindingTypeForMonomorph(param.args.front(), {}, {}, allowMathBare, ctx, info)) {
+          lambdaLocals[param.name] = info;
+        } else {
+          lambdaLocals[param.name] = info;
+        }
       } else if (param.isBinding && param.args.size() == 1) {
         if (inferBindingTypeForMonomorph(param.args.front(), {}, {}, allowMathBare, ctx, info)) {
           lambdaLocals[param.name] = info;
@@ -2030,7 +2045,12 @@ bool rewriteExpr(Expr &expr,
       }
       BindingInfo info;
       if (extractExplicitBindingType(bodyArg, info)) {
-        lambdaLocals[bodyArg.name] = info;
+        if (info.typeName == "auto" && bodyArg.args.size() == 1 &&
+            inferBindingTypeForMonomorph(bodyArg.args.front(), params, lambdaLocals, allowMathBare, ctx, info)) {
+          lambdaLocals[bodyArg.name] = info;
+        } else {
+          lambdaLocals[bodyArg.name] = info;
+        }
       } else if (bodyArg.isBinding && bodyArg.args.size() == 1) {
         if (inferBindingTypeForMonomorph(bodyArg.args.front(), params, lambdaLocals, allowMathBare, ctx, info)) {
           lambdaLocals[bodyArg.name] = info;
@@ -2053,6 +2073,65 @@ bool rewriteExpr(Expr &expr,
       expr.templateArgs = std::move(explicitArgs);
     }
   }
+
+  auto isCanonicalBuiltinMapHelperPath = [](const std::string &path) {
+    return path == "/std/collections/map/count" || path == "/std/collections/map/contains" ||
+           path == "/std/collections/map/tryAt" || path == "/std/collections/map/at" ||
+           path == "/std/collections/map/at_unsafe";
+  };
+  auto mapHelperReceiverExpr = [&](const Expr &candidate) -> const Expr * {
+    if (candidate.isMethodCall) {
+      return candidate.args.empty() ? nullptr : &candidate.args.front();
+    }
+    if (candidate.args.empty()) {
+      return nullptr;
+    }
+    if (hasNamedArguments(candidate.argNames)) {
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          return &candidate.args[i];
+        }
+      }
+    }
+    return &candidate.args.front();
+  };
+  auto resolvesBuiltinMapReceiver = [&](const Expr *receiverExpr) {
+    if (receiverExpr == nullptr) {
+      return false;
+    }
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo)) {
+      std::string receiverType = normalizeCollectionReceiverTypeName(receiverInfo.typeName);
+      if ((receiverType == "Reference" || receiverType == "Pointer") && !receiverInfo.typeTemplateArg.empty()) {
+        std::string innerBase;
+        std::string innerArgText;
+        if (splitTemplateTypeName(receiverInfo.typeTemplateArg, innerBase, innerArgText)) {
+          receiverType = normalizeCollectionReceiverTypeName(innerBase);
+        }
+      }
+      if (receiverType == "map") {
+        return true;
+      }
+    }
+    const std::string inferredReceiverType =
+        inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare);
+    if (inferredReceiverType.empty()) {
+      return false;
+    }
+    std::string receiverBase;
+    std::string receiverArgText;
+    if (splitTemplateTypeName(inferredReceiverType, receiverBase, receiverArgText)) {
+      return normalizeCollectionReceiverTypeName(receiverBase) == "map";
+    }
+    return normalizeCollectionReceiverTypeName(inferredReceiverType) == "map";
+  };
+  auto shouldDeferCanonicalBuiltinMapHelperTemplateRewrite = [&](const std::string &path) {
+    if (!expr.templateArgs.empty() || !isCanonicalBuiltinMapHelperPath(path)) {
+      return false;
+    }
+    return resolvesBuiltinMapReceiver(mapHelperReceiverExpr(expr));
+  };
 
   bool allConcrete = true;
   for (auto &templArg : expr.templateArgs) {
@@ -2135,6 +2214,9 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (expr.templateArgs.empty()) {
+        if (shouldDeferCanonicalBuiltinMapHelperTemplateRewrite(resolvedPath)) {
+          return true;
+        }
         error = "template arguments required for " + resolvedPath;
         return false;
       }
@@ -2204,6 +2286,9 @@ bool rewriteExpr(Expr &expr,
           }
         }
         if (expr.templateArgs.empty()) {
+          if (shouldDeferCanonicalBuiltinMapHelperTemplateRewrite(methodPath)) {
+            return true;
+          }
           error = "template arguments required for " + methodPath;
           return false;
         }
@@ -2235,7 +2320,12 @@ bool rewriteExpr(Expr &expr,
     }
     BindingInfo info;
     if (extractExplicitBindingType(arg, info)) {
-      bodyLocals[arg.name] = info;
+      if (info.typeName == "auto" && arg.args.size() == 1 &&
+          inferBindingTypeForMonomorph(arg.args.front(), params, bodyLocals, allowMathBare, ctx, info)) {
+        bodyLocals[arg.name] = info;
+      } else {
+        bodyLocals[arg.name] = info;
+      }
     } else if (arg.isBinding && arg.args.size() == 1) {
       if (inferBindingTypeForMonomorph(arg.args.front(), params, bodyLocals, allowMathBare, ctx, info)) {
         bodyLocals[arg.name] = info;
@@ -2264,7 +2354,12 @@ bool rewriteDefinition(Definition &def,
     }
     BindingInfo info;
     if (extractExplicitBindingType(param, info)) {
-      locals[param.name] = info;
+      if (info.typeName == "auto" && param.args.size() == 1 &&
+          inferBindingTypeForMonomorph(param.args.front(), {}, {}, allowMathBare, ctx, info)) {
+        locals[param.name] = info;
+      } else {
+        locals[param.name] = info;
+      }
       ParameterInfo paramInfo;
       paramInfo.name = param.name;
       paramInfo.binding = info;
@@ -2289,7 +2384,12 @@ bool rewriteDefinition(Definition &def,
     }
     BindingInfo info;
     if (extractExplicitBindingType(stmt, info)) {
-      locals[stmt.name] = info;
+      if (info.typeName == "auto" && stmt.args.size() == 1 &&
+          inferBindingTypeForMonomorph(stmt.args.front(), params, locals, allowMathBare, ctx, info)) {
+        locals[stmt.name] = info;
+      } else {
+        locals[stmt.name] = info;
+      }
     } else if (stmt.isBinding && stmt.args.size() == 1) {
       if (inferBindingTypeForMonomorph(stmt.args.front(), params, locals, allowMathBare, ctx, info)) {
         locals[stmt.name] = info;

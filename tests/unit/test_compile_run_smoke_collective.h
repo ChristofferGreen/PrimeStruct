@@ -434,6 +434,8 @@ main() {
 
 TEST_CASE("compiles and runs map indexing") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [mut] values{map<i32, i32>{1i32=10i32, 2i32=20i32}}
@@ -458,6 +460,8 @@ main() {
 
 TEST_CASE("compiles and runs map indexing with u64 keys") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(map<u64, i32>{1u64=7i32, 9u64=1i32}[1u64])
@@ -481,6 +485,8 @@ main() {
 
 TEST_CASE("compiles and runs string-keyed map indexing in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(map<string, i32>{"a"utf8=1i32, "b"utf8=4i32}["b"utf8])
@@ -496,6 +502,8 @@ main() {
 
 TEST_CASE("string-keyed map indexing checks missing key in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(map<string, i32>{"a"utf8=1i32}["missing"utf8])
@@ -513,6 +521,8 @@ main() {
 
 TEST_CASE("map indexing checks missing key") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [mut] values{map<i32, i32>{1i32=10i32, 2i32=20i32}}
@@ -541,6 +551,8 @@ main() {
 
 TEST_CASE("map indexing rejects mismatched key type in vm/native") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=10i32}}

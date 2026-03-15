@@ -1183,18 +1183,147 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto extractExperimentalMapFieldTypes = [&](const BindingInfo &binding,
+                                                std::string &keyTypeOut,
+                                                std::string &valueTypeOut) -> bool {
+      auto extractFromTypeText = [&](std::string normalizedType) -> bool {
+        while (true) {
+          std::string base;
+          std::string argText;
+          if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+            base = normalizeBindingTypeName(base);
+            if (base == "Reference" || base == "Pointer") {
+              std::vector<std::string> args;
+              if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+                return false;
+              }
+              normalizedType = normalizeBindingTypeName(args.front());
+              continue;
+            }
+          }
+
+          std::string resolvedPath = normalizedType;
+          if (!resolvedPath.empty() && resolvedPath.front() != '/') {
+            resolvedPath.insert(resolvedPath.begin(), '/');
+          }
+          std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
+          if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
+            normalizedResolvedPath.erase(normalizedResolvedPath.begin());
+          }
+          if (normalizedResolvedPath.rfind("std/collections/experimental_map/Map__", 0) != 0) {
+            return false;
+          }
+          auto defIt = defMap_.find(resolvedPath);
+          if (defIt == defMap_.end() || !defIt->second) {
+            return false;
+          }
+          std::string keysElementType;
+          std::string payloadsElementType;
+          for (const auto &fieldExpr : defIt->second->statements) {
+            if (!fieldExpr.isBinding) {
+              continue;
+            }
+            BindingInfo fieldBinding;
+            std::optional<std::string> restrictType;
+            std::string parseError;
+            if (!parseBindingInfo(fieldExpr,
+                                  defIt->second->namespacePrefix,
+                                  structNames_,
+                                  importAliases_,
+                                  fieldBinding,
+                                  restrictType,
+                                  parseError)) {
+              continue;
+            }
+            if (normalizeBindingTypeName(fieldBinding.typeName) != "vector" || fieldBinding.typeTemplateArg.empty()) {
+              continue;
+            }
+            std::vector<std::string> fieldArgs;
+            if (!splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, fieldArgs) || fieldArgs.size() != 1) {
+              continue;
+            }
+            if (fieldExpr.name == "keys") {
+              keysElementType = fieldArgs.front();
+            } else if (fieldExpr.name == "payloads") {
+              payloadsElementType = fieldArgs.front();
+            }
+          }
+          if (keysElementType.empty() || payloadsElementType.empty()) {
+            return false;
+          }
+          keyTypeOut = keysElementType;
+          valueTypeOut = payloadsElementType;
+          return true;
+        }
+      };
+
+      keyTypeOut.clear();
+      valueTypeOut.clear();
+      if (binding.typeTemplateArg.empty()) {
+        return extractFromTypeText(normalizeBindingTypeName(binding.typeName));
+      }
+      return extractFromTypeText(normalizeBindingTypeName(binding.typeName + "<" + binding.typeTemplateArg + ">"));
+    };
+    auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,
+                                          std::string &keyTypeOut,
+                                          std::string &valueTypeOut) -> bool {
+      return extractMapKeyValueTypes(binding, keyTypeOut, valueTypeOut) ||
+             extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
+    };
+    auto resolveExperimentalMapTarget = [&](const Expr &target,
+                                            std::string &keyTypeOut,
+                                            std::string &valueTypeOut) -> bool {
+      keyTypeOut.clear();
+      valueTypeOut.clear();
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          return extractExperimentalMapFieldTypes(*paramBinding, keyTypeOut, valueTypeOut);
+        }
+        auto it = locals.find(target.name);
+        return it != locals.end() &&
+               extractExperimentalMapFieldTypes(it->second, keyTypeOut, valueTypeOut);
+      }
+      if (target.kind != Expr::Kind::Call) {
+        return false;
+      }
+      auto defIt = defMap_.find(resolveCalleePath(target));
+      if (defIt == defMap_.end() || !defIt->second) {
+        return false;
+      }
+      BindingInfo inferredReturn;
+      return inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+             extractExperimentalMapFieldTypes(inferredReturn, keyTypeOut, valueTypeOut);
+    };
+    auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {
+      if (helperName == "count") {
+        return std::string("mapCount");
+      }
+      if (helperName == "contains") {
+        return std::string("mapContains");
+      }
+      if (helperName == "tryAt") {
+        return std::string("mapTryAt");
+      }
+      if (helperName == "at") {
+        return std::string("mapAt");
+      }
+      if (helperName == "at_unsafe") {
+        return std::string("mapAtUnsafe");
+      }
+      return std::string(helperName);
+    };
     resolveMapTarget = [&](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
       keyTypeOut.clear();
       valueTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          return extractMapKeyValueTypes(*paramBinding, keyTypeOut, valueTypeOut);
+          return extractAnyMapKeyValueTypes(*paramBinding, keyTypeOut, valueTypeOut);
         }
         auto it = locals.find(target.name);
         if (it == locals.end()) {
           return false;
         }
-        return extractMapKeyValueTypes(it->second, keyTypeOut, valueTypeOut);
+        return extractAnyMapKeyValueTypes(it->second, keyTypeOut, valueTypeOut);
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collectionTypePath;
@@ -1209,6 +1338,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         auto defIt = defMap_.find(resolveCalleePath(target));
         if (defIt == defMap_.end() || !defIt->second) {
           return false;
+        }
+        BindingInfo inferredReturn;
+        if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+            extractAnyMapKeyValueTypes(inferredReturn, keyTypeOut, valueTypeOut)) {
+          return true;
         }
         for (const auto &transform : defIt->second->transforms) {
           if (transform.name != "return" || transform.templateArgs.size() != 1) {
@@ -1488,7 +1622,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         return "";
       };
-      auto preferredMapMethodTargetForCall = [&](const std::string &helperName) {
+      auto preferredMapMethodTargetForCall = [&](const Expr &receiverExpr, const std::string &helperName) {
+        std::string keyType;
+        std::string valueType;
+        if (resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
+          return preferredExperimentalMapHelperTarget(helperName);
+        }
         const std::string canonical = "/std/collections/map/" + helperName;
         const std::string alias = "/map/" + helperName;
         if (defMap_.count(canonical) > 0 || hasImportedDefinitionPath(canonical)) {
@@ -1534,12 +1673,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return true;
         }
         if (normalizedMethodName == "count" && resolveMapTarget(receiver, keyType, valueType)) {
-          resolvedOut = preferredMapMethodTargetForCall("count");
+          resolvedOut = preferredMapMethodTargetForCall(receiver, "count");
           return true;
         }
         if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt") &&
             resolveMapTarget(receiver, keyType, valueType)) {
-          resolvedOut = preferredMapMethodTargetForCall(normalizedMethodName);
+          resolvedOut = preferredMapMethodTargetForCall(receiver, normalizedMethodName);
           return true;
         }
         if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
@@ -1558,7 +1697,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
             resolveMapTarget(receiver, keyType, valueType)) {
-          resolvedOut = preferredMapMethodTargetForCall(normalizedMethodName);
+          resolvedOut = preferredMapMethodTargetForCall(receiver, normalizedMethodName);
           return true;
         }
         if ((normalizedMethodName == "get" || normalizedMethodName == "ref") &&
@@ -1627,6 +1766,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         kindOut = ReturnKind::Int;
         return true;
       }
+      if (resolvedPath == "/map/contains" || resolvedPath == "/std/collections/map/contains") {
+        kindOut = ReturnKind::Bool;
+        return true;
+      }
       if (resolvedPath == "/string/at" || resolvedPath == "/string/at_unsafe") {
         kindOut = ReturnKind::Int;
         return true;
@@ -1690,10 +1833,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string keyType;
       std::string valueType;
       if (resolveMapTarget(callExpr.args.front(), keyType, valueType)) {
-        if (resolvedPath == "/map/at" || resolvedPath == "/map/at_unsafe" ||
-            resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe") {
-          return false;
-        }
         ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
         if (kind != ReturnKind::Unknown) {
           kindOut = kind;
@@ -1782,7 +1921,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return false;
     };
     const bool shouldInferBuiltinBareMapCountCall =
-        currentDefinitionPath_ == "/std/collections/mapCount";
+        currentDefinitionPath_.find("/mapCount") != std::string::npos;
     auto isUnnamespacedMapCountBuiltinFallbackCall = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
         return false;
@@ -2337,6 +2476,21 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (methodResolved == "/file_error/why") {
           return ReturnKind::String;
         }
+        if ((methodResolved == "/std/collections/map/count" &&
+             hasImportedDefinitionPath("/std/collections/map/count")) ||
+            (methodResolved == "/std/collections/map/contains" &&
+             hasImportedDefinitionPath("/std/collections/map/contains")) ||
+            (methodResolved == "/std/collections/map/tryAt" &&
+             hasImportedDefinitionPath("/std/collections/map/tryAt")) ||
+            (methodResolved == "/std/collections/map/at" &&
+             hasImportedDefinitionPath("/std/collections/map/at")) ||
+            (methodResolved == "/std/collections/map/at_unsafe" &&
+             hasImportedDefinitionPath("/std/collections/map/at_unsafe"))) {
+          ReturnKind builtinMethodKind = ReturnKind::Unknown;
+          if (resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
+            return builtinMethodKind;
+          }
+        }
         if (((methodResolved == "/std/collections/map/count" &&
               !hasDeclaredDefinitionPath("/map/count") &&
               !hasImportedDefinitionPath("/std/collections/map/count")) ||
@@ -2526,6 +2680,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isStdNamespacedMapAccessSpelling =
         hasBuiltinAccessSpelling && !expr.isMethodCall &&
         resolveCalleePath(expr).rfind("/std/collections/map/at", 0) == 0;
+    const bool hasStdNamespacedMapAccessDefinition =
+        isStdNamespacedMapAccessSpelling &&
+        hasImportedDefinitionPath(resolveCalleePath(expr));
     const bool isResolvedMapAccessCall =
         !expr.isMethodCall && (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
         !isMapNamespacedAccessCompatibilityCall(expr);
@@ -2589,7 +2746,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return false;
       }
       rewrittenOut = candidate;
-      rewrittenOut.name = preferredBareMapHelperTarget(helperName);
+      if (resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType)) {
+        rewrittenOut.name = preferredExperimentalMapHelperTarget(helperName);
+      } else {
+        rewrittenOut.name = preferredBareMapHelperTarget(helperName);
+      }
       rewrittenOut.namespacePrefix.clear();
       return true;
     };
@@ -3038,7 +3199,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     std::string builtinName;
     if (defMap_.find(resolved) == defMap_.end() && getBuiltinArrayAccessName(expr, builtinName) &&
         (!isStdNamespacedVectorAccessSpelling || shouldAllowStdAccessCompatibilityFallback) &&
-        !isStdNamespacedMapAccessSpelling &&
+        (!isStdNamespacedMapAccessSpelling || hasStdNamespacedMapAccessDefinition) &&
         expr.args.size() == 2) {
       std::string elemType;
       if (resolveStringTarget(expr.args.front())) {
@@ -3832,18 +3993,105 @@ std::string SemanticsValidator::inferStructReturnPath(
     }
     return false;
   };
+  auto extractExperimentalMapFieldTypes = [&](const BindingInfo &binding,
+                                              std::string &keyTypeOut,
+                                              std::string &valueTypeOut) -> bool {
+    auto extractFromTypeText = [&](std::string normalizedType) -> bool {
+      while (true) {
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+          base = normalizeBindingTypeName(base);
+          if (base == "Reference" || base == "Pointer") {
+            std::vector<std::string> args;
+            if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+              return false;
+            }
+            normalizedType = normalizeBindingTypeName(args.front());
+            continue;
+          }
+        }
+
+          std::string resolvedPath = normalizedType;
+          if (!resolvedPath.empty() && resolvedPath.front() != '/') {
+            resolvedPath.insert(resolvedPath.begin(), '/');
+          }
+          std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
+          if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
+            normalizedResolvedPath.erase(normalizedResolvedPath.begin());
+          }
+          if (normalizedResolvedPath.rfind("std/collections/experimental_map/Map__", 0) != 0) {
+            return false;
+          }
+        auto defIt = defMap_.find(resolvedPath);
+        if (defIt == defMap_.end() || !defIt->second) {
+          return false;
+        }
+        std::string keysElementType;
+        std::string payloadsElementType;
+        for (const auto &fieldExpr : defIt->second->statements) {
+          if (!fieldExpr.isBinding) {
+            continue;
+          }
+          BindingInfo fieldBinding;
+          std::optional<std::string> restrictType;
+          std::string parseError;
+          if (!parseBindingInfo(fieldExpr,
+                                defIt->second->namespacePrefix,
+                                structNames_,
+                                importAliases_,
+                                fieldBinding,
+                                restrictType,
+                                parseError)) {
+            continue;
+          }
+          if (normalizeBindingTypeName(fieldBinding.typeName) != "vector" || fieldBinding.typeTemplateArg.empty()) {
+            continue;
+          }
+          std::vector<std::string> fieldArgs;
+          if (!splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, fieldArgs) || fieldArgs.size() != 1) {
+            continue;
+          }
+          if (fieldExpr.name == "keys") {
+            keysElementType = fieldArgs.front();
+          } else if (fieldExpr.name == "payloads") {
+            payloadsElementType = fieldArgs.front();
+          }
+        }
+        if (keysElementType.empty() || payloadsElementType.empty()) {
+          return false;
+        }
+        keyTypeOut = keysElementType;
+        valueTypeOut = payloadsElementType;
+        return true;
+      }
+    };
+
+    keyTypeOut.clear();
+    valueTypeOut.clear();
+    if (binding.typeTemplateArg.empty()) {
+      return extractFromTypeText(normalizeBindingTypeName(binding.typeName));
+    }
+    return extractFromTypeText(normalizeBindingTypeName(binding.typeName + "<" + binding.typeTemplateArg + ">"));
+  };
+  auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,
+                                        std::string &keyTypeOut,
+                                        std::string &valueTypeOut) -> bool {
+    return extractMapKeyValueTypes(binding, keyTypeOut, valueTypeOut) ||
+           extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
+  };
   resolveMapTarget = [&](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     keyTypeOut.clear();
     valueTypeOut.clear();
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        return extractMapKeyValueTypes(*paramBinding, keyTypeOut, valueTypeOut);
+        return extractAnyMapKeyValueTypes(*paramBinding, keyTypeOut, valueTypeOut);
       }
       auto it = locals.find(target.name);
       if (it == locals.end()) {
         return false;
       }
-      return extractMapKeyValueTypes(it->second, keyTypeOut, valueTypeOut);
+      return extractAnyMapKeyValueTypes(it->second, keyTypeOut, valueTypeOut);
     }
     if (target.kind == Expr::Kind::Call) {
       std::string collectionTypePath;

@@ -1379,28 +1379,28 @@ bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
 }
 
 bool getPathSpaceBuiltin(const Expr &expr, PathSpaceBuiltin &out) {
-  if (isSimpleCallName(expr, "notify")) {
+  if (!expr.isMethodCall && isSimpleCallName(expr, "notify")) {
     out.target = PathSpaceTarget::Notify;
     out.name = "notify";
     out.requiredEffect = "pathspace_notify";
     out.argumentCount = 2;
     return true;
   }
-  if (isSimpleCallName(expr, "insert")) {
+  if (!expr.isMethodCall && isSimpleCallName(expr, "insert")) {
     out.target = PathSpaceTarget::Insert;
     out.name = "insert";
     out.requiredEffect = "pathspace_insert";
     out.argumentCount = 2;
     return true;
   }
-  if (isSimpleCallName(expr, "take")) {
+  if (!expr.isMethodCall && isSimpleCallName(expr, "take")) {
     out.target = PathSpaceTarget::Take;
     out.name = "take";
     out.requiredEffect = "pathspace_take";
     out.argumentCount = 1;
     return true;
   }
-  if (isSimpleCallName(expr, "bind")) {
+  if (!expr.isMethodCall && isSimpleCallName(expr, "bind")) {
     out.target = PathSpaceTarget::Bind;
     out.name = "bind";
     out.requiredEffect = "pathspace_bind";

@@ -1,3 +1,38 @@
+[return<bool>]
+/i32/equal([i32] self, [i32] other) {
+  return(equal(self, other))
+}
+
+[return<bool>]
+/i64/equal([i64] self, [i64] other) {
+  return(equal(self, other))
+}
+
+[return<bool>]
+/u64/equal([u64] self, [u64] other) {
+  return(equal(self, other))
+}
+
+[return<bool>]
+/f32/equal([f32] self, [f32] other) {
+  return(equal(self, other))
+}
+
+[return<bool>]
+/f64/equal([f64] self, [f64] other) {
+  return(equal(self, other))
+}
+
+[return<bool>]
+/bool/equal([bool] self, [bool] other) {
+  return(equal(self, other))
+}
+
+[return<bool>]
+/string/equal([string] self, [string] other) {
+  return(equal(self, other))
+}
+
 namespace std {
   namespace collections {
   namespace experimental_map {
@@ -30,24 +65,19 @@ namespace std {
     at_unsafe([K] key) {
       return(mapAtUnsafe<K, V>(this, key))
     }
-  }
 
-  [return<void> Comparable<K>]
-  mapValidateKeyEnvelope<K>([K] key) {
-    if(false,
-       then() {
-         [bool] witness{and(equal(key, key), less_than(key, key))}
-       },
-       else() { })
+    [public effects(heap_alloc), return<void> Comparable<K>]
+    insert([K] key, [V] value) {
+      mapInsert<K, V>(this, key, value)
+    }
   }
 
   [return<i32> Comparable<K>]
   mapFindIndex<K, V>([Map<K, V>] entries, [K] key) {
-    mapValidateKeyEnvelope<K>(key)
     [i32 mut] index{0i32}
     [i32] limit{count(entries.keys)}
     while(less_than(index, limit), do() {
-      if(equal(entries.keys[index], key),
+      if(entries.keys[index].equal(key),
          then() { return(index) },
          else() { })
       increment(index)
@@ -57,11 +87,10 @@ namespace std {
 
   [return<i32> Comparable<K>]
   mapFindIndexRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
-    mapValidateKeyEnvelope<K>(key)
     [i32 mut] index{0i32}
     [i32] limit{count(entries.keys)}
     while(less_than(index, limit), do() {
-      if(equal(entries.keys[index], key),
+      if(entries.keys[index].equal(key),
          then() { return(index) },
          else() { })
       increment(index)

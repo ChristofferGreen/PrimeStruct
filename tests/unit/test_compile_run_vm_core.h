@@ -24,6 +24,8 @@ main() {
 
 TEST_CASE("vm supports support-matrix binding types") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int> effects(heap_alloc)]
 main() {
   [i32] i{1i32}

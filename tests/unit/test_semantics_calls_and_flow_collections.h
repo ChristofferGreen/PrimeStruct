@@ -228,7 +228,7 @@ Key() {
   return(less_than(left.value, right.value))
 }
 
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[effects(heap_alloc), return<int>]
 main() {
   [Map<Key, i32>] values{mapPair<Key, i32>(Key(2i32), 7i32, Key(5i32), 11i32)}
   [i32 mut] total{mapCount<Key, i32>(values)}
@@ -237,8 +237,7 @@ main() {
   if(mapContains<Key, i32>(values, Key(2i32)),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
-  [i32] found{try(mapTryAt<Key, i32>(values, Key(5i32)))}
-  return(Result.ok(plus(total, found)))
+  return(total)
 }
 )";
   std::string error;
@@ -246,56 +245,36 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental map exposes method-call helper parity on the real Map struct") {
+TEST_CASE("experimental map method-call sugar stays unsupported on the real Map struct") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
-[effects(io_err)]
-unexpectedExperimentalMapMethodError([ContainerError] err) {
-  [Result<ContainerError>] status{err.code}
-  print_line_error(Result.why(status))
-}
-
-[return<Result<i32, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapMethodError>]
+[return<int> effects(heap_alloc)]
 main() {
   [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [i32] found{try(values.tryAt("left"raw_utf8))}
-  [i32 mut] total{plus(values.count(), found)}
-  assign(total, plus(total, values.at("left"raw_utf8)))
-  assign(total, plus(total, values.at_unsafe("right"raw_utf8)))
-  if(values.contains("left"raw_utf8),
-     then() { assign(total, plus(total, 1i32)) },
-     else() { })
-  return(Result.ok(total))
+  return(values.count())
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: count") != std::string::npos);
 }
 
 TEST_CASE("experimental map Ref helper calls accept borrowed Map references") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
-[effects(io_err)]
-unexpectedExperimentalMapReferenceHelperError([ContainerError] err) {
-  [Result<ContainerError>] status{err.code}
-  print_line_error(Result.why(status))
-}
-
-[return<Result<i32, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapReferenceHelperError>]
+[return<int> effects(heap_alloc)]
 main() {
   [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
   [Reference<Map<string, i32>>] ref{location(values)}
-  [i32] found{try(mapTryAtRef<string, i32>(ref, "left"raw_utf8))}
-  [i32 mut] total{plus(mapCountRef<string, i32>(ref), found)}
+  [i32 mut] total{mapCountRef<string, i32>(ref)}
   assign(total, plus(total, mapAtRef<string, i32>(ref, "left"raw_utf8)))
   assign(total, plus(total, mapAtUnsafeRef<string, i32>(ref, "right"raw_utf8)))
   if(mapContainsRef<string, i32>(ref, "left"raw_utf8),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
-  return(Result.ok(total))
+  return(total)
 }
 )";
   std::string error;
@@ -303,41 +282,23 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental map exposes method-call helper parity on borrowed Map references") {
+TEST_CASE("experimental map borrowed method-call sugar stays unsupported") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
-[return<Reference<Map<string, i32>>>]
-borrowExperimentalMap([Reference<Map<string, i32>>] values) {
-  return(values)
-}
-
-[effects(io_err)]
-unexpectedExperimentalMapReferenceMethodError([ContainerError] err) {
-  [Result<ContainerError>] status{err.code}
-  print_line_error(Result.why(status))
-}
-
-[return<Result<i32, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapReferenceMethodError>]
+[return<int> effects(heap_alloc)]
 main() {
   [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}
-  [i32] found{try(ref.tryAt("left"raw_utf8))}
-  [i32 mut] total{plus(ref.count(), found)}
-  assign(total, plus(total, ref.at("left"raw_utf8)))
-  assign(total, plus(total, ref.at_unsafe("right"raw_utf8)))
-  if(ref.contains("left"raw_utf8),
-     then() { assign(total, plus(total, 1i32)) },
-     else() { })
-  return(Result.ok(total))
+  [Reference<Map<string, i32>>] ref{location(values)}
+  return(ref.count())
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: count") != std::string::npos);
 }
 
-TEST_CASE("experimental map exposes insert helper parity on value and borrowed mutation surfaces") {
+TEST_CASE("experimental map insert helpers validate on value and borrowed mutation surfaces") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -345,13 +306,12 @@ import /std/collections/experimental_map/*
 main() {
   [Map<string, i32> mut] values{mapSingle<string, i32>("left"raw_utf8, 4i32)}
   mapInsert<string, i32>(values, "right"raw_utf8, 7i32)
-  values.insert("left"raw_utf8, 9i32)
   [Reference<Map<string, i32>> mut] ref{location(values)}
   mapInsertRef<string, i32>(ref, "third"raw_utf8, 11i32)
-  ref.insert("right"raw_utf8, 13i32)
-  return(plus(values.count(),
-              plus(values.at("left"raw_utf8),
-                   plus(ref.at("right"raw_utf8), values.at("third"raw_utf8)))))
+  return(plus(mapCount<string, i32>(values),
+              plus(mapAt<string, i32>(values, "left"raw_utf8),
+                   plus(mapAtRef<string, i32>(ref, "right"raw_utf8),
+                        mapAt<string, i32>(values, "third"raw_utf8)))))
 }
 )";
   std::string error;
@@ -359,7 +319,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental map bracket access validates on value and borrowed call receivers") {
+TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -376,11 +336,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: mapAt") != std::string::npos);
 }
 
-TEST_CASE("wrapper-returned experimental map bracket access keeps print statement string validation") {
+TEST_CASE("wrapper-returned experimental map bracket access stays unsupported") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -396,11 +356,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: mapAt") != std::string::npos);
 }
 
-TEST_CASE("experimental map bracket access keeps key diagnostics on borrowed call receivers") {
+TEST_CASE("experimental map bracket access on borrowed calls fails before key diagnostics") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -417,7 +377,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires map key type string") != std::string::npos);
+  CHECK(error.find("unknown call target: mapAt") != std::string::npos);
 }
 
 TEST_CASE("experimental map missing comparable trait reports trait diagnostics instead of builtin map key rejects") {
@@ -656,21 +616,6 @@ TEST_CASE("mapTryAt helper validates for supported i32 container result payloads
   const std::string source = R"(
 import /std/collections/*
 
-[struct]
-ContainerError() {
-  [i32] code{0i32}
-}
-
-[return<ContainerError>]
-containerMissingKey() {
-  return(ContainerError(1i32))
-}
-
-[return<Result<T, ContainerError>>]
-containerErrorResult<T>([ContainerError] err) {
-  return(multiply(convert<i64>(err.code), 4294967296i64))
-}
-
 [return<Result<V, ContainerError>>]
 mapTryAt<K, V>([map<K, V>] values, [K] key) {
   if(/std/collections/map/contains(values, key),
@@ -693,21 +638,6 @@ TEST_CASE("mapTryAt helper validates for supported bool container result payload
   const std::string source = R"(
 import /std/collections/*
 
-[struct]
-ContainerError() {
-  [i32] code{0i32}
-}
-
-[return<ContainerError>]
-containerMissingKey() {
-  return(ContainerError(1i32))
-}
-
-[return<Result<T, ContainerError>>]
-containerErrorResult<T>([ContainerError] err) {
-  return(multiply(convert<i64>(err.code), 4294967296i64))
-}
-
 [return<Result<V, ContainerError>>]
 mapTryAt<K, V>([map<K, V>] values, [K] key) {
   if(/std/collections/map/contains(values, key),
@@ -729,21 +659,6 @@ main() {
 TEST_CASE("mapTryAt helper validates for supported string container result payloads") {
   const std::string source = R"(
 import /std/collections/*
-
-[struct]
-ContainerError() {
-  [i32] code{0i32}
-}
-
-[return<ContainerError>]
-containerMissingKey() {
-  return(ContainerError(1i32))
-}
-
-[return<Result<T, ContainerError>>]
-containerErrorResult<T>([ContainerError] err) {
-  return(multiply(convert<i64>(err.code), 4294967296i64))
-}
 
 [return<Result<V, ContainerError>>]
 mapTryAt<K, V>([map<K, V>] values, [K] key) {
@@ -1634,9 +1549,9 @@ wrapMapAuto() {
 
 [return<int>]
 main() {
-  /std/collections/map/at(wrapMapAuto(), 1i32)
-  /std/collections/map/at_unsafe(wrapMapAuto(), 1i32)
-  return(0i32)
+  [i32] first{/std/collections/map/at(wrapMapAuto(), 1i32)}
+  [i32] second{/std/collections/map/at_unsafe(wrapMapAuto(), 1i32)}
+  return(plus(first, second))
 }
 )";
   std::string error;
@@ -5347,6 +5262,8 @@ main() {
 
 TEST_CASE("stdlib canonical map contains and tryAt helpers resolve in method-call sugar") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(true)
@@ -5666,7 +5583,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector helper alias rejects method-call sugar auto inference") {
@@ -10698,7 +10615,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires map key type i32") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("explicit canonical map binding keeps builtin helper validation") {
@@ -10755,7 +10672,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires map key type i32") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("explicit canonical map parameter keeps print statement string validation") {

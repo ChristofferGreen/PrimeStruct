@@ -480,6 +480,8 @@ main() {
 
 TEST_CASE("map access validates key type") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
@@ -493,6 +495,8 @@ main() {
 
 TEST_CASE("map literal access validates") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(at_unsafe(map<i32, i32>(1i32, 2i32), 1i32))
@@ -505,6 +509,8 @@ main() {
 
 TEST_CASE("map literal access validates for string keys") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(at_unsafe(map<string, i32>("a"utf8, 2i32), "a"utf8))
@@ -517,6 +523,8 @@ main() {
 
 TEST_CASE("unsafe map access validates key type") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
@@ -530,6 +538,8 @@ main() {
 
 TEST_CASE("string map access rejects numeric index") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 3i32)}
@@ -543,6 +553,8 @@ main() {
 
 TEST_CASE("unsafe string map access rejects numeric index") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 3i32)}
@@ -556,6 +568,8 @@ main() {
 
 TEST_CASE("map access accepts matching key type") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 3i32)}
@@ -569,6 +583,8 @@ main() {
 
 TEST_CASE("map access accepts string key expression") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 1i32)}
@@ -583,6 +599,8 @@ main() {
 
 TEST_CASE("unsafe map access accepts string key expression") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 1i32)}

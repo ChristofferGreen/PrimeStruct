@@ -632,6 +632,8 @@ main() {
 
 TEST_CASE("notify accepts string map access") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(pathspace_notify)]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "/events/test"utf8)}
@@ -800,6 +802,8 @@ main() {
 
 TEST_CASE("take accepts string map access") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(pathspace_take)]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "/events/test"utf8)}
@@ -1125,6 +1129,8 @@ main() {
 
 TEST_CASE("print accepts string map access") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(io_out)]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "hi"utf8)}
