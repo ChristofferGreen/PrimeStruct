@@ -503,7 +503,174 @@ namespace std {
   }
 
   [effects(heap_alloc), return<int>]
-  pngInflateStoredBlocks([vector<i32>] compressed, [vector<i32> mut] output) {
+  pngReverseBits([i32] value, [i32] bitCount) {
+    [i32 mut] reversed{0i32}
+    [i32 mut] remaining{bitCount}
+    [i32 mut] current{value}
+    while(greater_than(remaining, 0i32), do() {
+      assign(reversed, plus(multiply(reversed, 2i32), pngMod(current, 2i32)))
+      assign(current, divide(current, 2i32))
+      assign(remaining, minus(remaining, 1i32))
+    })
+    return(reversed)
+  }
+
+  [return<i32>]
+  pngCountCodeLength([vector<i32>] lengths, [i32] targetLength) {
+    [i32] lengthCount{count(lengths)}
+    [i32 mut] matches{0i32}
+    [i32 mut] index{0i32}
+    while(less_than(index, lengthCount), do() {
+      if(equal(lengths[index], targetLength),
+         then() { increment(matches) },
+         else() { })
+      increment(index)
+    })
+    return(matches)
+  }
+
+  [return<i32>]
+  pngCanonicalCodeForSymbol([vector<i32>] lengths, [i32] targetSymbol) {
+    [i32] targetLength{lengths[targetSymbol]}
+    if(equal(targetLength, 0i32),
+       then() { return(-1i32) },
+       else() { })
+
+    [i32 mut] code{0i32}
+    [i32 mut] length{1i32}
+    while(less_than(length, targetLength), do() {
+      assign(code, multiply(plus(code, pngCountCodeLength(lengths, length)), 2i32))
+      increment(length)
+    })
+
+    [i32 mut] offset{0i32}
+    [i32 mut] index{0i32}
+    while(less_than(index, targetSymbol), do() {
+      if(equal(lengths[index], targetLength),
+         then() { increment(offset) },
+         else() { })
+      increment(index)
+    })
+    return(plus(code, offset))
+  }
+
+  [return<i32>]
+  pngHuffmanDecodeSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [vector<i32>] lengths,
+                         [i32] maxBits, [i32 mut] symbolOut) {
+    assign(symbolOut, 0i32)
+    [i32] symbolCount{count(lengths)}
+    [i32 mut] code{0i32}
+    [i32 mut] factor{1i32}
+    [i32 mut] bitsRead{0i32}
+    while(less_than(bitsRead, maxBits), do() {
+      [i32 mut] bit{0i32}
+      [i32] bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
+      if(not_equal(bitStatus, 0i32),
+         then() { return(1i32) },
+         else() { })
+      assign(code, plus(code, multiply(bit, factor)))
+      assign(factor, multiply(factor, 2i32))
+      increment(bitsRead)
+
+      [i32 mut] symbolIndex{0i32}
+      while(less_than(symbolIndex, symbolCount), do() {
+        if(equal(lengths[symbolIndex], bitsRead),
+           then() {
+             [i32] canonicalCode{pngCanonicalCodeForSymbol(lengths, symbolIndex)}
+             if(equal(pngReverseBits(canonicalCode, bitsRead), code),
+                then() {
+                  assign(symbolOut, symbolIndex)
+                  return(0i32)
+                },
+                else() { })
+           },
+           else() { })
+        increment(symbolIndex)
+      })
+    })
+    return(1i32)
+  }
+
+  [effects(heap_alloc)]
+  pngBuildFixedLiteralLengths([vector<i32> mut] lengths) {
+    clear(lengths)
+    [i32 mut] symbol{0i32}
+    while(less_than(symbol, 288i32), do() {
+      [i32 mut] codeLength{8i32}
+      if(less_than(symbol, 144i32),
+         then() { assign(codeLength, 8i32) },
+         else() {
+           if(less_than(symbol, 256i32),
+              then() { assign(codeLength, 9i32) },
+              else() {
+                if(less_than(symbol, 280i32),
+                   then() { assign(codeLength, 7i32) },
+                   else() { assign(codeLength, 8i32) })
+              })
+         })
+      push(lengths, codeLength)
+      increment(symbol)
+    })
+  }
+
+  [effects(heap_alloc), return<int>]
+  pngInflateStoredBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex, [vector<i32> mut] output) {
+    if(not_equal(bitIndex, 0i32),
+       then() {
+         assign(bitIndex, 0i32)
+         assign(byteIndex, plus(byteIndex, 1i32))
+       },
+       else() { })
+
+    [i32] trailerStart{minus(count(compressed), 4i32)}
+    if(greater_than(plus(byteIndex, 4i32), trailerStart),
+       then() { return(1i32) },
+       else() { })
+
+    [i32] blockLen{plus(compressed[byteIndex], multiply(compressed[plus(byteIndex, 1i32)], 256i32))}
+    [i32] blockNlen{plus(compressed[plus(byteIndex, 2i32)], multiply(compressed[plus(byteIndex, 3i32)], 256i32))}
+    if(not_equal(plus(blockLen, blockNlen), 65535i32),
+       then() { return(1i32) },
+       else() { })
+    assign(byteIndex, plus(byteIndex, 4i32))
+
+    if(greater_than(plus(byteIndex, blockLen), trailerStart),
+       then() { return(1i32) },
+       else() { })
+    [i32 mut] blockIndex{0i32}
+    while(less_than(blockIndex, blockLen), do() {
+      push(output, compressed[plus(byteIndex, blockIndex)])
+      increment(blockIndex)
+    })
+    assign(byteIndex, plus(byteIndex, blockLen))
+    return(0i32)
+  }
+
+  [effects(heap_alloc), return<int>]
+  pngInflateFixedHuffmanLiteralBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
+                                     [vector<i32> mut] output) {
+    [vector<i32> mut] literalLengths{vector<i32>()}
+    pngBuildFixedLiteralLengths(literalLengths)
+
+    while(true, do() {
+      [i32 mut] symbol{0i32}
+      [i32] status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, 9i32, symbol)}
+      if(not_equal(status, 0i32),
+         then() { return(1i32) },
+         else() { })
+      if(less_than(symbol, 256i32),
+         then() { push(output, symbol) },
+         else() {
+           if(equal(symbol, 256i32),
+              then() { return(0i32) },
+              else() { return(2i32) })
+         })
+    })
+    return(1i32)
+  }
+
+  [effects(heap_alloc), return<int>]
+  pngInflateDeflateBlocks([vector<i32>] compressed, [vector<i32> mut] output) {
     clear(output)
     [i32] compressedCount{count(compressed)}
     if(less_than(compressedCount, 7i32),
@@ -528,41 +695,31 @@ namespace std {
       if(not_equal(blockStatus, 0i32),
          then() { return(1i32) },
          else() { })
-      if(not_equal(blockType, 0i32),
-         then() { return(2i32) },
-         else() { })
 
-      if(not_equal(bitIndex, 0i32),
-         then() {
-           assign(bitIndex, 0i32)
-           assign(byteIndex, plus(byteIndex, 1i32))
-         },
+      [i32 mut] inflateStatus{0i32}
+      if(equal(blockType, 0i32),
+         then() { assign(inflateStatus, pngInflateStoredBlock(compressed, byteIndex, bitIndex, output)) },
+         else() {
+           if(equal(blockType, 1i32),
+              then() { assign(inflateStatus, pngInflateFixedHuffmanLiteralBlock(compressed, byteIndex, bitIndex, output)) },
+              else() {
+                if(equal(blockType, 2i32),
+                   then() { return(2i32) },
+                   else() { return(1i32) })
+              })
+         })
+      if(not_equal(inflateStatus, 0i32),
+         then() { return(inflateStatus) },
          else() { })
-
-      [i32] trailerStart{minus(compressedCount, 4i32)}
-      if(greater_than(plus(byteIndex, 4i32), trailerStart),
-         then() { return(1i32) },
-         else() { })
-
-      [i32] blockLen{plus(compressed[byteIndex], multiply(compressed[plus(byteIndex, 1i32)], 256i32))}
-      [i32] blockNlen{plus(compressed[plus(byteIndex, 2i32)], multiply(compressed[plus(byteIndex, 3i32)], 256i32))}
-      if(not_equal(plus(blockLen, blockNlen), 65535i32),
-         then() { return(1i32) },
-         else() { })
-      assign(byteIndex, plus(byteIndex, 4i32))
-
-      if(greater_than(plus(byteIndex, blockLen), trailerStart),
-         then() { return(1i32) },
-         else() { })
-      [i32 mut] blockIndex{0i32}
-      while(less_than(blockIndex, blockLen), do() {
-        push(output, compressed[plus(byteIndex, blockIndex)])
-        increment(blockIndex)
-      })
-      assign(byteIndex, plus(byteIndex, blockLen))
 
       if(equal(isFinal, 1i32),
          then() {
+           if(not_equal(bitIndex, 0i32),
+              then() {
+                assign(bitIndex, 0i32)
+                assign(byteIndex, plus(byteIndex, 1i32))
+              },
+              else() { })
            if(not_equal(minus(compressedCount, byteIndex), 4i32),
               then() { return(1i32) },
               else() { })
@@ -843,7 +1000,7 @@ namespace std {
                   if(or(not_equal(chunkLength, 0i32), equal(sawIdat, 0i32)),
                      then() { return(invalidOperation()) },
                      else() {
-                       [i32] inflateStatus{pngInflateStoredBlocks(idatBytes, rawBytes)}
+                       [i32] inflateStatus{pngInflateDeflateBlocks(idatBytes, rawBytes)}
                        if(equal(inflateStatus, 1i32),
                           then() { return(invalidOperation()) },
                           else() { })

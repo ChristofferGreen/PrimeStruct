@@ -575,6 +575,128 @@ main() {
         "90\n");
 }
 
+TEST_CASE("compiles and runs native png read for fixed-huffman rgb inputs") {
+  const std::string inPath = (std::filesystem::temp_directory_path() / "primec_native_image_read_fixed.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = {
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x01, 0x63, 0xf8, 0xcf, 0xc0, 0x00, 0x00,
+        0x03, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x00,
+    };
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = std::string(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  return(plus(width, height))
+}
+)");
+  const std::string srcPath = writeTemp("compile_native_image_read_fixed_png.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_image_read_fixed_png").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_fixed_png.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 2);
+  CHECK(readFile(outPath) ==
+        "1\n"
+        "1\n"
+        "3\n"
+        "255\n"
+        "0\n"
+        "0\n");
+}
+
+TEST_CASE("compiles and reports unsupported dynamic native png inputs deterministically") {
+  const std::string inPath = (std::filesystem::temp_directory_path() / "primec_native_image_read_dynamic.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = {
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x43, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x9c, 0xe5, 0xcb, 0xd1, 0x09, 0xc0, 0x20,
+        0x0c, 0x05, 0xc0, 0x8e, 0xf2, 0x06, 0x28, 0x4e,
+        0xd2, 0x25, 0x24, 0x86, 0xf2, 0xc0, 0x18, 0x49,
+        0xe2, 0xfe, 0x1d, 0xa4, 0xf7, 0x7f, 0xd7, 0xe3,
+        0xa1, 0x06, 0xee, 0x3c, 0x86, 0xe1, 0xd3, 0x03,
+        0xc9, 0x42, 0x37, 0xad, 0x1b, 0xe2, 0x2b, 0x55,
+        0x4a, 0xeb, 0x04, 0xfa, 0xe0, 0x66, 0x0a, 0xd7,
+        0x0b, 0x9d, 0xac, 0x86, 0x1f, 0xc6, 0x0f, 0x63,
+        0x5f, 0x6f, 0x1b, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0x00,
+        0x00, 0x00, 0x00,
+    };
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = std::string(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{7i32}
+  [i32 mut] height{9i32}
+  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, ")") + escapedPath + R"("utf8)}
+  print_line(Result.why(status))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  return(0i32)
+}
+)");
+  const std::string srcPath = writeTemp("compile_native_image_read_dynamic_png.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_dynamic_png").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_dynamic_png.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) ==
+        "image_read_unsupported\n"
+        "0\n"
+        "0\n"
+        "0\n");
+}
+
 TEST_CASE("compiles and rejects malformed native png inputs deterministically") {
   const std::string inPath =
       (std::filesystem::temp_directory_path() / "primec_native_image_read_invalid.png").string();
