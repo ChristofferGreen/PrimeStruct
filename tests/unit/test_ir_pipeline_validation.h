@@ -100,7 +100,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  if (contains(values, 1i32)) {
+  if (/std/collections/map/contains(values, 1i32)) {
     return(1i32)
   }
   return(0i32)
@@ -131,8 +131,8 @@ MyError() {
 
 [return<Result<i32, MyError>>]
 probe([map<i32, i32>] values, [i32] key) {
-  if(contains(values, key),
-     then(){ return(Result.ok(at_unsafe(values, key))) },
+  if(/std/collections/map/contains(values, key),
+     then(){ return(Result.ok(/std/collections/map/at_unsafe(values, key))) },
      else(){ return(multiply(convert<i64>(1i32), 4294967296i64)) })
 }
 

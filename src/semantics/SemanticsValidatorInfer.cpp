@@ -1491,7 +1491,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       auto preferredMapMethodTargetForCall = [&](const std::string &helperName) {
         const std::string canonical = "/std/collections/map/" + helperName;
         const std::string alias = "/map/" + helperName;
-        if (defMap_.count(canonical) > 0) {
+        if (defMap_.count(canonical) > 0 || hasImportedDefinitionPath(canonical)) {
           return canonical;
         }
         if (defMap_.count(alias) > 0) {
@@ -1535,6 +1535,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         if (normalizedMethodName == "count" && resolveMapTarget(receiver, keyType, valueType)) {
           resolvedOut = preferredMapMethodTargetForCall("count");
+          return true;
+        }
+        if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt") &&
+            resolveMapTarget(receiver, keyType, valueType)) {
+          resolvedOut = preferredMapMethodTargetForCall(normalizedMethodName);
           return true;
         }
         if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
@@ -2540,6 +2545,62 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
         !prefersExplicitDirectMapAccessAliasDefinition &&
         !isMapNamespacedAccessCompatibilityCall(expr);
+    auto definitionPathContains = [&](std::string_view needle) {
+      return currentDefinitionPath_.find(std::string(needle)) != std::string::npos;
+    };
+    auto mapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {
+      if (hasNamedArguments(candidate.argNames)) {
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+              *candidate.argNames[i] == "values") {
+            return i;
+          }
+        }
+      }
+      return 0;
+    };
+    auto preferredBareMapHelperTarget = [&](std::string_view helperName) {
+      const std::string canonical = "/std/collections/map/" + std::string(helperName);
+      if (defMap_.find(canonical) != defMap_.end() || hasImportedDefinitionPath(canonical)) {
+        return canonical;
+      }
+      const std::string alias = "/map/" + std::string(helperName);
+      if (defMap_.find(alias) != defMap_.end()) {
+        return alias;
+      }
+      return canonical;
+    };
+    auto tryRewriteBareMapHelperCall = [&](const Expr &candidate,
+                                           std::string_view helperName,
+                                           Expr &rewrittenOut) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
+        return false;
+      }
+      if (candidate.name.find('/') != std::string::npos || !candidate.namespacePrefix.empty()) {
+        return false;
+      }
+      const size_t receiverIndex = mapHelperReceiverIndex(candidate);
+      if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      std::string keyType;
+      std::string valueType;
+      if (!resolveMapTarget(candidate.args[receiverIndex], keyType, valueType)) {
+        return false;
+      }
+      rewrittenOut = candidate;
+      rewrittenOut.name = preferredBareMapHelperTarget(helperName);
+      rewrittenOut.namespacePrefix.clear();
+      return true;
+    };
+    const bool shouldInferBuiltinBareMapContainsCall =
+        definitionPathContains("/mapContains") ||
+        definitionPathContains("/mapTryAt");
+    const bool shouldInferBuiltinBareMapAccessCall =
+        definitionPathContains("/mapAt") ||
+        definitionPathContains("/mapAtUnsafe") ||
+        definitionPathContains("/mapTryAt") ||
+        definitionPathContains("/mapAtRef");
     auto resolveBuiltinCollectionCountCapacityReturnKind = [&](const Expr &callExpr, ReturnKind &kindOut) -> bool {
       kindOut = ReturnKind::Unknown;
       if (callExpr.isMethodCall || callExpr.args.empty()) {
@@ -2699,6 +2760,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         !prefersCanonicalVectorCountAliasDefinition &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall ||
          isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
+      if (!shouldInferBuiltinBareMapCountCall) {
+        Expr rewrittenMapHelperCall;
+        if (tryRewriteBareMapHelperCall(expr, "count", rewrittenMapHelperCall)) {
+          return inferExprReturnKind(rewrittenMapHelperCall, params, locals);
+        }
+      }
       std::string methodResolved;
       if (resolveMethodCallPath("count", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -2746,6 +2813,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         !prefersCanonicalVectorCountAliasDefinition &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall || isNamespacedMapCountCall ||
          isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
+      if (!shouldInferBuiltinBareMapCountCall) {
+        Expr rewrittenMapHelperCall;
+        if (tryRewriteBareMapHelperCall(expr, "count", rewrittenMapHelperCall)) {
+          return inferExprReturnKind(rewrittenMapHelperCall, params, locals);
+        }
+      }
       std::string methodResolved;
       if (resolveMethodCallPath("count", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -2985,9 +3058,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return ReturnKind::Unknown;
     }
-    const bool shouldInferBuiltinBareMapContainsCall =
-        currentDefinitionPath_ == "/std/collections/mapContains" ||
-        currentDefinitionPath_ == "/std/collections/mapTryAt";
     if (defMap_.find(resolved) == defMap_.end() && !expr.isMethodCall &&
         isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
         shouldInferBuiltinBareMapContainsCall) {
@@ -2997,6 +3067,55 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Bool;
       }
       return ReturnKind::Unknown;
+    }
+    if (!expr.isMethodCall && defMap_.find(resolved) == defMap_.end() && expr.args.size() == 2 &&
+        (isSimpleCallName(expr, "contains") || getBuiltinArrayAccessName(expr, builtinAccessName))) {
+      if ((isSimpleCallName(expr, "contains") && !shouldInferBuiltinBareMapContainsCall) ||
+          ((expr.name == "at" || expr.name == "at_unsafe") && !shouldInferBuiltinBareMapAccessCall)) {
+        Expr rewrittenMapHelperCall;
+        if (tryRewriteBareMapHelperCall(expr,
+                                        isSimpleCallName(expr, "contains") ? "contains" : builtinAccessName,
+                                        rewrittenMapHelperCall)) {
+          return inferExprReturnKind(rewrittenMapHelperCall, params, locals);
+        }
+      }
+      std::string keyType;
+      std::string valueType;
+      if (resolveMapTarget(expr.args.front(), keyType, valueType)) {
+        std::string methodResolved;
+        if (resolveMethodCallPath(expr.name, methodResolved)) {
+          if (methodResolved == "/std/collections/map/contains" && !shouldInferBuiltinBareMapContainsCall &&
+              !hasDeclaredDefinitionPath("/map/contains") &&
+              !hasImportedDefinitionPath("/std/collections/map/contains") &&
+              !hasDeclaredDefinitionPath("/std/collections/map/contains")) {
+            error_ = "unknown call target: /std/collections/map/contains";
+            return ReturnKind::Unknown;
+          }
+          if ((methodResolved == "/map/at" || methodResolved == "/map/at_unsafe" ||
+               methodResolved == "/std/collections/map/at" || methodResolved == "/std/collections/map/at_unsafe") &&
+              !shouldInferBuiltinBareMapAccessCall &&
+              !hasDeclaredDefinitionPath("/map/" + builtinAccessName) &&
+              !hasImportedDefinitionPath("/std/collections/map/" + builtinAccessName) &&
+              !hasDeclaredDefinitionPath("/std/collections/map/" + builtinAccessName)) {
+            error_ = "unknown call target: /std/collections/map/" + builtinAccessName;
+            return ReturnKind::Unknown;
+          }
+          auto methodIt = defMap_.find(methodResolved);
+          if (methodIt != defMap_.end()) {
+            if (!inferDefinitionReturnKind(*methodIt->second)) {
+              return ReturnKind::Unknown;
+            }
+            auto kindIt = returnKinds_.find(methodResolved);
+            if (kindIt != returnKinds_.end()) {
+              return kindIt->second;
+            }
+          }
+          ReturnKind builtinMethodKind = ReturnKind::Unknown;
+          if (resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
+            return builtinMethodKind;
+          }
+        }
+      }
     }
     if (getBuiltinGpuName(expr, builtinName)) {
       return ReturnKind::Int;
@@ -3020,6 +3139,23 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall && (isSimpleCallName(expr, "buffer") || isSimpleCallName(expr, "upload") ||
                                isSimpleCallName(expr, "readback"))) {
       return ReturnKind::Array;
+    }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "contains") && shouldInferBuiltinBareMapContainsCall &&
+        expr.args.size() == 2) {
+      std::string keyType;
+      std::string valueType;
+      if (resolveMapTarget(expr.args.front(), keyType, valueType)) {
+        return ReturnKind::Bool;
+      }
+    }
+    if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinAccessName) &&
+        shouldInferBuiltinBareMapAccessCall && expr.args.size() == 2) {
+      std::string keyType;
+      std::string valueType;
+      if (resolveMapTarget(expr.args.front(), keyType, valueType)) {
+        ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
+        return kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind;
+      }
     }
     if (getBuiltinPointerName(expr, builtinName) && expr.args.size() == 1) {
       if (builtinName == "dereference") {

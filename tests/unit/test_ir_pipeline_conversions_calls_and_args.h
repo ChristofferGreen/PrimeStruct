@@ -221,7 +221,12 @@ TEST_CASE("ir lowerer supports map method calls") {
   const std::string source = R"(
 [return<int>]
 /map/size([map<i32, i32>] items) {
-  return(count(items))
+  return(/std/collections/map/count(items))
+}
+
+[return<int>]
+/std/collections/map/count([map<i32, i32>] items) {
+  return(1i32)
 }
 
 [return<int>]

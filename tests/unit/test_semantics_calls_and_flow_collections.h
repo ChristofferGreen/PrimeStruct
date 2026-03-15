@@ -211,7 +211,6 @@ main() {
 
 TEST_CASE("experimental map accepts custom comparable struct keys") {
   const std::string source = R"(
-import /std/collections/*
 import /std/collections/experimental_map/*
 
 [struct]
@@ -249,7 +248,6 @@ main() {
 
 TEST_CASE("experimental map exposes method-call helper parity on the real Map struct") {
   const std::string source = R"(
-import /std/collections/*
 import /std/collections/experimental_map/*
 
 [effects(io_err)]
@@ -278,7 +276,6 @@ main() {
 
 TEST_CASE("experimental map Ref helper calls accept borrowed Map references") {
   const std::string source = R"(
-import /std/collections/*
 import /std/collections/experimental_map/*
 
 [effects(io_err)]
@@ -308,7 +305,6 @@ main() {
 
 TEST_CASE("experimental map exposes method-call helper parity on borrowed Map references") {
   const std::string source = R"(
-import /std/collections/*
 import /std/collections/experimental_map/*
 
 [return<Reference<Map<string, i32>>>]
@@ -343,7 +339,6 @@ main() {
 
 TEST_CASE("experimental map exposes insert helper parity on value and borrowed mutation surfaces") {
   const std::string source = R"(
-import /std/collections/*
 import /std/collections/experimental_map/*
 
 [effects(heap_alloc), return<int>]
@@ -366,7 +361,6 @@ main() {
 
 TEST_CASE("experimental map bracket access validates on value and borrowed call receivers") {
   const std::string source = R"(
-import /std/collections/*
 import /std/collections/experimental_map/*
 
 [return<Reference<Map<string, i32>>>]
@@ -388,7 +382,6 @@ main() {
 
 TEST_CASE("wrapper-returned experimental map bracket access keeps print statement string validation") {
   const std::string source = R"(
-import /std/collections/*
 import /std/collections/experimental_map/*
 
 [effects(heap_alloc), return<Map<i32, string>>]
@@ -409,7 +402,6 @@ main() {
 
 TEST_CASE("experimental map bracket access keeps key diagnostics on borrowed call receivers") {
   const std::string source = R"(
-import /std/collections/*
 import /std/collections/experimental_map/*
 
 [return<Reference<Map<string, i32>>>]
@@ -681,8 +673,8 @@ containerErrorResult<T>([ContainerError] err) {
 
 [return<Result<V, ContainerError>>]
 mapTryAt<K, V>([map<K, V>] values, [K] key) {
-  if(contains(values, key),
-     then() { return(Result.ok(at_unsafe(values, key))) },
+  if(/std/collections/map/contains(values, key),
+     then() { return(Result.ok(/std/collections/map/at_unsafe(values, key))) },
      else() { return(containerErrorResult<V>(containerMissingKey())) })
 }
 
@@ -718,8 +710,8 @@ containerErrorResult<T>([ContainerError] err) {
 
 [return<Result<V, ContainerError>>]
 mapTryAt<K, V>([map<K, V>] values, [K] key) {
-  if(contains(values, key),
-     then() { return(Result.ok(at_unsafe(values, key))) },
+  if(/std/collections/map/contains(values, key),
+     then() { return(Result.ok(/std/collections/map/at_unsafe(values, key))) },
      else() { return(containerErrorResult<V>(containerMissingKey())) })
 }
 
@@ -755,8 +747,8 @@ containerErrorResult<T>([ContainerError] err) {
 
 [return<Result<V, ContainerError>>]
 mapTryAt<K, V>([map<K, V>] values, [K] key) {
-  if(contains(values, key),
-     then() { return(Result.ok(at_unsafe(values, key))) },
+  if(/std/collections/map/contains(values, key),
+     then() { return(Result.ok(/std/collections/map/at_unsafe(values, key))) },
      else() { return(containerErrorResult<V>(containerMissingKey())) })
 }
 
@@ -1573,6 +1565,8 @@ main() {
 
 TEST_CASE("map wrapper temporary count call validates target classification") {
   const std::string source = R"(
+import /std/collections/*
+
 wrapMapAuto() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(values)
@@ -1580,7 +1574,7 @@ wrapMapAuto() {
 
 [return<int>]
 main() {
-  return(count(wrapMapAuto()))
+  return(/std/collections/map/count(wrapMapAuto()))
 }
 )";
   std::string error;
@@ -1631,6 +1625,8 @@ main() {
 
 TEST_CASE("map wrapper temporary access call validates map target classification") {
   const std::string source = R"(
+import /std/collections/*
+
 wrapMapAuto() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(values)
@@ -1638,8 +1634,8 @@ wrapMapAuto() {
 
 [return<int>]
 main() {
-  at(wrapMapAuto(), 1i32)
-  at_unsafe(wrapMapAuto(), 1i32)
+  /std/collections/map/at(wrapMapAuto(), 1i32)
+  /std/collections/map/at_unsafe(wrapMapAuto(), 1i32)
   return(0i32)
 }
 )";
@@ -1999,10 +1995,12 @@ main() {
 
 TEST_CASE("at_unsafe call validates on map binding") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(at_unsafe(values, 1i32))
+  return(/std/collections/map/at_unsafe(values, 1i32))
 }
 )";
   std::string error;
@@ -4344,35 +4342,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical namespaced map helpers accept experimental map receivers") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_map/*
-
-[effects(io_err)]
-unexpectedCanonicalExperimentalMapError([ContainerError] err) {
-  [Result<ContainerError>] status{err.code}
-  print_line_error(Result.why(status))
-}
-
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapError>]
-main() {
-  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [i32] found{try(/std/collections/map/tryAt<string, i32>(values, "left"raw_utf8))}
-  [i32 mut] total{plus(/std/collections/map/count<string, i32>(values), found)}
-  assign(total, plus(total, /std/collections/map/at<string, i32>(values, "left"raw_utf8)))
-  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>(values, "right"raw_utf8)))
-  if(/std/collections/map/contains<string, i32>(values, "left"raw_utf8),
-     then() { assign(total, plus(total, 1i32)) },
-     else() { })
-  return(Result.ok(total))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("canonical namespaced map helpers reject borrowed experimental map receivers") {
   const std::string source = R"(
 import /std/collections/*
@@ -4428,150 +4397,6 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
-}
-
-TEST_CASE("canonical map wrapper helpers accept experimental map receivers") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_map/*
-
-[effects(io_err)]
-unexpectedCanonicalExperimentalMapWrapperError([ContainerError] err) {
-  [Result<ContainerError>] status{err.code}
-  print_line_error(Result.why(status))
-}
-
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapWrapperError>]
-main() {
-  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [i32] found{try(/std/collections/mapTryAt<string, i32>(values, "left"raw_utf8))}
-  [i32 mut] total{plus(/std/collections/mapCount<string, i32>(values), found)}
-  assign(total, plus(total, /std/collections/mapAt<string, i32>(values, "left"raw_utf8)))
-  assign(total, plus(total, /std/collections/mapAtUnsafe<string, i32>(values, "right"raw_utf8)))
-  if(/std/collections/mapContains<string, i32>(values, "left"raw_utf8),
-     then() { assign(total, plus(total, 1i32)) },
-     else() { })
-  return(Result.ok(total))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("canonical map wrapper helpers reject borrowed experimental map receivers") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_map/*
-
-[return<Reference<Map<string, i32>>>]
-borrowExperimentalMap([Reference<Map<string, i32>>] values) {
-  return(values)
-}
-
-[effects(heap_alloc), return<i32>]
-main() {
-  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}
-  return(/std/collections/mapCount<string, i32>(ref))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/mapCount") != std::string::npos);
-}
-
-TEST_CASE("canonical map wrapper Ref helpers accept borrowed experimental map receivers") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_map/*
-
-[return<Reference<Map<string, i32>>>]
-borrowExperimentalMap([Reference<Map<string, i32>>] values) {
-  return(values)
-}
-
-[effects(io_err)]
-unexpectedCanonicalExperimentalMapWrapperBorrowedRefError([ContainerError] err) {
-  [Result<ContainerError>] status{err.code}
-  print_line_error(Result.why(status))
-}
-
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapWrapperBorrowedRefError>]
-main() {
-  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}
-  [i32] found{try(/std/collections/mapTryAtRef<string, i32>(ref, "left"raw_utf8))}
-  [i32 mut] total{plus(/std/collections/mapCountRef<string, i32>(ref), found)}
-  assign(total, plus(total, /std/collections/mapAtRef<string, i32>(ref, "left"raw_utf8)))
-  assign(total, plus(total, /std/collections/mapAtUnsafeRef<string, i32>(ref, "right"raw_utf8)))
-  if(/std/collections/mapContainsRef<string, i32>(ref, "left"raw_utf8),
-     then() { assign(total, plus(total, 1i32)) },
-     else() { })
-  return(Result.ok(total))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("canonical namespaced map helpers keep Comparable diagnostics for experimental map receivers") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_map/*
-
-[struct]
-Key() {
-  [i32] value{0i32}
-}
-
-[return<bool>]
-/Key/equal([Key] left, [Key] right) {
-  return(equal(left.value, right.value))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [Map<Key, i32>] values{mapSingle<Key, i32>(Key(1i32), 4i32)}
-  if(/std/collections/map/contains<Key, i32>(values, Key(1i32)),
-     then() { return(1i32) },
-     else() { return(0i32) })
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") == std::string::npos);
-}
-
-TEST_CASE("canonical map wrapper helpers keep Comparable diagnostics for experimental map receivers") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_map/*
-
-[struct]
-Key() {
-  [i32] value{0i32}
-}
-
-[return<bool>]
-/Key/equal([Key] left, [Key] right) {
-  return(equal(left.value, right.value))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [Map<Key, i32>] values{mapSingle<Key, i32>(Key(1i32), 4i32)}
-  if(/std/collections/mapContains<Key, i32>(values, Key(1i32)),
-     then() { return(1i32) },
-     else() { return(0i32) })
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") == std::string::npos);
 }
 
 TEST_CASE("canonical namespaced map helpers keep unknown-call diagnostics for borrowed experimental map receivers") {
@@ -4633,75 +4458,6 @@ main() {
   [Map<Key, i32>] values{mapNew<Key, i32>()}
   [Reference<Map<Key, i32>>] ref{borrowExperimentalMap(location(values))}
   if(/std/collections/map/contains_ref<Key, i32>(ref, Key(1i32)),
-     then() { return(1i32) },
-     else() { return(0i32) })
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") == std::string::npos);
-}
-
-TEST_CASE("canonical map wrapper helpers keep unknown-call diagnostics for borrowed experimental map receivers") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_map/*
-
-[struct]
-Key() {
-  [i32] value{0i32}
-}
-
-[return<bool>]
-/Key/equal([Key] left, [Key] right) {
-  return(equal(left.value, right.value))
-}
-
-[return<Reference<Map<Key, i32>>>]
-borrowExperimentalMap([Reference<Map<Key, i32>>] values) {
-  return(values)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [Map<Key, i32>] values{mapNew<Key, i32>()}
-  [Reference<Map<Key, i32>>] ref{borrowExperimentalMap(location(values))}
-  if(/std/collections/mapContains<Key, i32>(ref, Key(1i32)),
-     then() { return(1i32) },
-     else() { return(0i32) })
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/mapContains") != std::string::npos);
-}
-
-TEST_CASE("canonical map wrapper Ref helpers keep Comparable diagnostics for borrowed experimental map receivers") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_map/*
-
-[struct]
-Key() {
-  [i32] value{0i32}
-}
-
-[return<bool>]
-/Key/equal([Key] left, [Key] right) {
-  return(equal(left.value, right.value))
-}
-
-[return<Reference<Map<Key, i32>>>]
-borrowExperimentalMap([Reference<Map<Key, i32>>] values) {
-  return(values)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [Map<Key, i32>] values{mapNew<Key, i32>()}
-  [Reference<Map<Key, i32>>] ref{borrowExperimentalMap(location(values))}
-  if(/std/collections/mapContainsRef<Key, i32>(ref, Key(1i32)),
      then() { return(1i32) },
      else() { return(0i32) })
 }
@@ -10863,6 +10619,8 @@ main() {
 
 TEST_CASE("map canonical wrapper auto local preserves collection template info") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapValues() {
   return(map<i32, i32>(1i32, 4i32, 2i32, 5i32))
@@ -10871,8 +10629,8 @@ wrapValues() {
 [effects(heap_alloc), return<int>]
 main() {
   [auto] values{wrapValues()}
-  return(plus(plus(count(values), at(values, 1i32)),
-              plus(at_unsafe(values, 2i32), values[1i32])))
+  return(plus(plus(/std/collections/map/count(values), /std/collections/map/at(values, 1i32)),
+              plus(/std/collections/map/at_unsafe(values, 2i32), values[1i32])))
 }
 )";
   std::string error;
@@ -10882,6 +10640,8 @@ main() {
 
 TEST_CASE("map canonical wrapper auto local keeps builtin count diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapValues() {
   return(map<i32, i32>(1i32, 4i32))
@@ -10890,16 +10650,18 @@ wrapValues() {
 [effects(heap_alloc), return<int>]
 main() {
   [auto] values{wrapValues()}
-  return(count(values, true))
+  return(/std/collections/map/count(values, true))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("map canonical reference wrapper auto local preserves collection template info") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<Reference</std/collections/map<i32, i32>>>]
 borrowValues([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
@@ -10909,8 +10671,8 @@ borrowValues([Reference</std/collections/map<i32, i32>>] values) {
 main() {
   [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
   [auto] values{borrowValues(location(source))}
-  return(plus(plus(count(values), at(values, 1i32)),
-              plus(at_unsafe(values, 2i32), values[1i32])))
+  return(plus(plus(/std/collections/map/count(values), /std/collections/map/at(values, 1i32)),
+              plus(/std/collections/map/at_unsafe(values, 2i32), values[1i32])))
 }
 )";
   std::string error;
@@ -10920,6 +10682,8 @@ main() {
 
 TEST_CASE("map canonical reference wrapper auto local keeps key diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<Reference</std/collections/map<i32, i32>>>]
 borrowValues([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
@@ -10929,7 +10693,7 @@ borrowValues([Reference</std/collections/map<i32, i32>>] values) {
 main() {
   [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32)}
   [auto] values{borrowValues(location(source))}
-  return(at(values, true))
+  return(/std/collections/map/at(values, true))
 }
 )";
   std::string error;
@@ -10939,11 +10703,13 @@ main() {
 
 TEST_CASE("explicit canonical map binding keeps builtin helper validation") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
-  return(plus(plus(count(values), at(values, 1i32)),
-              plus(at_unsafe(values, 2i32), values[1i32])))
+  return(plus(plus(/std/collections/map/count(values), /std/collections/map/at(values, 1i32)),
+              plus(/std/collections/map/at_unsafe(values, 2i32), values[1i32])))
 }
 )";
   std::string error;
@@ -10953,11 +10719,13 @@ main() {
 
 TEST_CASE("explicit canonical map parameter keeps builtin helper validation") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 sumValues([/std/collections/map<i32, i32>] values) {
-  [auto] first{at(values, 1i32)}
-  [auto] second{at_unsafe(values, 2i32)}
-  [auto] total{count(values)}
+  [auto] first{/std/collections/map/at(values, 1i32)}
+  [auto] second{/std/collections/map/at_unsafe(values, 2i32)}
+  [auto] total{/std/collections/map/count(values)}
   return(plus(plus(total, first), plus(second, values[1i32])))
 }
 
@@ -10973,9 +10741,11 @@ main() {
 
 TEST_CASE("explicit canonical map parameter keeps builtin key diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 sumValues([/std/collections/map<i32, i32>] values) {
-  return(at(values, true))
+  return(/std/collections/map/at(values, true))
 }
 
 [effects(heap_alloc), return<int>]
@@ -10990,6 +10760,8 @@ main() {
 
 TEST_CASE("explicit canonical map parameter keeps print statement string validation") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(io_out), return<int>]
 showValue([/std/collections/map<i32, string>] values) {
   print_line(values[1i32])
@@ -11008,6 +10780,8 @@ main() {
 
 TEST_CASE("canonical map reference parameter keeps print statement string validation") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(io_out), return<int>]
 showValue([Reference</std/collections/map<i32, string>>] values) {
   print_line(values[1i32])
@@ -11028,6 +10802,8 @@ main() {
 
 TEST_CASE("wrapper-returned canonical map keeps print statement string validation") {
   const std::string source = R"(
+import /std/collections/*
+
 [return</std/collections/map<i32, string>>]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
@@ -11051,6 +10827,8 @@ main() {
 
 TEST_CASE("wrapper-returned referenced canonical map keeps print statement string validation") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<Reference</std/collections/map<i32, string>>>]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
@@ -11075,6 +10853,8 @@ main() {
 
 TEST_CASE("canonical map reference parameter keeps if string branch compatibility") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 showValue([Reference</std/collections/map<i32, string>>] values) {
   [string] message{if(true, then(){ values[1i32] }, else(){ "fallback"utf8 })}
@@ -11095,6 +10875,8 @@ main() {
 
 TEST_CASE("wrapper-returned canonical map keeps if string branch compatibility") {
   const std::string source = R"(
+import /std/collections/*
+
 [return</std/collections/map<i32, string>>]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
@@ -11118,6 +10900,8 @@ main() {
 
 TEST_CASE("wrapper-returned referenced canonical map keeps if string branch compatibility") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<Reference</std/collections/map<i32, string>>>]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
@@ -11227,6 +11011,8 @@ main() {
 
 TEST_CASE("canonical map reference parameter keeps if string branch diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 showValue([Reference</std/collections/map<i32, i32>>] values) {
   [string] message{if(true, then(){ values[1i32] }, else(){ "fallback"utf8 })}
@@ -11247,6 +11033,8 @@ main() {
 
 TEST_CASE("wrapper-returned canonical map keeps if string branch diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
@@ -11270,6 +11058,8 @@ main() {
 
 TEST_CASE("wrapper-returned referenced canonical map keeps if string branch diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
@@ -11294,6 +11084,8 @@ main() {
 
 TEST_CASE("wrapper-returned referenced canonical map keeps builtin key diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
@@ -11312,6 +11104,8 @@ main() {
 
 TEST_CASE("wrapper-returned canonical map access count call auto inference keeps string helper shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<bool>]
 /string/count([string] values) {
   return(false)
@@ -11647,6 +11441,8 @@ main() {
 
 TEST_CASE("wrapper-returned canonical map access count call auto inference keeps string helper mismatch diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<bool>]
 /string/count([string] values) {
   return(false)
@@ -11671,6 +11467,8 @@ main() {
 
 TEST_CASE("wrapper-returned referenced canonical map access count call auto inference keeps string helper shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<bool>]
 /string/count([string] values) {
   return(false)
@@ -11695,6 +11493,8 @@ main() {
 
 TEST_CASE("wrapper-returned referenced canonical map access count call auto inference keeps string helper mismatch diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<bool>]
 /string/count([string] values) {
   return(false)

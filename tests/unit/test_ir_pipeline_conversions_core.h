@@ -384,10 +384,12 @@ main() {
 
 TEST_CASE("ir lowerer supports string-keyed map literals") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
-  return(plus(count(values), at(values, "b"raw_utf8)))
+  return(plus(/std/collections/map/count(values), /std/collections/map/at(values, "b"raw_utf8)))
 }
 )";
   primec::Program program;
