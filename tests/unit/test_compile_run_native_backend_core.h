@@ -163,6 +163,32 @@ main() {
   CHECK(runCommand(exePath) == 43);
 }
 
+TEST_CASE("native materializes string variadic args packs and pure spread forwarding") {
+  const std::string source = R"(
+[return<int>]
+pack_score([args<string>] values) {
+  return(plus(count(values), values[1i32].count()))
+}
+
+[return<int>]
+forward([args<string>] values) {
+  return(pack_score([spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward("a"raw_utf8, "bbb"raw_utf8))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_string.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_string").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("native rejects mixed explicit and spread variadic forwarding") {
   const std::string source = R"(
 [return<int>]

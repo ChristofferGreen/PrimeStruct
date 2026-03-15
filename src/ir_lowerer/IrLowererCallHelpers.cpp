@@ -1525,9 +1525,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
 }
 
 bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo, std::string &error) {
-  if (!targetInfo.isArrayOrVectorTarget || targetInfo.elemKind == LocalInfo::ValueKind::Unknown ||
-      targetInfo.elemKind == LocalInfo::ValueKind::String) {
-    error = "native backend only supports at() on numeric/bool arrays or vectors";
+  if (!targetInfo.isArrayOrVectorTarget || targetInfo.elemKind == LocalInfo::ValueKind::Unknown) {
+    error = "native backend only supports at() on numeric/bool/string arrays or vectors";
     return false;
   }
   return true;

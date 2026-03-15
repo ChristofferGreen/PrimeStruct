@@ -67,9 +67,8 @@ bool emitInlineDefinitionCallParameters(
           return false;
         }
       }
-      if (paramInfo.structTypeName.size() > 0 || paramInfo.valueKind == LocalInfo::ValueKind::Unknown ||
-          paramInfo.valueKind == LocalInfo::ValueKind::String) {
-        error = "native backend only supports numeric/bool variadic args parameters";
+      if (paramInfo.structTypeName.size() > 0 || paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+        error = "native backend only supports numeric/bool/string variadic args parameters";
         return false;
       }
 
@@ -80,14 +79,23 @@ bool emitInlineDefinitionCallParameters(
 
       for (size_t packedIndex = 0; packedIndex < packedArgs.size(); ++packedIndex) {
         const Expr &argExpr = *packedArgs[packedIndex];
-        LocalInfo::ValueKind argKind = inferExprKind(argExpr, callerLocals);
-        if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String ||
-            argKind != paramInfo.valueKind) {
-          error = "variadic parameter type mismatch";
-          return false;
-        }
-        if (!emitExpr(argExpr, callerLocals)) {
-          return false;
+        if (paramInfo.valueKind == LocalInfo::ValueKind::String) {
+          LocalInfo::StringSource source = LocalInfo::StringSource::None;
+          int32_t index = -1;
+          bool argvChecked = true;
+          if (!emitStringValueForCall(argExpr, callerLocals, source, index, argvChecked)) {
+            return false;
+          }
+        } else {
+          LocalInfo::ValueKind argKind = inferExprKind(argExpr, callerLocals);
+          if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String ||
+              argKind != paramInfo.valueKind) {
+            error = "variadic parameter type mismatch";
+            return false;
+          }
+          if (!emitExpr(argExpr, callerLocals)) {
+            return false;
+          }
         }
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1 + static_cast<int32_t>(packedIndex)));
       }

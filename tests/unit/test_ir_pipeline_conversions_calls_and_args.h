@@ -190,6 +190,40 @@ main() {
   CHECK(result == 9);
 }
 
+TEST_CASE("ir lowerer materializes string variadic args packs and forwards pure spread") {
+  const std::string source = R"(
+[return<int>]
+pack_score([args<string>] values) {
+  return(plus(count(values), values[1i32].count()))
+}
+
+[return<int>]
+forward([args<string>] values) {
+  return(pack_score([spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward("a"raw_utf8, "bbb"raw_utf8))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 5);
+}
+
 TEST_CASE("ir lowerer rejects mixed explicit and spread variadic forwarding") {
   const std::string source = R"(
 [return<int>]
