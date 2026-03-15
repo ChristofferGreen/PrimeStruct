@@ -30871,6 +30871,46 @@ TEST_CASE("ir lowerer statement binding helper sets string parameter defaults") 
   CHECK(info.argvChecked);
 }
 
+TEST_CASE("ir lowerer statement binding helper classifies variadic Result parameters") {
+  primec::Expr param;
+  param.name = "values";
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  argsTransform.templateArgs.push_back("Result<i32, ParseError>");
+  param.transforms.push_back(argsTransform);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 9;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
+  CHECK(info.isArgsPack);
+  CHECK(info.isResult);
+  CHECK(info.resultHasValue);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(info.resultValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.resultErrorType == "ParseError");
+}
+
 TEST_CASE("ir lowerer statement binding helper rejects string reference parameters") {
   primec::Expr param;
   param.name = "label";
@@ -35084,6 +35124,47 @@ TEST_CASE("ir lowerer result helpers build locals-aware resolver adapters") {
   unknownName.kind = primec::Expr::Kind::Name;
   unknownName.name = "missing";
   CHECK_FALSE(resolveResultExprInfo(unknownName, locals, out));
+}
+
+TEST_CASE("ir lowerer result helpers resolve indexed args-pack Result expressions") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo resultPack;
+  resultPack.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  resultPack.isArgsPack = true;
+  resultPack.isResult = true;
+  resultPack.resultHasValue = true;
+  resultPack.resultValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  resultPack.resultErrorType = "ParseError";
+  locals.emplace("values", resultPack);
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.args = {valuesName, indexExpr};
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      accessExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(out.errorType == "ParseError");
 }
 
 TEST_CASE("ir lowerer result helpers resolve Result.why call info") {

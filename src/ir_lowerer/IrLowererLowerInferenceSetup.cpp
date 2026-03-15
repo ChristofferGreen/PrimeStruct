@@ -155,6 +155,16 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       }
     }
     if (arg.kind == Expr::Kind::Call) {
+      std::string accessName;
+      if (getBuiltinArrayAccessName(arg, accessName) && arg.args.size() == 2 && arg.args.front().kind == Expr::Kind::Name) {
+        auto it = localsIn.find(arg.args.front().name);
+        if (it != localsIn.end() && it->second.isArgsPack && it->second.isResult) {
+          kindOut = it->second.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+          return true;
+        }
+      }
+    }
+    if (arg.kind == Expr::Kind::Call) {
       if (!arg.isMethodCall && isSimpleCallName(arg, "File")) {
         kindOut = LocalInfo::ValueKind::Int64;
         return true;
@@ -1645,6 +1655,17 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           return true;
         }
         return false;
+      }
+      if (resultExpr.kind == Expr::Kind::Call) {
+        std::string accessName;
+        if (getBuiltinArrayAccessName(resultExpr, accessName) && resultExpr.args.size() == 2 &&
+            resultExpr.args.front().kind == Expr::Kind::Name) {
+          auto it = localsIn.find(resultExpr.args.front().name);
+          if (it != localsIn.end() && it->second.isArgsPack && it->second.isResult) {
+            kindOut = it->second.resultHasValue ? it->second.resultValueKind : LocalInfo::ValueKind::Int32;
+            return true;
+          }
+        }
       }
       if (resultExpr.kind != Expr::Kind::Call) {
         return false;

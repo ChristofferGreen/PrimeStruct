@@ -531,6 +531,73 @@ main() {
   CHECK(result == 15);
 }
 
+TEST_CASE("ir lowerer materializes variadic Result packs with indexed why and try access") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return(if(equal(err.code, 7i32), then() { "bad"utf8 }, else() { "other"utf8 }))
+  }
+}
+
+swallow_parse_error([ParseError] err) {}
+
+[return<Result<i32, ParseError>>]
+ok_value([i32] value) {
+  return(Result.ok(value))
+}
+
+[return<Result<i32, ParseError>>]
+fail_bad() {
+  return(7i64)
+}
+
+[return<int> on_error<ParseError, /swallow_parse_error>]
+score_results([args<Result<i32, ParseError>>] values) {
+  [i32] head{try(values[0i32])}
+  [i32] tailWhyCount{count(Result.why(values[minus(count(values), 1i32)]))}
+  return(plus(head, tailWhyCount))
+}
+
+[return<int>]
+forward([args<Result<i32, ParseError>>] values) {
+  return(score_results([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Result<i32, ParseError>>] values) {
+  return(score_results(ok_value(10i32), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(plus(score_results(ok_value(2i32), fail_bad()),
+              plus(forward(ok_value(3i32), fail_bad()),
+                   forward_mixed(ok_value(4i32), fail_bad()))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 24);
+}
+
 TEST_CASE("ir lowerer forwards count to method calls") {
   const std::string source = R"(
 namespace i32 {

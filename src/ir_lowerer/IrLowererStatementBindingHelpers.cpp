@@ -5,6 +5,7 @@
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStringLiteralHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 #include "IrLowererUninitializedTypeHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -16,6 +17,27 @@ bool hasSoaVectorTypeTransform(const Expr &expr) {
     if (transform.name == "soa_vector") {
       return true;
     }
+  }
+  return false;
+}
+
+bool extractArgsPackElementTypeText(const Expr &expr, std::string &typeTextOut) {
+  typeTextOut.clear();
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isBindingQualifierName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    if (transform.name != "args" || transform.templateArgs.size() != 1) {
+      return false;
+    }
+    typeTextOut = trimTemplateTypeText(transform.templateArgs.front());
+    return !typeTextOut.empty();
   }
   return false;
 }
@@ -246,6 +268,22 @@ bool inferCallParameterLocalInfo(const Expr &param,
       infoOut.valueKind = infoOut.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       if (!transform.templateArgs.empty()) {
         infoOut.resultErrorType = transform.templateArgs.back();
+      }
+    }
+  }
+
+  if (infoOut.isArgsPack) {
+    std::string elementTypeText;
+    if (extractArgsPackElementTypeText(param, elementTypeText)) {
+      bool resultHasValue = false;
+      LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+      std::string resultErrorType;
+      if (parseResultTypeName(elementTypeText, resultHasValue, resultValueKind, resultErrorType)) {
+        infoOut.isResult = true;
+        infoOut.resultHasValue = resultHasValue;
+        infoOut.resultValueKind = resultValueKind;
+        infoOut.resultErrorType = resultErrorType;
+        infoOut.valueKind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       }
     }
   }

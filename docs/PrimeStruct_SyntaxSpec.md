@@ -397,8 +397,9 @@ Bottom-level form therefore has:
   now covers direct numeric/bool/string pack materialization, pure final-spread forwarding of an existing pack, and
   mixed explicit-prefix + final-spread rebuilding from known-size numeric/bool/string packs, including indexed
   downstream string helpers. Struct packs now also materialize for direct calls plus pure/mixed forwarding across
-  `count(...)`, checked/unchecked indexed access, and downstream field/helper resolution; other unsupported non-string
-  element support remains a separate follow-up slice.
+  `count(...)`, checked/unchecked indexed access, and downstream field/helper resolution. `Result<T, Error>` packs now
+  preserve indexed `Result.why(...)` and `?` behavior across direct, pure-spread, and mixed-forwarded IR-backed
+  materialization; other unsupported non-string element support remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 

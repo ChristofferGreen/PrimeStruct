@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererHelpers.h"
 #include "IrLowererRuntimeErrorHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -113,6 +114,18 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     resultOut.errorType = info.resultErrorType;
     return true;
   };
+  std::string accessName;
+  if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name) {
+    const LocalResultInfo local = lookupLocal(expr.args.front().name);
+    auto localIt = localsIn.find(expr.args.front().name);
+    if (local.found && local.isResult && localIt != localsIn.end() && localIt->second.isArgsPack) {
+      out.isResult = true;
+      out.hasValue = local.resultHasValue;
+      out.valueKind = local.resultValueKind;
+      out.errorType = local.resultErrorType;
+      return true;
+    }
+  }
   return resolveResultExprInfo(
       expr, lookupLocal, resolveMethod, resolveDefinitionCall, lookupDefinitionResult, out);
 }
