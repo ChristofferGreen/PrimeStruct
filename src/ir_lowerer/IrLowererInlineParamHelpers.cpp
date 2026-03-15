@@ -99,6 +99,10 @@ bool emitInlineDefinitionCallParameters(
           error = "variadic parameter type mismatch";
           return false;
         }
+        if (callerIt->second.isSoaVector != paramInfo.isSoaVector) {
+          error = "variadic parameter type mismatch";
+          return false;
+        }
         if (callerIt->second.referenceToArray != paramInfo.referenceToArray ||
             callerIt->second.referenceToMap != paramInfo.referenceToMap) {
           error = "variadic parameter type mismatch";
@@ -123,6 +127,7 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.mapValueKind = callerIt->second.mapValueKind;
         paramInfo.referenceToArray = callerIt->second.referenceToArray;
         paramInfo.referenceToMap = callerIt->second.referenceToMap;
+        paramInfo.isSoaVector = callerIt->second.isSoaVector;
         calleeLocals.emplace(param.name, paramInfo);
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(callerIt->second.index));
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
@@ -152,7 +157,7 @@ bool emitInlineDefinitionCallParameters(
           return false;
         }
         paramInfo.structSlotCount = structLayout.totalSlots;
-      } else if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+      } else if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown && !paramInfo.isSoaVector) {
         error = "native backend only supports numeric/bool/string variadic args parameters";
         return false;
       }

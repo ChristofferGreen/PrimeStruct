@@ -1840,7 +1840,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Vector) {
-            typeNameOut = "vector";
+            typeNameOut = localIt->second.isSoaVector ? "soa_vector" : "vector";
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&

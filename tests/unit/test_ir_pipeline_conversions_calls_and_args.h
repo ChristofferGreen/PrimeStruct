@@ -804,6 +804,51 @@ main() {
   CHECK(result == 11);
 }
 
+TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+score_soas([args<soa_vector<Particle>>] values) {
+  return(plus(count(values), plus(values[0i32].count(), values[2i32].count())))
+}
+
+[return<int>]
+forward([args<soa_vector<Particle>>] values) {
+  return(score_soas([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<soa_vector<Particle>>] values) {
+  return(score_soas(soa_vector<Particle>(), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(plus(score_soas(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
+              plus(forward(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
+                   forward_mixed(soa_vector<Particle>(), soa_vector<Particle>()))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 9);
+}
+
 TEST_CASE("ir lowerer materializes variadic map packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]

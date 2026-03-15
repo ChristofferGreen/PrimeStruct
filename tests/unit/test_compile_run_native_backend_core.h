@@ -639,6 +639,43 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("native materializes variadic soa_vector packs with indexed count methods") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+score_soas([args<soa_vector<Particle>>] values) {
+  return(plus(count(values), plus(values[0i32].count(), values[2i32].count())))
+}
+
+[return<int>]
+forward([args<soa_vector<Particle>>] values) {
+  return(score_soas([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<soa_vector<Particle>>] values) {
+  return(score_soas(soa_vector<Particle>(), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(plus(score_soas(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
+              plus(forward(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
+                   forward_mixed(soa_vector<Particle>(), soa_vector<Particle>()))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_soa_vector.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_soa_vector").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("native materializes variadic map packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]
