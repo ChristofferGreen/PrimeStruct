@@ -1344,7 +1344,158 @@
   std::vector<const Expr *> orderedArgs;
   auto paramIt = paramMap.find(resolvedFull);
   if (paramIt != paramMap.end()) {
-    orderedArgs = orderCallArguments(expr, resolvedFull, paramIt->second, localTypes);
+    const auto &params = paramIt->second;
+    size_t packedParamIndex = params.size();
+    BindingInfo packedParamInfo;
+    if (!params.empty()) {
+      BindingInfo lastParamInfo = getBindingInfo(params.back());
+      if (normalizeBindingTypeName(lastParamInfo.typeName) == "args") {
+        packedParamIndex = params.size() - 1;
+        packedParamInfo = lastParamInfo;
+      }
+    }
+    if (packedParamIndex < params.size()) {
+      std::vector<const Expr *> fixedArgs(packedParamIndex, nullptr);
+      std::vector<const Expr *> packedArgs;
+      bool canPackArgs = true;
+      size_t positionalIndex = 0;
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        const Expr &arg = expr.args[i];
+        if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+          const std::string &name = *expr.argNames[i];
+          size_t matchIndex = packedParamIndex;
+          for (size_t p = 0; p < packedParamIndex; ++p) {
+            if (params[p].name == name) {
+              matchIndex = p;
+              break;
+            }
+          }
+          if (matchIndex >= packedParamIndex) {
+            canPackArgs = false;
+            break;
+          }
+          fixedArgs[matchIndex] = &arg;
+          continue;
+        }
+        while (positionalIndex < fixedArgs.size() && fixedArgs[positionalIndex] != nullptr) {
+          ++positionalIndex;
+        }
+        if (positionalIndex < fixedArgs.size()) {
+          fixedArgs[positionalIndex] = &arg;
+          ++positionalIndex;
+          continue;
+        }
+        packedArgs.push_back(&arg);
+      }
+      if (canPackArgs) {
+        for (size_t i = 0; i < fixedArgs.size(); ++i) {
+          if (fixedArgs[i] != nullptr) {
+            continue;
+          }
+          if (!params[i].args.empty()) {
+            fixedArgs[i] = &params[i].args.front();
+            continue;
+          }
+          canPackArgs = false;
+          break;
+        }
+      }
+      if (canPackArgs) {
+        auto emitRenderedArg = [&](const std::string &argText, bool &needComma) {
+          if (needComma) {
+            out << ", ";
+          }
+          out << argText;
+          needComma = true;
+        };
+        bool needComma = false;
+        for (const Expr *fixedArg : fixedArgs) {
+          emitRenderedArg(emitExpr(*fixedArg,
+                                   nameMap,
+                                   paramMap,
+                                   defMap,
+                                   structTypeMap,
+                                   importAliases,
+                                   localTypes,
+                                   returnKinds,
+                                   resultInfos,
+                                   returnStructs,
+                                   allowMathBare),
+                          needComma);
+        }
+
+        std::string packElementType =
+            bindingTypeToCpp(packedParamInfo.typeTemplateArg,
+                             params.back().namespacePrefix,
+                             importAliases,
+                             structTypeMap);
+        if (packElementType.empty()) {
+          packElementType = "int";
+        }
+
+        std::ostringstream packOut;
+        if (packedArgs.empty()) {
+          packOut << "std::vector<" << packElementType << ">{}";
+        } else {
+          const Expr *spreadArg = packedArgs.back()->isSpread ? packedArgs.back() : nullptr;
+          const size_t explicitCount = spreadArg ? packedArgs.size() - 1 : packedArgs.size();
+          if (spreadArg != nullptr && explicitCount == 0) {
+            packOut << emitExpr(*spreadArg,
+                                nameMap,
+                                paramMap,
+                                defMap,
+                                structTypeMap,
+                                importAliases,
+                                localTypes,
+                                returnKinds,
+                                resultInfos,
+                                returnStructs,
+                                allowMathBare);
+          } else {
+            if (spreadArg != nullptr) {
+              packOut << "ps_args_concat(";
+            }
+            packOut << "std::vector<" << packElementType << ">{";
+            for (size_t i = 0; i < explicitCount; ++i) {
+              if (i > 0) {
+                packOut << ", ";
+              }
+              packOut << emitExpr(*packedArgs[i],
+                                  nameMap,
+                                  paramMap,
+                                  defMap,
+                                  structTypeMap,
+                                  importAliases,
+                                  localTypes,
+                                  returnKinds,
+                                  resultInfos,
+                                  returnStructs,
+                                  allowMathBare);
+            }
+            packOut << "}";
+            if (spreadArg != nullptr) {
+              packOut << ", "
+                      << emitExpr(*spreadArg,
+                                  nameMap,
+                                  paramMap,
+                                  defMap,
+                                  structTypeMap,
+                                  importAliases,
+                                  localTypes,
+                                  returnKinds,
+                                  resultInfos,
+                                  returnStructs,
+                                  allowMathBare)
+                      << ")";
+            }
+          }
+        }
+        emitRenderedArg(packOut.str(), needComma);
+        out << ")";
+        return out.str();
+      }
+    }
+    orderedArgs = orderCallArguments(expr, resolvedFull, params, localTypes);
   } else {
     for (const auto &arg : expr.args) {
       orderedArgs.push_back(&arg);

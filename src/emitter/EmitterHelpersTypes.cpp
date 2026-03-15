@@ -288,7 +288,7 @@ bool isReferenceCandidate(const BindingInfo &info) {
   if (typeName == "Reference" || typeName == "Pointer") {
     return false;
   }
-  if (typeName == "array" || typeName == "vector" || typeName == "map") {
+  if (typeName == "array" || typeName == "vector" || typeName == "args" || typeName == "map") {
     return true;
   }
   if (typeName == "string") {
@@ -307,7 +307,7 @@ std::string bindingTypeToCpp(const std::string &typeName) {
   std::string arg;
   if (splitTemplateTypeName(typeName, base, arg)) {
     base = normalizeBindingTypeName(base);
-    if (base == "array" || base == "vector") {
+    if (base == "array" || base == "vector" || base == "args") {
       std::vector<std::string> args;
       if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
         std::string elemType = bindingTypeToCpp(args[0]);
@@ -432,7 +432,7 @@ std::string bindingTypeToCpp(const std::string &typeName,
   std::string arg;
   if (splitTemplateTypeName(typeName, base, arg)) {
     base = normalizeBindingTypeName(base);
-    if (base == "array" || base == "vector") {
+    if (base == "array" || base == "vector" || base == "args") {
       std::vector<std::string> args;
       if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
         std::string elemType = bindingTypeToCpp(args[0], namespacePrefix, importAliases, structTypeMap);
@@ -486,7 +486,7 @@ std::string bindingTypeToCpp(const std::string &typeName,
 
 std::string bindingTypeToCpp(const BindingInfo &info) {
   const std::string typeName = normalizeBindingTypeName(info.typeName);
-  if (typeName == "array" || typeName == "vector") {
+  if (typeName == "array" || typeName == "vector" || typeName == "args") {
     std::string elemType = bindingTypeToCpp(info.typeTemplateArg);
     return "std::vector<" + elemType + ">";
   }
@@ -534,7 +534,7 @@ std::string bindingTypeToCpp(const BindingInfo &info,
                              const std::unordered_map<std::string, std::string> &importAliases,
                              const std::unordered_map<std::string, std::string> &structTypeMap) {
   const std::string typeName = normalizeBindingTypeName(info.typeName);
-  if (typeName == "array" || typeName == "vector") {
+  if (typeName == "array" || typeName == "vector" || typeName == "args") {
     std::string elemType =
         bindingTypeToCpp(info.typeTemplateArg, namespacePrefix, importAliases, structTypeMap);
     return "std::vector<" + elemType + ">";

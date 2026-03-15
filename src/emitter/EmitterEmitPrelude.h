@@ -276,6 +276,11 @@
   out << "static inline int ps_array_count(const std::vector<T> &value) {\n";
   out << "  return static_cast<int>(value.size());\n";
   out << "}\n";
+  out << "template <typename T>\n";
+  out << "static inline std::vector<T> ps_args_concat(std::vector<T> prefix, const std::vector<T> &suffix) {\n";
+  out << "  prefix.insert(prefix.end(), suffix.begin(), suffix.end());\n";
+  out << "  return prefix;\n";
+  out << "}\n";
   out << "template <typename Key, typename Value>\n";
   out << "static inline int ps_map_count(const std::unordered_map<Key, Value> &value) {\n";
   out << "  return static_cast<int>(value.size());\n";

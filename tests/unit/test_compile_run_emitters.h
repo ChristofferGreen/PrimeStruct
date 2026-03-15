@@ -9567,4 +9567,52 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("C++ emitter runs variadic args body access and indexed method calls") {
+  const std::string source = R"(
+[return<int>]
+packScore([args<string>] values) {
+  return(plus(plus(values[0i32].count(), values.at(1i32).count()),
+              values.at_unsafe(2i32).count()))
+}
+
+[return<int>]
+main() {
+  return(packScore("ab"utf8, "cde"utf8, "fghi"utf8))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_body_api.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_body_api_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("C++ emitter forwards variadic args packs with explicit prefix values") {
+  const std::string source = R"(
+[return<int>]
+packScore([args<i32>] values) {
+  return(plus(count(values), plus(plus(values[0i32], values.at(1i32)), values.at_unsafe(2i32))))
+}
+
+[return<int>]
+forward([args<i32>] values) {
+  return(plus(values.count(), packScore(4i32, values...)))
+}
+
+[return<int>]
+main() {
+  return(forward(5i32, 6i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_forward.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_forward_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 20);
+}
+
 TEST_SUITE_END();

@@ -637,14 +637,14 @@ bool isArrayValue(const Expr &target, const std::unordered_map<std::string, Bind
     if (it == localTypes.end()) {
       return false;
     }
-    if (it->second.typeName == "array" || it->second.typeName == "vector") {
+    if (it->second.typeName == "array" || it->second.typeName == "vector" || it->second.typeName == "args") {
       return true;
     }
     if (it->second.typeName == "Reference") {
       std::string base;
       std::string arg;
       if (splitTemplateTypeName(it->second.typeTemplateArg, base, arg)) {
-        return base == "array" || base == "vector";
+        return base == "array" || base == "vector" || base == "args";
       }
     }
     return false;
@@ -799,7 +799,7 @@ bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::
       templateArg.clear();
     }
   }
-  if ((typeName == "array" || typeName == "vector") && !templateArg.empty()) {
+  if ((typeName == "array" || typeName == "vector" || typeName == "args") && !templateArg.empty()) {
     typeOut = normalizeBindingTypeName(templateArg);
     return true;
   }
