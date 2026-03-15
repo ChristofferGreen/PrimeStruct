@@ -606,6 +606,10 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
                                           const std::unordered_map<std::string, const Definition *> &defMap,
                                           LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
+  if ((receiverCallExpr.isMethodCall && isExplicitMapMethodAliasPath(receiverCallExpr.name)) ||
+      isExplicitMapHelperFallbackPath(receiverCallExpr)) {
+    return false;
+  }
 
   std::string accessName;
   if (!(receiverCallExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(receiverCallExpr, accessName) &&
@@ -979,6 +983,11 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       std::string normalizedName = methodCallExpr.name;
       if (!normalizedName.empty() && normalizedName.front() == '/') {
         normalizedName.erase(normalizedName.begin());
+      }
+      if (normalizedName == "map/at" || normalizedName == "map/at_unsafe" ||
+          normalizedName == "std/collections/map/at" ||
+          normalizedName == "std/collections/map/at_unsafe") {
+        return false;
       }
       const Expr &receiverExpr = methodCallExpr.args.front();
       auto assignKnownElementKind = [&](LocalInfo::ValueKind valueKind) {
