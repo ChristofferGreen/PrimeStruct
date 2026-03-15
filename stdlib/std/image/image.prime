@@ -613,6 +613,99 @@ namespace std {
     })
   }
 
+  [effects(heap_alloc)]
+  pngBuildFixedDistanceLengths([vector<i32> mut] lengths) {
+    clear(lengths)
+    [i32 mut] symbol{0i32}
+    while(less_than(symbol, 32i32), do() {
+      push(lengths, 5i32)
+      increment(symbol)
+    })
+  }
+
+  [return<int>]
+  pngLengthInfo([i32] symbol, [i32 mut] baseOut, [i32 mut] extraBitsOut) {
+    assign(baseOut, 0i32)
+    assign(extraBitsOut, 0i32)
+    if(less_than(symbol, 257i32),
+       then() { return(1i32) },
+       else() { })
+    if(less_equal(symbol, 264i32),
+       then() {
+         assign(baseOut, plus(3i32, minus(symbol, 257i32)))
+         return(0i32)
+       },
+       else() { })
+    if(equal(symbol, 285i32),
+       then() {
+         assign(baseOut, 258i32)
+         return(0i32)
+       },
+       else() { })
+    if(greater_than(symbol, 284i32),
+       then() { return(1i32) },
+       else() { })
+
+    [i32 mut] base{11i32}
+    [i32 mut] currentSymbol{265i32}
+    [i32 mut] step{2i32}
+    [i32 mut] extraBits{1i32}
+    while(greater_than(symbol, plus(currentSymbol, 3i32)), do() {
+      assign(base, plus(base, multiply(step, 4i32)))
+      assign(currentSymbol, plus(currentSymbol, 4i32))
+      assign(step, multiply(step, 2i32))
+      increment(extraBits)
+    })
+    assign(baseOut, plus(base, multiply(minus(symbol, currentSymbol), step)))
+    assign(extraBitsOut, extraBits)
+    return(0i32)
+  }
+
+  [return<int>]
+  pngDistanceInfo([i32] symbol, [i32 mut] baseOut, [i32 mut] extraBitsOut) {
+    assign(baseOut, 0i32)
+    assign(extraBitsOut, 0i32)
+    if(or(less_than(symbol, 0i32), greater_than(symbol, 29i32)),
+       then() { return(1i32) },
+       else() { })
+    if(less_equal(symbol, 3i32),
+       then() {
+         assign(baseOut, plus(symbol, 1i32))
+         return(0i32)
+       },
+       else() { })
+
+    [i32 mut] base{5i32}
+    [i32 mut] currentSymbol{4i32}
+    [i32 mut] span{4i32}
+    [i32 mut] extraBits{1i32}
+    while(greater_than(symbol, plus(currentSymbol, 1i32)), do() {
+      assign(base, plus(base, span))
+      assign(currentSymbol, plus(currentSymbol, 2i32))
+      assign(span, multiply(span, 2i32))
+      increment(extraBits)
+    })
+    if(equal(minus(symbol, currentSymbol), 1i32),
+       then() { assign(base, plus(base, divide(span, 2i32))) },
+       else() { })
+    assign(baseOut, base)
+    assign(extraBitsOut, extraBits)
+    return(0i32)
+  }
+
+  [effects(heap_alloc), return<int>]
+  pngInflateCopyFromOutput([vector<i32> mut] output, [i32] distance, [i32] length) {
+    if(or(or(less_equal(distance, 0i32), less_than(length, 0i32)), greater_than(distance, count(output))),
+       then() { return(1i32) },
+       else() { })
+    [i32 mut] copyIndex{0i32}
+    while(less_than(copyIndex, length), do() {
+      push(output, output[minus(count(output), distance)])
+      increment(copyIndex)
+    })
+    return(0i32)
+  }
+
   [effects(heap_alloc), return<int>]
   pngInflateStoredBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex, [vector<i32> mut] output) {
     if(not_equal(bitIndex, 0i32),
@@ -647,10 +740,12 @@ namespace std {
   }
 
   [effects(heap_alloc), return<int>]
-  pngInflateFixedHuffmanLiteralBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
-                                     [vector<i32> mut] output) {
+  pngInflateFixedHuffmanBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
+                              [vector<i32> mut] output) {
     [vector<i32> mut] literalLengths{vector<i32>()}
+    [vector<i32> mut] distanceLengths{vector<i32>()}
     pngBuildFixedLiteralLengths(literalLengths)
+    pngBuildFixedDistanceLengths(distanceLengths)
 
     while(true, do() {
       [i32 mut] symbol{0i32}
@@ -663,7 +758,53 @@ namespace std {
          else() {
            if(equal(symbol, 256i32),
               then() { return(0i32) },
-              else() { return(2i32) })
+              else() {
+                [i32 mut] lengthBase{0i32}
+                [i32 mut] lengthExtraBits{0i32}
+                [i32] lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
+                if(not_equal(lengthInfoStatus, 0i32),
+                   then() { return(1i32) },
+                   else() { })
+
+                [i32 mut] lengthExtraValue{0i32}
+                if(greater_than(lengthExtraBits, 0i32),
+                   then() {
+                     [i32] lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
+                     if(not_equal(lengthExtraStatus, 0i32),
+                        then() { return(1i32) },
+                        else() { })
+                   },
+                   else() { })
+                [i32] matchLength{plus(lengthBase, lengthExtraValue)}
+
+                [i32 mut] distanceSymbol{0i32}
+                [i32] distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths, 5i32, distanceSymbol)}
+                if(not_equal(distanceStatus, 0i32),
+                   then() { return(1i32) },
+                   else() { })
+
+                [i32 mut] distanceBase{0i32}
+                [i32 mut] distanceExtraBits{0i32}
+                [i32] distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
+                if(not_equal(distanceInfoStatus, 0i32),
+                   then() { return(1i32) },
+                   else() { })
+
+                [i32 mut] distanceExtraValue{0i32}
+                if(greater_than(distanceExtraBits, 0i32),
+                   then() {
+                     [i32] distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
+                     if(not_equal(distanceExtraStatus, 0i32),
+                        then() { return(1i32) },
+                        else() { })
+                   },
+                   else() { })
+
+                [i32] copyStatus{pngInflateCopyFromOutput(output, plus(distanceBase, distanceExtraValue), matchLength)}
+                if(not_equal(copyStatus, 0i32),
+                   then() { return(1i32) },
+                   else() { })
+              })
          })
     })
     return(1i32)
@@ -701,7 +842,7 @@ namespace std {
          then() { assign(inflateStatus, pngInflateStoredBlock(compressed, byteIndex, bitIndex, output)) },
          else() {
            if(equal(blockType, 1i32),
-              then() { assign(inflateStatus, pngInflateFixedHuffmanLiteralBlock(compressed, byteIndex, bitIndex, output)) },
+              then() { assign(inflateStatus, pngInflateFixedHuffmanBlock(compressed, byteIndex, bitIndex, output)) },
               else() {
                 if(equal(blockType, 2i32),
                    then() { return(2i32) },

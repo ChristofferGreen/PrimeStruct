@@ -876,7 +876,7 @@ main() {
   }
 }
 
-TEST_CASE("primec wasm wasi decodes fixed-huffman rgb png inputs deterministically") {
+TEST_CASE("primec wasm wasi decodes fixed-huffman backreference rgb png inputs deterministically") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_fixed_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -887,12 +887,13 @@ TEST_CASE("primec wasm wasi decodes fixed-huffman rgb png inputs deterministical
     const std::vector<unsigned char> pngBytes = {
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01,
         0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54,
-        0x78, 0x01, 0x63, 0xf8, 0xcf, 0xc0, 0x00, 0x00,
-        0x03, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x01, 0x63, 0xe0, 0x12, 0x91, 0x83, 0x20,
+        0x00, 0x03, 0x52, 0x00, 0xb5, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
+        0x44,
         0x00, 0x00, 0x00, 0x00,
     };
     std::ofstream input(tempRoot / "input.png", std::ios::binary);
@@ -922,6 +923,12 @@ main() {
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
+  print_line(pixels[3i32])
+  print_line(pixels[4i32])
+  print_line(pixels[5i32])
+  print_line(pixels[6i32])
+  print_line(pixels[7i32])
+  print_line(pixels[8i32])
   return(plus(width, height))
 }
 )";
@@ -937,14 +944,20 @@ main() {
     const std::string outPath = (tempRoot / "png_fixed_stdout.txt").string();
     const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
                                    quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 2);
+    CHECK(runCommand(wasmRunCmd) == 4);
     CHECK(readFile(outPath) ==
-          "1\n"
-          "1\n"
           "3\n"
-          "255\n"
-          "0\n"
-          "0\n");
+          "1\n"
+          "9\n"
+          "10\n"
+          "20\n"
+          "30\n"
+          "10\n"
+          "20\n"
+          "30\n"
+          "10\n"
+          "20\n"
+          "30\n");
   }
 }
 

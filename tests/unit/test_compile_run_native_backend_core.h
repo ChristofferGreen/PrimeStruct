@@ -575,18 +575,19 @@ main() {
         "90\n");
 }
 
-TEST_CASE("compiles and runs native png read for fixed-huffman rgb inputs") {
+TEST_CASE("compiles and runs native png read for fixed-huffman backreference rgb inputs") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_native_image_read_fixed.png").string();
   {
     const std::vector<unsigned char> pngBytes = {
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01,
         0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54,
-        0x78, 0x01, 0x63, 0xf8, 0xcf, 0xc0, 0x00, 0x00,
-        0x03, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x01, 0x63, 0xe0, 0x12, 0x91, 0x83, 0x20,
+        0x00, 0x03, 0x52, 0x00, 0xb5, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
+        0x44,
         0x00, 0x00, 0x00, 0x00,
     };
     std::ofstream file(inPath, std::ios::binary);
@@ -617,6 +618,12 @@ main() {
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
+  print_line(pixels[3i32])
+  print_line(pixels[4i32])
+  print_line(pixels[5i32])
+  print_line(pixels[6i32])
+  print_line(pixels[7i32])
+  print_line(pixels[8i32])
   return(plus(width, height))
 }
 )");
@@ -627,14 +634,20 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath) == 2);
+  CHECK(runCommand(exePath + " > " + outPath) == 4);
   CHECK(readFile(outPath) ==
-        "1\n"
-        "1\n"
         "3\n"
-        "255\n"
-        "0\n"
-        "0\n");
+        "1\n"
+        "9\n"
+        "10\n"
+        "20\n"
+        "30\n"
+        "10\n"
+        "20\n"
+        "30\n"
+        "10\n"
+        "20\n"
+        "30\n");
 }
 
 TEST_CASE("compiles and reports unsupported dynamic native png inputs deterministically") {
