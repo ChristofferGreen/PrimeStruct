@@ -68,6 +68,10 @@ TEST_CASE("compiles and runs canonical namespaced map constructors on explicit e
   expectCanonicalMapNamespaceExperimentalConstructorConformance("exe");
 }
 
+TEST_CASE("compiles and runs canonical namespaced map constructors through explicit experimental map returns in C++ emitter") {
+  expectCanonicalMapNamespaceExperimentalReturnConformance("exe");
+}
+
 TEST_CASE("rejects canonical namespaced map helpers on borrowed experimental map values in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("exe");
 }

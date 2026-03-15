@@ -2467,6 +2467,74 @@ bool rewriteDefinition(Definition &def,
     return false;
   }
   const bool allowMathBare = hasMathImport(ctx);
+  auto experimentalMapConstructorHelperPath = [&](size_t argumentCount) -> std::string {
+    switch (argumentCount) {
+    case 0:
+      return "/std/collections/experimental_map/mapNew";
+    case 2:
+      return "/std/collections/experimental_map/mapSingle";
+    case 4:
+      return "/std/collections/experimental_map/mapPair";
+    case 6:
+      return "/std/collections/experimental_map/mapTriple";
+    case 8:
+      return "/std/collections/experimental_map/mapQuad";
+    case 10:
+      return "/std/collections/experimental_map/mapQuint";
+    case 12:
+      return "/std/collections/experimental_map/mapSext";
+    case 14:
+      return "/std/collections/experimental_map/mapSept";
+    case 16:
+      return "/std/collections/experimental_map/mapOct";
+    default:
+      return {};
+    }
+  };
+  auto rewriteCanonicalExperimentalMapConstructorValue = [&](Expr &valueExpr) {
+    if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
+      return;
+    }
+    if (resolveCalleePath(valueExpr, def.namespacePrefix, ctx) != "/std/collections/map/map") {
+      return;
+    }
+    const std::string helperPath = experimentalMapConstructorHelperPath(valueExpr.args.size());
+    if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
+      return;
+    }
+    valueExpr.name = helperPath;
+    valueExpr.namespacePrefix.clear();
+  };
+  const auto expectedExperimentalMapReturn = [&]() {
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(normalizeBindingTypeName(transform.templateArgs.front()), base, argText)) {
+        continue;
+      }
+      if (resolveNameToPath(base, def.namespacePrefix, ctx.importAliases, ctx.sourceDefs) !=
+          "/std/collections/experimental_map/Map") {
+        continue;
+      }
+      std::vector<std::string> args;
+      return splitTopLevelTemplateArgs(argText, args) && args.size() == 2;
+    }
+    return false;
+  }();
+  auto rewriteCanonicalExperimentalMapReturnConstructors = [&](auto &self, Expr &candidate) -> void {
+    if (isReturnCall(candidate) && candidate.args.size() == 1) {
+      rewriteCanonicalExperimentalMapConstructorValue(candidate.args.front());
+    }
+    for (auto &arg : candidate.args) {
+      self(self, arg);
+    }
+    for (auto &arg : candidate.bodyArguments) {
+      self(self, arg);
+    }
+  };
   std::vector<ParameterInfo> params;
   params.reserve(def.parameters.size());
   LocalTypeMap locals;
@@ -2505,6 +2573,9 @@ bool rewriteDefinition(Definition &def,
     if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
       return false;
     }
+    if (expectedExperimentalMapReturn) {
+      rewriteCanonicalExperimentalMapReturnConstructors(rewriteCanonicalExperimentalMapReturnConstructors, stmt);
+    }
     BindingInfo info;
     if (extractExplicitBindingType(stmt, info)) {
       if (info.typeName == "auto" && stmt.args.size() == 1 &&
@@ -2523,6 +2594,9 @@ bool rewriteDefinition(Definition &def,
     if (!rewriteExpr(*def.returnExpr, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params,
                      allowMathBare)) {
       return false;
+    }
+    if (expectedExperimentalMapReturn) {
+      rewriteCanonicalExperimentalMapConstructorValue(*def.returnExpr);
     }
   }
   return true;

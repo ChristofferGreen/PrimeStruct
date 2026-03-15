@@ -420,6 +420,36 @@ inline std::string makeCanonicalMapNamespaceExperimentalConstructorConformanceSo
   return source;
 }
 
+inline std::string makeCanonicalMapNamespaceExperimentalReturnConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedCanonicalExperimentalMapReturnError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source += "[return<Map<string, i32>> effects(heap_alloc)]\n";
+  source += "buildValues() {\n";
+  source += "  return(/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapReturnError>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32>] values{buildValues()}\n";
+  source += "  [i32] found{try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8))}\n";
+  source += "  [i32 mut] total{plus(/std/collections/map/count<string, i32>(values), found)}\n";
+  source += "  assign(total, plus(total, /std/collections/map/at<string, i32>(values, \"left\"raw_utf8)))\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>(values, \"right\"raw_utf8)))\n";
+  source += "  if(/std/collections/map/contains<string, i32>(values, \"left\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -810,6 +840,14 @@ inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const 
   expectMapConformanceProgramRuns(
       makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
       "map_namespace_canonical_experimental_constructor_" + emitMode,
+      emitMode,
+      20);
+}
+
+inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(
+      makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
+      "map_namespace_canonical_experimental_return_" + emitMode,
       emitMode,
       20);
 }

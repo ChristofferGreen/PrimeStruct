@@ -2252,6 +2252,10 @@ TEST_CASE("compiles and runs native canonical namespaced map constructors on exp
   expectCanonicalMapNamespaceExperimentalConstructorConformance("native");
 }
 
+TEST_CASE("compiles and runs native canonical namespaced map constructors through explicit experimental map returns") {
+  expectCanonicalMapNamespaceExperimentalReturnConformance("native");
+}
+
 TEST_CASE("rejects native canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("native");
 }

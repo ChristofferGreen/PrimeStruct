@@ -4588,6 +4588,61 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced map constructor accepts explicit experimental map returns") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(io_err)]
+unexpectedCanonicalExperimentalMapReturnError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Map<string, i32>> effects(heap_alloc)]
+buildValues() {
+  return(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapReturnError>]
+main() {
+  [Map<string, i32>] values{buildValues()}
+  [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
+  [i32 mut] total{plus(/std/collections/map/count(values), found)}
+  assign(total, plus(total, /std/collections/map/at(values, "left"raw_utf8)))
+  assign(total, plus(total, /std/collections/map/at_unsafe(values, "right"raw_utf8)))
+  if(/std/collections/map/contains(values, "left"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map returns") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<Map<string, i32>> effects(heap_alloc)]
+buildValues() {
+  return(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32>] values{buildValues()}
+  return(/std/collections/map/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mismatch") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*
