@@ -2973,27 +2973,34 @@ bool rewriteExpr(Expr &expr,
     }
   }
 
+  std::function<bool(Expr &)> rewriteNestedExperimentalMapConstructorValue =
+      [&](Expr &candidate) -> bool {
+    if (candidate.isBinding && candidate.args.size() == 1) {
+      return rewriteNestedExperimentalMapConstructorValue(candidate.args.front());
+    }
+    if (candidate.kind != Expr::Kind::Call) {
+      return true;
+    }
+    if (!rewriteCanonicalExperimentalMapConstructorExpr(candidate)) {
+      return false;
+    }
+    // Keep walking through wrapper call trees once an outer destination is
+    // known to require an experimental Map value.
+    for (auto &arg : candidate.args) {
+      if (!rewriteNestedExperimentalMapConstructorValue(arg)) {
+        return false;
+      }
+    }
+    for (auto &bodyArg : candidate.bodyArguments) {
+      if (!rewriteNestedExperimentalMapConstructorValue(bodyArg)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   std::function<bool(const Definition &, bool)> rewriteCanonicalExperimentalMapConstructorArgs =
       [&](const Definition &targetDef, bool methodCallSyntax) -> bool {
-    auto rewriteNestedExperimentalMapConstructorArgs = [&](auto &self, Expr &candidate) -> void {
-      if (candidate.isBinding && candidate.args.size() == 1) {
-        self(self, candidate.args.front());
-        return;
-      }
-      if (candidate.kind != Expr::Kind::Call) {
-        return;
-      }
-      rewriteCanonicalExperimentalMapConstructorExpr(candidate);
-      // When an outer destination already requires an experimental Map value,
-      // keep walking through generic wrapper calls so nested canonical map
-      // constructors are rewritten before template inference binds the wrapper.
-      for (auto &arg : candidate.args) {
-        self(self, arg);
-      }
-      for (auto &bodyArg : candidate.bodyArguments) {
-        self(self, bodyArg);
-      }
-    };
     std::vector<ParameterInfo> callParams;
     if (!targetDef.parameters.empty()) {
       callParams.reserve(targetDef.parameters.size());
@@ -3072,7 +3079,9 @@ bool rewriteExpr(Expr &expr,
         if (&argExpr != orderedArg) {
           continue;
         }
-        rewriteNestedExperimentalMapConstructorArgs(rewriteNestedExperimentalMapConstructorArgs, argExpr);
+        if (!rewriteNestedExperimentalMapConstructorValue(argExpr)) {
+          return false;
+        }
         break;
       }
     }
@@ -3254,7 +3263,7 @@ bool rewriteExpr(Expr &expr,
         return;
       }
       Expr &valueExpr = expr.args[1];
-      if (!rewriteCanonicalExperimentalMapConstructorExpr(valueExpr)) {
+      if (!rewriteNestedExperimentalMapConstructorValue(valueExpr)) {
         return;
       }
     };

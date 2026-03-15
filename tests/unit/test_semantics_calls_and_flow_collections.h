@@ -5082,6 +5082,50 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
+TEST_CASE("helper-wrapped map constructor assignments accept explicit experimental map targets") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32> mut] values{mapNew<string, i32>()}
+  assign(values, wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)))
+  return(/std/collections/map/at(values, "left"raw_utf8))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped map constructor assignments keep mismatch diagnostics on explicit experimental map targets") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32> mut] values{mapNew<string, i32>()}
+  assign(values, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("implicit map constructors infer experimental auto locals and auto returns") {
   const std::string source = R"(
 import /std/collections/*
@@ -6009,6 +6053,58 @@ Holder() {
 main() {
   [Holder mut] holder{Holder()}
   assign(holder.values, /std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped map constructor assignments accept inferred experimental map struct fields") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+Holder() {
+  values{wrapValues(mapNew<string, i32>())}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  assign(holder.values, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)))
+  return(/std/collections/map/at(holder.values, "left"raw_utf8))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped map constructor assignments keep mismatch diagnostics on inferred experimental map struct fields") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+Holder() {
+  values{wrapValues(mapNew<string, i32>())}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  assign(holder.values, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
   return(0i32)
 }
 )";
