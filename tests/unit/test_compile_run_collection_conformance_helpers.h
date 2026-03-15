@@ -129,3 +129,15 @@ inline void expectExperimentalVectorOwnershipRejects(const std::string &emitMode
       "remove_swap",
       "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: Owned");
 }
+
+inline void expectVectorIndexedRemovalOwnershipRejects(const std::string &emitMode) {
+  expectVectorIndexedRemovalOwnershipReject(
+      emitMode,
+      "remove_at_drop",
+      "remove_at requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+  expectVectorIndexedRemovalOwnershipReject(
+      emitMode,
+      "remove_swap_relocation",
+      "remove_swap requires relocation-trivial vector element type until container move/reallocation semantics are "
+      "implemented: Wrapper");
+}

@@ -8006,6 +8006,10 @@ main() {
             "implemented: Mover") != std::string::npos);
 }
 
+TEST_CASE("rejects vm indexed vector removals with unsupported ownership semantics") {
+  expectVectorIndexedRemovalOwnershipRejects("vm");
+}
+
 TEST_CASE("runs vm with user push helper shadow") {
   const std::string source = R"(
 [return<int>]

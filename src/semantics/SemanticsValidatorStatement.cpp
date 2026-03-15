@@ -226,6 +226,17 @@ bool SemanticsValidator::validateVectorDiscardHelperElementType(const BindingInf
   return false;
 }
 
+bool SemanticsValidator::validateVectorIndexedRemovalHelperElementType(
+    const BindingInfo &binding,
+    const std::string &helperName,
+    const std::string &namespacePrefix,
+    const std::vector<std::string> *definitionTemplateArgs) {
+  if (!validateVectorDiscardHelperElementType(binding, helperName, namespacePrefix, definitionTemplateArgs)) {
+    return false;
+  }
+  return validateVectorRelocationHelperElementType(binding, helperName, namespacePrefix, definitionTemplateArgs);
+}
+
 bool SemanticsValidator::validateVectorRelocationHelperElementType(
     const BindingInfo &binding,
     const std::string &helperName,
@@ -2697,6 +2708,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         }
         if (!isIntegerExpr(stmt.args[1])) {
           error_ = vectorHelper + " requires integer index";
+          return false;
+        }
+        if (!validateVectorIndexedRemovalHelperElementType(
+                *binding, vectorHelper, namespacePrefix, definitionTemplateArgs)) {
           return false;
         }
         return true;

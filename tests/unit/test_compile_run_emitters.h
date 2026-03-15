@@ -8700,6 +8700,10 @@ main() {
             "implemented: Mover") != std::string::npos);
 }
 
+TEST_CASE("rejects indexed vector removals with unsupported ownership semantics in C++ emitter") {
+  expectVectorIndexedRemovalOwnershipRejects("exe");
+}
+
 TEST_CASE("compiles and runs repeat loop") {
   const std::string source = R"(
 [return<int>]

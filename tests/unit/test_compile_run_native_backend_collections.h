@@ -8854,6 +8854,10 @@ main() {
             "implemented: Wrapper") != std::string::npos);
 }
 
+TEST_CASE("rejects native indexed vector removals with unsupported ownership semantics") {
+  expectVectorIndexedRemovalOwnershipRejects("native");
+}
+
 TEST_CASE("compiles and runs native named vector at expression receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -71,6 +71,10 @@ private:
                                               const std::string &helperName,
                                               const std::string &namespacePrefix,
                                               const std::vector<std::string> *definitionTemplateArgs);
+  bool validateVectorIndexedRemovalHelperElementType(const BindingInfo &binding,
+                                                     const std::string &helperName,
+                                                     const std::string &namespacePrefix,
+                                                     const std::vector<std::string> *definitionTemplateArgs);
   bool validateVectorRelocationHelperElementType(const BindingInfo &binding,
                                                  const std::string &helperName,
                                                  const std::string &namespacePrefix,

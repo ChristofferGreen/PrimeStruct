@@ -562,6 +562,13 @@ Helpers:
 Mutation helpers (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) are statement-only
 (not valid in expression contexts).
 
+Current ownership contract:
+- `pop` / `clear` require drop-trivial element types.
+- `remove_at` / `remove_swap` require element types that are both drop-trivial and
+  relocation-trivial while non-trivial removed-element destruction and survivor
+  compaction semantics are still undefined.
+- `push` / `reserve` require relocation-trivial element types.
+
 Implementation status note: VM/native currently still implement vectors as fixed-capacity locals; full dynamic
 vector runtime parity is tracked in `docs/todo.md`.
 

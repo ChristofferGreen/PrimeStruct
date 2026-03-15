@@ -2854,6 +2854,61 @@ main() {
   CHECK(error.find("remove_at requires exactly two arguments") != std::string::npos);
 }
 
+TEST_CASE("remove_at rejects non-drop-trivial vector element types") {
+  const std::string source = R"(
+[struct]
+Owned() {
+  [i32] value{1i32}
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned())}
+  remove_at(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "remove_at requires drop-trivial vector element type until container drop semantics are implemented: "
+            "Owned") != std::string::npos);
+}
+
+TEST_CASE("remove_at rejects nested non-relocation-trivial vector element types") {
+  const std::string source = R"(
+[struct]
+Mover() {
+  [i32] value{1i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[struct]
+Wrapper() {
+  [Mover] value{Mover()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(), Wrapper())}
+  remove_at(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "remove_at requires relocation-trivial vector element type until container move/reallocation semantics "
+            "are implemented: Wrapper") != std::string::npos);
+}
+
 TEST_CASE("remove_at call keeps user-defined vector helper precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
@@ -2964,6 +3019,61 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("remove_swap requires exactly two arguments") != std::string::npos);
+}
+
+TEST_CASE("remove_swap rejects non-drop-trivial vector element types") {
+  const std::string source = R"(
+[struct]
+Owned() {
+  [i32] value{1i32}
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned())}
+  remove_swap(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: "
+            "Owned") != std::string::npos);
+}
+
+TEST_CASE("remove_swap rejects nested non-relocation-trivial vector element types") {
+  const std::string source = R"(
+[struct]
+Mover() {
+  [i32] value{1i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[struct]
+Wrapper() {
+  [Mover] value{Mover()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(), Wrapper())}
+  remove_swap(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "remove_swap requires relocation-trivial vector element type until container move/reallocation semantics "
+            "are implemented: Wrapper") != std::string::npos);
 }
 
 TEST_CASE("remove_swap validates on mutable vector binding") {

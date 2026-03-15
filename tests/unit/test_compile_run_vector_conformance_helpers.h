@@ -846,6 +846,65 @@ inline void expectExperimentalVectorOwnershipReject(const std::string &emitMode,
   CHECK(readFile(outPath).find(expectedError) != std::string::npos);
 }
 
+inline std::string makeVectorIndexedRemovalOwnershipRejectSource(const std::string &mode) {
+  std::string source;
+  if (mode == "remove_at_drop") {
+    source += "[struct]\n";
+    source += "Owned() {\n";
+    source += "  [i32] value{1i32}\n\n";
+    source += "  Destroy() {\n";
+    source += "  }\n";
+    source += "}\n\n";
+    source += "[effects(heap_alloc), return<int>]\n";
+    source += "main() {\n";
+    source += "  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned())}\n";
+    source += "  remove_at(values, 0i32)\n";
+    source += "  return(0i32)\n";
+    source += "}\n";
+    return source;
+  }
+
+  source += "[struct]\n";
+  source += "Mover() {\n";
+  source += "  [i32] value{1i32}\n\n";
+  source += "  [mut]\n";
+  source += "  Move([Reference<Self>] other) {\n";
+  source += "    assign(this, other)\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[struct]\n";
+  source += "Wrapper() {\n";
+  source += "  [Mover] value{Mover()}\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(), Wrapper())}\n";
+  source += "  remove_swap(values, 0i32)\n";
+  source += "  return(0i32)\n";
+  source += "}\n";
+  return source;
+}
+
+inline void expectVectorIndexedRemovalOwnershipReject(const std::string &emitMode,
+                                                      const std::string &mode,
+                                                      const std::string &expectedError) {
+  const std::string source = makeVectorIndexedRemovalOwnershipRejectSource(mode);
+  const std::string srcPath = writeTemp("vector_indexed_removal_ownership_" + mode + "_" + emitMode + ".prime",
+                                        source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_vector_indexed_removal_ownership_" + mode + "_" + emitMode + "_out.txt"))
+          .string();
+
+  const std::string command = emitMode == "vm"
+                                  ? "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                                        quoteShellArg(outPath) + " 2>&1"
+                                  : "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                        " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(command) == 2);
+  CHECK(readFile(outPath).find(expectedError) != std::string::npos);
+}
+
 inline std::string makeVectorPopEmptyRuntimeContractSource(bool methodForm) {
   std::string source;
   source += "[effects(heap_alloc), return<int>]\n";
