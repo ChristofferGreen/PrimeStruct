@@ -902,6 +902,22 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto resolveArgsPackCountTarget = [&](const Expr &target, std::string &elemType) -> bool {
+      elemType.clear();
+      auto resolveBinding = [&](const BindingInfo &binding) {
+        return getArgsPackElementType(binding, elemType);
+      };
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          return resolveBinding(*paramBinding);
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          return resolveBinding(it->second);
+        }
+      }
+      return false;
+    };
     auto resolveVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
