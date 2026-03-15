@@ -78,10 +78,10 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
   if (base == "Reference") {
     std::string refBase;
     std::string refArg;
+    infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
     if (!splitTemplateTypeName(trimTemplateTypeText(arg), refBase, refArg)) {
       const LocalInfo::ValueKind refValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
       if (refValueKind != LocalInfo::ValueKind::Unknown) {
-        infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
         infoOut.valueKind = refValueKind;
       }
       return;
@@ -107,7 +107,6 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     }
     const LocalInfo::ValueKind refValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
     if (refValueKind != LocalInfo::ValueKind::Unknown) {
-      infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
       infoOut.valueKind = refValueKind;
     }
     return;
@@ -132,6 +131,47 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
     infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
     infoOut.valueKind = infoOut.mapValueKind;
+  }
+}
+
+void applyArgsPackElementStructMetadata(const Expr &param,
+                                        const std::string &elementTypeText,
+                                        const ApplyStructBindingInfoFn &applyStructArrayInfo,
+                                        const ApplyStructBindingInfoFn &applyStructValueInfo,
+                                        LocalInfo &infoOut) {
+  if (elementTypeText.empty() || !infoOut.structTypeName.empty()) {
+    return;
+  }
+
+  Expr syntheticBinding;
+  syntheticBinding.namespacePrefix = param.namespacePrefix;
+
+  Transform syntheticTransform;
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(elementTypeText, base, arg)) {
+    syntheticTransform.name = trimTemplateTypeText(base);
+    if (!arg.empty()) {
+      std::vector<std::string> templateArgs;
+      if (splitTemplateArgs(arg, templateArgs)) {
+        syntheticTransform.templateArgs = std::move(templateArgs);
+      } else {
+        syntheticTransform.templateArgs.push_back(trimTemplateTypeText(arg));
+      }
+    }
+  } else {
+    syntheticTransform.name = trimTemplateTypeText(elementTypeText);
+  }
+  syntheticBinding.transforms.push_back(std::move(syntheticTransform));
+
+  LocalInfo elementInfo = infoOut;
+  elementInfo.kind = (infoOut.argsPackElementKind == LocalInfo::Kind::Value) ? LocalInfo::Kind::Value
+                                                                              : infoOut.argsPackElementKind;
+  elementInfo.isArgsPack = false;
+  applyStructArrayInfo(syntheticBinding, elementInfo);
+  applyStructValueInfo(syntheticBinding, elementInfo);
+  if (!elementInfo.structTypeName.empty()) {
+    infoOut.structTypeName = elementInfo.structTypeName;
   }
 }
 
@@ -369,6 +409,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
     std::string elementTypeText;
     if (extractArgsPackElementTypeText(param, elementTypeText)) {
       applyArgsPackElementMetadata(elementTypeText, infoOut);
+      applyArgsPackElementStructMetadata(param, elementTypeText, applyStructArrayInfo, applyStructValueInfo, infoOut);
     }
   }
 

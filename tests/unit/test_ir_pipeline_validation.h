@@ -32708,6 +32708,52 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic scalar refere
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
+TEST_CASE("ir lowerer statement binding helper classifies variadic struct reference parameters") {
+  primec::Expr param;
+  param.name = "values";
+  param.namespacePrefix = "/pkg";
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  argsTransform.templateArgs.push_back("Reference<Pair>");
+  param.transforms.push_back(argsTransform);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 14;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo &infoOut) {
+        for (const auto &transform : expr.transforms) {
+          if (transform.name == "Reference" && transform.templateArgs.size() == 1 &&
+              transform.templateArgs.front() == "Pair") {
+            infoOut.structTypeName = "/pkg/Pair";
+            return;
+          }
+        }
+      },
+      [](const primec::Expr &) { return false; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
+  CHECK(info.isArgsPack);
+  CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(info.structTypeName == "/pkg/Pair");
+}
+
 TEST_CASE("ir lowerer statement binding helper classifies variadic scalar pointer parameters") {
   primec::Expr param;
   param.name = "values";

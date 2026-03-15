@@ -402,7 +402,8 @@ Bottom-level form therefore has:
   materialization, and `array<T>`, `Reference<array<T>>`, `vector<T>`, empty/header-only `soa_vector<T>`,
   `map<K, V>`, plus `Reference<map<K, V>>` packs preserve indexed downstream `count()` resolution across those
   same forwarding modes, while scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream
-  `dereference(...)`; other unsupported non-string element support remains a separate follow-up slice.
+  `dereference(...)` and struct `Reference<T>` packs preserve indexed downstream field/helper access; other
+  unsupported non-string element support remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 

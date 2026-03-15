@@ -639,6 +639,70 @@ main() {
   CHECK(runCommand(exePath) == 23);
 }
 
+TEST_CASE("native materializes variadic struct reference packs with indexed field and helper access") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<int>]
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
+}
+
+[return<int>]
+score_refs([args<Reference<Pair>>] values) {
+  return(plus(values[0i32].value, values[2i32].score()))
+}
+
+[return<int>]
+forward([args<Reference<Pair>>] values) {
+  return(score_refs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Reference<Pair>>] values) {
+  [Pair] extra{Pair(5i32)}
+  [Reference<Pair>] extra_ref{location(extra)}
+  return(score_refs(extra_ref, [spread] values))
+}
+
+[return<int>]
+main() {
+  [Pair] a0{Pair(7i32)}
+  [Pair] a1{Pair(8i32)}
+  [Pair] a2{Pair(9i32)}
+  [Reference<Pair>] r0{location(a0)}
+  [Reference<Pair>] r1{location(a1)}
+  [Reference<Pair>] r2{location(a2)}
+
+  [Pair] b0{Pair(11i32)}
+  [Pair] b1{Pair(12i32)}
+  [Pair] b2{Pair(13i32)}
+  [Reference<Pair>] s0{location(b0)}
+  [Reference<Pair>] s1{location(b1)}
+  [Reference<Pair>] s2{location(b2)}
+
+  [Pair] c0{Pair(15i32)}
+  [Pair] c1{Pair(17i32)}
+  [Reference<Pair>] t0{location(c0)}
+  [Reference<Pair>] t1{location(c1)}
+
+  return(plus(score_refs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_struct_reference.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct_reference").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 65);
+}
+
 TEST_CASE("native materializes variadic scalar pointer packs with indexed dereference") {
   const std::string source = R"(
 [return<int>]

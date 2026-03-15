@@ -1550,12 +1550,17 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
   const bool isStructArgsPackTarget =
       targetInfo.isArgsPackTarget && !targetInfo.isVectorTarget && !targetInfo.structTypeName.empty() &&
       targetInfo.elemSlotCount > 0;
+  const bool isWrappedStructArgsPackTarget =
+      targetInfo.isArgsPackTarget && !targetInfo.isVectorTarget && !targetInfo.structTypeName.empty() &&
+      (targetInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
+       targetInfo.argsPackElementKind == LocalInfo::Kind::Reference);
   const bool isVectorArgsPackTarget =
       targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Vector;
   if (!targetInfo.isArrayOrVectorTarget ||
-      (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget && !isVectorArgsPackTarget)) {
+      (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget &&
+       !isWrappedStructArgsPackTarget && !isVectorArgsPackTarget)) {
     error =
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<vector<T>> packs";
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Reference<Struct>>/args<vector<T>> packs";
     return false;
   }
   return true;
@@ -1598,6 +1603,10 @@ bool emitArrayVectorIndexedAccess(
   }
   emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
 
+  const bool isWrappedStructArgsPackTarget =
+      arrayVectorTargetInfo.isArgsPackTarget &&
+      (arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
+       arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Reference);
   emitArrayVectorAccessLoad(
       accessName,
       ptrLocal,
@@ -1606,7 +1615,7 @@ bool emitArrayVectorIndexedAccess(
       arrayVectorTargetInfo.isVectorTarget,
       1,
       (arrayVectorTargetInfo.elemSlotCount > 0) ? arrayVectorTargetInfo.elemSlotCount : 1,
-      arrayVectorTargetInfo.structTypeName.empty(),
+      arrayVectorTargetInfo.structTypeName.empty() || isWrappedStructArgsPackTarget,
       allocTempLocal,
       emitArrayIndexOutOfBounds,
       instructionCount,
