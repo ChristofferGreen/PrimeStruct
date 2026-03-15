@@ -404,7 +404,7 @@ main() {
   CHECK(result == 3);
 }
 
-TEST_CASE("ir lowerer still rejects struct variadic pack indexing") {
+TEST_CASE("ir lowerer materializes direct struct variadic pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -412,13 +412,18 @@ Pair() {
 }
 
 [return<int>]
-first_value([args<Pair>] values) {
-  return(values[0i32].value)
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
+}
+
+[return<int>]
+score_pairs([args<Pair>] values) {
+  return(plus(values[0i32].value, values[1i32].score()))
 }
 
 [return<int>]
 main() {
-  return(first_value(Pair()))
+  return(score_pairs(Pair(7i32), Pair(9i32)))
 }
 )";
   primec::Program program;
@@ -428,9 +433,102 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
-        std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 17);
+}
+
+TEST_CASE("ir lowerer forwards pure spread struct pack indexing and method access") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<int>]
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
+}
+
+[return<int>]
+score_pairs([args<Pair>] values) {
+  return(plus(values[0i32].value, values[1i32].score()))
+}
+
+[return<int>]
+forward([args<Pair>] values) {
+  return(score_pairs([spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward(Pair(7i32), Pair(9i32)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 17);
+}
+
+TEST_CASE("ir lowerer materializes mixed struct pack indexing and method access") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<int>]
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
+}
+
+[return<int>]
+score_pairs([args<Pair>] values) {
+  return(plus(values[0i32].value, values[2i32].score()))
+}
+
+[return<int>]
+forward([args<Pair>] values) {
+  return(score_pairs(Pair(5i32), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward(Pair(7i32), Pair(9i32)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 15);
 }
 
 TEST_CASE("ir lowerer forwards count to method calls") {

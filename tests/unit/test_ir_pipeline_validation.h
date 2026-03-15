@@ -13766,6 +13766,13 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   refArrayInfo.valueKind = Kind::Bool;
   locals.emplace("refArr", refArrayInfo);
 
+  LocalInfo structArgsInfo;
+  structArgsInfo.kind = LocalInfo::Kind::Array;
+  structArgsInfo.isArgsPack = true;
+  structArgsInfo.structTypeName = "/pkg/Pair";
+  structArgsInfo.structSlotCount = 2;
+  locals.emplace("structArgs", structArgsInfo);
+
   primec::Expr arrName;
   arrName.kind = primec::Expr::Kind::Name;
   arrName.name = "arr";
@@ -13803,6 +13810,19 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error.empty());
 
+  primec::Expr structArgsName;
+  structArgsName.kind = primec::Expr::Kind::Name;
+  structArgsName.name = "structArgs";
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(structArgsName, locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Unknown);
+  CHECK_FALSE(resolved.isVectorTarget);
+  CHECK(resolved.isArgsPackTarget);
+  CHECK(resolved.structTypeName == "/pkg/Pair");
+  CHECK(resolved.elemSlotCount == 2);
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
+
   primec::Expr plain;
   plain.kind = primec::Expr::Kind::Name;
   plain.name = "other";
@@ -13810,14 +13830,14 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK_FALSE(resolved.isArrayOrVectorTarget);
   error.clear();
   CHECK_FALSE(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
-  CHECK(error == "native backend only supports at() on numeric/bool arrays or vectors");
+  CHECK(error == "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct> packs");
 
   primec::ir_lowerer::ArrayVectorAccessTargetInfo stringElem;
   stringElem.isArrayOrVectorTarget = true;
   stringElem.elemKind = Kind::String;
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(stringElem, error));
-  CHECK(error == "native backend only supports at() on numeric/bool arrays or vectors");
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(stringElem, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer call helpers try emit map access lookup") {
@@ -14239,7 +14259,7 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
       error));
-  CHECK(error == "native backend only supports at() on numeric/bool arrays or vectors");
+  CHECK(error == "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct> packs");
   CHECK(inferCalls == 0);
   CHECK(allocCalls == 0);
   CHECK(emitExprCalls == 0);
@@ -14354,6 +14374,55 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
   CHECK(instructions[22].op == primec::ir_lowerer::pushOneForIndex(Kind::Int32));
   CHECK(instructions[22].imm == primec::IrSlotBytesI32);
   CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  error.clear();
+  inferCalls = 0;
+  allocCalls = 0;
+  emitExprCalls = 0;
+  arrayIndexOutOfBoundsCalls = 0;
+  primec::ir_lowerer::LocalMap structLocals;
+  primec::ir_lowerer::LocalInfo structPackInfo;
+  structPackInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  structPackInfo.isArgsPack = true;
+  structPackInfo.structTypeName = "/pkg/Pair";
+  structPackInfo.structSlotCount = 2;
+  structLocals.emplace("vec", structPackInfo);
+  CHECK(primec::ir_lowerer::emitArrayVectorIndexedAccess(
+      "at",
+      targetExpr,
+      indexExpr,
+      structLocals,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Int32;
+      },
+      [&]() { return 60 + allocCalls++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        instructions.push_back({primec::IrOpcode::PushI32, emitExprCalls == 1 ? 201u : 4u});
+        return true;
+      },
+      [&]() { ++arrayIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error.empty());
+  CHECK(inferCalls == 1);
+  CHECK(allocCalls == 3);
+  CHECK(emitExprCalls == 2);
+  CHECK(arrayIndexOutOfBoundsCalls == 2);
+  REQUIRE(instructions.size() == 24u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 60u);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 61u);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 60u);
+  CHECK(instructions.back().op == primec::IrOpcode::AddI64);
 }
 
 TEST_CASE("ir lowerer call helpers emit builtin array access") {
@@ -15280,6 +15349,8 @@ TEST_CASE("ir lowerer call helpers emit array vector access load") {
       Kind::Int32,
       true,
       1,
+      1,
+      true,
       [&]() { return nextLocal++; },
       [&]() { ++arrayIndexOutOfBoundsCalls; },
       [&]() { return instructions.size(); },
@@ -15334,6 +15405,8 @@ TEST_CASE("ir lowerer call helpers emit array vector access load") {
       Kind::UInt64,
       false,
       1,
+      1,
+      true,
       [&]() { return nextLocal++; },
       [&]() { ++arrayIndexOutOfBoundsCalls; },
       [&]() { return instructions.size(); },
@@ -15354,6 +15427,46 @@ TEST_CASE("ir lowerer call helpers emit array vector access load") {
   CHECK(instructions[5].op == primec::ir_lowerer::mulForIndex(Kind::UInt64));
   CHECK(instructions[6].op == primec::IrOpcode::AddI64);
   CHECK(instructions[7].op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  nextLocal = 50;
+  arrayIndexOutOfBoundsCalls = 0;
+  primec::ir_lowerer::emitArrayVectorAccessLoad(
+      "at",
+      8,
+      9,
+      Kind::Int32,
+      false,
+      1,
+      2,
+      false,
+      [&]() { return nextLocal++; },
+      [&]() { ++arrayIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; });
+  CHECK(nextLocal == 51);
+  CHECK(arrayIndexOutOfBoundsCalls == 2);
+  REQUIRE(instructions.size() == 20u);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 8);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[2].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[2].imm == 50);
+  CHECK(instructions[11].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[11].imm == 8);
+  CHECK(instructions[12].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[12].imm == 9);
+  CHECK(instructions[13].op == primec::ir_lowerer::pushOneForIndex(Kind::Int32));
+  CHECK(instructions[13].imm == 2u);
+  CHECK(instructions[14].op == primec::ir_lowerer::mulForIndex(Kind::Int32));
+  CHECK(instructions[15].op == primec::ir_lowerer::pushOneForIndex(Kind::Int32));
+  CHECK(instructions[15].imm == 1u);
+  CHECK(instructions[16].op == primec::ir_lowerer::addForIndex(Kind::Int32));
+  CHECK(instructions[17].op == primec::ir_lowerer::pushOneForIndex(Kind::Int32));
+  CHECK(instructions[17].imm == primec::IrSlotBytesI32);
+  CHECK(instructions[18].op == primec::ir_lowerer::mulForIndex(Kind::Int32));
+  CHECK(instructions[19].op == primec::IrOpcode::AddI64);
 }
 
 TEST_CASE("ir lowerer call helpers emit map lookup loop locals") {
@@ -18388,6 +18501,61 @@ TEST_CASE("ir lowerer setup type helper resolves struct receiver method definiti
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
       [](const primec::Expr &) { return std::string("/pkg/Ctor"); },
+      defMap,
+      error);
+  CHECK(resolved == &structMethodDef);
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves indexed args-pack struct receiver methods from expressions") {
+  primec::Definition structMethodDef;
+  structMethodDef.fullPath = "/pkg/Pair/length";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {structMethodDef.fullPath, &structMethodDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 0;
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "at";
+  receiverCall.isMethodCall = true;
+  receiverCall.args = {receiverExpr, indexExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "length";
+  methodCall.isMethodCall = true;
+  methodCall.args.push_back(receiverCall);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.structTypeName = "/pkg/Pair";
+  valuesLocal.structSlotCount = 2;
+  locals.emplace("values", valuesLocal);
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {"/pkg/Pair"},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
       defMap,
       error);
   CHECK(resolved == &structMethodDef);
@@ -23164,6 +23332,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure struct variadic forwardin
   sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   sourceInfo.structTypeName = "/pkg/Pair";
+  sourceInfo.structSlotCount = 2;
   sourceInfo.isArgsPack = true;
   sourceInfo.argsPackElementCount = 2;
   callerLocals.emplace("source", sourceInfo);
@@ -23210,6 +23379,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure struct variadic forwardin
   CHECK(nextLocal == 2);
   REQUIRE(calleeLocals.count("values") == 1u);
   CHECK(calleeLocals.at("values").structTypeName == "/pkg/Pair");
+  CHECK(calleeLocals.at("values").structSlotCount == 2);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
   REQUIRE(instructions.size() == 2u);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
@@ -23297,6 +23467,7 @@ TEST_CASE("ir lowerer inline param helper materializes direct struct variadic ar
   CHECK(nextLocal == 10);
   REQUIRE(calleeLocals.count("values") == 1u);
   CHECK(calleeLocals.at("values").structTypeName == "/pkg/Pair");
+  CHECK(calleeLocals.at("values").structSlotCount == 2);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
   REQUIRE(instructions.size() == 8u);
   CHECK(instructions[0].op == primec::IrOpcode::PushI32);
@@ -23344,6 +23515,7 @@ TEST_CASE("ir lowerer inline param helper materializes mixed struct variadic for
   sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   sourceInfo.structTypeName = "/pkg/Pair";
+  sourceInfo.structSlotCount = 2;
   sourceInfo.isArgsPack = true;
   sourceInfo.argsPackElementCount = 2;
   callerLocals.emplace("source", sourceInfo);
@@ -23416,6 +23588,7 @@ TEST_CASE("ir lowerer inline param helper materializes mixed struct variadic for
   CHECK(nextLocal == 16);
   REQUIRE(calleeLocals.count("values") == 1u);
   CHECK(calleeLocals.at("values").structTypeName == "/pkg/Pair");
+  CHECK(calleeLocals.at("values").structSlotCount == 2);
   CHECK(calleeLocals.at("values").argsPackElementCount == 3);
   REQUIRE(instructions.size() == 16u);
   CHECK(instructions[0].op == primec::IrOpcode::PushI32);
@@ -25737,6 +25910,28 @@ TEST_CASE("ir lowerer uninitialized type helpers build expression struct path in
   callExpr.name = "factory";
   primec::ir_lowerer::LocalMap locals;
   CHECK(inferStructExprPath(callExpr, locals) == "/pkg/Ctor");
+
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.structTypeName = "/pkg/Ctor";
+  valuesInfo.structSlotCount = 2;
+  locals.emplace("values", valuesInfo);
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 0;
+
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.isMethodCall = true;
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+  accessExpr.args = {valuesExpr, indexExpr};
+  CHECK(inferStructExprPath(accessExpr, locals) == "/pkg/Ctor");
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {

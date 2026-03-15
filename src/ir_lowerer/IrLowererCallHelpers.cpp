@@ -1490,12 +1490,18 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = (it->second.kind == LocalInfo::Kind::Vector);
+      info.isArgsPackTarget = it->second.isArgsPack;
+      info.elemSlotCount = it->second.structSlotCount;
+      info.structTypeName = it->second.structTypeName;
       return info;
     }
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference &&
         it->second.referenceToArray) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
+      info.isArgsPackTarget = it->second.isArgsPack;
+      info.elemSlotCount = it->second.structSlotCount;
+      info.structTypeName = it->second.structTypeName;
       return info;
     }
     return info;
@@ -1525,8 +1531,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
 }
 
 bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo, std::string &error) {
-  if (!targetInfo.isArrayOrVectorTarget || targetInfo.elemKind == LocalInfo::ValueKind::Unknown) {
-    error = "native backend only supports at() on numeric/bool/string arrays or vectors";
+  const bool isStructArgsPackTarget =
+      targetInfo.isArgsPackTarget && !targetInfo.isVectorTarget && !targetInfo.structTypeName.empty() &&
+      targetInfo.elemSlotCount > 0;
+  if (!targetInfo.isArrayOrVectorTarget ||
+      (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget)) {
+    error = "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct> packs";
     return false;
   }
   return true;
@@ -1576,6 +1586,8 @@ bool emitArrayVectorIndexedAccess(
       indexKind,
       arrayVectorTargetInfo.isVectorTarget,
       1,
+      (arrayVectorTargetInfo.elemSlotCount > 0) ? arrayVectorTargetInfo.elemSlotCount : 1,
+      arrayVectorTargetInfo.structTypeName.empty(),
       allocTempLocal,
       emitArrayIndexOutOfBounds,
       instructionCount,
@@ -2157,6 +2169,8 @@ void emitArrayVectorAccessLoad(
     LocalInfo::ValueKind indexKind,
     bool isVectorTarget,
     uint64_t arrayHeaderSlots,
+    int32_t elementSlotCount,
+    bool loadElementValue,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void()> &emitArrayIndexOutOfBounds,
     const std::function<size_t()> &instructionCount,
@@ -2201,12 +2215,21 @@ void emitArrayVectorAccessLoad(
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
   if (!isVectorTarget) {
     emitInstruction(pushOneForIndex(indexKind), arrayHeaderSlots);
+    if (elementSlotCount > 1) {
+      emitInstruction(pushOneForIndex(indexKind), static_cast<uint64_t>(elementSlotCount));
+      emitInstruction(mulForIndex(indexKind), 0);
+    }
     emitInstruction(addForIndex(indexKind), 0);
+  } else if (elementSlotCount > 1) {
+    emitInstruction(pushOneForIndex(indexKind), static_cast<uint64_t>(elementSlotCount));
+    emitInstruction(mulForIndex(indexKind), 0);
   }
   emitInstruction(pushOneForIndex(indexKind), IrSlotBytesI32);
   emitInstruction(mulForIndex(indexKind), 0);
   emitInstruction(IrOpcode::AddI64, 0);
-  emitInstruction(IrOpcode::LoadIndirect, 0);
+  if (loadElementValue) {
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+  }
 }
 
 MapLookupLoopLocals emitMapLookupLoopLocals(

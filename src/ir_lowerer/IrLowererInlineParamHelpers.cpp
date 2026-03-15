@@ -94,6 +94,7 @@ bool emitInlineDefinitionCallParameters(
           return true;
         }
         paramInfo.argsPackElementCount = callerIt->second.argsPackElementCount;
+        paramInfo.structSlotCount = callerIt->second.structSlotCount;
         calleeLocals.emplace(param.name, paramInfo);
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(callerIt->second.index));
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
@@ -122,6 +123,7 @@ bool emitInlineDefinitionCallParameters(
         if (!resolveStructSlotLayout(paramInfo.structTypeName, structLayout)) {
           return false;
         }
+        paramInfo.structSlotCount = structLayout.totalSlots;
       } else if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
         error = "native backend only supports numeric/bool/string variadic args parameters";
         return false;

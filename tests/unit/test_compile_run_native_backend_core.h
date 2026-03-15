@@ -303,7 +303,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("native still rejects struct variadic pack indexing") {
+TEST_CASE("native materializes direct struct variadic pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -311,26 +311,99 @@ Pair() {
 }
 
 [return<int>]
-first_value([args<Pair>] values) {
-  return(values[0i32].value)
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
+}
+
+[return<int>]
+score_pairs([args<Pair>] values) {
+  return(plus(values[0i32].value, values[1i32].score()))
 }
 
 [return<int>]
 main() {
-  return(first_value(Pair()))
+  return(score_pairs(Pair(7i32), Pair(9i32)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_index.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct_index.txt").string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct_index").string();
 
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
+}
+
+TEST_CASE("native forwards pure spread struct pack indexing and method access") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<int>]
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
+}
+
+[return<int>]
+score_pairs([args<Pair>] values) {
+  return(plus(values[0i32].value, values[1i32].score()))
+}
+
+[return<int>]
+forward([args<Pair>] values) {
+  return(score_pairs([spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward(Pair(7i32), Pair(9i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_struct_access_spread.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct_access_spread").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
+}
+
+TEST_CASE("native materializes mixed struct pack indexing and method access") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<int>]
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
+}
+
+[return<int>]
+score_pairs([args<Pair>] values) {
+  return(plus(values[0i32].value, values[2i32].score()))
+}
+
+[return<int>]
+forward([args<Pair>] values) {
+  return(score_pairs(Pair(5i32), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(forward(Pair(7i32), Pair(9i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_struct_access_mixed.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_struct_access_mixed").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 15);
 }
 
 TEST_CASE("native preserves if expression values in arithmetic context") {

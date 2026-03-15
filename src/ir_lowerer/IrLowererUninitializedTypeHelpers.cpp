@@ -574,6 +574,17 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           }
         }
       }
+      std::string accessName;
+      if (getBuiltinArrayAccessName(exprIn, accessName) && exprIn.args.size() == 2) {
+        const Expr &accessReceiver = exprIn.args.front();
+        if (accessReceiver.kind == Expr::Kind::Name) {
+          auto receiverIt = localsInExpr.find(accessReceiver.name);
+          if (receiverIt != localsInExpr.end() && receiverIt->second.isArgsPack &&
+              !receiverIt->second.structTypeName.empty()) {
+            return receiverIt->second.structTypeName;
+          }
+        }
+      }
       const std::string fieldAccessStruct = inferStructPathFromFieldAccessCall(
           exprIn, localsInExpr, inferStructExprPath, resolveStructFieldSlot);
       if (!fieldAccessStruct.empty() || exprIn.isFieldAccess) {

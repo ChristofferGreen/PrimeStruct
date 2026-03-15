@@ -1829,6 +1829,18 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     return false;
   }
   if (receiverExpr.kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(receiverExpr, accessName) && receiverExpr.args.size() == 2) {
+      const Expr &accessReceiver = receiverExpr.args.front();
+      if (accessReceiver.kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(accessReceiver.name);
+        if (localIt != localsIn.end() && localIt->second.isArgsPack &&
+            !localIt->second.structTypeName.empty()) {
+          resolvedTypePathOut = localIt->second.structTypeName;
+          return true;
+        }
+      }
+    }
     const LocalInfo::ValueKind inferredKind =
         inferExprKind ? inferExprKind(receiverExpr, localsIn) : LocalInfo::ValueKind::Unknown;
     typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind);

@@ -118,6 +118,9 @@ struct ArrayVectorAccessTargetInfo {
   bool isArrayOrVectorTarget = false;
   LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
   bool isVectorTarget = false;
+  bool isArgsPackTarget = false;
+  int32_t elemSlotCount = 0;
+  std::string structTypeName;
 };
 using ResolveCallMapAccessTargetInfoFn = std::function<bool(const Expr &, MapAccessTargetInfo &)>;
 using ResolveCallArrayVectorAccessTargetInfoFn =
@@ -627,6 +630,8 @@ void emitArrayVectorAccessLoad(
     LocalInfo::ValueKind indexKind,
     bool isVectorTarget,
     uint64_t arrayHeaderSlots,
+    int32_t elementSlotCount,
+    bool loadElementValue,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void()> &emitArrayIndexOutOfBounds,
     const std::function<size_t()> &instructionCount,
