@@ -71,6 +71,11 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     std::string refBase;
     std::string refArg;
     if (!splitTemplateTypeName(trimTemplateTypeText(arg), refBase, refArg)) {
+      const LocalInfo::ValueKind refValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+      if (refValueKind != LocalInfo::ValueKind::Unknown) {
+        infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
+        infoOut.valueKind = refValueKind;
+      }
       return;
     }
     refBase = normalizeCollectionBindingTypeName(refBase);
@@ -92,6 +97,12 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = infoOut.mapValueKind;
       return;
     }
+    const LocalInfo::ValueKind refValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+    if (refValueKind != LocalInfo::ValueKind::Unknown) {
+      infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
+      infoOut.valueKind = refValueKind;
+    }
+    return;
   }
   if (base == "vector") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Vector;

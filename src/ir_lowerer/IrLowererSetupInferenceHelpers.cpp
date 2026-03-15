@@ -66,6 +66,16 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
     return LocalInfo::ValueKind::Unknown;
   }
   if (expr.kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(expr, accessName) && !accessName.empty() && expr.args.size() == 2 &&
+        expr.args.front().kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.args.front().name);
+      if (it != localsIn.end() && it->second.isArgsPack &&
+          it->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+          !it->second.referenceToArray && !it->second.referenceToMap) {
+        return it->second.valueKind;
+      }
+    }
     if (isSimpleCallName(expr, "location") && expr.args.size() == 1) {
       const Expr &target = expr.args.front();
       if (target.kind == Expr::Kind::Name) {

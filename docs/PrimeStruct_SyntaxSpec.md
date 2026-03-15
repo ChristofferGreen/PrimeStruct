@@ -401,7 +401,8 @@ Bottom-level form therefore has:
   preserve indexed `Result.why(...)` and `?` behavior across direct, pure-spread, and mixed-forwarded IR-backed
   materialization, and `array<T>`, `Reference<array<T>>`, `vector<T>`, empty/header-only `soa_vector<T>`,
   `map<K, V>`, plus `Reference<map<K, V>>` packs preserve indexed downstream `count()` resolution across those
-  same forwarding modes; other unsupported non-string element support remains a separate follow-up slice.
+  same forwarding modes, while scalar `Reference<T>` packs preserve indexed downstream `dereference(...)`;
+  other unsupported non-string element support remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 
