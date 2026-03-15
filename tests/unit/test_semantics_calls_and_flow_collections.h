@@ -4508,6 +4508,33 @@ main() {
   CHECK(error.find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
+TEST_CASE("bare map contains method requires imported canonical helper or alias definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.contains(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/map/contains") != std::string::npos);
+}
+
+TEST_CASE("bare map tryAt method auto inference keeps deterministic unknown method diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.tryAt(1i32)}
+  return(try(inferred))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/map/tryAt") != std::string::npos);
+}
+
 TEST_CASE("bare map access methods require imported canonical helpers or alias definitions") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -4588,6 +4615,32 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown method: /map/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("stdlib canonical map contains and tryAt helpers resolve in method-call sugar") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(true)
+}
+
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(41i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  if(values.contains(1i32), {
+    return(try(values.tryAt(1i32)))
+  })
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib canonical map helpers resolve in method-call sugar") {

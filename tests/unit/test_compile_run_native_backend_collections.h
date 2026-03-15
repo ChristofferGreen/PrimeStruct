@@ -993,6 +993,50 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
+TEST_CASE("rejects native bare map contains method without imported canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.contains(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bare_map_contains_method_without_import.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_bare_map_contains_method_without_import_out.txt")
+          .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_bare_map_contains_method_without_import_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /std/collections/map/contains") != std::string::npos);
+}
+
+TEST_CASE("rejects native bare map tryAt method without imported canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(try(values.tryAt(1i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bare_map_tryat_method_without_import.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_bare_map_tryat_method_without_import_out.txt")
+          .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_bare_map_tryat_method_without_import_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /std/collections/map/tryAt") != std::string::npos);
+}
+
 TEST_CASE("rejects native bare map access methods without imported canonical helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

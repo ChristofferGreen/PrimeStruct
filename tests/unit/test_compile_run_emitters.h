@@ -4750,6 +4750,42 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/map/count") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter rejects bare map contains method without imported canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.contains(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_map_contains_method_without_import.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_contains_method_without_import.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/map/contains") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter rejects bare map tryAt method without imported canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(try(values.tryAt(1i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_map_tryat_method_without_import.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_tryat_method_without_import.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/map/tryAt") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter rejects bare map access methods without imported canonical helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
