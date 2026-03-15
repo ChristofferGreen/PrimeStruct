@@ -2253,6 +2253,14 @@ TEST_CASE("compiles and runs native canonical namespaced map helpers on borrowed
   expectCanonicalMapNamespaceExperimentalReferenceConformance("native");
 }
 
+TEST_CASE("compiles and runs native canonical map wrapper helpers on experimental map values") {
+  expectCanonicalMapWrapperExperimentalConformance("native");
+}
+
+TEST_CASE("compiles and runs native canonical map wrapper helpers on borrowed experimental map values") {
+  expectCanonicalMapWrapperExperimentalReferenceConformance("native");
+}
+
 TEST_CASE("compiles and runs native experimental map methods") {
   expectExperimentalMapMethodConformance("native");
 }

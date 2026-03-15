@@ -204,6 +204,16 @@ namespace std {
   }
 
   [public return<i32>]
+  /std/collections/mapCount<K, V>([Map<K, V>] values) {
+    return(mapCount<K, V>(values))
+  }
+
+  [public return<i32>]
+  /std/collections/mapCount<K, V>([Reference<Map<K, V>>] values) {
+    return(mapCount<K, V>(values))
+  }
+
+  [public return<i32>]
   /std/collections/map/count<K, V>([Map<K, V>] values) {
     return(mapCount<K, V>(values))
   }
@@ -226,6 +236,16 @@ namespace std {
   [public return<bool> Comparable<K>]
   /Reference/contains<K, V>([Reference<Map<K, V>>] self, [K] key) {
     return(mapContains<K, V>(self, key))
+  }
+
+  [public return<bool> Comparable<K>]
+  /std/collections/mapContains<K, V>([Map<K, V>] values, [K] key) {
+    return(mapContains<K, V>(values, key))
+  }
+
+  [public return<bool> Comparable<K>]
+  /std/collections/mapContains<K, V>([Reference<Map<K, V>>] values, [K] key) {
+    return(mapContains<K, V>(values, key))
   }
 
   [public return<bool> Comparable<K>]
@@ -260,6 +280,16 @@ namespace std {
   }
 
   [public return<Result<V, ContainerError>> Comparable<K>]
+  /std/collections/mapTryAt<K, V>([Map<K, V>] values, [K] key) {
+    return(mapTryAt<K, V>(values, key))
+  }
+
+  [public return<Result<V, ContainerError>> Comparable<K>]
+  /std/collections/mapTryAt<K, V>([Reference<Map<K, V>>] values, [K] key) {
+    return(mapTryAt<K, V>(values, key))
+  }
+
+  [public return<Result<V, ContainerError>> Comparable<K>]
   /std/collections/map/tryAt<K, V>([Map<K, V>] values, [K] key) {
     return(mapTryAt<K, V>(values, key))
   }
@@ -291,6 +321,16 @@ namespace std {
   }
 
   [public return<V> Comparable<K>]
+  /std/collections/mapAt<K, V>([Map<K, V>] values, [K] key) {
+    return(mapAt<K, V>(values, key))
+  }
+
+  [public return<V> Comparable<K>]
+  /std/collections/mapAt<K, V>([Reference<Map<K, V>>] values, [K] key) {
+    return(mapAt<K, V>(values, key))
+  }
+
+  [public return<V> Comparable<K>]
   /std/collections/map/at<K, V>([Map<K, V>] values, [K] key) {
     return(mapAt<K, V>(values, key))
   }
@@ -313,6 +353,16 @@ namespace std {
   [public return<V> Comparable<K>]
   /Reference/at_unsafe<K, V>([Reference<Map<K, V>>] self, [K] key) {
     return(mapAtUnsafe<K, V>(self, key))
+  }
+
+  [public return<V> Comparable<K>]
+  /std/collections/mapAtUnsafe<K, V>([Map<K, V>] values, [K] key) {
+    return(mapAtUnsafe<K, V>(values, key))
+  }
+
+  [public return<V> Comparable<K>]
+  /std/collections/mapAtUnsafe<K, V>([Reference<Map<K, V>>] values, [K] key) {
+    return(mapAtUnsafe<K, V>(values, key))
   }
 
   [public return<V> Comparable<K>]

@@ -68,6 +68,14 @@ TEST_CASE("compiles and runs canonical namespaced map helpers on borrowed experi
   expectCanonicalMapNamespaceExperimentalReferenceConformance("exe");
 }
 
+TEST_CASE("compiles and runs canonical map wrapper helpers on experimental map values in C++ emitter") {
+  expectCanonicalMapWrapperExperimentalConformance("exe");
+}
+
+TEST_CASE("compiles and runs canonical map wrapper helpers on borrowed experimental map values in C++ emitter") {
+  expectCanonicalMapWrapperExperimentalReferenceConformance("exe");
+}
+
 TEST_CASE("compiles and runs experimental map methods in C++ emitter") {
   expectExperimentalMapMethodConformance("exe");
 }
