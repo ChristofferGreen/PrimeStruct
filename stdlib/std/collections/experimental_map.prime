@@ -7,12 +7,11 @@ namespace std {
     [public vector<V> mut] payloads{vector<V>()}
   }
 
-  [return<void>]
+  [return<void> Comparable<K>]
   mapValidateKeyEnvelope<K>([K] key) {
     if(false,
        then() {
-         [map<K, i32>] guard{map<K, i32>(key, 0i32)}
-         at_unsafe(guard, key)
+         [bool] witness{and(equal(key, key), less_than(key, key))}
        },
        else() { })
   }

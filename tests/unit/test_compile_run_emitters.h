@@ -62,6 +62,48 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("C++ emitter runs experimental map with custom comparable struct keys") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[struct]
+Key() {
+  [i32] value{0i32}
+}
+
+[return<bool>]
+/Key/equal([Key] left, [Key] right) {
+  return(equal(left.value, right.value))
+}
+
+[return<bool>]
+/Key/less_than([Key] left, [Key] right) {
+  return(less_than(left.value, right.value))
+}
+
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+main() {
+  [Map<Key, i32>] values{mapPair<Key, i32>(Key(2i32), 7i32, Key(5i32), 11i32)}
+  [i32 mut] total{mapCount<Key, i32>(values)}
+  assign(total, plus(total, mapAt<Key, i32>(values, Key(2i32))))
+  assign(total, plus(total, mapAtUnsafe<Key, i32>(values, Key(5i32))))
+  if(mapContains<Key, i32>(values, Key(2i32)),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  [i32] found{try(mapTryAt<Key, i32>(values, Key(5i32)))}
+  return(Result.ok(plus(total, found)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_experimental_map_custom_comparable_key.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_experimental_map_custom_comparable_key_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 32);
+}
+
 TEST_CASE("executions are ignored by C++ emitter") {
   const std::string source = R"(
 [return<int>]

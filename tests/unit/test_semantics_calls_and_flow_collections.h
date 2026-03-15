@@ -119,6 +119,70 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("experimental map accepts custom comparable struct keys") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[struct]
+Key() {
+  [i32] value{0i32}
+}
+
+[return<bool>]
+/Key/equal([Key] left, [Key] right) {
+  return(equal(left.value, right.value))
+}
+
+[return<bool>]
+/Key/less_than([Key] left, [Key] right) {
+  return(less_than(left.value, right.value))
+}
+
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+main() {
+  [Map<Key, i32>] values{mapPair<Key, i32>(Key(2i32), 7i32, Key(5i32), 11i32)}
+  [i32 mut] total{mapCount<Key, i32>(values)}
+  assign(total, plus(total, mapAt<Key, i32>(values, Key(2i32))))
+  assign(total, plus(total, mapAtUnsafe<Key, i32>(values, Key(5i32))))
+  if(mapContains<Key, i32>(values, Key(2i32)),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  [i32] found{try(mapTryAt<Key, i32>(values, Key(5i32)))}
+  return(Result.ok(plus(total, found)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental map missing comparable trait reports trait diagnostics instead of builtin map key rejects") {
+  const std::string source = R"(
+import /std/collections/experimental_map/*
+
+[struct]
+Key() {
+  [i32] value{0i32}
+}
+
+[return<bool>]
+/Key/equal([Key] left, [Key] right) {
+  return(equal(left.value, right.value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<Key, i32>] values{mapSingle<Key, i32>(Key(1i32), 4i32)}
+  return(mapCount<Key, i32>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Comparable") != std::string::npos);
+  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+}
+
 TEST_CASE("container error contract shape validates through Result.why") {
   const std::string source = R"(
 [struct]
