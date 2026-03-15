@@ -1884,8 +1884,16 @@ bool SemanticsValidator::validateExecutions() {
       return false;
     }
     std::vector<const Expr *> orderedExecArgs;
+    std::vector<const Expr *> packedExecArgs;
+    size_t packedExecParamIndex = execParams.size();
     std::string orderError;
-    if (!buildOrderedArguments(execParams, exec.arguments, exec.argumentNames, orderedExecArgs, orderError)) {
+    if (!buildOrderedArguments(execParams,
+                               exec.arguments,
+                               exec.argumentNames,
+                               orderedExecArgs,
+                               packedExecArgs,
+                               packedExecParamIndex,
+                               orderError)) {
       if (orderError.find("argument count mismatch") != std::string::npos) {
         error_ = "argument count mismatch for " + resolvedPath;
       } else {
@@ -1893,11 +1901,166 @@ bool SemanticsValidator::validateExecutions() {
       }
       return false;
     }
+    std::unordered_set<const Expr *> explicitExecArgs;
+    explicitExecArgs.reserve(exec.arguments.size());
+    for (const auto &arg : exec.arguments) {
+      explicitExecArgs.insert(&arg);
+    }
     for (const auto *arg : orderedExecArgs) {
-      if (!arg) {
+      if (!arg || explicitExecArgs.count(arg) == 0) {
         continue;
       }
       if (!validateExpr({}, std::unordered_map<std::string, BindingInfo>{}, *arg)) {
+        return false;
+      }
+    }
+    for (const auto *arg : packedExecArgs) {
+      if (!arg || explicitExecArgs.count(arg) == 0) {
+        continue;
+      }
+      if (!validateExpr({}, std::unordered_map<std::string, BindingInfo>{}, *arg)) {
+        return false;
+      }
+    }
+    auto isSoftwareNumericParamCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {
+      if (expectedKind == actualKind) {
+        return true;
+      }
+      if (expectedKind == ReturnKind::Integer) {
+        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
+               actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+               actualKind == ReturnKind::Integer;
+      }
+      if (expectedKind == ReturnKind::Decimal) {
+        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
+               actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+               actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
+               actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal;
+      }
+      if (expectedKind == ReturnKind::Complex) {
+        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
+               actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+               actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
+               actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal ||
+               actualKind == ReturnKind::Complex;
+      }
+      return false;
+    };
+    auto validateExecutionArgTypeAgainstParam = [&](const Expr &arg,
+                                                    const ParameterInfo &param,
+                                                    const std::string &expectedTypeName) -> bool {
+      const ReturnKind expectedKind = returnKindForTypeName(normalizeBindingTypeName(expectedTypeName));
+      if (expectedKind != ReturnKind::Unknown) {
+        const ReturnKind actualKind = inferExprReturnKind(arg, {}, {});
+        if (actualKind == ReturnKind::Unknown || actualKind == expectedKind ||
+            isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
+          return true;
+        }
+        error_ = "argument type mismatch for " + resolvedPath + " parameter " + param.name + ": expected " +
+                 typeNameForReturnKind(expectedKind) + " got " + typeNameForReturnKind(actualKind);
+        return false;
+      }
+      const std::string expectedStructPath = resolveStructTypePath(expectedTypeName, exec.namespacePrefix, structNames_);
+      if (expectedStructPath.empty()) {
+        return true;
+      }
+      const std::string actualStructPath = inferStructReturnPath(arg, {}, {});
+      if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
+        error_ = "argument type mismatch for " + resolvedPath + " parameter " + param.name + ": expected " +
+                 expectedStructPath + " got " + actualStructPath;
+        return false;
+      }
+      return true;
+    };
+    auto validateExecutionSpreadTypeAgainstParam = [&](const Expr &arg,
+                                                       const ParameterInfo &param,
+                                                       const std::string &expectedTypeName,
+                                                       const std::string &expectedTypeText) -> bool {
+      std::string actualElementTypeText;
+      if (!resolveArgsPackElementTypeForExpr(arg, {}, {}, actualElementTypeText)) {
+        error_ = "spread argument requires args<T> value";
+        return false;
+      }
+      const ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
+      if (expectedKind != ReturnKind::Unknown) {
+        const ReturnKind actualKind = returnKindForTypeName(actualElementTypeText);
+        if (actualKind == ReturnKind::Unknown || actualKind == expectedKind ||
+            isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
+          return true;
+        }
+        error_ = "argument type mismatch for " + resolvedPath + " parameter " + param.name + ": expected " +
+                 typeNameForReturnKind(expectedKind) + " got " + typeNameForReturnKind(actualKind);
+        return false;
+      }
+      const std::string expectedStructPath = resolveStructTypePath(expectedTypeName, exec.namespacePrefix, structNames_);
+      if (!expectedStructPath.empty()) {
+        const std::string actualStructPath =
+            resolveStructTypePath(actualElementTypeText, arg.namespacePrefix, structNames_);
+        if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
+          error_ = "argument type mismatch for " + resolvedPath + " parameter " + param.name + ": expected " +
+                   expectedStructPath + " got " + actualStructPath;
+          return false;
+        }
+        if (actualStructPath.empty() && normalizeBindingTypeName(actualElementTypeText) != expectedStructPath) {
+          error_ = "argument type mismatch for " + resolvedPath + " parameter " + param.name + ": expected " +
+                   expectedStructPath + " got " + normalizeBindingTypeName(actualElementTypeText);
+          return false;
+        }
+        return true;
+      }
+      if (normalizeBindingTypeName(actualElementTypeText) != normalizeBindingTypeName(expectedTypeText)) {
+        error_ = "argument type mismatch for " + resolvedPath + " parameter " + param.name + ": expected " +
+                 expectedTypeText + " got " + normalizeBindingTypeName(actualElementTypeText);
+        return false;
+      }
+      return true;
+    };
+    auto validateExecutionArgsForParam = [&](const ParameterInfo &param,
+                                             const std::string &expectedTypeName,
+                                             const std::string &expectedTypeText,
+                                             const std::vector<const Expr *> &argsToValidate) -> bool {
+      for (const Expr *arg : argsToValidate) {
+        if (arg == nullptr || explicitExecArgs.count(arg) == 0) {
+          continue;
+        }
+        if (arg->isSpread) {
+          if (!validateExecutionSpreadTypeAgainstParam(*arg, param, expectedTypeName, expectedTypeText)) {
+            return false;
+          }
+          continue;
+        }
+        if (!validateExecutionArgTypeAgainstParam(*arg, param, expectedTypeName)) {
+          return false;
+        }
+      }
+      return true;
+    };
+    for (size_t paramIndex = 0; paramIndex < execParams.size(); ++paramIndex) {
+      const ParameterInfo &param = execParams[paramIndex];
+      if (paramIndex == packedExecParamIndex) {
+        std::string packElementTypeText;
+        if (!getArgsPackElementType(param.binding, packElementTypeText)) {
+          continue;
+        }
+        std::string packElementTypeName = packElementTypeText;
+        std::string packBase;
+        std::string packArgs;
+        if (splitTemplateTypeName(packElementTypeText, packBase, packArgs)) {
+          packElementTypeName = packBase;
+        }
+        if (!validateExecutionArgsForParam(param, packElementTypeName, packElementTypeText, packedExecArgs)) {
+          return false;
+        }
+        continue;
+      }
+      const Expr *arg = paramIndex < orderedExecArgs.size() ? orderedExecArgs[paramIndex] : nullptr;
+      if (arg == nullptr || explicitExecArgs.count(arg) == 0) {
+        continue;
+      }
+      const std::string &expectedTypeName = param.binding.typeName;
+      const std::string expectedTypeText =
+          param.binding.typeTemplateArg.empty() ? expectedTypeName : expectedTypeName + "<" + param.binding.typeTemplateArg + ">";
+      if (!validateExecutionArgTypeAgainstParam(*arg, param, expectedTypeName)) {
         return false;
       }
     }

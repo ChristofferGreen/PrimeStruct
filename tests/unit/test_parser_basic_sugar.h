@@ -128,9 +128,7 @@ collect(values...) {
   REQUIRE(param.transforms[0].templateArgs.size() == 1);
   CHECK(param.transforms[0].templateArgs[0] == "__pack_T");
   REQUIRE(def.returnExpr.has_value());
-  const auto &returnExpr = *def.returnExpr;
-  REQUIRE(returnExpr.args.size() == 1);
-  const auto &vectorCall = returnExpr.args[0];
+  const auto &vectorCall = *def.returnExpr;
   REQUIRE(vectorCall.kind == primec::Expr::Kind::Call);
   REQUIRE(vectorCall.args.size() == 1);
   CHECK(vectorCall.args[0].isSpread);
@@ -161,9 +159,8 @@ collect([string] values...) {
   REQUIRE(param.transforms[0].templateArgs.size() == 1);
   CHECK(param.transforms[0].templateArgs[0] == "string");
   REQUIRE(def.returnExpr.has_value());
-  const auto &returnExpr = *def.returnExpr;
-  REQUIRE(returnExpr.args.size() == 1);
-  const auto &vectorCall = returnExpr.args[0];
+  const auto &vectorCall = *def.returnExpr;
+  REQUIRE(vectorCall.kind == primec::Expr::Kind::Call);
   REQUIRE(vectorCall.args.size() == 1);
   CHECK(vectorCall.args[0].isSpread);
   CHECK(vectorCall.args[0].name == "values");

@@ -25,7 +25,7 @@ bool isArgumentLabelValueStart(TokenKind kind) {
 }
 
 bool isIgnorableToken(TokenKind kind) {
-  return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
+  return kind == TokenKind::Comment;
 }
 
 bool isControlKeyword(const std::string &name) {

@@ -61,7 +61,7 @@ std::string nextVariadicPackTemplateName(const std::vector<std::string> &existin
 }
 
 bool isIgnorableToken(TokenKind kind) {
-  return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
+  return kind == TokenKind::Comment;
 }
 
 void printTransforms(std::ostringstream &out, const std::vector<Transform> &transforms) {
@@ -707,14 +707,24 @@ bool Parser::parseParameterBinding(Expr &out,
 bool Parser::parseParameterList(std::vector<Expr> &out,
                                 const std::string &namespacePrefix,
                                 std::vector<std::string> *implicitTemplateArgsOut) {
-  if (match(TokenKind::RParen)) {
+  auto skipCommentsOnly = [&]() {
+    while (tokens_[pos_].kind == TokenKind::Comment) {
+      ++pos_;
+    }
+  };
+  auto matchRaw = [&](TokenKind kind) -> bool {
+    skipCommentsOnly();
+    return tokens_[pos_].kind == kind;
+  };
+
+  if (matchRaw(TokenKind::RParen)) {
     return true;
   }
   bool sawVariadicParam = false;
   while (true) {
-    if (match(TokenKind::Semicolon)) {
-      expect(TokenKind::Semicolon, "expected ';'");
-      if (match(TokenKind::RParen)) {
+    if (matchRaw(TokenKind::Semicolon)) {
+      ++pos_;
+      if (matchRaw(TokenKind::RParen)) {
         break;
       }
       continue;
@@ -769,28 +779,20 @@ bool Parser::parseParameterList(std::vector<Expr> &out,
       sawVariadicParam = true;
     }
     out.push_back(std::move(param));
-    if (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+    if (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
       if (sawVariadicParam) {
         return fail("variadic parameter must be final");
       }
-      if (match(TokenKind::Comma)) {
-        expect(TokenKind::Comma, "expected ','");
-      } else {
-        expect(TokenKind::Semicolon, "expected ';'");
+      ++pos_;
+      while (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
+        ++pos_;
       }
-      while (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
-        if (match(TokenKind::Comma)) {
-          expect(TokenKind::Comma, "expected ','");
-        } else {
-          expect(TokenKind::Semicolon, "expected ';'");
-        }
-      }
-      if (match(TokenKind::RParen)) {
+      if (matchRaw(TokenKind::RParen)) {
         break;
       }
       continue;
     }
-    if (match(TokenKind::RParen)) {
+    if (matchRaw(TokenKind::RParen)) {
       break;
     }
     continue;
@@ -801,15 +803,25 @@ bool Parser::parseParameterList(std::vector<Expr> &out,
 bool Parser::parseCallArgumentList(std::vector<Expr> &out,
                                    std::vector<std::optional<std::string>> &argNames,
                                    const std::string &namespacePrefix) {
-  if (match(TokenKind::RParen)) {
+  auto skipCommentsOnly = [&]() {
+    while (tokens_[pos_].kind == TokenKind::Comment) {
+      ++pos_;
+    }
+  };
+  auto matchRaw = [&](TokenKind kind) -> bool {
+    skipCommentsOnly();
+    return tokens_[pos_].kind == kind;
+  };
+
+  if (matchRaw(TokenKind::RParen)) {
     return true;
   }
   ArgumentLabelGuard labelGuard(*this);
   bool sawSpreadArg = false;
   while (true) {
-    if (match(TokenKind::Semicolon)) {
-      expect(TokenKind::Semicolon, "expected ';'");
-      if (match(TokenKind::RParen)) {
+    if (matchRaw(TokenKind::Semicolon)) {
+      ++pos_;
+      if (matchRaw(TokenKind::RParen)) {
         break;
       }
       continue;
@@ -903,27 +915,19 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     }
     out.push_back(std::move(arg));
     argNames.push_back(std::move(argName));
-    if (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+    if (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
       if (sawSpreadArg) {
         return fail("spread argument must be final");
       }
-      if (match(TokenKind::Comma)) {
-        expect(TokenKind::Comma, "expected ','");
-      } else {
-        expect(TokenKind::Semicolon, "expected ';'");
+      ++pos_;
+      while (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
+        ++pos_;
       }
-      while (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
-        if (match(TokenKind::Comma)) {
-          expect(TokenKind::Comma, "expected ','");
-        } else {
-          expect(TokenKind::Semicolon, "expected ';'");
-        }
-      }
-      if (match(TokenKind::RParen)) {
+      if (matchRaw(TokenKind::RParen)) {
         break;
       }
     } else {
-      if (match(TokenKind::RParen)) {
+      if (matchRaw(TokenKind::RParen)) {
         break;
       }
       continue;

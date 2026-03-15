@@ -4134,8 +4134,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         resolvedMethod = false;
       }
-    } else if ((isDirectStdNamespacedVectorCountWrapperMapTarget ||
-                (isStdNamespacedVectorCountCall && expr.args.size() == 1 && resolveMapTarget(expr.args.front()))) &&
+    } else if (isDirectStdNamespacedVectorCountWrapperMapTarget) {
+      error_ = "template arguments required for /std/collections/vector/count";
+      return false;
+    } else if ((isStdNamespacedVectorCountCall && expr.args.size() == 1 && resolveMapTarget(expr.args.front())) &&
                (defMap_.find("/std/collections/vector/count") == defMap_.end() ||
                 hasImportedDefinitionPath("/std/collections/vector/count")) &&
                hasStdNamespacedVectorCountAliasDefinition) {
