@@ -328,11 +328,11 @@ Notes:
 - Placement transforms `[stack]`, `[heap]`, and `[buffer]` are reserved and rejected by the compiler.
 - Recursive struct layouts (structs containing themselves by value, directly or indirectly) are rejected.
 
-## 4A. Draft Variadic Pack Proposal (Parser Canonicalization Implemented)
+## 4A. Draft Variadic Pack Proposal (Parser/Semantics Implemented)
 
 This appendix records the canonical model for variadic user-defined calls. Parser/canonicalization, call-binding
-semantics, and the count-only body API are now implemented; checked/unchecked access plus lowering/runtime remain
-follow-up work beyond the stable grammar above.
+semantics, and the read-only body API are now implemented; lowering/runtime remains follow-up work beyond the stable
+grammar above.
 
 ### 4A.1 Surface forms
 
@@ -386,9 +386,9 @@ Bottom-level form therefore has:
 - Named arguments bind only fixed parameters, never the `args<T>` parameter directly.
 - At most one spread argument per call in the first slice, and it must appear in the final positional slot.
 - Trailing positional arguments bind to the `args<T>` parameter after all fixed parameters have been satisfied.
-- `count(values)` and `values.count()` are available on `args<T>` parameters.
-- The remaining body API for `args<T>` is planned to mirror read-only sequence operations:
-  `values[index]`, `at(values, index)`, `values.at(index)`, and `values.at_unsafe(index)`.
+- `count(values)`, `values.count()`, `values[index]`, `at(values, index)`, `values.at(index)`, and
+  `values.at_unsafe(index)` are available on `args<T>` parameters.
+- Lowering/runtime for concrete `args<T>` parameters and `[spread]` calls remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 

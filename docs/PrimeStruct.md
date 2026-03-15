@@ -220,11 +220,11 @@ module {
   - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`. Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms (no name references).
   - `{...}` holds runtime code for definition bodies and value blocks for binding initializers. Binding initializers evaluate the block and use its resulting value (last item or `return(value)`); use explicit constructor calls when passing multiple arguments (e.g., `[T] name{ T(arg1, arg2) }`).
   - Bindings are only valid inside definition bodies or parameter lists; top-level bindings are rejected.
-- **Draft variadic argument packs (parser + call semantics + count body API landed; access/runtime still pending):** to support stdlib-owned `vector`/`map` implementations without hand-written `Single/Pair/Triple/...` constructor ladders, the surface syntax now parses rest parameters and spread calls while keeping the canonical meaning inside the envelope system.
+- **Draft variadic argument packs (parser + call semantics + read-only body API landed; lowering/runtime still pending):** to support stdlib-owned `vector`/`map` implementations without hand-written `Single/Pair/Triple/...` constructor ladders, the surface syntax now parses rest parameters and spread calls while keeping the canonical meaning inside the envelope system.
   - Surface parameter sugar: `collect(values...) { ... }` now desugars during parsing to `collect<__pack_T>([args<__pack_T>] values) { ... }`.
   - Typed surface parameter sugar: `collect([string] values...) { ... }` now desugars during parsing to `collect([args<string>] values) { ... }`.
   - Surface call sugar: `build(values...)` inside a call now desugars to `[spread] values` on that argument node, and explicit canonical `[spread] values` is accepted directly in call-argument position.
-  - Canonical parser form therefore uses a real pack envelope plus an explicit spread marker instead of storing syntax in bare identifier spelling. Call semantics now bind trailing positional arguments into that trailing pack, infer omitted pack element types homogeneously across packed values, and reject named arguments targeting the variadic parameter directly; body APIs and backend lowering remain tracked by the follow-up arg-pack TODO slices below.
+  - Canonical parser form therefore uses a real pack envelope plus an explicit spread marker instead of storing syntax in bare identifier spelling. Call semantics now bind trailing positional arguments into that trailing pack, infer omitted pack element types homogeneously across packed values, and reject named arguments targeting the variadic parameter directly; the read-only body API is now available and backend lowering remains tracked by the follow-up arg-pack TODO slice below.
   - After monomorphisation, bottom-level form contains no templates. Example:
     - Surface:
       ```text
@@ -244,8 +244,8 @@ module {
       }
       ```
   - Current v1 constraints: one `args<T>` parameter per definition, it must be last, it is homogeneous, named arguments bind only fixed parameters, and `[spread]` is only valid in call-argument position.
-  - Current body API: `count(values)` and `values.count()` work on `args<T>` parameters.
-  - Planned body API follow-up: `values[index]`, `at(values, index)`, `values.at(index)`, and `values.at_unsafe(index)` should work on `args<T>` parameters so `.prime` container implementations can iterate packs directly.
+  - Current body API: `count(values)`, `values.count()`, `values[index]`, `at(values, index)`, `values.at(index)`, and `values.at_unsafe(index)` work on `args<T>` parameters.
+  - Remaining follow-up: lower concrete `args<T>` parameters and `[spread]` call sites across VM/native/C++ so `.prime` variadic container helpers can execute without compiler-owned constructor ladders.
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style (`execute_task<…>(args)`) with mandatory parentheses and no body, and map to an envelope with an implicit empty body. Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.
   - Executions accept the same argument syntax as calls, including labeled arguments (`[param] value`).
   - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>([first] 1i32)` is rejected).
@@ -1181,7 +1181,7 @@ bad_use_after_take() {
   - Example: `sum3(1i32 [c] 3i32 [b] 2i32)` is valid.
   - Example: `array<i32>([first] 1i32)` is rejected because collections are builtin calls.
   - Duplicate labeled arguments are rejected for definitions and executions (`execute_task([a] 1i32 [a] 2i32)`).
-  - Variadic-pack interaction: if a definition ends in `[args<T>] values`, positional arguments fill the fixed parameters first and the remaining positional arguments bind to `values`; named arguments do not target the `args<T>` parameter directly. A spread argument (`values...` surface, `[spread] values` canonical) is only legal in call-argument position and expands into that trailing variadic slot. The body-side count API (`count(values)`, `values.count()`) is now available; indexing and `at*` remain separate follow-up slices.
+  - Variadic-pack interaction: if a definition ends in `[args<T>] values`, positional arguments fill the fixed parameters first and the remaining positional arguments bind to `values`; named arguments do not target the `args<T>` parameter directly. A spread argument (`values...` surface, `[spread] values` canonical) is only legal in call-argument position and expands into that trailing variadic slot. The body-side read-only API (`count(values)`, `values.count()`, `values[index]`, `at(values, index)`, `values.at(index)`, `values.at_unsafe(index)`) is now available; lowering/runtime remains a separate follow-up slice.
 - **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `vector<Type>{ … }` / `vector<Type>[ … ]`, `map<Key,Value>{ … }` / `map<Key,Value>[ … ]` rewrite to standard builder functions. The brace/bracket forms desugar to `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals supply alternating key/value forms.
   - Requires the `collections` text transform (enabled by default in `--text-transforms`).
   - Map literal entries are read left-to-right as alternating key/value forms; an odd number of entries is a diagnostic.

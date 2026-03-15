@@ -886,6 +886,22 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType) -> bool {
+      elemType.clear();
+      auto resolveBinding = [&](const BindingInfo &binding) {
+        return getArgsPackElementType(binding, elemType);
+      };
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          return resolveBinding(*paramBinding);
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          return resolveBinding(it->second);
+        }
+      }
+      return false;
+    };
     auto resolveVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -1142,7 +1158,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             std::string elemType;
             std::string keyType;
             std::string valueType;
-            if (resolveArrayTarget(*accessReceiver, elemType) || resolveVectorTarget(*accessReceiver, elemType)) {
+            if (resolveArgsPackAccessTarget(*accessReceiver, elemType) ||
+                resolveArrayTarget(*accessReceiver, elemType) || resolveVectorTarget(*accessReceiver, elemType)) {
               return normalizeBindingTypeName(elemType) == "string";
             }
             if (resolveMapTarget(*accessReceiver, keyType, valueType)) {
@@ -1155,7 +1172,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           size_t receiverIndex = 0;
           if (isDirectCanonicalVectorAccessCallOnBuiltinReceiver(target, receiverIndex)) {
             std::string elemType;
-            return resolveArrayTarget(target.args[receiverIndex], elemType) &&
+            return (resolveArgsPackAccessTarget(target.args[receiverIndex], elemType) ||
+                    resolveArrayTarget(target.args[receiverIndex], elemType)) &&
                    normalizeBindingTypeName(elemType) == "string";
           }
           const std::string resolvedTarget = resolveCalleePath(target);
@@ -1170,7 +1188,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             }
           }
           std::string elemType;
-          if (resolveArrayTarget(target.args.front(), elemType) && elemType == "string") {
+          if ((resolveArgsPackAccessTarget(target.args.front(), elemType) ||
+               resolveArrayTarget(target.args.front(), elemType)) &&
+              elemType == "string") {
             return true;
           }
           std::string keyType;
@@ -1783,6 +1803,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return true;
         }
         if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
+          if (resolveArgsPackAccessTarget(receiver, elemType)) {
+            resolvedOut = preferVectorStdlibHelperPathForCall("/array/" + normalizedMethodName);
+            return true;
+          }
           if (resolveVectorTarget(receiver, elemType)) {
             resolvedOut = preferVectorStdlibHelperPathForCall("/vector/" + normalizedMethodName);
             return true;
@@ -1877,7 +1901,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (resolvedPath == "/array/at" || resolvedPath == "/array/at_unsafe") {
         std::string elemType;
-        if (resolveArrayTarget(receiverExpr, elemType)) {
+        if (resolveArgsPackAccessTarget(receiverExpr, elemType) || resolveArrayTarget(receiverExpr, elemType)) {
           ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
           if (kind != ReturnKind::Unknown) {
             kindOut = kind;
@@ -1947,8 +1971,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return true;
         }
       }
-      if (resolveArrayTarget(callExpr.args.front(), elemType)) {
-        ReturnKind kind = returnKindForTypeName(elemType);
+      if (resolveArgsPackAccessTarget(callExpr.args.front(), elemType) ||
+          resolveArrayTarget(callExpr.args.front(), elemType)) {
+        ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
         if (kind != ReturnKind::Unknown) {
           kindOut = kind;
           return true;
@@ -3370,8 +3395,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
         return kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind;
       }
-      if (resolveArrayTarget(expr.args.front(), elemType)) {
-        ReturnKind kind = returnKindForTypeName(elemType);
+      if (resolveArgsPackAccessTarget(expr.args.front(), elemType) ||
+          resolveArrayTarget(expr.args.front(), elemType)) {
+        ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
         if (kind != ReturnKind::Unknown) {
           return kind;
         }
@@ -3978,6 +4004,22 @@ std::string SemanticsValidator::inferStructReturnPath(
     }
     return false;
   };
+  auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType) -> bool {
+    elemType.clear();
+    auto resolveBinding = [&](const BindingInfo &binding) {
+      return getArgsPackElementType(binding, elemType);
+    };
+    if (target.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+        return resolveBinding(*paramBinding);
+      }
+      auto it = locals.find(target.name);
+      if (it != locals.end()) {
+        return resolveBinding(it->second);
+      }
+    }
+    return false;
+  };
   auto resolveVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -4085,7 +4127,8 @@ std::string SemanticsValidator::inferStructReturnPath(
       return false;
     }
     std::string elemType;
-    return resolveVectorTarget(candidate.args[receiverIndexOut], elemType) ||
+    return resolveArgsPackAccessTarget(candidate.args[receiverIndexOut], elemType) ||
+           resolveVectorTarget(candidate.args[receiverIndexOut], elemType) ||
            resolveArrayTarget(candidate.args[receiverIndexOut], elemType) ||
            isBuiltinStringReceiverExpr(candidate.args[receiverIndexOut]);
   };
@@ -4111,7 +4154,8 @@ std::string SemanticsValidator::inferStructReturnPath(
           std::string elemType;
           std::string keyType;
           std::string valueType;
-          if (resolveArrayTarget(*accessReceiver, elemType) || resolveVectorTarget(*accessReceiver, elemType)) {
+          if (resolveArgsPackAccessTarget(*accessReceiver, elemType) ||
+              resolveArrayTarget(*accessReceiver, elemType) || resolveVectorTarget(*accessReceiver, elemType)) {
             return normalizeBindingTypeName(elemType) == "string";
           }
           if (resolveMapTarget(*accessReceiver, keyType, valueType)) {
@@ -4124,7 +4168,8 @@ std::string SemanticsValidator::inferStructReturnPath(
         size_t receiverIndex = 0;
         if (isDirectCanonicalVectorAccessCallOnBuiltinReceiver(target, receiverIndex)) {
           std::string elemType;
-          return resolveArrayTarget(target.args[receiverIndex], elemType) &&
+          return (resolveArgsPackAccessTarget(target.args[receiverIndex], elemType) ||
+                  resolveArrayTarget(target.args[receiverIndex], elemType)) &&
                  normalizeBindingTypeName(elemType) == "string";
         }
         const std::string resolvedTarget = resolveCalleePath(target);
@@ -4139,7 +4184,9 @@ std::string SemanticsValidator::inferStructReturnPath(
           }
         }
         std::string elemType;
-        if (resolveArrayTarget(target.args.front(), elemType) && elemType == "string") {
+        if ((resolveArgsPackAccessTarget(target.args.front(), elemType) ||
+             resolveArrayTarget(target.args.front(), elemType)) &&
+            elemType == "string") {
           return true;
         }
         std::string keyType;
@@ -4692,7 +4739,8 @@ std::string SemanticsValidator::inferStructReturnPath(
         }
         if (receiverIndex < expr.args.size()) {
           std::string elemType;
-          if (resolveVectorTarget(expr.args[receiverIndex], elemType) ||
+          if (resolveArgsPackAccessTarget(expr.args[receiverIndex], elemType) ||
+              resolveVectorTarget(expr.args[receiverIndex], elemType) ||
               resolveArrayTarget(expr.args[receiverIndex], elemType) ||
               resolveStringTarget(expr.args[receiverIndex])) {
             return "";

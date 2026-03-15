@@ -123,6 +123,108 @@ main() {
   CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
+TEST_CASE("variadic args access helper validates") {
+  const std::string source = R"(
+[return<int>]
+collect(values...) {
+  return(at(values, 0i32))
+}
+
+[return<int>]
+main() {
+  return(collect(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("variadic args access method validates") {
+  const std::string source = R"(
+[return<int>]
+collect(values...) {
+  return(values.at(0i32))
+}
+
+[return<int>]
+main() {
+  return(collect(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("variadic args unsafe access method validates") {
+  const std::string source = R"(
+[return<int>]
+collect(values...) {
+  return(values.at_unsafe(0i32))
+}
+
+[return<int>]
+main() {
+  return(collect(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("variadic args index validates") {
+  const std::string source = R"(
+[return<int>]
+collect(values...) {
+  return(values[0i32])
+}
+
+[return<int>]
+main() {
+  return(collect(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("variadic args index supports string method resolution") {
+  const std::string source = R"(
+[return<int>]
+collect([string] values...) {
+  return(values[0i32].count())
+}
+
+[return<int>]
+main() {
+  return(collect("hello"utf8, "bye"utf8))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("variadic args index rejects non-integer index") {
+  const std::string source = R"(
+[return<int>]
+collect(values...) {
+  return(values["nope"utf8])
+}
+
+[return<int>]
+main() {
+  return(collect(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires integer index") != std::string::npos);
+}
+
 TEST_CASE("count rejects missing type method") {
   const std::string source = R"(
 [struct]

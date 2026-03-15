@@ -2125,6 +2125,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType) -> bool {
+      elemType.clear();
+      auto resolveBinding = [&](const BindingInfo &binding) {
+        return getArgsPackElementType(binding, elemType);
+      };
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          return resolveBinding(*paramBinding);
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          return resolveBinding(it->second);
+        }
+      }
+      return false;
+    };
     auto resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -2253,7 +2269,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(target)) {
             std::string elemType;
             std::string mapValueType;
-            if (resolveArrayTarget(*accessReceiver, elemType) || resolveVectorTarget(*accessReceiver, elemType)) {
+            if (resolveArgsPackAccessTarget(*accessReceiver, elemType) || resolveArrayTarget(*accessReceiver, elemType) ||
+                resolveVectorTarget(*accessReceiver, elemType)) {
               return normalizeBindingTypeName(elemType) == "string";
             }
             if (resolveMapValueTypeForStringTarget(*accessReceiver, mapValueType)) {
@@ -2275,7 +2292,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             }
           }
           std::string elemType;
-          if (resolveArrayTarget(target.args.front(), elemType) && elemType == "string") {
+          if ((resolveArgsPackAccessTarget(target.args.front(), elemType) ||
+               resolveArrayTarget(target.args.front(), elemType)) &&
+              elemType == "string") {
             return true;
           }
           if (resolveMapTarget(target.args.front())) {
@@ -3246,6 +3265,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
+        if (resolveArgsPackAccessTarget(receiver, elemType)) {
+          return setCollectionMethodTarget("/array/" + normalizedMethodName);
+        }
         if (resolveVectorTarget(receiver, elemType)) {
           return setCollectionMethodTarget("/vector/" + normalizedMethodName);
         }
@@ -3323,7 +3345,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             const Expr &accessReceiver = receiver.args[accessReceiverIndex];
             std::string accessElemType;
             std::string accessValueType;
-            if (resolveVectorTarget(accessReceiver, accessElemType) ||
+            if (resolveArgsPackAccessTarget(accessReceiver, accessElemType) ||
+                resolveVectorTarget(accessReceiver, accessElemType) ||
                 resolveArrayTarget(accessReceiver, accessElemType)) {
               const std::string normalizedElemType = normalizeBindingTypeName(accessElemType);
               if (isPrimitiveBindingTypeName(normalizedElemType)) {
@@ -6702,7 +6725,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
         std::string elemType;
-        bool isArrayOrString = resolveArrayTarget(expr.args.front(), elemType) || resolveStringTarget(expr.args.front());
+        bool isArrayOrString = resolveArgsPackAccessTarget(expr.args.front(), elemType) ||
+                               resolveArrayTarget(expr.args.front(), elemType) ||
+                               resolveStringTarget(expr.args.front());
         std::string mapKeyType;
         bool isMap = resolveMapKeyType(expr.args.front(), mapKeyType);
         if (!isArrayOrString && !isMap) {
