@@ -2288,6 +2288,10 @@ TEST_CASE("compiles and runs native block inferred experimental map returns") {
   expectBlockInferredExperimentalMapReturnConformance("native");
 }
 
+TEST_CASE("compiles and runs native auto block inferred experimental map returns") {
+  expectAutoBlockInferredExperimentalMapReturnConformance("native");
+}
+
 TEST_CASE("rejects native canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("native");
 }

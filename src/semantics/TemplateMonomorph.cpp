@@ -2353,16 +2353,17 @@ bool rewriteExpr(Expr &expr,
       return;
     }
     BindingInfo bindingInfo;
-    if (!extractExplicitBindingType(bindingExpr, bindingInfo) || bindingInfo.typeTemplateArg.empty()) {
-      return;
+    const bool hasExplicitBindingType = extractExplicitBindingType(bindingExpr, bindingInfo);
+    if (!hasExplicitBindingType || bindingInfo.typeName == "auto") {
+      if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), params, locals, allowMathBare, ctx, bindingInfo)) {
+        return;
+      }
     }
-    const std::string resolvedBindingPath =
-        resolveNameToPath(bindingInfo.typeName, namespacePrefix, ctx.importAliases, ctx.sourceDefs);
-    if (resolvedBindingPath != "/std/collections/experimental_map/Map") {
-      return;
+    std::string bindingTypeText = bindingInfo.typeName;
+    if (!bindingInfo.typeTemplateArg.empty()) {
+      bindingTypeText += "<" + bindingInfo.typeTemplateArg + ">";
     }
-    std::vector<std::string> mapArgs;
-    if (!splitTopLevelTemplateArgs(bindingInfo.typeTemplateArg, mapArgs) || mapArgs.size() != 2) {
+    if (!resolvesExperimentalMapValueTypeText(bindingTypeText)) {
       return;
     }
     Expr &initializer = bindingExpr.args.front();

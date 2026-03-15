@@ -1891,6 +1891,10 @@ TEST_CASE("runs vm block inferred experimental map returns") {
   expectBlockInferredExperimentalMapReturnConformance("vm");
 }
 
+TEST_CASE("runs vm auto block inferred experimental map returns") {
+  expectAutoBlockInferredExperimentalMapReturnConformance("vm");
+}
+
 TEST_CASE("rejects vm canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("vm");
 }
