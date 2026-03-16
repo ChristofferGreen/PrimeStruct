@@ -584,6 +584,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     }
     return true;
   }
+  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToArray) {
+    typeNameOut = "array";
+    return true;
+  }
   if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToVector) {
     typeNameOut = "vector";
     return true;
@@ -670,6 +674,7 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
     if (receiverInfo.kind == LocalInfo::Kind::Vector || receiverInfo.kind == LocalInfo::Kind::Array ||
         (receiverInfo.kind == LocalInfo::Kind::Reference &&
          (receiverInfo.referenceToArray || receiverInfo.referenceToVector)) ||
+        (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToArray) ||
         (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToVector)) {
       return assignKind(receiverInfo.valueKind);
     }
@@ -1270,6 +1275,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
            (info.kind == LocalInfo::Kind::Reference &&
             (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
+           (info.kind == LocalInfo::Kind::Pointer && info.pointerToArray) ||
            (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
            (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
            info.isSoaVector ||
@@ -1868,6 +1874,11 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
               localIt->second.referenceToArray) {
+            typeNameOut = "array";
+            return true;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+              localIt->second.pointerToArray) {
             typeNameOut = "array";
             return true;
           }

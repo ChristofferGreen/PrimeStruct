@@ -7444,6 +7444,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64;
         };
         auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {
+          std::string targetBase;
+          std::string targetArg;
+          if (splitTemplateTypeName(targetType, targetBase, targetArg) &&
+              normalizeBindingTypeName(targetBase) == "array") {
+            error_ = "unsupported pointer target type: " + targetType;
+            return false;
+          }
           Expr bindingExpr;
           bindingExpr.kind = Expr::Kind::Call;
           bindingExpr.name = "__memory_target";

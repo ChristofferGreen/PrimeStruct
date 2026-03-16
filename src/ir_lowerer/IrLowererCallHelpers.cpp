@@ -1525,6 +1525,16 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.structTypeName = it->second.structTypeName;
       return info;
     }
+    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToArray) {
+      info.isArrayOrVectorTarget = true;
+      info.elemKind = it->second.valueKind;
+      info.isVectorTarget = false;
+      info.isArgsPackTarget = it->second.isArgsPack;
+      info.argsPackElementKind = it->second.argsPackElementKind;
+      info.elemSlotCount = it->second.structSlotCount;
+      info.structTypeName = it->second.structTypeName;
+      return info;
+    }
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToVector) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
@@ -1561,6 +1571,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
                 localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
                 localIt->second.referenceToVector;
             info.isSoaVector = localIt->second.isSoaVector;
+            return info;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer && localIt->second.pointerToArray) {
+            info.isArrayOrVectorTarget = true;
+            info.elemKind = localIt->second.valueKind;
+            info.isVectorTarget = false;
             return info;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer && localIt->second.pointerToVector) {

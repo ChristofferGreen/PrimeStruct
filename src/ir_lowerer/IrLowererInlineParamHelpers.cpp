@@ -83,6 +83,7 @@ bool emitInlineDefinitionCallParameters(
           }
           auto it = callerLocals.find(argExpr.name);
           if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Pointer ||
+              it->second.pointerToArray != paramInfo.pointerToArray ||
               it->second.isSoaVector != paramInfo.isSoaVector ||
               it->second.pointerToVector != paramInfo.pointerToVector ||
               it->second.pointerToMap != paramInfo.pointerToMap ||
@@ -178,6 +179,7 @@ bool emitInlineDefinitionCallParameters(
           return false;
         }
         if (callerIt->second.referenceToArray != paramInfo.referenceToArray ||
+            callerIt->second.pointerToArray != paramInfo.pointerToArray ||
             callerIt->second.referenceToVector != paramInfo.referenceToVector ||
             callerIt->second.pointerToVector != paramInfo.pointerToVector ||
             callerIt->second.referenceToMap != paramInfo.referenceToMap ||
@@ -205,6 +207,7 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.mapKeyKind = callerIt->second.mapKeyKind;
         paramInfo.mapValueKind = callerIt->second.mapValueKind;
         paramInfo.referenceToArray = callerIt->second.referenceToArray;
+        paramInfo.pointerToArray = callerIt->second.pointerToArray;
         paramInfo.referenceToVector = callerIt->second.referenceToVector;
         paramInfo.pointerToVector = callerIt->second.pointerToVector;
         paramInfo.referenceToMap = callerIt->second.referenceToMap;

@@ -182,7 +182,11 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
     }
     base = normalizeCollectionBindingTypeName(base);
     if (base == "array") {
-      info.referenceToArray = true;
+      if (info.kind == LocalInfo::Kind::Reference) {
+        info.referenceToArray = true;
+      } else {
+        info.pointerToArray = true;
+      }
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
         info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
       }

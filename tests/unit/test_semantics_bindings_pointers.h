@@ -313,6 +313,20 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer bindings accept array targets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [Pointer<array<i32>>] ptr{location(values)}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("reference bindings reject array without element type") {
   const std::string source = R"(
 [return<int>]
@@ -325,6 +339,20 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unsupported reference target type") != std::string::npos);
+}
+
+TEST_CASE("pointer bindings reject array without element type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [Pointer<array>] ptr{location(values)}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported pointer target type") != std::string::npos);
 }
 
 TEST_CASE("pointer bindings reject unknown targets") {

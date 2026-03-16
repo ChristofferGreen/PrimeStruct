@@ -29,6 +29,7 @@ struct LocalInfo {
   bool isArgsPack = false;
   int32_t argsPackElementCount = -1;
   bool referenceToArray = false;
+  bool pointerToArray = false;
   bool referenceToVector = false;
   bool pointerToVector = false;
   bool referenceToMap = false;

@@ -1678,6 +1678,68 @@ main() {
   CHECK(result == 11);
 }
 
+TEST_CASE("ir lowerer materializes variadic pointer array packs with indexed count methods") {
+  const std::string source = R"(
+[return<int>]
+score_ptrs([args<Pointer<array<i32>>>] values) {
+  return(plus(values[0i32].count(), values[2i32].count()))
+}
+
+[return<int>]
+forward([args<Pointer<array<i32>>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<array<i32>>>] values) {
+  [array<i32>] extra{array<i32>(1i32)}
+  [Pointer<array<i32>>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [array<i32>] a0{array<i32>(1i32, 2i32)}
+  [array<i32>] a1{array<i32>(3i32)}
+  [array<i32>] a2{array<i32>(4i32, 5i32, 6i32)}
+  [Pointer<array<i32>>] r0{location(a0)}
+  [Pointer<array<i32>>] r1{location(a1)}
+  [Pointer<array<i32>>] r2{location(a2)}
+
+  [array<i32>] b0{array<i32>(7i32)}
+  [array<i32>] b1{array<i32>(8i32, 9i32)}
+  [array<i32>] b2{array<i32>(10i32)}
+  [Pointer<array<i32>>] s0{location(b0)}
+  [Pointer<array<i32>>] s1{location(b1)}
+  [Pointer<array<i32>>] s2{location(b2)}
+
+  [array<i32>] c0{array<i32>(11i32, 12i32)}
+  [array<i32>] c1{array<i32>(13i32, 14i32, 15i32)}
+  [Pointer<array<i32>>] t0{location(c0)}
+  [Pointer<array<i32>>] t1{location(c1)}
+
+  return(plus(score_ptrs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 11);
+}
+
 TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]

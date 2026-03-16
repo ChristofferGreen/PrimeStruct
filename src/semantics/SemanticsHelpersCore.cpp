@@ -1904,8 +1904,18 @@ bool parseBindingInfo(const Expr &expr,
     }
     std::string normalizedTarget = normalizeBindingTypeName(info.typeTemplateArg);
     if (!isPrimitiveBindingTypeName(normalizedTarget) && !isStructTypeName(normalizedTarget)) {
-      error = "unsupported pointer target type: " + info.typeTemplateArg;
-      return false;
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(info.typeTemplateArg, base, arg) && normalizeBindingTypeName(base) == "array") {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+          error = "unsupported pointer target type: " + info.typeTemplateArg;
+          return false;
+        }
+      } else {
+        error = "unsupported pointer target type: " + info.typeTemplateArg;
+        return false;
+      }
     }
   }
   if (typeHasTemplate && typeName == "Reference") {

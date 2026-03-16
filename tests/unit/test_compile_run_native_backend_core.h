@@ -737,6 +737,60 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("native materializes variadic pointer array packs with indexed count methods") {
+  const std::string source = R"(
+[return<int>]
+score_ptrs([args<Pointer<array<i32>>>] values) {
+  return(plus(values[0i32].count(), values[2i32].count()))
+}
+
+[return<int>]
+forward([args<Pointer<array<i32>>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<array<i32>>>] values) {
+  [array<i32>] extra{array<i32>(1i32)}
+  [Pointer<array<i32>>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [array<i32>] a0{array<i32>(1i32, 2i32)}
+  [array<i32>] a1{array<i32>(3i32)}
+  [array<i32>] a2{array<i32>(4i32, 5i32, 6i32)}
+  [Pointer<array<i32>>] p0{location(a0)}
+  [Pointer<array<i32>>] p1{location(a1)}
+  [Pointer<array<i32>>] p2{location(a2)}
+
+  [array<i32>] b0{array<i32>(7i32)}
+  [array<i32>] b1{array<i32>(8i32, 9i32)}
+  [array<i32>] b2{array<i32>(10i32)}
+  [Pointer<array<i32>>] q0{location(b0)}
+  [Pointer<array<i32>>] q1{location(b1)}
+  [Pointer<array<i32>>] q2{location(b2)}
+
+  [array<i32>] c0{array<i32>(11i32, 12i32)}
+  [array<i32>] c1{array<i32>(13i32, 14i32, 15i32)}
+  [Pointer<array<i32>>] r0{location(c0)}
+  [Pointer<array<i32>>] r1{location(c1)}
+
+  return(plus(score_ptrs(p0, p1, p2),
+              plus(forward(q0, q1, q2),
+                   forward_mixed(r0, r1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_array.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_pointer_array").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("native materializes variadic scalar reference packs with indexed dereference") {
   const std::string source = R"(
 [return<int>]
