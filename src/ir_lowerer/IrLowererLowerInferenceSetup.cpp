@@ -19,6 +19,22 @@ bool isIndexedArgsPackFileHandleReceiver(const Expr &receiverExpr, const LocalMa
          it->second.argsPackElementKind == LocalInfo::Kind::Value;
 }
 
+bool isIndexedBorrowedArgsPackFileHandleReceiver(const Expr &receiverExpr, const LocalMap &localsIn) {
+  if (!(receiverExpr.kind == Expr::Kind::Call && isSimpleCallName(receiverExpr, "dereference") &&
+        receiverExpr.args.size() == 1)) {
+    return false;
+  }
+  std::string accessName;
+  const Expr &targetExpr = receiverExpr.args.front();
+  if (targetExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(targetExpr, accessName) ||
+      targetExpr.args.size() != 2 || targetExpr.args.front().kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto it = localsIn.find(targetExpr.args.front().name);
+  return it != localsIn.end() && it->second.isArgsPack && it->second.isFileHandle &&
+         it->second.argsPackElementKind == LocalInfo::Kind::Reference;
+}
+
 bool inferLiteralOrNameExprKindImpl(const Expr &expr,
                                     const LocalMap &localsIn,
                                     const GetSetupMathConstantNameFn &getMathConstantName,
@@ -176,6 +192,13 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       }
     }
     if (!expr.args.empty() && isIndexedArgsPackFileHandleReceiver(expr.args.front(), localsIn)) {
+      if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
+          expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+        kindOut = LocalInfo::ValueKind::Int32;
+        return true;
+      }
+    }
+    if (!expr.args.empty() && isIndexedBorrowedArgsPackFileHandleReceiver(expr.args.front(), localsIn)) {
       if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
           expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
         kindOut = LocalInfo::ValueKind::Int32;
@@ -1758,6 +1781,14 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
       }
       if (resultExpr.isMethodCall && !resultExpr.args.empty() &&
           isIndexedArgsPackFileHandleReceiver(resultExpr.args.front(), localsIn)) {
+        if (resultExpr.name == "write" || resultExpr.name == "write_line" || resultExpr.name == "write_byte" ||
+            resultExpr.name == "write_bytes" || resultExpr.name == "flush" || resultExpr.name == "close") {
+          kindOut = LocalInfo::ValueKind::Int32;
+          return true;
+        }
+      }
+      if (resultExpr.isMethodCall && !resultExpr.args.empty() &&
+          isIndexedBorrowedArgsPackFileHandleReceiver(resultExpr.args.front(), localsIn)) {
         if (resultExpr.name == "write" || resultExpr.name == "write_line" || resultExpr.name == "write_byte" ||
             resultExpr.name == "write_bytes" || resultExpr.name == "flush" || resultExpr.name == "close") {
           kindOut = LocalInfo::ValueKind::Int32;

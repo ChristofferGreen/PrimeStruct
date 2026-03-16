@@ -291,25 +291,51 @@ FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
     return FileHandleMethodCallEmitResult::NotMatched;
   }
   int32_t handleIndex = -1;
-  if (expr.args.front().kind == Expr::Kind::Name) {
-    auto it = localsIn.find(expr.args.front().name);
+  const Expr &receiverExpr = expr.args.front();
+  if (receiverExpr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(receiverExpr.name);
     if (it == localsIn.end() || !it->second.isFileHandle) {
       return FileHandleMethodCallEmitResult::NotMatched;
     }
     handleIndex = it->second.index;
-  } else if (expr.args.front().kind == Expr::Kind::Call) {
-    std::string accessName;
-    const Expr &receiver = expr.args.front();
-    if (!getBuiltinArrayAccessName(receiver, accessName) || receiver.args.size() != 2 ||
-        receiver.args.front().kind != Expr::Kind::Name) {
+  } else if (receiverExpr.kind == Expr::Kind::Call && isSimpleCallName(receiverExpr, "dereference") &&
+             receiverExpr.args.size() == 1) {
+    const Expr &targetExpr = receiverExpr.args.front();
+    bool isBorrowedFileHandle = false;
+    if (targetExpr.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(targetExpr.name);
+      isBorrowedFileHandle =
+          it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference && it->second.isFileHandle;
+    } else if (targetExpr.kind == Expr::Kind::Call) {
+      std::string accessName;
+      if (getBuiltinArrayAccessName(targetExpr, accessName) && targetExpr.args.size() == 2 &&
+          targetExpr.args.front().kind == Expr::Kind::Name) {
+        auto it = localsIn.find(targetExpr.args.front().name);
+        isBorrowedFileHandle =
+            it != localsIn.end() && it->second.isArgsPack && it->second.isFileHandle &&
+            it->second.argsPackElementKind == LocalInfo::Kind::Reference;
+      }
+    }
+    if (!isBorrowedFileHandle) {
       return FileHandleMethodCallEmitResult::NotMatched;
     }
-    auto it = localsIn.find(receiver.args.front().name);
+    if (!emitExpr(receiverExpr, localsIn)) {
+      return FileHandleMethodCallEmitResult::Error;
+    }
+    handleIndex = allocTempLocal();
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(handleIndex));
+  } else if (receiverExpr.kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (!getBuiltinArrayAccessName(receiverExpr, accessName) || receiverExpr.args.size() != 2 ||
+        receiverExpr.args.front().kind != Expr::Kind::Name) {
+      return FileHandleMethodCallEmitResult::NotMatched;
+    }
+    auto it = localsIn.find(receiverExpr.args.front().name);
     if (it == localsIn.end() || !it->second.isArgsPack || !it->second.isFileHandle ||
         it->second.argsPackElementKind != LocalInfo::Kind::Value) {
       return FileHandleMethodCallEmitResult::NotMatched;
     }
-    if (!emitExpr(receiver, localsIn)) {
+    if (!emitExpr(receiverExpr, localsIn)) {
       return FileHandleMethodCallEmitResult::Error;
     }
     handleIndex = allocTempLocal();

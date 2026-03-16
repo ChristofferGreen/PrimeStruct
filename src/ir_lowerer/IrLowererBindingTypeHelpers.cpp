@@ -212,6 +212,13 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
         info.valueKind = info.mapValueKind;
       }
+      return;
+    }
+    if (base == "File") {
+      info.isFileHandle = true;
+      if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+        info.valueKind = LocalInfo::ValueKind::Int64;
+      }
     }
     return;
   }

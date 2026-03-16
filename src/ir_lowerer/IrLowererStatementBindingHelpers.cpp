@@ -162,6 +162,12 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = infoOut.mapValueKind;
       return;
     }
+    if (refBase == "File") {
+      infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
+      infoOut.isFileHandle = true;
+      infoOut.valueKind = LocalInfo::ValueKind::Int64;
+      return;
+    }
     const LocalInfo::ValueKind refValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
     if (refValueKind != LocalInfo::ValueKind::Unknown) {
       infoOut.valueKind = refValueKind;
