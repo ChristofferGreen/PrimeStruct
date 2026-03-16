@@ -1529,6 +1529,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = true;
+      info.isSoaVector = it->second.isSoaVector;
       info.isArgsPackTarget = it->second.isArgsPack;
       info.argsPackElementKind = it->second.argsPackElementKind;
       info.elemSlotCount = it->second.structSlotCount;
@@ -1566,6 +1567,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             info.isArrayOrVectorTarget = true;
             info.elemKind = localIt->second.valueKind;
             info.isVectorTarget = true;
+            info.isSoaVector = localIt->second.isSoaVector;
             return info;
           }
         }
@@ -1607,15 +1609,18 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
   const bool isPointerVectorArgsPackTarget =
       targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
       targetInfo.isVectorTarget;
+  const bool isPointerSoaVectorArgsPackTarget =
+      targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
+      targetInfo.isVectorTarget && targetInfo.isSoaVector;
   const bool isBorrowedSoaVectorArgsPackTarget =
       targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
       targetInfo.isVectorTarget && targetInfo.isSoaVector;
   if (!targetInfo.isArrayOrVectorTarget ||
       (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget &&
        !isWrappedStructArgsPackTarget && !isVectorArgsPackTarget && !isPointerVectorArgsPackTarget &&
-       !isBorrowedSoaVectorArgsPackTarget)) {
+       !isPointerSoaVectorArgsPackTarget && !isBorrowedSoaVectorArgsPackTarget)) {
     error =
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Pointer<Struct>>/args<Reference<Struct>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Reference<soa_vector<T>>> packs";
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Pointer<Struct>>/args<Reference<Struct>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/args<Reference<soa_vector<T>>> packs";
     return false;
   }
   return true;

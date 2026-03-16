@@ -200,7 +200,11 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
       return;
     }
     if (base == "soa_vector") {
-      info.referenceToVector = true;
+      if (info.kind == LocalInfo::Kind::Reference) {
+        info.referenceToVector = true;
+      } else {
+        info.pointerToVector = true;
+      }
       info.isSoaVector = true;
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
         info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));

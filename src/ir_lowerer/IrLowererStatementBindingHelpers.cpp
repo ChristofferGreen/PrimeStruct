@@ -95,6 +95,13 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       return;
     }
     if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
+        normalizeCollectionBindingTypeName(pointerBase) == "soa_vector") {
+      infoOut.pointerToVector = true;
+      infoOut.isSoaVector = true;
+      infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(pointerArg));
+      return;
+    }
+    if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
         normalizeCollectionBindingTypeName(pointerBase) == "map") {
       std::vector<std::string> args;
       if (!splitTemplateArgs(pointerArg, args) || args.size() != 2) {
@@ -503,6 +510,13 @@ bool inferCallParameterLocalInfo(const Expr &param,
           splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
           normalizeCollectionBindingTypeName(wrappedBase) == "vector") {
         infoOut.pointerToVector = true;
+        infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(wrappedArg));
+      }
+      if (transform.name == "Pointer" &&
+          splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          normalizeCollectionBindingTypeName(wrappedBase) == "soa_vector") {
+        infoOut.pointerToVector = true;
+        infoOut.isSoaVector = true;
         infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(wrappedArg));
       }
       if (transform.name == "Pointer" &&

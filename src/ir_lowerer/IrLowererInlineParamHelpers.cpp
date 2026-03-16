@@ -83,6 +83,7 @@ bool emitInlineDefinitionCallParameters(
           }
           auto it = callerLocals.find(argExpr.name);
           if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Pointer ||
+              it->second.isSoaVector != paramInfo.isSoaVector ||
               it->second.pointerToVector != paramInfo.pointerToVector ||
               it->second.pointerToMap != paramInfo.pointerToMap ||
               it->second.isFileHandle != paramInfo.isFileHandle ||
