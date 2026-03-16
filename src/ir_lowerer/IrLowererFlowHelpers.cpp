@@ -642,15 +642,60 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   }
 
   auto isMutableVectorTargetExpr = [&](const Expr &expr) {
+    auto classifyVectorLocal = [&](const LocalInfo &localInfo, bool fromArgsPack) {
+      const LocalInfo::Kind kind = fromArgsPack ? localInfo.argsPackElementKind : localInfo.kind;
+      if (localInfo.isSoaVector &&
+          (kind == LocalInfo::Kind::Value || kind == LocalInfo::Kind::Vector ||
+           kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer)) {
+        return true;
+      }
+      if (!fromArgsPack && kind == LocalInfo::Kind::Vector && localInfo.isMutable) {
+        return true;
+      }
+      if (fromArgsPack && kind == LocalInfo::Kind::Vector) {
+        return true;
+      }
+      if (kind == LocalInfo::Kind::Reference && localInfo.referenceToVector) {
+        return true;
+      }
+      if (kind == LocalInfo::Kind::Pointer && localInfo.pointerToVector) {
+        return true;
+      }
+      return false;
+    };
+
     if (expr.kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.name);
       if (it == localsIn.end()) {
         return false;
       }
-      if (it->second.isSoaVector) {
-        return true;
+      return classifyVectorLocal(it->second, false);
+    }
+    if (expr.kind == Expr::Kind::Call) {
+      std::string accessName;
+      if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 &&
+          expr.args.front().kind == Expr::Kind::Name) {
+        auto it = localsIn.find(expr.args.front().name);
+        if (it != localsIn.end() && it->second.isArgsPack) {
+          return classifyVectorLocal(it->second, true);
+        }
       }
-      return it->second.kind == LocalInfo::Kind::Vector && it->second.isMutable;
+      if (isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
+        const Expr &derefTarget = expr.args.front();
+        if (derefTarget.kind == Expr::Kind::Name) {
+          auto it = localsIn.find(derefTarget.name);
+          if (it != localsIn.end()) {
+            return classifyVectorLocal(it->second, false);
+          }
+        }
+        if (getBuiltinArrayAccessName(derefTarget, accessName) && derefTarget.args.size() == 2 &&
+            derefTarget.args.front().kind == Expr::Kind::Name) {
+          auto it = localsIn.find(derefTarget.args.front().name);
+          if (it != localsIn.end() && it->second.isArgsPack) {
+            return classifyVectorLocal(it->second, true);
+          }
+        }
+      }
     }
     return expr.kind == Expr::Kind::Call && expr.isFieldAccess && inferStructExprPath(expr, localsIn) == "/vector";
   };
@@ -763,6 +808,69 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       return VectorStatementHelperEmitResult::Error;
     }
     if (it->second.kind != LocalInfo::Kind::Vector || !it->second.isMutable) {
+      error = vectorHelper + " requires mutable vector binding";
+      return VectorStatementHelperEmitResult::Error;
+    }
+  } else if (target.kind == Expr::Kind::Call && isSimpleCallName(target, "dereference") &&
+             target.args.size() == 1) {
+    auto emitSoaTargetError = [&]() {
+      error = "native backend does not support soa_vector helper: " + vectorHelper;
+      return VectorStatementHelperEmitResult::Error;
+    };
+    const Expr &derefTarget = target.args.front();
+    if (derefTarget.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(derefTarget.name);
+      if (it == localsIn.end()) {
+        error = vectorHelper + " requires mutable vector binding";
+        return VectorStatementHelperEmitResult::Error;
+      }
+      if (it->second.isSoaVector) {
+        return emitSoaTargetError();
+      }
+      if (!((it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
+            (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToVector))) {
+        error = vectorHelper + " requires mutable vector binding";
+        return VectorStatementHelperEmitResult::Error;
+      }
+    } else {
+      std::string derefAccessName;
+      if (!(getBuiltinArrayAccessName(derefTarget, derefAccessName) && derefTarget.args.size() == 2 &&
+            derefTarget.args.front().kind == Expr::Kind::Name)) {
+        error = vectorHelper + " requires mutable vector binding";
+        return VectorStatementHelperEmitResult::Error;
+      }
+      auto it = localsIn.find(derefTarget.args.front().name);
+      if (it == localsIn.end() || !it->second.isArgsPack) {
+        error = vectorHelper + " requires mutable vector binding";
+        return VectorStatementHelperEmitResult::Error;
+      }
+      if (it->second.isSoaVector) {
+        return emitSoaTargetError();
+      }
+      if (!((it->second.argsPackElementKind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
+            (it->second.argsPackElementKind == LocalInfo::Kind::Pointer && it->second.pointerToVector))) {
+        error = vectorHelper + " requires mutable vector binding";
+        return VectorStatementHelperEmitResult::Error;
+      }
+    }
+  } else if (target.kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
+        target.args.front().kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.args.front().name);
+      if (it == localsIn.end() || !it->second.isArgsPack) {
+        error = vectorHelper + " requires mutable vector binding";
+        return VectorStatementHelperEmitResult::Error;
+      }
+      if (it->second.isSoaVector) {
+        error = "native backend does not support soa_vector helper: " + vectorHelper;
+        return VectorStatementHelperEmitResult::Error;
+      }
+      if (it->second.argsPackElementKind != LocalInfo::Kind::Vector) {
+        error = vectorHelper + " requires mutable vector binding";
+        return VectorStatementHelperEmitResult::Error;
+      }
+    } else if (!(target.isFieldAccess && inferStructExprPath(target, localsIn) == "/vector")) {
       error = vectorHelper + " requires mutable vector binding";
       return VectorStatementHelperEmitResult::Error;
     }

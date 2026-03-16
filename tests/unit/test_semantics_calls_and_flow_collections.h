@@ -15246,6 +15246,98 @@ main() {
   CHECK(error.find("unknown method: /Counter/push") != std::string::npos);
 }
 
+TEST_CASE("vector helper statement validates on variadic vector pack receivers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+mutate([args<vector<i32>>] values) {
+  push(at(values, 0i32), 9i32)
+  values[1i32].clear()
+  values[2i32].remove_swap(0i32)
+  return(plus(count(at(values, 0i32)),
+              plus(capacity(values[1i32]),
+                   count(values[2i32]))))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(mutate(vector<i32>(1i32),
+                vector<i32>(2i32, 3i32),
+                vector<i32>(4i32, 5i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector helper statement validates on dereferenced variadic vector pack receivers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+mutate_refs([args<Reference<vector<i32>>>] values) {
+  push(dereference(at(values, 0i32)), 9i32)
+  dereference(at(values, 1i32)).clear()
+  dereference(at(values, 2i32)).remove_swap(0i32)
+  return(plus(count(dereference(at(values, 0i32))),
+              plus(capacity(dereference(at(values, 1i32))),
+                   count(dereference(at(values, 2i32))))))
+}
+
+[effects(heap_alloc), return<int>]
+mutate_ptrs([args<Pointer<vector<i32>>>] values) {
+  push(dereference(at(values, 0i32)), 9i32)
+  dereference(at(values, 1i32)).clear()
+  dereference(at(values, 2i32)).remove_swap(0i32)
+  return(plus(count(dereference(at(values, 0i32))),
+              plus(capacity(dereference(at(values, 1i32))),
+                   count(dereference(at(values, 2i32))))))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] a0{vector<i32>(1i32)}
+  [vector<i32> mut] a1{vector<i32>(2i32, 3i32)}
+  [vector<i32> mut] a2{vector<i32>(4i32, 5i32)}
+  [vector<i32> mut] b0{vector<i32>(1i32)}
+  [vector<i32> mut] b1{vector<i32>(2i32, 3i32)}
+  [vector<i32> mut] b2{vector<i32>(4i32, 5i32)}
+  [Reference<vector<i32>>] r0{location(a0)}
+  [Reference<vector<i32>>] r1{location(a1)}
+  [Reference<vector<i32>>] r2{location(a2)}
+  [Pointer<vector<i32>>] p0{location(b0)}
+  [Pointer<vector<i32>>] p1{location(b1)}
+  [Pointer<vector<i32>>] p2{location(b2)}
+  return(plus(mutate_refs(r0, r1, r2),
+              mutate_ptrs(p0, p1, p2)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector helper statement user shadow resolves on variadic vector pack receivers") {
+  const std::string source = R"(
+[return<void>]
+/vector/push([vector<i32> mut] values, [i32] value) {
+}
+
+[return<int>]
+mutate([args<vector<i32>>] values) {
+  push(at(values, 0i32), 9i32)
+  values[0i32].push(3i32)
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  return(mutate(vector<i32>(1i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector at call-form helper shadow accepts reordered named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

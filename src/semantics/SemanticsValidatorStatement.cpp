@@ -583,19 +583,95 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   };
   auto resolveVectorBinding = [&](const Expr &target, const BindingInfo *&bindingOut) -> bool {
     bindingOut = nullptr;
-    static std::optional<BindingInfo> resolvedFieldBinding;
-    resolvedFieldBinding.reset();
-    if (target.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        bindingOut = paramBinding;
-        return true;
+    static std::optional<BindingInfo> resolvedBinding;
+    resolvedBinding.reset();
+    auto resolveNamedBinding = [&](const std::string &name) -> const BindingInfo * {
+      if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+        return paramBinding;
       }
-      auto it = locals.find(target.name);
+      auto it = locals.find(name);
       if (it != locals.end()) {
-        bindingOut = &it->second;
+        return &it->second;
+      }
+      return nullptr;
+    };
+    auto resolveVectorTypeText = [&](const std::string &typeText, bool isMutable) -> bool {
+      if (typeText.empty()) {
+        return false;
+      }
+      std::string normalizedType = normalizeBindingTypeName(typeText);
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(normalizedType, base, arg)) {
+        const std::string normalizedBase = normalizeBindingTypeName(base);
+        if ((normalizedBase == "vector" || normalizedBase == "soa_vector") && !arg.empty()) {
+          resolvedBinding.emplace();
+          resolvedBinding->typeName = normalizedBase;
+          resolvedBinding->typeTemplateArg = arg;
+          resolvedBinding->isMutable = isMutable;
+          bindingOut = &*resolvedBinding;
+          return true;
+        }
+      } else if (normalizedType == "vector" || normalizedType == "soa_vector") {
+        resolvedBinding.emplace();
+        resolvedBinding->typeName = normalizedType;
+        resolvedBinding->typeTemplateArg.clear();
+        resolvedBinding->isMutable = isMutable;
+        bindingOut = &*resolvedBinding;
         return true;
       }
       return false;
+    };
+    if (target.kind == Expr::Kind::Name) {
+      if (const BindingInfo *binding = resolveNamedBinding(target.name)) {
+        bindingOut = binding;
+        return true;
+      }
+      return false;
+    }
+    if (target.kind == Expr::Kind::Call) {
+      std::string accessName;
+      if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
+          target.args.front().kind == Expr::Kind::Name) {
+        if (const BindingInfo *binding = resolveNamedBinding(target.args.front().name)) {
+          std::string elementType;
+          if (getArgsPackElementType(*binding, elementType)) {
+            return resolveVectorTypeText(elementType, true);
+          }
+        }
+        return false;
+      }
+      if (isSimpleCallName(target, "dereference") && target.args.size() == 1) {
+        const Expr &derefTarget = target.args.front();
+        if (derefTarget.kind == Expr::Kind::Name) {
+          const BindingInfo *binding = resolveNamedBinding(derefTarget.name);
+          if (binding == nullptr || binding->typeTemplateArg.empty()) {
+            return false;
+          }
+          const std::string normalizedType = normalizeBindingTypeName(binding->typeName);
+          if (normalizedType != "Reference" && normalizedType != "Pointer") {
+            return false;
+          }
+          return resolveVectorTypeText(binding->typeTemplateArg, true);
+        }
+        if (getBuiltinArrayAccessName(derefTarget, accessName) && derefTarget.args.size() == 2 &&
+            derefTarget.args.front().kind == Expr::Kind::Name) {
+          if (const BindingInfo *binding = resolveNamedBinding(derefTarget.args.front().name)) {
+            std::string elementType;
+            if (getArgsPackElementType(*binding, elementType)) {
+              std::string base;
+              std::string arg;
+              if (splitTemplateTypeName(normalizeBindingTypeName(elementType), base, arg)) {
+                const std::string normalizedBase = normalizeBindingTypeName(base);
+                if ((normalizedBase == "Reference" || normalizedBase == "Pointer") && !arg.empty()) {
+                  return resolveVectorTypeText(arg, true);
+                }
+              }
+            }
+          }
+        }
+        return false;
+      }
     }
     if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
       return false;
@@ -654,11 +730,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (!fieldStmt.isBinding || isStaticField || fieldStmt.name != target.name) {
         continue;
       }
-      resolvedFieldBinding.emplace();
-      if (!resolveStructFieldBinding(*defIt->second, fieldStmt, *resolvedFieldBinding)) {
+      resolvedBinding.emplace();
+      if (!resolveStructFieldBinding(*defIt->second, fieldStmt, *resolvedBinding)) {
         return false;
       }
-      bindingOut = &*resolvedFieldBinding;
+      bindingOut = &*resolvedBinding;
       return true;
     }
     return false;
@@ -831,6 +907,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                            const std::string &helperName,
                                            std::string &resolvedOut) -> bool {
     resolvedOut.clear();
+    const BindingInfo *vectorBinding = nullptr;
+    if (resolveVectorBinding(receiver, vectorBinding) && vectorBinding != nullptr &&
+        (vectorBinding->typeName == "vector" || vectorBinding->typeName == "soa_vector")) {
+      resolvedOut = "/" + vectorBinding->typeName + "/" + helperName;
+      return true;
+    }
     auto resolveReceiverTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
       if (typeName.empty()) {
         return "";

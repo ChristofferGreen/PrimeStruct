@@ -1516,6 +1516,67 @@ main() {
   CHECK(result == 11);
 }
 
+TEST_CASE("ir lowerer materializes variadic vector packs with indexed statement mutators") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+mutate_vectors([args<vector<i32>>] values) {
+  push(at(values, 0i32), 9i32)
+  values[0i32].pop()
+  reserve(values[1i32], 6i32)
+  values[1i32].clear()
+  remove_at(values[2i32], 1i32)
+  values[2i32].remove_swap(0i32)
+  return(plus(values[0i32].count(),
+              plus(values[1i32].capacity(),
+                   values[2i32].count())))
+}
+
+[effects(heap_alloc), return<int>]
+forward([args<vector<i32>>] values) {
+  return(mutate_vectors([spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+forward_mixed([args<vector<i32>>] values) {
+  [vector<i32>] extra{vector<i32>(20i32)}
+  return(mutate_vectors(extra, [spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] a0{vector<i32>(1i32, 2i32)}
+  [vector<i32>] a1{vector<i32>(3i32)}
+  [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32)}
+
+  [vector<i32>] b0{vector<i32>(7i32)}
+  [vector<i32>] b1{vector<i32>(8i32, 9i32)}
+  [vector<i32>] b2{vector<i32>(10i32, 11i32, 12i32)}
+
+  [vector<i32>] c0{vector<i32>(13i32, 14i32)}
+  [vector<i32>] c1{vector<i32>(15i32, 16i32, 17i32)}
+
+  return(plus(mutate_vectors(a0, a1, a2),
+              plus(forward(b0, b1, b2),
+                   forward_mixed(c0, c1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 25);
+}
+
 TEST_CASE("ir lowerer materializes variadic array packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]
@@ -2840,6 +2901,76 @@ main() {
   CHECK(result == 39);
 }
 
+TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference statement mutators") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+mutate_ptrs([args<Pointer<vector<i32>>>] values) {
+  push(dereference(at(values, 0i32)), 9i32)
+  dereference(at(values, 0i32)).pop()
+  reserve(dereference(at(values, 1i32)), 6i32)
+  dereference(at(values, 1i32)).clear()
+  remove_at(dereference(at(values, 2i32)), 1i32)
+  dereference(at(values, 2i32)).remove_swap(0i32)
+  return(plus(dereference(at(values, 0i32)).count(),
+              plus(dereference(at(values, 1i32)).capacity(),
+                   dereference(at(values, 2i32)).count())))
+}
+
+[effects(heap_alloc), return<int>]
+forward([args<Pointer<vector<i32>>>] values) {
+  return(mutate_ptrs([spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+forward_mixed([args<Pointer<vector<i32>>>] values) {
+  [vector<i32>] extra{vector<i32>(20i32)}
+  [Pointer<vector<i32>>] extra_ptr{location(extra)}
+  return(mutate_ptrs(extra_ptr, [spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] a0{vector<i32>(1i32, 2i32)}
+  [vector<i32>] a1{vector<i32>(3i32)}
+  [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32)}
+  [Pointer<vector<i32>>] r0{location(a0)}
+  [Pointer<vector<i32>>] r1{location(a1)}
+  [Pointer<vector<i32>>] r2{location(a2)}
+
+  [vector<i32>] b0{vector<i32>(7i32)}
+  [vector<i32>] b1{vector<i32>(8i32, 9i32)}
+  [vector<i32>] b2{vector<i32>(10i32, 11i32, 12i32)}
+  [Pointer<vector<i32>>] s0{location(b0)}
+  [Pointer<vector<i32>>] s1{location(b1)}
+  [Pointer<vector<i32>>] s2{location(b2)}
+
+  [vector<i32>] c0{vector<i32>(13i32, 14i32)}
+  [vector<i32>] c1{vector<i32>(15i32, 16i32, 17i32)}
+  [Pointer<vector<i32>>] t0{location(c0)}
+  [Pointer<vector<i32>>] t1{location(c1)}
+
+  return(plus(mutate_ptrs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 25);
+}
+
 TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]
@@ -3026,6 +3157,76 @@ main() {
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 39);
+}
+
+TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed dereference statement mutators") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+mutate_refs([args<Reference<vector<i32>>>] values) {
+  push(dereference(at(values, 0i32)), 9i32)
+  dereference(at(values, 0i32)).pop()
+  reserve(dereference(at(values, 1i32)), 6i32)
+  dereference(at(values, 1i32)).clear()
+  remove_at(dereference(at(values, 2i32)), 1i32)
+  dereference(at(values, 2i32)).remove_swap(0i32)
+  return(plus(dereference(at(values, 0i32)).count(),
+              plus(dereference(at(values, 1i32)).capacity(),
+                   dereference(at(values, 2i32)).count())))
+}
+
+[effects(heap_alloc), return<int>]
+forward([args<Reference<vector<i32>>>] values) {
+  return(mutate_refs([spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+forward_mixed([args<Reference<vector<i32>>>] values) {
+  [vector<i32>] extra{vector<i32>(20i32)}
+  [Reference<vector<i32>>] extra_ref{location(extra)}
+  return(mutate_refs(extra_ref, [spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] a0{vector<i32>(1i32, 2i32)}
+  [vector<i32>] a1{vector<i32>(3i32)}
+  [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32)}
+  [Reference<vector<i32>>] r0{location(a0)}
+  [Reference<vector<i32>>] r1{location(a1)}
+  [Reference<vector<i32>>] r2{location(a2)}
+
+  [vector<i32>] b0{vector<i32>(7i32)}
+  [vector<i32>] b1{vector<i32>(8i32, 9i32)}
+  [vector<i32>] b2{vector<i32>(10i32, 11i32, 12i32)}
+  [Reference<vector<i32>>] s0{location(b0)}
+  [Reference<vector<i32>>] s1{location(b1)}
+  [Reference<vector<i32>>] s2{location(b2)}
+
+  [vector<i32>] c0{vector<i32>(13i32, 14i32)}
+  [vector<i32>] c1{vector<i32>(15i32, 16i32, 17i32)}
+  [Reference<vector<i32>>] t0{location(c0)}
+  [Reference<vector<i32>>] t1{location(c1)}
+
+  return(plus(mutate_refs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 25);
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed soa_vector packs with indexed count methods") {
