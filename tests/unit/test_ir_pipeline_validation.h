@@ -33844,6 +33844,44 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
   locals.emplace("values", vecInfo);
 
+  primec::ir_lowerer::LocalInfo refVecInfo;
+  refVecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  refVecInfo.referenceToVector = true;
+  locals.emplace("refVec", refVecInfo);
+
+  primec::ir_lowerer::LocalInfo ptrVecInfo;
+  ptrVecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  ptrVecInfo.pointerToVector = true;
+  locals.emplace("ptrVec", ptrVecInfo);
+
+  primec::ir_lowerer::LocalInfo vectorArgsInfo;
+  vectorArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  vectorArgsInfo.isArgsPack = true;
+  vectorArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("vectorArgs", vectorArgsInfo);
+
+  primec::ir_lowerer::LocalInfo refVectorArgsInfo;
+  refVectorArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  refVectorArgsInfo.isArgsPack = true;
+  refVectorArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  refVectorArgsInfo.referenceToVector = true;
+  locals.emplace("refVectorArgs", refVectorArgsInfo);
+
+  primec::ir_lowerer::LocalInfo ptrVectorArgsInfo;
+  ptrVectorArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  ptrVectorArgsInfo.isArgsPack = true;
+  ptrVectorArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  ptrVectorArgsInfo.pointerToVector = true;
+  locals.emplace("ptrVectorArgs", ptrVectorArgsInfo);
+
+  primec::ir_lowerer::LocalInfo soaVectorArgsInfo;
+  soaVectorArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  soaVectorArgsInfo.isArgsPack = true;
+  soaVectorArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  soaVectorArgsInfo.pointerToVector = true;
+  soaVectorArgsInfo.isSoaVector = true;
+  locals.emplace("soaVectorArgs", soaVectorArgsInfo);
+
   primec::Expr valuesName;
   valuesName.kind = primec::Expr::Kind::Name;
   valuesName.name = "values";
@@ -33855,6 +33893,74 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
   capacityCall.name = "/std/collections/vector/capacity";
   CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+
+  primec::Expr refVecName;
+  refVecName.kind = primec::Expr::Kind::Name;
+  refVecName.name = "refVec";
+  capacityCall.name = "capacity";
+  capacityCall.args = {refVecName};
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+
+  primec::Expr ptrVecName;
+  ptrVecName.kind = primec::Expr::Kind::Name;
+  ptrVecName.name = "ptrVec";
+  capacityCall.args = {ptrVecName};
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+
+  primec::Expr vectorArgsName;
+  vectorArgsName.kind = primec::Expr::Kind::Name;
+  vectorArgsName.name = "vectorArgs";
+  primec::Expr zeroIndex;
+  zeroIndex.kind = primec::Expr::Kind::Literal;
+  zeroIndex.literalValue = 0;
+  primec::Expr indexedVector;
+  indexedVector.kind = primec::Expr::Kind::Call;
+  indexedVector.name = "at";
+  indexedVector.args = {vectorArgsName, zeroIndex};
+  capacityCall.args = {indexedVector};
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+
+  primec::Expr refVectorArgsName;
+  refVectorArgsName.kind = primec::Expr::Kind::Name;
+  refVectorArgsName.name = "refVectorArgs";
+  primec::Expr indexedRefVector;
+  indexedRefVector.kind = primec::Expr::Kind::Call;
+  indexedRefVector.name = "at";
+  indexedRefVector.args = {refVectorArgsName, zeroIndex};
+  primec::Expr derefRefVector;
+  derefRefVector.kind = primec::Expr::Kind::Call;
+  derefRefVector.name = "dereference";
+  derefRefVector.args = {indexedRefVector};
+  capacityCall.args = {derefRefVector};
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+
+  primec::Expr ptrVectorArgsName;
+  ptrVectorArgsName.kind = primec::Expr::Kind::Name;
+  ptrVectorArgsName.name = "ptrVectorArgs";
+  primec::Expr indexedPtrVector;
+  indexedPtrVector.kind = primec::Expr::Kind::Call;
+  indexedPtrVector.name = "at";
+  indexedPtrVector.args = {ptrVectorArgsName, zeroIndex};
+  primec::Expr derefPtrVector;
+  derefPtrVector.kind = primec::Expr::Kind::Call;
+  derefPtrVector.name = "dereference";
+  derefPtrVector.args = {indexedPtrVector};
+  capacityCall.args = {derefPtrVector};
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+
+  primec::Expr soaVectorArgsName;
+  soaVectorArgsName.kind = primec::Expr::Kind::Name;
+  soaVectorArgsName.name = "soaVectorArgs";
+  primec::Expr indexedSoaVector;
+  indexedSoaVector.kind = primec::Expr::Kind::Call;
+  indexedSoaVector.name = "at";
+  indexedSoaVector.args = {soaVectorArgsName, zeroIndex};
+  primec::Expr derefSoaVector;
+  derefSoaVector.kind = primec::Expr::Kind::Call;
+  derefSoaVector.name = "dereference";
+  derefSoaVector.args = {indexedSoaVector};
+  capacityCall.args = {derefSoaVector};
+  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 
   primec::Expr stringCount;
   stringCount.kind = primec::Expr::Kind::Call;

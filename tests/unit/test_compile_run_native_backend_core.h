@@ -855,6 +855,40 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("native materializes variadic vector packs with indexed capacity methods") {
+  const std::string source = R"(
+[return<int>]
+score_vectors([args<vector<i32>>] values) {
+  [auto] head{capacity(at(values, 0i32))}
+  return(plus(head, at(values, 2i32).capacity()))
+}
+
+[return<int>]
+forward([args<vector<i32>>] values) {
+  return(score_vectors([spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+forward_mixed([args<vector<i32>>] values) {
+  return(score_vectors(vector<i32>(1i32), [spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(score_vectors(vector<i32>(1i32, 2i32), vector<i32>(3i32), vector<i32>(4i32, 5i32, 6i32)),
+              plus(forward(vector<i32>(7i32), vector<i32>(8i32, 9i32), vector<i32>(10i32)),
+                   forward_mixed(vector<i32>(11i32, 12i32), vector<i32>(13i32, 14i32, 15i32)))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_vector_capacity.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_vector_capacity").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("native materializes variadic array packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]
@@ -1901,6 +1935,61 @@ main() {
   CHECK(runCommand(exePath) == 16);
 }
 
+TEST_CASE("native materializes variadic pointer vector packs with indexed dereference capacity methods") {
+  const std::string source = R"(
+[return<int>]
+score_ptrs([args<Pointer<vector<i32>>>] values) {
+  [auto] head{capacity(dereference(at(values, 0i32)))}
+  return(plus(head, dereference(at(values, 2i32)).capacity()))
+}
+
+[return<int>]
+forward([args<Pointer<vector<i32>>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<vector<i32>>>] values) {
+  [vector<i32>] extra{vector<i32>(1i32)}
+  [Pointer<vector<i32>>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [vector<i32>] a0{vector<i32>(1i32, 2i32)}
+  [vector<i32>] a1{vector<i32>(3i32)}
+  [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32, 7i32)}
+  [Pointer<vector<i32>>] r0{location(a0)}
+  [Pointer<vector<i32>>] r1{location(a1)}
+  [Pointer<vector<i32>>] r2{location(a2)}
+
+  [vector<i32>] b0{vector<i32>(8i32)}
+  [vector<i32>] b1{vector<i32>(9i32, 10i32)}
+  [vector<i32>] b2{vector<i32>(11i32, 12i32, 13i32)}
+  [Pointer<vector<i32>>] s0{location(b0)}
+  [Pointer<vector<i32>>] s1{location(b1)}
+  [Pointer<vector<i32>>] s2{location(b2)}
+
+  [vector<i32>] c0{vector<i32>(14i32, 15i32)}
+  [vector<i32>] c1{vector<i32>(16i32, 17i32, 18i32, 19i32, 20i32)}
+  [Pointer<vector<i32>>] t0{location(c0)}
+  [Pointer<vector<i32>>] t1{location(c1)}
+
+  return(plus(score_ptrs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_vector_deref_capacity.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_pointer_vector_deref_capacity").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 16);
+}
+
 TEST_CASE("native materializes variadic pointer vector packs with indexed dereference access helpers") {
   const std::string source = R"(
 [return<int>]
@@ -2004,6 +2093,61 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_vector.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_variadic_args_borrowed_vector").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 16);
+}
+
+TEST_CASE("native materializes variadic borrowed vector packs with indexed dereference capacity methods") {
+  const std::string source = R"(
+[return<int>]
+score_refs([args<Reference<vector<i32>>>] values) {
+  [auto] head{capacity(dereference(at(values, 0i32)))}
+  return(plus(head, dereference(at(values, 2i32)).capacity()))
+}
+
+[return<int>]
+forward([args<Reference<vector<i32>>>] values) {
+  return(score_refs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Reference<vector<i32>>>] values) {
+  [vector<i32>] extra{vector<i32>(1i32)}
+  [Reference<vector<i32>>] extra_ref{location(extra)}
+  return(score_refs(extra_ref, [spread] values))
+}
+
+[return<int>]
+main() {
+  [vector<i32>] a0{vector<i32>(1i32, 2i32)}
+  [vector<i32>] a1{vector<i32>(3i32)}
+  [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32, 7i32)}
+  [Reference<vector<i32>>] r0{location(a0)}
+  [Reference<vector<i32>>] r1{location(a1)}
+  [Reference<vector<i32>>] r2{location(a2)}
+
+  [vector<i32>] b0{vector<i32>(8i32)}
+  [vector<i32>] b1{vector<i32>(9i32, 10i32)}
+  [vector<i32>] b2{vector<i32>(11i32, 12i32, 13i32)}
+  [Reference<vector<i32>>] s0{location(b0)}
+  [Reference<vector<i32>>] s1{location(b1)}
+  [Reference<vector<i32>>] s2{location(b2)}
+
+  [vector<i32>] c0{vector<i32>(14i32, 15i32)}
+  [vector<i32>] c1{vector<i32>(16i32, 17i32, 18i32, 19i32, 20i32)}
+  [Reference<vector<i32>>] t0{location(c0)}
+  [Reference<vector<i32>>] t1{location(c1)}
+
+  return(plus(score_refs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_vector_deref_capacity.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_borrowed_vector_deref_capacity").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

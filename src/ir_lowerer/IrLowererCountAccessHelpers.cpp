@@ -321,11 +321,46 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
     return false;
   }
   const Expr &target = expr.args.front();
+  auto isSupportedVectorTarget = [&](const LocalInfo &info, bool fromArgsPack) {
+    const LocalInfo::Kind kind = fromArgsPack ? info.argsPackElementKind : info.kind;
+    if (info.isSoaVector) {
+      return false;
+    }
+    return kind == LocalInfo::Kind::Vector ||
+           (kind == LocalInfo::Kind::Reference && info.referenceToVector) ||
+           (kind == LocalInfo::Kind::Pointer && info.pointerToVector);
+  };
+
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
-    return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Vector;
+    return it != localsIn.end() && isSupportedVectorTarget(it->second, false);
   }
   if (target.kind == Expr::Kind::Call) {
+    if (isSimpleCallName(target, "dereference") && target.args.size() == 1) {
+      const Expr &derefTarget = target.args.front();
+      if (derefTarget.kind == Expr::Kind::Name) {
+        auto it = localsIn.find(derefTarget.name);
+        return it != localsIn.end() && isSupportedVectorTarget(it->second, false);
+      }
+
+      std::string accessName;
+      if (getBuiltinArrayAccessName(derefTarget, accessName) && derefTarget.args.size() == 2 &&
+          derefTarget.args.front().kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(derefTarget.args.front().name);
+        return localIt != localsIn.end() && localIt->second.isArgsPack &&
+               isSupportedVectorTarget(localIt->second, true);
+      }
+      return false;
+    }
+
+    std::string accessName;
+    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
+        target.args.front().kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(target.args.front().name);
+      return localIt != localsIn.end() && localIt->second.isArgsPack &&
+             isSupportedVectorTarget(localIt->second, true);
+    }
+
     std::string collection;
     if (!getBuiltinCollectionName(target, collection)) {
       return false;
