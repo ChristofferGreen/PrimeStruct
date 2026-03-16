@@ -7265,7 +7265,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("Semantic error: at requires map key type i32") != std::string::npos);
 }
 
 TEST_CASE("vm keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {
