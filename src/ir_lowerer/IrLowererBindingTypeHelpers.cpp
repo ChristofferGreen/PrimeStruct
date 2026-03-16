@@ -218,6 +218,8 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
     if (base == "Buffer") {
       if (info.kind == LocalInfo::Kind::Reference) {
         info.referenceToBuffer = true;
+      } else {
+        info.pointerToBuffer = true;
       }
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
         info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));

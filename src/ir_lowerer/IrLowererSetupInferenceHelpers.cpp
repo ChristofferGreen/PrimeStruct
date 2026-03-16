@@ -143,7 +143,9 @@ LocalInfo::ValueKind inferBufferElementValueKind(
       const Expr &targetExpr = expr.args.front();
       if (targetExpr.kind == Expr::Kind::Name) {
         auto it = localsIn.find(targetExpr.name);
-        if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) {
+        if (it != localsIn.end() &&
+            ((it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) ||
+             (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToBuffer))) {
           return it->second.valueKind;
         }
       }
@@ -151,7 +153,8 @@ LocalInfo::ValueKind inferBufferElementValueKind(
           targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
         auto it = localsIn.find(targetExpr.args.front().name);
         if (it != localsIn.end() && it->second.isArgsPack &&
-            it->second.argsPackElementKind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) {
+            ((it->second.argsPackElementKind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) ||
+             (it->second.argsPackElementKind == LocalInfo::Kind::Pointer && it->second.pointerToBuffer))) {
           return it->second.valueKind;
         }
       }

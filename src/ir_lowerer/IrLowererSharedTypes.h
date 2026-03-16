@@ -33,6 +33,7 @@ struct LocalInfo {
   bool referenceToVector = false;
   bool pointerToVector = false;
   bool referenceToBuffer = false;
+  bool pointerToBuffer = false;
   bool referenceToMap = false;
   bool pointerToMap = false;
   bool isUninitializedStorage = false;

@@ -1294,7 +1294,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       auto resolveReferenceBufferType = [&](const std::string &typeName,
                                             const std::string &typeTemplateArg,
                                             std::string &elemTypeOut) -> bool {
-        if (typeName != "Reference" || typeTemplateArg.empty()) {
+        if ((typeName != "Reference" && typeName != "Pointer") || typeTemplateArg.empty()) {
           return false;
         }
         std::string base;
@@ -1315,10 +1315,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         std::string base;
         std::string nestedArg;
         if (!splitTemplateTypeName(typeTemplateArg, base, nestedArg) ||
-            normalizeBindingTypeName(base) != "Reference" || nestedArg.empty()) {
+            (normalizeBindingTypeName(base) != "Reference" && normalizeBindingTypeName(base) != "Pointer") ||
+            nestedArg.empty()) {
           return false;
         }
-        return resolveReferenceBufferType("Reference", nestedArg, elemTypeOut);
+        return resolveReferenceBufferType(base, nestedArg, elemTypeOut);
       };
       auto resolveIndexedArgsPackReferenceBuffer = [&](const Expr &targetExpr, std::string &elemTypeOut) -> bool {
         std::string accessName;
