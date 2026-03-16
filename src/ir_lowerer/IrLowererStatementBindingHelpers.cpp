@@ -80,6 +80,14 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
   }
   if (base == "Pointer") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Pointer;
+    std::string pointerBase;
+    std::string pointerArg;
+    if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
+        normalizeCollectionBindingTypeName(pointerBase) == "File") {
+      infoOut.isFileHandle = true;
+      infoOut.valueKind = LocalInfo::ValueKind::Int64;
+      return;
+    }
     if (trimTemplateTypeText(arg) == "FileError") {
       infoOut.isFileError = true;
       infoOut.valueKind = LocalInfo::ValueKind::Int32;
@@ -466,6 +474,13 @@ bool inferCallParameterLocalInfo(const Expr &param,
         infoOut.resultErrorType = transform.templateArgs.back();
       }
     } else if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
+      std::string wrappedBase;
+      std::string wrappedArg;
+      if (splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          normalizeCollectionBindingTypeName(wrappedBase) == "File") {
+        infoOut.isFileHandle = true;
+        infoOut.valueKind = LocalInfo::ValueKind::Int64;
+      }
       bool resultHasValue = false;
       LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
       std::string resultErrorType;

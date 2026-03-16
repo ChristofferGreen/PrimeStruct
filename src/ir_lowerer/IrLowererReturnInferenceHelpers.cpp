@@ -236,6 +236,14 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
       bindingInfo.resultErrorType = transform.templateArgs.empty() ? "" : transform.templateArgs.back();
       bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64
                                                          : LocalInfo::ValueKind::Int32;
+    } else if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
+      std::string wrappedBase;
+      std::string wrappedArg;
+      if (splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          normalizeCollectionBindingTypeName(wrappedBase) == "File") {
+        bindingInfo.isFileHandle = true;
+        bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
+      }
     }
   }
   setReferenceArrayInfo(bindingExpr, bindingInfo);

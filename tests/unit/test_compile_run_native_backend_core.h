@@ -2722,6 +2722,97 @@ TEST_CASE("native materializes variadic borrowed File handle packs with indexed 
   CHECK(readFile(pathC0) == "alpha\n");
   CHECK(readFile(pathExtra) == "omega\n");
 }
+
+TEST_CASE("native materializes variadic pointer File handle packs with indexed dereference file methods") {
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string pathA0 =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_pointer_file_handle_a0.txt").string();
+  const std::string pathA1 =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_pointer_file_handle_a1.txt").string();
+  const std::string pathA2 =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_pointer_file_handle_a2.txt").string();
+  const std::string pathB0 =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_pointer_file_handle_b0.txt").string();
+  const std::string pathB1 =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_pointer_file_handle_b1.txt").string();
+  const std::string pathB2 =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_pointer_file_handle_b2.txt").string();
+  const std::string pathC0 =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_pointer_file_handle_c0.txt").string();
+  const std::string pathC1 =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_pointer_file_handle_c1.txt").string();
+  const std::string pathExtra =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_pointer_file_handle_extra.txt").string();
+
+  const std::string source =
+      "[effects(file_write)]\n"
+      "swallow_file_error([FileError] err) {}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "score_ptrs([args<Pointer<File<Write>>>] values) {\n"
+      "  dereference(values[0i32]).write_line(\"alpha\"utf8)?\n"
+      "  dereference(values[minus(count(values), 1i32)]).write_line(\"omega\"utf8)?\n"
+      "  dereference(values[0i32]).flush()?\n"
+      "  dereference(values[minus(count(values), 1i32)]).flush()?\n"
+      "  return(plus(count(values), 10i32))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "forward([args<Pointer<File<Write>>>] values) {\n"
+      "  return(score_ptrs([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "forward_mixed([args<Pointer<File<Write>>>] values) {\n"
+      "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
+      "  [Pointer<File<Write>>] extra_ptr{location(extra)}\n"
+      "  return(score_ptrs([spread] values, extra_ptr))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] a0{File<Write>(\"" + escape(pathA0) + "\"utf8)?}\n"
+      "  [File<Write>] a1{File<Write>(\"" + escape(pathA1) + "\"utf8)?}\n"
+      "  [File<Write>] a2{File<Write>(\"" + escape(pathA2) + "\"utf8)?}\n"
+      "  [Pointer<File<Write>>] r0{location(a0)}\n"
+      "  [Pointer<File<Write>>] r1{location(a1)}\n"
+      "  [Pointer<File<Write>>] r2{location(a2)}\n"
+      "  [File<Write>] b0{File<Write>(\"" + escape(pathB0) + "\"utf8)?}\n"
+      "  [File<Write>] b1{File<Write>(\"" + escape(pathB1) + "\"utf8)?}\n"
+      "  [File<Write>] b2{File<Write>(\"" + escape(pathB2) + "\"utf8)?}\n"
+      "  [Pointer<File<Write>>] s0{location(b0)}\n"
+      "  [Pointer<File<Write>>] s1{location(b1)}\n"
+      "  [Pointer<File<Write>>] s2{location(b2)}\n"
+      "  [File<Write>] c0{File<Write>(\"" + escape(pathC0) + "\"utf8)?}\n"
+      "  [File<Write>] c1{File<Write>(\"" + escape(pathC1) + "\"utf8)?}\n"
+      "  [Pointer<File<Write>>] t0{location(c0)}\n"
+      "  [Pointer<File<Write>>] t1{location(c1)}\n"
+      "  return(plus(score_ptrs(r0, r1, r2), plus(forward(s0, s1, s2), forward_mixed(t0, t1))))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_file_handle.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_pointer_file_handle").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 39);
+  CHECK(readFile(pathA0) == "alpha\n");
+  CHECK(readFile(pathA2) == "omega\n");
+  CHECK(readFile(pathB0) == "alpha\n");
+  CHECK(readFile(pathB2) == "omega\n");
+  CHECK(readFile(pathC0) == "alpha\n");
+  CHECK(readFile(pathExtra) == "omega\n");
+}
 #endif
 
 TEST_CASE("compiles and runs native void call with string param") {

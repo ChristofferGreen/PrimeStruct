@@ -111,6 +111,21 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     return it != localsIn.end() && it->second.isArgsPack && it->second.isFileHandle &&
            it->second.argsPackElementKind == LocalInfo::Kind::Reference;
   };
+  auto isIndexedPointerArgsPackFileHandleReceiver = [&](const Expr &receiverExpr) {
+    if (!(receiverExpr.kind == Expr::Kind::Call && isSimpleCallName(receiverExpr, "dereference") &&
+          receiverExpr.args.size() == 1)) {
+      return false;
+    }
+    std::string accessName;
+    const Expr &targetExpr = receiverExpr.args.front();
+    if (targetExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(targetExpr, accessName) ||
+        targetExpr.args.size() != 2 || targetExpr.args.front().kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(targetExpr.args.front().name);
+    return it != localsIn.end() && it->second.isArgsPack && it->second.isFileHandle &&
+           it->second.argsPackElementKind == LocalInfo::Kind::Pointer;
+  };
 
   auto lookupLocal = [&](const std::string &name) -> LocalResultInfo {
     LocalResultInfo local;
@@ -152,6 +167,16 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
   }
   if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
       isIndexedBorrowedArgsPackFileHandleReceiver(expr.args.front())) {
+    if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
+        expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+      out.isResult = true;
+      out.hasValue = false;
+      out.errorType = "FileError";
+      return true;
+    }
+  }
+  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
+      isIndexedPointerArgsPackFileHandleReceiver(expr.args.front())) {
     if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
         expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
       out.isResult = true;

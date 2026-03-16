@@ -163,6 +163,13 @@
             info.resultErrorType = transform.templateArgs.back();
           }
         } else if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
+          std::string wrappedBase;
+          std::string wrappedArg;
+          if (splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+              normalizeCollectionBindingTypeName(wrappedBase) == "File") {
+            info.isFileHandle = true;
+            info.valueKind = LocalInfo::ValueKind::Int64;
+          }
           bool resultHasValue = false;
           LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
           std::string resultErrorType;

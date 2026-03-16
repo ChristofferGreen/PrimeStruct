@@ -83,6 +83,7 @@ bool emitInlineDefinitionCallParameters(
           }
           auto it = callerLocals.find(argExpr.name);
           if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Pointer ||
+              it->second.isFileHandle != paramInfo.isFileHandle ||
               it->second.isFileError != paramInfo.isFileError ||
               it->second.isResult != paramInfo.isResult ||
               it->second.resultHasValue != paramInfo.resultHasValue ||
