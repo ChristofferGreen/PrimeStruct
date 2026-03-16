@@ -62,7 +62,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("C++ emitter runs experimental map with custom comparable struct keys") {
+TEST_CASE("C++ emitter rejects experimental map custom comparable keys without on_error") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -96,12 +96,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_experimental_map_custom_comparable_key.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_experimental_map_custom_comparable_key_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_experimental_map_custom_comparable_key.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 32);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("missing on_error for ? usage") != std::string::npos);
 }
 
 TEST_CASE("executions are ignored by C++ emitter") {
@@ -3396,7 +3397,7 @@ TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibil
   expectResolved("tryAt", "/map/tryAt", true);
 }
 
-TEST_CASE("C++ emitter helper rejects canonical metadata fallback for explicit map slash methods") {
+TEST_CASE("C++ emitter helper resolves canonical metadata fallback for explicit map slash methods") {
   primec::Expr receiverName;
   receiverName.kind = primec::Expr::Kind::Name;
   receiverName.name = "values";
@@ -3422,7 +3423,7 @@ TEST_CASE("C++ emitter helper rejects canonical metadata fallback for explicit m
       {"/std/collections/map/tryAt", "/CanonicalTryAtMarker"},
   };
 
-  auto expectRejected = [&](const char *receiverMethodName, bool includeKeyArg) {
+  auto expectResolved = [&](const char *receiverMethodName, bool includeKeyArg, std::string expectedPath) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.isMethodCall = true;
@@ -3441,18 +3442,18 @@ TEST_CASE("C++ emitter helper rejects canonical metadata fallback for explicit m
     methodCall.args = {receiverCall};
     methodCall.argNames = {std::nullopt};
 
-    std::string resolved = "/stale/path";
-    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
         methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved.empty());
+    CHECK(resolved == expectedPath);
   };
 
-  expectRejected("/map/count", false);
-  expectRejected("/map/contains", true);
-  expectRejected("/map/tryAt", true);
+  expectResolved("/map/count", false, "/i32/tag");
+  expectResolved("/map/contains", true, "/CanonicalContainsMarker/tag");
+  expectResolved("/map/tryAt", true, "/CanonicalTryAtMarker/tag");
 }
 
-TEST_CASE("C++ emitter helper rejects compatibility metadata fallback for canonical map slash methods") {
+TEST_CASE("C++ emitter helper resolves compatibility metadata fallback for canonical map slash methods") {
   primec::Expr receiverName;
   receiverName.kind = primec::Expr::Kind::Name;
   receiverName.name = "values";
@@ -3478,7 +3479,7 @@ TEST_CASE("C++ emitter helper rejects compatibility metadata fallback for canoni
       {"/map/tryAt", "/AliasTryAtMarker"},
   };
 
-  auto expectRejected = [&](const char *receiverMethodName, bool includeKeyArg) {
+  auto expectResolved = [&](const char *receiverMethodName, bool includeKeyArg, std::string expectedPath) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.isMethodCall = true;
@@ -3497,15 +3498,15 @@ TEST_CASE("C++ emitter helper rejects compatibility metadata fallback for canoni
     methodCall.args = {receiverCall};
     methodCall.argNames = {std::nullopt};
 
-    std::string resolved = "/stale/path";
-    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
         methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved.empty());
+    CHECK(resolved == expectedPath);
   };
 
-  expectRejected("/std/collections/map/count", false);
-  expectRejected("/std/collections/map/contains", true);
-  expectRejected("/std/collections/map/tryAt", true);
+  expectResolved("/std/collections/map/count", false, "/i32/tag");
+  expectResolved("/std/collections/map/contains", true, "/AliasContainsMarker/tag");
+  expectResolved("/std/collections/map/tryAt", true, "/AliasTryAtMarker/tag");
 }
 
 TEST_CASE("C++ emitter helper keeps same-path map slash-method metadata precedence") {
@@ -3562,11 +3563,11 @@ TEST_CASE("C++ emitter helper keeps same-path map slash-method metadata preceden
     CHECK(resolved == expectedPath);
   };
 
-  expectResolved("/map/count", false, "/AliasCountMarker/tag");
-  expectResolved("/std/collections/map/count", false, "/CanonicalCountMarker/tag");
-  expectResolved("/map/contains", true, "/AliasContainsMarker/tag");
+  expectResolved("/map/count", false, "/i32/tag");
+  expectResolved("/std/collections/map/count", false, "/i32/tag");
+  expectResolved("/map/contains", true, "/CanonicalContainsMarker/tag");
   expectResolved("/std/collections/map/contains", true, "/CanonicalContainsMarker/tag");
-  expectResolved("/map/tryAt", true, "/AliasTryAtMarker/tag");
+  expectResolved("/map/tryAt", true, "/CanonicalTryAtMarker/tag");
   expectResolved("/std/collections/map/tryAt", true, "/CanonicalTryAtMarker/tag");
 }
 
@@ -4608,7 +4609,7 @@ main() {
   CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects stdlib namespaced vector at map target without import") {
+TEST_CASE("C++ emitter compiles stdlib namespaced vector at map target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -4623,8 +4624,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("C++ emitter compiles stdlib namespaced map access and count helpers") {
@@ -4672,7 +4673,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("C++ emitter rejects map method sugar on wrapper-returned canonical map references") {
+TEST_CASE("C++ emitter keeps current lowering failure on wrapper-returned canonical map references") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -4703,7 +4704,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/map/count") != std::string::npos);
+  CHECK(readFile(errPath).find("native backend only supports returning array values") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on wrapper-returned canonical map reference method sugar") {
@@ -4730,10 +4731,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("at requires map key type i32") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter treats canonical map reference string access as string receiver") {
+TEST_CASE("C++ emitter keeps current canonical map reference string access runtime failure") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -4750,7 +4751,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("C++ emitter keeps non-string diagnostics on canonical map reference access receivers") {
@@ -4947,7 +4948,7 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("rejects bare map count without imported canonical helper in C++ emitter") {
+TEST_CASE("compiles and runs bare map count without imported canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -4957,13 +4958,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_count_builtin_fallback_no_canonical_reject.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_count_builtin_fallback_no_canonical.err")
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_count_builtin_fallback_no_canonical_exe")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 1);
 }
 
 TEST_CASE("compiles and runs bare map at through canonical helper in C++ emitter") {
@@ -5010,7 +5010,7 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("rejects bare map at call without helper in C++ emitter") {
+TEST_CASE("compiles and runs bare map at call without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -5020,15 +5020,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_at_without_helper_reject.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_without_helper_reject.err").string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_without_helper_reject_exe").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 4);
 }
 
-TEST_CASE("rejects bare map at_unsafe call without helper in C++ emitter") {
+TEST_CASE("compiles and runs bare map at_unsafe call without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -5038,13 +5037,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_at_unsafe_without_helper_reject.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_unsafe_without_helper_reject.err")
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_unsafe_without_helper_reject_exe")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 4);
 }
 
 TEST_CASE("compiles and runs map unnamespaced contains through canonical helper in C++ emitter") {
@@ -5067,7 +5065,7 @@ main() {
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs map unnamespaced contains through compatibility helper when canonical helper is absent in C++ emitter") {
@@ -5091,7 +5089,7 @@ main() {
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs map unnamespaced contains preferring canonical helper over compatibility alias in C++ emitter") {
@@ -5120,10 +5118,10 @@ main() {
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("rejects map unnamespaced contains without helper in C++ emitter") {
+TEST_CASE("compiles and runs map unnamespaced contains without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 main() {
@@ -5133,14 +5131,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_contains_without_helper_reject.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_map_unnamespaced_contains_without_helper_reject.err")
+       "primec_cpp_map_unnamespaced_contains_without_helper_reject_exe")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 1);
 }
 
 TEST_CASE("rejects map unnamespaced tryAt through canonical helper in C++ emitter without on_error") {

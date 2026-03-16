@@ -881,6 +881,7 @@ bool resolveMethodCallPath(const Expr &call,
                            const std::unordered_map<std::string, ReturnKind> &returnKinds,
                            const std::unordered_map<std::string, std::string> &returnStructs,
                            std::string &resolvedOut) {
+  resolvedOut.clear();
   if (!call.isMethodCall || call.args.empty()) {
     return false;
   }
