@@ -83,12 +83,16 @@ bool emitInlineDefinitionCallParameters(
           }
           auto it = callerLocals.find(argExpr.name);
           if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Pointer ||
+              it->second.pointerToMap != paramInfo.pointerToMap ||
               it->second.isFileHandle != paramInfo.isFileHandle ||
               it->second.isFileError != paramInfo.isFileError ||
               it->second.isResult != paramInfo.isResult ||
               it->second.resultHasValue != paramInfo.resultHasValue ||
               it->second.resultValueKind != paramInfo.resultValueKind ||
               it->second.resultErrorType != paramInfo.resultErrorType ||
+              (paramInfo.pointerToMap &&
+               (it->second.mapKeyKind != paramInfo.mapKeyKind ||
+                it->second.mapValueKind != paramInfo.mapValueKind)) ||
               it->second.valueKind != paramInfo.valueKind ||
               it->second.structTypeName != paramInfo.structTypeName) {
             error = "variadic parameter type mismatch";
@@ -173,12 +177,14 @@ bool emitInlineDefinitionCallParameters(
         }
         if (callerIt->second.referenceToArray != paramInfo.referenceToArray ||
             callerIt->second.referenceToVector != paramInfo.referenceToVector ||
-            callerIt->second.referenceToMap != paramInfo.referenceToMap) {
+            callerIt->second.referenceToMap != paramInfo.referenceToMap ||
+            callerIt->second.pointerToMap != paramInfo.pointerToMap) {
           error = "variadic parameter type mismatch";
           return false;
         }
         if ((paramInfo.argsPackElementKind == LocalInfo::Kind::Map ||
-             (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference && paramInfo.referenceToMap)) &&
+             (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference && paramInfo.referenceToMap) ||
+             (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer && paramInfo.pointerToMap)) &&
             (callerIt->second.mapKeyKind != paramInfo.mapKeyKind ||
              callerIt->second.mapValueKind != paramInfo.mapValueKind)) {
           error = "variadic parameter type mismatch";
@@ -198,6 +204,7 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.referenceToArray = callerIt->second.referenceToArray;
         paramInfo.referenceToVector = callerIt->second.referenceToVector;
         paramInfo.referenceToMap = callerIt->second.referenceToMap;
+        paramInfo.pointerToMap = callerIt->second.pointerToMap;
         paramInfo.isSoaVector = callerIt->second.isSoaVector;
         paramInfo.isFileHandle = callerIt->second.isFileHandle;
         paramInfo.isFileError = callerIt->second.isFileError;

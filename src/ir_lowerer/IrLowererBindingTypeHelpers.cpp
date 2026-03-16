@@ -166,11 +166,13 @@ LocalInfo::ValueKind bindingValueKindFromTransforms(const Expr &expr, LocalInfo:
 }
 
 void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
-  if (info.kind != LocalInfo::Kind::Reference) {
+  if (info.kind != LocalInfo::Kind::Reference && info.kind != LocalInfo::Kind::Pointer) {
     return;
   }
   for (const auto &transform : expr.transforms) {
-    if (transform.name != "Reference" || transform.templateArgs.size() != 1) {
+    if ((info.kind == LocalInfo::Kind::Reference && transform.name != "Reference") ||
+        (info.kind == LocalInfo::Kind::Pointer && transform.name != "Pointer") ||
+        transform.templateArgs.size() != 1) {
       continue;
     }
     std::string base;
@@ -206,7 +208,11 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
       if (!splitTemplateArgs(arg, args) || args.size() != 2) {
         return;
       }
-      info.referenceToMap = true;
+      if (info.kind == LocalInfo::Kind::Reference) {
+        info.referenceToMap = true;
+      } else {
+        info.pointerToMap = true;
+      }
       info.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
       info.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {

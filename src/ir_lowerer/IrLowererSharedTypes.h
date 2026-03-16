@@ -31,6 +31,7 @@ struct LocalInfo {
   bool referenceToArray = false;
   bool referenceToVector = false;
   bool referenceToMap = false;
+  bool pointerToMap = false;
   bool isUninitializedStorage = false;
   bool isSoaVector = false;
 };

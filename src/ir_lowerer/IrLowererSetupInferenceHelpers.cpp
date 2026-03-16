@@ -280,6 +280,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
            (info.kind == LocalInfo::Kind::Reference &&
             (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
+           (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
            info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
   };
@@ -359,7 +360,8 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
       auto it = localsIn.find(target.name);
       if (it != localsIn.end() &&
           ((it->second.kind == LocalInfo::Kind::Map) ||
-           (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap)) &&
+           (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap) ||
+           (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToMap)) &&
           it->second.mapValueKind != LocalInfo::ValueKind::Unknown) {
         kindOut = it->second.mapValueKind;
         return ArrayMapAccessElementKindResolution::Resolved;

@@ -584,6 +584,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     }
     return true;
   }
+  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) {
+    typeNameOut = "map";
+    return true;
+  }
   if (localInfo.kind == LocalInfo::Kind::Pointer || localInfo.kind == LocalInfo::Kind::Reference) {
     return false;
   }
@@ -665,7 +669,8 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
       return assignKind(receiverInfo.valueKind);
     }
     if (receiverInfo.kind == LocalInfo::Kind::Map ||
-        (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToMap)) {
+        (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToMap) ||
+        (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToMap)) {
       return assignKind(receiverInfo.mapValueKind);
     }
     if (receiverInfo.kind == LocalInfo::Kind::Value && receiverInfo.valueKind == LocalInfo::ValueKind::String) {
@@ -1044,7 +1049,8 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
 
       auto assignMapValueKind = [&](const LocalInfo &receiverInfo) {
         if (receiverInfo.kind == LocalInfo::Kind::Map ||
-            (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToMap)) {
+            (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToMap) ||
+            (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToMap)) {
           return assignKnownElementKind(receiverInfo.mapValueKind);
         }
         return false;
@@ -1259,6 +1265,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
            (info.kind == LocalInfo::Kind::Reference &&
             (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
+           (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
            info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
   };
@@ -1270,7 +1277,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       }
       const LocalInfo &info = it->second;
       return info.kind == LocalInfo::Kind::Map ||
-             (info.kind == LocalInfo::Kind::Reference && info.referenceToMap);
+             (info.kind == LocalInfo::Kind::Reference && info.referenceToMap) ||
+             (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap);
     }
     if (candidate.kind == Expr::Kind::Call) {
       std::string collection;
@@ -1863,6 +1871,11 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
               localIt->second.referenceToMap) {
+            typeNameOut = "map";
+            return true;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+              localIt->second.pointerToMap) {
             typeNameOut = "map";
             return true;
           }

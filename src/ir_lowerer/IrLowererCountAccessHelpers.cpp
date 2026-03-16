@@ -225,6 +225,9 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     if (it->second.kind == LocalInfo::Kind::Reference) {
       return it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap;
     }
+    if (it->second.kind == LocalInfo::Kind::Pointer) {
+      return it->second.pointerToMap;
+    }
     if (it->second.isSoaVector && isExplicitVectorCompatibilityName(expr, "count")) {
       return false;
     }
@@ -244,6 +247,7 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
             info.argsPackElementKind == LocalInfo::Kind::Map ||
             (info.argsPackElementKind == LocalInfo::Kind::Reference &&
              (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
+            (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
             info.isSoaVector) {
           return true;
         }
@@ -411,8 +415,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         if (it != localsIn.end()) {
           const LocalInfo &info = it->second;
           stringMapAccess =
-              (info.kind == LocalInfo::Kind::Map ||
-               (info.kind == LocalInfo::Kind::Reference && info.referenceToMap)) &&
+              ((info.kind == LocalInfo::Kind::Map) ||
+               (info.kind == LocalInfo::Kind::Reference && info.referenceToMap) ||
+               (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap)) &&
               info.mapValueKind == LocalInfo::ValueKind::String;
         }
       } else if (accessTarget.kind == Expr::Kind::Call) {

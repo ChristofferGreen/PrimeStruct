@@ -88,6 +88,18 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = LocalInfo::ValueKind::Int64;
       return;
     }
+    if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
+        normalizeCollectionBindingTypeName(pointerBase) == "map") {
+      std::vector<std::string> args;
+      if (!splitTemplateArgs(pointerArg, args) || args.size() != 2) {
+        return;
+      }
+      infoOut.pointerToMap = true;
+      infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+      infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+      infoOut.valueKind = infoOut.mapValueKind;
+      return;
+    }
     if (trimTemplateTypeText(arg) == "FileError") {
       infoOut.isFileError = true;
       infoOut.valueKind = LocalInfo::ValueKind::Int32;
@@ -480,6 +492,17 @@ bool inferCallParameterLocalInfo(const Expr &param,
           normalizeCollectionBindingTypeName(wrappedBase) == "File") {
         infoOut.isFileHandle = true;
         infoOut.valueKind = LocalInfo::ValueKind::Int64;
+      }
+      if (transform.name == "Pointer" &&
+          splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          normalizeCollectionBindingTypeName(wrappedBase) == "map") {
+        std::vector<std::string> args;
+        if (splitTemplateArgs(wrappedArg, args) && args.size() == 2) {
+          infoOut.pointerToMap = true;
+          infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+          infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+          infoOut.valueKind = infoOut.mapValueKind;
+        }
       }
       bool resultHasValue = false;
       LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
