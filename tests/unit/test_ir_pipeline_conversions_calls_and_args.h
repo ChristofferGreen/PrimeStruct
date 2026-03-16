@@ -677,7 +677,7 @@ main() {
   CHECK(result == 30);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer Result packs with indexed dereference why and try access") {
+TEST_CASE("ir lowerer materializes variadic pointer Result packs with indexed dereference why and inferred try access") {
   const std::string source = R"(
 namespace ParseError {
   [return<string>]
@@ -700,7 +700,7 @@ fail_bad() {
 
 [return<int> on_error<ParseError, /swallow_parse_error>]
 score_results([args<Pointer<Result<i32, ParseError>>>] values) {
-  [i32] head{try(dereference(values[0i32]))}
+  [auto] head{try(dereference(values[0i32]))}
   [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
   return(plus(head, tailWhyCount))
 }

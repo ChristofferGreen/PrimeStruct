@@ -1773,7 +1773,8 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
               targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
             auto it = localsIn.find(targetExpr.args.front().name);
             if (it != localsIn.end() && it->second.isArgsPack && it->second.isResult &&
-                it->second.argsPackElementKind == LocalInfo::Kind::Reference) {
+                (it->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+                 it->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
               kindOut = it->second.resultHasValue ? it->second.resultValueKind : LocalInfo::ValueKind::Int32;
               return true;
             }
