@@ -3169,18 +3169,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto hasResolvableMapHelperPath = [&](const std::string &path) {
       return defMap_.find(path) != defMap_.end() || hasImportedDefinitionPath(path);
     };
-    const bool shouldBuiltinValidateBareMapCountCall =
-        definitionPathContains("/mapCount");
-    const bool shouldBuiltinValidateBareMapContainsCall =
-        definitionPathContains("/mapContains") ||
-        definitionPathContains("/mapTryAt");
-    const bool shouldBuiltinValidateBareMapTryAtCall =
-        definitionPathContains("/mapTryAt");
-    const bool shouldBuiltinValidateBareMapAccessCall =
-        definitionPathContains("/mapAt") ||
-        definitionPathContains("/mapAtUnsafe") ||
-        definitionPathContains("/mapTryAt") ||
-        definitionPathContains("/mapAtRef");
+    const bool shouldBuiltinValidateBareMapCountCall = true;
+    const bool shouldBuiltinValidateBareMapContainsCall = true;
+    const bool shouldBuiltinValidateBareMapTryAtCall = true;
+    const bool shouldBuiltinValidateBareMapAccessCall = true;
     auto isUnnamespacedMapCountBuiltinFallbackCall = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
         return false;
@@ -4457,6 +4449,39 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return "meta." + callExpr.name;
     };
+
+    std::string earlyPointerBuiltin;
+    if (getBuiltinPointerName(expr, earlyPointerBuiltin)) {
+      if (hasNamedArguments(expr.argNames)) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "pointer helpers do not accept template arguments";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "pointer helpers do not accept block arguments";
+        return false;
+      }
+      if (expr.args.size() != 1) {
+        error_ = "argument count mismatch for builtin " + earlyPointerBuiltin;
+        return false;
+      }
+      if (earlyPointerBuiltin == "location") {
+        const Expr &target = expr.args.front();
+        if (target.kind != Expr::Kind::Name || isEntryArgsName(target.name) ||
+            (locals.count(target.name) == 0 && !isParam(params, target.name))) {
+          error_ = "location requires a local binding";
+          return false;
+        }
+      }
+      if (earlyPointerBuiltin == "dereference" && !isPointerLikeExpr(expr.args.front(), params, locals)) {
+        error_ = "dereference requires a pointer or reference";
+        return false;
+      }
+      return validateExpr(params, locals, expr.args.front());
+    }
 
     std::string resolved = resolveCalleePath(expr);
     std::string canonicalExperimentalMapHelperResolved;
@@ -5846,7 +5871,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         }
         const bool returnsResult = currentResultType_.has_value() && currentResultType_->isResult;
-        if (!currentOnError_.has_value() && !returnsResult && enclosingReturnKind != ReturnKind::Int) {
+        if (!currentOnError_.has_value()) {
           error_ = "missing on_error for ? usage";
           return false;
         }
@@ -7740,6 +7765,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       if (getBuiltinPointerName(expr, builtinName)) {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
         if (!expr.templateArgs.empty()) {
           error_ = "pointer helpers do not accept template arguments";
           return false;

@@ -65,6 +65,20 @@ bool isMapTryAtCallName(const Expr &expr) {
   return normalized == "map/tryAt" || normalized == "std/collections/map/tryAt";
 }
 
+bool isMapContainsCallName(const Expr &expr) {
+  if (isSimpleCallName(expr, "contains")) {
+    return true;
+  }
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "map/contains" || normalized == "std/collections/map/contains";
+}
+
 bool inferMapTryAtResultValueKind(const Expr &expr,
                                   const LocalMap &localsIn,
                                   LocalInfo::ValueKind &kindOut) {
@@ -77,6 +91,21 @@ bool inferMapTryAtResultValueKind(const Expr &expr,
     return false;
   }
   kindOut = targetInfo.mapValueKind;
+  return true;
+}
+
+bool inferMapContainsResultKind(const Expr &expr,
+                                const LocalMap &localsIn,
+                                LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (expr.kind != Expr::Kind::Call || expr.args.empty() || !isMapContainsCallName(expr)) {
+    return false;
+  }
+  const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn);
+  if (!targetInfo.isMapTarget) {
+    return false;
+  }
+  kindOut = LocalInfo::ValueKind::Bool;
   return true;
 }
 
@@ -272,16 +301,19 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     if (arg.kind == Expr::Kind::Name) {
       auto it = localsIn.find(arg.name);
       if (it != localsIn.end() && it->second.isResult) {
-        kindOut = it->second.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+        kindOut = it->second.resultHasValue ? it->second.resultValueKind : LocalInfo::ValueKind::Int32;
         return true;
       }
     }
     if (arg.kind == Expr::Kind::Call) {
+      if (inferMapTryAtResultValueKind(arg, localsIn, kindOut)) {
+        return true;
+      }
       std::string accessName;
       if (getBuiltinArrayAccessName(arg, accessName) && arg.args.size() == 2 && arg.args.front().kind == Expr::Kind::Name) {
         auto it = localsIn.find(arg.args.front().name);
         if (it != localsIn.end() && it->second.isArgsPack && it->second.isResult) {
-          kindOut = it->second.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+          kindOut = it->second.resultHasValue ? it->second.resultValueKind : LocalInfo::ValueKind::Int32;
           return true;
         }
       }
@@ -292,7 +324,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
           auto it = localsIn.find(targetExpr.args.front().name);
           if (it != localsIn.end() && it->second.isArgsPack && it->second.isResult &&
               it->second.argsPackElementKind == LocalInfo::Kind::Pointer) {
-            kindOut = it->second.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+            kindOut = it->second.resultHasValue ? it->second.resultValueKind : LocalInfo::ValueKind::Int32;
             return true;
           }
         }
@@ -312,9 +344,19 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
             return true;
           }
         }
-        if (arg.args.front().name == "Result" && arg.name == "ok") {
-          kindOut = arg.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
-          return true;
+        if (arg.args.front().name == "Result") {
+          if (arg.name == "ok") {
+            kindOut = arg.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+            return true;
+          }
+          if (arg.name == "error") {
+            kindOut = LocalInfo::ValueKind::Bool;
+            return true;
+          }
+          if (arg.name == "why") {
+            kindOut = LocalInfo::ValueKind::String;
+            return true;
+          }
         }
       }
     }
@@ -1332,6 +1374,11 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
               return false;
             };
 
+            if (receiverExpr.kind == Expr::Kind::Name) {
+              auto it = candidateLocals.find(receiverExpr.name);
+              return it != candidateLocals.end() && assignFromLocal(it->second, false);
+            }
+
             if (receiverExpr.kind == Expr::Kind::Call && isSimpleCallName(receiverExpr, "dereference") &&
                 receiverExpr.args.size() == 1) {
               const Expr &derefTarget = receiverExpr.args.front();
@@ -1871,6 +1918,9 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
       if (resultExpr.kind != Expr::Kind::Call) {
         return false;
       }
+      if (inferMapContainsResultKind(resultExpr, localsIn, kindOut)) {
+        return true;
+      }
       if (inferMapTryAtResultValueKind(resultExpr, localsIn, kindOut)) {
         return true;
       }
@@ -1887,10 +1937,20 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
             return true;
           }
         }
-        if (resultExpr.args.front().name == "Result" && resultExpr.name == "ok") {
-          kindOut = resultExpr.args.size() > 1 ? stateInOut.inferExprKind(resultExpr.args[1], localsIn)
-                                               : LocalInfo::ValueKind::Int32;
-          return true;
+        if (resultExpr.args.front().name == "Result") {
+          if (resultExpr.name == "ok") {
+            kindOut = resultExpr.args.size() > 1 ? stateInOut.inferExprKind(resultExpr.args[1], localsIn)
+                                                 : LocalInfo::ValueKind::Int32;
+            return true;
+          }
+          if (resultExpr.name == "error") {
+            kindOut = LocalInfo::ValueKind::Bool;
+            return true;
+          }
+          if (resultExpr.name == "why") {
+            kindOut = LocalInfo::ValueKind::String;
+            return true;
+          }
         }
       }
       if (resultExpr.isMethodCall && !resultExpr.args.empty() &&

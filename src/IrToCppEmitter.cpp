@@ -208,6 +208,9 @@ bool usesFileIoHelpers(IrOpcode opcode) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic:
     case IrOpcode::FileReadByte:
     case IrOpcode::FileClose:
     case IrOpcode::FileFlush:
@@ -875,6 +878,36 @@ bool emitInstruction(const IrInstruction &instruction,
       }
       out << ";\n";
       out << "        int fileFd = ::open(ps_string_table[" << instruction.imm << "], fileOpenFlags, 0644);\n";
+      out << "        uint64_t filePacked = 0;\n";
+      out << "        if (fileFd < 0) {\n";
+      out << "          uint32_t fileErr = errno == 0 ? 1u : static_cast<uint32_t>(errno);\n";
+      out << "          filePacked = static_cast<uint64_t>(fileErr) << 32;\n";
+      out << "        } else {\n";
+      out << "          filePacked = static_cast<uint64_t>(static_cast<uint32_t>(fileFd));\n";
+      out << "        }\n";
+      out << "        stack[sp++] = filePacked;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic:
+      emitStackUnderflowGuard(1, "file open");
+      out << "        uint64_t stringIndex = stack[--sp];\n";
+      out << "        if (stringIndex >= ps_string_table_count) {\n";
+      out << "          std::cerr << \"invalid string index in IR\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
+      out << "        int fileOpenFlags = ";
+      if (instruction.op == IrOpcode::FileOpenWriteDynamic) {
+        out << "O_WRONLY | O_CREAT | O_TRUNC";
+      } else if (instruction.op == IrOpcode::FileOpenAppendDynamic) {
+        out << "O_WRONLY | O_CREAT | O_APPEND";
+      } else {
+        out << "O_RDONLY";
+      }
+      out << ";\n";
+      out << "        int fileFd = ::open(ps_string_table[stringIndex], fileOpenFlags, 0644);\n";
       out << "        uint64_t filePacked = 0;\n";
       out << "        if (fileFd < 0) {\n";
       out << "          uint32_t fileErr = errno == 0 ? 1u : static_cast<uint32_t>(errno);\n";

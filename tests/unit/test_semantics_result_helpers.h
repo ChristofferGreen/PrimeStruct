@@ -1,6 +1,6 @@
 TEST_SUITE_BEGIN("primestruct.semantics.result_helpers");
 
-TEST_CASE("Result.error in if conditions requires bool-compatible output") {
+TEST_CASE("Result.error in if conditions is bool-compatible") {
   const std::string source = R"(
 [return<Result<FileError>>]
 main() {
@@ -9,8 +9,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("if condition requires bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("Result.error rejects non-result argument") {

@@ -24,6 +24,7 @@ using ResolveStringTableTargetWithLocalsForWriteFn =
 using InferExprKindWithLocalsForWriteFn =
     std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using EmitExprWithLocalsForWriteFn = std::function<bool(const Expr &, const LocalMap &)>;
+using IsEntryArgsNameWithLocalsForWriteFn = std::function<bool(const Expr &, const LocalMap &)>;
 
 enum class FileHandleMethodCallEmitResult {
   NotMatched,
@@ -37,10 +38,20 @@ enum class FileConstructorCallEmitResult {
 };
 
 bool resolveFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut);
+bool resolveDynamicFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut);
 bool emitFileOpenCall(const std::string &mode,
                       int32_t stringIndex,
                       const EmitInstructionForWriteFn &emitInstruction,
                       std::string &error);
+FileConstructorCallEmitResult tryEmitFileConstructorCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
+    const InferExprKindWithLocalsForWriteFn &inferExprKind,
+    const EmitExprWithLocalsForWriteFn &emitExpr,
+    const IsEntryArgsNameWithLocalsForWriteFn &isEntryArgsName,
+    const EmitInstructionForWriteFn &emitInstruction,
+    std::string &error);
 FileConstructorCallEmitResult tryEmitFileConstructorCall(
     const Expr &expr,
     const LocalMap &localsIn,

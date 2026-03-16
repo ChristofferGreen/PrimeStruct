@@ -19,6 +19,22 @@ bool resolveFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut) {
   return false;
 }
 
+bool resolveDynamicFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut) {
+  if (mode == "Read") {
+    opcodeOut = IrOpcode::FileOpenReadDynamic;
+    return true;
+  }
+  if (mode == "Write") {
+    opcodeOut = IrOpcode::FileOpenWriteDynamic;
+    return true;
+  }
+  if (mode == "Append") {
+    opcodeOut = IrOpcode::FileOpenAppendDynamic;
+    return true;
+  }
+  return false;
+}
+
 bool emitFileOpenCall(const std::string &mode,
                       int32_t stringIndex,
                       const EmitInstructionForWriteFn &emitInstruction,
@@ -36,6 +52,9 @@ FileConstructorCallEmitResult tryEmitFileConstructorCall(
     const Expr &expr,
     const LocalMap &localsIn,
     const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
+    const InferExprKindWithLocalsForWriteFn &inferExprKind,
+    const EmitExprWithLocalsForWriteFn &emitExpr,
+    const IsEntryArgsNameWithLocalsForWriteFn &isEntryArgsName,
     const EmitInstructionForWriteFn &emitInstruction,
     std::string &error) {
   if (expr.isMethodCall || !isSimpleCallName(expr, "File")) {
@@ -52,14 +71,69 @@ FileConstructorCallEmitResult tryEmitFileConstructorCall(
 
   int32_t stringIndex = -1;
   size_t length = 0;
-  if (!resolveStringTableTarget(expr.args.front(), localsIn, stringIndex, length)) {
-    error = "native backend only supports File() with string literals or literal-backed bindings";
-    return FileConstructorCallEmitResult::Error;
+  if (resolveStringTableTarget(expr.args.front(), localsIn, stringIndex, length)) {
+    if (!emitFileOpenCall(expr.templateArgs.front(), stringIndex, emitInstruction, error)) {
+      return FileConstructorCallEmitResult::Error;
+    }
+    return FileConstructorCallEmitResult::Emitted;
   }
-  if (!emitFileOpenCall(expr.templateArgs.front(), stringIndex, emitInstruction, error)) {
-    return FileConstructorCallEmitResult::Error;
+
+  if (expr.args.front().kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.args.front().name);
+    if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String &&
+        it->second.stringSource == LocalInfo::StringSource::RuntimeIndex) {
+      IrOpcode dynamicOp = IrOpcode::FileOpenReadDynamic;
+      if (!resolveDynamicFileOpenModeOpcode(expr.templateArgs.front(), dynamicOp)) {
+        error = "File requires Read, Write, or Append mode";
+        return FileConstructorCallEmitResult::Error;
+      }
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+      emitInstruction(dynamicOp, 0);
+      return FileConstructorCallEmitResult::Emitted;
+    }
   }
-  return FileConstructorCallEmitResult::Emitted;
+
+  if (expr.args.front().kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(expr.args.front(), accessName) && !expr.args.front().args.empty() &&
+        isEntryArgsName(expr.args.front().args.front(), localsIn)) {
+      error = "native backend only supports File() with string literals or literal-backed bindings";
+      return FileConstructorCallEmitResult::Error;
+    }
+  }
+
+  if (inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+    IrOpcode dynamicOp = IrOpcode::FileOpenReadDynamic;
+    if (!resolveDynamicFileOpenModeOpcode(expr.templateArgs.front(), dynamicOp)) {
+      error = "File requires Read, Write, or Append mode";
+      return FileConstructorCallEmitResult::Error;
+    }
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return FileConstructorCallEmitResult::Error;
+    }
+    emitInstruction(dynamicOp, 0);
+    return FileConstructorCallEmitResult::Emitted;
+  }
+
+  error = "native backend only supports File() with string literals or literal-backed bindings";
+  return FileConstructorCallEmitResult::Error;
+}
+
+FileConstructorCallEmitResult tryEmitFileConstructorCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
+    const EmitInstructionForWriteFn &emitInstruction,
+    std::string &error) {
+  return tryEmitFileConstructorCall(
+      expr,
+      localsIn,
+      resolveStringTableTarget,
+      [](const Expr &, const LocalMap &) { return LocalInfo::ValueKind::Unknown; },
+      [](const Expr &, const LocalMap &) { return false; },
+      [](const Expr &, const LocalMap &) { return false; },
+      emitInstruction,
+      error);
 }
 
 bool resolveFileWriteValueOpcode(LocalInfo::ValueKind kind, IrOpcode &opcodeOut) {

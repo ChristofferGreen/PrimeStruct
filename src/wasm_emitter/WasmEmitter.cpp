@@ -514,6 +514,9 @@ bool opcodeNeedsWasiRuntime(IrOpcode op) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic:
     case IrOpcode::FileReadByte:
     case IrOpcode::FileClose:
     case IrOpcode::FileFlush:
@@ -547,6 +550,8 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
     if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
         inst.op == IrOpcode::PrintStringDynamic || inst.op == IrOpcode::FileOpenRead ||
         inst.op == IrOpcode::FileOpenWrite || inst.op == IrOpcode::FileOpenAppend ||
+        inst.op == IrOpcode::FileOpenReadDynamic || inst.op == IrOpcode::FileOpenWriteDynamic ||
+        inst.op == IrOpcode::FileOpenAppendDynamic ||
         inst.op == IrOpcode::FileReadByte || inst.op == IrOpcode::FileClose || inst.op == IrOpcode::FileFlush ||
         inst.op == IrOpcode::FileWriteI32 ||
         inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 || inst.op == IrOpcode::FileWriteString ||
@@ -914,6 +919,14 @@ void emitWasiWriteDecimalFromI64Local(uint32_t fdLocal,
   emitWasiWritePtrLenFromFdLocal(fdLocal, ptrLocal, lenLocal, runtime, out);
 }
 
+void emitWasiPathOpen(uint32_t pathPtr,
+                      uint32_t pathLen,
+                      uint32_t oflags,
+                      uint64_t rightsBase,
+                      uint32_t fdflags,
+                      const WasmRuntimeContext &runtime,
+                      std::vector<uint8_t> &out);
+
 void emitWasiWriteDynamicStringFromI64Local(uint32_t fdLocal,
                                             uint32_t stringIndexLocal,
                                             const WasmRuntimeContext &runtime,
@@ -950,6 +963,52 @@ void emitWasiWriteDynamicStringFromI64Local(uint32_t fdLocal,
   }
   out.push_back(WasmOpUnreachable);
   out.push_back(WasmOpEnd);
+}
+
+void emitWasiPathOpenDynamicFromI64Local(uint32_t stringIndexLocal,
+                                         uint32_t errorLocal,
+                                         uint32_t oflags,
+                                         uint64_t rightsBase,
+                                         uint32_t fdflags,
+                                         const WasmRuntimeContext &runtime,
+                                         std::vector<uint8_t> &out) {
+  out.push_back(WasmOpLocalGet);
+  appendU32Leb(stringIndexLocal, out);
+  out.push_back(WasmOpI64Const);
+  appendS64Leb(static_cast<int64_t>(runtime.stringPtrs.size()), out);
+  out.push_back(WasmOpI64GeU);
+  out.push_back(WasmOpIf);
+  out.push_back(WasmBlockTypeVoid);
+  out.push_back(WasmOpUnreachable);
+  out.push_back(WasmOpEnd);
+
+  out.push_back(WasmOpBlock);
+  out.push_back(WasmBlockTypeVoid);
+  for (size_t stringIndex = 0; stringIndex < runtime.stringPtrs.size(); ++stringIndex) {
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(stringIndexLocal, out);
+    out.push_back(WasmOpI64Const);
+    appendS64Leb(static_cast<int64_t>(stringIndex), out);
+    out.push_back(WasmOpI64Eq);
+    out.push_back(WasmOpIf);
+    out.push_back(WasmBlockTypeVoid);
+    emitWasiPathOpen(runtime.stringPtrs[stringIndex],
+                     runtime.stringLens[stringIndex],
+                     oflags,
+                     rightsBase,
+                     fdflags,
+                     runtime,
+                     out);
+    out.push_back(WasmOpLocalSet);
+    appendU32Leb(errorLocal, out);
+    out.push_back(WasmOpBr);
+    appendU32Leb(1, out);
+    out.push_back(WasmOpEnd);
+  }
+  out.push_back(WasmOpUnreachable);
+  out.push_back(WasmOpEnd);
+  out.push_back(WasmOpLocalGet);
+  appendU32Leb(errorLocal, out);
 }
 
 void emitWasiPathOpen(uint32_t pathPtr,
@@ -1012,6 +1071,8 @@ bool buildWasiRuntimeContext(const IrModule &module,
         runtime.hasOutputOps = true;
       }
       if (inst.op == IrOpcode::FileOpenRead || inst.op == IrOpcode::FileOpenWrite || inst.op == IrOpcode::FileOpenAppend ||
+          inst.op == IrOpcode::FileOpenReadDynamic || inst.op == IrOpcode::FileOpenWriteDynamic ||
+          inst.op == IrOpcode::FileOpenAppendDynamic ||
           inst.op == IrOpcode::FileReadByte || inst.op == IrOpcode::FileClose || inst.op == IrOpcode::FileFlush ||
           inst.op == IrOpcode::FileWriteI32 ||
           inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 || inst.op == IrOpcode::FileWriteString ||
@@ -1603,35 +1664,46 @@ bool emitSimpleInstruction(const IrInstruction &inst,
     }
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
-    case IrOpcode::FileOpenAppend: {
+    case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic: {
       if (!runtime.enabled || !runtime.hasFileOps || !localLayout.hasFileHelpers) {
         error = "wasm emitter missing file runtime support in function: " + functionName;
-        return false;
-      }
-      if (inst.imm >= runtime.stringPtrs.size()) {
-        error = "wasm emitter invalid string index in function: " + functionName;
         return false;
       }
 
       uint32_t oflags = 0;
       uint64_t rightsBase = WasiRightsFdRead;
       uint32_t fdflags = 0;
-      if (inst.op == IrOpcode::FileOpenWrite) {
+      if (inst.op == IrOpcode::FileOpenWrite || inst.op == IrOpcode::FileOpenWriteDynamic) {
         oflags = WasiOflagsCreat | WasiOflagsTrunc;
         rightsBase = WasiRightsFdWrite;
-      } else if (inst.op == IrOpcode::FileOpenAppend) {
+      } else if (inst.op == IrOpcode::FileOpenAppend || inst.op == IrOpcode::FileOpenAppendDynamic) {
         oflags = WasiOflagsCreat;
         rightsBase = WasiRightsFdWrite;
         fdflags = WasiFdflagAppend;
       }
 
-      emitWasiPathOpen(runtime.stringPtrs[static_cast<size_t>(inst.imm)],
-                       runtime.stringLens[static_cast<size_t>(inst.imm)],
-                       oflags,
-                       rightsBase,
-                       fdflags,
-                       runtime,
-                       out);
+      if (inst.op == IrOpcode::FileOpenReadDynamic || inst.op == IrOpcode::FileOpenWriteDynamic ||
+          inst.op == IrOpcode::FileOpenAppendDynamic) {
+        out.push_back(WasmOpLocalSet);
+        appendU32Leb(localLayout.fileDigitsValueLocal, out);
+        emitWasiPathOpenDynamicFromI64Local(
+            localLayout.fileDigitsValueLocal, localLayout.fileErrLocal, oflags, rightsBase, fdflags, runtime, out);
+      } else {
+        if (inst.imm >= runtime.stringPtrs.size()) {
+          error = "wasm emitter invalid string index in function: " + functionName;
+          return false;
+        }
+        emitWasiPathOpen(runtime.stringPtrs[static_cast<size_t>(inst.imm)],
+                         runtime.stringLens[static_cast<size_t>(inst.imm)],
+                         oflags,
+                         rightsBase,
+                         fdflags,
+                         runtime,
+                         out);
+      }
       out.push_back(WasmOpLocalTee);
       appendU32Leb(localLayout.fileErrLocal, out);
       out.push_back(WasmOpI32Eqz);

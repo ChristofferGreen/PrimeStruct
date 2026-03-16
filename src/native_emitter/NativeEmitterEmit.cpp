@@ -612,6 +612,23 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
         stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
         break;
       }
+      case IrOpcode::FileOpenReadDynamic: {
+        size_t fixupIndex = emitter.emitFileOpenDynamicPlaceholder(stringTableOffsetDelta, O_RDONLY, 0);
+        stringTableFixups.push_back(fixupIndex);
+        break;
+      }
+      case IrOpcode::FileOpenWriteDynamic: {
+        size_t fixupIndex =
+            emitter.emitFileOpenDynamicPlaceholder(stringTableOffsetDelta, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        stringTableFixups.push_back(fixupIndex);
+        break;
+      }
+      case IrOpcode::FileOpenAppendDynamic: {
+        size_t fixupIndex =
+            emitter.emitFileOpenDynamicPlaceholder(stringTableOffsetDelta, O_WRONLY | O_CREAT | O_APPEND, 0644);
+        stringTableFixups.push_back(fixupIndex);
+        break;
+      }
       case IrOpcode::FileReadByte:
         emitter.emitFileReadByte(static_cast<uint32_t>(inst.imm), layout.scratchOffset);
         break;

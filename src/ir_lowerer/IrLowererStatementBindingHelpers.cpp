@@ -350,6 +350,23 @@ std::string inferPointerMemoryIntrinsicStructType(const Expr &expr, const LocalM
   return "";
 }
 
+LocalInfo::ValueKind inferSpecialCallValueKind(const Expr &expr) {
+  if (!(expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
+        expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result")) {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  if (expr.name == "ok") {
+    return expr.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+  }
+  if (expr.name == "error") {
+    return LocalInfo::ValueKind::Bool;
+  }
+  if (expr.name == "why") {
+    return LocalInfo::ValueKind::String;
+  }
+  return LocalInfo::ValueKind::Unknown;
+}
+
 } // namespace
 
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
@@ -421,9 +438,12 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   }
 
   if (info.kind == LocalInfo::Kind::Value) {
-    info.valueKind = (inferredInitValueKind != LocalInfo::ValueKind::Unknown)
-                         ? inferredInitValueKind
-                         : inferExprKind(init, localsIn);
+    const LocalInfo::ValueKind specialInitValueKind = inferSpecialCallValueKind(init);
+    info.valueKind = (specialInitValueKind != LocalInfo::ValueKind::Unknown)
+                         ? specialInitValueKind
+                         : ((inferredInitValueKind != LocalInfo::ValueKind::Unknown)
+                                ? inferredInitValueKind
+                                : inferExprKind(init, localsIn));
     if (info.valueKind == LocalInfo::ValueKind::Unknown) {
       info.valueKind = LocalInfo::ValueKind::Int32;
     }
@@ -1143,7 +1163,10 @@ StatementMatchIfEmitResult tryEmitMatchIfStatement(const Expr &stmt,
     return StatementMatchIfEmitResult::Error;
   }
   const LocalInfo::ValueKind condKind = inferExprKind(stmt.args[0], localsIn);
-  if (condKind != LocalInfo::ValueKind::Bool) {
+  const bool isIntegralCondition =
+      condKind == LocalInfo::ValueKind::Int32 || condKind == LocalInfo::ValueKind::Int64 ||
+      condKind == LocalInfo::ValueKind::UInt64;
+  if (condKind != LocalInfo::ValueKind::Bool && !isIntegralCondition) {
     error = "if condition requires bool";
     return StatementMatchIfEmitResult::Error;
   }

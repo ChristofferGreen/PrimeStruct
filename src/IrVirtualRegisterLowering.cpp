@@ -50,6 +50,11 @@ bool stackEffectForOpcode(IrOpcode op, StackEffect &out, std::string &error) {
     case IrOpcode::Call:
       out = {0, 1, 0};
       return true;
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic:
+      out = {1, 1, 0};
+      return true;
     case IrOpcode::StoreLocal:
     case IrOpcode::Pop:
     case IrOpcode::HeapFree:

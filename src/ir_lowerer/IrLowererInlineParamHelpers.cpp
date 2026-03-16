@@ -145,18 +145,6 @@ bool emitInlineDefinitionCallParameters(
         }
         const int32_t srcPtrLocal = allocTempLocal();
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
-        std::string accessName;
-        if (argExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(argExpr, accessName) &&
-            argExpr.args.size() == 2 && argExpr.args.front().kind == Expr::Kind::Name) {
-          auto callerIt = callerLocals.find(argExpr.args.front().name);
-          if (callerIt != callerLocals.end() && callerIt->second.isArgsPack &&
-              callerIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
-              !callerIt->second.structTypeName.empty()) {
-            emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal));
-            emitInstruction(IrOpcode::LoadIndirect, 0);
-            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
-          }
-        }
         return emitStructCopySlots(destBaseLocal, srcPtrLocal, structLayout.totalSlots);
       };
 

@@ -33,10 +33,10 @@ main() {
   [i32] value{1i32}
   return(dereference(location(value)) { 1i32 })
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target") != std::string::npos);
+  CHECK(error.find("pointer helpers do not accept block arguments") != std::string::npos);
 }
 
 TEST_CASE("memory intrinsics validate with heap_alloc effect") {

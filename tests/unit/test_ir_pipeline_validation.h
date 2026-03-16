@@ -35392,7 +35392,7 @@ TEST_CASE("ir lowerer setup inference helper rejects invalid pointer targets") {
             locals,
             [](const primec::Expr &expr, std::string &builtinName) {
               return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
-            }) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
   primec::Expr ptrName;
   ptrName.kind = primec::Expr::Kind::Name;
@@ -35435,7 +35435,7 @@ TEST_CASE("ir lowerer setup inference helper rejects invalid pointer targets") {
             locals,
             [](const primec::Expr &expr, std::string &builtinName) {
               return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
-            }) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
 TEST_CASE("ir lowerer setup inference helper infers buffer element kinds") {
@@ -48389,6 +48389,9 @@ TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
       primec::IrOpcode::FileOpenRead,
       primec::IrOpcode::FileOpenWrite,
       primec::IrOpcode::FileOpenAppend,
+      primec::IrOpcode::FileOpenReadDynamic,
+      primec::IrOpcode::FileOpenWriteDynamic,
+      primec::IrOpcode::FileOpenAppendDynamic,
       primec::IrOpcode::FileReadByte,
       primec::IrOpcode::FileClose,
       primec::IrOpcode::FileFlush,

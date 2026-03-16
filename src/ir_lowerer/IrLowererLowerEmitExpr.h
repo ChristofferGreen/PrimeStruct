@@ -77,7 +77,11 @@
         auto it = localsIn.find(expr.name);
         if (it != localsIn.end()) {
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-          if (it->second.kind == LocalInfo::Kind::Reference) {
+          const bool isAggregateReference =
+              it->second.kind == LocalInfo::Kind::Reference &&
+              (!it->second.structTypeName.empty() || it->second.referenceToArray ||
+               it->second.referenceToVector || it->second.referenceToMap || it->second.referenceToBuffer);
+          if (it->second.kind == LocalInfo::Kind::Reference && !isAggregateReference) {
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           }
           return true;
@@ -156,18 +160,6 @@
           }
           const int32_t ptrLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-          std::string accessName;
-          if (receiver.kind == Expr::Kind::Call && getBuiltinArrayAccessName(receiver, accessName) &&
-              receiver.args.size() == 2 && receiver.args.front().kind == Expr::Kind::Name) {
-            auto receiverIt = localsIn.find(receiver.args.front().name);
-            if (receiverIt != localsIn.end() && receiverIt->second.isArgsPack &&
-                receiverIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
-                !receiverIt->second.structTypeName.empty()) {
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-            }
-          }
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
           const uint64_t offsetBytes = static_cast<uint64_t>(fieldInfo.slotOffset) * IrSlotBytes;
           function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
@@ -291,8 +283,7 @@
             error = "try requires exactly one argument";
             return false;
           }
-          const bool returnsIntStatus = !currentReturnResult.has_value() && !returnsVoid;
-          if (!currentOnError.has_value() && !returnsIntStatus) {
+          if (!currentOnError.has_value()) {
             error = "missing on_error for ? usage";
             return false;
           }
@@ -312,29 +303,6 @@
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
 
           auto emitOnErrorReturn = [&](int32_t errorLocal) -> bool {
-            if (!currentOnError.has_value()) {
-              if (!returnsIntStatus) {
-                error = "missing on_error for ? usage";
-                return false;
-              }
-              if (activeInlineContext) {
-                InlineContext &context = *activeInlineContext;
-                if (context.returnLocal < 0) {
-                  error = "native backend missing inline return local";
-                  return false;
-                }
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
-                size_t jumpIndex = function.instructions.size();
-                function.instructions.push_back({IrOpcode::Jump, 0});
-                context.returnJumps.push_back(jumpIndex);
-                return true;
-              }
-              emitFileScopeCleanupAll();
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-              function.instructions.push_back({IrOpcode::ReturnI32, 0});
-              return true;
-            }
             const OnErrorHandler &handler = *currentOnError;
             auto defIt = defMap.find(handler.handlerPath);
             if (defIt == defMap.end()) {
@@ -553,6 +521,15 @@
                 size_t &lengthOut) {
               return resolveStringTableTarget(valueExpr, localMap, stringIndexOut, lengthOut);
             },
+            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
+              return inferExprKind(valueExpr, localMap);
+            },
+            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
+              return emitExpr(valueExpr, localMap);
+            },
+            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
+              return isEntryArgsName(valueExpr, localMap);
+            },
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
             error);
         if (fileConstructorResult == ir_lowerer::FileConstructorCallEmitResult::Emitted) {
@@ -658,8 +635,94 @@
         if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Error) {
           return false;
         }
+        auto rewriteExplicitMapHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
+            return false;
+          }
+          std::string helperName;
+          if (callExpr.name == "/map/count" || callExpr.name == "/std/collections/map/count") {
+            helperName = "count";
+          } else if (callExpr.name == "/map/at" || callExpr.name == "/std/collections/map/at") {
+            helperName = "at";
+          } else if (callExpr.name == "/map/at_unsafe" || callExpr.name == "/std/collections/map/at_unsafe") {
+            helperName = "at_unsafe";
+          } else {
+            return false;
+          }
+          if (!ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn).isMapTarget) {
+            return false;
+          }
+          rewrittenExpr = callExpr;
+          rewrittenExpr.name = helperName;
+          return true;
+        };
+        auto rewriteImplicitBorrowedMapReceiverExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
+            return false;
+          }
+
+          auto isBorrowedOrPointerMapReceiver = [&](const Expr &receiverExpr) {
+            if (receiverExpr.kind == Expr::Kind::Call && isSimpleCallName(receiverExpr, "dereference") &&
+                receiverExpr.args.size() == 1) {
+              return false;
+            }
+            if (receiverExpr.kind == Expr::Kind::Name) {
+              auto it = localsIn.find(receiverExpr.name);
+              return it != localsIn.end() &&
+                     ((it->second.kind == ir_lowerer::LocalInfo::Kind::Reference && it->second.referenceToMap) ||
+                      (it->second.kind == ir_lowerer::LocalInfo::Kind::Pointer && it->second.pointerToMap));
+            }
+            std::string accessName;
+            if (receiverExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(receiverExpr, accessName) &&
+                receiverExpr.args.size() == 2 && receiverExpr.args.front().kind == Expr::Kind::Name) {
+              auto it = localsIn.find(receiverExpr.args.front().name);
+              return it != localsIn.end() && it->second.isArgsPack &&
+                     (((it->second.argsPackElementKind == ir_lowerer::LocalInfo::Kind::Reference) &&
+                       it->second.referenceToMap) ||
+                      ((it->second.argsPackElementKind == ir_lowerer::LocalInfo::Kind::Pointer) &&
+                       it->second.pointerToMap));
+            }
+            return false;
+          };
+
+          auto shouldRewriteReceiver = [&](const Expr &candidate) {
+            if (candidate.isMethodCall) {
+              return candidate.name == "contains" || candidate.name == "tryAt" ||
+                     candidate.name == "at" || candidate.name == "at_unsafe";
+            }
+            if (candidate.name == "contains" || candidate.name == "tryAt" ||
+                candidate.name == "/map/contains" || candidate.name == "/std/collections/map/contains" ||
+                candidate.name == "/map/tryAt" || candidate.name == "/std/collections/map/tryAt" ||
+                candidate.name == "at" || candidate.name == "at_unsafe") {
+              return true;
+            }
+            return false;
+          };
+
+          if (!shouldRewriteReceiver(callExpr) || !isBorrowedOrPointerMapReceiver(callExpr.args.front())) {
+            return false;
+          }
+
+          Expr derefExpr;
+          derefExpr.kind = Expr::Kind::Call;
+          derefExpr.name = "dereference";
+          derefExpr.args.push_back(callExpr.args.front());
+
+          rewrittenExpr = callExpr;
+          rewrittenExpr.args.front() = derefExpr;
+          return true;
+        };
+        Expr nativeTailExpr = expr;
+        Expr rewrittenExplicitMapHelperExpr;
+        if (rewriteExplicitMapHelperBuiltinExpr(expr, rewrittenExplicitMapHelperExpr)) {
+          nativeTailExpr = rewrittenExplicitMapHelperExpr;
+        }
+        Expr rewrittenBorrowedMapReceiverExpr;
+        if (rewriteImplicitBorrowedMapReceiverExpr(nativeTailExpr, rewrittenBorrowedMapReceiverExpr)) {
+          nativeTailExpr = rewrittenBorrowedMapReceiverExpr;
+        }
         const auto nativeTailResult = ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
-            expr,
+            nativeTailExpr,
             localsIn,
             [&](const Expr &callExpr, std::string &mathBuiltinName) {
               return getMathBuiltinName(callExpr, mathBuiltinName);

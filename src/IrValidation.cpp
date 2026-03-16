@@ -87,6 +87,9 @@ bool isGlslOpcodeAllowed(IrOpcode op) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic:
     case IrOpcode::FileClose:
     case IrOpcode::FileFlush:
     case IrOpcode::FileWriteI32:
@@ -228,6 +231,9 @@ bool isWasmOpcodeAllowedWasi(IrOpcode op) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic:
     case IrOpcode::FileReadByte:
     case IrOpcode::FileClose:
     case IrOpcode::FileFlush:
@@ -265,6 +271,9 @@ bool isWasiOnlyOpcode(IrOpcode op) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic:
     case IrOpcode::FileReadByte:
     case IrOpcode::FileClose:
     case IrOpcode::FileFlush:

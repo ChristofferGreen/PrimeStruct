@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -1051,6 +1052,81 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
 
   const Definition *callee = resolveMethodCallDefinition(methodCallExpr, localsIn);
   if (callee == nullptr) {
+    auto normalizeMethodName = [](std::string name) {
+      if (!name.empty() && name.front() == '/') {
+        name.erase(name.begin());
+      }
+      return name;
+    };
+    auto isBuiltinAccessMethodName = [](const std::string &name) {
+      return name == "at" || name == "at_unsafe";
+    };
+    auto isBuiltinCountMethodName = [](const std::string &name) {
+      return name == "count";
+    };
+    auto isBuiltinCapacityMethodName = [](const std::string &name) {
+      return name == "capacity";
+    };
+    auto isBuiltinContainsMethodName = [](const std::string &name) {
+      return name == "contains";
+    };
+    auto isBuiltinTryAtMethodName = [](const std::string &name) {
+      return name == "tryAt";
+    };
+    auto resolveBuiltinMethodReceiverKind = [&](const Expr &receiverExpr,
+                                                const std::string &normalizedName,
+                                                LocalInfo::ValueKind &builtinKindOut) {
+      builtinKindOut = LocalInfo::ValueKind::Unknown;
+      if (!methodCallExpr.isMethodCall || requireArrayReturn) {
+        return false;
+      }
+
+      if (isBuiltinAccessMethodName(normalizedName)) {
+        const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn);
+        if (arrayVectorTargetInfo.isArrayOrVectorTarget &&
+            arrayVectorTargetInfo.elemKind != LocalInfo::ValueKind::Unknown) {
+          builtinKindOut = arrayVectorTargetInfo.elemKind;
+          return true;
+        }
+        const auto mapTargetInfo = resolveMapAccessTargetInfo(receiverExpr, localsIn);
+        if (mapTargetInfo.isMapTarget && mapTargetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+          builtinKindOut = mapTargetInfo.mapValueKind;
+          return true;
+        }
+      }
+
+      if (isBuiltinCountMethodName(normalizedName) || isBuiltinCapacityMethodName(normalizedName)) {
+        const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn);
+        if (arrayVectorTargetInfo.isArrayOrVectorTarget) {
+          builtinKindOut = LocalInfo::ValueKind::Int32;
+          return true;
+        }
+        const auto mapTargetInfo = resolveMapAccessTargetInfo(receiverExpr, localsIn);
+        if (mapTargetInfo.isMapTarget) {
+          builtinKindOut = LocalInfo::ValueKind::Int32;
+          return true;
+        }
+      }
+
+      if (isBuiltinContainsMethodName(normalizedName)) {
+        const auto mapTargetInfo = resolveMapAccessTargetInfo(receiverExpr, localsIn);
+        if (mapTargetInfo.isMapTarget) {
+          builtinKindOut = LocalInfo::ValueKind::Bool;
+          return true;
+        }
+      }
+
+      if (isBuiltinTryAtMethodName(normalizedName)) {
+        const auto mapTargetInfo = resolveMapAccessTargetInfo(receiverExpr, localsIn);
+        if (mapTargetInfo.isMapTarget && mapTargetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+          builtinKindOut = mapTargetInfo.mapValueKind;
+          return true;
+        }
+      }
+
+      return false;
+    };
+
     auto resolveExplicitRemovedBuiltinAccessMethodReturnKind = [&](LocalInfo::ValueKind &builtinKindOut) {
       builtinKindOut = LocalInfo::ValueKind::Unknown;
       if (!methodCallExpr.isMethodCall || requireArrayReturn || methodCallExpr.args.size() != 2) {
@@ -1163,6 +1239,14 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
     };
 
     if (resolveExplicitRemovedBuiltinAccessMethodReturnKind(kindOut)) {
+      if (methodResolvedOut != nullptr) {
+        *methodResolvedOut = true;
+      }
+      return true;
+    }
+    if (!methodCallExpr.args.empty() &&
+        resolveBuiltinMethodReceiverKind(
+            methodCallExpr.args.front(), normalizeMethodName(methodCallExpr.name), kindOut)) {
       if (methodResolvedOut != nullptr) {
         *methodResolvedOut = true;
       }
@@ -1282,40 +1366,21 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     if (candidate.kind == Expr::Kind::StringLiteral) {
       return true;
     }
+    if (resolveMapAccessTargetInfo(candidate, localsIn).isMapTarget) {
+      return true;
+    }
+    if (resolveArrayVectorAccessTargetInfo(candidate, localsIn).isArrayOrVectorTarget) {
+      return true;
+    }
     if (candidate.kind != Expr::Kind::Name) {
       return false;
     }
     auto it = localsIn.find(candidate.name);
-    if (it == localsIn.end()) {
-      return false;
-    }
-    const LocalInfo &info = it->second;
-    return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
-           (info.kind == LocalInfo::Kind::Reference &&
-            (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
-           (info.kind == LocalInfo::Kind::Pointer && info.pointerToArray) ||
-           (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
-           (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
-           info.isSoaVector ||
-           (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
+    return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
+           it->second.valueKind == LocalInfo::ValueKind::String;
   };
   auto isKnownMapReceiverExpr = [&](const Expr &candidate) -> bool {
-    if (candidate.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(candidate.name);
-      if (it == localsIn.end()) {
-        return false;
-      }
-      const LocalInfo &info = it->second;
-      return info.kind == LocalInfo::Kind::Map ||
-             (info.kind == LocalInfo::Kind::Reference && info.referenceToMap) ||
-             (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap);
-    }
-    if (candidate.kind == Expr::Kind::Call) {
-      std::string collection;
-      return getBuiltinCollectionName(candidate, collection) && collection == "map" &&
-             candidate.templateArgs.size() == 2;
-    }
-    return false;
+    return resolveMapAccessTargetInfo(candidate, localsIn).isMapTarget;
   };
   auto isKnownVectorMutatorReceiverExpr = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Name) {
@@ -1582,9 +1647,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
   const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
+  const bool isBuiltinMapContainsOrTryAtCall =
+      isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt");
   const bool allowBuiltinFallback =
       !isExplicitMapMethodAlias &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
+       isBuiltinMapContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
        (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall);
 

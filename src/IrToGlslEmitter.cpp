@@ -559,6 +559,14 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic:
+      out << "        --sp; // GLSL backend cannot open files; discard dynamic path index.\n";
+      out << "        stack[sp++] = -1;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::FileClose:
       out << "        // GLSL backend cannot close files; replace handle with deterministic success code.\n";
       out << "        stack[sp - 1] = 0;\n";

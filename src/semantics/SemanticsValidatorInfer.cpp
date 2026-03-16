@@ -2670,8 +2670,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
-    const bool shouldInferBuiltinBareMapCountCall =
-        currentDefinitionPath_.find("/mapCount") != std::string::npos;
+    const bool shouldInferBuiltinBareMapCountCall = true;
     auto isUnnamespacedMapCountBuiltinFallbackCall = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
         return false;
@@ -3184,6 +3183,26 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType) &&
              !resolveExperimentalMapValueTarget(candidate.args[receiverIndex], keyType, valueType);
     };
+    std::string earlyPointerBuiltin;
+    if (getBuiltinPointerName(expr, earlyPointerBuiltin) && expr.args.size() == 1) {
+      if (earlyPointerBuiltin == "dereference") {
+        ReturnKind targetKind = pointerTargetKind(expr.args.front());
+        if (targetKind != ReturnKind::Unknown) {
+          return targetKind;
+        }
+      }
+      return ReturnKind::Unknown;
+    }
+    if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+        expr.args.front().name == "Result") {
+      if (expr.name == "error" && expr.args.size() == 2) {
+        return ReturnKind::Bool;
+      }
+      if (expr.name == "why" && expr.args.size() == 2) {
+        return ReturnKind::String;
+      }
+    }
+
     std::string resolvedCallee = resolveCalleePath(expr);
     std::string canonicalExperimentalMapHelperResolved;
     if (!expr.isMethodCall && defMap_.count(resolvedCallee) == 0 &&
@@ -3572,9 +3591,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         !prefersExplicitDirectMapAccessAliasDefinition &&
         !isMapNamespacedAccessCompatibilityCall(expr) &&
         defMap_.find(resolved) == defMap_.end();
-    auto definitionPathContains = [&](std::string_view needle) {
-      return currentDefinitionPath_.find(std::string(needle)) != std::string::npos;
-    };
     auto mapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {
       if (hasNamedArguments(candidate.argNames)) {
         for (size_t i = 0; i < candidate.args.size(); ++i) {
@@ -3624,16 +3640,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       rewrittenOut.namespacePrefix.clear();
       return true;
     };
-    const bool shouldInferBuiltinBareMapContainsCall =
-        definitionPathContains("/mapContains") ||
-        definitionPathContains("/mapTryAt");
-    const bool shouldInferBuiltinBareMapTryAtCall =
-        definitionPathContains("/mapTryAt");
-    const bool shouldInferBuiltinBareMapAccessCall =
-        definitionPathContains("/mapAt") ||
-        definitionPathContains("/mapAtUnsafe") ||
-        definitionPathContains("/mapTryAt") ||
-        definitionPathContains("/mapAtRef");
+    const bool shouldInferBuiltinBareMapContainsCall = true;
+    const bool shouldInferBuiltinBareMapTryAtCall = true;
+    const bool shouldInferBuiltinBareMapAccessCall = true;
     auto isIndexedArgsPackMapReceiverTarget = [&](const Expr &receiverExpr) -> bool {
       std::string elemType;
       std::string keyType;

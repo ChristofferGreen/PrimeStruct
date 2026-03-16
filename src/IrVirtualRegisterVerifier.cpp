@@ -88,6 +88,9 @@ bool verifyBarrierOrdering(const IrVirtualRegisterBlock &originalBlock,
       case IrOpcode::FileOpenRead:
       case IrOpcode::FileOpenWrite:
       case IrOpcode::FileOpenAppend:
+      case IrOpcode::FileOpenReadDynamic:
+      case IrOpcode::FileOpenWriteDynamic:
+      case IrOpcode::FileOpenAppendDynamic:
       case IrOpcode::FileReadByte:
       case IrOpcode::FileClose:
       case IrOpcode::FileFlush:

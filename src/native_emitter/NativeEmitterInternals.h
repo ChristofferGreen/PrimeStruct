@@ -721,6 +721,37 @@ class Arm64Emitter {
     emitPushReg(0);
     return fixupIndex;
   }
+  size_t emitFileOpenDynamicPlaceholder(uint64_t offsetTableDelta, uint64_t flags, uint64_t mode) {
+    emitPopReg(0);
+    size_t fixupIndex = emitAdrPlaceholder(1);
+    emitMovImm64(2, offsetTableDelta);
+    emitSubReg(2, 1, 2);
+    emitMovImm64(3, 8);
+    emitMulReg(3, 0, 3);
+    emitAddReg(4, 1, 3);
+    emit(encodeLdrRegBase(4, 4, 0));
+    emitAddReg(5, 2, 4);
+    emitMovReg(0, 5);
+    emitMovImm64(1, flags);
+    emitMovImm64(2, mode);
+    emitMovImm64(16, SysOpen);
+    emit(encodeSvc());
+    emitCompareRegZero(0);
+    size_t nonNegative = emitCondBranchPlaceholder(CondCode::Ge);
+    emitMovImm64(1, 1);
+    emitMovImm64(0, 0);
+    size_t afterError = emitJumpPlaceholder();
+    size_t nonNegativeIndex = currentWordIndex();
+    patchCondBranch(nonNegative, static_cast<int32_t>(nonNegativeIndex - nonNegative), CondCode::Ge);
+    emitMovImm64(1, 0);
+    size_t afterIndex = currentWordIndex();
+    patchJump(afterError, static_cast<int32_t>(afterIndex - afterError));
+    emitMovImm64(2, 4294967296ull);
+    emitMulReg(1, 1, 2);
+    emitAddReg(0, 0, 1);
+    emitPushReg(0);
+    return fixupIndex;
+  }
   void emitFileWriteI32(uint32_t scratchOffset, uint32_t scratchBytes) {
     emitPopReg(0);
     emitPopReg(1);

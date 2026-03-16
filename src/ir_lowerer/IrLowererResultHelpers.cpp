@@ -3,10 +3,29 @@
 #include <utility>
 
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererRuntimeErrorHelpers.h"
 
 namespace primec::ir_lowerer {
+
+namespace {
+
+bool isMapTryAtCallName(const Expr &expr) {
+  if (isSimpleCallName(expr, "tryAt")) {
+    return true;
+  }
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "map/tryAt" || normalized == "std/collections/map/tryAt";
+}
+
+} // namespace
 
 bool resolveResultExprInfo(const Expr &expr,
                            const LookupLocalResultInfoFn &lookupLocal,
@@ -86,6 +105,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
                                      const LookupReturnInfoFn &lookupReturnInfo,
                                      ResultExprInfo &out) {
+  out = ResultExprInfo{};
   auto isIndexedArgsPackFileHandleReceiver = [&](const Expr &receiverExpr) {
     std::string accessName;
     if (receiverExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(receiverExpr, accessName) ||
@@ -212,6 +232,16 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
         out.errorType = local.resultErrorType;
         return true;
       }
+    }
+  }
+  if (expr.kind == Expr::Kind::Call && !expr.args.empty() && isMapTryAtCallName(expr)) {
+    const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn);
+    if (targetInfo.isMapTarget && targetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+      out.isResult = true;
+      out.hasValue = true;
+      out.valueKind = targetInfo.mapValueKind;
+      out.errorType = "ContainerError";
+      return true;
     }
   }
   return resolveResultExprInfo(

@@ -885,11 +885,10 @@ main() {
   }
   return(pipeline.token)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("experimental gfx entry point not implemented yet: Device.create_pipeline([vertex_type] type, ...)") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target: create_pipeline") != std::string::npos);
 }
 
 TEST_CASE("import rejects missing std gfx experimental path") {

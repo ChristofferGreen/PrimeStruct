@@ -113,6 +113,14 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
+bool isMapContainsHelperName(const Expr &expr) {
+  return isMapBuiltinName(expr, "contains");
+}
+
+bool isMapTryAtHelperName(const Expr &expr) {
+  return isMapBuiltinName(expr, "tryAt");
+}
+
 bool isExplicitMapHelperFallbackPath(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
     return false;
@@ -152,6 +160,20 @@ MapAccessLookupEmitResult tryEmitMapContainsLookup(
     std::string &error);
 
 bool emitMapLookupContains(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error);
+
+bool emitMapLookupTryAt(
     LocalInfo::ValueKind mapKeyKind,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
@@ -428,9 +450,12 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const bool isBuiltinAccessMethod = getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2;
     const bool isBuiltinCountName = isSimpleCallName(expr, "count") && expr.args.size() == 1;
     const bool isBuiltinCapacityName = isSimpleCallName(expr, "capacity") && expr.args.size() == 1;
+    const bool isBuiltinMapContainsName = isMapContainsHelperName(expr) && expr.args.size() == 2;
+    const bool isBuiltinMapTryAtName = isMapTryAtHelperName(expr) && expr.args.size() == 2;
     const bool isBuiltinCountLikeMethod =
         isBuiltinCountName || isBuiltinCapacityName || isArrayCountCall(expr) || isStringCountCall(expr) ||
-        isVectorCapacityCall(expr) || isBuiltinAccessMethod;
+        isVectorCapacityCall(expr) || isBuiltinAccessMethod || isBuiltinMapContainsName ||
+        isBuiltinMapTryAtName;
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
       const auto emitResult = emitResolvedInlineDefinitionCall(
@@ -732,7 +757,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::Error;
   }
 
-  if (!expr.isMethodCall && isSimpleCallName(expr, "contains")) {
+  if (!expr.isMethodCall && isMapContainsHelperName(expr)) {
     if (expr.args.size() != 2) {
       error = "contains requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
@@ -758,6 +783,68 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     }
     error = "contains requires map target";
     return NativeCallTailDispatchResult::Error;
+  }
+
+  if (expr.isMethodCall && expr.name == "tryAt") {
+    if (expr.args.size() != 2) {
+      error = "tryAt requires exactly two arguments";
+      return NativeCallTailDispatchResult::Error;
+    }
+    const auto mapTargetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+    if (!mapTargetInfo.isMapTarget) {
+      error = "tryAt requires map target";
+      return NativeCallTailDispatchResult::Error;
+    }
+    if (!validateMapAccessTargetInfo(mapTargetInfo, "tryAt", error)) {
+      return NativeCallTailDispatchResult::Error;
+    }
+    if (!emitMapLookupTryAt(
+            mapTargetInfo.mapKeyKind,
+            expr.args.front(),
+            expr.args[1],
+            localsIn,
+            allocTempLocal,
+            emitExpr,
+            resolveStringTableTarget,
+            inferExprKind,
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error)) {
+      return NativeCallTailDispatchResult::Error;
+    }
+    return NativeCallTailDispatchResult::Emitted;
+  }
+
+  if (!expr.isMethodCall && isMapTryAtHelperName(expr)) {
+    if (expr.args.size() != 2) {
+      error = "tryAt requires exactly two arguments";
+      return NativeCallTailDispatchResult::Error;
+    }
+    const auto mapTargetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+    if (!mapTargetInfo.isMapTarget) {
+      error = "tryAt requires map target";
+      return NativeCallTailDispatchResult::Error;
+    }
+    if (!validateMapAccessTargetInfo(mapTargetInfo, "tryAt", error)) {
+      return NativeCallTailDispatchResult::Error;
+    }
+    if (!emitMapLookupTryAt(
+            mapTargetInfo.mapKeyKind,
+            expr.args.front(),
+            expr.args[1],
+            localsIn,
+            allocTempLocal,
+            emitExpr,
+            resolveStringTableTarget,
+            inferExprKind,
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error)) {
+      return NativeCallTailDispatchResult::Error;
+    }
+    return NativeCallTailDispatchResult::Emitted;
   }
 
   const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnostic(
@@ -1565,6 +1652,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = (it->second.kind == LocalInfo::Kind::Vector);
+      info.isSoaVector = it->second.isSoaVector;
       info.isArgsPackTarget = it->second.isArgsPack;
       info.argsPackElementKind = it->second.argsPackElementKind;
       info.elemSlotCount = it->second.structSlotCount;
@@ -1770,10 +1858,10 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
       targetInfo.isVectorTarget;
   const bool isPointerSoaVectorArgsPackTarget =
       targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
-      targetInfo.isVectorTarget && targetInfo.isSoaVector;
+      targetInfo.isSoaVector;
   const bool isBorrowedSoaVectorArgsPackTarget =
       targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
-      targetInfo.isVectorTarget && targetInfo.isSoaVector;
+      targetInfo.isSoaVector;
   if (!targetInfo.isArrayOrVectorTarget ||
       (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget &&
        !isWrappedStructArgsPackTarget && !isVectorArgsPackTarget && !isPointerVectorArgsPackTarget &&
@@ -1840,12 +1928,6 @@ bool emitArrayVectorIndexedAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm);
-  if (arrayVectorTargetInfo.isArgsPackTarget &&
-      (arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Reference ||
-       arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Pointer) &&
-      !arrayVectorTargetInfo.structTypeName.empty()) {
-    emitInstruction(IrOpcode::LoadIndirect, 0);
-  }
   return true;
 }
 
@@ -2376,6 +2458,68 @@ bool emitMapLookupContains(
   const auto loopLocals = emitMapLookupLoopSearchScaffold(
       ptrLocal, keyLocal, mapKeyKind, allocTempLocal, instructionCount, emitInstruction, patchInstructionImm);
   emitMapLookupContainsResult(loopLocals.indexLocal, loopLocals.countLocal, emitInstruction);
+  return true;
+}
+
+bool emitMapLookupTryAt(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  int32_t ptrLocal = -1;
+  if (!emitMapLookupTargetPointerLocal(
+          targetExpr,
+          localsIn,
+          allocTempLocal,
+          emitExpr,
+          [&](int32_t localIndex) { emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)); },
+          ptrLocal)) {
+    return false;
+  }
+
+  int32_t keyLocal = -1;
+  if (!emitMapLookupKeyLocal(
+          mapKeyKind,
+          lookupKeyExpr,
+          localsIn,
+          allocTempLocal,
+          resolveStringTableTarget,
+          inferExprKind,
+          emitExpr,
+          [&](int32_t stringIndex) { emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)); },
+          [&](int32_t localIndex) { emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)); },
+          keyLocal,
+          error)) {
+    return false;
+  }
+
+  const auto loopLocals = emitMapLookupLoopSearchScaffold(
+      ptrLocal, keyLocal, mapKeyKind, allocTempLocal, instructionCount, emitInstruction, patchInstructionImm);
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.indexLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
+  emitInstruction(IrOpcode::CmpEqI32, 0);
+  const size_t jumpFound = instructionCount();
+  emitInstruction(IrOpcode::JumpIfZero, 0);
+
+  emitInstruction(IrOpcode::PushI64, 4294967296ull);
+  const size_t jumpEnd = instructionCount();
+  emitInstruction(IrOpcode::Jump, 0);
+
+  const size_t foundIndex = instructionCount();
+  patchInstructionImm(jumpFound, static_cast<uint64_t>(foundIndex));
+  emitMapLookupValueLoad(ptrLocal, loopLocals.indexLocal, emitInstruction);
+
+  const size_t endIndex = instructionCount();
+  patchInstructionImm(jumpEnd, static_cast<uint64_t>(endIndex));
   return true;
 }
 

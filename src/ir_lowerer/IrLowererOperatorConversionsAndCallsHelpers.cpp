@@ -63,6 +63,47 @@ std::string inferPointerStructTypePath(
   return "";
 }
 
+bool isAggregatePointerLikeLocal(const LocalInfo &info, bool fromArgsPack) {
+  const LocalInfo::Kind kind = fromArgsPack ? info.argsPackElementKind : info.kind;
+  if (kind != LocalInfo::Kind::Pointer && kind != LocalInfo::Kind::Reference) {
+    return false;
+  }
+  return !info.structTypeName.empty() || info.referenceToArray || info.pointerToArray || info.referenceToVector ||
+         info.pointerToVector || info.referenceToMap || info.pointerToMap || info.referenceToBuffer ||
+         info.pointerToBuffer;
+}
+
+bool isAggregatePointerLikeExpr(const Expr &expr, const LocalMap &localsIn) {
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.name);
+    return it != localsIn.end() && isAggregatePointerLikeLocal(it->second, false);
+  }
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+
+  std::string accessName;
+  if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.args.front().name);
+    return it != localsIn.end() && it->second.isArgsPack && isAggregatePointerLikeLocal(it->second, true);
+  }
+
+  std::string builtinPointer;
+  if (getBuiltinPointerName(expr, builtinPointer) && builtinPointer == "location" && expr.args.size() == 1) {
+    const Expr &target = expr.args.front();
+    if (target.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(target.name);
+    return it != localsIn.end() &&
+           (!it->second.structTypeName.empty() || it->second.kind == LocalInfo::Kind::Array ||
+            it->second.kind == LocalInfo::Kind::Vector || it->second.kind == LocalInfo::Kind::Map ||
+            it->second.kind == LocalInfo::Kind::Buffer);
+  }
+
+  return false;
+}
+
 } // namespace
 
 bool emitConversionsAndCallsOperatorExpr(
@@ -542,7 +583,10 @@ bool emitConversionsAndCallsOperatorExpr(
               error = "location requires a local binding";
               return false;
             }
-            if (it->second.kind == LocalInfo::Kind::Reference) {
+            if (it->second.kind == LocalInfo::Kind::Reference || !it->second.structTypeName.empty() ||
+                it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
+                it->second.isSoaVector ||
+                it->second.kind == LocalInfo::Kind::Map || it->second.kind == LocalInfo::Kind::Buffer) {
               instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
             } else {
               instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});
@@ -565,6 +609,9 @@ bool emitConversionsAndCallsOperatorExpr(
             if (!emitExpr(pointerExpr, localsIn)) {
               return false;
             }
+          }
+          if (builtin == "dereference" && isAggregatePointerLikeExpr(pointerExpr, localsIn)) {
+            return true;
           }
           instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;
@@ -1385,7 +1432,10 @@ bool emitConversionsAndCallsControlExprTail(
       return false;
     }
     LocalInfo::ValueKind condKind = inferExprKind(cond, localsIn);
-    if (condKind != LocalInfo::ValueKind::Bool) {
+    const bool isIntegralCondition =
+        condKind == LocalInfo::ValueKind::Int32 || condKind == LocalInfo::ValueKind::Int64 ||
+        condKind == LocalInfo::ValueKind::UInt64;
+    if (condKind != LocalInfo::ValueKind::Bool && !isIntegralCondition) {
       error = "if condition requires bool";
       return false;
     }

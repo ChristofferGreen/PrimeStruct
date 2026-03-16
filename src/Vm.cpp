@@ -1194,6 +1194,39 @@ bool executeImpl(const IrModule &module,
         ip += 1;
         break;
       }
+      case IrOpcode::FileOpenReadDynamic:
+      case IrOpcode::FileOpenWriteDynamic:
+      case IrOpcode::FileOpenAppendDynamic: {
+        if (stack.empty()) {
+          error = "IR stack underflow on file open";
+          return false;
+        }
+        uint64_t stringIndex = stack.back();
+        stack.pop_back();
+        if (stringIndex >= module.stringTable.size()) {
+          error = "invalid string index in IR";
+          return false;
+        }
+        const std::string &path = module.stringTable[static_cast<size_t>(stringIndex)];
+        int flags = O_RDONLY;
+        int mode = 0644;
+        if (inst.op == IrOpcode::FileOpenWriteDynamic) {
+          flags = O_WRONLY | O_CREAT | O_TRUNC;
+        } else if (inst.op == IrOpcode::FileOpenAppendDynamic) {
+          flags = O_WRONLY | O_CREAT | O_APPEND;
+        }
+        int fd = ::open(path.c_str(), flags, mode);
+        uint64_t packed = 0;
+        if (fd < 0) {
+          uint32_t err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
+          packed = (static_cast<uint64_t>(err) << 32);
+        } else {
+          packed = static_cast<uint64_t>(static_cast<uint32_t>(fd));
+        }
+        stack.push_back(packed);
+        ip += 1;
+        break;
+      }
       case IrOpcode::FileClose: {
         if (stack.empty()) {
           error = "IR stack underflow on file close";
@@ -2606,6 +2639,39 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       if (inst.op == IrOpcode::FileOpenWrite) {
         flags = O_WRONLY | O_CREAT | O_TRUNC;
       } else if (inst.op == IrOpcode::FileOpenAppend) {
+        flags = O_WRONLY | O_CREAT | O_APPEND;
+      }
+      const int fd = ::open(path.c_str(), flags, mode);
+      uint64_t packed = 0;
+      if (fd < 0) {
+        const uint32_t err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
+        packed = static_cast<uint64_t>(err) << 32;
+      } else {
+        packed = static_cast<uint64_t>(static_cast<uint32_t>(fd));
+      }
+      stack_.push_back(packed);
+      ip += 1;
+      return finishStep(StepOutcome::Continue);
+    }
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on file open";
+        return finishFault();
+      }
+      uint64_t stringIndex = stack_.back();
+      stack_.pop_back();
+      if (stringIndex >= module_->stringTable.size()) {
+        error = "invalid string index in IR";
+        return finishFault();
+      }
+      const std::string &path = module_->stringTable[static_cast<size_t>(stringIndex)];
+      int flags = O_RDONLY;
+      const int mode = 0644;
+      if (inst.op == IrOpcode::FileOpenWriteDynamic) {
+        flags = O_WRONLY | O_CREAT | O_TRUNC;
+      } else if (inst.op == IrOpcode::FileOpenAppendDynamic) {
         flags = O_WRONLY | O_CREAT | O_APPEND;
       }
       const int fd = ::open(path.c_str(), flags, mode);
