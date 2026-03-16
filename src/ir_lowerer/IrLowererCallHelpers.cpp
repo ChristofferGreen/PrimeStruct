@@ -1579,6 +1579,55 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     return info;
   }
   if (target.kind == Expr::Kind::Call) {
+    auto resolveDereferencedArgsPackTarget = [&](const Expr &derefTarget) {
+      std::string derefAccessName;
+      if (!(getBuiltinArrayAccessName(derefTarget, derefAccessName) && derefTarget.args.size() == 2)) {
+        return false;
+      }
+
+      const Expr &accessReceiver = derefTarget.args.front();
+      if (accessReceiver.kind != Expr::Kind::Name) {
+        return false;
+      }
+
+      auto localIt = localsIn.find(accessReceiver.name);
+      if (localIt == localsIn.end() || !localIt->second.isArgsPack) {
+        return false;
+      }
+
+      const LocalInfo &localInfo = localIt->second;
+      if (localInfo.argsPackElementKind == LocalInfo::Kind::Array) {
+        info.isArrayOrVectorTarget = true;
+        info.elemKind = localInfo.valueKind;
+        info.isVectorTarget = false;
+        return true;
+      }
+      if (localInfo.argsPackElementKind == LocalInfo::Kind::Vector) {
+        info.isArrayOrVectorTarget = true;
+        info.elemKind = localInfo.valueKind;
+        info.isVectorTarget = true;
+        info.isSoaVector = localInfo.isSoaVector;
+        return true;
+      }
+      if (localInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
+          (localInfo.referenceToArray || localInfo.referenceToVector)) {
+        info.isArrayOrVectorTarget = true;
+        info.elemKind = localInfo.valueKind;
+        info.isVectorTarget = localInfo.referenceToVector;
+        info.isSoaVector = localInfo.isSoaVector;
+        return true;
+      }
+      if (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
+          (localInfo.pointerToArray || localInfo.pointerToVector)) {
+        info.isArrayOrVectorTarget = true;
+        info.elemKind = localInfo.valueKind;
+        info.isVectorTarget = localInfo.pointerToVector;
+        info.isSoaVector = localInfo.isSoaVector;
+        return true;
+      }
+      return false;
+    };
+
     std::string accessName;
     if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
       const Expr &accessReceiver = target.args.front();
@@ -1618,6 +1667,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
           }
         }
       }
+    }
+    if (isSimpleCallName(target, "dereference") && target.args.size() == 1 &&
+        resolveDereferencedArgsPackTarget(target.args.front())) {
+      return info;
     }
     std::string collection;
     if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&

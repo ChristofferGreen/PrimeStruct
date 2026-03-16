@@ -1853,19 +1853,27 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     return false;
   }
   if (receiverExpr.kind == Expr::Kind::Call) {
-    auto resolveDereferencedMapOrFileErrorReceiver = [&](const Expr &targetExpr) {
+    auto resolveDereferencedCollectionOrFileErrorReceiver = [&](const Expr &targetExpr) {
       auto classifyLocal = [&](const LocalInfo &localInfo, bool fromArgsPack) -> bool {
         const LocalInfo::Kind receiverKind =
             fromArgsPack ? localInfo.argsPackElementKind : localInfo.kind;
-        const bool isReferenceMap =
-            fromArgsPack ? (receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToMap)
-                         : (receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToMap);
-        const bool isPointerMap =
-            fromArgsPack ? (receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap)
-                         : (receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap);
+        const bool isReferenceArray = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToArray;
+        const bool isPointerArray = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToArray;
+        const bool isReferenceVector = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToVector;
+        const bool isPointerVector = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToVector;
+        const bool isReferenceMap = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToMap;
+        const bool isPointerMap = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap;
         if (localInfo.isFileError &&
             (receiverKind == LocalInfo::Kind::Reference || receiverKind == LocalInfo::Kind::Pointer)) {
           typeNameOut = "FileError";
+          return true;
+        }
+        if (isReferenceArray || isPointerArray) {
+          typeNameOut = "array";
+          return true;
+        }
+        if (isReferenceVector || isPointerVector) {
+          typeNameOut = localInfo.isSoaVector ? "soa_vector" : "vector";
           return true;
         }
         if (isReferenceMap || isPointerMap) {
@@ -1953,7 +1961,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     }
     if (isSimpleCallName(receiverExpr, "dereference") && receiverExpr.args.size() == 1) {
       const Expr &targetExpr = receiverExpr.args.front();
-      if (resolveDereferencedMapOrFileErrorReceiver(targetExpr)) {
+      if (resolveDereferencedCollectionOrFileErrorReceiver(targetExpr)) {
         return true;
       }
     }

@@ -14049,6 +14049,45 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   vectorArgsInfo.argsPackElementKind = LocalInfo::Kind::Vector;
   locals.emplace("vectorArgs", vectorArgsInfo);
 
+  LocalInfo borrowedArrayArgsInfo;
+  borrowedArrayArgsInfo.kind = LocalInfo::Kind::Array;
+  borrowedArrayArgsInfo.isArgsPack = true;
+  borrowedArrayArgsInfo.argsPackElementKind = LocalInfo::Kind::Reference;
+  borrowedArrayArgsInfo.referenceToArray = true;
+  borrowedArrayArgsInfo.valueKind = Kind::Int32;
+  locals.emplace("borrowedArrayArgs", borrowedArrayArgsInfo);
+
+  LocalInfo pointerArrayArgsInfo;
+  pointerArrayArgsInfo.kind = LocalInfo::Kind::Array;
+  pointerArrayArgsInfo.isArgsPack = true;
+  pointerArrayArgsInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
+  pointerArrayArgsInfo.pointerToArray = true;
+  pointerArrayArgsInfo.valueKind = Kind::Int32;
+  locals.emplace("pointerArrayArgs", pointerArrayArgsInfo);
+
+  LocalInfo borrowedVectorArgsInfo;
+  borrowedVectorArgsInfo.kind = LocalInfo::Kind::Array;
+  borrowedVectorArgsInfo.isArgsPack = true;
+  borrowedVectorArgsInfo.argsPackElementKind = LocalInfo::Kind::Reference;
+  borrowedVectorArgsInfo.referenceToVector = true;
+  borrowedVectorArgsInfo.valueKind = Kind::Int32;
+  locals.emplace("borrowedVectorArgs", borrowedVectorArgsInfo);
+
+  LocalInfo pointerVectorArgsInfo;
+  pointerVectorArgsInfo.kind = LocalInfo::Kind::Array;
+  pointerVectorArgsInfo.isArgsPack = true;
+  pointerVectorArgsInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
+  pointerVectorArgsInfo.pointerToVector = true;
+  pointerVectorArgsInfo.valueKind = Kind::Int32;
+  locals.emplace("pointerVectorArgs", pointerVectorArgsInfo);
+
+  LocalInfo scalarRefArgsInfo;
+  scalarRefArgsInfo.kind = LocalInfo::Kind::Array;
+  scalarRefArgsInfo.isArgsPack = true;
+  scalarRefArgsInfo.argsPackElementKind = LocalInfo::Kind::Reference;
+  scalarRefArgsInfo.valueKind = Kind::Int32;
+  locals.emplace("scalarRefArgs", scalarRefArgsInfo);
+
   primec::Expr arrName;
   arrName.kind = primec::Expr::Kind::Name;
   arrName.name = "arr";
@@ -14110,6 +14149,67 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.argsPackElementKind == LocalInfo::Kind::Vector);
   CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error.empty());
+
+  auto makeDereferencedArgsPackAccess = [](const char *name) {
+    primec::Expr receiverName;
+    receiverName.kind = primec::Expr::Kind::Name;
+    receiverName.name = name;
+
+    primec::Expr indexExpr;
+    indexExpr.kind = primec::Expr::Kind::Literal;
+    indexExpr.literalValue = 0;
+
+    primec::Expr accessExpr;
+    accessExpr.kind = primec::Expr::Kind::Call;
+    accessExpr.name = "at";
+    accessExpr.args = {receiverName, indexExpr};
+
+    primec::Expr derefExpr;
+    derefExpr.kind = primec::Expr::Kind::Call;
+    derefExpr.name = "dereference";
+    derefExpr.args = {accessExpr};
+    return derefExpr;
+  };
+
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      makeDereferencedArgsPackAccess("borrowedArrayArgs"), locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK_FALSE(resolved.isVectorTarget);
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
+
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      makeDereferencedArgsPackAccess("pointerArrayArgs"), locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK_FALSE(resolved.isVectorTarget);
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
+
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      makeDereferencedArgsPackAccess("borrowedVectorArgs"), locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK(resolved.isVectorTarget);
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
+
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      makeDereferencedArgsPackAccess("pointerVectorArgs"), locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK(resolved.isVectorTarget);
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
+
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      makeDereferencedArgsPackAccess("scalarRefArgs"), locals);
+  CHECK_FALSE(resolved.isArrayOrVectorTarget);
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error ==
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Pointer<Struct>>/args<Reference<Struct>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/args<Reference<soa_vector<T>>> packs");
 
   primec::Expr plain;
   plain.kind = primec::Expr::Kind::Name;
@@ -18479,6 +18579,198 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack pointer vecto
   CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(callReceiver,
                                                         locals,
                                                         "count",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "vector");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack borrowed array receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesLocal;
+  valuesLocal.kind = LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Reference;
+  valuesLocal.referenceToArray = true;
+  valuesLocal.valueKind = ValueKind::Int32;
+  locals.emplace("values", valuesLocal);
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr accessReceiver;
+  accessReceiver.kind = primec::Expr::Kind::Call;
+  accessReceiver.name = "at";
+  accessReceiver.args = {receiverName, indexExpr};
+  primec::Expr dereferenceReceiver;
+  dereferenceReceiver.kind = primec::Expr::Kind::Call;
+  dereferenceReceiver.name = "dereference";
+  dereferenceReceiver.args = {accessReceiver};
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(dereferenceReceiver,
+                                                        locals,
+                                                        "at",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "array");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack pointer array receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesLocal;
+  valuesLocal.kind = LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Pointer;
+  valuesLocal.pointerToArray = true;
+  valuesLocal.valueKind = ValueKind::Int32;
+  locals.emplace("values", valuesLocal);
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr accessReceiver;
+  accessReceiver.kind = primec::Expr::Kind::Call;
+  accessReceiver.name = "at";
+  accessReceiver.args = {receiverName, indexExpr};
+  primec::Expr dereferenceReceiver;
+  dereferenceReceiver.kind = primec::Expr::Kind::Call;
+  dereferenceReceiver.name = "dereference";
+  dereferenceReceiver.args = {accessReceiver};
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(dereferenceReceiver,
+                                                        locals,
+                                                        "at",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "array");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack borrowed vector receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesLocal;
+  valuesLocal.kind = LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Reference;
+  valuesLocal.referenceToVector = true;
+  valuesLocal.valueKind = ValueKind::Int32;
+  locals.emplace("values", valuesLocal);
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr accessReceiver;
+  accessReceiver.kind = primec::Expr::Kind::Call;
+  accessReceiver.name = "at";
+  accessReceiver.args = {receiverName, indexExpr};
+  primec::Expr dereferenceReceiver;
+  dereferenceReceiver.kind = primec::Expr::Kind::Call;
+  dereferenceReceiver.name = "dereference";
+  dereferenceReceiver.args = {accessReceiver};
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(dereferenceReceiver,
+                                                        locals,
+                                                        "at",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "vector");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack pointer vector receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesLocal;
+  valuesLocal.kind = LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Pointer;
+  valuesLocal.pointerToVector = true;
+  valuesLocal.valueKind = ValueKind::Int32;
+  locals.emplace("values", valuesLocal);
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr accessReceiver;
+  accessReceiver.kind = primec::Expr::Kind::Call;
+  accessReceiver.name = "at";
+  accessReceiver.args = {receiverName, indexExpr};
+  primec::Expr dereferenceReceiver;
+  dereferenceReceiver.kind = primec::Expr::Kind::Call;
+  dereferenceReceiver.name = "dereference";
+  dereferenceReceiver.args = {accessReceiver};
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(dereferenceReceiver,
+                                                        locals,
+                                                        "at",
                                                         {},
                                                         {},
                                                         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
