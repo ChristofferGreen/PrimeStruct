@@ -68,6 +68,11 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     return;
   }
   base = normalizeCollectionBindingTypeName(base);
+  if (base == "File") {
+    infoOut.isFileHandle = true;
+    infoOut.valueKind = LocalInfo::ValueKind::Int64;
+    return;
+  }
   if (base == "array") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Array;
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));

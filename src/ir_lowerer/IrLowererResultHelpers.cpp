@@ -86,6 +86,17 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
                                      const LookupReturnInfoFn &lookupReturnInfo,
                                      ResultExprInfo &out) {
+  auto isIndexedArgsPackFileHandleReceiver = [&](const Expr &receiverExpr) {
+    std::string accessName;
+    if (receiverExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(receiverExpr, accessName) ||
+        receiverExpr.args.size() != 2 || receiverExpr.args.front().kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(receiverExpr.args.front().name);
+    return it != localsIn.end() && it->second.isArgsPack && it->second.isFileHandle &&
+           it->second.argsPackElementKind == LocalInfo::Kind::Value;
+  };
+
   auto lookupLocal = [&](const std::string &name) -> LocalResultInfo {
     LocalResultInfo local;
     auto it = localsIn.find(name);
@@ -114,6 +125,16 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     resultOut.errorType = info.resultErrorType;
     return true;
   };
+  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
+      isIndexedArgsPackFileHandleReceiver(expr.args.front())) {
+    if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
+        expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+      out.isResult = true;
+      out.hasValue = false;
+      out.errorType = "FileError";
+      return true;
+    }
+  }
   std::string accessName;
   if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name) {
     const LocalResultInfo local = lookupLocal(expr.args.front().name);

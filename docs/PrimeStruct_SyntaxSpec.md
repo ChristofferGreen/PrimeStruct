@@ -404,7 +404,7 @@ Bottom-level form therefore has:
   forwarding modes, `Pointer<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping across those same
   forwarding modes, `Reference<Result<T, Error>>` packs preserve indexed downstream `dereference(...)`, `try(...)`,
   and `Result.why(...)` access across those same forwarding modes, `Pointer<Result<T, Error>>` packs preserve indexed downstream `dereference(...)`,
-  `try(...)`, and `Result.why(...)` access across those same forwarding modes, and `array<T>`, `Reference<array<T>>`, `vector<T>`, `Reference<vector<T>>`,
+  `try(...)`, and `Result.why(...)` access across those same forwarding modes, `File<Mode>` packs preserve indexed downstream file-handle method access, and `array<T>`, `Reference<array<T>>`, `vector<T>`, `Reference<vector<T>>`,
   empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `map<K, V>`, plus `Reference<map<K, V>>`
   packs preserve indexed downstream `count()` resolution across those
   same forwarding modes, while scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream

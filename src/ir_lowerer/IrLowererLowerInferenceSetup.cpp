@@ -8,6 +8,17 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isIndexedArgsPackFileHandleReceiver(const Expr &receiverExpr, const LocalMap &localsIn) {
+  std::string accessName;
+  if (receiverExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(receiverExpr, accessName) ||
+      receiverExpr.args.size() != 2 || receiverExpr.args.front().kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto it = localsIn.find(receiverExpr.args.front().name);
+  return it != localsIn.end() && it->second.isArgsPack && it->second.isFileHandle &&
+         it->second.argsPackElementKind == LocalInfo::Kind::Value;
+}
+
 bool inferLiteralOrNameExprKindImpl(const Expr &expr,
                                     const LocalMap &localsIn,
                                     const GetSetupMathConstantNameFn &getMathConstantName,
@@ -162,6 +173,13 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
           kindOut = LocalInfo::ValueKind::Int32;
           return true;
         }
+      }
+    }
+    if (!expr.args.empty() && isIndexedArgsPackFileHandleReceiver(expr.args.front(), localsIn)) {
+      if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
+          expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+        kindOut = LocalInfo::ValueKind::Int32;
+        return true;
       }
     }
     return false;
@@ -1735,6 +1753,14 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         if (resultExpr.args.front().name == "Result" && resultExpr.name == "ok") {
           kindOut = resultExpr.args.size() > 1 ? stateInOut.inferExprKind(resultExpr.args[1], localsIn)
                                                : LocalInfo::ValueKind::Int32;
+          return true;
+        }
+      }
+      if (resultExpr.isMethodCall && !resultExpr.args.empty() &&
+          isIndexedArgsPackFileHandleReceiver(resultExpr.args.front(), localsIn)) {
+        if (resultExpr.name == "write" || resultExpr.name == "write_line" || resultExpr.name == "write_byte" ||
+            resultExpr.name == "write_bytes" || resultExpr.name == "flush" || resultExpr.name == "close") {
+          kindOut = LocalInfo::ValueKind::Int32;
           return true;
         }
       }

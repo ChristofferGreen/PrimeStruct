@@ -154,6 +154,10 @@ bool emitInlineDefinitionCallParameters(
           error = "variadic parameter type mismatch";
           return false;
         }
+        if (callerIt->second.isFileHandle != paramInfo.isFileHandle) {
+          error = "variadic parameter type mismatch";
+          return false;
+        }
         if (callerIt->second.isFileError != paramInfo.isFileError) {
           error = "variadic parameter type mismatch";
           return false;
@@ -193,6 +197,7 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.referenceToVector = callerIt->second.referenceToVector;
         paramInfo.referenceToMap = callerIt->second.referenceToMap;
         paramInfo.isSoaVector = callerIt->second.isSoaVector;
+        paramInfo.isFileHandle = callerIt->second.isFileHandle;
         paramInfo.isFileError = callerIt->second.isFileError;
         paramInfo.isResult = callerIt->second.isResult;
         paramInfo.resultHasValue = callerIt->second.resultHasValue;

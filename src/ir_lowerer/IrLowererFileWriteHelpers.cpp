@@ -287,15 +287,37 @@ FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
     const GetInstructionCountForWriteFn &getInstructionCount,
     const PatchInstructionImmForWriteFn &patchInstructionImm,
     std::string &error) {
-  if (!expr.isMethodCall || expr.args.empty() || expr.args.front().kind != Expr::Kind::Name) {
+  if (!expr.isMethodCall || expr.args.empty()) {
     return FileHandleMethodCallEmitResult::NotMatched;
   }
-  auto it = localsIn.find(expr.args.front().name);
-  if (it == localsIn.end() || !it->second.isFileHandle) {
+  int32_t handleIndex = -1;
+  if (expr.args.front().kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.args.front().name);
+    if (it == localsIn.end() || !it->second.isFileHandle) {
+      return FileHandleMethodCallEmitResult::NotMatched;
+    }
+    handleIndex = it->second.index;
+  } else if (expr.args.front().kind == Expr::Kind::Call) {
+    std::string accessName;
+    const Expr &receiver = expr.args.front();
+    if (!getBuiltinArrayAccessName(receiver, accessName) || receiver.args.size() != 2 ||
+        receiver.args.front().kind != Expr::Kind::Name) {
+      return FileHandleMethodCallEmitResult::NotMatched;
+    }
+    auto it = localsIn.find(receiver.args.front().name);
+    if (it == localsIn.end() || !it->second.isArgsPack || !it->second.isFileHandle ||
+        it->second.argsPackElementKind != LocalInfo::Kind::Value) {
+      return FileHandleMethodCallEmitResult::NotMatched;
+    }
+    if (!emitExpr(receiver, localsIn)) {
+      return FileHandleMethodCallEmitResult::Error;
+    }
+    handleIndex = allocTempLocal();
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(handleIndex));
+  } else {
     return FileHandleMethodCallEmitResult::NotMatched;
   }
 
-  const int32_t handleIndex = it->second.index;
   auto emitWriteStep = [&](const Expr &arg, int32_t errorLocal) -> bool {
     return emitFileWriteStep(
         arg,

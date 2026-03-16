@@ -921,6 +921,95 @@ TEST_CASE("ir lowerer materializes variadic pointer FileError packs with indexed
   CHECK(error.empty());
   CHECK(result == 36);
 }
+
+TEST_CASE("ir lowerer materializes variadic File handle packs with indexed file methods") {
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string pathA0 = "/tmp/primec_vm_variadic_file_handle_a0.txt";
+  const std::string pathA1 = "/tmp/primec_vm_variadic_file_handle_a1.txt";
+  const std::string pathA2 = "/tmp/primec_vm_variadic_file_handle_a2.txt";
+  const std::string pathB0 = "/tmp/primec_vm_variadic_file_handle_b0.txt";
+  const std::string pathB1 = "/tmp/primec_vm_variadic_file_handle_b1.txt";
+  const std::string pathB2 = "/tmp/primec_vm_variadic_file_handle_b2.txt";
+  const std::string pathC0 = "/tmp/primec_vm_variadic_file_handle_c0.txt";
+  const std::string pathC1 = "/tmp/primec_vm_variadic_file_handle_c1.txt";
+  const std::string pathExtra = "/tmp/primec_vm_variadic_file_handle_extra.txt";
+  const auto readFile = [](const std::string &path) {
+    std::ifstream file(path, std::ios::binary);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+  };
+
+  const std::string source =
+      "[effects(file_write)]\n"
+      "swallow_file_error([FileError] err) {}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "score_files([args<File<Write>>] values) {\n"
+      "  values[0i32].write_line(\"alpha\"utf8)?\n"
+      "  values[minus(count(values), 1i32)].write_line(\"omega\"utf8)?\n"
+      "  values[0i32].flush()?\n"
+      "  values[minus(count(values), 1i32)].flush()?\n"
+      "  values[0i32].close()?\n"
+      "  values[minus(count(values), 1i32)].close()?\n"
+      "  return(plus(count(values), 10i32))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "forward([args<File<Write>>] values) {\n"
+      "  return(score_files([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "forward_mixed([args<File<Write>>] values) {\n"
+      "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
+      "  return(score_files([spread] values, extra))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] a0{File<Write>(\"" + escape(pathA0) + "\"utf8)?}\n"
+      "  [File<Write>] a1{File<Write>(\"" + escape(pathA1) + "\"utf8)?}\n"
+      "  [File<Write>] a2{File<Write>(\"" + escape(pathA2) + "\"utf8)?}\n"
+      "  [File<Write>] b0{File<Write>(\"" + escape(pathB0) + "\"utf8)?}\n"
+      "  [File<Write>] b1{File<Write>(\"" + escape(pathB1) + "\"utf8)?}\n"
+      "  [File<Write>] b2{File<Write>(\"" + escape(pathB2) + "\"utf8)?}\n"
+      "  [File<Write>] c0{File<Write>(\"" + escape(pathC0) + "\"utf8)?}\n"
+      "  [File<Write>] c1{File<Write>(\"" + escape(pathC1) + "\"utf8)?}\n"
+      "  return(plus(score_files(a0, a1, a2), plus(forward(b0, b1, b2), forward_mixed(c0, c1))))\n"
+      "}\n";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 39);
+  CHECK(readFile(pathA0) == "alpha\n");
+  CHECK(readFile(pathA2) == "omega\n");
+  CHECK(readFile(pathB0) == "alpha\n");
+  CHECK(readFile(pathB2) == "omega\n");
+  CHECK(readFile(pathC0) == "alpha\n");
+  CHECK(readFile(pathExtra) == "omega\n");
+}
 #endif
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed count methods") {
