@@ -1596,7 +1596,7 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
        !isWrappedStructArgsPackTarget && !isVectorArgsPackTarget &&
        !isBorrowedSoaVectorArgsPackTarget)) {
     error =
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Reference<Struct>>/args<vector<T>>/args<Reference<vector<T>>>/args<Reference<soa_vector<T>>> packs";
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Pointer<Struct>>/args<Reference<Struct>>/args<vector<T>>/args<Reference<vector<T>>>/args<Reference<soa_vector<T>>> packs";
     return false;
   }
   return true;

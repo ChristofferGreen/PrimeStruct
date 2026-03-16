@@ -876,6 +876,78 @@ main() {
   CHECK(result == 65);
 }
 
+TEST_CASE("ir lowerer materializes variadic struct pointer packs with indexed field and helper access") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<int>]
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
+}
+
+[return<int>]
+score_ptrs([args<Pointer<Pair>>] values) {
+  return(plus(values[0i32].value, values[2i32].score()))
+}
+
+[return<int>]
+forward([args<Pointer<Pair>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<Pair>>] values) {
+  [Pair] extra{Pair(5i32)}
+  [Pointer<Pair>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [Pair] a0{Pair(7i32)}
+  [Pair] a1{Pair(8i32)}
+  [Pair] a2{Pair(9i32)}
+  [Pointer<Pair>] p0{location(a0)}
+  [Pointer<Pair>] p1{location(a1)}
+  [Pointer<Pair>] p2{location(a2)}
+
+  [Pair] b0{Pair(11i32)}
+  [Pair] b1{Pair(12i32)}
+  [Pair] b2{Pair(13i32)}
+  [Pointer<Pair>] q0{location(b0)}
+  [Pointer<Pair>] q1{location(b1)}
+  [Pointer<Pair>] q2{location(b2)}
+
+  [Pair] c0{Pair(15i32)}
+  [Pair] c1{Pair(17i32)}
+  [Pointer<Pair>] r0{location(c0)}
+  [Pointer<Pair>] r1{location(c1)}
+
+  return(plus(score_ptrs(p0, p1, p2),
+              plus(forward(q0, q1, q2),
+                   forward_mixed(r0, r1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 65);
+}
+
 TEST_CASE("ir lowerer materializes variadic scalar pointer packs with indexed dereference") {
   const std::string source = R"(
 [return<int>]

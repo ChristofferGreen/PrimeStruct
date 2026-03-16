@@ -68,9 +68,9 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     return;
   }
   if (base == "Pointer") {
+    infoOut.argsPackElementKind = LocalInfo::Kind::Pointer;
     const LocalInfo::ValueKind pointerValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
     if (pointerValueKind != LocalInfo::ValueKind::Unknown) {
-      infoOut.argsPackElementKind = LocalInfo::Kind::Pointer;
       infoOut.valueKind = pointerValueKind;
     }
     return;
