@@ -335,6 +335,23 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
         return FileErrorWhyCallEmitResult::Emitted;
       }
     }
+    if (isSimpleCallName(receiver, "dereference") && receiver.args.size() == 1) {
+      const Expr &target = receiver.args.front();
+      if (target.kind == Expr::Kind::Call && getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
+          target.args.front().kind == Expr::Kind::Name) {
+        auto it = localsIn.find(target.args.front().name);
+        if (it != localsIn.end() && it->second.isArgsPack && it->second.isFileError &&
+            it->second.argsPackElementKind == LocalInfo::Kind::Reference) {
+          if (!emitExpr(receiver, localsIn)) {
+            return FileErrorWhyCallEmitResult::Error;
+          }
+          const int32_t errorLocal = allocTempLocal();
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+          emitFileErrorWhyFn(errorLocal);
+          return FileErrorWhyCallEmitResult::Emitted;
+        }
+      }
+    }
   }
 
   return FileErrorWhyCallEmitResult::NotHandled;

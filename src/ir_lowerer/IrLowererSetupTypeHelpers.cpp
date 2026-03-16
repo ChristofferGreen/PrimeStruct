@@ -1877,6 +1877,18 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         }
       }
     }
+    if (isSimpleCallName(receiverExpr, "dereference") && receiverExpr.args.size() == 1) {
+      const Expr &targetExpr = receiverExpr.args.front();
+      if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, accessName) &&
+          targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(targetExpr.args.front().name);
+        if (localIt != localsIn.end() && localIt->second.isArgsPack && localIt->second.isFileError &&
+            localIt->second.argsPackElementKind == LocalInfo::Kind::Reference) {
+          typeNameOut = "FileError";
+          return true;
+        }
+      }
+    }
     const LocalInfo::ValueKind inferredKind =
         inferExprKind ? inferExprKind(receiverExpr, localsIn) : LocalInfo::ValueKind::Unknown;
     typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind);

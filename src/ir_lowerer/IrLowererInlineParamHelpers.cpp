@@ -61,6 +61,7 @@ bool emitInlineDefinitionCallParameters(
           auto it = callerLocals.find(argExpr.name);
           if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Reference ||
               it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap ||
+              it->second.isFileError != paramInfo.isFileError ||
               it->second.valueKind != paramInfo.valueKind ||
               it->second.structTypeName != paramInfo.structTypeName) {
             error = "variadic parameter type mismatch";

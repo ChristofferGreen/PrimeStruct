@@ -139,6 +139,18 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
             return true;
           }
         }
+        if (isSimpleCallName(receiver, "dereference") && receiver.args.size() == 1) {
+          const Expr &target = receiver.args.front();
+          if (target.kind == Expr::Kind::Call && getBuiltinArrayAccessName(target, accessName) &&
+              target.args.size() == 2 && target.args.front().kind == Expr::Kind::Name) {
+            auto it = localsIn.find(target.args.front().name);
+            if (it != localsIn.end() && it->second.isArgsPack && it->second.isFileError &&
+                it->second.argsPackElementKind == LocalInfo::Kind::Reference) {
+              kindOut = LocalInfo::ValueKind::String;
+              return true;
+            }
+          }
+        }
       }
     }
     if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {

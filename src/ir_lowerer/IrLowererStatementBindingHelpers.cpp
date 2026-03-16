@@ -86,6 +86,9 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     std::string refArg;
     infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
     if (!splitTemplateTypeName(trimTemplateTypeText(arg), refBase, refArg)) {
+      if (trimTemplateTypeText(arg) == "FileError") {
+        infoOut.isFileError = true;
+      }
       const LocalInfo::ValueKind refValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
       if (refValueKind != LocalInfo::ValueKind::Unknown) {
         infoOut.valueKind = refValueKind;
