@@ -696,7 +696,9 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 ### 8.4 SoA Vectors (Draft)
 
 `soa_vector<T>` is a distinct structure-of-arrays container and is not interchangeable with
-`vector<T>`. The language must not perform implicit AoS/SoA rewriting.
+`vector<T>`. The language must not perform implicit AoS/SoA rewriting. The target implementation
+model is a stdlib `.prime` container on top of generic SoA substrate; `soa_vector` should not
+remain a permanent compiler-owned collection.
 
 Draft surface shape:
 - `soa_vector<T>()`
@@ -720,20 +722,18 @@ Current implementation status: parser/text-transform support accepts surface `so
 and semantic validation now accepts `soa_vector` usage when constraints hold
 (`soa_vector` struct element requirement, `soa_vector` literal/return template-arity checks, and deterministic
 `soa_vector field envelope is unsupported on /Type/field/...: ...` diagnostics for disallowed direct/nested
-element-field envelopes in literal, binding, and return validation paths). Builtin `count`/`get`/`ref` validation now
-routes `soa_vector` targets through deterministic semantics diagnostics, and method-form/call-form field-view names now
-emit `soa_vector field views are not implemented yet: <field>` unless a user-defined `/soa_vector/<field>` helper
-exists (including call-form single-argument helper lowering dispatch and call-form method-fallback return-kind
-inference for both `get/ref` and single-argument field-view helper calls, plus statement direct-call probing for
-call-form single-argument SoA field helpers before expression fallback, and statement mutator helper probing for
-call-form SoA receivers so user-defined `/soa_vector/push`-style helpers bypass builtin unsupported-helper fallback).
-Lowering/runtime support remains
-incomplete; current IR lowering routes `count(...)` on `soa_vector` through the native count path for SoA bindings,
-and empty `soa_vector<T>()` literals lower to header-only storage, while still emitting deterministic unsupported
-diagnostics for non-empty literals and draft helper paths (`native backend does not support non-empty soa_vector literals`,
+element-field envelopes in literal, binding, and return validation paths). Builtin `count`/`get`/`ref` validation and
+current lowering behavior are temporary scaffolding while the language grows the generic SoA substrate needed for a
+real stdlib-owned implementation. Method-form/call-form field-view names now emit
+`soa_vector field views are not implemented yet: <field>` unless a user-defined `/soa_vector/<field>` helper exists,
+and current IR lowering routes `count(...)` on `soa_vector` through the native count path for current SoA bindings
+while empty `soa_vector<T>()` literals lower to header-only storage. Non-empty literals and draft helper paths still
+emit deterministic unsupported diagnostics (`native backend does not support non-empty soa_vector literals`,
 `native backend does not support soa_vector get`, `native backend does not support soa_vector ref`,
 `native backend does not support to_soa`, `native backend does not support to_aos`,
 `native backend does not support soa_vector helper: push`, `native backend does not support soa_vector helper: reserve`).
+These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
+stdlib `.prime` implementation replace them.
 Draft example source: `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA runtime support lands).
 
 ### 8.5 Matrix and Quaternion Types (Draft)
