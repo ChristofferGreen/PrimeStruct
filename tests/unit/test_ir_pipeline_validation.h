@@ -39325,6 +39325,98 @@ TEST_CASE("ir lowerer statement call helper emits buffer_store") {
   CHECK(instructions[15].op == primec::IrOpcode::Pop);
 }
 
+TEST_CASE("ir lowerer statement call helper emits buffer_store for variadic Buffer receivers") {
+  using EmitResult = primec::ir_lowerer::BufferStoreStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  auto makeIndexExpr = [](int64_t value) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Literal;
+    expr.intWidth = 32;
+    expr.literalValue = value;
+    return expr;
+  };
+
+  const primec::Expr indexExpr = makeIndexExpr(0);
+  const primec::Expr valueExpr = makeIndexExpr(77);
+
+  auto makePackAccess = [&](const std::string &packName) {
+    primec::Expr packExpr;
+    packExpr.kind = primec::Expr::Kind::Name;
+    packExpr.name = packName;
+
+    primec::Expr accessExpr;
+    accessExpr.kind = primec::Expr::Kind::Call;
+    accessExpr.name = "at";
+    accessExpr.args = {packExpr, indexExpr};
+    return accessExpr;
+  };
+
+  auto makeDereference = [&](primec::Expr targetExpr) {
+    primec::Expr derefExpr;
+    derefExpr.kind = primec::Expr::Kind::Call;
+    derefExpr.name = "dereference";
+    derefExpr.args = {std::move(targetExpr)};
+    return derefExpr;
+  };
+
+  auto makeBufferStoreStmt = [&](primec::Expr bufferExpr) {
+    primec::Expr stmt;
+    stmt.kind = primec::Expr::Kind::Call;
+    stmt.name = "buffer_store";
+    stmt.args = {std::move(bufferExpr), indexExpr, valueExpr};
+    return stmt;
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+
+  primec::ir_lowerer::LocalInfo valuePackInfo;
+  valuePackInfo.isArgsPack = true;
+  valuePackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Buffer;
+  valuePackInfo.valueKind = ValueKind::Int32;
+  locals.emplace("buffers", valuePackInfo);
+
+  primec::ir_lowerer::LocalInfo borrowedPackInfo;
+  borrowedPackInfo.isArgsPack = true;
+  borrowedPackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  borrowedPackInfo.referenceToBuffer = true;
+  borrowedPackInfo.valueKind = ValueKind::Int32;
+  locals.emplace("bufferRefs", borrowedPackInfo);
+
+  primec::ir_lowerer::LocalInfo pointerPackInfo;
+  pointerPackInfo.isArgsPack = true;
+  pointerPackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerPackInfo.pointerToBuffer = true;
+  pointerPackInfo.valueKind = ValueKind::Int32;
+  locals.emplace("bufferPtrs", pointerPackInfo);
+
+  auto runStore = [&](const primec::Expr &stmtExpr) {
+    std::vector<primec::IrInstruction> instructions;
+    int nextLocal = 20;
+    std::string error;
+    const auto result = primec::ir_lowerer::tryEmitBufferStoreStatement(
+        stmtExpr,
+        locals,
+        [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+        [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          instructions.push_back({primec::IrOpcode::PushI32, 0});
+          return true;
+        },
+        [&]() { return nextLocal++; },
+        instructions,
+        error);
+    CHECK(result == EmitResult::Emitted);
+    CHECK(error.empty());
+    REQUIRE(instructions.size() == 16);
+    CHECK(instructions[14].op == primec::IrOpcode::StoreIndirect);
+    CHECK(instructions[15].op == primec::IrOpcode::Pop);
+  };
+
+  runStore(makeBufferStoreStmt(makePackAccess("buffers")));
+  runStore(makeBufferStoreStmt(makeDereference(makePackAccess("bufferRefs"))));
+  runStore(makeBufferStoreStmt(makeDereference(makePackAccess("bufferPtrs"))));
+}
+
 TEST_CASE("ir lowerer statement call helper validates buffer_store diagnostics") {
   using EmitResult = primec::ir_lowerer::BufferStoreStatementEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;

@@ -413,10 +413,11 @@ Bottom-level form therefore has:
   `Result.why(...)` access across those same forwarding modes, `File<Mode>` packs preserve indexed downstream
   file-handle method access, `Reference<File<Mode>>` packs preserve indexed downstream `dereference(...).write*` /
   `flush()` access, `Pointer<File<Mode>>` packs preserve indexed downstream `dereference(...).write*` / `flush()`
-  access, `Buffer<T>` packs preserve indexed downstream `buffer_load(...)` on the IR/VM GPU path,
-  `Reference<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` on that same IR/VM
-  GPU path, `Pointer<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` on that same
-  IR/VM GPU path, and `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`,
+  access, `Buffer<T>` packs preserve indexed downstream `buffer_load(...)` and `buffer_store(...)` on the IR/VM GPU
+  path, `Reference<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` and
+  `buffer_store(dereference(...), ...)` on that same IR/VM GPU path, `Pointer<Buffer<T>>` packs preserve indexed
+  downstream `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU
+  path, and `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`,
   empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`, `Reference<map<K, V>>`, plus `Pointer<map<K, V>>`
   packs preserve indexed downstream `count()` resolution across those
   same forwarding modes, while `Pointer<map<K, V>>` packs also preserve indexed downstream `contains()` / `at()` /

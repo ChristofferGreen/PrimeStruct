@@ -7,6 +7,7 @@
 #include "IrLowererLowerEffects.h"
 #include "IrLowererSetupTypeHelpers.h"
 
+#include <optional>
 #include <utility>
 
 namespace primec::ir_lowerer {
@@ -59,6 +60,57 @@ static bool isSoaVectorTargetExpr(const Expr &expr, const LocalMap &localsIn) {
     return getBuiltinCollectionName(expr, collection) && collection == "soa_vector";
   }
   return false;
+}
+
+static std::optional<LocalInfo::ValueKind> resolveBufferTargetElementKind(
+    const Expr &bufferExpr,
+    const LocalMap &localsIn) {
+  if (bufferExpr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(bufferExpr.name);
+    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Buffer) {
+      return it->second.valueKind;
+    }
+  }
+
+  if (bufferExpr.kind == Expr::Kind::Call && isSimpleCallName(bufferExpr, "buffer") &&
+      bufferExpr.templateArgs.size() == 1) {
+    return valueKindFromTypeName(bufferExpr.templateArgs.front());
+  }
+
+  if (bufferExpr.kind == Expr::Kind::Call && isSimpleCallName(bufferExpr, "dereference") &&
+      bufferExpr.args.size() == 1) {
+    const Expr &targetExpr = bufferExpr.args.front();
+    if (targetExpr.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(targetExpr.name);
+      if (it != localsIn.end() &&
+          ((it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) ||
+           (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToBuffer))) {
+        return it->second.valueKind;
+      }
+    }
+
+    std::string derefAccessName;
+    if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, derefAccessName) &&
+        targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
+      auto it = localsIn.find(targetExpr.args.front().name);
+      if (it != localsIn.end() && it->second.isArgsPack &&
+          ((it->second.argsPackElementKind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) ||
+           (it->second.argsPackElementKind == LocalInfo::Kind::Pointer && it->second.pointerToBuffer))) {
+        return it->second.valueKind;
+      }
+    }
+  }
+
+  std::string accessName;
+  if (bufferExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(bufferExpr, accessName) &&
+      bufferExpr.args.size() == 2 && bufferExpr.args.front().kind == Expr::Kind::Name) {
+    auto it = localsIn.find(bufferExpr.args.front().name);
+    if (it != localsIn.end() && it->second.isArgsPack && it->second.argsPackElementKind == LocalInfo::Kind::Buffer) {
+      return it->second.valueKind;
+    }
+  }
+
+  return std::nullopt;
 }
 
 static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
@@ -169,14 +221,8 @@ BufferStoreStatementEmitResult tryEmitBufferStoreStatement(
   }
 
   LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
-  if (stmt.args[0].kind == Expr::Kind::Name) {
-    auto it = localsIn.find(stmt.args[0].name);
-    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Buffer) {
-      elemKind = it->second.valueKind;
-    }
-  } else if (stmt.args[0].kind == Expr::Kind::Call && isSimpleCallName(stmt.args[0], "buffer") &&
-             stmt.args[0].templateArgs.size() == 1) {
-    elemKind = valueKindFromTypeName(stmt.args[0].templateArgs.front());
+  if (const auto resolvedKind = resolveBufferTargetElementKind(stmt.args[0], localsIn); resolvedKind.has_value()) {
+    elemKind = *resolvedKind;
   }
   if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
     error = "buffer_store requires numeric/bool buffer";

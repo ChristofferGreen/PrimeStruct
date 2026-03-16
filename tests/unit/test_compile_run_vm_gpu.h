@@ -34,7 +34,7 @@ main() {
 TEST_CASE("runs vm with gpu dispatch fallback and variadic Buffer packs") {
   const std::string source = R"(
 [compute workgroup_size(1, 1, 1)]
-/score_direct([Buffer<i32>] output, [args<Buffer<i32>>] values) {
+/score_direct([args<Buffer<i32>>] values) {
   [i32] x{ /std/gpu/global_id_x() }
   if (x >= 1i32) {
     return()
@@ -43,17 +43,17 @@ TEST_CASE("runs vm with gpu dispatch fallback and variadic Buffer packs") {
     plus(/std/gpu/buffer_load(values[0i32], 0i32),
          /std/gpu/buffer_load(values[minus(count(values), 1i32)], 0i32))
   }
-  /std/gpu/buffer_store(output, 0i32, total)
+  /std/gpu/buffer_store(values[0i32], 0i32, total)
 }
 
 [compute workgroup_size(1, 1, 1)]
-/forward([Buffer<i32>] output, [args<Buffer<i32>>] values) {
-  /score_direct(output, [spread] values)
+/forward([args<Buffer<i32>>] values) {
+  /score_direct([spread] values)
 }
 
 [compute workgroup_size(1, 1, 1)]
-/forward_mixed([Buffer<i32>] output, [Buffer<i32>] extra, [args<Buffer<i32>>] values) {
-  /score_direct(output, extra, [spread] values)
+/forward_mixed([Buffer<i32>] extra, [args<Buffer<i32>>] values) {
+  /score_direct(extra, [spread] values)
 }
 
 [effects(gpu_dispatch) return<int>]
@@ -79,29 +79,25 @@ main() {
   [Buffer<i32>] f1{ /std/gpu/upload(e1) }
   [Buffer<i32>] extra{ /std/gpu/upload(extra_values) }
 
-  [Buffer<i32>] out0{ /std/gpu/buffer<i32>(1i32) }
-  [Buffer<i32>] out1{ /std/gpu/buffer<i32>(1i32) }
-  [Buffer<i32>] out2{ /std/gpu/buffer<i32>(1i32) }
+  /std/gpu/dispatch(/score_direct, 1i32, 1i32, 1i32, b0, b1, b2)
+  /std/gpu/dispatch(/forward, 1i32, 1i32, 1i32, d0, d1, d2)
+  /std/gpu/dispatch(/forward_mixed, 1i32, 1i32, 1i32, extra, f0, f1)
 
-  /std/gpu/dispatch(/score_direct, 1i32, 1i32, 1i32, out0, b0, b1, b2)
-  /std/gpu/dispatch(/forward, 1i32, 1i32, 1i32, out1, d0, d1, d2)
-  /std/gpu/dispatch(/forward_mixed, 1i32, 1i32, 1i32, out2, extra, f0, f1)
-
-  [array<i32>] r0{ /std/gpu/readback(out0) }
-  [array<i32>] r1{ /std/gpu/readback(out1) }
-  [array<i32>] r2{ /std/gpu/readback(out2) }
+  [array<i32>] r0{ /std/gpu/readback(b0) }
+  [array<i32>] r1{ /std/gpu/readback(d0) }
+  [array<i32>] r2{ /std/gpu/readback(extra) }
   return(plus(r0[0i32], plus(r1[0i32], r2[0i32])))
 }
 )";
   const std::string srcPath = writeTemp("vm_gpu_variadic_buffer_args.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 27);
+  CHECK(runCommand(runCmd) == 29);
 }
 
 TEST_CASE("runs vm with gpu dispatch fallback and borrowed variadic Buffer packs") {
   const std::string source = R"(
 [compute workgroup_size(1, 1, 1)]
-/score_direct([Buffer<i32>] output, [args<Reference<Buffer<i32>>>] values) {
+/score_direct([args<Reference<Buffer<i32>>>] values) {
   [i32] x{ /std/gpu/global_id_x() }
   if (x >= 1i32) {
     return()
@@ -110,17 +106,17 @@ TEST_CASE("runs vm with gpu dispatch fallback and borrowed variadic Buffer packs
     plus(/std/gpu/buffer_load(dereference(values[0i32]), 0i32),
          /std/gpu/buffer_load(dereference(values[minus(count(values), 1i32)]), 0i32))
   }
-  /std/gpu/buffer_store(output, 0i32, total)
+  /std/gpu/buffer_store(dereference(values[0i32]), 0i32, total)
 }
 
 [compute workgroup_size(1, 1, 1)]
-/forward([Buffer<i32>] output, [args<Reference<Buffer<i32>>>] values) {
-  /score_direct(output, [spread] values)
+/forward([args<Reference<Buffer<i32>>>] values) {
+  /score_direct([spread] values)
 }
 
 [compute workgroup_size(1, 1, 1)]
-/forward_mixed([Buffer<i32>] output, [Reference<Buffer<i32>>] extra, [args<Reference<Buffer<i32>>>] values) {
-  /score_direct(output, extra, [spread] values)
+/forward_mixed([Reference<Buffer<i32>>] extra, [args<Reference<Buffer<i32>>>] values) {
+  /score_direct(extra, [spread] values)
 }
 
 [effects(gpu_dispatch) return<int>]
@@ -155,29 +151,25 @@ main() {
   [Reference<Buffer<i32>>] t1{location(f1)}
   [Reference<Buffer<i32>>] extra_ref{location(extra)}
 
-  [Buffer<i32>] out0{ /std/gpu/buffer<i32>(1i32) }
-  [Buffer<i32>] out1{ /std/gpu/buffer<i32>(1i32) }
-  [Buffer<i32>] out2{ /std/gpu/buffer<i32>(1i32) }
+  /std/gpu/dispatch(/score_direct, 1i32, 1i32, 1i32, r0, r1, r2)
+  /std/gpu/dispatch(/forward, 1i32, 1i32, 1i32, s0, s1, s2)
+  /std/gpu/dispatch(/forward_mixed, 1i32, 1i32, 1i32, extra_ref, t0, t1)
 
-  /std/gpu/dispatch(/score_direct, 1i32, 1i32, 1i32, out0, r0, r1, r2)
-  /std/gpu/dispatch(/forward, 1i32, 1i32, 1i32, out1, s0, s1, s2)
-  /std/gpu/dispatch(/forward_mixed, 1i32, 1i32, 1i32, out2, extra_ref, t0, t1)
-
-  [array<i32>] r0_out{ /std/gpu/readback(out0) }
-  [array<i32>] r1_out{ /std/gpu/readback(out1) }
-  [array<i32>] r2_out{ /std/gpu/readback(out2) }
+  [array<i32>] r0_out{ /std/gpu/readback(b0) }
+  [array<i32>] r1_out{ /std/gpu/readback(d0) }
+  [array<i32>] r2_out{ /std/gpu/readback(extra) }
   return(plus(r0_out[0i32], plus(r1_out[0i32], r2_out[0i32])))
 }
 )";
   const std::string srcPath = writeTemp("vm_gpu_variadic_borrowed_buffer_args.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 27);
+  CHECK(runCommand(runCmd) == 29);
 }
 
 TEST_CASE("runs vm with gpu dispatch fallback and pointer variadic Buffer packs") {
   const std::string source = R"(
 [compute workgroup_size(1, 1, 1)]
-/score_direct([Buffer<i32>] output, [args<Pointer<Buffer<i32>>>] values) {
+/score_direct([args<Pointer<Buffer<i32>>>] values) {
   [i32] x{ /std/gpu/global_id_x() }
   if (x >= 1i32) {
     return()
@@ -186,17 +178,17 @@ TEST_CASE("runs vm with gpu dispatch fallback and pointer variadic Buffer packs"
     plus(/std/gpu/buffer_load(dereference(values[0i32]), 0i32),
          /std/gpu/buffer_load(dereference(values[minus(count(values), 1i32)]), 0i32))
   }
-  /std/gpu/buffer_store(output, 0i32, total)
+  /std/gpu/buffer_store(dereference(values[0i32]), 0i32, total)
 }
 
 [compute workgroup_size(1, 1, 1)]
-/forward([Buffer<i32>] output, [args<Pointer<Buffer<i32>>>] values) {
-  /score_direct(output, [spread] values)
+/forward([args<Pointer<Buffer<i32>>>] values) {
+  /score_direct([spread] values)
 }
 
 [compute workgroup_size(1, 1, 1)]
-/forward_mixed([Buffer<i32>] output, [Pointer<Buffer<i32>>] extra, [args<Pointer<Buffer<i32>>>] values) {
-  /score_direct(output, extra, [spread] values)
+/forward_mixed([Pointer<Buffer<i32>>] extra, [args<Pointer<Buffer<i32>>>] values) {
+  /score_direct(extra, [spread] values)
 }
 
 [effects(gpu_dispatch) return<int>]
@@ -231,23 +223,19 @@ main() {
   [Pointer<Buffer<i32>>] m1{location(f1)}
   [Pointer<Buffer<i32>>] extra_ptr{location(extra)}
 
-  [Buffer<i32>] out0{ /std/gpu/buffer<i32>(1i32) }
-  [Buffer<i32>] out1{ /std/gpu/buffer<i32>(1i32) }
-  [Buffer<i32>] out2{ /std/gpu/buffer<i32>(1i32) }
+  /std/gpu/dispatch(/score_direct, 1i32, 1i32, 1i32, p0, p1, p2)
+  /std/gpu/dispatch(/forward, 1i32, 1i32, 1i32, q0, q1, q2)
+  /std/gpu/dispatch(/forward_mixed, 1i32, 1i32, 1i32, extra_ptr, m0, m1)
 
-  /std/gpu/dispatch(/score_direct, 1i32, 1i32, 1i32, out0, p0, p1, p2)
-  /std/gpu/dispatch(/forward, 1i32, 1i32, 1i32, out1, q0, q1, q2)
-  /std/gpu/dispatch(/forward_mixed, 1i32, 1i32, 1i32, out2, extra_ptr, m0, m1)
-
-  [array<i32>] r0_out{ /std/gpu/readback(out0) }
-  [array<i32>] r1_out{ /std/gpu/readback(out1) }
-  [array<i32>] r2_out{ /std/gpu/readback(out2) }
+  [array<i32>] r0_out{ /std/gpu/readback(b0) }
+  [array<i32>] r1_out{ /std/gpu/readback(d0) }
+  [array<i32>] r2_out{ /std/gpu/readback(extra) }
   return(plus(r0_out[0i32], plus(r1_out[0i32], r2_out[0i32])))
 }
 )";
   const std::string srcPath = writeTemp("vm_gpu_variadic_pointer_buffer_args.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 27);
+  CHECK(runCommand(runCmd) == 29);
 }
 
 TEST_SUITE_END();
