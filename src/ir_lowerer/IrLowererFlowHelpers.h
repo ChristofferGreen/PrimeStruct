@@ -192,7 +192,7 @@ struct BufferLoadInfo {
 };
 bool resolveBufferLoadInfo(
     const Expr &expr,
-    const std::function<std::optional<LocalInfo::ValueKind>(const std::string &)> &resolveNamedBufferElemKind,
+    const std::function<std::optional<LocalInfo::ValueKind>(const Expr &)> &resolveBufferElemKind,
     const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
     const std::function<LocalInfo::ValueKind(const Expr &)> &inferExprKind,
     BufferLoadInfo &out,

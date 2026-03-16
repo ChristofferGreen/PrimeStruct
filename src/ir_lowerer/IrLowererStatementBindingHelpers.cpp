@@ -73,6 +73,11 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     infoOut.valueKind = LocalInfo::ValueKind::Int64;
     return;
   }
+  if (base == "Buffer") {
+    infoOut.argsPackElementKind = LocalInfo::Kind::Buffer;
+    infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+    return;
+  }
   if (base == "array") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Array;
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));

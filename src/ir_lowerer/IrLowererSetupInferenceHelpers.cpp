@@ -130,6 +130,15 @@ LocalInfo::ValueKind inferBufferElementValueKind(
     return LocalInfo::ValueKind::Unknown;
   }
   if (expr.kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 &&
+        expr.args.front().kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.args.front().name);
+      if (it != localsIn.end() && it->second.isArgsPack &&
+          it->second.argsPackElementKind == LocalInfo::Kind::Buffer) {
+        return it->second.valueKind;
+      }
+    }
     if (isSimpleCallName(expr, "buffer") && expr.templateArgs.size() == 1) {
       return valueKindFromTypeName(expr.templateArgs.front());
     }

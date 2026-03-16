@@ -1298,7 +1298,7 @@ bool resolveBufferInitInfo(const Expr &expr,
 
 bool resolveBufferLoadInfo(
     const Expr &expr,
-    const std::function<std::optional<LocalInfo::ValueKind>(const std::string &)> &resolveNamedBufferElemKind,
+    const std::function<std::optional<LocalInfo::ValueKind>(const Expr &)> &resolveBufferElemKind,
     const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
     const std::function<LocalInfo::ValueKind(const Expr &)> &inferExprKind,
     BufferLoadInfo &out,
@@ -1309,11 +1309,9 @@ bool resolveBufferLoadInfo(
   }
 
   LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
-  if (expr.args[0].kind == Expr::Kind::Name) {
-    const std::optional<LocalInfo::ValueKind> localKind = resolveNamedBufferElemKind(expr.args[0].name);
-    if (localKind.has_value()) {
-      elemKind = *localKind;
-    }
+  const std::optional<LocalInfo::ValueKind> localKind = resolveBufferElemKind(expr.args[0]);
+  if (localKind.has_value()) {
+    elemKind = *localKind;
   } else if (expr.args[0].kind == Expr::Kind::Call) {
     if (isSimpleCallName(expr.args[0], "buffer") && expr.args[0].templateArgs.size() == 1) {
       elemKind = resolveValueKind(expr.args[0].templateArgs.front());
@@ -1395,12 +1393,24 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
     BufferLoadInfo loadInfo;
     if (!resolveBufferLoadInfo(
             expr,
-            [&](const std::string &name) -> std::optional<LocalInfo::ValueKind> {
-              auto it = localsIn.find(name);
-              if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Buffer) {
-                return std::nullopt;
+            [&](const Expr &bufferExpr) -> std::optional<LocalInfo::ValueKind> {
+              if (bufferExpr.kind == Expr::Kind::Name) {
+                auto it = localsIn.find(bufferExpr.name);
+                if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Buffer) {
+                  return std::nullopt;
+                }
+                return it->second.valueKind;
               }
-              return it->second.valueKind;
+              std::string accessName;
+              if (bufferExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(bufferExpr, accessName) &&
+                  bufferExpr.args.size() == 2 && bufferExpr.args.front().kind == Expr::Kind::Name) {
+                auto it = localsIn.find(bufferExpr.args.front().name);
+                if (it != localsIn.end() && it->second.isArgsPack &&
+                    it->second.argsPackElementKind == LocalInfo::Kind::Buffer) {
+                  return it->second.valueKind;
+                }
+              }
+              return std::nullopt;
             },
             resolveValueKind,
             [&](const Expr &indexExpr) { return inferExprKind(indexExpr, localsIn); },
