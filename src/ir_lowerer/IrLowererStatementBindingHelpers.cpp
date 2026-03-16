@@ -75,6 +75,20 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
   }
   if (base == "Pointer") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Pointer;
+    bool pointerResultHasValue = false;
+    LocalInfo::ValueKind pointerResultValueKind = LocalInfo::ValueKind::Unknown;
+    std::string pointerResultErrorType;
+    if (parseResultTypeName(trimTemplateTypeText(arg),
+                            pointerResultHasValue,
+                            pointerResultValueKind,
+                            pointerResultErrorType)) {
+      infoOut.isResult = true;
+      infoOut.resultHasValue = pointerResultHasValue;
+      infoOut.resultValueKind = pointerResultValueKind;
+      infoOut.resultErrorType = pointerResultErrorType;
+      infoOut.valueKind = pointerResultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+      return;
+    }
     const LocalInfo::ValueKind pointerValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
     if (pointerValueKind != LocalInfo::ValueKind::Unknown) {
       infoOut.valueKind = pointerValueKind;
@@ -435,7 +449,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
       if (!transform.templateArgs.empty()) {
         infoOut.resultErrorType = transform.templateArgs.back();
       }
-    } else if (transform.name == "Reference" && transform.templateArgs.size() == 1) {
+    } else if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
       bool resultHasValue = false;
       LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
       std::string resultErrorType;

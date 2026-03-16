@@ -162,7 +162,7 @@
           if (!transform.templateArgs.empty()) {
             info.resultErrorType = transform.templateArgs.back();
           }
-        } else if (transform.name == "Reference" && transform.templateArgs.size() == 1) {
+        } else if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
           bool resultHasValue = false;
           LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
           std::string resultErrorType;

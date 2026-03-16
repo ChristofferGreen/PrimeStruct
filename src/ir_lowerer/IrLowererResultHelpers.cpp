@@ -133,7 +133,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       const LocalResultInfo local = lookupLocal(targetExpr.args.front().name);
       auto localIt = localsIn.find(targetExpr.args.front().name);
       if (local.found && local.isResult && localIt != localsIn.end() && localIt->second.isArgsPack &&
-          localIt->second.argsPackElementKind == LocalInfo::Kind::Reference) {
+          (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+           localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
         out.isResult = true;
         out.hasValue = local.resultHasValue;
         out.valueKind = local.resultValueKind;
