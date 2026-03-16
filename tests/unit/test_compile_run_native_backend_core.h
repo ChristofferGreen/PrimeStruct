@@ -1286,6 +1286,61 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("native materializes variadic borrowed map packs with indexed dereference count methods") {
+  const std::string source = R"(
+[return<int>]
+score_refs([args<Reference</std/collections/map<i32, i32>>>] values) {
+  return(plus(dereference(at(values, 0i32)).count(),
+              dereference(at(values, 2i32)).count()))
+}
+
+[return<int>]
+forward([args<Reference</std/collections/map<i32, i32>>>] values) {
+  return(score_refs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Reference</std/collections/map<i32, i32>>>] values) {
+  [/std/collections/map<i32, i32>] extra{map<i32, i32>(1i32, 2i32)}
+  [Reference</std/collections/map<i32, i32>>] extra_ref{location(extra)}
+  return(score_refs(extra_ref, [spread] values))
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<i32, i32>] a0{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
+  [/std/collections/map<i32, i32>] a1{map<i32, i32>(5i32, 6i32)}
+  [/std/collections/map<i32, i32>] a2{map<i32, i32>(7i32, 8i32, 9i32, 10i32, 11i32, 12i32)}
+  [Reference</std/collections/map<i32, i32>>] r0{location(a0)}
+  [Reference</std/collections/map<i32, i32>>] r1{location(a1)}
+  [Reference</std/collections/map<i32, i32>>] r2{location(a2)}
+
+  [/std/collections/map<i32, i32>] b0{map<i32, i32>(13i32, 14i32)}
+  [/std/collections/map<i32, i32>] b1{map<i32, i32>(15i32, 16i32, 17i32, 18i32)}
+  [/std/collections/map<i32, i32>] b2{map<i32, i32>(19i32, 20i32)}
+  [Reference</std/collections/map<i32, i32>>] s0{location(b0)}
+  [Reference</std/collections/map<i32, i32>>] s1{location(b1)}
+  [Reference</std/collections/map<i32, i32>>] s2{location(b2)}
+
+  [/std/collections/map<i32, i32>] c0{map<i32, i32>(21i32, 22i32, 23i32, 24i32)}
+  [/std/collections/map<i32, i32>] c1{map<i32, i32>(25i32, 26i32, 27i32, 28i32, 29i32, 30i32)}
+  [Reference</std/collections/map<i32, i32>>] t0{location(c0)}
+  [Reference</std/collections/map<i32, i32>>] t1{location(c1)}
+
+  return(plus(score_refs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_map_deref_count.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_borrowed_map_deref_count").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("native materializes variadic borrowed map packs with indexed dereference lookup helpers") {
   const std::string source = R"(
 [return<int>]
@@ -1449,6 +1504,61 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_map.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_variadic_args_pointer_map").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
+TEST_CASE("native materializes variadic pointer map packs with indexed dereference count methods") {
+  const std::string source = R"(
+[return<int>]
+score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
+  return(plus(dereference(at(values, 0i32)).count(),
+              dereference(at(values, 2i32)).count()))
+}
+
+[return<int>]
+forward([args<Pointer</std/collections/map<i32, i32>>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer</std/collections/map<i32, i32>>>] values) {
+  [/std/collections/map<i32, i32>] extra{map<i32, i32>(1i32, 2i32)}
+  [Pointer</std/collections/map<i32, i32>>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<i32, i32>] a0{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
+  [/std/collections/map<i32, i32>] a1{map<i32, i32>(5i32, 6i32)}
+  [/std/collections/map<i32, i32>] a2{map<i32, i32>(7i32, 8i32, 9i32, 10i32, 11i32, 12i32)}
+  [Pointer</std/collections/map<i32, i32>>] r0{location(a0)}
+  [Pointer</std/collections/map<i32, i32>>] r1{location(a1)}
+  [Pointer</std/collections/map<i32, i32>>] r2{location(a2)}
+
+  [/std/collections/map<i32, i32>] b0{map<i32, i32>(13i32, 14i32)}
+  [/std/collections/map<i32, i32>] b1{map<i32, i32>(15i32, 16i32, 17i32, 18i32)}
+  [/std/collections/map<i32, i32>] b2{map<i32, i32>(19i32, 20i32)}
+  [Pointer</std/collections/map<i32, i32>>] s0{location(b0)}
+  [Pointer</std/collections/map<i32, i32>>] s1{location(b1)}
+  [Pointer</std/collections/map<i32, i32>>] s2{location(b2)}
+
+  [/std/collections/map<i32, i32>] c0{map<i32, i32>(21i32, 22i32, 23i32, 24i32)}
+  [/std/collections/map<i32, i32>] c1{map<i32, i32>(25i32, 26i32, 27i32, 28i32, 29i32, 30i32)}
+  [Pointer</std/collections/map<i32, i32>>] t0{location(c0)}
+  [Pointer</std/collections/map<i32, i32>>] t1{location(c1)}
+
+  return(plus(score_ptrs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_map_deref_count.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_pointer_map_deref_count").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

@@ -33413,6 +33413,56 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   countEntry.args = {vectorCall};
   countEntry.name = "/std/collections/vector/count";
   CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
+
+  primec::ir_lowerer::LocalInfo mapRefArgs;
+  mapRefArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  mapRefArgs.isArgsPack = true;
+  mapRefArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  mapRefArgs.referenceToMap = true;
+  mapRefArgs.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapRefArgs.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("mapRefs", mapRefArgs);
+
+  primec::Expr mapRefsName;
+  mapRefsName.kind = primec::Expr::Kind::Name;
+  mapRefsName.name = "mapRefs";
+  primec::Expr zeroIndex;
+  zeroIndex.kind = primec::Expr::Kind::Literal;
+  zeroIndex.literalValue = 0;
+  primec::Expr mapRefAccess;
+  mapRefAccess.kind = primec::Expr::Kind::Call;
+  mapRefAccess.name = "at";
+  mapRefAccess.args = {mapRefsName, zeroIndex};
+  primec::Expr mapRefDeref;
+  mapRefDeref.kind = primec::Expr::Kind::Call;
+  mapRefDeref.name = "dereference";
+  mapRefDeref.args = {mapRefAccess};
+  countEntry.name = "count";
+  countEntry.args = {mapRefDeref};
+  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
+
+  primec::ir_lowerer::LocalInfo mapPtrArgs;
+  mapPtrArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  mapPtrArgs.isArgsPack = true;
+  mapPtrArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  mapPtrArgs.pointerToMap = true;
+  mapPtrArgs.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapPtrArgs.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("mapPtrs", mapPtrArgs);
+
+  primec::Expr mapPtrsName;
+  mapPtrsName.kind = primec::Expr::Kind::Name;
+  mapPtrsName.name = "mapPtrs";
+  primec::Expr mapPtrAccess;
+  mapPtrAccess.kind = primec::Expr::Kind::Call;
+  mapPtrAccess.name = "at";
+  mapPtrAccess.args = {mapPtrsName, zeroIndex};
+  primec::Expr mapPtrDeref;
+  mapPtrDeref.kind = primec::Expr::Kind::Call;
+  mapPtrDeref.name = "dereference";
+  mapPtrDeref.args = {mapPtrAccess};
+  countEntry.args = {mapPtrDeref};
+  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
 }
 
 TEST_CASE("ir lowerer count access helpers build bundled entry count setup") {

@@ -56,6 +56,47 @@ bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
   return false;
 }
 
+bool isDereferencedCollectionCountTarget(const Expr &countExpr, const Expr &target, const LocalMap &localsIn) {
+  if (!(target.kind == Expr::Kind::Call && isSimpleCallName(target, "dereference") && target.args.size() == 1)) {
+    return false;
+  }
+
+  auto isSupportedDereferenceTarget = [&](const LocalInfo &info, bool fromArgsPack) {
+    const LocalInfo::Kind kind = fromArgsPack ? info.argsPackElementKind : info.kind;
+    const bool isArrayTarget =
+        (kind == LocalInfo::Kind::Reference && info.referenceToArray) ||
+        (kind == LocalInfo::Kind::Pointer && info.pointerToArray);
+    const bool isVectorTarget =
+        (kind == LocalInfo::Kind::Reference && info.referenceToVector) ||
+        (kind == LocalInfo::Kind::Pointer && info.pointerToVector);
+    const bool isMapTarget =
+        (kind == LocalInfo::Kind::Reference && info.referenceToMap) ||
+        (kind == LocalInfo::Kind::Pointer && info.pointerToMap);
+    if (!isArrayTarget && !isVectorTarget && !isMapTarget) {
+      return false;
+    }
+    if (isVectorTarget && info.isSoaVector && isExplicitVectorCompatibilityName(countExpr, "count")) {
+      return false;
+    }
+    return true;
+  };
+
+  const Expr &derefTarget = target.args.front();
+  if (derefTarget.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(derefTarget.name);
+    return it != localsIn.end() && isSupportedDereferenceTarget(it->second, false);
+  }
+
+  std::string accessName;
+  if (derefTarget.kind == Expr::Kind::Call && getBuiltinArrayAccessName(derefTarget, accessName) &&
+      derefTarget.args.size() == 2 && derefTarget.args.front().kind == Expr::Kind::Name) {
+    auto it = localsIn.find(derefTarget.args.front().name);
+    return it != localsIn.end() && it->second.isArgsPack && isSupportedDereferenceTarget(it->second, true);
+  }
+
+  return false;
+}
+
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -215,6 +256,9 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     return false;
   }
   if (isEntryArgsName(target, localsIn, hasEntryArgs, entryArgsName)) {
+    return true;
+  }
+  if (isDereferencedCollectionCountTarget(expr, target, localsIn)) {
     return true;
   }
   if (target.kind == Expr::Kind::Name) {
