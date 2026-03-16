@@ -1853,6 +1853,44 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     return false;
   }
   if (receiverExpr.kind == Expr::Kind::Call) {
+    auto resolveDereferencedMapOrFileErrorReceiver = [&](const Expr &targetExpr) {
+      auto classifyLocal = [&](const LocalInfo &localInfo, bool fromArgsPack) -> bool {
+        const LocalInfo::Kind receiverKind =
+            fromArgsPack ? localInfo.argsPackElementKind : localInfo.kind;
+        const bool isReferenceMap =
+            fromArgsPack ? (receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToMap)
+                         : (receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToMap);
+        const bool isPointerMap =
+            fromArgsPack ? (receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap)
+                         : (receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap);
+        if (localInfo.isFileError &&
+            (receiverKind == LocalInfo::Kind::Reference || receiverKind == LocalInfo::Kind::Pointer)) {
+          typeNameOut = "FileError";
+          return true;
+        }
+        if (isReferenceMap || isPointerMap) {
+          typeNameOut = "map";
+          return true;
+        }
+        return false;
+      };
+
+      if (targetExpr.kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(targetExpr.name);
+        return localIt != localsIn.end() && classifyLocal(localIt->second, false);
+      }
+
+      std::string derefAccessName;
+      if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, derefAccessName) &&
+          targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(targetExpr.args.front().name);
+        return localIt != localsIn.end() && localIt->second.isArgsPack &&
+               classifyLocal(localIt->second, true);
+      }
+
+      return false;
+    };
+
     std::string accessName;
     if (getBuiltinArrayAccessName(receiverExpr, accessName) && receiverExpr.args.size() == 2) {
       const Expr &accessReceiver = receiverExpr.args.front();
@@ -1915,15 +1953,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     }
     if (isSimpleCallName(receiverExpr, "dereference") && receiverExpr.args.size() == 1) {
       const Expr &targetExpr = receiverExpr.args.front();
-      if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, accessName) &&
-          targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
-        auto localIt = localsIn.find(targetExpr.args.front().name);
-        if (localIt != localsIn.end() && localIt->second.isArgsPack && localIt->second.isFileError &&
-            (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference ||
-             localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
-          typeNameOut = "FileError";
-          return true;
-        }
+      if (resolveDereferencedMapOrFileErrorReceiver(targetExpr)) {
+        return true;
       }
     }
     const LocalInfo::ValueKind inferredKind =

@@ -421,8 +421,9 @@ Bottom-level form therefore has:
   empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`, `Reference<map<K, V>>`, plus `Pointer<map<K, V>>`
   packs preserve indexed downstream `count()` resolution across those
   same forwarding modes, those same value, borrowed, and pointer map packs preserve indexed downstream
-  `tryAt(...)` payload-kind inference for `auto` bindings, and `Pointer<map<K, V>>` packs also preserve indexed downstream `contains()` / `at()` /
-  `at_unsafe()` lookup access. Scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream
+  `tryAt(...)` payload-kind inference for `auto` bindings, `Pointer<map<K, V>>` packs also preserve indexed downstream `contains()` / `at()` /
+  `at_unsafe()` lookup access, and borrowed/pointer map packs preserve that same lookup surface through explicit indexed `dereference(...)`
+  receiver wrappers. Scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream
   `dereference(...)` and struct `Pointer<T>` plus struct `Reference<T>` packs preserve indexed downstream
   field/helper access; other unsupported non-string element support remains a separate follow-up slice.
 

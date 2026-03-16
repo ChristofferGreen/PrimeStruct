@@ -20735,6 +20735,109 @@ TEST_CASE("ir lowerer setup type helper keeps explicit map tryAt receiver alias 
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed variadic map receivers") {
+  primec::Definition containsDef;
+  containsDef.fullPath = "/std/collections/map/contains";
+  primec::Definition atUnsafeDef;
+  atUnsafeDef.fullPath = "/std/collections/map/at_unsafe";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {containsDef.fullPath, &containsDef},
+      {atUnsafeDef.fullPath, &atUnsafeDef},
+  };
+
+  auto makeMethodCall = [](const std::string &packName,
+                           const std::string &methodName,
+                           int64_t keyValue) {
+    primec::Expr packNameExpr;
+    packNameExpr.kind = primec::Expr::Kind::Name;
+    packNameExpr.name = packName;
+
+    primec::Expr indexExpr;
+    indexExpr.kind = primec::Expr::Kind::Literal;
+    indexExpr.intWidth = 32;
+    indexExpr.literalValue = 0;
+
+    primec::Expr accessExpr;
+    accessExpr.kind = primec::Expr::Kind::Call;
+    accessExpr.name = "at";
+    accessExpr.args = {packNameExpr, indexExpr};
+
+    primec::Expr derefExpr;
+    derefExpr.kind = primec::Expr::Kind::Call;
+    derefExpr.name = "dereference";
+    derefExpr.args = {accessExpr};
+
+    primec::Expr keyExpr;
+    keyExpr.kind = primec::Expr::Kind::Literal;
+    keyExpr.intWidth = 32;
+    keyExpr.literalValue = keyValue;
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = {derefExpr, keyExpr};
+    return methodCall;
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+
+  primec::ir_lowerer::LocalInfo borrowedPackInfo;
+  borrowedPackInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  borrowedPackInfo.isArgsPack = true;
+  borrowedPackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  borrowedPackInfo.referenceToMap = true;
+  borrowedPackInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  borrowedPackInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("mapRefs", borrowedPackInfo);
+
+  primec::ir_lowerer::LocalInfo pointerPackInfo;
+  pointerPackInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  pointerPackInfo.isArgsPack = true;
+  pointerPackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerPackInfo.pointerToMap = true;
+  pointerPackInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  pointerPackInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("mapPtrs", pointerPackInfo);
+
+  auto resolveExprPath = [](const primec::Expr &expr) { return expr.name; };
+  auto isNever = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; };
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      makeMethodCall("mapRefs", "contains", 11),
+      locals,
+      isNever,
+      isNever,
+      isNever,
+      {},
+      {},
+      {},
+      resolveExprPath,
+      {},
+      defMap,
+      error);
+  CHECK(resolved == &containsDef);
+  CHECK(error.empty());
+
+  error.clear();
+  resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      makeMethodCall("mapPtrs", "at_unsafe", 11),
+      locals,
+      isNever,
+      isNever,
+      isNever,
+      {},
+      {},
+      {},
+      resolveExprPath,
+      {},
+      defMap,
+      error);
+  CHECK(resolved == &atUnsafeDef);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-method map access kinds") {
   using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
 
