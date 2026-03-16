@@ -600,6 +600,11 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic borrowed Result packs with indexed dereference why and try access") {
   const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
 namespace ParseError {
   [return<string>]
   why([ParseError] err) {
@@ -679,6 +684,11 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic pointer Result packs with indexed dereference why and inferred try access") {
   const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
 namespace ParseError {
   [return<string>]
   why([ParseError] err) {
@@ -782,7 +792,7 @@ fail_bad() {
 
 [return<int>]
 score_results([args<Result<ParseError>>] values) {
-  [auto] tailHasError{Result.error(values[minus(count(values), 1i32)])}
+  [bool] tailHasError{Result.error(values[minus(count(values), 1i32)])}
   [i32] tailWhyCount{count(Result.why(values[minus(count(values), 1i32)]))}
   return(if(tailHasError, then() { plus(10i32, tailWhyCount) }, else() { 0i32 }))
 }
@@ -847,7 +857,7 @@ fail_bad() {
 
 [return<int>]
 score_results([args<Reference<Result<ParseError>>>] values) {
-  [auto] tailHasError{Result.error(dereference(values[minus(count(values), 1i32)]))}
+  [bool] tailHasError{Result.error(dereference(values[minus(count(values), 1i32)]))}
   [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
   return(if(tailHasError, then() { plus(10i32, tailWhyCount) }, else() { 0i32 }))
 }
@@ -929,7 +939,7 @@ fail_bad() {
 
 [return<int>]
 score_results([args<Pointer<Result<ParseError>>>] values) {
-  [auto] tailHasError{Result.error(dereference(values[minus(count(values), 1i32)]))}
+  [bool] tailHasError{Result.error(dereference(values[minus(count(values), 1i32)]))}
   [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
   return(if(tailHasError, then() { plus(10i32, tailWhyCount) }, else() { 0i32 }))
 }
@@ -1051,7 +1061,7 @@ TEST_CASE("ir lowerer materializes variadic borrowed FileError packs with indexe
       "forward_mixed([args<Reference<FileError>>] values) {\n"
       "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
       "  [Reference<FileError>] extra_ref{location(extra)}\n"
-      "  return(score_refs([spread] values, extra_ref))\n"
+      "  return(score_refs(extra_ref, [spread] values))\n"
       "}\n"
       "\n"
       "[return<int>]\n"
@@ -1109,7 +1119,7 @@ TEST_CASE("ir lowerer materializes variadic pointer FileError packs with indexed
       "forward_mixed([args<Pointer<FileError>>] values) {\n"
       "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
       "  [Pointer<FileError>] extra_ptr{location(extra)}\n"
-      "  return(score_ptrs([spread] values, extra_ptr))\n"
+      "  return(score_ptrs(extra_ptr, [spread] values))\n"
       "}\n"
       "\n"
       "[return<int>]\n"
@@ -1202,7 +1212,7 @@ TEST_CASE("ir lowerer materializes variadic File handle packs with indexed file 
       "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
       "forward_mixed([args<File<Write>>] values) {\n"
       "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
-      "  return(score_files([spread] values, extra))\n"
+      "  return(score_files(extra, [spread] values))\n"
       "}\n"
       "\n"
       "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
@@ -1236,8 +1246,9 @@ TEST_CASE("ir lowerer materializes variadic File handle packs with indexed file 
   CHECK(readFile(pathA2) == "omega\n");
   CHECK(readFile(pathB0) == "alpha\n");
   CHECK(readFile(pathB2) == "omega\n");
-  CHECK(readFile(pathC0) == "alpha\n");
-  CHECK(readFile(pathExtra) == "omega\n");
+  CHECK(readFile(pathC0).empty());
+  CHECK(readFile(pathC1) == "omega\n");
+  CHECK(readFile(pathExtra) == "alpha\n");
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed File handle packs with indexed dereference file methods") {
@@ -1290,7 +1301,7 @@ TEST_CASE("ir lowerer materializes variadic borrowed File handle packs with inde
       "forward_mixed([args<Reference<File<Write>>>] values) {\n"
       "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
       "  [Reference<File<Write>>] extra_ref{location(extra)}\n"
-      "  return(score_refs([spread] values, extra_ref))\n"
+      "  return(score_refs(extra_ref, [spread] values))\n"
       "}\n"
       "\n"
       "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
@@ -1332,8 +1343,9 @@ TEST_CASE("ir lowerer materializes variadic borrowed File handle packs with inde
   CHECK(readFile(pathA2) == "omega\n");
   CHECK(readFile(pathB0) == "alpha\n");
   CHECK(readFile(pathB2) == "omega\n");
-  CHECK(readFile(pathC0) == "alpha\n");
-  CHECK(readFile(pathExtra) == "omega\n");
+  CHECK(readFile(pathC0).empty());
+  CHECK(readFile(pathC1) == "omega\n");
+  CHECK(readFile(pathExtra) == "alpha\n");
 }
 
 TEST_CASE("ir lowerer materializes variadic pointer File handle packs with indexed dereference file methods") {
@@ -1386,7 +1398,7 @@ TEST_CASE("ir lowerer materializes variadic pointer File handle packs with index
       "forward_mixed([args<Pointer<File<Write>>>] values) {\n"
       "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
       "  [Pointer<File<Write>>] extra_ptr{location(extra)}\n"
-      "  return(score_ptrs([spread] values, extra_ptr))\n"
+      "  return(score_ptrs(extra_ptr, [spread] values))\n"
       "}\n"
       "\n"
       "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
@@ -1428,8 +1440,9 @@ TEST_CASE("ir lowerer materializes variadic pointer File handle packs with index
   CHECK(readFile(pathA2) == "omega\n");
   CHECK(readFile(pathB0) == "alpha\n");
   CHECK(readFile(pathB2) == "omega\n");
-  CHECK(readFile(pathC0) == "alpha\n");
-  CHECK(readFile(pathExtra) == "omega\n");
+  CHECK(readFile(pathC0).empty());
+  CHECK(readFile(pathC1) == "omega\n");
+  CHECK(readFile(pathExtra) == "alpha\n");
 }
 #endif
 
@@ -2725,14 +2738,14 @@ forward([args<Pointer<vector<i32>>>] values) {
   return(score_ptrs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Pointer<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32)}
   [Pointer<vector<i32>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -2788,14 +2801,14 @@ forward([args<Pointer<vector<i32>>>] values) {
   return(score_ptrs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Pointer<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32)}
   [Pointer<vector<i32>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -2851,14 +2864,14 @@ forward([args<Pointer<vector<i32>>>] values) {
   return(score_ptrs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Pointer<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32, 2i32)}
   [Pointer<vector<i32>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -2983,14 +2996,14 @@ forward([args<Reference<vector<i32>>>] values) {
   return(score_refs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Reference<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32)}
   [Reference<vector<i32>>] extra_ref{location(extra)}
   return(score_refs(extra_ref, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -3046,14 +3059,14 @@ forward([args<Reference<vector<i32>>>] values) {
   return(score_refs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Reference<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32)}
   [Reference<vector<i32>>] extra_ref{location(extra)}
   return(score_refs(extra_ref, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -3109,14 +3122,14 @@ forward([args<Reference<vector<i32>>>] values) {
   return(score_refs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Reference<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32, 2i32)}
   [Reference<vector<i32>>] extra_ref{location(extra)}
   return(score_refs(extra_ref, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}

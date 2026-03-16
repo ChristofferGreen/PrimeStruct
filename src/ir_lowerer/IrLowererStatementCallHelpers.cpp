@@ -314,7 +314,13 @@ DispatchStatementEmitResult tryEmitDispatchStatement(
     }
   }
 
-  if (stmt.args.size() != kernelDef->parameters.size() + 4) {
+  const bool hasTrailingArgsPack =
+      !kernelDef->parameters.empty() && isArgsPackBinding(kernelDef->parameters.back());
+  const size_t fixedKernelParamCount =
+      hasTrailingArgsPack ? kernelDef->parameters.size() - 1 : kernelDef->parameters.size();
+  const size_t minDispatchArgs = fixedKernelParamCount + 4;
+  if ((!hasTrailingArgsPack && stmt.args.size() != minDispatchArgs) ||
+      (hasTrailingArgsPack && stmt.args.size() < minDispatchArgs)) {
     error = "dispatch argument count mismatch for " + kernelPath;
     return DispatchStatementEmitResult::Error;
   }
@@ -578,7 +584,7 @@ bool buildCallableDefinitionCallContext(
       // needs a non-negative pack size to lower deterministically.
       info.argsPackElementCount = 0;
     }
-    if (info.valueKind == LocalInfo::ValueKind::Unknown && info.structTypeName.empty()) {
+    if (!info.isArgsPack && info.valueKind == LocalInfo::ValueKind::Unknown && info.structTypeName.empty()) {
       error = "native backend requires typed parameters on " + def.fullPath;
       return false;
     }

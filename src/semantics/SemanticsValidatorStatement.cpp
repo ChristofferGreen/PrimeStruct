@@ -2334,6 +2334,72 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return false;
   };
   auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool {
+    auto resolveReferenceBufferType = [&](const std::string &typeName,
+                                          const std::string &typeTemplateArg,
+                                          std::string &elemTypeOut) -> bool {
+      if ((typeName != "Reference" && typeName != "Pointer") || typeTemplateArg.empty()) {
+        return false;
+      }
+      std::string base;
+      std::string nestedArg;
+      if (!splitTemplateTypeName(typeTemplateArg, base, nestedArg) || normalizeBindingTypeName(base) != "Buffer" ||
+          nestedArg.empty()) {
+        return false;
+      }
+      elemTypeOut = nestedArg;
+      return true;
+    };
+    auto resolveArgsPackReferenceBufferType = [&](const std::string &typeName,
+                                                  const std::string &typeTemplateArg,
+                                                  std::string &elemTypeOut) -> bool {
+      if (typeName != "args" || typeTemplateArg.empty()) {
+        return false;
+      }
+      std::string base;
+      std::string nestedArg;
+      if (!splitTemplateTypeName(typeTemplateArg, base, nestedArg) ||
+          (normalizeBindingTypeName(base) != "Reference" && normalizeBindingTypeName(base) != "Pointer") ||
+          nestedArg.empty()) {
+        return false;
+      }
+      return resolveReferenceBufferType(base, nestedArg, elemTypeOut);
+    };
+    auto resolveIndexedArgsPackValueBuffer = [&](const Expr &targetExpr, std::string &elemTypeOut) -> bool {
+      std::string accessName;
+      if (targetExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(targetExpr, accessName) ||
+          targetExpr.args.size() != 2 || targetExpr.args.front().kind != Expr::Kind::Name) {
+          return false;
+      }
+      const std::string &targetName = targetExpr.args.front().name;
+      auto resolveBinding = [&](const BindingInfo &binding) {
+        std::string packElemType;
+        std::string base;
+        return getArgsPackElementType(binding, packElemType) &&
+               splitTemplateTypeName(normalizeBindingTypeName(packElemType), base, elemTypeOut) &&
+               normalizeBindingTypeName(base) == "Buffer";
+      };
+      if (const BindingInfo *paramBinding = findParamBinding(params, targetName)) {
+        return resolveBinding(*paramBinding);
+      }
+      auto itLocal = locals.find(targetName);
+      return itLocal != locals.end() && resolveBinding(itLocal->second);
+    };
+    auto resolveIndexedArgsPackReferenceBuffer = [&](const Expr &targetExpr, std::string &elemTypeOut) -> bool {
+      std::string accessName;
+      if (targetExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(targetExpr, accessName) ||
+          targetExpr.args.size() != 2 || targetExpr.args.front().kind != Expr::Kind::Name) {
+        return false;
+      }
+      const std::string &targetName = targetExpr.args.front().name;
+      if (const BindingInfo *paramBinding = findParamBinding(params, targetName)) {
+        if (resolveArgsPackReferenceBufferType(paramBinding->typeName, paramBinding->typeTemplateArg, elemTypeOut)) {
+          return true;
+        }
+      }
+      auto itLocal = locals.find(targetName);
+      return itLocal != locals.end() &&
+             resolveArgsPackReferenceBufferType(itLocal->second.typeName, itLocal->second.typeTemplateArg, elemTypeOut);
+    };
     if (arg.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
         if (paramBinding->typeName == "Buffer" && !paramBinding->typeTemplateArg.empty()) {
@@ -2350,6 +2416,27 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
     }
     if (arg.kind == Expr::Kind::Call) {
+      if (resolveIndexedArgsPackValueBuffer(arg, elemType)) {
+        return true;
+      }
+      if (isSimpleCallName(arg, "dereference") && arg.args.size() == 1) {
+        const Expr &targetExpr = arg.args.front();
+        if (targetExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, targetExpr.name)) {
+            if (resolveReferenceBufferType(paramBinding->typeName, paramBinding->typeTemplateArg, elemType)) {
+              return true;
+            }
+          }
+          auto itLocal = locals.find(targetExpr.name);
+          if (itLocal != locals.end() &&
+              resolveReferenceBufferType(itLocal->second.typeName, itLocal->second.typeTemplateArg, elemType)) {
+            return true;
+          }
+        }
+        if (resolveIndexedArgsPackReferenceBuffer(targetExpr, elemType)) {
+          return true;
+        }
+      }
       if (isSimpleCallName(arg, "buffer") && arg.templateArgs.size() == 1) {
         elemType = arg.templateArgs.front();
         return true;
@@ -2418,7 +2505,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
     }
     const auto &kernelParams = paramsByDef_[kernelPath];
-    if (stmt.args.size() != kernelParams.size() + 4) {
+    size_t trailingArgsPackIndex = kernelParams.size();
+    const bool hasTrailingArgsPack = findTrailingArgsPackParameter(kernelParams, trailingArgsPackIndex, nullptr);
+    const size_t minDispatchArgs = (hasTrailingArgsPack ? trailingArgsPackIndex : kernelParams.size()) + 4;
+    if ((!hasTrailingArgsPack && stmt.args.size() != minDispatchArgs) ||
+        (hasTrailingArgsPack && stmt.args.size() < minDispatchArgs)) {
       error_ = "dispatch argument count mismatch for " + kernelPath;
       return false;
     }

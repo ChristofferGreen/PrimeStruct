@@ -685,7 +685,16 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "dereference" || name == "location") {
+  if (name == "dereference" || name == "location" || name == "soa_vector/dereference" ||
+      name == "soa_vector/location") {
+    if (name == "soa_vector/dereference") {
+      out = "dereference";
+      return true;
+    }
+    if (name == "soa_vector/location") {
+      out = "location";
+      return true;
+    }
     out = name;
     return true;
   }

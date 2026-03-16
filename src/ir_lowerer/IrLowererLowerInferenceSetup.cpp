@@ -1283,8 +1283,8 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
           return false;
         }
 
-        if (candidate.isMethodCall && candidate.args.size() == 2 &&
-            (isSimpleCallName(candidate, "at") || isSimpleCallName(candidate, "at_unsafe"))) {
+        std::string builtinAccessName;
+        if (candidate.args.size() == 2 && getBuiltinArrayAccessName(candidate, builtinAccessName)) {
           const Expr &receiver = candidate.args.front();
           auto assignReceiverCollectionValueKind = [&](const std::string &collectionName,
                                                       const std::vector<std::string> &collectionArgs) {
@@ -1303,6 +1303,60 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
             }
             return false;
           };
+          auto assignArgsPackReceiverValueKind = [&](const Expr &receiverExpr) {
+            auto assignFromLocal = [&](const LocalInfo &info, bool dereferenced) {
+              if (!info.isArgsPack) {
+                return false;
+              }
+              if (info.argsPackElementKind == LocalInfo::Kind::Array ||
+                  info.argsPackElementKind == LocalInfo::Kind::Vector) {
+                kindOut = info.valueKind;
+                return kindOut != LocalInfo::ValueKind::Unknown;
+              }
+              if (info.argsPackElementKind == LocalInfo::Kind::Map) {
+                kindOut = info.mapValueKind;
+                return kindOut != LocalInfo::ValueKind::Unknown;
+              }
+              if ((info.argsPackElementKind == LocalInfo::Kind::Reference ||
+                   info.argsPackElementKind == LocalInfo::Kind::Pointer) &&
+                  (dereferenced || info.structTypeName.empty())) {
+                if (info.referenceToArray || info.pointerToArray || info.referenceToVector || info.pointerToVector) {
+                  kindOut = info.valueKind;
+                  return kindOut != LocalInfo::ValueKind::Unknown;
+                }
+                if (info.referenceToMap || info.pointerToMap) {
+                  kindOut = info.mapValueKind;
+                  return kindOut != LocalInfo::ValueKind::Unknown;
+                }
+              }
+              return false;
+            };
+
+            if (receiverExpr.kind == Expr::Kind::Call && isSimpleCallName(receiverExpr, "dereference") &&
+                receiverExpr.args.size() == 1) {
+              const Expr &derefTarget = receiverExpr.args.front();
+              std::string accessName;
+              if (derefTarget.kind == Expr::Kind::Call && getBuiltinArrayAccessName(derefTarget, accessName) &&
+                  derefTarget.args.size() == 2 && derefTarget.args.front().kind == Expr::Kind::Name) {
+                auto it = candidateLocals.find(derefTarget.args.front().name);
+                return it != candidateLocals.end() && assignFromLocal(it->second, true);
+              }
+              return false;
+            }
+
+            std::string accessName;
+            if (receiverExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(receiverExpr, accessName) &&
+                receiverExpr.args.size() == 2 && receiverExpr.args.front().kind == Expr::Kind::Name) {
+              auto it = candidateLocals.find(receiverExpr.args.front().name);
+              return it != candidateLocals.end() && assignFromLocal(it->second, false);
+            }
+
+            return false;
+          };
+
+          if (assignArgsPackReceiverValueKind(receiver)) {
+            return true;
+          }
 
           if (receiver.kind == Expr::Kind::Call) {
             std::string collectionName;

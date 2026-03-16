@@ -435,6 +435,81 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
                                                   const std::unordered_map<std::string, BindingInfo> &locals,
                                                   ResultTypeInfo &out) const {
   out = ResultTypeInfo{};
+  auto resolveBindingTypeText = [&](const std::string &name, std::string &typeTextOut) -> bool {
+    typeTextOut.clear();
+    auto describeBindingType = [](const BindingInfo &binding) {
+      if (binding.typeTemplateArg.empty()) {
+        return binding.typeName;
+      }
+      return binding.typeName + "<" + binding.typeTemplateArg + ">";
+    };
+    if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+      typeTextOut = describeBindingType(*paramBinding);
+      return true;
+    }
+    auto it = locals.find(name);
+    if (it != locals.end()) {
+      typeTextOut = describeBindingType(it->second);
+      return true;
+    }
+    return false;
+  };
+  auto resolveBuiltinMapResultType = [&](const std::string &typeText) -> bool {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText)), base, argText)) {
+      return false;
+    }
+    if (normalizeBindingTypeName(base) != "map") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
+      return false;
+    }
+    out.isResult = true;
+    out.hasValue = true;
+    out.valueType = args[1];
+    out.errorType = "ContainerError";
+    return true;
+  };
+  std::function<bool(const Expr &, std::string &)> resolveMapReceiverTypeText;
+  resolveMapReceiverTypeText = [&](const Expr &receiverExpr, std::string &typeTextOut) -> bool {
+    typeTextOut.clear();
+    if (receiverExpr.kind == Expr::Kind::Name) {
+      return resolveBindingTypeText(receiverExpr.name, typeTextOut);
+    }
+    if (isSimpleCallName(receiverExpr, "dereference") && receiverExpr.args.size() == 1) {
+      std::string wrappedType;
+      if (!resolveMapReceiverTypeText(receiverExpr.args.front(), wrappedType)) {
+        return false;
+      }
+      typeTextOut = unwrapReferencePointerTypeText(wrappedType);
+      return !typeTextOut.empty();
+    }
+    std::string accessName;
+    if (receiverExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(receiverExpr, accessName) &&
+        receiverExpr.args.size() == 2 && !receiverExpr.args.empty()) {
+      const Expr &accessReceiver = receiverExpr.args.front();
+      if (accessReceiver.kind != Expr::Kind::Name) {
+        return false;
+      }
+      const BindingInfo *binding = findParamBinding(params, accessReceiver.name);
+      if (!binding) {
+        auto it = locals.find(accessReceiver.name);
+        if (it != locals.end()) {
+          binding = &it->second;
+        }
+      }
+      if (binding == nullptr) {
+        return false;
+      }
+      if (getArgsPackElementType(*binding, typeTextOut)) {
+        return true;
+      }
+    }
+    return false;
+  };
   auto resolveMethodResultPath = [&]() -> std::string {
     if (!expr.isMethodCall || expr.args.empty()) {
       return "";
@@ -524,6 +599,34 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     out.errorType = "FileError";
     return true;
   }
+  if (isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
+    std::string pointeeType;
+    const Expr &target = expr.args.front();
+    if (target.kind == Expr::Kind::Name) {
+      if (resolveBindingTypeText(target.name, pointeeType)) {
+        return resolveResultTypeFromTypeName(unwrapReferencePointerTypeText(pointeeType), out);
+      }
+    }
+    std::string accessName;
+    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 && !target.args.empty()) {
+      const Expr &receiver = target.args.front();
+      if (receiver.kind == Expr::Kind::Name && resolveBindingTypeText(receiver.name, pointeeType)) {
+        std::string elemType;
+        if (resolveResultTypeFromTypeName(unwrapReferencePointerTypeText(pointeeType), out)) {
+          return true;
+        }
+        if (const BindingInfo *binding = findParamBinding(params, receiver.name)) {
+          if (getArgsPackElementType(*binding, elemType)) {
+            return resolveResultTypeFromTypeName(unwrapReferencePointerTypeText(elemType), out);
+          }
+        } else if (auto it = locals.find(receiver.name); it != locals.end()) {
+          if (getArgsPackElementType(it->second, elemType)) {
+            return resolveResultTypeFromTypeName(unwrapReferencePointerTypeText(elemType), out);
+          }
+        }
+      }
+    }
+  }
   std::string accessName;
   if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 && !expr.args.empty()) {
     const Expr &receiver = expr.args.front();
@@ -561,6 +664,13 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
         }
       }
     }
+    if (expr.name == "tryAt" && !expr.args.empty()) {
+      std::string receiverTypeText;
+      if (resolveMapReceiverTypeText(expr.args.front(), receiverTypeText) &&
+          resolveBuiltinMapResultType(receiverTypeText)) {
+        return true;
+      }
+    }
   }
   if (!expr.isMethodCall) {
     const std::string resolved = resolveCalleePath(expr);
@@ -571,6 +681,14 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
           continue;
         }
         return resolveResultTypeFromTypeName(transform.templateArgs.front(), out);
+      }
+    }
+    if ((resolved == "/std/collections/map/tryAt" || resolved == "/map/tryAt" || isSimpleCallName(expr, "tryAt")) &&
+        !expr.args.empty()) {
+      std::string receiverTypeText;
+      if (resolveMapReceiverTypeText(expr.args.front(), receiverTypeText) &&
+          resolveBuiltinMapResultType(receiverTypeText)) {
+        return true;
       }
     }
   }

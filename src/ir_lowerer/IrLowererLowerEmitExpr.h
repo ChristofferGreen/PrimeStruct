@@ -156,6 +156,18 @@
           }
           const int32_t ptrLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+          std::string accessName;
+          if (receiver.kind == Expr::Kind::Call && getBuiltinArrayAccessName(receiver, accessName) &&
+              receiver.args.size() == 2 && receiver.args.front().kind == Expr::Kind::Name) {
+            auto receiverIt = localsIn.find(receiver.args.front().name);
+            if (receiverIt != localsIn.end() && receiverIt->second.isArgsPack &&
+                receiverIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+                !receiverIt->second.structTypeName.empty()) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+            }
+          }
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
           const uint64_t offsetBytes = static_cast<uint64_t>(fieldInfo.slotOffset) * IrSlotBytes;
           function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
@@ -279,7 +291,8 @@
             error = "try requires exactly one argument";
             return false;
           }
-          if (!currentOnError.has_value()) {
+          const bool returnsIntStatus = !currentReturnResult.has_value() && !returnsVoid;
+          if (!currentOnError.has_value() && !returnsIntStatus) {
             error = "missing on_error for ? usage";
             return false;
           }
@@ -300,8 +313,27 @@
 
           auto emitOnErrorReturn = [&](int32_t errorLocal) -> bool {
             if (!currentOnError.has_value()) {
-              error = "missing on_error for ? usage";
-              return false;
+              if (!returnsIntStatus) {
+                error = "missing on_error for ? usage";
+                return false;
+              }
+              if (activeInlineContext) {
+                InlineContext &context = *activeInlineContext;
+                if (context.returnLocal < 0) {
+                  error = "native backend missing inline return local";
+                  return false;
+                }
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
+                size_t jumpIndex = function.instructions.size();
+                function.instructions.push_back({IrOpcode::Jump, 0});
+                context.returnJumps.push_back(jumpIndex);
+                return true;
+              }
+              emitFileScopeCleanupAll();
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+              function.instructions.push_back({IrOpcode::ReturnI32, 0});
+              return true;
             }
             const OnErrorHandler &handler = *currentOnError;
             auto defIt = defMap.find(handler.handlerPath);

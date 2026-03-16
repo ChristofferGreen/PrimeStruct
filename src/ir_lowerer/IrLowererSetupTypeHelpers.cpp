@@ -531,9 +531,12 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
   const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
+  const bool isBuiltinMapContainsOrTryAtCall =
+      isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt");
   const bool allowBuiltinFallback =
       !isExplicitMapMethodAlias &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
+       isBuiltinMapContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
        (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall);
   const Expr &receiver = callExpr.args.front();
@@ -846,8 +849,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   auto shouldPreferCanonicalMapPath = [&](const std::string &candidate) {
     return !isExplicitCompatibilityMapMethodAlias && !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
            isMapReceiverTarget(candidate) &&
-           (isExplicitCanonicalMapMethodAlias || normalizedMethodName == "count" || normalizedMethodName == "at" ||
-            normalizedMethodName == "at_unsafe");
+           (isExplicitCanonicalMapMethodAlias || normalizedMethodName == "count" ||
+            normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
+            normalizedMethodName == "at" || normalizedMethodName == "at_unsafe");
   };
   auto findMethodDefinitionByPath = [&](const std::string &path) -> const Definition * {
     auto defIt = defMap.find(path);
@@ -955,6 +959,13 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     const Definition *resolvedDef = findMethodDefinitionByPath(resolved);
     if (resolvedDef == nullptr) {
+      if (!isExplicitCanonicalMapMethodAlias && !isExplicitCompatibilityMapMethodAlias &&
+          !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
+          isMapReceiverTarget(resolvedTypeWithoutSlash) &&
+          (normalizedMethodName == "contains" || normalizedMethodName == "tryAt")) {
+        errorOut.clear();
+        return nullptr;
+      }
       errorOut = "unknown method: " + resolved;
       return nullptr;
     }
@@ -984,6 +995,13 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   }
   const Definition *resolvedDef = findMethodDefinitionByPath(resolved);
   if (resolvedDef == nullptr) {
+    if (!isExplicitCanonicalMapMethodAlias && !isExplicitCompatibilityMapMethodAlias &&
+        !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
+        isMapReceiverTarget(normalizedTypeName) &&
+        (normalizedMethodName == "contains" || normalizedMethodName == "tryAt")) {
+      errorOut.clear();
+      return nullptr;
+    }
     errorOut = "unknown method: " + resolved;
     return nullptr;
   }

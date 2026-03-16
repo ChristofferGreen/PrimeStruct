@@ -970,7 +970,16 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "dereference" || name == "location") {
+  if (name == "dereference" || name == "location" || name == "soa_vector/dereference" ||
+      name == "soa_vector/location") {
+    if (name == "soa_vector/dereference") {
+      out = "dereference";
+      return true;
+    }
+    if (name == "soa_vector/location") {
+      out = "location";
+      return true;
+    }
     out = name;
     return true;
   }
@@ -1865,6 +1874,41 @@ bool parseBindingInfo(const Expr &expr,
     };
     return contains(text);
   };
+  auto isSupportedPointerReferenceTarget = [&](const std::string &targetType, std::string &unsupportedError) -> bool {
+    const std::string normalizedTarget = normalizeBindingTypeName(targetType);
+    if (isPrimitiveBindingTypeName(normalizedTarget) || isStructTypeName(normalizedTarget) ||
+        normalizedTarget == "FileError") {
+      return true;
+    }
+
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(targetType, base, arg)) {
+      unsupportedError = targetType;
+      return false;
+    }
+
+    base = normalizeBindingTypeName(base);
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(arg, args)) {
+      unsupportedError = targetType;
+      return false;
+    }
+
+    if ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" || base == "File") &&
+        args.size() == 1) {
+      return true;
+    }
+    if (base == "map" && args.size() == 2) {
+      return true;
+    }
+    if (base == "Result" && (args.size() == 1 || args.size() == 2)) {
+      return true;
+    }
+
+    unsupportedError = targetType;
+    return false;
+  };
   const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
   if (typeHasTemplate &&
       (normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "Buffer")) {
@@ -1902,20 +1946,10 @@ bool parseBindingInfo(const Expr &expr,
       error = "uninitialized storage is not allowed in pointer targets";
       return false;
     }
-    std::string normalizedTarget = normalizeBindingTypeName(info.typeTemplateArg);
-    if (!isPrimitiveBindingTypeName(normalizedTarget) && !isStructTypeName(normalizedTarget)) {
-      std::string base;
-      std::string arg;
-      if (splitTemplateTypeName(info.typeTemplateArg, base, arg) && normalizeBindingTypeName(base) == "array") {
-        std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-          error = "unsupported pointer target type: " + info.typeTemplateArg;
-          return false;
-        }
-      } else {
-        error = "unsupported pointer target type: " + info.typeTemplateArg;
-        return false;
-      }
+    std::string unsupportedTarget;
+    if (!isSupportedPointerReferenceTarget(info.typeTemplateArg, unsupportedTarget)) {
+      error = "unsupported pointer target type: " + unsupportedTarget;
+      return false;
     }
   }
   if (typeHasTemplate && typeName == "Reference") {
@@ -1927,27 +1961,10 @@ bool parseBindingInfo(const Expr &expr,
       error = "uninitialized storage is not allowed in reference targets";
       return false;
     }
-    std::string normalizedTarget = normalizeBindingTypeName(info.typeTemplateArg);
-    if (!isPrimitiveBindingTypeName(normalizedTarget) && !isStructTypeName(normalizedTarget)) {
-      std::string base;
-      std::string arg;
-      if (splitTemplateTypeName(info.typeTemplateArg, base, arg) && normalizeBindingTypeName(base) == "array") {
-        std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-          error = "unsupported reference target type: " + info.typeTemplateArg;
-          return false;
-        }
-      } else if (splitTemplateTypeName(info.typeTemplateArg, base, arg) &&
-                 normalizeBindingTypeName(base) == "map") {
-        std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
-          error = "unsupported reference target type: " + info.typeTemplateArg;
-          return false;
-        }
-      } else {
-        error = "unsupported reference target type: " + info.typeTemplateArg;
-        return false;
-      }
+    std::string unsupportedTarget;
+    if (!isSupportedPointerReferenceTarget(info.typeTemplateArg, unsupportedTarget)) {
+      error = "unsupported reference target type: " + unsupportedTarget;
+      return false;
     }
   }
   if (isPrimitiveBindingTypeName(typeName)) {

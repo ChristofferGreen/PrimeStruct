@@ -1,5 +1,7 @@
 #include "IrLowererReturnInferenceHelpers.h"
 
+#include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
@@ -209,6 +211,7 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
   LocalInfo bindingInfo;
   bindingInfo.index = 0;
   bindingInfo.isMutable = isBindingMutable(bindingExpr);
+  bindingInfo.isArgsPack = isArgsPackBinding(bindingExpr);
   bindingInfo.kind = bindingKind(bindingExpr);
   if (hasExplicitBindingTypeTransform(bindingExpr)) {
     bindingInfo.valueKind = bindingValueKind(bindingExpr, bindingInfo.kind);
@@ -261,7 +264,9 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
     error = "native backend does not support string pointers or references";
     return false;
   }
-  if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown && bindingInfo.structTypeName.empty()) {
+  if (!bindingInfo.isArgsPack &&
+      bindingInfo.valueKind == LocalInfo::ValueKind::Unknown &&
+      bindingInfo.structTypeName.empty()) {
     if (isParameter) {
       error = "native backend requires typed parameters on " + definitionPath;
     } else {

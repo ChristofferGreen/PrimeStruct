@@ -704,6 +704,34 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::Error;
   }
 
+  if (expr.isMethodCall && expr.name == "contains") {
+    if (expr.args.size() != 2) {
+      error = "contains requires exactly two arguments";
+      return NativeCallTailDispatchResult::Error;
+    }
+    const auto containsResult = tryEmitMapContainsLookup(
+        expr.args.front(),
+        expr.args[1],
+        localsIn,
+        allocTempLocal,
+        emitExpr,
+        resolveStringTableTarget,
+        resolveCallMapAccessTargetInfo,
+        inferExprKind,
+        instructionCount,
+        emitInstruction,
+        patchInstructionImm,
+        error);
+    if (containsResult == MapAccessLookupEmitResult::Emitted) {
+      return NativeCallTailDispatchResult::Emitted;
+    }
+    if (containsResult == MapAccessLookupEmitResult::Error) {
+      return NativeCallTailDispatchResult::Error;
+    }
+    error = "contains requires map target";
+    return NativeCallTailDispatchResult::Error;
+  }
+
   if (!expr.isMethodCall && isSimpleCallName(expr, "contains")) {
     if (expr.args.size() != 2) {
       error = "contains requires exactly two arguments";
@@ -1600,6 +1628,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.isArrayOrVectorTarget = true;
         info.elemKind = localInfo.valueKind;
         info.isVectorTarget = false;
+        info.isArgsPackTarget = true;
+        info.argsPackElementKind = localInfo.argsPackElementKind;
+        info.elemSlotCount = localInfo.structSlotCount;
+        info.structTypeName = localInfo.structTypeName;
         return true;
       }
       if (localInfo.argsPackElementKind == LocalInfo::Kind::Vector) {
@@ -1607,6 +1639,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.elemKind = localInfo.valueKind;
         info.isVectorTarget = true;
         info.isSoaVector = localInfo.isSoaVector;
+        info.isArgsPackTarget = true;
+        info.argsPackElementKind = localInfo.argsPackElementKind;
+        info.elemSlotCount = localInfo.structSlotCount;
+        info.structTypeName = localInfo.structTypeName;
         return true;
       }
       if (localInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
@@ -1615,6 +1651,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.elemKind = localInfo.valueKind;
         info.isVectorTarget = localInfo.referenceToVector;
         info.isSoaVector = localInfo.isSoaVector;
+        info.isArgsPackTarget = true;
+        info.argsPackElementKind = localInfo.argsPackElementKind;
+        info.elemSlotCount = localInfo.structSlotCount;
+        info.structTypeName = localInfo.structTypeName;
         return true;
       }
       if (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
@@ -1623,6 +1663,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.elemKind = localInfo.valueKind;
         info.isVectorTarget = localInfo.pointerToVector;
         info.isSoaVector = localInfo.isSoaVector;
+        info.isArgsPackTarget = true;
+        info.argsPackElementKind = localInfo.argsPackElementKind;
+        info.elemSlotCount = localInfo.structSlotCount;
+        info.structTypeName = localInfo.structTypeName;
         return true;
       }
       return false;
@@ -1639,6 +1683,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             info.elemKind = localIt->second.valueKind;
             info.isVectorTarget = true;
             info.isSoaVector = localIt->second.isSoaVector;
+            info.isArgsPackTarget = true;
+            info.argsPackElementKind = localIt->second.argsPackElementKind;
+            info.elemSlotCount = localIt->second.structSlotCount;
+            info.structTypeName = localIt->second.structTypeName;
             return info;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Array ||
@@ -1650,12 +1698,20 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
                 localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
                 localIt->second.referenceToVector;
             info.isSoaVector = localIt->second.isSoaVector;
+            info.isArgsPackTarget = true;
+            info.argsPackElementKind = localIt->second.argsPackElementKind;
+            info.elemSlotCount = localIt->second.structSlotCount;
+            info.structTypeName = localIt->second.structTypeName;
             return info;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer && localIt->second.pointerToArray) {
             info.isArrayOrVectorTarget = true;
             info.elemKind = localIt->second.valueKind;
             info.isVectorTarget = false;
+            info.isArgsPackTarget = true;
+            info.argsPackElementKind = localIt->second.argsPackElementKind;
+            info.elemSlotCount = localIt->second.structSlotCount;
+            info.structTypeName = localIt->second.structTypeName;
             return info;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer && localIt->second.pointerToVector) {
@@ -1663,6 +1719,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             info.elemKind = localIt->second.valueKind;
             info.isVectorTarget = true;
             info.isSoaVector = localIt->second.isSoaVector;
+            info.isArgsPackTarget = true;
+            info.argsPackElementKind = localIt->second.argsPackElementKind;
+            info.elemSlotCount = localIt->second.structSlotCount;
+            info.structTypeName = localIt->second.structTypeName;
             return info;
           }
         }
@@ -1781,7 +1841,8 @@ bool emitArrayVectorIndexedAccess(
       emitInstruction,
       patchInstructionImm);
   if (arrayVectorTargetInfo.isArgsPackTarget &&
-      arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
+      (arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Reference ||
+       arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Pointer) &&
       !arrayVectorTargetInfo.structTypeName.empty()) {
     emitInstruction(IrOpcode::LoadIndirect, 0);
   }

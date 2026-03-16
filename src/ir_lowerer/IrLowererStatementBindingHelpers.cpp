@@ -586,7 +586,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
     }
   }
 
-  infoOut.isFileError = isFileErrorBinding(param);
+  infoOut.isFileError = infoOut.isFileError || isFileErrorBinding(param);
   setReferenceArrayInfo(param, infoOut);
   applyStructArrayInfo(param, infoOut);
   applyStructValueInfo(param, infoOut);

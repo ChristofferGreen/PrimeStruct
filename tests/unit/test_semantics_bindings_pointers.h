@@ -315,7 +315,7 @@ main() {
 
 TEST_CASE("reference bindings accept Buffer targets") {
   const std::string source = R"(
-[return<int>]
+[effects(gpu_dispatch) return<int>]
 main() {
   [Buffer<i32>] values{/std/gpu/buffer<i32>(2i32)}
   [Reference<Buffer<i32>>] ref{location(values)}
@@ -329,7 +329,7 @@ main() {
 
 TEST_CASE("pointer bindings accept Buffer targets") {
   const std::string source = R"(
-[return<int>]
+[effects(gpu_dispatch) return<int>]
 main() {
   [Buffer<i32>] values{/std/gpu/buffer<i32>(2i32)}
   [Pointer<Buffer<i32>>] ptr{location(values)}

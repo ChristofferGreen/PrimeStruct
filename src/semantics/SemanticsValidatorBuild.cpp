@@ -1439,6 +1439,10 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   if (expr.name.find('/') != std::string::npos) {
     return rewriteCanonicalCollectionConstructorPath("/" + expr.name);
   }
+  std::string pointerBuiltinName;
+  if (getBuiltinPointerName(expr, pointerBuiltinName)) {
+    return "/" + pointerBuiltinName;
+  }
   if (!expr.namespacePrefix.empty()) {
     std::string normalizedPrefix = expr.namespacePrefix;
     if (!normalizedPrefix.empty() && normalizedPrefix.front() != '/') {

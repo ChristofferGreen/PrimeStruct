@@ -57,9 +57,12 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
       return LocalInfo::ValueKind::Unknown;
     }
     if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
-      if (it->second.kind == LocalInfo::Kind::Reference &&
-          (it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap)) {
-        return LocalInfo::ValueKind::Unknown;
+      if (it->second.referenceToMap || it->second.pointerToMap) {
+        return it->second.mapValueKind;
+      }
+      if (it->second.referenceToArray || it->second.referenceToVector ||
+          it->second.pointerToArray || it->second.pointerToVector) {
+        return it->second.valueKind;
       }
       return it->second.valueKind;
     }
@@ -71,9 +74,11 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
         expr.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.args.front().name);
       if (it != localsIn.end() && it->second.isArgsPack &&
-          ((it->second.argsPackElementKind == LocalInfo::Kind::Pointer) ||
-           (it->second.argsPackElementKind == LocalInfo::Kind::Reference &&
-            !it->second.referenceToArray && !it->second.referenceToVector && !it->second.referenceToMap))) {
+          (it->second.argsPackElementKind == LocalInfo::Kind::Pointer ||
+           it->second.argsPackElementKind == LocalInfo::Kind::Reference)) {
+        if (it->second.referenceToMap || it->second.pointerToMap) {
+          return it->second.mapValueKind;
+        }
         return it->second.valueKind;
       }
     }
@@ -82,9 +87,12 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
       if (target.kind == Expr::Kind::Name) {
         auto it = localsIn.find(target.name);
         if (it != localsIn.end()) {
-          if (it->second.kind == LocalInfo::Kind::Reference &&
-              (it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap)) {
-            return LocalInfo::ValueKind::Unknown;
+          if (it->second.referenceToMap || it->second.pointerToMap) {
+            return it->second.mapValueKind;
+          }
+          if (it->second.referenceToArray || it->second.referenceToVector ||
+              it->second.pointerToArray || it->second.pointerToVector) {
+            return it->second.valueKind;
           }
           return it->second.valueKind;
         }

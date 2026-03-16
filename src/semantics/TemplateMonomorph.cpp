@@ -2894,6 +2894,7 @@ bool rewriteExpr(Expr &expr,
   };
   std::function<bool(Expr &)> rewriteNestedExperimentalMapConstructorValue;
   std::function<bool(Expr &)> rewriteNestedExperimentalMapResultOkPayloadValue;
+  std::function<bool(const std::string &, Expr &)> rewriteExperimentalMapTargetValueForType;
 
   auto isBuiltinResultOkValueCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name != "ok" ||
@@ -2904,7 +2905,7 @@ bool rewriteExpr(Expr &expr,
     return receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "Result";
   };
 
-  auto rewriteExperimentalMapTargetValueForType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
+  rewriteExperimentalMapTargetValueForType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
     std::string base;
     std::string argText;
     if (splitTemplateTypeName(typeText, base, argText) && normalizeBindingTypeName(base) == "uninitialized") {

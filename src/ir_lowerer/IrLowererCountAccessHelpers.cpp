@@ -169,6 +169,19 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
+bool isDirectPointerArgsPackCollectionAccessTarget(const Expr &target, const LocalMap &localsIn) {
+  std::string accessName;
+  if (!(target.kind == Expr::Kind::Call && getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
+        target.args.front().kind == Expr::Kind::Name)) {
+    return false;
+  }
+  auto it = localsIn.find(target.args.front().name);
+  if (it == localsIn.end() || !it->second.isArgsPack || it->second.argsPackElementKind != LocalInfo::Kind::Pointer) {
+    return false;
+  }
+  return it->second.pointerToArray || it->second.pointerToVector || it->second.pointerToMap;
+}
+
 } // namespace
 
 bool resolveEntryArgsParameter(const Definition &entryDef,
@@ -436,6 +449,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
     }
+    if (isDirectPointerArgsPackCollectionAccessTarget(expr.args.front(), localsIn)) {
+      emitInstruction(IrOpcode::LoadIndirect, 0);
+    }
     emitInstruction(IrOpcode::LoadIndirect, 0);
     return CountAccessCallEmitResult::Emitted;
   }
@@ -443,6 +459,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   if (isVectorCapacityCallFn(expr, localsIn)) {
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
+    }
+    if (isDirectPointerArgsPackCollectionAccessTarget(expr.args.front(), localsIn)) {
+      emitInstruction(IrOpcode::LoadIndirect, 0);
     }
     emitInstruction(IrOpcode::PushI64, IrSlotBytes);
     emitInstruction(IrOpcode::AddI64, 0);
@@ -455,6 +474,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
     }
+    if (isDirectPointerArgsPackCollectionAccessTarget(expr.args.front(), localsIn)) {
+      emitInstruction(IrOpcode::LoadIndirect, 0);
+    }
     emitInstruction(IrOpcode::LoadIndirect, 0);
     return CountAccessCallEmitResult::Emitted;
   }
@@ -463,6 +485,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
+    }
+    if (isDirectPointerArgsPackCollectionAccessTarget(expr.args.front(), localsIn)) {
+      emitInstruction(IrOpcode::LoadIndirect, 0);
     }
     emitInstruction(IrOpcode::PushI64, IrSlotBytes);
     emitInstruction(IrOpcode::AddI64, 0);
