@@ -1518,6 +1518,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = it->second.referenceToVector;
+      info.isSoaVector = it->second.isSoaVector;
       info.isArgsPackTarget = it->second.isArgsPack;
       info.argsPackElementKind = it->second.argsPackElementKind;
       info.elemSlotCount = it->second.structSlotCount;
@@ -1537,6 +1538,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             info.isArrayOrVectorTarget = true;
             info.elemKind = localIt->second.valueKind;
             info.isVectorTarget = true;
+            info.isSoaVector = localIt->second.isSoaVector;
             return info;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Array ||
@@ -1547,6 +1549,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             info.isVectorTarget =
                 localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
                 localIt->second.referenceToVector;
+            info.isSoaVector = localIt->second.isSoaVector;
             return info;
           }
         }
@@ -1585,11 +1588,15 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
        targetInfo.argsPackElementKind == LocalInfo::Kind::Reference);
   const bool isVectorArgsPackTarget =
       targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Vector;
+  const bool isBorrowedSoaVectorArgsPackTarget =
+      targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
+      targetInfo.isVectorTarget && targetInfo.isSoaVector;
   if (!targetInfo.isArrayOrVectorTarget ||
       (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget &&
-       !isWrappedStructArgsPackTarget && !isVectorArgsPackTarget)) {
+       !isWrappedStructArgsPackTarget && !isVectorArgsPackTarget &&
+       !isBorrowedSoaVectorArgsPackTarget)) {
     error =
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Reference<Struct>>/args<vector<T>>/args<Reference<vector<T>>> packs";
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Reference<Struct>>/args<vector<T>>/args<Reference<vector<T>>>/args<Reference<soa_vector<T>>> packs";
     return false;
   }
   return true;

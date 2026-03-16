@@ -118,6 +118,7 @@ struct ArrayVectorAccessTargetInfo {
   bool isArrayOrVectorTarget = false;
   LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
   bool isVectorTarget = false;
+  bool isSoaVector = false;
   bool isArgsPackTarget = false;
   LocalInfo::Kind argsPackElementKind = LocalInfo::Kind::Value;
   int32_t elemSlotCount = 0;
