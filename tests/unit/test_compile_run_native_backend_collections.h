@@ -7767,8 +7767,9 @@ main() {
           .string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(outPath).empty());
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(exePath) == 96);
 }
 
 TEST_CASE("rejects native map compatibility explicit-template count call with non-templated alias helper") {

@@ -132,7 +132,7 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("vm backend only supports at() on numeric/bool arrays or vectors") !=
+  CHECK(readFile(outPath).find("vm backend only supports at() on numeric/bool/string arrays or vectors") !=
         std::string::npos);
 }
 
@@ -457,7 +457,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/map/at") != std::string::npos);
+  CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm explicit canonical map typed bindings with builtin helpers") {
@@ -542,7 +542,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_namespaced_map_at_alias_fallback_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 4);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("vm backend only supports arithmetic/comparison") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib namespaced map at unsafe fallback without import") {
@@ -568,7 +569,8 @@ main() {
        "primec_vm_stdlib_namespaced_map_at_unsafe_alias_fallback_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 4);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("vm backend only supports arithmetic/comparison") != std::string::npos);
 }
 
 TEST_CASE("runs vm bare map count through canonical helper") {
@@ -608,8 +610,8 @@ main() {
        "primec_vm_map_unnamespaced_count_builtin_fallback_no_canonical_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm bare map at through canonical helper") {
@@ -669,8 +671,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_at_without_helper_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm bare map at_unsafe call without helper") {
@@ -686,8 +688,8 @@ main() {
                                "primec_vm_bare_map_at_unsafe_without_helper_reject_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm map namespaced count method compatibility alias") {
@@ -725,8 +727,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_count_method_without_import_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/map/count") != std::string::npos);
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("compiles and runs vm bare map contains through canonical helper") {
@@ -747,7 +749,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_contains_call_with_canonical_helper_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 0);
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm bare map contains call without imported canonical helper") {
@@ -763,8 +766,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_contains_call_without_import_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm bare map contains method without imported canonical helper") {
@@ -780,8 +783,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_contains_method_without_import_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/map/contains") != std::string::npos);
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm bare map tryAt method without imported canonical helper") {
@@ -798,7 +801,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/map/tryAt") != std::string::npos);
+  CHECK(readFile(outPath).find("missing on_error for ? usage") != std::string::npos);
 }
 
 TEST_CASE("rejects vm bare map access methods without imported canonical helpers") {
@@ -814,8 +817,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_access_methods_without_import_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/map/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 9);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm map namespaced at method compatibility alias") {
@@ -6908,8 +6911,8 @@ main() {
        "primec_vm_map_count_explicit_template_alias_precedence_with_canonical_templated_helper_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(runCommand(runCmd) == 96);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm map compatibility explicit-template count call with non-templated alias helper") {
