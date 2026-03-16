@@ -1139,30 +1139,60 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     const LocalMap &localsIn,
     const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo) {
   MapAccessTargetInfo info;
+  auto populateFromDirectLocal = [&](const LocalInfo &localInfo) {
+    if (localInfo.kind != LocalInfo::Kind::Map &&
+        !(localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToMap) &&
+        !(localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap)) {
+      return false;
+    }
+    info.isMapTarget = true;
+    info.mapKeyKind = localInfo.mapKeyKind;
+    info.mapValueKind = localInfo.mapValueKind;
+    return true;
+  };
+  auto populateFromArgsPackLocal = [&](const LocalInfo &localInfo) {
+    if (!localInfo.isArgsPack ||
+        (localInfo.argsPackElementKind != LocalInfo::Kind::Map &&
+         !(localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToMap) &&
+         !(localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap))) {
+      return false;
+    }
+    info.isMapTarget = true;
+    info.mapKeyKind = localInfo.mapKeyKind;
+    info.mapValueKind = localInfo.mapValueKind;
+    return true;
+  };
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
-    if (it != localsIn.end() &&
-        (it->second.kind == LocalInfo::Kind::Map ||
-         (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap))) {
-      info.isMapTarget = true;
-      info.mapKeyKind = it->second.mapKeyKind;
-      info.mapValueKind = it->second.mapValueKind;
+    if (it != localsIn.end()) {
+      populateFromDirectLocal(it->second);
     }
     return info;
   }
   if (target.kind == Expr::Kind::Call) {
+    if (isSimpleCallName(target, "dereference") && target.args.size() == 1) {
+      const Expr &derefTarget = target.args.front();
+      if (derefTarget.kind == Expr::Kind::Name) {
+        auto it = localsIn.find(derefTarget.name);
+        if (it != localsIn.end() && populateFromDirectLocal(it->second)) {
+          return info;
+        }
+      }
+      std::string derefAccessName;
+      if (derefTarget.kind == Expr::Kind::Call && getBuiltinArrayAccessName(derefTarget, derefAccessName) &&
+          derefTarget.args.size() == 2 && derefTarget.args.front().kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(derefTarget.args.front().name);
+        if (localIt != localsIn.end() && populateFromArgsPackLocal(localIt->second)) {
+          return info;
+        }
+      }
+    }
     std::string accessName;
     if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
       const Expr &accessReceiver = target.args.front();
       if (accessReceiver.kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(accessReceiver.name);
-        if (localIt != localsIn.end() && localIt->second.isArgsPack &&
-            (localIt->second.argsPackElementKind == LocalInfo::Kind::Map ||
-             (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
-              localIt->second.referenceToMap))) {
-          info.isMapTarget = true;
-          info.mapKeyKind = localIt->second.mapKeyKind;
-          info.mapValueKind = localIt->second.mapValueKind;
+        if (localIt != localsIn.end() && populateFromArgsPackLocal(localIt->second)) {
           return info;
         }
       }

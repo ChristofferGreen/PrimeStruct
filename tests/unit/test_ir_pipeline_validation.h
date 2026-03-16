@@ -13820,6 +13820,64 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 
+  primec::ir_lowerer::LocalInfo mapPointerInfo;
+  mapPointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  mapPointerInfo.pointerToMap = true;
+  mapPointerInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+  mapPointerInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("mapPtr", mapPointerInfo);
+
+  primec::Expr mapPtrName;
+  mapPtrName.kind = primec::Expr::Kind::Name;
+  mapPtrName.name = "mapPtr";
+  resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(mapPtrName, locals);
+  CHECK(resolved.isMapTarget);
+  CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Expr mapPtrDeref;
+  mapPtrDeref.kind = primec::Expr::Kind::Call;
+  mapPtrDeref.name = "dereference";
+  mapPtrDeref.args = {mapPtrName};
+  resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(mapPtrDeref, locals);
+  CHECK(resolved.isMapTarget);
+  CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::ir_lowerer::LocalInfo mapPtrArgsInfo;
+  mapPtrArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  mapPtrArgsInfo.isArgsPack = true;
+  mapPtrArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  mapPtrArgsInfo.pointerToMap = true;
+  mapPtrArgsInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapPtrArgsInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+  mapPtrArgsInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+  locals.emplace("mapPtrArgs", mapPtrArgsInfo);
+
+  primec::Expr mapPtrArgsName;
+  mapPtrArgsName.kind = primec::Expr::Kind::Name;
+  mapPtrArgsName.name = "mapPtrArgs";
+  primec::Expr mapPtrArgsIndex;
+  mapPtrArgsIndex.kind = primec::Expr::Kind::Literal;
+  mapPtrArgsIndex.literalValue = 0;
+  primec::Expr mapPtrArgsAccess;
+  mapPtrArgsAccess.kind = primec::Expr::Kind::Call;
+  mapPtrArgsAccess.name = "at";
+  mapPtrArgsAccess.args = {mapPtrArgsName, mapPtrArgsIndex};
+  resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(mapPtrArgsAccess, locals);
+  CHECK(resolved.isMapTarget);
+  CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
+  primec::Expr mapPtrArgsDeref;
+  mapPtrArgsDeref.kind = primec::Expr::Kind::Call;
+  mapPtrArgsDeref.name = "dereference";
+  mapPtrArgsDeref.args = {mapPtrArgsAccess};
+  resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(mapPtrArgsDeref, locals);
+  CHECK(resolved.isMapTarget);
+  CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
   primec::Expr plain;
   plain.kind = primec::Expr::Kind::Name;
   plain.name = "other";

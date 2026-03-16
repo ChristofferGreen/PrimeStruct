@@ -419,10 +419,10 @@ Bottom-level form therefore has:
   IR/VM GPU path, and `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`,
   empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`, `Reference<map<K, V>>`, plus `Pointer<map<K, V>>`
   packs preserve indexed downstream `count()` resolution across those
-  same forwarding modes, while scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream
+  same forwarding modes, while `Pointer<map<K, V>>` packs also preserve indexed downstream `contains()` / `at()` /
+  `at_unsafe()` lookup access. Scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream
   `dereference(...)` and struct `Pointer<T>` plus struct `Reference<T>` packs preserve indexed downstream
-  field/helper access; other
-  unsupported non-string element support remains a separate follow-up slice.
+  field/helper access; other unsupported non-string element support remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 
