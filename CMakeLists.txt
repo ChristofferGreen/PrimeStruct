@@ -610,13 +610,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # Keep the unsupported shards disabled until image IO, GPU dispatch fallback,
   # and the stdlib/experimental map shim paths are implemented for the VM.
   set_tests_properties(
-    PrimeStruct_primestruct_compile_run_vm_collections_ir_and_output_modes_basics
     PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics
     PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity
     PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims
     PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence
     PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax
-    PrimeStruct_primestruct_compile_run_vm_gpu
     PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution
     PrimeStruct_primestruct_compile_run_emitters_cpp_map_wrapper_and_fallback_inference
     PrimeStruct_primestruct_compile_run_emitters_cpp_numeric_math_and_control_flow_core

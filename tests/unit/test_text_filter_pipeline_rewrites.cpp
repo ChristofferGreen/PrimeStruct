@@ -49,6 +49,40 @@ TEST_CASE("does not rewrite slash-method helper paths after identifier receivers
   CHECK(output.find("divide(divide(values., vector), at(0i32))") == std::string::npos);
 }
 
+TEST_CASE("does not rewrite slash paths at the start of later statements") {
+  const std::string source =
+      "main(){\n"
+      "  /std/gpu/dispatch(/a, 1i32, 1i32, 1i32)\n"
+      "  /std/gpu/dispatch(/b, 1i32, 1i32, 1i32)\n"
+      "}\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("/std/gpu/dispatch(/a, 1i32, 1i32, 1i32)\n  /std/gpu/dispatch(/b, 1i32, 1i32, 1i32)") !=
+        std::string::npos);
+  CHECK(output.find("dispatchdivide") == std::string::npos);
+}
+
+TEST_CASE("does not rewrite slash path calls with slash path arguments across later statements") {
+  const std::string source =
+      "main(){\n"
+      "  /std/gpu/dispatch(/score_direct, 1i32, 1i32, 1i32, b0, b1, b2)\n"
+      "  /std/gpu/dispatch(/forward, 1i32, 1i32, 1i32, d0, d1, d2)\n"
+      "  /std/gpu/dispatch(/forward_mixed, 1i32, 1i32, 1i32, extra, f0, f1)\n"
+      "}\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("/std/gpu/dispatch(/score_direct, 1i32, 1i32, 1i32, b0, b1, b2)") != std::string::npos);
+  CHECK(output.find("/std/gpu/dispatch(/forward, 1i32, 1i32, 1i32, d0, d1, d2)") != std::string::npos);
+  CHECK(output.find("/std/gpu/dispatch(/forward_mixed, 1i32, 1i32, 1i32, extra, f0, f1)") != std::string::npos);
+  CHECK(output.find("dispatchdivide") == std::string::npos);
+}
+
 TEST_CASE("rewrites plus operator without spaces") {
   const std::string source = "main(){ return(a+b) }\n";
   primec::TextFilterPipeline pipeline;

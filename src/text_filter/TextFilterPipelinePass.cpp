@@ -168,29 +168,32 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
     pos = end;
     return true;
   }
+  std::string token;
   if (input[start] == '/' && !isCommentStart(input, start)) {
     if (start == 0 || isSeparator(input[start - 1]) || input[start - 1] == '.') {
       size_t end = start + 1;
       while (end < input.size() && !isSeparator(input[end])) {
         ++end;
       }
-      out = input.substr(start, end - start);
+      token = input.substr(start, end - start);
       pos = end;
-      return true;
+    } else {
+      return false;
     }
-  }
-  if (!isIdentifierStartChar(input[start])) {
-    return false;
-  }
-  size_t end = start + 1;
-  while (end < input.size() && isIdentifierBodyChar(input[end])) {
-    if (input[end] == '.' && end + 1 < input.size() && input[end + 1] == '/') {
-      break;
+  } else {
+    if (!isIdentifierStartChar(input[start])) {
+      return false;
     }
-    ++end;
+    size_t end = start + 1;
+    while (end < input.size() && isIdentifierBodyChar(input[end])) {
+      if (input[end] == '.' && end + 1 < input.size() && input[end + 1] == '/') {
+        break;
+      }
+      ++end;
+    }
+    token = input.substr(start, end - start);
+    pos = end;
   }
-  std::string token = input.substr(start, end - start);
-  pos = end;
   while (true) {
     size_t scan = pos;
     while (scan < input.size() && std::isspace(static_cast<unsigned char>(input[scan]))) {
@@ -255,11 +258,19 @@ bool parseExpressionWithPrecedence(const std::string &input,
     while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
       ++pos;
     }
+    const bool sawLineBreak =
+        input.find_first_of("\r\n", whitespaceStart) != std::string::npos &&
+        input.find_first_of("\r\n", whitespaceStart) < pos;
     if (pos >= input.size()) {
       pos = whitespaceStart;
       break;
     }
     if (isBoundaryChar(input[pos]) || isCommentStart(input, pos)) {
+      pos = whitespaceStart;
+      break;
+    }
+    if (sawLineBreak && input[pos] == '/' && !isCommentStart(input, pos) && pos + 1 < input.size() &&
+        isIdentifierStartChar(input[pos + 1])) {
       pos = whitespaceStart;
       break;
     }
