@@ -1883,7 +1883,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(targetExpr.args.front().name);
         if (localIt != localsIn.end() && localIt->second.isArgsPack && localIt->second.isFileError &&
-            localIt->second.argsPackElementKind == LocalInfo::Kind::Reference) {
+            (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+             localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
           typeNameOut = "FileError";
           return true;
         }

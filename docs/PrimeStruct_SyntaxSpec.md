@@ -401,6 +401,7 @@ Bottom-level form therefore has:
   preserve indexed `Result.why(...)` and `?` behavior across direct, pure-spread, and mixed-forwarded IR-backed
   materialization, `FileError` packs preserve indexed downstream `why()` mapping across those same forwarding modes,
   `Reference<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping across those same
+  forwarding modes, `Pointer<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping across those same
   forwarding modes, `Reference<Result<T, Error>>` packs preserve indexed downstream `dereference(...)`, `try(...)`,
   and `Result.why(...)` access across those same forwarding modes, `Pointer<Result<T, Error>>` packs preserve indexed downstream `dereference(...)`,
   `try(...)`, and `Result.why(...)` access across those same forwarding modes, and `array<T>`, `Reference<array<T>>`, `vector<T>`, `Reference<vector<T>>`,

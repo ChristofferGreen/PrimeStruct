@@ -110,7 +110,7 @@ bool isFileErrorBindingType(const Expr &expr) {
     if (transform.name == "FileError") {
       return true;
     }
-    if (transform.name == "Reference" && transform.templateArgs.size() == 1 &&
+    if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1 &&
         trimTemplateTypeText(transform.templateArgs.front()) == "FileError") {
       return true;
     }

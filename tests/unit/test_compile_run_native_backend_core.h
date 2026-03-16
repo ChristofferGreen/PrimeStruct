@@ -2505,6 +2505,56 @@ TEST_CASE("native materializes variadic borrowed FileError packs with indexed de
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 36);
 }
+
+TEST_CASE("native materializes variadic pointer FileError packs with indexed dereference why methods") {
+  const std::string source =
+      "[return<int>]\n"
+      "score_ptrs([args<Pointer<FileError>>] values) {\n"
+      "  return(plus(count(dereference(values[0i32]).why()), count(dereference(values[2i32]).why())))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward([args<Pointer<FileError>>] values) {\n"
+      "  return(score_ptrs([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward_mixed([args<Pointer<FileError>>] values) {\n"
+      "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
+      "  [Pointer<FileError>] extra_ptr{location(extra)}\n"
+      "  return(score_ptrs([spread] values, extra_ptr))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "main() {\n"
+      "  [FileError] a0{" + std::to_string(EACCES) + "i32}\n"
+      "  [FileError] a1{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] a2{" + std::to_string(EEXIST) + "i32}\n"
+      "  [Pointer<FileError>] r0{location(a0)}\n"
+      "  [Pointer<FileError>] r1{location(a1)}\n"
+      "  [Pointer<FileError>] r2{location(a2)}\n"
+      "  [FileError] b0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] b1{" + std::to_string(EEXIST) + "i32}\n"
+      "  [FileError] b2{" + std::to_string(EACCES) + "i32}\n"
+      "  [Pointer<FileError>] s0{location(b0)}\n"
+      "  [Pointer<FileError>] s1{location(b1)}\n"
+      "  [Pointer<FileError>] s2{location(b2)}\n"
+      "  [FileError] c0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] c1{" + std::to_string(EEXIST) + "i32}\n"
+      "  [Pointer<FileError>] t0{location(c0)}\n"
+      "  [Pointer<FileError>] t1{location(c1)}\n"
+      "  return(plus(score_ptrs(r0, r1, r2),\n"
+      "              plus(forward(s0, s1, s2),\n"
+      "                   forward_mixed(t0, t1))))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_file_error.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_pointer_file_error").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 36);
+}
 #endif
 
 TEST_CASE("compiles and runs native void call with string param") {

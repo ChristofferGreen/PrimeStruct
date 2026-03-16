@@ -145,7 +145,8 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
               target.args.size() == 2 && target.args.front().kind == Expr::Kind::Name) {
             auto it = localsIn.find(target.args.front().name);
             if (it != localsIn.end() && it->second.isArgsPack && it->second.isFileError &&
-                it->second.argsPackElementKind == LocalInfo::Kind::Reference) {
+                (it->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+                 it->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
               kindOut = LocalInfo::ValueKind::String;
               return true;
             }

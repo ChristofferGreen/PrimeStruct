@@ -75,6 +75,11 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
   }
   if (base == "Pointer") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Pointer;
+    if (trimTemplateTypeText(arg) == "FileError") {
+      infoOut.isFileError = true;
+      infoOut.valueKind = LocalInfo::ValueKind::Int32;
+      return;
+    }
     bool pointerResultHasValue = false;
     LocalInfo::ValueKind pointerResultValueKind = LocalInfo::ValueKind::Unknown;
     std::string pointerResultErrorType;

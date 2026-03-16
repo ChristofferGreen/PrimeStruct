@@ -304,7 +304,7 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
       expr.args.front().kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.args.front().name);
     if (it != localsIn.end() && it->second.isFileError) {
-      if (it->second.kind == LocalInfo::Kind::Reference) {
+      if (it->second.kind == LocalInfo::Kind::Reference || it->second.kind == LocalInfo::Kind::Pointer) {
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
         emitInstruction(IrOpcode::LoadIndirect, 0);
         const int32_t errorLocal = allocTempLocal();
@@ -341,7 +341,8 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
           target.args.front().kind == Expr::Kind::Name) {
         auto it = localsIn.find(target.args.front().name);
         if (it != localsIn.end() && it->second.isArgsPack && it->second.isFileError &&
-            it->second.argsPackElementKind == LocalInfo::Kind::Reference) {
+            (it->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+             it->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
           if (!emitExpr(receiver, localsIn)) {
             return FileErrorWhyCallEmitResult::Error;
           }
