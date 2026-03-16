@@ -365,16 +365,16 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_image_api_unsupported.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_image_api_unsupported").string();
+  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_image_api_unsupported.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
   CHECK(runCommand(exePath + " > " + outPath) == 0);
   CHECK(readFile(outPath) ==
         "image_invalid_operation\n"
         "image_invalid_operation\n"
-        "image_invalid_operation\n"
+        "image_read_unsupported\n"
         "image_write_unsupported\n");
 }
 
