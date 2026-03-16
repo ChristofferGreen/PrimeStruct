@@ -51,6 +51,35 @@ bool isIndexedPointerArgsPackFileHandleReceiver(const Expr &receiverExpr, const 
          it->second.argsPackElementKind == LocalInfo::Kind::Pointer;
 }
 
+bool isMapTryAtCallName(const Expr &expr) {
+  if (isSimpleCallName(expr, "tryAt")) {
+    return true;
+  }
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "map/tryAt" || normalized == "std/collections/map/tryAt";
+}
+
+bool inferMapTryAtResultValueKind(const Expr &expr,
+                                  const LocalMap &localsIn,
+                                  LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (expr.kind != Expr::Kind::Call || expr.args.empty() || !isMapTryAtCallName(expr)) {
+    return false;
+  }
+  const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn);
+  if (!targetInfo.isMapTarget || targetInfo.mapValueKind == LocalInfo::ValueKind::Unknown) {
+    return false;
+  }
+  kindOut = targetInfo.mapValueKind;
+  return true;
+}
+
 bool inferLiteralOrNameExprKindImpl(const Expr &expr,
                                     const LocalMap &localsIn,
                                     const GetSetupMathConstantNameFn &getMathConstantName,
@@ -1787,6 +1816,9 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
       }
       if (resultExpr.kind != Expr::Kind::Call) {
         return false;
+      }
+      if (inferMapTryAtResultValueKind(resultExpr, localsIn, kindOut)) {
+        return true;
       }
       if (!resultExpr.isMethodCall && isSimpleCallName(resultExpr, "File")) {
         kindOut = LocalInfo::ValueKind::Int64;

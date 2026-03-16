@@ -3473,6 +3473,117 @@ TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed point
   CHECK(state.inferExprKind(tryExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
+TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed map tryAt args pack lookups") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; };
+  state.isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; };
+  state.isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; };
+  state.inferCallExprCountCapacityFallbackKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+  state.resolveMethodCallDefinition =
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  state.inferCallExprMathFallbackKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+  state.inferCallExprOperatorFallbackKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+  state.inferCallExprControlFlowFallbackKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+  state.inferCallExprPointerFallbackKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::string inferenceError;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
+          .error = &inferenceError,
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(state.inferExprKind));
+
+  auto makeArgsPackInfo = [](primec::ir_lowerer::LocalInfo::Kind elementKind,
+                             bool referenceToMap,
+                             bool pointerToMap) {
+    primec::ir_lowerer::LocalInfo info;
+    info.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+    info.isArgsPack = true;
+    info.argsPackElementKind = elementKind;
+    info.referenceToMap = referenceToMap;
+    info.pointerToMap = pointerToMap;
+    info.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    info.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    return info;
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+  locals.emplace("maps", makeArgsPackInfo(primec::ir_lowerer::LocalInfo::Kind::Map, false, false));
+  locals.emplace("mapRefs", makeArgsPackInfo(primec::ir_lowerer::LocalInfo::Kind::Reference, true, false));
+  locals.emplace("mapPtrs", makeArgsPackInfo(primec::ir_lowerer::LocalInfo::Kind::Pointer, false, true));
+
+  auto makeNameExpr = [](const std::string &name) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    return expr;
+  };
+  auto makeLiteralExpr = [](int64_t value) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Literal;
+    expr.intWidth = 32;
+    expr.literalValue = value;
+    return expr;
+  };
+  auto makeAtExpr = [&](const std::string &packName) {
+    primec::Expr atExpr;
+    atExpr.kind = primec::Expr::Kind::Call;
+    atExpr.name = "at";
+    atExpr.args = {makeNameExpr(packName), makeLiteralExpr(0)};
+    return atExpr;
+  };
+  auto makeTryExpr = [](primec::Expr resultExpr) {
+    primec::Expr tryExpr;
+    tryExpr.kind = primec::Expr::Kind::Call;
+    tryExpr.name = "try";
+    tryExpr.args = {std::move(resultExpr)};
+    return tryExpr;
+  };
+
+  primec::Expr helperTryAtExpr;
+  helperTryAtExpr.kind = primec::Expr::Kind::Call;
+  helperTryAtExpr.name = "/std/collections/map/tryAt";
+  helperTryAtExpr.args = {makeAtExpr("maps"), makeLiteralExpr(3)};
+  CHECK(state.inferExprKind(makeTryExpr(helperTryAtExpr), locals) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Expr borrowedMethodTryAtExpr;
+  borrowedMethodTryAtExpr.kind = primec::Expr::Kind::Call;
+  borrowedMethodTryAtExpr.name = "tryAt";
+  borrowedMethodTryAtExpr.isMethodCall = true;
+  borrowedMethodTryAtExpr.args = {makeAtExpr("mapRefs"), makeLiteralExpr(3)};
+  CHECK(state.inferExprKind(makeTryExpr(borrowedMethodTryAtExpr), locals) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Expr pointerMethodTryAtExpr;
+  pointerMethodTryAtExpr.kind = primec::Expr::Kind::Call;
+  pointerMethodTryAtExpr.name = "tryAt";
+  pointerMethodTryAtExpr.isMethodCall = true;
+  pointerMethodTryAtExpr.args = {makeAtExpr("mapPtrs"), makeLiteralExpr(3)};
+  CHECK(state.inferExprKind(makeTryExpr(pointerMethodTryAtExpr), locals) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
 TEST_CASE("ir lowerer inference expr-kind dispatch setup validates dependencies") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string inferenceError;
