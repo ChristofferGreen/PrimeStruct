@@ -162,6 +162,17 @@
           if (!transform.templateArgs.empty()) {
             info.resultErrorType = transform.templateArgs.back();
           }
+        } else if (transform.name == "Reference" && transform.templateArgs.size() == 1) {
+          bool resultHasValue = false;
+          LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+          std::string resultErrorType;
+          if (parseResultTypeName(transform.templateArgs.front(), resultHasValue, resultValueKind, resultErrorType)) {
+            info.isResult = true;
+            info.resultHasValue = resultHasValue;
+            info.resultValueKind = resultValueKind;
+            info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+            info.resultErrorType = resultErrorType;
+          }
         }
       }
       info.isFileError = isFileErrorBinding(stmt);

@@ -85,6 +85,17 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     std::string refBase;
     std::string refArg;
     infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
+    bool refResultHasValue = false;
+    LocalInfo::ValueKind refResultValueKind = LocalInfo::ValueKind::Unknown;
+    std::string refResultErrorType;
+    if (parseResultTypeName(trimTemplateTypeText(arg), refResultHasValue, refResultValueKind, refResultErrorType)) {
+      infoOut.isResult = true;
+      infoOut.resultHasValue = refResultHasValue;
+      infoOut.resultValueKind = refResultValueKind;
+      infoOut.resultErrorType = refResultErrorType;
+      infoOut.valueKind = refResultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+      return;
+    }
     if (!splitTemplateTypeName(trimTemplateTypeText(arg), refBase, refArg)) {
       if (trimTemplateTypeText(arg) == "FileError") {
         infoOut.isFileError = true;
@@ -423,6 +434,17 @@ bool inferCallParameterLocalInfo(const Expr &param,
       infoOut.valueKind = infoOut.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       if (!transform.templateArgs.empty()) {
         infoOut.resultErrorType = transform.templateArgs.back();
+      }
+    } else if (transform.name == "Reference" && transform.templateArgs.size() == 1) {
+      bool resultHasValue = false;
+      LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+      std::string resultErrorType;
+      if (parseResultTypeName(transform.templateArgs.front(), resultHasValue, resultValueKind, resultErrorType)) {
+        infoOut.isResult = true;
+        infoOut.resultHasValue = resultHasValue;
+        infoOut.resultValueKind = resultValueKind;
+        infoOut.valueKind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+        infoOut.resultErrorType = resultErrorType;
       }
     }
   }

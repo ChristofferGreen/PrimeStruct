@@ -62,6 +62,10 @@ bool emitInlineDefinitionCallParameters(
           if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Reference ||
               it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap ||
               it->second.isFileError != paramInfo.isFileError ||
+              it->second.isResult != paramInfo.isResult ||
+              it->second.resultHasValue != paramInfo.resultHasValue ||
+              it->second.resultValueKind != paramInfo.resultValueKind ||
+              it->second.resultErrorType != paramInfo.resultErrorType ||
               it->second.valueKind != paramInfo.valueKind ||
               it->second.structTypeName != paramInfo.structTypeName) {
             error = "variadic parameter type mismatch";
@@ -149,6 +153,13 @@ bool emitInlineDefinitionCallParameters(
           error = "variadic parameter type mismatch";
           return false;
         }
+        if (callerIt->second.isResult != paramInfo.isResult ||
+            callerIt->second.resultHasValue != paramInfo.resultHasValue ||
+            callerIt->second.resultValueKind != paramInfo.resultValueKind ||
+            callerIt->second.resultErrorType != paramInfo.resultErrorType) {
+          error = "variadic parameter type mismatch";
+          return false;
+        }
         if (callerIt->second.referenceToArray != paramInfo.referenceToArray ||
             callerIt->second.referenceToVector != paramInfo.referenceToVector ||
             callerIt->second.referenceToMap != paramInfo.referenceToMap) {
@@ -178,6 +189,10 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.referenceToMap = callerIt->second.referenceToMap;
         paramInfo.isSoaVector = callerIt->second.isSoaVector;
         paramInfo.isFileError = callerIt->second.isFileError;
+        paramInfo.isResult = callerIt->second.isResult;
+        paramInfo.resultHasValue = callerIt->second.resultHasValue;
+        paramInfo.resultValueKind = callerIt->second.resultValueKind;
+        paramInfo.resultErrorType = callerIt->second.resultErrorType;
         calleeLocals.emplace(param.name, paramInfo);
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(callerIt->second.index));
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));

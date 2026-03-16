@@ -1690,6 +1690,18 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
             return true;
           }
         }
+        if (isSimpleCallName(resultExpr, "dereference") && resultExpr.args.size() == 1) {
+          const Expr &targetExpr = resultExpr.args.front();
+          if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, accessName) &&
+              targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
+            auto it = localsIn.find(targetExpr.args.front().name);
+            if (it != localsIn.end() && it->second.isArgsPack && it->second.isResult &&
+                it->second.argsPackElementKind == LocalInfo::Kind::Reference) {
+              kindOut = it->second.resultHasValue ? it->second.resultValueKind : LocalInfo::ValueKind::Int32;
+              return true;
+            }
+          }
+        }
       }
       if (resultExpr.kind != Expr::Kind::Call) {
         return false;

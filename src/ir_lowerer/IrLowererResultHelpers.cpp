@@ -126,6 +126,22 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       return true;
     }
   }
+  if (isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
+    const Expr &targetExpr = expr.args.front();
+    if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, accessName) &&
+        targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
+      const LocalResultInfo local = lookupLocal(targetExpr.args.front().name);
+      auto localIt = localsIn.find(targetExpr.args.front().name);
+      if (local.found && local.isResult && localIt != localsIn.end() && localIt->second.isArgsPack &&
+          localIt->second.argsPackElementKind == LocalInfo::Kind::Reference) {
+        out.isResult = true;
+        out.hasValue = local.resultHasValue;
+        out.valueKind = local.resultValueKind;
+        out.errorType = local.resultErrorType;
+        return true;
+      }
+    }
+  }
   return resolveResultExprInfo(
       expr, lookupLocal, resolveMethod, resolveDefinitionCall, lookupDefinitionResult, out);
 }
