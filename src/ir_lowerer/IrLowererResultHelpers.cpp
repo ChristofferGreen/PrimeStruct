@@ -278,6 +278,63 @@ bool resolveResultWhyCallInfo(const Expr &expr,
   return true;
 }
 
+bool resolveResultErrorCallInfo(const Expr &expr,
+                                const LocalMap &localsIn,
+                                const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+                                ResultExprInfo &resultInfo,
+                                std::string &error) {
+  if (expr.args.size() != 2) {
+    error = "Result.error requires exactly one argument";
+    return false;
+  }
+  if (!resolveResultExprInfo ||
+      !resolveResultExprInfo(expr.args[1], localsIn, resultInfo) ||
+      !resultInfo.isResult) {
+    error = "Result.error requires Result argument";
+    return false;
+  }
+  return true;
+}
+
+ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error) {
+  if (!(expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+        expr.args.front().name == "Result" && expr.name == "error")) {
+    return ResultErrorMethodCallEmitResult::NotHandled;
+  }
+
+  ResultExprInfo resultInfo;
+  if (!resolveResultErrorCallInfo(
+          expr, localsIn, resolveResultExprInfo, resultInfo, error)) {
+    return ResultErrorMethodCallEmitResult::Error;
+  }
+
+  int32_t errorLocal = 0;
+  if (!emitResultWhyLocalsFromValueExpr(
+          expr.args[1],
+          localsIn,
+          resultInfo.hasValue,
+          emitExpr,
+          allocTempLocal,
+          emitInstruction,
+          errorLocal)) {
+    return ResultErrorMethodCallEmitResult::Error;
+  }
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal));
+  emitInstruction(IrOpcode::PushI64, 0);
+  emitInstruction(IrOpcode::CmpEqI64, 0);
+  emitInstruction(IrOpcode::PushI64, 0);
+  emitInstruction(IrOpcode::CmpEqI64, 0);
+  return ResultErrorMethodCallEmitResult::Emitted;
+}
+
 ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     const Expr &expr,
     const LocalMap &localsIn,

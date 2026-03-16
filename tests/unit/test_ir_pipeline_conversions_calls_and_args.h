@@ -756,6 +756,235 @@ main() {
   CHECK(result == 30);
 }
 
+TEST_CASE("ir lowerer materializes variadic status-only Result packs with indexed error and why access") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return(if(equal(err.code, 7i32), then() { "bad"utf8 }, else() { "other"utf8 }))
+  }
+}
+
+[return<Result<ParseError>>]
+ok_status() {
+  return(Result.ok())
+}
+
+[return<Result<ParseError>>]
+fail_bad() {
+  return(7i32)
+}
+
+[return<int>]
+score_results([args<Result<ParseError>>] values) {
+  [auto] tailHasError{Result.error(values[minus(count(values), 1i32)])}
+  [i32] tailWhyCount{count(Result.why(values[minus(count(values), 1i32)]))}
+  return(if(tailHasError, then() { plus(10i32, tailWhyCount) }, else() { 0i32 }))
+}
+
+[return<int>]
+forward([args<Result<ParseError>>] values) {
+  return(score_results([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Result<ParseError>>] values) {
+  return(score_results(ok_status(), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(plus(score_results(ok_status(), fail_bad()),
+              plus(forward(ok_status(), fail_bad()),
+                   forward_mixed(ok_status(), fail_bad()))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 39);
+}
+
+TEST_CASE("ir lowerer materializes variadic borrowed status-only Result packs with indexed dereference error and why access") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return(if(equal(err.code, 7i32), then() { "bad"utf8 }, else() { "other"utf8 }))
+  }
+}
+
+[return<Result<ParseError>>]
+ok_status() {
+  return(Result.ok())
+}
+
+[return<Result<ParseError>>]
+fail_bad() {
+  return(7i32)
+}
+
+[return<int>]
+score_results([args<Reference<Result<ParseError>>>] values) {
+  [auto] tailHasError{Result.error(dereference(values[minus(count(values), 1i32)]))}
+  [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
+  return(if(tailHasError, then() { plus(10i32, tailWhyCount) }, else() { 0i32 }))
+}
+
+[return<int>]
+forward([args<Reference<Result<ParseError>>>] values) {
+  return(score_results([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Reference<Result<ParseError>>>] values) {
+  [Result<ParseError>] extra{ok_status()}
+  [Reference<Result<ParseError>>] extra_ref{location(extra)}
+  return(score_results(extra_ref, [spread] values))
+}
+
+[return<int>]
+main() {
+  [Result<ParseError>] a0{ok_status()}
+  [Result<ParseError>] a1{fail_bad()}
+  [Reference<Result<ParseError>>] r0{location(a0)}
+  [Reference<Result<ParseError>>] r1{location(a1)}
+
+  [Result<ParseError>] b0{ok_status()}
+  [Result<ParseError>] b1{fail_bad()}
+  [Reference<Result<ParseError>>] s0{location(b0)}
+  [Reference<Result<ParseError>>] s1{location(b1)}
+
+  [Result<ParseError>] c0{ok_status()}
+  [Result<ParseError>] c1{fail_bad()}
+  [Reference<Result<ParseError>>] t0{location(c0)}
+  [Reference<Result<ParseError>>] t1{location(c1)}
+
+  return(plus(score_results(r0, r1),
+              plus(forward(s0, s1),
+                   forward_mixed(t0, t1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 39);
+}
+
+TEST_CASE("ir lowerer materializes variadic pointer status-only Result packs with indexed dereference error and why access") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return(if(equal(err.code, 7i32), then() { "bad"utf8 }, else() { "other"utf8 }))
+  }
+}
+
+[return<Result<ParseError>>]
+ok_status() {
+  return(Result.ok())
+}
+
+[return<Result<ParseError>>]
+fail_bad() {
+  return(7i32)
+}
+
+[return<int>]
+score_results([args<Pointer<Result<ParseError>>>] values) {
+  [auto] tailHasError{Result.error(dereference(values[minus(count(values), 1i32)]))}
+  [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
+  return(if(tailHasError, then() { plus(10i32, tailWhyCount) }, else() { 0i32 }))
+}
+
+[return<int>]
+forward([args<Pointer<Result<ParseError>>>] values) {
+  return(score_results([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<Result<ParseError>>>] values) {
+  [Result<ParseError>] extra{ok_status()}
+  [Pointer<Result<ParseError>>] extra_ptr{location(extra)}
+  return(score_results(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [Result<ParseError>] a0{ok_status()}
+  [Result<ParseError>] a1{fail_bad()}
+  [Pointer<Result<ParseError>>] r0{location(a0)}
+  [Pointer<Result<ParseError>>] r1{location(a1)}
+
+  [Result<ParseError>] b0{ok_status()}
+  [Result<ParseError>] b1{fail_bad()}
+  [Pointer<Result<ParseError>>] s0{location(b0)}
+  [Pointer<Result<ParseError>>] s1{location(b1)}
+
+  [Result<ParseError>] c0{ok_status()}
+  [Result<ParseError>] c1{fail_bad()}
+  [Pointer<Result<ParseError>>] t0{location(c0)}
+  [Pointer<Result<ParseError>>] t1{location(c1)}
+
+  return(plus(score_results(r0, r1),
+              plus(forward(s0, s1),
+                   forward_mixed(t0, t1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 39);
+}
+
 #if defined(EACCES) && defined(ENOENT) && defined(EEXIST)
 TEST_CASE("ir lowerer materializes variadic FileError packs with indexed why methods") {
   const std::string source =

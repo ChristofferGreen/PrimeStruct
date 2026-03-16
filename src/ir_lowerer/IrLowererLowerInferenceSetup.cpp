@@ -153,6 +153,10 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
         kindOut = expr.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
         return true;
       }
+      if (expr.name == "error") {
+        kindOut = LocalInfo::ValueKind::Bool;
+        return true;
+      }
       if (expr.name == "why") {
         kindOut = LocalInfo::ValueKind::String;
         return true;

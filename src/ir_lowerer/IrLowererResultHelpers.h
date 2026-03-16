@@ -64,6 +64,16 @@ bool resolveResultWhyCallInfo(const Expr &expr,
                               const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
                               ResultExprInfo &resultInfo,
                               std::string &error);
+bool resolveResultErrorCallInfo(const Expr &expr,
+                                const LocalMap &localsIn,
+                                const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+                                ResultExprInfo &resultInfo,
+                                std::string &error);
+enum class ResultErrorMethodCallEmitResult {
+  NotHandled,
+  Emitted,
+  Error,
+};
 enum class ResultWhyMethodCallEmitResult {
   NotHandled,
   Emitted,
@@ -84,6 +94,14 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error);
+ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error);
 bool emitResultWhyLocalsFromValueExpr(

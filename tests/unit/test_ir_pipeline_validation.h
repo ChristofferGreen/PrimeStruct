@@ -42776,6 +42776,54 @@ TEST_CASE("ir lowerer result helpers resolve Result.why call info") {
   CHECK(error == "Result.why requires Result argument");
 }
 
+TEST_CASE("ir lowerer result helpers resolve Result.error call info") {
+  primec::Expr resultErrorExpr;
+  resultErrorExpr.kind = primec::Expr::Kind::Call;
+  resultErrorExpr.isMethodCall = true;
+  resultErrorExpr.name = "error";
+  resultErrorExpr.args.resize(2);
+  resultErrorExpr.args[0].kind = primec::Expr::Kind::Name;
+  resultErrorExpr.args[0].name = "Result";
+  resultErrorExpr.args[1].kind = primec::Expr::Kind::Name;
+  resultErrorExpr.args[1].name = "status";
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::ResolveResultExprInfoWithLocalsFn resolveResultExprInfo =
+      [](const primec::Expr &valueExpr,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::ResultExprInfo &resultInfoOut) {
+        if (valueExpr.kind == primec::Expr::Kind::Name && valueExpr.name == "status") {
+          resultInfoOut = primec::ir_lowerer::ResultExprInfo{};
+          resultInfoOut.isResult = true;
+          resultInfoOut.hasValue = false;
+          resultInfoOut.errorType = "ParseError";
+          return true;
+        }
+        return false;
+      };
+
+  primec::ir_lowerer::ResultExprInfo resultInfo;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveResultErrorCallInfo(
+      resultErrorExpr, locals, resolveResultExprInfo, resultInfo, error));
+  CHECK(resultInfo.isResult);
+  CHECK_FALSE(resultInfo.hasValue);
+  CHECK(resultInfo.errorType == "ParseError");
+
+  resultErrorExpr.args.resize(1);
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveResultErrorCallInfo(
+      resultErrorExpr, locals, resolveResultExprInfo, resultInfo, error));
+  CHECK(error == "Result.error requires exactly one argument");
+
+  resultErrorExpr.args.resize(2);
+  resultErrorExpr.args[1].name = "plainValue";
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveResultErrorCallInfo(
+      resultErrorExpr, locals, resolveResultExprInfo, resultInfo, error));
+  CHECK(error == "Result.error requires Result argument");
+}
+
 TEST_CASE("ir lowerer result helpers classify Result.why error kinds") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   CHECK(primec::ir_lowerer::isSupportedResultWhyErrorKind(ValueKind::Int32));
@@ -42966,6 +43014,98 @@ TEST_CASE("ir lowerer result helpers emit Result.why value-local setup") {
       errorLocal));
   CHECK(allocCounter == 0);
   CHECK(errorLocal == -1);
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer result helpers try emit Result.error method calls") {
+  using EmitResult = primec::ir_lowerer::ResultErrorMethodCallEmitResult;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.isMethodCall = true;
+  expr.name = "error";
+  expr.args.resize(2);
+  expr.args[0].kind = primec::Expr::Kind::Name;
+  expr.args[0].name = "Result";
+  expr.args[1].kind = primec::Expr::Kind::Name;
+  expr.args[1].name = "status";
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::ResolveResultExprInfoWithLocalsFn resolveResultExprInfo =
+      [](const primec::Expr &valueExpr,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::ResultExprInfo &resultInfoOut) {
+        if (valueExpr.kind == primec::Expr::Kind::Name && valueExpr.name == "status") {
+          resultInfoOut = primec::ir_lowerer::ResultExprInfo{};
+          resultInfoOut.isResult = true;
+          resultInfoOut.hasValue = false;
+          resultInfoOut.errorType = "ParseError";
+          return true;
+        }
+        return false;
+      };
+
+  std::vector<primec::IrInstruction> instructions;
+  int allocCounter = 0;
+  int emitCalls = 0;
+  std::string error;
+  const EmitResult emitted = primec::ir_lowerer::tryEmitResultErrorCall(
+      expr,
+      locals,
+      resolveResultExprInfo,
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &valueLocals) {
+        ++emitCalls;
+        CHECK(valueExpr.kind == primec::Expr::Kind::Name);
+        CHECK(valueExpr.name == "status");
+        CHECK(valueLocals.empty());
+        instructions.push_back({primec::IrOpcode::LoadLocal, 7});
+        return true;
+      },
+      [&]() {
+        ++allocCounter;
+        return allocCounter == 1 ? 13 : 17;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      error);
+  CHECK(emitted == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitCalls == 1);
+  CHECK(allocCounter == 2);
+  REQUIRE(instructions.size() == 9);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 7);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 13);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].imm == 13);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 17);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 17);
+  CHECK(instructions[5].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[5].imm == 0);
+  CHECK(instructions[6].op == primec::IrOpcode::CmpEqI64);
+  CHECK(instructions[6].imm == 0);
+  CHECK(instructions[7].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[7].imm == 0);
+  CHECK(instructions[8].op == primec::IrOpcode::CmpEqI64);
+  CHECK(instructions[8].imm == 0);
+
+  instructions.clear();
+  allocCounter = 0;
+  emitCalls = 0;
+  error.clear();
+  expr.args.resize(1);
+  const EmitResult badCall = primec::ir_lowerer::tryEmitResultErrorCall(
+      expr,
+      locals,
+      resolveResultExprInfo,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [&]() { return 0; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      error);
+  CHECK(badCall == EmitResult::Error);
+  CHECK(error == "Result.error requires exactly one argument");
   CHECK(instructions.empty());
 }
 

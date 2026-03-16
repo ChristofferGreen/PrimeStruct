@@ -462,6 +462,22 @@
         if (resultOkCallResult == ir_lowerer::ResultOkMethodCallEmitResult::Error) {
           return false;
         }
+        const auto resultErrorCallResult = ir_lowerer::tryEmitResultErrorCall(
+            expr,
+            localsIn,
+            resolveResultExprInfo,
+            [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+              return emitExpr(valueExpr, valueLocals);
+            },
+            [&]() { return allocTempLocal(); },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            error);
+        if (resultErrorCallResult == ir_lowerer::ResultErrorMethodCallEmitResult::Emitted) {
+          return true;
+        }
+        if (resultErrorCallResult == ir_lowerer::ResultErrorMethodCallEmitResult::Error) {
+          return false;
+        }
         const auto resultWhyDispatchResult = ir_lowerer::tryEmitResultWhyDispatchCall(
             expr,
             localsIn,

@@ -399,13 +399,24 @@ Bottom-level form therefore has:
   downstream string helpers. Struct packs now also materialize for direct calls plus pure/mixed forwarding across
   `count(...)`, checked/unchecked indexed access, and downstream field/helper resolution. `Result<T, Error>` packs now
   preserve indexed `Result.why(...)` and `?` behavior across direct, pure-spread, and mixed-forwarded IR-backed
-  materialization, `FileError` packs preserve indexed downstream `why()` mapping across those same forwarding modes,
-  `Reference<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping across those same
-  forwarding modes, `Pointer<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping across those same
-  forwarding modes, `Reference<Result<T, Error>>` packs preserve indexed downstream `dereference(...)`, `try(...)`,
-  and `Result.why(...)` access across those same forwarding modes, `Pointer<Result<T, Error>>` packs preserve indexed downstream `dereference(...)`,
-  `try(...)`, and `Result.why(...)` access across those same forwarding modes including payload-kind inference for
-  `auto` bindings on indexed `try(...)` results, `File<Mode>` packs preserve indexed downstream file-handle method access, `Reference<File<Mode>>` packs preserve indexed downstream `dereference(...).write*` / `flush()` access, `Pointer<File<Mode>>` packs preserve indexed downstream `dereference(...).write*` / `flush()` access, `Buffer<T>` packs preserve indexed downstream `buffer_load(...)` on the IR/VM GPU path, `Reference<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` on that same IR/VM GPU path, `Pointer<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` on that same IR/VM GPU path, and `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`,
+  materialization, status-only `Result<Error>` packs preserve indexed `Result.error(...)` and `Result.why(...)`
+  behavior across those same forwarding modes, `FileError` packs preserve indexed downstream `why()` mapping across
+  those same forwarding modes, `Reference<FileError>` packs preserve indexed downstream `dereference(...).why()`
+  mapping across those same forwarding modes, `Pointer<FileError>` packs preserve indexed downstream
+  `dereference(...).why()` mapping across those same forwarding modes, `Reference<Result<T, Error>>` packs preserve
+  indexed downstream `dereference(...)`, `try(...)`, and `Result.why(...)` access across those same forwarding modes,
+  status-only `Reference<Result<Error>>` packs preserve indexed downstream `dereference(...)`, `Result.error(...)`,
+  and `Result.why(...)` access across those same forwarding modes, `Pointer<Result<T, Error>>` packs preserve indexed
+  downstream `dereference(...)`, `try(...)`, and `Result.why(...)` access across those same forwarding modes
+  including payload-kind inference for `auto` bindings on indexed `try(...)` results, status-only
+  `Pointer<Result<Error>>` packs preserve indexed downstream `dereference(...)`, `Result.error(...)`, and
+  `Result.why(...)` access across those same forwarding modes, `File<Mode>` packs preserve indexed downstream
+  file-handle method access, `Reference<File<Mode>>` packs preserve indexed downstream `dereference(...).write*` /
+  `flush()` access, `Pointer<File<Mode>>` packs preserve indexed downstream `dereference(...).write*` / `flush()`
+  access, `Buffer<T>` packs preserve indexed downstream `buffer_load(...)` on the IR/VM GPU path,
+  `Reference<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` on that same IR/VM
+  GPU path, `Pointer<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` on that same
+  IR/VM GPU path, and `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`,
   empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`, `Reference<map<K, V>>`, plus `Pointer<map<K, V>>`
   packs preserve indexed downstream `count()` resolution across those
   same forwarding modes, while scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream
