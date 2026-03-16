@@ -212,6 +212,12 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = LocalInfo::ValueKind::Int64;
       return;
     }
+    if (refBase == "Buffer") {
+      infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
+      infoOut.referenceToBuffer = true;
+      infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(refArg));
+      return;
+    }
     const LocalInfo::ValueKind refValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
     if (refValueKind != LocalInfo::ValueKind::Unknown) {
       infoOut.valueKind = refValueKind;

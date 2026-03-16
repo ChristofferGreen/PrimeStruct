@@ -1401,6 +1401,27 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
                 }
                 return it->second.valueKind;
               }
+              if (bufferExpr.kind == Expr::Kind::Call && isSimpleCallName(bufferExpr, "dereference") &&
+                  bufferExpr.args.size() == 1) {
+                const Expr &targetExpr = bufferExpr.args.front();
+                if (targetExpr.kind == Expr::Kind::Name) {
+                  auto it = localsIn.find(targetExpr.name);
+                  if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference &&
+                      it->second.referenceToBuffer) {
+                    return it->second.valueKind;
+                  }
+                }
+                std::string derefAccessName;
+                if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, derefAccessName) &&
+                    targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
+                  auto it = localsIn.find(targetExpr.args.front().name);
+                  if (it != localsIn.end() && it->second.isArgsPack &&
+                      it->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+                      it->second.referenceToBuffer) {
+                    return it->second.valueKind;
+                  }
+                }
+              }
               std::string accessName;
               if (bufferExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(bufferExpr, accessName) &&
                   bufferExpr.args.size() == 2 && bufferExpr.args.front().kind == Expr::Kind::Name) {

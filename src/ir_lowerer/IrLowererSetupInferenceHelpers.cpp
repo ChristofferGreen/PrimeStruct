@@ -139,6 +139,23 @@ LocalInfo::ValueKind inferBufferElementValueKind(
         return it->second.valueKind;
       }
     }
+    if (isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
+      const Expr &targetExpr = expr.args.front();
+      if (targetExpr.kind == Expr::Kind::Name) {
+        auto it = localsIn.find(targetExpr.name);
+        if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) {
+          return it->second.valueKind;
+        }
+      }
+      if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, accessName) &&
+          targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
+        auto it = localsIn.find(targetExpr.args.front().name);
+        if (it != localsIn.end() && it->second.isArgsPack &&
+            it->second.argsPackElementKind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) {
+          return it->second.valueKind;
+        }
+      }
+    }
     if (isSimpleCallName(expr, "buffer") && expr.templateArgs.size() == 1) {
       return valueKindFromTypeName(expr.templateArgs.front());
     }

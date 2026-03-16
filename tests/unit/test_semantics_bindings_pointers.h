@@ -313,6 +313,20 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("reference bindings accept Buffer targets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [Buffer<i32>] values{/std/gpu/buffer<i32>(2i32)}
+  [Reference<Buffer<i32>>] ref{location(values)}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("pointer bindings accept array targets") {
   const std::string source = R"(
 [return<int>]

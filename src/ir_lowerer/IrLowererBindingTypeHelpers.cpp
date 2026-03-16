@@ -215,6 +215,15 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
       }
       return;
     }
+    if (base == "Buffer") {
+      if (info.kind == LocalInfo::Kind::Reference) {
+        info.referenceToBuffer = true;
+      }
+      if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+        info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+      }
+      return;
+    }
     if (base == "map") {
       std::vector<std::string> args;
       if (!splitTemplateArgs(arg, args) || args.size() != 2) {
