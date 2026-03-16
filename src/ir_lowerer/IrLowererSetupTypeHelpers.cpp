@@ -1838,6 +1838,11 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
       if (accessReceiver.kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(accessReceiver.name);
         if (localIt != localsIn.end() && localIt->second.isArgsPack) {
+          if (localIt->second.isFileError &&
+              localIt->second.argsPackElementKind == LocalInfo::Kind::Value) {
+            typeNameOut = "FileError";
+            return true;
+          }
           if (!localIt->second.structTypeName.empty()) {
             resolvedTypePathOut = localIt->second.structTypeName;
             return true;

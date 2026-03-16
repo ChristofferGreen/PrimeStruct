@@ -317,6 +317,26 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
     }
   }
 
+  if (expr.isMethodCall && expr.name == "why" && expr.args.size() == 1 &&
+      expr.args.front().kind == Expr::Kind::Call) {
+    const Expr &receiver = expr.args.front();
+    std::string accessName;
+    if (getBuiltinArrayAccessName(receiver, accessName) && receiver.args.size() == 2 &&
+        receiver.args.front().kind == Expr::Kind::Name) {
+      auto it = localsIn.find(receiver.args.front().name);
+      if (it != localsIn.end() && it->second.isArgsPack && it->second.isFileError &&
+          it->second.argsPackElementKind == LocalInfo::Kind::Value) {
+        if (!emitExpr(receiver, localsIn)) {
+          return FileErrorWhyCallEmitResult::Error;
+        }
+        const int32_t errorLocal = allocTempLocal();
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+        emitFileErrorWhyFn(errorLocal);
+        return FileErrorWhyCallEmitResult::Emitted;
+      }
+    }
+  }
+
   return FileErrorWhyCallEmitResult::NotHandled;
 }
 

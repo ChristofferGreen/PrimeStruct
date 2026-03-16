@@ -44,6 +44,12 @@ bool extractArgsPackElementTypeText(const Expr &expr, std::string &typeTextOut) 
 }
 
 void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut) {
+  if (trimTemplateTypeText(typeText) == "FileError") {
+    infoOut.isFileError = true;
+    infoOut.valueKind = LocalInfo::ValueKind::Int32;
+    return;
+  }
+
   bool resultHasValue = false;
   LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
   std::string resultErrorType;

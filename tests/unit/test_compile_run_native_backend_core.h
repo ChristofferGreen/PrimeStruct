@@ -2262,6 +2262,49 @@ TEST_CASE("compiles and runs native FileError.why mapping") {
 }
 #endif
 
+#if defined(EACCES) && defined(ENOENT) && defined(EEXIST)
+TEST_CASE("native materializes variadic FileError packs with indexed why methods") {
+  const std::string source =
+      "[return<int>]\n"
+      "score_errors([args<FileError>] values) {\n"
+      "  return(plus(count(values[0i32].why()), count(values[2i32].why())))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward([args<FileError>] values) {\n"
+      "  return(score_errors([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward_mixed([args<FileError>] values) {\n"
+      "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
+      "  return(score_errors(extra, [spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "main() {\n"
+      "  [FileError] a0{" + std::to_string(EACCES) + "i32}\n"
+      "  [FileError] a1{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] a2{" + std::to_string(EEXIST) + "i32}\n"
+      "  [FileError] b0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] b1{" + std::to_string(EEXIST) + "i32}\n"
+      "  [FileError] b2{" + std::to_string(EACCES) + "i32}\n"
+      "  [FileError] c0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] c1{" + std::to_string(EEXIST) + "i32}\n"
+      "  return(plus(score_errors(a0, a1, a2),\n"
+      "              plus(forward(b0, b1, b2),\n"
+      "                   forward_mixed(c0, c1))))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_file_error.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_file_error").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 36);
+}
+#endif
+
 TEST_CASE("compiles and runs native void call with string param") {
   const std::string source = R"(
 [return<void> effects(io_out)]

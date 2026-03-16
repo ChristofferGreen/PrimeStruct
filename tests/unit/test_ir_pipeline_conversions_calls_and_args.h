@@ -598,6 +598,57 @@ main() {
   CHECK(result == 30);
 }
 
+#if defined(EACCES) && defined(ENOENT) && defined(EEXIST)
+TEST_CASE("ir lowerer materializes variadic FileError packs with indexed why methods") {
+  const std::string source =
+      "[return<int>]\n"
+      "score_errors([args<FileError>] values) {\n"
+      "  return(plus(count(values[0i32].why()), count(values[2i32].why())))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward([args<FileError>] values) {\n"
+      "  return(score_errors([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward_mixed([args<FileError>] values) {\n"
+      "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
+      "  return(score_errors(extra, [spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "main() {\n"
+      "  [FileError] a0{" + std::to_string(EACCES) + "i32}\n"
+      "  [FileError] a1{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] a2{" + std::to_string(EEXIST) + "i32}\n"
+      "  [FileError] b0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] b1{" + std::to_string(EEXIST) + "i32}\n"
+      "  [FileError] b2{" + std::to_string(EACCES) + "i32}\n"
+      "  [FileError] c0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] c1{" + std::to_string(EEXIST) + "i32}\n"
+      "  return(plus(score_errors(a0, a1, a2),\n"
+      "              plus(forward(b0, b1, b2),\n"
+      "                   forward_mixed(c0, c1))))\n"
+      "}\n";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 36);
+}
+#endif
+
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]

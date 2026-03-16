@@ -128,6 +128,18 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
           return true;
         }
       }
+      if (receiver.kind == Expr::Kind::Call) {
+        std::string accessName;
+        if (getBuiltinArrayAccessName(receiver, accessName) && receiver.args.size() == 2 &&
+            receiver.args.front().kind == Expr::Kind::Name) {
+          auto it = localsIn.find(receiver.args.front().name);
+          if (it != localsIn.end() && it->second.isArgsPack && it->second.isFileError &&
+              it->second.argsPackElementKind == LocalInfo::Kind::Value) {
+            kindOut = LocalInfo::ValueKind::String;
+            return true;
+          }
+        }
+      }
     }
     if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.args.front().name);

@@ -144,6 +144,10 @@ bool emitInlineDefinitionCallParameters(
           error = "variadic parameter type mismatch";
           return false;
         }
+        if (callerIt->second.isFileError != paramInfo.isFileError) {
+          error = "variadic parameter type mismatch";
+          return false;
+        }
         if (callerIt->second.referenceToArray != paramInfo.referenceToArray ||
             callerIt->second.referenceToVector != paramInfo.referenceToVector ||
             callerIt->second.referenceToMap != paramInfo.referenceToMap) {
@@ -172,6 +176,7 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.referenceToVector = callerIt->second.referenceToVector;
         paramInfo.referenceToMap = callerIt->second.referenceToMap;
         paramInfo.isSoaVector = callerIt->second.isSoaVector;
+        paramInfo.isFileError = callerIt->second.isFileError;
         calleeLocals.emplace(param.name, paramInfo);
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(callerIt->second.index));
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
