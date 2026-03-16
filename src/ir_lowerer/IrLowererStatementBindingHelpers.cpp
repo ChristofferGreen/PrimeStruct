@@ -89,6 +89,12 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       return;
     }
     if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
+        normalizeCollectionBindingTypeName(pointerBase) == "vector") {
+      infoOut.pointerToVector = true;
+      infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(pointerArg));
+      return;
+    }
+    if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
         normalizeCollectionBindingTypeName(pointerBase) == "map") {
       std::vector<std::string> args;
       if (!splitTemplateArgs(pointerArg, args) || args.size() != 2) {
@@ -492,6 +498,12 @@ bool inferCallParameterLocalInfo(const Expr &param,
           normalizeCollectionBindingTypeName(wrappedBase) == "File") {
         infoOut.isFileHandle = true;
         infoOut.valueKind = LocalInfo::ValueKind::Int64;
+      }
+      if (transform.name == "Pointer" &&
+          splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          normalizeCollectionBindingTypeName(wrappedBase) == "vector") {
+        infoOut.pointerToVector = true;
+        infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(wrappedArg));
       }
       if (transform.name == "Pointer" &&
           splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&

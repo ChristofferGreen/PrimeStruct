@@ -189,7 +189,11 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
       return;
     }
     if (base == "vector") {
-      info.referenceToVector = true;
+      if (info.kind == LocalInfo::Kind::Reference) {
+        info.referenceToVector = true;
+      } else {
+        info.pointerToVector = true;
+      }
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
         info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
       }

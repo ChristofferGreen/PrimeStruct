@@ -584,6 +584,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     }
     return true;
   }
+  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToVector) {
+    typeNameOut = "vector";
+    return true;
+  }
   if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) {
     typeNameOut = "map";
     return true;
@@ -665,7 +669,8 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
     const LocalInfo &receiverInfo = localIt->second;
     if (receiverInfo.kind == LocalInfo::Kind::Vector || receiverInfo.kind == LocalInfo::Kind::Array ||
         (receiverInfo.kind == LocalInfo::Kind::Reference &&
-         (receiverInfo.referenceToArray || receiverInfo.referenceToVector))) {
+         (receiverInfo.referenceToArray || receiverInfo.referenceToVector)) ||
+        (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToVector)) {
       return assignKind(receiverInfo.valueKind);
     }
     if (receiverInfo.kind == LocalInfo::Kind::Map ||
@@ -1265,6 +1270,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
            (info.kind == LocalInfo::Kind::Reference &&
             (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
+           (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
            (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
            info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
@@ -1296,7 +1302,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
     const LocalInfo &info = it->second;
-    return info.kind == LocalInfo::Kind::Vector || info.isSoaVector;
+    return info.kind == LocalInfo::Kind::Vector || info.isSoaVector ||
+           (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector);
   };
   auto isKnownLocalName = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Name) {
@@ -1867,6 +1874,11 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
               localIt->second.referenceToVector) {
             typeNameOut = localIt->second.isSoaVector ? "soa_vector" : "vector";
+            return true;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+              localIt->second.pointerToVector) {
+            typeNameOut = "vector";
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&

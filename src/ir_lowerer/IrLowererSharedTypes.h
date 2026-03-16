@@ -30,6 +30,7 @@ struct LocalInfo {
   int32_t argsPackElementCount = -1;
   bool referenceToArray = false;
   bool referenceToVector = false;
+  bool pointerToVector = false;
   bool referenceToMap = false;
   bool pointerToMap = false;
   bool isUninitializedStorage = false;

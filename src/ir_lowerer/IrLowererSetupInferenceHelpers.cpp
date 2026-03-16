@@ -280,6 +280,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
            (info.kind == LocalInfo::Kind::Reference &&
             (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
+           (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
            (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
            info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
@@ -386,14 +387,16 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
-      if (it != localsIn.end()) {
-        if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector) {
-          elementKind = it->second.valueKind;
-        } else if (it->second.kind == LocalInfo::Kind::Reference &&
-                   (it->second.referenceToArray || it->second.referenceToVector)) {
-          elementKind = it->second.valueKind;
+        if (it != localsIn.end()) {
+          if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector) {
+            elementKind = it->second.valueKind;
+          } else if (it->second.kind == LocalInfo::Kind::Reference &&
+                     (it->second.referenceToArray || it->second.referenceToVector)) {
+            elementKind = it->second.valueKind;
+          } else if (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToVector) {
+            elementKind = it->second.valueKind;
+          }
         }
-      }
     } else if (target.kind == Expr::Kind::Call) {
       std::string collection;
       if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&

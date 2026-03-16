@@ -83,6 +83,7 @@ bool emitInlineDefinitionCallParameters(
           }
           auto it = callerLocals.find(argExpr.name);
           if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Pointer ||
+              it->second.pointerToVector != paramInfo.pointerToVector ||
               it->second.pointerToMap != paramInfo.pointerToMap ||
               it->second.isFileHandle != paramInfo.isFileHandle ||
               it->second.isFileError != paramInfo.isFileError ||
@@ -177,6 +178,7 @@ bool emitInlineDefinitionCallParameters(
         }
         if (callerIt->second.referenceToArray != paramInfo.referenceToArray ||
             callerIt->second.referenceToVector != paramInfo.referenceToVector ||
+            callerIt->second.pointerToVector != paramInfo.pointerToVector ||
             callerIt->second.referenceToMap != paramInfo.referenceToMap ||
             callerIt->second.pointerToMap != paramInfo.pointerToMap) {
           error = "variadic parameter type mismatch";
@@ -203,6 +205,7 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.mapValueKind = callerIt->second.mapValueKind;
         paramInfo.referenceToArray = callerIt->second.referenceToArray;
         paramInfo.referenceToVector = callerIt->second.referenceToVector;
+        paramInfo.pointerToVector = callerIt->second.pointerToVector;
         paramInfo.referenceToMap = callerIt->second.referenceToMap;
         paramInfo.pointerToMap = callerIt->second.pointerToMap;
         paramInfo.isSoaVector = callerIt->second.isSoaVector;
