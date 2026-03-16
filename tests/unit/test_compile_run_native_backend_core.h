@@ -93,6 +93,33 @@ TEST_CASE("compiles and runs native file read_byte with deterministic eof") {
   CHECK(readFile(outPath) == "65\n66\nEOF\n99\n");
 }
 
+TEST_CASE("compiles and runs native mutable scalar helper copy-back") {
+  const std::string source = R"(
+[return<void>]
+set42([i32 mut] value) {
+  assign(value, 42i32)
+}
+
+[effects(io_out), return<int>]
+main() {
+  [i32 mut] value{7i32}
+  set42(value)
+  print_line(value)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_mut_scalar_param.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_mut_scalar_param").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_mut_scalar_param.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "42\n");
+}
+
 TEST_CASE("compiles and runs native executable") {
   const std::string source = R"(
 [return<int>]
@@ -1599,10 +1626,11 @@ TEST_CASE("native materializes variadic borrowed map packs with indexed tryAt in
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference</std/collections/map<i32, i32>>>] values) {
-  [auto] head{try(at(values, 0i32).tryAt(3i32))}
-  [auto] tailMissing{Result.error(/std/collections/map/tryAt(at(values, minus(count(values), 1i32)), 99i32))}
+  [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
+  [auto] tailMissing{
+      Result.error(/std/collections/map/tryAt<i32, i32>(at(values, minus(count(values), 1i32)), 99i32))}
   return(if(tailMissing,
-            then(){ return(plus(head, /std/collections/map/at_unsafe(at(values, minus(count(values), 1i32)), 11i32))) },
+            then(){ return(plus(head, /std/collections/map/at_unsafe<i32, i32>(at(values, minus(count(values), 1i32)), 11i32))) },
             else(){ return(0i32) }))
 }
 
@@ -1650,7 +1678,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 60);
+  CHECK(runCommand(exePath) == 148);
 }
 
 TEST_CASE("native materializes variadic pointer map packs with indexed count methods") {
@@ -1880,10 +1908,11 @@ TEST_CASE("native materializes variadic pointer map packs with indexed tryAt inf
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
-  [auto] head{try(at(values, 0i32).tryAt(3i32))}
-  [auto] tailMissing{Result.error(/std/collections/map/tryAt(at(values, minus(count(values), 1i32)), 99i32))}
+  [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
+  [auto] tailMissing{
+      Result.error(/std/collections/map/tryAt<i32, i32>(at(values, minus(count(values), 1i32)), 99i32))}
   return(if(tailMissing,
-            then(){ return(plus(head, /std/collections/map/at_unsafe(at(values, minus(count(values), 1i32)), 11i32))) },
+            then(){ return(plus(head, /std/collections/map/at_unsafe<i32, i32>(at(values, minus(count(values), 1i32)), 11i32))) },
             else(){ return(0i32) }))
 }
 
@@ -1931,7 +1960,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 60);
+  CHECK(runCommand(exePath) == 148);
 }
 
 TEST_CASE("native materializes variadic pointer vector packs with indexed count methods") {
@@ -1946,14 +1975,14 @@ forward([args<Pointer<vector<i32>>>] values) {
   return(score_ptrs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Pointer<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32)}
   [Pointer<vector<i32>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -2001,14 +2030,14 @@ forward([args<Pointer<vector<i32>>>] values) {
   return(score_ptrs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Pointer<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32)}
   [Pointer<vector<i32>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -2056,14 +2085,14 @@ forward([args<Pointer<vector<i32>>>] values) {
   return(score_ptrs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Pointer<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32, 2i32)}
   [Pointer<vector<i32>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -2172,14 +2201,14 @@ forward([args<Reference<vector<i32>>>] values) {
   return(score_refs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Reference<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32)}
   [Reference<vector<i32>>] extra_ref{location(extra)}
   return(score_refs(extra_ref, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -2227,14 +2256,14 @@ forward([args<Reference<vector<i32>>>] values) {
   return(score_refs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Reference<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32)}
   [Reference<vector<i32>>] extra_ref{location(extra)}
   return(score_refs(extra_ref, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -2282,14 +2311,14 @@ forward([args<Reference<vector<i32>>>] values) {
   return(score_refs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Reference<vector<i32>>>] values) {
   [vector<i32>] extra{vector<i32>(1i32, 2i32)}
   [Reference<vector<i32>>] extra_ref{location(extra)}
   return(score_refs(extra_ref, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
   [vector<i32>] a1{vector<i32>(3i32)}
@@ -2402,14 +2431,14 @@ forward([args<Reference<soa_vector<Particle>>>] values) {
   return(score_refs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Reference<soa_vector<Particle>>>] values) {
   [soa_vector<Particle>] extra{soa_vector<Particle>()}
   [Reference<soa_vector<Particle>>] extra_ref{location(extra)}
   return(score_refs(extra_ref, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [soa_vector<Particle>] a0{soa_vector<Particle>()}
   [soa_vector<Particle>] a1{soa_vector<Particle>()}
@@ -2460,14 +2489,14 @@ forward([args<Pointer<soa_vector<Particle>>>] values) {
   return(score_ptrs([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<Pointer<soa_vector<Particle>>>] values) {
   [soa_vector<Particle>] extra{soa_vector<Particle>()}
   [Pointer<soa_vector<Particle>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [soa_vector<Particle>] a0{soa_vector<Particle>()}
   [soa_vector<Particle>] a1{soa_vector<Particle>()}
@@ -2518,12 +2547,12 @@ forward([args<soa_vector<Particle>>] values) {
   return(score_soas([spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 forward_mixed([args<soa_vector<Particle>>] values) {
   return(score_soas(soa_vector<Particle>(), [spread] values))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(plus(score_soas(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
               plus(forward(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
@@ -2581,10 +2610,11 @@ TEST_CASE("native materializes variadic map packs with indexed tryAt inference")
   const std::string source = R"(
 [return<int>]
 score_maps([args<map<i32, i32>>] values) {
-  [auto] head{try(at(values, 0i32).tryAt(3i32))}
-  [auto] tailMissing{Result.error(/std/collections/map/tryAt(at(values, minus(count(values), 1i32)), 99i32))}
+  [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
+  [auto] tailMissing{
+      Result.error(/std/collections/map/tryAt<i32, i32>(at(values, minus(count(values), 1i32)), 99i32))}
   return(if(tailMissing,
-            then(){ return(plus(head, /std/collections/map/at_unsafe(at(values, minus(count(values), 1i32)), 11i32))) },
+            then(){ return(plus(head, /std/collections/map/at_unsafe<i32, i32>(at(values, minus(count(values), 1i32)), 11i32))) },
             else(){ return(0i32) }))
 }
 
@@ -2862,7 +2892,7 @@ TEST_CASE("compiles and runs native ppm write for ascii p3 outputs") {
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
-[effects(file_write), return<int>]
+[effects(heap_alloc, file_write), return<int>]
 main() {
   [vector<i32>] pixels{vector<i32>(255i32, 0i32, 0i32, 0i32, 255i32, 128i32)}
   [Result<ImageError>] status{/std/image/ppm/write("__PATH__"utf8, 2i32, 1i32, pixels)}
@@ -2900,7 +2930,7 @@ TEST_CASE("compiles and rejects invalid native ppm write inputs deterministicall
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
-[effects(io_out, file_write), return<int>]
+[effects(heap_alloc, io_out, file_write), return<int>]
 main() {
   [vector<i32>] pixels{vector<i32>(255i32, 0i32, 0i32)}
   [Result<ImageError>] status{/std/image/ppm/write("__PATH__"utf8, 2i32, 1i32, pixels)}

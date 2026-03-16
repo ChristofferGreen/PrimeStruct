@@ -364,6 +364,54 @@ bool emitInlineDefinitionCallParameters(
       continue;
     }
 
+    if (paramInfo.kind == LocalInfo::Kind::Value && paramInfo.isMutable &&
+        paramInfo.structTypeName.empty() && !paramInfo.isFileHandle &&
+        !paramInfo.isFileError && !paramInfo.isResult &&
+        paramInfo.valueKind != LocalInfo::ValueKind::Unknown &&
+        paramInfo.valueKind != LocalInfo::ValueKind::String) {
+      if (!orderedArg) {
+        error = "argument count mismatch";
+        return false;
+      }
+      const Expr &argExpr = *orderedArg;
+      auto emitMutableScalarReference = [&](const Expr &arg) -> bool {
+        if (arg.kind == Expr::Kind::Name) {
+          auto it = callerLocals.find(arg.name);
+          if (it != callerLocals.end() && it->second.structTypeName.empty() &&
+              it->second.valueKind == paramInfo.valueKind && !it->second.isFileHandle &&
+              !it->second.isFileError && !it->second.isResult) {
+            if (it->second.kind == LocalInfo::Kind::Reference &&
+                !it->second.referenceToArray && !it->second.referenceToVector &&
+                !it->second.referenceToMap && !it->second.referenceToBuffer) {
+              emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+              return true;
+            }
+            if (it->second.kind == LocalInfo::Kind::Value) {
+              emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index));
+              return true;
+            }
+          }
+        }
+
+        if (!emitExpr(arg, callerLocals)) {
+          return false;
+        }
+        const int32_t tempLocal = allocTempLocal();
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(tempLocal));
+        emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(tempLocal));
+        return true;
+      };
+
+      if (!emitMutableScalarReference(argExpr)) {
+        return false;
+      }
+      LocalInfo aliasedParamInfo = paramInfo;
+      aliasedParamInfo.kind = LocalInfo::Kind::Reference;
+      calleeLocals.emplace(param.name, aliasedParamInfo);
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(aliasedParamInfo.index));
+      continue;
+    }
+
     if (paramInfo.kind == LocalInfo::Kind::Value && paramInfo.isMutable && !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
         error = "argument count mismatch";
@@ -470,6 +518,22 @@ bool emitInlineDefinitionCallParameters(
       calleeLocals.emplace(param.name, paramInfo);
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
       continue;
+    }
+
+    if (paramInfo.isFileHandle) {
+      if (!orderedArg) {
+        error = "argument count mismatch";
+        return false;
+      }
+      if (orderedArg->kind == Expr::Kind::Name) {
+        auto it = callerLocals.find(orderedArg->name);
+        if (it != callerLocals.end() && it->second.isFileHandle) {
+          LocalInfo aliasedParamInfo = paramInfo;
+          aliasedParamInfo.index = it->second.index;
+          calleeLocals.emplace(param.name, aliasedParamInfo);
+          continue;
+        }
+      }
     }
 
     if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown || paramInfo.valueKind == LocalInfo::ValueKind::String) {

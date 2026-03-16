@@ -243,7 +243,10 @@ bool emitFileWriteByteCall(const Expr &expr,
 bool emitFileReadByteCall(const Expr &expr,
                           const LocalMap &localsIn,
                           int32_t handleIndex,
+                          const AllocTempLocalForWriteFn &allocTempLocal,
                           const EmitInstructionForWriteFn &emitInstruction,
+                          const GetInstructionCountForWriteFn &getInstructionCount,
+                          const PatchInstructionImmForWriteFn &patchInstructionImm,
                           std::string &error) {
   if (expr.args.size() != 2) {
     error = "read_byte requires exactly one argument";
@@ -264,9 +267,48 @@ bool emitFileReadByteCall(const Expr &expr,
     error = "read_byte requires mutable integer binding";
     return false;
   }
+
+  if (it->second.kind == LocalInfo::Kind::Reference) {
+    const int32_t valueLocal = allocTempLocal();
+    const int32_t statusLocal = allocTempLocal();
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
+    emitInstruction(IrOpcode::FileReadByte, static_cast<uint64_t>(valueLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(statusLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(statusLocal));
+    emitInstruction(IrOpcode::PushI64, 0);
+    emitInstruction(IrOpcode::CmpEqI64, 0);
+    const size_t jumpSkipStore = getInstructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+    emitInstruction(IrOpcode::StoreIndirect, 0);
+    emitInstruction(IrOpcode::Pop, 0);
+    const size_t storeEnd = getInstructionCount();
+    patchInstructionImm(jumpSkipStore, static_cast<int32_t>(storeEnd));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(statusLocal));
+    return true;
+  }
+
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
   emitInstruction(IrOpcode::FileReadByte, static_cast<uint64_t>(it->second.index));
   return true;
+}
+
+bool emitFileReadByteCall(const Expr &expr,
+                          const LocalMap &localsIn,
+                          int32_t handleIndex,
+                          const EmitInstructionForWriteFn &emitInstruction,
+                          std::string &error) {
+  int32_t nextTempLocal = 0;
+  return emitFileReadByteCall(
+      expr,
+      localsIn,
+      handleIndex,
+      [&]() { return nextTempLocal++; },
+      emitInstruction,
+      []() { return size_t{0}; },
+      [](size_t, int32_t) {},
+      error);
 }
 
 bool emitFileWriteBytesCall(const Expr &expr,
@@ -458,7 +500,14 @@ FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
     return FileHandleMethodCallEmitResult::Emitted;
   }
   if (expr.name == "read_byte") {
-    if (!emitFileReadByteCall(expr, localsIn, handleIndex, emitInstruction, error)) {
+    if (!emitFileReadByteCall(expr,
+                              localsIn,
+                              handleIndex,
+                              allocTempLocal,
+                              emitInstruction,
+                              getInstructionCount,
+                              patchInstructionImm,
+                              error)) {
       return FileHandleMethodCallEmitResult::Error;
     }
     return FileHandleMethodCallEmitResult::Emitted;
