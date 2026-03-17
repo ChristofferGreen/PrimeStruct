@@ -938,6 +938,9 @@
     }
   }
   if (it == nameMap.end()) {
+    if (isNoHelperExplicitVectorAccessCallFallback(expr)) {
+      return emitMissingExplicitVectorAccessCall(expr);
+    }
     if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         isExplicitVectorAccessDirectCall(expr.args.front()) &&
         explicitVectorAccessResolvedTypePath(expr.args.front()).empty()) {

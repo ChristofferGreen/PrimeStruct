@@ -9000,6 +9000,34 @@ main() {
   CHECK(output.find("ps_missing_vector_at_unsafe_call_helper(wrapVector(), 1)") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lowers wrapper explicit vector access calls without helper to deleted stubs") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(/vector/at(wrapVector(), 1i32),
+              /std/collections/vector/at_unsafe(wrapVector(), 2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_explicit_vector_access_call_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_at_call_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_at_call_helper(wrapVector(), 1)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_at_unsafe_call_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_at_unsafe_call_helper(wrapVector(), 2)") != std::string::npos);
+}
+
 TEST_CASE("rejects wrapper bare vector at_unsafe calls without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
@@ -9022,6 +9050,30 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("ps_missing_vector_at_unsafe_call_helper") != std::string::npos);
+}
+
+TEST_CASE("rejects wrapper explicit vector access calls without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/vector/at(wrapVector(), 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_explicit_vector_access_call_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_at_call_helper") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers bare vector mutator statements without helper to deleted stubs") {
