@@ -363,12 +363,83 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     return typePath == "/std/math/Mat2" || typePath == "/std/math/Mat3" || typePath == "/std/math/Mat4" ||
            typePath == "/std/math/Quat";
   };
+  auto matrixDimensionForTypePath = [](const std::string &typePath) -> size_t {
+    if (typePath == "/std/math/Mat2") {
+      return 2;
+    }
+    if (typePath == "/std/math/Mat3") {
+      return 3;
+    }
+    if (typePath == "/std/math/Mat4") {
+      return 4;
+    }
+    return 0;
+  };
+  auto isVectorTypePath = [](const std::string &typePath) {
+    return typePath == "/std/math/Vec2" || typePath == "/std/math/Vec3" || typePath == "/std/math/Vec4";
+  };
+  auto vectorDimensionForTypePath = [](const std::string &typePath) -> size_t {
+    if (typePath == "/std/math/Vec2") {
+      return 2;
+    }
+    if (typePath == "/std/math/Vec3") {
+      return 3;
+    }
+    if (typePath == "/std/math/Vec4") {
+      return 4;
+    }
+    return 0;
+  };
   auto inferMatrixQuaternionTypePath = [&](const Expr &arg) -> std::string {
     std::string typePath = inferStructReturnPath(arg, params, locals);
     if (!isMatrixQuaternionTypePath(typePath)) {
       return "";
     }
     return typePath;
+  };
+  auto inferVectorTypePath = [&](const Expr &arg) -> std::string {
+    std::string typePath = inferStructReturnPath(arg, params, locals);
+    if (!isVectorTypePath(typePath)) {
+      return "";
+    }
+    return typePath;
+  };
+  struct MatrixQuaternionMultiplyInfo {
+    bool handled = false;
+    bool valid = false;
+  };
+  auto classifyMatrixQuaternionMultiply = [&](const Expr &left, const Expr &right) -> MatrixQuaternionMultiplyInfo {
+    const std::string leftMathType = inferMatrixQuaternionTypePath(left);
+    const std::string rightMathType = inferMatrixQuaternionTypePath(right);
+    if (leftMathType.empty() && rightMathType.empty()) {
+      return {};
+    }
+    const std::string rightVectorType = inferVectorTypePath(right);
+    MatrixQuaternionMultiplyInfo result;
+    result.handled = true;
+    if (!leftMathType.empty()) {
+      if (leftMathType == "/std/math/Quat") {
+        result.valid = rightMathType == "/std/math/Quat" || rightVectorType == "/std/math/Vec3" ||
+                       (rightMathType.empty() && rightVectorType.empty() && isNumericExpr(right));
+        return result;
+      }
+      if (!rightMathType.empty()) {
+        result.valid = leftMathType == rightMathType;
+        return result;
+      }
+      if (!rightVectorType.empty()) {
+        result.valid = matrixDimensionForTypePath(leftMathType) == vectorDimensionForTypePath(rightVectorType);
+        return result;
+      }
+      result.valid = isNumericExpr(right);
+      return result;
+    }
+    if (rightMathType == "/std/math/Quat") {
+      result.valid = isNumericExpr(left);
+      return result;
+    }
+    result.valid = isNumericExpr(left);
+    return result;
   };
   auto isFloatExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
@@ -7509,6 +7580,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 }
               }
               return true;
+            }
+            if (builtinName == "multiply") {
+              MatrixQuaternionMultiplyInfo multiplyInfo =
+                  classifyMatrixQuaternionMultiply(expr.args[0], expr.args[1]);
+              if (multiplyInfo.handled) {
+                if (!multiplyInfo.valid) {
+                  error_ =
+                      "multiply requires scalar scaling, matrix-vector, matrix-matrix, quaternion-quaternion, or quaternion-Vec3 operands";
+                  return false;
+                }
+                for (const auto &arg : expr.args) {
+                  if (!validateExpr(params, locals, arg)) {
+                    return false;
+                  }
+                }
+                return true;
+              }
             }
             if (!isNumericExpr(expr.args[0]) || !isNumericExpr(expr.args[1])) {
               error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;

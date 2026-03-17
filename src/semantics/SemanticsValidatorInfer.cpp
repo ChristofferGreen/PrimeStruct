@@ -4327,7 +4327,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (expr.args.size() != 2) {
         return ReturnKind::Unknown;
       }
-      if ((builtinName == "plus" || builtinName == "minus") &&
+      if ((builtinName == "plus" || builtinName == "minus" || builtinName == "multiply") &&
           !inferStructReturnPath(expr, params, locals).empty()) {
         return ReturnKind::Array;
       }
@@ -4490,6 +4490,55 @@ std::string SemanticsValidator::inferStructReturnPath(
   auto isMatrixQuaternionTypePath = [](const std::string &typePath) {
     return typePath == "/std/math/Mat2" || typePath == "/std/math/Mat3" || typePath == "/std/math/Mat4" ||
            typePath == "/std/math/Quat";
+  };
+  auto matrixDimensionForTypePath = [](const std::string &typePath) -> size_t {
+    if (typePath == "/std/math/Mat2") {
+      return 2;
+    }
+    if (typePath == "/std/math/Mat3") {
+      return 3;
+    }
+    if (typePath == "/std/math/Mat4") {
+      return 4;
+    }
+    return 0;
+  };
+  auto isVectorTypePath = [](const std::string &typePath) {
+    return typePath == "/std/math/Vec2" || typePath == "/std/math/Vec3" || typePath == "/std/math/Vec4";
+  };
+  auto vectorDimensionForTypePath = [](const std::string &typePath) -> size_t {
+    if (typePath == "/std/math/Vec2") {
+      return 2;
+    }
+    if (typePath == "/std/math/Vec3") {
+      return 3;
+    }
+    if (typePath == "/std/math/Vec4") {
+      return 4;
+    }
+    return 0;
+  };
+  auto isNumericScalarExpr = [&](const Expr &arg) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    const bool isSoftware =
+        kind == ReturnKind::Integer || kind == ReturnKind::Decimal || kind == ReturnKind::Complex;
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+        kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || isSoftware) {
+      return true;
+    }
+    if (kind == ReturnKind::Bool || kind == ReturnKind::Void || kind == ReturnKind::Array) {
+      return false;
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::StringLiteral || arg.kind == Expr::Kind::BoolLiteral) {
+        return false;
+      }
+      if (!inferStructReturnPath(arg, params, locals).empty()) {
+        return false;
+      }
+      return true;
+    }
+    return false;
   };
   auto normalizeCollectionTypePath = [&](const std::string &typePath) {
     std::string normalizedTypePath = normalizeBindingTypeName(typePath);
@@ -5828,6 +5877,41 @@ std::string SemanticsValidator::inferStructReturnPath(
       const std::string rightType = inferStructReturnPath(expr.args[1], params, locals);
       if (isMatrixQuaternionTypePath(leftType) && leftType == rightType) {
         return leftType;
+      }
+    }
+    if (getBuiltinOperatorName(expr, builtinName) && builtinName == "multiply" && expr.args.size() == 2) {
+      const std::string leftType = inferStructReturnPath(expr.args[0], params, locals);
+      const std::string rightType = inferStructReturnPath(expr.args[1], params, locals);
+      if (isMatrixQuaternionTypePath(leftType)) {
+        if (leftType == "/std/math/Quat") {
+          if (rightType == "/std/math/Quat") {
+            return leftType;
+          }
+          if (rightType == "/std/math/Vec3") {
+            return rightType;
+          }
+          if (isNumericScalarExpr(expr.args[1])) {
+            return leftType;
+          }
+          return "";
+        }
+        if (isMatrixQuaternionTypePath(rightType) && leftType == rightType) {
+          return leftType;
+        }
+        if (isVectorTypePath(rightType) &&
+            matrixDimensionForTypePath(leftType) == vectorDimensionForTypePath(rightType)) {
+          return rightType;
+        }
+        if (isNumericScalarExpr(expr.args[1])) {
+          return leftType;
+        }
+        return "";
+      }
+      if (isMatrixQuaternionTypePath(rightType)) {
+        if (isNumericScalarExpr(expr.args[0])) {
+          return rightType;
+        }
+        return "";
       }
     }
     if (expr.isFieldAccess && expr.args.size() == 1) {

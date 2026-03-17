@@ -110,7 +110,7 @@ Minimal vector substrate note: the remaining items below are only worth keeping 
 - ✓ Add stdlib `Quat` with constructors, component accessors, and normalization helpers. Progress: stdlib now ships `Quat` as a nominal math struct with public scalar `x/y/z/w` fields plus `toNormalized()` and `normalize()` helpers, so constructor, field-access, and normalization flows work under `import /std/math/*`.
 - ✓ Implement matrix/quaternion `plus` shape validation with deterministic diagnostics. Progress: semantics now accepts `plus` only when both operands resolve to the same stdlib matrix/quaternion type (`Mat2`, `Mat3`, `Mat4`, or `Quat`) and emits a stable mismatch diagnostic otherwise.
 - ✓ Implement matrix/quaternion `minus` shape validation with deterministic diagnostics. Progress: semantics now accepts `minus` only when both operands resolve to the same stdlib matrix/quaternion type (`Mat2`, `Mat3`, `Mat4`, or `Quat`) and emits a stable mismatch diagnostic otherwise.
-- ○ Implement matrix/quaternion `multiply` allowlist validation with deterministic diagnostics.
+- ✓ Implement matrix/quaternion `multiply` allowlist validation with deterministic diagnostics. Progress: semantics now accepts only the documented `multiply` combinations that mention `Mat*`/`Quat` (scalar scaling, `Mat*Vec*`, matching `Mat*Mat*`, `Quat*Quat`, and `Quat*Vec3`) and emits a stable mismatch diagnostic otherwise.
 - ○ Implement matrix/quaternion `divide` composite-by-scalar-only validation with deterministic diagnostics.
 - ○ Implement `quat_to_mat3`.
 - ○ Implement `quat_to_mat4`.

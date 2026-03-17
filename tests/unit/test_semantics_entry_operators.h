@@ -175,6 +175,159 @@ main() {
   CHECK(error.find("minus requires matching matrix/quaternion operand types") != std::string::npos);
 }
 
+TEST_CASE("arithmetic multiply accepts matrix scalar scaling") {
+  const std::string source = R"(
+import /std/math/*
+[return<Mat2>]
+main() {
+  [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  return(multiply(value, 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("arithmetic multiply accepts scalar quaternion scaling") {
+  const std::string source = R"(
+import /std/math/*
+[return<Quat>]
+main() {
+  [Quat] value{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
+  return(multiply(2.0f32, value))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("arithmetic multiply accepts matrix vector products") {
+  const std::string source = R"(
+import /std/math/*
+[return<Vec3>]
+main() {
+  [Mat3] basis{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [Vec3] value{Vec3(1.0f32, 2.0f32, 3.0f32)}
+  return(multiply(basis, value))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("arithmetic multiply accepts matrix matrix products") {
+  const std::string source = R"(
+import /std/math/*
+[return<Mat4>]
+main() {
+  [Mat4] left{Mat4(
+    1.0f32, 0.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 0.0f32, 1.0f32
+  )}
+  [Mat4] right{left}
+  return(multiply(left, right))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("arithmetic multiply accepts quaternion quaternion products") {
+  const std::string source = R"(
+import /std/math/*
+[return<Quat>]
+main() {
+  [Quat] left{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Quat] right{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
+  return(multiply(left, right))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("arithmetic multiply accepts quaternion vector rotation shape") {
+  const std::string source = R"(
+import /std/math/*
+[return<Vec3>]
+main() {
+  [Quat] rotation{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Vec3] value{Vec3(1.0f32, 0.0f32, 0.0f32)}
+  return(multiply(rotation, value))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("arithmetic multiply rejects mismatched matrix shapes") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Mat2] left{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat3] right{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [Mat2] value{multiply(left, right)}
+  return(convert<int>(value.m00))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("multiply requires scalar scaling, matrix-vector, matrix-matrix, quaternion-quaternion, or quaternion-Vec3 operands") != std::string::npos);
+}
+
+TEST_CASE("arithmetic multiply rejects vector matrix ordering") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Vec3] left{Vec3(1.0f32, 2.0f32, 3.0f32)}
+  [Mat3] right{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [Vec3] value{multiply(left, right)}
+  return(convert<int>(value.x))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("multiply requires scalar scaling, matrix-vector, matrix-matrix, quaternion-quaternion, or quaternion-Vec3 operands") != std::string::npos);
+}
+
+TEST_CASE("arithmetic multiply rejects quaternion vec4 operands") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Quat] left{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Vec4] right{Vec4(1.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Vec4] value{multiply(left, right)}
+  return(convert<int>(value.x))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("multiply requires scalar scaling, matrix-vector, matrix-matrix, quaternion-quaternion, or quaternion-Vec3 operands") != std::string::npos);
+}
+
 TEST_CASE("arithmetic negate rejects bool operands") {
   const std::string source = R"(
 [return<int>]
