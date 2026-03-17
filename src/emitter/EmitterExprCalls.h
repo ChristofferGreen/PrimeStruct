@@ -1044,6 +1044,34 @@
       const size_t receiverIndex = pickAccessReceiverIndex();
       const size_t indexIndex = receiverIndex == 0 ? 1 : 0;
       const Expr &target = expr.args[receiverIndex];
+      if (!expr.isMethodCall && isResolvedVectorTarget(target)) {
+        out << "ps_missing_vector_at_call_helper("
+            << emitExpr(target,
+                        nameMap,
+                        paramMap,
+                        defMap,
+                        structTypeMap,
+                        importAliases,
+                        localTypes,
+                        returnKinds,
+                        resultInfos,
+                        returnStructs,
+                        allowMathBare)
+            << ", "
+            << emitExpr(expr.args[indexIndex],
+                        nameMap,
+                        paramMap,
+                        defMap,
+                        structTypeMap,
+                        importAliases,
+                        localTypes,
+                        returnKinds,
+                        resultInfos,
+                        returnStructs,
+                        allowMathBare)
+            << ")";
+        return out.str();
+      }
       if (expr.isMethodCall && isResolvedVectorTarget(target)) {
         out << "ps_missing_vector_at_method_helper("
             << emitExpr(target,
@@ -1144,6 +1172,34 @@
       const size_t receiverIndex = pickAccessReceiverIndex();
       const size_t indexIndex = receiverIndex == 0 ? 1 : 0;
       const Expr &target = expr.args[receiverIndex];
+      if (!expr.isMethodCall && isResolvedVectorTarget(target)) {
+        out << "ps_missing_vector_at_unsafe_call_helper("
+            << emitExpr(target,
+                        nameMap,
+                        paramMap,
+                        defMap,
+                        structTypeMap,
+                        importAliases,
+                        localTypes,
+                        returnKinds,
+                        resultInfos,
+                        returnStructs,
+                        allowMathBare)
+            << ", "
+            << emitExpr(expr.args[indexIndex],
+                        nameMap,
+                        paramMap,
+                        defMap,
+                        structTypeMap,
+                        importAliases,
+                        localTypes,
+                        returnKinds,
+                        resultInfos,
+                        returnStructs,
+                        allowMathBare)
+            << ")";
+        return out.str();
+      }
       if (expr.isMethodCall && isResolvedVectorTarget(target)) {
         out << "ps_missing_vector_at_unsafe_method_helper("
             << emitExpr(target,
