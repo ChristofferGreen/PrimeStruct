@@ -1131,8 +1131,9 @@
       }
       return out.str();
     }
-    auto rewriteMathMultiplyExpr = [&](const Expr &candidate, Expr &rewrittenExpr) {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || !isSimpleCallName(candidate, "multiply") ||
+    auto rewriteMathArithmeticExpr = [&](const Expr &candidate, Expr &rewrittenExpr) {
+      char candidateOp = '\0';
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || !getBuiltinOperator(candidate, candidateOp) ||
           candidate.args.size() != 2) {
         return false;
       }
@@ -1152,77 +1153,79 @@
         }
         return resolvedTypePathForTarget(targetExpr);
       };
+      auto matrixHelperBaseForType = [&](const std::string &typePath) -> std::string {
+        if (typePath == "/std/math/Mat2") {
+          return "/std/math/mat2";
+        }
+        if (typePath == "/std/math/Mat3") {
+          return "/std/math/mat3";
+        }
+        if (typePath == "/std/math/Mat4") {
+          return "/std/math/mat4";
+        }
+        return "";
+      };
+      auto isNumericScalarTarget = [&](const Expr &targetExpr) {
+        ReturnKind kind = inferPrimitiveReturnKind(targetExpr, localTypes, returnKinds, allowMathBare);
+        return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+               kind == ReturnKind::Float32 || kind == ReturnKind::Float64;
+      };
+      auto rewriteHelperCall = [&](const std::string &helperPath) {
+        rewrittenExpr = candidate;
+        rewrittenExpr.name = helperPath;
+        rewrittenExpr.namespacePrefix.clear();
+        rewrittenExpr.isMethodCall = false;
+        rewrittenExpr.isFieldAccess = false;
+        return true;
+      };
       const std::string leftType = resolvedMathTypeForTarget(candidate.args[0]);
       const std::string rightType = resolvedMathTypeForTarget(candidate.args[1]);
+      const std::string leftMatrixBase = matrixHelperBaseForType(leftType);
+      const std::string rightMatrixBase = matrixHelperBaseForType(rightType);
+      if (candidateOp == '+' && !leftMatrixBase.empty() && leftType == rightType) {
+        return rewriteHelperCall(leftMatrixBase + "_add_internal");
+      }
+      if (candidateOp == '-' && !leftMatrixBase.empty() && leftType == rightType) {
+        return rewriteHelperCall(leftMatrixBase + "_sub_internal");
+      }
+      if (candidateOp == '*' && !leftMatrixBase.empty() && isNumericScalarTarget(candidate.args[1])) {
+        return rewriteHelperCall(leftMatrixBase + "_scale_internal");
+      }
+      if (candidateOp == '*' && isNumericScalarTarget(candidate.args[0]) && !rightMatrixBase.empty()) {
+        return rewriteHelperCall(rightMatrixBase + "_scale_left_internal");
+      }
+      if (candidateOp == '/' && !leftMatrixBase.empty() && isNumericScalarTarget(candidate.args[1])) {
+        return rewriteHelperCall(leftMatrixBase + "_div_scalar_internal");
+      }
       if (leftType == "/std/math/Mat2" && rightType == "/std/math/Vec2") {
-        rewrittenExpr = candidate;
-        rewrittenExpr.name = "/std/math/mat2_mul_vec2_internal";
-        rewrittenExpr.namespacePrefix.clear();
-        rewrittenExpr.isMethodCall = false;
-        rewrittenExpr.isFieldAccess = false;
-        return true;
+        return rewriteHelperCall("/std/math/mat2_mul_vec2_internal");
       }
       if (leftType == "/std/math/Mat3" && rightType == "/std/math/Vec3") {
-        rewrittenExpr = candidate;
-        rewrittenExpr.name = "/std/math/mat3_mul_vec3_internal";
-        rewrittenExpr.namespacePrefix.clear();
-        rewrittenExpr.isMethodCall = false;
-        rewrittenExpr.isFieldAccess = false;
-        return true;
+        return rewriteHelperCall("/std/math/mat3_mul_vec3_internal");
       }
       if (leftType == "/std/math/Mat4" && rightType == "/std/math/Vec4") {
-        rewrittenExpr = candidate;
-        rewrittenExpr.name = "/std/math/mat4_mul_vec4_internal";
-        rewrittenExpr.namespacePrefix.clear();
-        rewrittenExpr.isMethodCall = false;
-        rewrittenExpr.isFieldAccess = false;
-        return true;
+        return rewriteHelperCall("/std/math/mat4_mul_vec4_internal");
       }
       if (leftType == "/std/math/Mat2" && rightType == "/std/math/Mat2") {
-        rewrittenExpr = candidate;
-        rewrittenExpr.name = "/std/math/mat2_mul_mat2_internal";
-        rewrittenExpr.namespacePrefix.clear();
-        rewrittenExpr.isMethodCall = false;
-        rewrittenExpr.isFieldAccess = false;
-        return true;
+        return rewriteHelperCall("/std/math/mat2_mul_mat2_internal");
       }
       if (leftType == "/std/math/Mat3" && rightType == "/std/math/Mat3") {
-        rewrittenExpr = candidate;
-        rewrittenExpr.name = "/std/math/mat3_mul_mat3_internal";
-        rewrittenExpr.namespacePrefix.clear();
-        rewrittenExpr.isMethodCall = false;
-        rewrittenExpr.isFieldAccess = false;
-        return true;
+        return rewriteHelperCall("/std/math/mat3_mul_mat3_internal");
       }
       if (leftType == "/std/math/Mat4" && rightType == "/std/math/Mat4") {
-        rewrittenExpr = candidate;
-        rewrittenExpr.name = "/std/math/mat4_mul_mat4_internal";
-        rewrittenExpr.namespacePrefix.clear();
-        rewrittenExpr.isMethodCall = false;
-        rewrittenExpr.isFieldAccess = false;
-        return true;
+        return rewriteHelperCall("/std/math/mat4_mul_mat4_internal");
       }
       if (leftType == "/std/math/Quat" && rightType == "/std/math/Quat") {
-        rewrittenExpr = candidate;
-        rewrittenExpr.name = "/std/math/quat_multiply_internal";
-        rewrittenExpr.namespacePrefix.clear();
-        rewrittenExpr.isMethodCall = false;
-        rewrittenExpr.isFieldAccess = false;
-        return true;
+        return rewriteHelperCall("/std/math/quat_multiply_internal");
       }
       if (leftType == "/std/math/Quat" && rightType == "/std/math/Vec3") {
-        rewrittenExpr = candidate;
-        rewrittenExpr.name = "/std/math/quat_rotate_vec3_internal";
-        rewrittenExpr.namespacePrefix.clear();
-        rewrittenExpr.isMethodCall = false;
-        rewrittenExpr.isFieldAccess = false;
-        return true;
+        return rewriteHelperCall("/std/math/quat_rotate_vec3_internal");
       }
       return false;
     };
-    Expr rewrittenMathMultiplyExpr;
-    if (rewriteMathMultiplyExpr(expr, rewrittenMathMultiplyExpr)) {
-      return emitExpr(rewrittenMathMultiplyExpr,
+    Expr rewrittenMathArithmeticExpr;
+    if (rewriteMathArithmeticExpr(expr, rewrittenMathArithmeticExpr)) {
+      return emitExpr(rewrittenMathArithmeticExpr,
                       nameMap,
                       paramMap,
                       defMap,

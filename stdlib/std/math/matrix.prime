@@ -69,12 +69,126 @@ namespace std {
   }
 
   [return<Mat2>]
+  mat2_add_internal([Mat2] left, [Mat2] right) {
+    return(Mat2(
+      left.m00 + right.m00,
+      left.m01 + right.m01,
+      left.m10 + right.m10,
+      left.m11 + right.m11
+    ))
+  }
+
+  [return<Mat2>]
+  mat2_sub_internal([Mat2] left, [Mat2] right) {
+    return(Mat2(
+      left.m00 - right.m00,
+      left.m01 - right.m01,
+      left.m10 - right.m10,
+      left.m11 - right.m11
+    ))
+  }
+
+  [return<Mat2>]
+  mat2_scale_internal([Mat2] value, [auto] scale) {
+    [f32] scalar{convert<f32>(scale)}
+    return(Mat2(
+      value.m00 * scalar,
+      value.m01 * scalar,
+      value.m10 * scalar,
+      value.m11 * scalar
+    ))
+  }
+
+  [return<Mat2>]
+  mat2_scale_left_internal([auto] scale, [Mat2] value) {
+    return(mat2_scale_internal(value, scale))
+  }
+
+  [return<Mat2>]
+  mat2_div_scalar_internal([Mat2] value, [auto] scale) {
+    [f32] scalar{convert<f32>(scale)}
+    return(Mat2(
+      value.m00 / scalar,
+      value.m01 / scalar,
+      value.m10 / scalar,
+      value.m11 / scalar
+    ))
+  }
+
+  [return<Mat2>]
   mat2_mul_mat2_internal([Mat2] left, [Mat2] right) {
     return(Mat2(
       left.m00 * right.m00 + left.m01 * right.m10,
       left.m00 * right.m01 + left.m01 * right.m11,
       left.m10 * right.m00 + left.m11 * right.m10,
       left.m10 * right.m01 + left.m11 * right.m11
+    ))
+  }
+
+  [return<Mat3>]
+  mat3_add_internal([Mat3] left, [Mat3] right) {
+    return(Mat3(
+      left.m00 + right.m00,
+      left.m01 + right.m01,
+      left.m02 + right.m02,
+      left.m10 + right.m10,
+      left.m11 + right.m11,
+      left.m12 + right.m12,
+      left.m20 + right.m20,
+      left.m21 + right.m21,
+      left.m22 + right.m22
+    ))
+  }
+
+  [return<Mat3>]
+  mat3_sub_internal([Mat3] left, [Mat3] right) {
+    return(Mat3(
+      left.m00 - right.m00,
+      left.m01 - right.m01,
+      left.m02 - right.m02,
+      left.m10 - right.m10,
+      left.m11 - right.m11,
+      left.m12 - right.m12,
+      left.m20 - right.m20,
+      left.m21 - right.m21,
+      left.m22 - right.m22
+    ))
+  }
+
+  [return<Mat3>]
+  mat3_scale_internal([Mat3] value, [auto] scale) {
+    [f32] scalar{convert<f32>(scale)}
+    return(Mat3(
+      value.m00 * scalar,
+      value.m01 * scalar,
+      value.m02 * scalar,
+      value.m10 * scalar,
+      value.m11 * scalar,
+      value.m12 * scalar,
+      value.m20 * scalar,
+      value.m21 * scalar,
+      value.m22 * scalar
+    ))
+  }
+
+  [return<Mat3>]
+  mat3_scale_left_internal([auto] scale, [Mat3] value) {
+    return(mat3_scale_internal(value, scale))
+  }
+
+  [return<Mat3>]
+  mat3_div_scalar_internal([Mat3] value, [auto] scale) {
+    [f32] scalar{convert<f32>(scale)}
+    return(Mat3(
+      value.m00 / scalar,
+      value.m01 / scalar,
+      value.m02 / scalar,
+      value.m10 / scalar,
+      value.m11 / scalar,
+      value.m12 / scalar,
+      value.m20 / scalar,
+      value.m21 / scalar,
+      value.m22 / scalar
     ))
   }
 
@@ -90,6 +204,101 @@ namespace std {
       left.m20 * right.m00 + left.m21 * right.m10 + left.m22 * right.m20,
       left.m20 * right.m01 + left.m21 * right.m11 + left.m22 * right.m21,
       left.m20 * right.m02 + left.m21 * right.m12 + left.m22 * right.m22
+    ))
+  }
+
+  [return<Mat4>]
+  mat4_add_internal([Mat4] left, [Mat4] right) {
+    return(Mat4(
+      left.m00 + right.m00,
+      left.m01 + right.m01,
+      left.m02 + right.m02,
+      left.m03 + right.m03,
+      left.m10 + right.m10,
+      left.m11 + right.m11,
+      left.m12 + right.m12,
+      left.m13 + right.m13,
+      left.m20 + right.m20,
+      left.m21 + right.m21,
+      left.m22 + right.m22,
+      left.m23 + right.m23,
+      left.m30 + right.m30,
+      left.m31 + right.m31,
+      left.m32 + right.m32,
+      left.m33 + right.m33
+    ))
+  }
+
+  [return<Mat4>]
+  mat4_sub_internal([Mat4] left, [Mat4] right) {
+    return(Mat4(
+      left.m00 - right.m00,
+      left.m01 - right.m01,
+      left.m02 - right.m02,
+      left.m03 - right.m03,
+      left.m10 - right.m10,
+      left.m11 - right.m11,
+      left.m12 - right.m12,
+      left.m13 - right.m13,
+      left.m20 - right.m20,
+      left.m21 - right.m21,
+      left.m22 - right.m22,
+      left.m23 - right.m23,
+      left.m30 - right.m30,
+      left.m31 - right.m31,
+      left.m32 - right.m32,
+      left.m33 - right.m33
+    ))
+  }
+
+  [return<Mat4>]
+  mat4_scale_internal([Mat4] value, [auto] scale) {
+    [f32] scalar{convert<f32>(scale)}
+    return(Mat4(
+      value.m00 * scalar,
+      value.m01 * scalar,
+      value.m02 * scalar,
+      value.m03 * scalar,
+      value.m10 * scalar,
+      value.m11 * scalar,
+      value.m12 * scalar,
+      value.m13 * scalar,
+      value.m20 * scalar,
+      value.m21 * scalar,
+      value.m22 * scalar,
+      value.m23 * scalar,
+      value.m30 * scalar,
+      value.m31 * scalar,
+      value.m32 * scalar,
+      value.m33 * scalar
+    ))
+  }
+
+  [return<Mat4>]
+  mat4_scale_left_internal([auto] scale, [Mat4] value) {
+    return(mat4_scale_internal(value, scale))
+  }
+
+  [return<Mat4>]
+  mat4_div_scalar_internal([Mat4] value, [auto] scale) {
+    [f32] scalar{convert<f32>(scale)}
+    return(Mat4(
+      value.m00 / scalar,
+      value.m01 / scalar,
+      value.m02 / scalar,
+      value.m03 / scalar,
+      value.m10 / scalar,
+      value.m11 / scalar,
+      value.m12 / scalar,
+      value.m13 / scalar,
+      value.m20 / scalar,
+      value.m21 / scalar,
+      value.m22 / scalar,
+      value.m23 / scalar,
+      value.m30 / scalar,
+      value.m31 / scalar,
+      value.m32 / scalar,
+      value.m33 / scalar
     ))
   }
 

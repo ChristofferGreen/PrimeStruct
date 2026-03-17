@@ -1659,6 +1659,91 @@ main() {
   }
 }
 
+TEST_CASE("primec emits wasm bytecode for matrix arithmetic helpers with tolerance") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat2] base2{Mat2(
+    1.0f32, 2.0f32,
+    3.0f32, 4.0f32
+  )}
+  [Mat2] delta2{Mat2(
+    0.5f32, -1.0f32,
+    1.5f32, 2.0f32
+  )}
+  [Mat2] sum2{plus(base2, delta2)}
+  [Mat2] div2{divide(sum2, 2.0f32)}
+  [Mat3] base3{Mat3(
+    1.0f32, 2.0f32, 3.0f32,
+    4.0f32, 5.0f32, 6.0f32,
+    7.0f32, 8.0f32, 9.0f32
+  )}
+  [Mat3] delta3{Mat3(
+    0.5f32, 1.0f32, 1.5f32,
+    2.0f32, 2.5f32, 3.0f32,
+    3.5f32, 4.0f32, 4.5f32
+  )}
+  [Mat3] diff3{minus(base3, delta3)}
+  [Mat3] scaledLeft3{multiply(2i32, base3)}
+  [Mat4] base4{Mat4(
+    1.0f32, 2.0f32, 3.0f32, 4.0f32,
+    5.0f32, 6.0f32, 7.0f32, 8.0f32,
+    9.0f32, 10.0f32, 11.0f32, 12.0f32,
+    13.0f32, 14.0f32, 15.0f32, 16.0f32
+  )}
+  [Mat4] scaledRight4{multiply(base4, 0.5f32)}
+  [Mat4] doubled4{multiply(base4, 2.0f32)}
+  [Mat4] restored4{divide(doubled4, 2i32)}
+  [f32] tolerance{0.0001f32}
+  [f32] totalError{
+    abs(sum2.m00 - 1.5f32) +
+    abs(sum2.m01 - 1.0f32) +
+    abs(sum2.m10 - 4.5f32) +
+    abs(sum2.m11 - 6.0f32) +
+    abs(div2.m00 - 0.75f32) +
+    abs(div2.m11 - 3.0f32) +
+    abs(diff3.m00 - 0.5f32) +
+    abs(diff3.m12 - 3.0f32) +
+    abs(diff3.m22 - 4.5f32) +
+    abs(scaledLeft3.m00 - 2.0f32) +
+    abs(scaledLeft3.m12 - 12.0f32) +
+    abs(scaledLeft3.m22 - 18.0f32) +
+    abs(scaledRight4.m00 - 0.5f32) +
+    abs(scaledRight4.m13 - 4.0f32) +
+    abs(scaledRight4.m31 - 7.0f32) +
+    abs(restored4.m00 - 1.0f32) +
+    abs(restored4.m12 - 7.0f32) +
+    abs(restored4.m30 - 13.0f32) +
+    abs(restored4.m33 - 16.0f32)
+  }
+  return(convert<int>(totalError <= tolerance))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_matrix_arithmetic_helpers.prime", source);
+  const std::string wasmPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_matrix_arithmetic_helpers.wasm").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_matrix_arithmetic_helpers_err.txt").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_matrix_arithmetic_helpers_out.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  if (hasWasmtime()) {
+    const std::string runCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    const std::string output = readFile(outPath);
+    CHECK(output.find("1") != std::string::npos);
+  }
+}
+
 TEST_CASE("primec rejects wasm support-matrix plus mismatch with deterministic diagnostic") {
   const std::string source = R"(
 import /std/math/*
