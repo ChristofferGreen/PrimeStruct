@@ -4210,6 +4210,56 @@ TEST_CASE("C++ emitter helper prefers vector slash-method access return-kind met
   CHECK(resolved == "/string/count");
 }
 
+TEST_CASE("C++ emitter helper rejects explicit vector slash-method receivers without metadata") {
+  auto expectRejected = [&](const char *receiverMethodName) {
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.isMethodCall = true;
+    receiverCall.name = receiverMethodName;
+
+    primec::Expr receiverName;
+    receiverName.kind = primec::Expr::Kind::Name;
+    receiverName.name = "values";
+
+    primec::Expr indexLiteral;
+    indexLiteral.kind = primec::Expr::Kind::Literal;
+    indexLiteral.intWidth = 32;
+    indexLiteral.literalValue = 0;
+
+    receiverCall.args = {receiverName, indexLiteral};
+    receiverCall.argNames = {std::nullopt, std::nullopt};
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.isMethodCall = true;
+    methodCall.name = "tag";
+    methodCall.args = {receiverCall};
+    methodCall.argNames = {std::nullopt};
+
+    std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+    primec::emitter::BindingInfo receiverInfo;
+    receiverInfo.typeName = "vector";
+    receiverInfo.typeTemplateArg = "i32";
+    localTypes.emplace("values", receiverInfo);
+
+    std::unordered_map<std::string, const primec::Definition *> defMap;
+    std::unordered_map<std::string, std::string> importAliases;
+    std::unordered_map<std::string, std::string> structTypeMap;
+    std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+    std::unordered_map<std::string, std::string> returnStructs;
+
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved.empty());
+  };
+
+  expectRejected("/vector/at");
+  expectRejected("/vector/at_unsafe");
+  expectRejected("/std/collections/vector/at");
+  expectRejected("/std/collections/vector/at_unsafe");
+}
+
 TEST_CASE("rejects stdlib canonical vector helper method-precedence forwarding in C++ emitter") {
   const std::string source = R"(
 [return<int>]
@@ -7730,6 +7780,34 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("rejects vector method alias access receiver fallback without helper in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 40i32))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/at(1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_method_alias_access_receiver_fallback_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_method_alias_access_receiver_fallback_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+}
+
 TEST_CASE("rejects vector unsafe method alias access field expression with struct receiver diagnostics in C++ emitter") {
   const std::string source = R"(
 Marker {
@@ -7764,6 +7842,34 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+}
+
+TEST_CASE("rejects vector unsafe method alias access receiver fallback without helper in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 40i32))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/at_unsafe(1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_method_alias_access_unsafe_receiver_fallback_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_method_alias_access_unsafe_receiver_fallback_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps vector method alias struct-return precedence over canonical helper") {
@@ -8091,6 +8197,35 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("rejects std-namespaced vector method alias access receiver fallback without helper in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 40i32))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./std/collections/vector/at(1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_std_namespaced_vector_method_alias_access_receiver_fallback_reject.prime",
+                source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_std_namespaced_vector_method_alias_access_receiver_fallback_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
+}
+
 TEST_CASE("rejects std-namespaced vector method alias access struct method chain with helper receiver diagnostics in C++ emitter") {
   const std::string source = R"(
 Marker {
@@ -8129,6 +8264,35 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
+}
+
+TEST_CASE("rejects std-namespaced vector unsafe method alias access receiver fallback without helper in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 40i32))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./std/collections/vector/at_unsafe(1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_std_namespaced_vector_method_alias_access_unsafe_receiver_fallback_reject.prime",
+                source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_std_namespaced_vector_method_alias_access_unsafe_receiver_fallback_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter forwards explicit-template vector count wrappers through canonical return kinds") {

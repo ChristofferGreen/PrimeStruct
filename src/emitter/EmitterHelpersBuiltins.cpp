@@ -1167,6 +1167,30 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return false;
   };
+  auto isExplicitVectorAccessSlashMethod = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
+        candidate.args.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "vector/at" && normalized != "vector/at_unsafe" &&
+        normalized != "std/collections/vector/at" &&
+        normalized != "std/collections/vector/at_unsafe") {
+      return false;
+    }
+    const Expr &receiverExpr = candidate.args.front();
+    if (isVectorValue(receiverExpr, localTypes)) {
+      return true;
+    }
+    if (inferPrimitiveTypeName) {
+      const std::string inferredReceiverType = normalizeBindingTypeName(inferPrimitiveTypeName(receiverExpr));
+      return inferredReceiverType == "vector";
+    }
+    return false;
+  };
   auto resolveBareVectorAccessMethodHelperPath = [&](const Expr &candidate) -> std::string {
     if (!isBareVectorAccessMethod(candidate)) {
       return "";
@@ -1419,6 +1443,9 @@ bool resolveMethodCallPath(const Expr &call,
           if (const std::string explicitVectorAccessType = inferExplicitVectorAccessResolvedTypeName(expr);
               !explicitVectorAccessType.empty()) {
             return explicitVectorAccessType;
+          }
+          if (isExplicitVectorAccessSlashMethod(expr)) {
+            return "";
           }
           if (const std::string vectorAccessMethodPath = resolveBareVectorAccessMethodHelperPath(expr);
               !vectorAccessMethodPath.empty()) {
