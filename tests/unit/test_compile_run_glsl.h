@@ -927,7 +927,7 @@ main() {
   CHECK(output.find("pc = (cond == 0) ?") != std::string::npos);
 }
 
-TEST_CASE("glsl emitter rejects unavailable support-matrix math types") {
+TEST_CASE("glsl emitter rejects remaining unavailable support-matrix quaternion types") {
   const std::string source = R"(
 import /std/math/*
 
@@ -996,6 +996,55 @@ main() {
   CHECK(output.find("const float sample3 = (m3)[1][2];") != std::string::npos);
   CHECK(output.find("const mat4 m4 = mat4(1.0, 5.0, 9.0, 13.0, 2.0, 6.0, 10.0, 14.0, 3.0, 7.0, 11.0, 15.0, 4.0, 8.0, 12.0, 16.0);") != std::string::npos);
   CHECK(output.find("const float sample4 = (m4)[2][3];") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter lowers vector nominal values and matrix vector multiply") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<void>]
+main() {
+  [Vec2] v2{Vec2(1.0f32, 2.0f32)}
+  [Vec3] v3{Vec3(3.0f32, 4.0f32, 5.0f32)}
+  [Vec4] v4{Vec4(6.0f32, 7.0f32, 8.0f32, 9.0f32)}
+  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat3] m3{Mat3(
+    1.0f32, 2.0f32, 3.0f32,
+    4.0f32, 5.0f32, 6.0f32,
+    7.0f32, 8.0f32, 9.0f32
+  )}
+  [Mat4] m4{Mat4(
+    1.0f32, 2.0f32, 3.0f32, 4.0f32,
+    5.0f32, 6.0f32, 7.0f32, 8.0f32,
+    9.0f32, 10.0f32, 11.0f32, 12.0f32,
+    13.0f32, 14.0f32, 15.0f32, 16.0f32
+  )}
+  [Vec2] out2{multiply(m2, v2)}
+  [Vec3] out3{multiply(m3, v3)}
+  [Vec4] out4{multiply(m4, v4)}
+  [f32] sample{plus(out2.y, plus(out3.z, out4.w))}
+  [i32 mut] sink{0i32}
+  if(true, then() { assign(sink, convert<int>(sample)) }, else() { })
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_support_matrix_vector_values.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_vector_values.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("const vec2 v2 = vec2(1.0, 2.0);") != std::string::npos);
+  CHECK(output.find("const vec3 v3 = vec3(3.0, 4.0, 5.0);") != std::string::npos);
+  CHECK(output.find("const vec4 v4 = vec4(6.0, 7.0, 8.0, 9.0);") != std::string::npos);
+  CHECK(output.find("const vec2 out2 = (m2 * v2);") != std::string::npos);
+  CHECK(output.find("const vec3 out3 = (m3 * v3);") != std::string::npos);
+  CHECK(output.find("const vec4 out4 = (m4 * v4);") != std::string::npos);
+  CHECK(output.find("const float sample = ") != std::string::npos);
+  CHECK(output.find("(out2).y") != std::string::npos);
+  CHECK(output.find("(out3).z") != std::string::npos);
+  CHECK(output.find("(out4).w") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles math constants") {

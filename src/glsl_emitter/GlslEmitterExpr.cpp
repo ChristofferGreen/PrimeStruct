@@ -6,6 +6,19 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error);
 
 namespace {
 
+int vectorDimension(GlslType type) {
+  switch (type) {
+  case GlslType::Vec2:
+    return 2;
+  case GlslType::Vec3:
+    return 3;
+  case GlslType::Vec4:
+    return 4;
+  default:
+    return 0;
+  }
+}
+
 int matrixDimension(GlslType type) {
   switch (type) {
   case GlslType::Mat2:
@@ -17,6 +30,22 @@ int matrixDimension(GlslType type) {
   default:
     return 0;
   }
+}
+
+bool vectorFieldComponentIndex(const std::string &name, int dimension, int &componentOut) {
+  if (name.size() != 1) {
+    return false;
+  }
+  const char componentName = name[0];
+  const char *components = "xyzw";
+  for (int i = 0; i < dimension; ++i) {
+    if (components[i] != componentName) {
+      continue;
+    }
+    componentOut = i;
+    return true;
+  }
+  return false;
 }
 
 bool matrixFieldRowColumn(const std::string &name, int dimension, int &rowOut, int &columnOut) {
@@ -35,6 +64,36 @@ bool matrixFieldRowColumn(const std::string &name, int dimension, int &rowOut, i
 
 ExprResult castScalarToMatrixElementFloat(const ExprResult &expr) {
   return castExpr(expr, GlslType::Float);
+}
+
+bool emitVectorConstructor(const Expr &expr, const std::string &name, GlslType type, EmitState &state, std::string &error, ExprResult &out) {
+  const int dimension = vectorDimension(type);
+  const size_t expectedArgs = static_cast<size_t>(dimension);
+  if (expr.args.size() != expectedArgs) {
+    error = "glsl backend requires " + name + " constructor with " + std::to_string(expectedArgs) + " arguments";
+    return false;
+  }
+  out = {};
+  out.type = type;
+  out.code = glslTypeName(type) + "(";
+  for (size_t i = 0; i < expectedArgs; ++i) {
+    ExprResult arg = emitExpr(expr.args[i], state, error);
+    if (!error.empty()) {
+      return false;
+    }
+    if (!isNumericType(arg.type)) {
+      error = "glsl backend requires numeric vector constructor arguments";
+      return false;
+    }
+    arg = castScalarToMatrixElementFloat(arg);
+    out.prelude += arg.prelude;
+    if (i != 0) {
+      out.code += ", ";
+    }
+    out.code += arg.code;
+  }
+  out.code += ")";
+  return true;
 }
 
 bool emitMatrixConstructor(const Expr &expr,
@@ -116,6 +175,16 @@ bool emitMatrixArithmetic(const Expr &expr,
         return false;
       }
       out.type = left.type;
+      out.code = "(" + left.code + " * " + right.code + ")";
+      out.prelude = left.prelude + right.prelude;
+      return true;
+    }
+    if (leftMatrix && isVectorType(right.type)) {
+      if (matrixDimension(left.type) != vectorDimension(right.type)) {
+        error = "glsl backend requires matching matrix/vector operands for multiply";
+        return false;
+      }
+      out.type = right.type;
       out.code = "(" + left.code + " * " + right.code + ")";
       out.prelude = left.prelude + right.prelude;
       return true;
@@ -263,9 +332,23 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     if (!error.empty()) {
       return {};
     }
+    const int vectorSize = vectorDimension(receiver.type);
+    if (vectorSize != 0) {
+      int component = 0;
+      if (!vectorFieldComponentIndex(expr.name, vectorSize, component)) {
+        error = "glsl backend does not support vector field: " + expr.name;
+        return {};
+      }
+      ExprResult out;
+      out.type = GlslType::Float;
+      out.code = "(" + receiver.code + ").";
+      out.code.push_back("xyzw"[component]);
+      out.prelude = receiver.prelude;
+      return out;
+    }
     const int dimension = matrixDimension(receiver.type);
     if (dimension == 0) {
-      error = "glsl backend only supports matrix field access";
+      error = "glsl backend only supports vector or matrix field access";
       return {};
     }
     int row = 0;
@@ -281,6 +364,27 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     return out;
   }
   const std::string name = normalizeName(expr);
+  if (name == "Vec2") {
+    ExprResult out;
+    if (!emitVectorConstructor(expr, name, GlslType::Vec2, state, error, out)) {
+      return {};
+    }
+    return out;
+  }
+  if (name == "Vec3") {
+    ExprResult out;
+    if (!emitVectorConstructor(expr, name, GlslType::Vec3, state, error, out)) {
+      return {};
+    }
+    return out;
+  }
+  if (name == "Vec4") {
+    ExprResult out;
+    if (!emitVectorConstructor(expr, name, GlslType::Vec4, state, error, out)) {
+      return {};
+    }
+    return out;
+  }
   if (name == "Mat2") {
     ExprResult out;
     if (!emitMatrixConstructor(expr, name, GlslType::Mat2, state, error, out)) {
@@ -319,7 +423,7 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     }
     std::string typeName = glslTypeName(blockResult.type);
     if (typeName.empty()) {
-      error = "glsl backend requires numeric or boolean block values";
+      error = "glsl backend requires GLSL-supported block values";
       return {};
     }
     std::string tempName = allocTempName(state, "_ps_block_");

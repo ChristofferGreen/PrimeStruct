@@ -117,7 +117,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
       }
       std::string typeName = glslTypeName(bindingType);
       if (typeName.empty()) {
-        error = "glsl backend requires numeric or boolean binding types";
+        error = "glsl backend requires GLSL-supported binding types";
         return false;
       }
       state.needsInt64Ext = state.needsInt64Ext || blockState.needsInt64Ext;
@@ -151,7 +151,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
     }
     std::string typeName = glslTypeName(bindingType);
     if (typeName.empty()) {
-      error = "glsl backend requires numeric or boolean binding types";
+      error = "glsl backend requires GLSL-supported binding types";
       return false;
     }
     state.locals[stmt.name] = {bindingType, isMutable};

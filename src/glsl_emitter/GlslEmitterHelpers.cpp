@@ -257,6 +257,15 @@ GlslType glslTypeFromName(const std::string &name, EmitState &state, std::string
     state.needsFp64Ext = true;
     return GlslType::Double;
   }
+  if (name == "Vec2") {
+    return GlslType::Vec2;
+  }
+  if (name == "Vec3") {
+    return GlslType::Vec3;
+  }
+  if (name == "Vec4") {
+    return GlslType::Vec4;
+  }
   if (name == "Mat2") {
     return GlslType::Mat2;
   }
@@ -286,6 +295,12 @@ std::string glslTypeName(GlslType type) {
     return "float";
   case GlslType::Double:
     return "double";
+  case GlslType::Vec2:
+    return "vec2";
+  case GlslType::Vec3:
+    return "vec3";
+  case GlslType::Vec4:
+    return "vec4";
   case GlslType::Mat2:
     return "mat2";
   case GlslType::Mat3:
@@ -301,6 +316,10 @@ std::string glslTypeName(GlslType type) {
 bool isNumericType(GlslType type) {
   return type == GlslType::Int || type == GlslType::UInt || type == GlslType::Int64 || type == GlslType::UInt64 ||
          type == GlslType::Float || type == GlslType::Double;
+}
+
+bool isVectorType(GlslType type) {
+  return type == GlslType::Vec2 || type == GlslType::Vec3 || type == GlslType::Vec4;
 }
 
 bool isMatrixType(GlslType type) {
