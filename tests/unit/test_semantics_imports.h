@@ -813,7 +813,7 @@ main() {
   CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("experimental gfx window constructor-like entry point keeps deterministic reject") {
+TEST_CASE("experimental gfx window constructor entry point validates through stdlib helper") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -825,12 +825,27 @@ log_gfx_error([GfxError] err) {
 [return<int> on_error<GfxError, /log_gfx_error>]
 main() {
   [Window] window{Window([title] "PrimeStruct"utf8, [width] 1280i32, [height] 720i32)?}
+  return(plus(window.width, window.height))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental gfx window constructor still rejects bare explicit struct binding") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int>]
+main() {
+  [Window] window{Window([title] "PrimeStruct"utf8, [width] 1280i32, [height] 720i32)}
   return(window.width)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown named argument: title") != std::string::npos);
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("experimental gfx profile literals keep deterministic reject") {

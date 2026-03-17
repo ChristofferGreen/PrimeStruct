@@ -362,6 +362,61 @@ main() {
   CHECK(runCommand(nativePath) == 8);
 }
 
+TEST_CASE("experimental gfx window constructor entry point runs across backends") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Window] window{Window([title] "PrimeStruct"utf8, [width] 1280i32, [height] 720i32)?}
+  [i32 mut] score{0i32}
+
+  if(window.is_open()) {
+    score = plus(score, 1i32)
+  } else {
+    return(90i32)
+  }
+  if(equal(window.width, 1280i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(91i32)
+  }
+  if(equal(window.height, 720i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(92i32)
+  }
+  if(greater_than(window.aspect_ratio(), 1.7f32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(93i32)
+  }
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_gfx_experimental_window_constructor.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_window_constructor_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_window_constructor_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 4);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 4);
+}
+
 TEST_CASE("experimental gfx static fields import across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -2846,6 +2901,14 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
     CHECK(guidelinesDoc.find("Canonical `/std/gfx/*` contract example: `device{Device()?}` is preferred") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("Current `/std/gfx/experimental/*` status: the constructor-shaped `Device()`") !=
+          std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-V1-WINDOW-CONSTRUCTOR-STATUS");
+    CHECK(graphicsDoc.find("constructor-shaped `Window(...)` entry point") != std::string::npos);
+    CHECK(graphicsDoc.find("rewrites through a dedicated substrate-backed stdlib helper") != std::string::npos);
+    CHECK(primeStructDoc.find("constructor-shaped experimental `Window(...)` entry point now rewrites") !=
           std::string::npos);
   }
 

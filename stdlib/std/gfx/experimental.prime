@@ -383,6 +383,15 @@ namespace std {
     }
   }
 
+  [return<Result<Window, GfxError>>]
+  windowCreate([string] title, [i32] width, [i32] height) {
+    [SubstrateWindowConfig] config{
+      SubstrateWindowConfig([hostToken] 1i32, [width] width, [height] height)
+    }
+    [i32] windowToken{GraphicsSubstrate.createWindow(config)?}
+    return(Result.ok(Window([token] windowToken, [width] width, [height] height)))
+  }
+
   namespace GfxError {
     [public return<string>]
     why([GfxError] err) {

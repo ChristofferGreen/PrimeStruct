@@ -1,14 +1,14 @@
 # PrimeStruct Graphics API Design
 
 Status: Locked (v1 Core Contract + Spinning-Cube Mini-Spec)
-Last updated: 2026-03-06
+Last updated: 2026-03-17
 
 This document defines the locked cross-backend graphics API contract for the
 spinning-cube program family. The goal is to keep one portable language surface,
 apply profile-gated validation at compile time, and avoid backend-specific
 language namespaces in v1.
 
-Implementation status note (2026-03-15): this document locks the source-level
+Implementation status note (2026-03-17): this document locks the source-level
 contract, and the repo now ships an initial experimental `.prime` type surface
 at `/std/gfx/experimental/*`, but the canonical `/std/gfx/*` stdlib plus full
 helper semantics and lowering/runtime support are not yet implemented
@@ -16,18 +16,18 @@ end-to-end. Current repo coverage therefore consists of contract checks,
 experimental import/type-surface coverage, an explicit `.prime`
 `GraphicsSubstrate` token/config boundary for create/acquire/submit/present
 operations, method-form `.prime` wrappers for the currently expressible
-window/frame lifecycle surface, and browser/native/Metal host samples around
-shared `.prime` simulation/data paths. Constructor-like `Window(...)` /
-`Device()` entry points and the type-valued `Device.create_pipeline(...)`
+window/frame lifecycle surface, a constructor-shaped `Window(...)` entry point
+that now rewrites through a dedicated substrate-backed stdlib helper, and
+browser/native/Metal host samples around shared `.prime` simulation/data
+paths. Bare `Device()` and the type-valued `Device.create_pipeline(...)`
 signature are still pending canonical entry-point work, so the current
-experimental package intentionally locks deterministic rejects for source-level
-profile literals, constructor-shaped named fields, bare `Device()` entry-point
-spelling, and the type-valued `create_pipeline(...)` shape instead of inventing
-more compiler-owned routing, and Result-carrying method wrappers now also
-reject bare explicit non-`Result` struct bindings during semantics rather than
-deferring those failures to lowering; follow-up work should keep the public
-graphics API primarily in `.prime` files while leaving only minimal backend
-substrate in C++/host code.
+experimental package intentionally keeps deterministic rejects for source-level
+profile literals, bare `Device()` entry-point spelling, and the type-valued
+`create_pipeline(...)` shape instead of inventing more compiler-owned routing,
+and Result-carrying method wrappers now also reject bare explicit non-`Result`
+struct bindings during semantics rather than deferring those failures to
+lowering; follow-up work should keep the public graphics API primarily in
+`.prime` files while leaving only minimal backend substrate in C++/host code.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.
