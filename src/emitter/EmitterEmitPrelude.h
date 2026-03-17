@@ -341,6 +341,8 @@
   out << "  return static_cast<int>(value.capacity());\n";
   out << "}\n";
   out << "template <typename T>\n";
+  out << "static inline int ps_missing_vector_capacity_call_helper(const T &) = delete;\n";
+  out << "template <typename T>\n";
   out << "static inline int ps_missing_vector_capacity_method_helper(const T &) = delete;\n";
   out << "template <typename T, typename Value>\n";
   out << "static inline void ps_vector_push(std::vector<T> &value, Value element) {\n";
