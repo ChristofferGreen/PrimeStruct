@@ -1597,13 +1597,14 @@ namespace std {
 
   [effects(heap_alloc), return<int>]
   pngDecodeScanlines([vector<i32>] rawBytes, [i32] width, [i32] height, [i32] bitDepth, [i32] colorType,
-                     [i32] interlace, [vector<i32> mut] pixels) {
+                     [i32] interlace, [vector<i32>] paletteBytes, [vector<i32> mut] pixels) {
     clear(pixels)
     if(or(not_equal(bitDepth, 8i32), not_equal(interlace, 0i32)),
        then() { return(2i32) },
        else() { })
     if(and(not_equal(colorType, 0i32),
-           and(not_equal(colorType, 2i32), and(not_equal(colorType, 4i32), not_equal(colorType, 6i32)))),
+           and(not_equal(colorType, 2i32),
+               and(not_equal(colorType, 3i32), and(not_equal(colorType, 4i32), not_equal(colorType, 6i32))))),
        then() { return(2i32) },
        else() { })
 
@@ -1614,14 +1615,25 @@ namespace std {
          if(equal(colorType, 2i32),
             then() { assign(bytesPerPixel, 3i32) },
             else() {
-              if(equal(colorType, 4i32),
-                 then() { assign(bytesPerPixel, 2i32) },
+              if(equal(colorType, 3i32),
+                 then() { assign(bytesPerPixel, 1i32) },
                  else() { })
             })
        })
+    if(equal(colorType, 4i32),
+       then() { assign(bytesPerPixel, 2i32) },
+       else() { })
     [i32] scanlineBytes{multiply(width, bytesPerPixel)}
     if(not_equal(count(rawBytes), multiply(height, plus(scanlineBytes, 1i32))),
        then() { return(1i32) },
+       else() { })
+    if(equal(colorType, 3i32),
+       then() {
+         if(or(or(equal(count(paletteBytes), 0i32), not_equal(pngMod(count(paletteBytes), 3i32), 0i32)),
+               greater_than(count(paletteBytes), 768i32)),
+            then() { return(1i32) },
+            else() { })
+       },
        else() { })
 
     [i32 mut] offset{0i32}
@@ -1689,9 +1701,24 @@ namespace std {
              push(pixels, rowBytes[pixelByteIndex])
            },
            else() {
-             push(pixels, rowBytes[pixelByteIndex])
-             push(pixels, rowBytes[plus(pixelByteIndex, 1i32)])
-             push(pixels, rowBytes[plus(pixelByteIndex, 2i32)])
+             if(equal(colorType, 3i32),
+                then() {
+                  [i32] paletteOffset{multiply(rowBytes[pixelByteIndex], 3i32)}
+                  if(greater_equal(plus(paletteOffset, 2i32), count(paletteBytes)),
+                     then() {
+                       clear(pixels)
+                       return(1i32)
+                     },
+                     else() { })
+                  push(pixels, paletteBytes[paletteOffset])
+                  push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
+                  push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
+                },
+                else() {
+                  push(pixels, rowBytes[pixelByteIndex])
+                  push(pixels, rowBytes[plus(pixelByteIndex, 1i32)])
+                  push(pixels, rowBytes[plus(pixelByteIndex, 2i32)])
+                })
            })
         assign(pixelByteIndex, plus(pixelByteIndex, bytesPerPixel))
       })
@@ -1860,6 +1887,7 @@ namespace std {
       [i32 mut] colorType{0i32}
       [i32 mut] interlace{0i32}
       [vector<i32> mut] idatBytes{vector<i32>()}
+      [vector<i32> mut] plteBytes{vector<i32>()}
       [vector<i32> mut] rawBytes{vector<i32>()}
       while(true, do() {
         [i32 mut] chunkLength{0i32}
@@ -1945,6 +1973,16 @@ namespace std {
                     not(pngChunkCrcMatches(typeA, typeB, typeC, typeD, chunkBytes, crcA, crcB, crcC, crcD))),
                 then() { return(1i32) },
                 else() { })
+             if(pngChunkIsPlte(typeA, typeB, typeC, typeD),
+                then() {
+                  if(or(or(equal(count(chunkBytes), 0i32), not_equal(pngMod(count(chunkBytes), 3i32), 0i32)),
+                        greater_than(count(chunkBytes), 768i32)),
+                     then() { return(1i32) },
+                     else() { })
+                  clear(plteBytes)
+                  pngAppendVectorBytes(chunkBytes, plteBytes)
+                },
+                else() { })
              if(and(not_equal(sawIdat, 0i32), not(pngChunkIsIdat(typeA, typeB, typeC, typeD))),
                 then() { assign(sawPostIdatChunk, 1i32) },
                 else() { })
@@ -1967,7 +2005,11 @@ namespace std {
                           then() { return(2i32) },
                           else() { })
 
-                       [i32] decodeStatus{pngDecodeScanlines(rawBytes, parsedWidth, parsedHeight, bitDepth, colorType, interlace, pixels)}
+                       if(and(equal(colorType, 3i32), equal(count(plteBytes), 0i32)),
+                          then() { return(1i32) },
+                          else() { })
+
+                       [i32] decodeStatus{pngDecodeScanlines(rawBytes, parsedWidth, parsedHeight, bitDepth, colorType, interlace, plteBytes, pixels)}
                        if(equal(decodeStatus, 1i32),
                           then() {
                             resetReadOutputs(width, height, pixels)
