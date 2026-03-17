@@ -4327,7 +4327,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (expr.args.size() != 2) {
         return ReturnKind::Unknown;
       }
-      if ((builtinName == "plus" || builtinName == "minus" || builtinName == "multiply") &&
+      if ((builtinName == "plus" || builtinName == "minus" || builtinName == "multiply" ||
+           builtinName == "divide") &&
           !inferStructReturnPath(expr, params, locals).empty()) {
         return ReturnKind::Array;
       }
@@ -5911,6 +5912,16 @@ std::string SemanticsValidator::inferStructReturnPath(
         if (isNumericScalarExpr(expr.args[0])) {
           return rightType;
         }
+        return "";
+      }
+    }
+    if (getBuiltinOperatorName(expr, builtinName) && builtinName == "divide" && expr.args.size() == 2) {
+      const std::string leftType = inferStructReturnPath(expr.args[0], params, locals);
+      const std::string rightType = inferStructReturnPath(expr.args[1], params, locals);
+      if (isMatrixQuaternionTypePath(leftType) && rightType.empty() && isNumericScalarExpr(expr.args[1])) {
+        return leftType;
+      }
+      if (isMatrixQuaternionTypePath(leftType) || isMatrixQuaternionTypePath(rightType)) {
         return "";
       }
     }

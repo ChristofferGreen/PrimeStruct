@@ -328,6 +328,65 @@ main() {
   CHECK(error.find("multiply requires scalar scaling, matrix-vector, matrix-matrix, quaternion-quaternion, or quaternion-Vec3 operands") != std::string::npos);
 }
 
+TEST_CASE("arithmetic divide accepts matrix scalar division") {
+  const std::string source = R"(
+import /std/math/*
+[return<Mat2>]
+main() {
+  [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  return(divide(value, 2.0f32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("arithmetic divide accepts quaternion scalar division") {
+  const std::string source = R"(
+import /std/math/*
+[return<Quat>]
+main() {
+  [Quat] value{Quat(0.0f32, 2.0f32, 0.0f32, 0.0f32)}
+  return(divide(value, 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("arithmetic divide rejects matrix matrix operands") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Mat2] left{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat2] right{left}
+  [Mat2] value{divide(left, right)}
+  return(convert<int>(value.m00))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("divide requires matrix/quaternion composite-by-scalar operands") != std::string::npos);
+}
+
+TEST_CASE("arithmetic divide rejects scalar quaternion operands") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Quat] value{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Quat] scaled{divide(2.0f32, value)}
+  return(convert<int>(scaled.w))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("divide requires matrix/quaternion composite-by-scalar operands") != std::string::npos);
+}
+
 TEST_CASE("arithmetic negate rejects bool operands") {
   const std::string source = R"(
 [return<int>]

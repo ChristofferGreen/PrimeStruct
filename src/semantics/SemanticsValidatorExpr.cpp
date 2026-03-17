@@ -441,6 +441,21 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     result.valid = isNumericExpr(left);
     return result;
   };
+  struct MatrixQuaternionDivideInfo {
+    bool handled = false;
+    bool valid = false;
+  };
+  auto classifyMatrixQuaternionDivide = [&](const Expr &left, const Expr &right) -> MatrixQuaternionDivideInfo {
+    const std::string leftMathType = inferMatrixQuaternionTypePath(left);
+    const std::string rightMathType = inferMatrixQuaternionTypePath(right);
+    if (leftMathType.empty() && rightMathType.empty()) {
+      return {};
+    }
+    MatrixQuaternionDivideInfo result;
+    result.handled = true;
+    result.valid = !leftMathType.empty() && rightMathType.empty() && isNumericExpr(right);
+    return result;
+  };
   auto isFloatExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
     if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Decimal) {
@@ -7588,6 +7603,21 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 if (!multiplyInfo.valid) {
                   error_ =
                       "multiply requires scalar scaling, matrix-vector, matrix-matrix, quaternion-quaternion, or quaternion-Vec3 operands";
+                  return false;
+                }
+                for (const auto &arg : expr.args) {
+                  if (!validateExpr(params, locals, arg)) {
+                    return false;
+                  }
+                }
+                return true;
+              }
+            }
+            if (builtinName == "divide") {
+              MatrixQuaternionDivideInfo divideInfo = classifyMatrixQuaternionDivide(expr.args[0], expr.args[1]);
+              if (divideInfo.handled) {
+                if (!divideInfo.valid) {
+                  error_ = "divide requires matrix/quaternion composite-by-scalar operands";
                   return false;
                 }
                 for (const auto &arg : expr.args) {
