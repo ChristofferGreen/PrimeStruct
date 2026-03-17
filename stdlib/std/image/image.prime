@@ -1599,11 +1599,21 @@ namespace std {
   pngDecodeScanlines([vector<i32>] rawBytes, [i32] width, [i32] height, [i32] bitDepth, [i32] colorType,
                      [i32] interlace, [vector<i32> mut] pixels) {
     clear(pixels)
-    if(or(not_equal(bitDepth, 8i32), or(not_equal(interlace, 0i32), and(not_equal(colorType, 2i32), not_equal(colorType, 6i32)))),
+    if(or(not_equal(bitDepth, 8i32), not_equal(interlace, 0i32)),
+       then() { return(2i32) },
+       else() { })
+    if(and(not_equal(colorType, 0i32), and(not_equal(colorType, 2i32), not_equal(colorType, 6i32))),
        then() { return(2i32) },
        else() { })
 
-    [i32] bytesPerPixel{if(equal(colorType, 2i32), then() { 3i32 }, else() { 4i32 })}
+    [i32 mut] bytesPerPixel{4i32}
+    if(equal(colorType, 0i32),
+       then() { assign(bytesPerPixel, 1i32) },
+       else() {
+         if(equal(colorType, 2i32),
+            then() { assign(bytesPerPixel, 3i32) },
+            else() { })
+       })
     [i32] scanlineBytes{multiply(width, bytesPerPixel)}
     if(not_equal(count(rawBytes), multiply(height, plus(scanlineBytes, 1i32))),
        then() { return(1i32) },
@@ -1667,9 +1677,17 @@ namespace std {
 
       [i32 mut] pixelByteIndex{0i32}
       while(less_than(pixelByteIndex, scanlineBytes), do() {
-        push(pixels, rowBytes[pixelByteIndex])
-        push(pixels, rowBytes[plus(pixelByteIndex, 1i32)])
-        push(pixels, rowBytes[plus(pixelByteIndex, 2i32)])
+        if(equal(colorType, 0i32),
+           then() {
+             push(pixels, rowBytes[pixelByteIndex])
+             push(pixels, rowBytes[pixelByteIndex])
+             push(pixels, rowBytes[pixelByteIndex])
+           },
+           else() {
+             push(pixels, rowBytes[pixelByteIndex])
+             push(pixels, rowBytes[plus(pixelByteIndex, 1i32)])
+             push(pixels, rowBytes[plus(pixelByteIndex, 2i32)])
+           })
         assign(pixelByteIndex, plus(pixelByteIndex, bytesPerPixel))
       })
       clear(previousRowBytes)
