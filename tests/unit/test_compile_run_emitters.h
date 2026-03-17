@@ -1374,6 +1374,29 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("C++ emitter lambda lowers explicit vector mutator statement without helper to deleted stub") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  holder{[]([i32] seed) {
+    [vector<i32> mut] values{vector<i32>(1i32, 2i32, seed)}
+    /std/collections/vector/push(values, 5i32)
+    return(0i32)
+  }}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_lambda_explicit_vector_mutator_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_lambda_explicit_vector_mutator_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).find("ps_missing_vector_push_call_helper(values, 5)") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter lambda mutator mismatch rejects user helper signatures") {
   const std::string source = R"(
 /vector/push([vector<i32> mut] values, [bool] value) { }
@@ -5047,7 +5070,7 @@ main() {
   CHECK(runCommand(exePath) == 13);
 }
 
-TEST_CASE("C++ emitter emits builtin statement for stdlib namespaced vector mutator") {
+TEST_CASE("C++ emitter lowers stdlib namespaced vector mutator statement without helper to deleted stub") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -5066,11 +5089,10 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("static int64_t ps_fn_0(") != std::string::npos);
-  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_push_call_helper(values, 2)") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter accepts vector namespaced mutator alias statement") {
+TEST_CASE("rejects vector namespaced mutator alias statement without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -5080,15 +5102,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_mutator_stmt.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_mutator_stmt.cpp").string();
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_mutator_stmt_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK_FALSE(readFile(outPath).empty());
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_push_call_helper") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps stdlib namespaced vector access builtin fallback") {

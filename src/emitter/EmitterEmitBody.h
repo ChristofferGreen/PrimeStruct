@@ -500,9 +500,6 @@
           Expr missingHelperCall = stmt;
           bool hasMissingVectorHelper = false;
           auto rememberMissingVectorHelperCall = [&](const Expr &candidate, const std::string &resolvedPath) {
-            if (!stmt.isMethodCall && (!stmt.name.empty() && stmt.name.front() == '/')) {
-              return;
-            }
             if (resolvedPath != "/vector/" + vectorHelper &&
                 resolvedPath != "/std/collections/vector/" + vectorHelper) {
               return;
