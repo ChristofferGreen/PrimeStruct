@@ -42,6 +42,8 @@ bool validateProgramThroughCompilePipeline(const std::string &source,
                                            const std::string &entry,
                                            const std::vector<std::string> &defaultEffects,
                                            const std::vector<std::string> &entryDefaultEffects,
+                                           const std::string &emitKind,
+                                           const std::string &wasmProfile,
                                            std::string &error,
                                            primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
   const std::filesystem::path tempPath = makeTempSemanticSourcePath();
@@ -57,6 +59,8 @@ bool validateProgramThroughCompilePipeline(const std::string &source,
   primec::Options options;
   options.inputPath = tempPath.string();
   options.entryPath = entry;
+  options.emitKind = emitKind;
+  options.wasmProfile = wasmProfile;
   options.defaultEffects = defaultEffects;
   options.entryDefaultEffects = entryDefaultEffects;
   options.dumpStage = "ast_semantic";
@@ -70,6 +74,16 @@ bool validateProgramThroughCompilePipeline(const std::string &source,
   std::error_code ec;
   std::filesystem::remove(tempPath, ec);
   return ok;
+}
+
+bool validateProgramThroughCompilePipeline(const std::string &source,
+                                           const std::string &entry,
+                                           const std::vector<std::string> &defaultEffects,
+                                           const std::vector<std::string> &entryDefaultEffects,
+                                           std::string &error,
+                                           primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
+  return validateProgramThroughCompilePipeline(
+      source, entry, defaultEffects, entryDefaultEffects, "native", "wasi", error, diagnosticInfo);
 }
 
 primec::Program parseProgram(const std::string &source) {
@@ -111,6 +125,16 @@ bool validateProgramWithDefaults(const std::string &source,
   auto program = parseProgram(source);
   primec::Semantics semantics;
   return semantics.validate(program, entry, error, defaultEffects, entryDefaultEffects);
+}
+
+bool validateProgramForCompileTarget(const std::string &source,
+                                     const std::string &entry,
+                                     const std::string &emitKind,
+                                     const std::string &wasmProfile,
+                                     std::string &error) {
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  return validateProgramThroughCompilePipeline(
+      source, entry, defaults, defaults, emitKind, wasmProfile, error);
 }
 
 bool validateProgramWithDefaults(const std::string &source,

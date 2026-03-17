@@ -1086,6 +1086,80 @@ main() {
   CHECK(runCommand(nativePath) == 10);
 }
 
+TEST_CASE("gfx imports reject unsupported backend targets with deterministic diagnostics") {
+  struct NegativeCase {
+    std::string name;
+    std::string importPath;
+    std::string emitKind;
+    std::string wasmProfile;
+    std::string outputSuffix;
+    std::string expectedMessage;
+  };
+
+  const std::vector<NegativeCase> cases = {
+      {
+          "canonical_wasm_browser",
+          "/std/gfx/*",
+          "wasm",
+          "browser",
+          ".wasm",
+          "graphics stdlib runtime substrate unavailable for wasm-browser target: /std/gfx/*",
+      },
+      {
+          "canonical_wasm_wasi",
+          "/std/gfx/*",
+          "wasm",
+          "wasi",
+          ".wasm",
+          "graphics stdlib runtime substrate unavailable for wasm-wasi target: /std/gfx/*",
+      },
+      {
+          "experimental_glsl",
+          "/std/gfx/experimental/*",
+          "glsl",
+          "wasi",
+          ".glsl",
+          "graphics stdlib runtime substrate unavailable for glsl target: /std/gfx/experimental/*",
+      },
+      {
+          "canonical_spirv",
+          "/std/gfx/*",
+          "spirv",
+          "wasi",
+          ".spv",
+          "graphics stdlib runtime substrate unavailable for spirv target: /std/gfx/*",
+      },
+  };
+
+  for (const auto &negativeCase : cases) {
+    CAPTURE(negativeCase.name);
+    const std::string source = "import " + negativeCase.importPath + R"(
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+    const std::string srcPath = writeTemp("compile_gfx_unsupported_backend_" + negativeCase.name + ".prime", source);
+    const std::string outPath =
+        (std::filesystem::temp_directory_path() / ("primec_gfx_unsupported_backend_" + negativeCase.name +
+                                                   negativeCase.outputSuffix))
+            .string();
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / ("primec_gfx_unsupported_backend_" + negativeCase.name + ".json"))
+            .string();
+    std::string command = "./primec --emit=" + negativeCase.emitKind;
+    if (negativeCase.emitKind == "wasm") {
+      command += " --wasm-profile " + negativeCase.wasmProfile;
+    }
+    command += " " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
+               " --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(command) == 2);
+    const std::string diagnostics = readFile(errPath);
+    CHECK(diagnostics.find(negativeCase.expectedMessage) != std::string::npos);
+  }
+}
+
 TEST_CASE("experimental gfx static fields import across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -3638,13 +3712,13 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   {
     CAPTURE("GFX-V1-HOST-RUNTIME-STATUS");
     CHECK(graphicsDoc.find("first real") != std::string::npos);
-    CHECK(graphicsDoc.find("native-desktop host/runtime path now consumes a deterministic experimental gfx") !=
+    CHECK(graphicsDoc.find("native-desktop host/runtime path now consumes a deterministic canonical `/std/gfx/*` stream") !=
           std::string::npos);
     CHECK(graphicsDoc.find("submit/present") != std::string::npos);
-    CHECK(primeStructDoc.find("first real native-desktop host/runtime path now consumes a deterministic experimental gfx") !=
+    CHECK(primeStructDoc.find("shared spinning-cube native-window sample path now emits a deterministic canonical `/std/gfx/*` stream") !=
           std::string::npos);
-    CHECK(guidelinesDoc.find("first real native-desktop host path now consumes the") != std::string::npos);
-    CHECK(guidelinesDoc.find("deterministic experimental gfx stream emitted by the shared spinning-cube") !=
+    CHECK(guidelinesDoc.find("shared spinning-cube native-window sample path now emits and") != std::string::npos);
+    CHECK(guidelinesDoc.find("deterministic canonical `/std/gfx/*` stream") !=
           std::string::npos);
   }
 
@@ -3723,9 +3797,10 @@ main() {
     CAPTURE("GFX-PROFILE-GATING");
     CAPTURE("GFX-DIAG-PROFILE-CONTEXT");
     const std::string source = R"(
+import /std/gfx/*
+
 [return<int> effects(io_out)]
 main() {
-  print_line("gfx"utf8)
   return(0i32)
 }
 )";
@@ -3739,26 +3814,31 @@ main() {
                                 quoteShellArg(errPath);
     CHECK(runCommand(command) == 2);
     const std::string diagnostics = readFile(errPath);
-    CHECK(diagnostics.find("unsupported effect mask bits for wasm-browser target") != std::string::npos);
-    CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") != std::string::npos);
+    CHECK(diagnostics.find("graphics stdlib runtime substrate unavailable for wasm-browser target: /std/gfx/*") !=
+          std::string::npos);
   }
 
   {
     CAPTURE("GFX-CORE-API-NAMESPACE");
     const std::string source = R"(
+import /std/gfx/*
+
 [return<int>]
 main() {
   return(0i32)
 }
 )";
-    const std::string srcPath = writeTemp("gfx_contract_backend_emit_extension_reject.prime", source);
+    const std::string srcPath = writeTemp("gfx_contract_backend_emit_reject.prime", source);
     const std::string errPath =
-        (std::filesystem::temp_directory_path() / "primec_gfx_contract_backend_emit_extension_reject.err.txt").string();
-    const std::string command =
-        "./primec --emit=metal " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+        (std::filesystem::temp_directory_path() / "primec_gfx_contract_backend_emit_reject.err.json").string();
+    const std::string outPath =
+        (std::filesystem::temp_directory_path() / "primec_gfx_contract_backend_emit_reject.glsl").string();
+    const std::string command = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
+                                " --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
     CHECK(runCommand(command) == 2);
     const std::string diagnostics = readFile(errPath);
-    CHECK(diagnostics.find("Usage: primec") != std::string::npos);
+    CHECK(diagnostics.find("graphics stdlib runtime substrate unavailable for glsl target: /std/gfx/*") !=
+          std::string::npos);
   }
 }
 

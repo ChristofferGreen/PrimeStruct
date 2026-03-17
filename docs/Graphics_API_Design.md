@@ -39,10 +39,13 @@ of relying only on doc-lock coverage for that API surface. Source-level profile
 literals and unsupported `create_pipeline` vertex types are still
 intentionally rejected, Result-carrying method wrappers still reject bare
 explicit non-`Result` struct bindings during semantics, and follow-up work
-still needs to add unsupported-backend diagnostics, reduce the remaining
-sample-owned compatibility/contract glue, and keep the remaining public
-graphics API primarily in `.prime` files while leaving only minimal backend
-substrate in C++/host code.
+now also rejects `/std/gfx/*` and `/std/gfx/experimental/*` imports
+deterministically on wasm (`wasm-browser`, `wasm-wasi`) and shader-only
+(`glsl`, `spirv`) emits because those targets still lack the required runtime
+substrate. Follow-up work still needs to reduce the remaining sample-owned
+compatibility/contract glue and keep the remaining public graphics API
+primarily in `.prime` files while leaving only minimal backend substrate in
+C++/host code.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.

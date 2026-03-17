@@ -909,6 +909,36 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical gfx imports reject wasm-browser targets without runtime substrate") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgramForCompileTarget(source, "/main", "wasm", "browser", error));
+  CHECK(error.find("graphics stdlib runtime substrate unavailable for wasm-browser target: /std/gfx/*") !=
+        std::string::npos);
+}
+
+TEST_CASE("experimental gfx imports reject glsl targets without runtime substrate") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgramForCompileTarget(source, "/main", "glsl", "wasi", error));
+  CHECK(error.find("graphics stdlib runtime substrate unavailable for glsl target: /std/gfx/experimental/*") !=
+        std::string::npos);
+}
+
 TEST_CASE("experimental gfx result wrappers reject bare explicit struct bindings") {
   const std::string source = R"(
 import /std/gfx/experimental/*

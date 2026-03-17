@@ -116,6 +116,57 @@ bool appendStdlibSources(const std::vector<std::string> &importPaths,
   return true;
 }
 
+bool isGraphicsImportPath(const std::string &importPath) {
+  if (importPath == "/std/gfx/*" || importPath == "/std/gfx") {
+    return true;
+  }
+  return importPath.rfind("/std/gfx/", 0) == 0;
+}
+
+std::string unsupportedGraphicsTargetName(const Options &options) {
+  if (options.emitKind == "wasm") {
+    return options.wasmProfile == "browser" ? "wasm-browser" : "wasm-wasi";
+  }
+  if (options.emitKind == "glsl" || options.emitKind == "glsl-ir") {
+    return "glsl";
+  }
+  if (options.emitKind == "spirv" || options.emitKind == "spirv-ir") {
+    return "spirv";
+  }
+  return "";
+}
+
+bool validateGraphicsBackendSupport(const Program &program,
+                                    const Options &options,
+                                    std::string &error,
+                                    CompilePipelineDiagnosticInfo *diagnosticInfo) {
+  const std::string targetName = unsupportedGraphicsTargetName(options);
+  if (targetName.empty()) {
+    return true;
+  }
+
+  for (const auto &importPath : program.imports) {
+    if (!isGraphicsImportPath(importPath)) {
+      continue;
+    }
+    error = "graphics stdlib runtime substrate unavailable for " + targetName + " target: " + importPath;
+    if (diagnosticInfo != nullptr) {
+      diagnosticInfo->normalizedMessage = error;
+      diagnosticInfo->hasPrimarySpan = false;
+      diagnosticInfo->primarySpan = {};
+      diagnosticInfo->relatedSpans.clear();
+      diagnosticInfo->records.clear();
+      CompilePipelineDiagnosticInfo::RecordInfo record;
+      record.normalizedMessage = error;
+      record.hasPrimarySpan = false;
+      diagnosticInfo->records.push_back(std::move(record));
+    }
+    return false;
+  }
+
+  return true;
+}
+
 void sortParserErrorsForStableOrdering(std::vector<Parser::ErrorInfo> &errors) {
   auto normalize = [](int value) -> int {
     return value > 0 ? value : std::numeric_limits<int>::max();
@@ -385,6 +436,11 @@ bool runCompilePipeline(const Options &options,
         }
       }
     }
+    return false;
+  }
+
+  if (!validateGraphicsBackendSupport(output.program, options, error, diagnosticInfo)) {
+    errorStage = CompilePipelineErrorStage::Semantic;
     return false;
   }
 

@@ -63,10 +63,13 @@ semantics after canonicalization.
   `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites
   through the matching pipeline helper. The canonical `/std/gfx/*` entry
   points now mirror that same helper-backed slice in `.prime` and also have
-  real compile-run conformance across exe/vm/native, but source-level profile
-  literals and unsupported pipeline vertex types are still intentionally
-  rejected while unsupported-backend diagnostics, remaining sample-owned
-  contract cleanup, and broader backend conformance slices remain staged.
+  real compile-run conformance across exe/vm/native. Canonical and
+  experimental gfx imports now reject deterministically on wasm
+  (`wasm-browser`, `wasm-wasi`) and shader-only (`glsl`, `spirv`) emits until
+  those targets gain runtime substrate, while source-level profile literals
+  and unsupported pipeline vertex types are still intentionally rejected and
+  remaining sample-owned contract cleanup plus broader backend conformance
+  slices remain staged.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
   Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with
@@ -94,7 +97,8 @@ stdlib in this repo ships vector/color math only; matrix/quaternion contracts
 are now documented but still pending backend/runtime support. The `/std/gfx/*`
 rendering surface shown below (including `VertexColored`) now has an initial
 helper-backed `.prime` implementation, but still needs broader
-backend/runtime coverage plus the remaining sample-owned contract cleanup.
+backend/runtime coverage plus the remaining sample-owned contract cleanup on
+top of the current unsupported-backend diagnostics.
 
 ```prime
 import /std/math/*
