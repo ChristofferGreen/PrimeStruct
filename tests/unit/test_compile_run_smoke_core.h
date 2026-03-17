@@ -971,7 +971,7 @@ TEST_CASE("primec wasm wasi rejects stored rgb png inputs with unsupported effec
   REQUIRE(!ec);
 
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
@@ -1032,7 +1032,7 @@ TEST_CASE("primec wasm wasi rejects stored sub-filter rgb png inputs with unsupp
   REQUIRE(!ec);
 
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01,
@@ -1044,7 +1044,7 @@ TEST_CASE("primec wasm wasi rejects stored sub-filter rgb png inputs with unsupp
         0x00, 0xd4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0x00, 0x00,
         0x00, 0x00,
-    };
+    });
     std::ofstream input(tempRoot / "input.png", std::ios::binary);
     REQUIRE(input.good());
     input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -1096,7 +1096,7 @@ TEST_CASE("primec wasm wasi rejects stored up-filter rgb png inputs with unsuppo
   REQUIRE(!ec);
 
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02,
@@ -1108,7 +1108,7 @@ TEST_CASE("primec wasm wasi rejects stored up-filter rgb png inputs with unsuppo
         0x8a, 0x00, 0x54, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0x00,
         0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream input(tempRoot / "input.png", std::ios::binary);
     REQUIRE(input.good());
     input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -1160,7 +1160,7 @@ TEST_CASE("primec wasm wasi rejects stored average-filter rgb png inputs with un
   REQUIRE(!ec);
 
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02,
@@ -1172,7 +1172,7 @@ TEST_CASE("primec wasm wasi rejects stored average-filter rgb png inputs with un
         0xc0, 0x00, 0x73, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0x00,
         0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream input(tempRoot / "input.png", std::ios::binary);
     REQUIRE(input.good());
     input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -1224,7 +1224,7 @@ TEST_CASE("primec wasm wasi rejects stored paeth-filter rgb png inputs with unsu
   REQUIRE(!ec);
 
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,
@@ -1237,7 +1237,7 @@ TEST_CASE("primec wasm wasi rejects stored paeth-filter rgb png inputs with unsu
         0x2c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x49, 0x45, 0x4e, 0x44, 0x00, 0x00, 0x00,
         0x00,
-    };
+    });
     std::ofstream input(tempRoot / "input.png", std::ios::binary);
     REQUIRE(input.good());
     input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -1295,7 +1295,7 @@ TEST_CASE("primec wasm wasi rejects fixed-huffman backreference rgb png inputs w
   REQUIRE(!ec);
 
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01,
@@ -1307,7 +1307,7 @@ TEST_CASE("primec wasm wasi rejects fixed-huffman backreference rgb png inputs w
         0x00, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
         0x44,
         0x00, 0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream input(tempRoot / "input.png", std::ios::binary);
     REQUIRE(input.good());
     input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -1364,7 +1364,7 @@ TEST_CASE("primec wasm wasi rejects dynamic-huffman literal rgb png inputs with 
   {
     std::ofstream input(tempRoot / "input.png", std::ios::binary);
     REQUIRE(input.good());
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01,
@@ -1377,7 +1377,7 @@ TEST_CASE("primec wasm wasi rejects dynamic-huffman literal rgb png inputs with 
         0x37, 0x00, 0xd3, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0x00,
         0x00, 0x00, 0x00,
-    };
+    });
     input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
     REQUIRE(input.good());
   }
@@ -1429,7 +1429,7 @@ TEST_CASE("primec wasm wasi rejects dynamic-huffman backreference rgb png inputs
   {
     std::ofstream input(tempRoot / "input.png", std::ios::binary);
     REQUIRE(input.good());
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01,
@@ -1442,7 +1442,7 @@ TEST_CASE("primec wasm wasi rejects dynamic-huffman backreference rgb png inputs
         0x52, 0x00, 0xb5, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0x00,
         0x00, 0x00, 0x00,
-    };
+    });
     input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
     REQUIRE(input.good());
   }
@@ -1495,7 +1495,7 @@ TEST_CASE("primec wasm wasi rejects broader unsupported png decode paths with un
   REQUIRE(!ec);
 
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
@@ -1507,7 +1507,7 @@ TEST_CASE("primec wasm wasi rejects broader unsupported png decode paths with un
         0x00, 0x00, 0x00, 0x00, 0x00,
         0x49, 0x45, 0x4e, 0x44,
         0x00, 0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream input(tempRoot / "input.png", std::ios::binary);
     REQUIRE(input.good());
     input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));

@@ -403,7 +403,7 @@ main() {
 TEST_CASE("reports vm png read for stored rgba inputs as unsupported") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read.png").string();
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
@@ -413,7 +413,7 @@ TEST_CASE("reports vm png read for stored rgba inputs as unsupported") {
         0x00, 0xff, 0x80, 0x40, 0x04, 0x42, 0x01, 0xc0,
         0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
         0x00, 0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream file(inPath, std::ios::binary);
     REQUIRE(file.good());
     file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -455,7 +455,7 @@ main() {
 TEST_CASE("rejects vm png read for stored sub-filter rgba inputs deterministically") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_sub.png").string();
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01,
@@ -466,7 +466,7 @@ TEST_CASE("rejects vm png read for stored sub-filter rgba inputs deterministical
         0x02, 0xb0, 0x00, 0x86, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
         0x00, 0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream file(inPath, std::ios::binary);
     REQUIRE(file.good());
     file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -511,7 +511,7 @@ main() {
 TEST_CASE("rejects vm png read for stored up-filter rgba inputs deterministically") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_up.png").string();
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02,
@@ -522,7 +522,7 @@ TEST_CASE("rejects vm png read for stored up-filter rgba inputs deterministicall
         0x00, 0x08, 0x15, 0x01, 0x53, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
         0x44, 0x00, 0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream file(inPath, std::ios::binary);
     REQUIRE(file.good());
     file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -568,7 +568,7 @@ TEST_CASE("rejects vm png read for stored average-filter rgba inputs determinist
   const std::string inPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_average.png").string();
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02,
@@ -579,7 +579,7 @@ TEST_CASE("rejects vm png read for stored average-filter rgba inputs determinist
         0x80, 0x08, 0xea, 0x01, 0xf2, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
         0x44, 0x00, 0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream file(inPath, std::ios::binary);
     REQUIRE(file.good());
     file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -625,7 +625,7 @@ main() {
 TEST_CASE("rejects vm png read for fixed-huffman backreference rgba inputs deterministically") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_fixed_sub.png").string();
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01,
@@ -635,7 +635,7 @@ TEST_CASE("rejects vm png read for fixed-huffman backreference rgba inputs deter
         0x61, 0x00, 0x07, 0x15, 0x01, 0x2d, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45,
         0x4e, 0x44, 0x00, 0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream file(inPath, std::ios::binary);
     REQUIRE(file.good());
     file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -685,7 +685,7 @@ TEST_CASE("rejects vm png read for dynamic-huffman literal rgb inputs determinis
   const std::string inPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_dynamic_literal.png").string();
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01,
@@ -697,7 +697,7 @@ TEST_CASE("rejects vm png read for dynamic-huffman literal rgb inputs determinis
         0x37, 0x00, 0xd3, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0x00,
         0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream file(inPath, std::ios::binary);
     REQUIRE(file.good());
     file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -744,7 +744,7 @@ TEST_CASE("rejects vm png read for dynamic-huffman backreference rgba inputs det
   const std::string inPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_dynamic_backref.png").string();
   {
-    const std::vector<unsigned char> pngBytes = {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01,
@@ -756,7 +756,7 @@ TEST_CASE("rejects vm png read for dynamic-huffman backreference rgba inputs det
         0xec, 0x7f, 0x13, 0xae, 0x03, 0xb2, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45,
         0x4e, 0x44, 0x00, 0x00, 0x00, 0x00,
-    };
+    });
     std::ofstream file(inPath, std::ios::binary);
     REQUIRE(file.good());
     file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
@@ -832,6 +832,56 @@ main() {
   const std::string srcPath = writeTemp("vm_image_read_invalid_png.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid_png.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) ==
+        "image_invalid_operation\n"
+        "0\n"
+        "0\n"
+        "0\n");
+}
+
+TEST_CASE("rejects vm png inputs with critical chunk crc mismatches deterministically") {
+  const std::string inPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid_crc.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = withCorruptedFirstPngChunkCrc({
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41,
+        0x54, 0x78, 0x01, 0x01, 0x04, 0x00, 0xfb, 0xff,
+        0x00, 0x11, 0x22, 0x33, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x00,
+    });
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = injectEscapedPath(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{7i32}
+  [i32 mut] height{9i32}
+  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
+  print_line(Result.why(status))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  return(0i32)
+}
+)", escapedPath);
+  const std::string srcPath = writeTemp("vm_image_read_invalid_crc_png.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid_crc_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==

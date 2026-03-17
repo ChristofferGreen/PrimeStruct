@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -71,6 +72,58 @@ std::string quoteShellArg(const std::string &value) {
   }
   quoted += "'";
   return quoted;
+}
+
+uint32_t computePngCrc(const unsigned char *data, size_t size) {
+  uint32_t crc = 0xFFFFFFFFu;
+  for (size_t index = 0; index < size; ++index) {
+    crc ^= static_cast<uint32_t>(data[index]);
+    for (int bit = 0; bit < 8; ++bit) {
+      if ((crc & 1u) != 0u) {
+        crc = (crc >> 1u) ^ 0xEDB88320u;
+      } else {
+        crc >>= 1u;
+      }
+    }
+  }
+  return ~crc;
+}
+
+std::vector<unsigned char> withValidPngCrcs(std::vector<unsigned char> bytes) {
+  if (bytes.size() < 8) {
+    return bytes;
+  }
+
+  size_t offset = 8;
+  while (offset + 12 <= bytes.size()) {
+    const uint32_t length = (static_cast<uint32_t>(bytes[offset]) << 24u) |
+                            (static_cast<uint32_t>(bytes[offset + 1]) << 16u) |
+                            (static_cast<uint32_t>(bytes[offset + 2]) << 8u) |
+                            static_cast<uint32_t>(bytes[offset + 3]);
+    const size_t chunkSize = static_cast<size_t>(length) + 12u;
+    CHECK(offset + chunkSize <= bytes.size());
+    if (offset + chunkSize > bytes.size()) {
+      return bytes;
+    }
+
+    const uint32_t crc = computePngCrc(bytes.data() + offset + 4u, static_cast<size_t>(length) + 4u);
+    const size_t crcOffset = offset + 8u + static_cast<size_t>(length);
+    bytes[crcOffset] = static_cast<unsigned char>((crc >> 24u) & 0xFFu);
+    bytes[crcOffset + 1] = static_cast<unsigned char>((crc >> 16u) & 0xFFu);
+    bytes[crcOffset + 2] = static_cast<unsigned char>((crc >> 8u) & 0xFFu);
+    bytes[crcOffset + 3] = static_cast<unsigned char>(crc & 0xFFu);
+    offset += chunkSize;
+  }
+
+  return bytes;
+}
+
+std::vector<unsigned char> withCorruptedFirstPngChunkCrc(std::vector<unsigned char> bytes) {
+  bytes = withValidPngCrcs(bytes);
+  if (bytes.size() >= 33) {
+    bytes[29] ^= 0xFFu;
+  }
+  return bytes;
 }
 
 std::string escapeStringLiteral(const std::string &text);

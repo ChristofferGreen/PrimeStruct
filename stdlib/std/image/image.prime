@@ -272,6 +272,11 @@ namespace std {
   }
 
   [return<bool>]
+  pngChunkIsAncillary([i32] a) {
+    return(and(greater_equal(a, 97i32), less_equal(a, 122i32)))
+  }
+
+  [return<bool>]
   pngBitDepthAllowed([i32] bitDepth, [i32] a, [i32] b, [i32] c, [i32] d, [i32] valueE) {
     return(or(or(equal(bitDepth, a), equal(bitDepth, b)), or(or(equal(bitDepth, c), equal(bitDepth, d)), equal(bitDepth, valueE))))
   }
@@ -414,6 +419,89 @@ namespace std {
   [return<i32>]
   pngMod([i32] value, [i32] divisor) {
     return(minus(value, multiply(divide(value, divisor), divisor)))
+  }
+
+  [return<u64>]
+  pngModU64([u64] value, [u64] divisor) {
+    return(minus(value, multiply(divide(value, divisor), divisor)))
+  }
+
+  [return<u64>]
+  pngXorU64([u64] left, [u64] right) {
+    [u64 mut] currentLeft{left}
+    [u64 mut] currentRight{right}
+    [u64 mut] factor{1u64}
+    [u64 mut] value{0u64}
+    while(or(greater_than(currentLeft, 0u64), greater_than(currentRight, 0u64)), do() {
+      [u64] leftBit{pngModU64(currentLeft, 2u64)}
+      [u64] rightBit{pngModU64(currentRight, 2u64)}
+      if(not_equal(leftBit, rightBit),
+         then() { assign(value, plus(value, factor)) },
+         else() { })
+      assign(currentLeft, divide(currentLeft, 2u64))
+      assign(currentRight, divide(currentRight, 2u64))
+      assign(factor, multiply(factor, 2u64))
+    })
+    return(value)
+  }
+
+  [effects(heap_alloc), return<void>]
+  pngAppendVectorBytes([vector<i32>] bytes, [vector<i32> mut] out) {
+    [i32 mut] index{0i32}
+    while(less_than(index, count(bytes)), do() {
+      push(out, bytes[index])
+      increment(index)
+    })
+  }
+
+  [effects(heap_alloc), return<void>]
+  pngAppendU32Be([i32] value, [vector<i32> mut] out) {
+    push(out, divide(value, 16777216i32))
+    push(out, pngMod(divide(value, 65536i32), 256i32))
+    push(out, pngMod(divide(value, 256i32), 256i32))
+    push(out, pngMod(value, 256i32))
+  }
+
+  [return<u64>]
+  pngCrc32UpdateByte([u64] crc, [i32] byte) {
+    [u64 mut] current{pngXorU64(crc, convert<u64>(byte))}
+    [i32 mut] bit{0i32}
+    while(less_than(bit, 8i32), do() {
+      if(equal(pngModU64(current, 2u64), 1u64),
+         then() {
+           assign(current, pngXorU64(divide(current, 2u64), 3988292384u64))
+         },
+         else() {
+           assign(current, divide(current, 2u64))
+         })
+      increment(bit)
+    })
+    return(current)
+  }
+
+  [return<u64>]
+  pngChunkCrc([i32] typeA, [i32] typeB, [i32] typeC, [i32] typeD, [vector<i32>] payload) {
+    [u64 mut] crc{4294967295u64}
+    assign(crc, pngCrc32UpdateByte(crc, typeA))
+    assign(crc, pngCrc32UpdateByte(crc, typeB))
+    assign(crc, pngCrc32UpdateByte(crc, typeC))
+    assign(crc, pngCrc32UpdateByte(crc, typeD))
+    [i32 mut] index{0i32}
+    while(less_than(index, count(payload)), do() {
+      assign(crc, pngCrc32UpdateByte(crc, payload[index]))
+      increment(index)
+    })
+    return(pngXorU64(crc, 4294967295u64))
+  }
+
+  [return<bool>]
+  pngChunkCrcMatches([i32] typeA, [i32] typeB, [i32] typeC, [i32] typeD, [vector<i32>] payload,
+                     [i32] crcA, [i32] crcB, [i32] crcC, [i32] crcD) {
+    [u64] crc{pngChunkCrc(typeA, typeB, typeC, typeD, payload)}
+    return(and(and(equal(divide(crc, 16777216u64), convert<u64>(crcA)),
+                   equal(pngModU64(divide(crc, 65536u64), 256u64), convert<u64>(crcB))),
+               and(equal(pngModU64(divide(crc, 256u64), 256u64), convert<u64>(crcC)),
+                   equal(pngModU64(crc, 256u64), convert<u64>(crcD)))))
   }
 
   [return<i32>]
@@ -1769,8 +1857,23 @@ namespace std {
              if(not_equal(ihdrStatus, 0i32),
                 then() { return(1i32) },
                 else() { })
-             [i32] ihdrCrcStatus{pngSkipBytes(file, 4i32)}
+             [i32 mut] ihdrCrcA{0i32}
+             [i32 mut] ihdrCrcB{0i32}
+             [i32 mut] ihdrCrcC{0i32}
+             [i32 mut] ihdrCrcD{0i32}
+             [i32] ihdrCrcStatus{pngReadChunkType(file, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD)}
              if(not_equal(ihdrCrcStatus, 0i32),
+                then() { return(1i32) },
+                else() { })
+             [vector<i32> mut] ihdrBytes{vector<i32>()}
+             pngAppendU32Be(parsedWidth, ihdrBytes)
+             pngAppendU32Be(parsedHeight, ihdrBytes)
+             push(ihdrBytes, bitDepth)
+             push(ihdrBytes, colorType)
+             push(ihdrBytes, 0i32)
+             push(ihdrBytes, 0i32)
+             push(ihdrBytes, interlace)
+             if(not(pngChunkCrcMatches(typeA, typeB, typeC, typeD, ihdrBytes, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD))),
                 then() { return(1i32) },
                 else() { })
            },
@@ -1778,26 +1881,28 @@ namespace std {
              if(pngChunkIsIhdr(typeA, typeB, typeC, typeD),
                 then() { return(1i32) },
                 else() { })
+             [vector<i32> mut] chunkBytes{vector<i32>()}
+             [i32] payloadStatus{pngAppendBytes(file, chunkLength, chunkBytes)}
+             if(not_equal(payloadStatus, 0i32),
+                then() { return(1i32) },
+                else() { })
+             [i32 mut] crcA{0i32}
+             [i32 mut] crcB{0i32}
+             [i32 mut] crcC{0i32}
+             [i32 mut] crcD{0i32}
+             [i32] crcStatus{pngReadChunkType(file, crcA, crcB, crcC, crcD)}
+             if(not_equal(crcStatus, 0i32),
+                then() { return(1i32) },
+                else() { })
+             if(and(not(pngChunkIsAncillary(typeA)),
+                    not(pngChunkCrcMatches(typeA, typeB, typeC, typeD, chunkBytes, crcA, crcB, crcC, crcD))),
+                then() { return(1i32) },
+                else() { })
              if(pngChunkIsIdat(typeA, typeB, typeC, typeD),
                 then() {
                   assign(sawIdat, 1i32)
-                  [i32] payloadStatus{pngAppendBytes(file, chunkLength, idatBytes)}
-                  if(not_equal(payloadStatus, 0i32),
-                     then() { return(1i32) },
-                     else() { })
+                  pngAppendVectorBytes(chunkBytes, idatBytes)
                 },
-                else() { })
-             if(not(pngChunkIsIdat(typeA, typeB, typeC, typeD)),
-                then() {
-                  [i32] payloadStatus{pngSkipBytes(file, chunkLength)}
-                  if(not_equal(payloadStatus, 0i32),
-                     then() { return(1i32) },
-                     else() { })
-                },
-                else() { })
-             [i32] crcStatus{pngSkipBytes(file, 4i32)}
-             if(not_equal(crcStatus, 0i32),
-                then() { return(1i32) },
                 else() { })
              if(pngChunkIsIend(typeA, typeB, typeC, typeD),
                 then() {
