@@ -6,6 +6,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererStructFieldBindingHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -946,6 +947,7 @@ std::string inferStructReturnPathFromDefinition(
     const Definition &def,
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const InferStructExprPathFn &inferStructExprPath) {
+  std::function<std::string(const Expr &, const std::unordered_map<std::string, std::string> &)> inferValueStructPath;
   auto inferBindingStructPath = [&](const Expr &bindingExpr,
                                     const std::unordered_map<std::string, std::string> &knownBindings) {
     for (const auto &transform : bindingExpr.transforms) {
@@ -980,6 +982,41 @@ std::string inferStructReturnPathFromDefinition(
     }
     return inferStructExprPath(initializer);
   };
+  inferValueStructPath = [&](const Expr &valueExpr,
+                             const std::unordered_map<std::string, std::string> &knownBindings) -> std::string {
+    if (valueExpr.kind == Expr::Kind::Name) {
+      auto bindingIt = knownBindings.find(valueExpr.name);
+      if (bindingIt != knownBindings.end()) {
+        return bindingIt->second;
+      }
+    }
+    if (isMatchCall(valueExpr)) {
+      Expr lowered;
+      std::string loweredError;
+      if (lowerMatchToIf(valueExpr, lowered, loweredError)) {
+        return inferValueStructPath(lowered, knownBindings);
+      }
+    }
+    if (isIfCall(valueExpr) && valueExpr.args.size() == 3) {
+      const Expr *thenValue = getEnvelopeValueExpr(valueExpr.args[1], true);
+      const Expr *elseValue = getEnvelopeValueExpr(valueExpr.args[2], true);
+      const std::string thenStruct =
+          inferValueStructPath(thenValue ? *thenValue : valueExpr.args[1], knownBindings);
+      if (thenStruct.empty()) {
+        return {};
+      }
+      const std::string elseStruct =
+          inferValueStructPath(elseValue ? *elseValue : valueExpr.args[2], knownBindings);
+      return thenStruct == elseStruct ? thenStruct : std::string{};
+    }
+    if (const Expr *innerValue = getEnvelopeValueExpr(valueExpr, false)) {
+      if (isReturnCall(*innerValue) && !innerValue->args.empty()) {
+        return inferValueStructPath(innerValue->args.front(), knownBindings);
+      }
+      return inferValueStructPath(*innerValue, knownBindings);
+    }
+    return inferStructExprPath(valueExpr);
+  };
 
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
@@ -1012,13 +1049,14 @@ std::string inferStructReturnPathFromDefinition(
   }
 
   if (def.returnExpr.has_value()) {
-    std::string inferred = inferStructExprPath(*def.returnExpr);
+    std::string inferred = inferValueStructPath(*def.returnExpr, {});
     if (!inferred.empty()) {
       return inferred;
     }
   }
 
   std::unordered_map<std::string, std::string> knownBindings;
+  const Expr *lastValueStmt = nullptr;
   for (const auto &stmt : def.statements) {
     if (stmt.isBinding) {
       std::string inferredBinding = inferBindingStructPath(stmt, knownBindings);
@@ -1027,22 +1065,18 @@ std::string inferStructReturnPathFromDefinition(
       }
       continue;
     }
+    lastValueStmt = &stmt;
     if (!isReturnCall(stmt) || stmt.args.size() != 1) {
       continue;
     }
-    std::string inferred;
-    if (stmt.args.front().kind == Expr::Kind::Name) {
-      auto bindingIt = knownBindings.find(stmt.args.front().name);
-      if (bindingIt != knownBindings.end()) {
-        inferred = bindingIt->second;
-      }
-    }
-    if (inferred.empty()) {
-      inferred = inferStructExprPath(stmt.args.front());
-    }
+    std::string inferred = inferValueStructPath(stmt.args.front(), knownBindings);
     if (!inferred.empty()) {
       return inferred;
     }
+  }
+
+  if (lastValueStmt != nullptr) {
+    return inferValueStructPath(*lastValueStmt, knownBindings);
   }
 
   return "";

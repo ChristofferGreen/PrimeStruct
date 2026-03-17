@@ -710,7 +710,15 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
         },
         [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
           return resolveMethodCallReturnKind(
-              candidate, candidateLocals, stateInOut.resolveMethodCallDefinition, stateInOut.getReturnInfo, true, kindOut);
+              candidate,
+              candidateLocals,
+              stateInOut.resolveMethodCallDefinition,
+              [&](const Expr &callExpr) {
+                return ir_lowerer::resolveDefinitionCall(callExpr, *defMap, resolveExprPath);
+              },
+              stateInOut.getReturnInfo,
+              true,
+              kindOut);
         });
   };
   return true;
@@ -832,6 +840,8 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
   stateInOut.inferCallExprDirectReturnKind =
       [isArrayCountCall,
        isStringCountCall,
+       defMap,
+       resolveExprPath,
        &stateInOut,
        isNamespacedCollectionReceiverProbeCall,
        resolveDefinitionCallReturnKindForCandidate](
@@ -898,6 +908,10 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
               const bool resolved = resolveMethodCallReturnKind(candidate,
                                                                 candidateLocals,
                                                                 stateInOut.resolveMethodCallDefinition,
+                                                                [&](const Expr &callExpr) {
+                                                                  return ir_lowerer::resolveDefinitionCall(
+                                                                      callExpr, *defMap, resolveExprPath);
+                                                                },
                                                                 stateInOut.getReturnInfo,
                                                                 false,
                                                                 candidateKindOut,
@@ -1045,6 +1059,31 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
 
   if (hasReturnTransformLocal) {
     if (hasReturnAuto) {
+      std::string collectionName;
+      std::vector<std::string> collectionArgs;
+      if (ir_lowerer::inferDeclaredReturnCollection(definition, collectionName, collectionArgs)) {
+        auto assignCollectionReturnInfo = [&](LocalInfo::ValueKind elementKind) {
+          if (elementKind == LocalInfo::ValueKind::Unknown) {
+            return false;
+          }
+          infoInOut.returnsVoid = false;
+          infoInOut.returnsArray = true;
+          infoInOut.kind = elementKind;
+          return true;
+        };
+        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+            collectionArgs.size() == 1 && assignCollectionReturnInfo(valueKindFromTypeName(collectionArgs.front()))) {
+          if (infoInOut.kind == LocalInfo::ValueKind::String) {
+            errorOut = "native backend does not support string array return types on " + definition.fullPath;
+            return false;
+          }
+          return true;
+        }
+        if (collectionName == "map" && collectionArgs.size() == 2 &&
+            assignCollectionReturnInfo(valueKindFromTypeName(collectionArgs.back()))) {
+          return true;
+        }
+      }
       ReturnInferenceOptions options;
       options.missingReturnBehavior = MissingReturnBehavior::Error;
       options.includeDefinitionReturnExpr = true;
@@ -1541,6 +1580,12 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                             candidateExpr.args.front(), candidateLocals, fieldStructPath, fieldValueKind)) {
                       return fieldStructPath == "/vector" || fieldStructPath == "/map";
                     }
+                    LocalInfo::ValueKind receiverCollectionKind = LocalInfo::ValueKind::Unknown;
+                    if (resolveCallCollectionAccessValueKind(
+                            candidateExpr.args.front(), candidateLocals, receiverCollectionKind) &&
+                        receiverCollectionKind != LocalInfo::ValueKind::Unknown) {
+                      return true;
+                    }
                   }
                   return isArrayCountCall(candidateExpr, candidateLocals);
                 },
@@ -1885,6 +1930,56 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                                  const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     auto resolveTryValueKind = [&](const Expr &resultExpr, LocalInfo::ValueKind &kindOut) -> bool {
       kindOut = LocalInfo::ValueKind::Unknown;
+      auto resolveCallReceiverCollectionValueKind = [&](const Expr &receiverExpr,
+                                                        LocalInfo::ValueKind &receiverKindOut) -> bool {
+        receiverKindOut = LocalInfo::ValueKind::Unknown;
+        if (receiverExpr.kind != Expr::Kind::Call) {
+          return false;
+        }
+        std::string collectionName;
+        if (getBuiltinCollectionName(receiverExpr, collectionName)) {
+          if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+              receiverExpr.templateArgs.size() == 1) {
+            receiverKindOut = valueKindFromTypeName(receiverExpr.templateArgs.front());
+            return receiverKindOut != LocalInfo::ValueKind::Unknown;
+          }
+          if (collectionName == "map" && receiverExpr.templateArgs.size() == 2) {
+            receiverKindOut = valueKindFromTypeName(receiverExpr.templateArgs.back());
+            return receiverKindOut != LocalInfo::ValueKind::Unknown;
+          }
+        }
+        if (defMap == nullptr || !resolveExprPath) {
+          return false;
+        }
+        std::string receiverPath = resolveExprPath(receiverExpr);
+        if (receiverPath.empty() && !receiverExpr.name.empty()) {
+          receiverPath = receiverExpr.name;
+          if (!receiverPath.empty() && receiverPath.front() != '/') {
+            receiverPath.insert(receiverPath.begin(), '/');
+          }
+        }
+        if (receiverPath.empty()) {
+          return false;
+        }
+        auto defIt = defMap->find(receiverPath);
+        if (defIt == defMap->end() || defIt->second == nullptr) {
+          return false;
+        }
+        std::vector<std::string> collectionArgs;
+        if (!inferDeclaredReturnCollection(*defIt->second, collectionName, collectionArgs)) {
+          return false;
+        }
+        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+            collectionArgs.size() == 1) {
+          receiverKindOut = valueKindFromTypeName(collectionArgs.front());
+          return receiverKindOut != LocalInfo::ValueKind::Unknown;
+        }
+        if (collectionName == "map" && collectionArgs.size() == 2) {
+          receiverKindOut = valueKindFromTypeName(collectionArgs.back());
+          return receiverKindOut != LocalInfo::ValueKind::Unknown;
+        }
+        return false;
+      };
       if (resultExpr.kind == Expr::Kind::Name) {
         auto it = localsIn.find(resultExpr.name);
         if (it != localsIn.end() && it->second.isResult) {
@@ -1919,6 +2014,22 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
       }
       if (resultExpr.kind != Expr::Kind::Call) {
         return false;
+      }
+      if (isMapContainsCallName(resultExpr) && !resultExpr.args.empty()) {
+        LocalInfo::ValueKind receiverCollectionKind = LocalInfo::ValueKind::Unknown;
+        if (resolveCallReceiverCollectionValueKind(resultExpr.args.front(), receiverCollectionKind) &&
+            receiverCollectionKind != LocalInfo::ValueKind::Unknown) {
+          kindOut = LocalInfo::ValueKind::Bool;
+          return true;
+        }
+      }
+      if (isMapTryAtCallName(resultExpr) && !resultExpr.args.empty()) {
+        LocalInfo::ValueKind receiverCollectionKind = LocalInfo::ValueKind::Unknown;
+        if (resolveCallReceiverCollectionValueKind(resultExpr.args.front(), receiverCollectionKind) &&
+            receiverCollectionKind != LocalInfo::ValueKind::Unknown) {
+          kindOut = receiverCollectionKind;
+          return true;
+        }
       }
       if (inferMapContainsResultKind(resultExpr, localsIn, kindOut)) {
         return true;

@@ -454,6 +454,288 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     return false;
   };
+  auto describeBindingType = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto parseTypeText = [](const std::string &typeText, BindingInfo &parsedOut) -> bool {
+    const std::string normalized = normalizeBindingTypeName(typeText);
+    if (normalized.empty()) {
+      return false;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalized, base, argText) && !base.empty()) {
+      parsedOut.typeName = base;
+      parsedOut.typeTemplateArg = argText;
+      return true;
+    }
+    parsedOut.typeName = normalized;
+    parsedOut.typeTemplateArg.clear();
+    return true;
+  };
+  auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+      return false;
+    }
+    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+      return false;
+    }
+    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+      return false;
+    }
+    return allowAnyName || isBuiltinBlockCall(candidate);
+  };
+  auto getEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> const Expr * {
+    if (!isEnvelopeValueExpr(candidate, allowAnyName)) {
+      return nullptr;
+    }
+    const Expr *valueExpr = nullptr;
+    for (const auto &bodyExpr : candidate.bodyArguments) {
+      if (bodyExpr.isBinding) {
+        continue;
+      }
+      valueExpr = &bodyExpr;
+    }
+    return valueExpr;
+  };
+  std::unordered_set<std::string> inferredDefinitionTypeStack;
+  std::function<bool(const Expr &,
+                     const std::vector<ParameterInfo> &,
+                     const std::unordered_map<std::string, BindingInfo> &,
+                     std::string &)>
+      inferExprTypeText;
+  inferExprTypeText = [&](const Expr &candidate,
+                          const std::vector<ParameterInfo> &activeParams,
+                          const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                          std::string &typeTextOut) -> bool {
+    typeTextOut.clear();
+    if (candidate.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(activeParams, candidate.name)) {
+        typeTextOut = describeBindingType(*paramBinding);
+        return !typeTextOut.empty();
+      }
+      auto it = activeLocals.find(candidate.name);
+      if (it != activeLocals.end()) {
+        typeTextOut = describeBindingType(it->second);
+        return !typeTextOut.empty();
+      }
+      return false;
+    }
+    if (candidate.kind == Expr::Kind::Literal) {
+      typeTextOut = candidate.isUnsigned ? "u64" : (candidate.intWidth == 64 ? "i64" : "i32");
+      return true;
+    }
+    if (candidate.kind == Expr::Kind::BoolLiteral) {
+      typeTextOut = "bool";
+      return true;
+    }
+    if (candidate.kind == Expr::Kind::FloatLiteral) {
+      typeTextOut = candidate.floatWidth == 64 ? "f64" : "f32";
+      return true;
+    }
+    if (candidate.kind == Expr::Kind::StringLiteral) {
+      typeTextOut = "string";
+      return true;
+    }
+    if (isIfCall(candidate) && candidate.args.size() == 3) {
+      const Expr &thenArg = candidate.args[1];
+      const Expr &elseArg = candidate.args[2];
+      const Expr *thenValue = getEnvelopeValueExpr(thenArg, true);
+      const Expr *elseValue = getEnvelopeValueExpr(elseArg, true);
+      std::string thenType;
+      std::string elseType;
+      if (!inferExprTypeText(thenValue ? *thenValue : thenArg, activeParams, activeLocals, thenType) ||
+          !inferExprTypeText(elseValue ? *elseValue : elseArg, activeParams, activeLocals, elseType)) {
+        return false;
+      }
+      if (normalizeBindingTypeName(thenType) != normalizeBindingTypeName(elseType)) {
+        return false;
+      }
+      typeTextOut = thenType;
+      return true;
+    }
+    if (const Expr *valueExpr = getEnvelopeValueExpr(candidate, false)) {
+      if (isReturnCall(*valueExpr) && !valueExpr->args.empty()) {
+        return inferExprTypeText(valueExpr->args.front(), activeParams, activeLocals, typeTextOut);
+      }
+      return inferExprTypeText(*valueExpr, activeParams, activeLocals, typeTextOut);
+    }
+    if (candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (isSimpleCallName(candidate, "dereference") && candidate.args.size() == 1) {
+      std::string wrappedType;
+      if (!inferExprTypeText(candidate.args.front(), activeParams, activeLocals, wrappedType)) {
+        return false;
+      }
+      typeTextOut = unwrapReferencePointerTypeText(wrappedType);
+      return !typeTextOut.empty();
+    }
+    std::string collection;
+    if (getBuiltinCollectionName(candidate, collection)) {
+      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+          candidate.templateArgs.size() == 1) {
+        typeTextOut = collection + "<" + candidate.templateArgs.front() + ">";
+        return true;
+      }
+      if (collection == "map" && candidate.templateArgs.size() == 2) {
+        typeTextOut = "map<" + candidate.templateArgs[0] + ", " + candidate.templateArgs[1] + ">";
+        return true;
+      }
+    }
+    auto inferDirectMapConstructorTypeText = [&](std::string &directTypeTextOut) -> bool {
+      const std::string resolvedCandidate = resolveCalleePath(candidate);
+      auto matchesDirectMapConstructorPath = [&](std::string_view basePath) {
+        return resolvedCandidate == basePath || resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
+      };
+      const bool isDirectMapConstructor =
+          matchesDirectMapConstructorPath("/std/collections/map/map") ||
+          matchesDirectMapConstructorPath("/std/collections/mapNew") ||
+          matchesDirectMapConstructorPath("/std/collections/mapSingle") ||
+          matchesDirectMapConstructorPath("/std/collections/mapDouble") ||
+          matchesDirectMapConstructorPath("/std/collections/mapPair") ||
+          matchesDirectMapConstructorPath("/std/collections/mapTriple") ||
+          matchesDirectMapConstructorPath("/std/collections/mapQuad") ||
+          matchesDirectMapConstructorPath("/std/collections/mapQuint") ||
+          matchesDirectMapConstructorPath("/std/collections/mapSext") ||
+          matchesDirectMapConstructorPath("/std/collections/mapSept") ||
+          matchesDirectMapConstructorPath("/std/collections/mapOct") ||
+          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapNew") ||
+          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSingle") ||
+          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapDouble") ||
+          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapPair") ||
+          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapTriple") ||
+          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapQuad") ||
+          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapQuint") ||
+          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSext") ||
+          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSept") ||
+          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapOct");
+      if (!isDirectMapConstructor) {
+        return false;
+      }
+      if (candidate.templateArgs.size() == 2) {
+        directTypeTextOut = "map<" + candidate.templateArgs[0] + ", " + candidate.templateArgs[1] + ">";
+        return true;
+      }
+      if (candidate.args.empty() || candidate.args.size() % 2 != 0) {
+        return false;
+      }
+      std::string keyType;
+      std::string valueType;
+      for (size_t i = 0; i < candidate.args.size(); i += 2) {
+        std::string currentKeyType;
+        std::string currentValueType;
+        if (!inferExprTypeText(candidate.args[i], activeParams, activeLocals, currentKeyType) ||
+            !inferExprTypeText(candidate.args[i + 1], activeParams, activeLocals, currentValueType)) {
+          return false;
+        }
+        if (keyType.empty()) {
+          keyType = currentKeyType;
+        } else if (normalizeBindingTypeName(keyType) != normalizeBindingTypeName(currentKeyType)) {
+          return false;
+        }
+        if (valueType.empty()) {
+          valueType = currentValueType;
+        } else if (normalizeBindingTypeName(valueType) != normalizeBindingTypeName(currentValueType)) {
+          return false;
+        }
+      }
+      if (keyType.empty() || valueType.empty()) {
+        return false;
+      }
+      directTypeTextOut = "map<" + keyType + ", " + valueType + ">";
+      return true;
+    };
+    if (inferDirectMapConstructorTypeText(typeTextOut)) {
+      return true;
+    }
+    const std::string resolvedCandidate = resolveCalleePath(candidate);
+    auto defIt = defMap_.find(resolvedCandidate);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      if (transform.templateArgs.front() == "auto") {
+        break;
+      }
+      typeTextOut = transform.templateArgs.front();
+      return !typeTextOut.empty();
+    }
+    if (!inferredDefinitionTypeStack.insert(resolvedCandidate).second) {
+      return false;
+    }
+    auto stackIt = inferredDefinitionTypeStack.find(resolvedCandidate);
+    struct ScopeGuard {
+      std::unordered_set<std::string> &stack;
+      std::unordered_set<std::string>::iterator it;
+      ~ScopeGuard() {
+        stack.erase(it);
+      }
+    } guard{inferredDefinitionTypeStack, stackIt};
+
+    std::vector<ParameterInfo> defParams;
+    defParams.reserve(defIt->second->parameters.size());
+    for (const auto &paramExpr : defIt->second->parameters) {
+      ParameterInfo paramInfo;
+      paramInfo.name = paramExpr.name;
+      std::optional<std::string> restrictType;
+      std::string parseError;
+      (void)parseBindingInfo(paramExpr,
+                             defIt->second->namespacePrefix,
+                             structNames_,
+                             importAliases_,
+                             paramInfo.binding,
+                             restrictType,
+                             parseError);
+      if (paramExpr.args.size() == 1) {
+        paramInfo.defaultExpr = &paramExpr.args.front();
+      }
+      defParams.push_back(std::move(paramInfo));
+    }
+
+    std::unordered_map<std::string, BindingInfo> defLocals;
+    const Expr *valueExpr = nullptr;
+    bool sawReturn = false;
+    for (const auto &stmt : defIt->second->statements) {
+      if (stmt.isBinding) {
+        BindingInfo binding;
+        std::optional<std::string> restrictType;
+        std::string parseError;
+        if (parseBindingInfo(
+                stmt, defIt->second->namespacePrefix, structNames_, importAliases_, binding, restrictType, parseError)) {
+          defLocals[stmt.name] = binding;
+        } else if (stmt.args.size() == 1) {
+          std::string inferredLocalType;
+          if (inferExprTypeText(stmt.args.front(), defParams, defLocals, inferredLocalType) &&
+              parseTypeText(inferredLocalType, binding)) {
+            defLocals[stmt.name] = binding;
+          }
+        }
+        continue;
+      }
+      if (isReturnCall(stmt)) {
+        if (stmt.args.size() != 1) {
+          return false;
+        }
+        valueExpr = &stmt.args.front();
+        sawReturn = true;
+        continue;
+      }
+      if (!sawReturn) {
+        valueExpr = &stmt;
+      }
+    }
+    if (defIt->second->returnExpr.has_value()) {
+      valueExpr = &*defIt->second->returnExpr;
+    }
+    return valueExpr != nullptr && inferExprTypeText(*valueExpr, defParams, defLocals, typeTextOut);
+  };
   auto resolveBuiltinMapResultType = [&](const std::string &typeText) -> bool {
     std::string base;
     std::string argText;
@@ -507,6 +789,9 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       if (getArgsPackElementType(*binding, typeTextOut)) {
         return true;
       }
+    }
+    if (receiverExpr.kind == Expr::Kind::Call) {
+      return inferExprTypeText(receiverExpr, params, locals, typeTextOut);
     }
     return false;
   };

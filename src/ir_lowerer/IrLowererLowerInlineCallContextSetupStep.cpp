@@ -25,10 +25,12 @@ bool runLowerInlineCallContextSetupStep(const LowerInlineCallContextSetupStepInp
 
   if (!output.returnsVoid) {
     output.returnLocal = input.allocTempLocal();
-    IrOpcode zeroOp = IrOpcode::PushI32;
+    IrOpcode zeroOp = IrOpcode::PushI64;
     if (output.returnsArray || output.returnKind == LocalInfo::ValueKind::Int64 ||
         output.returnKind == LocalInfo::ValueKind::UInt64 || output.returnKind == LocalInfo::ValueKind::String) {
       zeroOp = IrOpcode::PushI64;
+    } else if (output.returnKind == LocalInfo::ValueKind::Int32 || output.returnKind == LocalInfo::ValueKind::Bool) {
+      zeroOp = IrOpcode::PushI32;
     } else if (output.returnKind == LocalInfo::ValueKind::Float64) {
       zeroOp = IrOpcode::PushF64;
     } else if (output.returnKind == LocalInfo::ValueKind::Float32) {

@@ -30,7 +30,18 @@
 
 [return<bool>]
 /string/equal([string] self, [string] other) {
-  return(equal(self, other))
+  [i32] limit{count(self)}
+  if(not_equal(limit, count(other)),
+     then() { return(false) },
+     else() { })
+  [i32 mut] index{0i32}
+  while(less_than(index, limit), do() {
+    if(not_equal(at(self, index), at(other, index)),
+       then() { return(false) },
+       else() { })
+    increment(index)
+  })
+  return(true)
 }
 
 namespace std {
@@ -144,7 +155,8 @@ namespace std {
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapPair<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-    return(mapDouble<K, V>(firstKey, firstValue, secondKey, secondValue))
+    [Map<K, V>] out{mapDouble<K, V>(firstKey, firstValue, secondKey, secondValue)}
+    return(out)
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]

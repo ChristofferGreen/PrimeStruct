@@ -79,8 +79,16 @@ StringCallEmitResult emitCallStringCallValue(const Expr &arg,
       return StringCallEmitResult::Error;
     }
     if (!isEntryArgsName(arg.args.front())) {
-      error = "native backend only supports entry argument indexing";
-      return StringCallEmitResult::Error;
+      if (!inferCallReturnsString(arg)) {
+        error = "native backend only supports entry argument indexing";
+        return StringCallEmitResult::Error;
+      }
+      if (!emitExpr(arg)) {
+        return StringCallEmitResult::Error;
+      }
+      sourceOut = StringCallSource::RuntimeIndex;
+      argvCheckedOut = true;
+      return StringCallEmitResult::Handled;
     }
 
     StringIndexOps indexOps;

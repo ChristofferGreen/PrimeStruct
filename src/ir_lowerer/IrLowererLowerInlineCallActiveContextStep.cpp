@@ -34,14 +34,24 @@ bool runLowerInlineCallActiveContextStep(const LowerInlineCallActiveContextStepI
         break;
       }
     }
+    const Expr *implicitReturnExpr = nullptr;
     if (success && input.callee->returnExpr.has_value()) {
+      implicitReturnExpr = &*input.callee->returnExpr;
+    } else if (success && !input.definitionReturnsVoid && !input.callee->hasReturnStatement) {
+      for (const auto &stmt : input.callee->statements) {
+        if (!stmt.isBinding) {
+          implicitReturnExpr = &stmt;
+        }
+      }
+    }
+    if (success && implicitReturnExpr != nullptr) {
       Expr returnStmt;
       returnStmt.kind = Expr::Kind::Call;
       returnStmt.name = "return";
       returnStmt.namespacePrefix = input.callee->namespacePrefix;
-      returnStmt.sourceLine = input.callee->returnExpr->sourceLine;
-      returnStmt.sourceColumn = input.callee->returnExpr->sourceColumn;
-      returnStmt.args.push_back(*input.callee->returnExpr);
+      returnStmt.sourceLine = implicitReturnExpr->sourceLine;
+      returnStmt.sourceColumn = implicitReturnExpr->sourceColumn;
+      returnStmt.args.push_back(*implicitReturnExpr);
       returnStmt.argNames.push_back(std::nullopt);
       if (!input.emitInlineStatement(returnStmt)) {
         success = false;

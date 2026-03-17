@@ -366,6 +366,7 @@ std::string inferStructReturnPathFromDefinitionInternal(
 
   std::string inferred;
   std::unordered_map<std::string, LayoutFieldBinding> knownLocalBindings;
+  const Expr *lastValueStmt = nullptr;
   for (const auto &stmt : def.statements) {
     if (stmt.isBinding) {
       LayoutFieldBinding bindingInfo;
@@ -383,6 +384,7 @@ std::string inferStructReturnPathFromDefinitionInternal(
       }
       continue;
     }
+    lastValueStmt = &stmt;
     if (!isReturnCall(stmt) || stmt.args.size() != 1) {
       continue;
     }
@@ -397,6 +399,10 @@ std::string inferStructReturnPathFromDefinitionInternal(
     if (candidate != inferred) {
       return "";
     }
+  }
+
+  if (inferred.empty() && lastValueStmt != nullptr) {
+    return inferFromReturnValue(*lastValueStmt, knownLocalBindings);
   }
 
   return inferred;

@@ -66,6 +66,7 @@ enum class StatementMatchIfEmitResult {
 struct ReturnStatementInlineContext {
   bool returnsVoid = false;
   bool returnsArray = false;
+  LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
   int32_t returnLocal = -1;
   std::vector<size_t> *returnJumps = nullptr;
 };

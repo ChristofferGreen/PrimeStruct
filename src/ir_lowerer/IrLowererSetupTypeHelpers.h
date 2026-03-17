@@ -20,6 +20,7 @@ using ResolveReceiverExprPathFn = std::function<std::string(const Expr &)>;
 using IsMethodCallClassifierFn = std::function<bool(const Expr &, const LocalMap &)>;
 using GetReturnInfoForPathFn = std::function<bool(const std::string &, ReturnInfo &)>;
 using ResolveMethodCallDefinitionFn = std::function<const Definition *(const Expr &, const LocalMap &)>;
+using ResolveDefinitionCallFn = std::function<const Definition *(const Expr &)>;
 
 struct SetupTypeAdapters {
   ValueKindFromTypeNameFn valueKindFromTypeName;
@@ -69,6 +70,7 @@ bool resolveReturnInfoKindForPath(const std::string &path,
 bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
                                  const LocalMap &localsIn,
                                  const ResolveMethodCallDefinitionFn &resolveMethodCallDefinition,
+                                 const ResolveDefinitionCallFn &resolveDefinitionCall,
                                  const GetReturnInfoForPathFn &getReturnInfo,
                                  bool requireArrayReturn,
                                  LocalInfo::ValueKind &kindOut,

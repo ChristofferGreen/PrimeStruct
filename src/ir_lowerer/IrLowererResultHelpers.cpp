@@ -6,6 +6,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererRuntimeErrorHelpers.h"
+#include "IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -175,6 +176,25 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     resultOut.errorType = info.resultErrorType;
     return true;
   };
+  auto inferCallMapTargetInfo = [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
+    targetInfoOut = {};
+    const Definition *callee = resolveDefinitionCall(targetExpr);
+    if (callee == nullptr) {
+      return false;
+    }
+    std::string collectionName;
+    std::vector<std::string> collectionArgs;
+    if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs)) {
+      return false;
+    }
+    if (collectionName != "map" || collectionArgs.size() != 2) {
+      return false;
+    }
+    targetInfoOut.isMapTarget = true;
+    targetInfoOut.mapKeyKind = valueKindFromTypeName(collectionArgs[0]);
+    targetInfoOut.mapValueKind = valueKindFromTypeName(collectionArgs[1]);
+    return true;
+  };
   if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
       isIndexedArgsPackFileHandleReceiver(expr.args.front())) {
     if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
@@ -235,7 +255,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
   }
   if (expr.kind == Expr::Kind::Call && !expr.args.empty() && isMapTryAtCallName(expr)) {
-    const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn);
+    const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, inferCallMapTargetInfo);
     if (targetInfo.isMapTarget && targetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
       out.isResult = true;
       out.hasValue = true;

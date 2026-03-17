@@ -154,6 +154,7 @@
             {
                 .callee = &callee,
                 .structDefinition = structDef,
+                .definitionReturnsVoid = context.returnsVoid,
                 .activateInlineContext = [&]() { activeInlineContext = &context; },
                 .restoreInlineContext = [&]() { activeInlineContext = prevContext; },
                 .emitInlineStatement = [&](const Expr &stmt) {

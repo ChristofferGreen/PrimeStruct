@@ -1556,7 +1556,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         parsedOut.typeTemplateArg.clear();
         return true;
       };
-
       for (const auto &transform : def.transforms) {
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
@@ -1584,6 +1583,173 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
 
       std::unordered_map<std::string, BindingInfo> defLocals;
+      auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {
+        if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+          return false;
+        }
+        if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+          return false;
+        }
+        if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+          return false;
+        }
+        return allowAnyName || isBuiltinBlockCall(candidate);
+      };
+      auto getEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> const Expr * {
+        if (!isEnvelopeValueExpr(candidate, allowAnyName)) {
+          return nullptr;
+        }
+        const Expr *innerValueExpr = nullptr;
+        for (const auto &bodyExpr : candidate.bodyArguments) {
+          if (bodyExpr.isBinding) {
+            continue;
+          }
+          innerValueExpr = &bodyExpr;
+        }
+        return innerValueExpr;
+      };
+      auto extractDirectMapConstructorBinding = [&](const Expr &candidate, BindingInfo &directOut) -> bool {
+        if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+          return false;
+        }
+        const std::string resolvedCandidate = resolveCalleePath(candidate);
+        auto matchesPath = [&](std::string_view basePath) {
+          return resolvedCandidate == basePath || resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
+        };
+        const bool isDirectMapConstructor =
+            matchesPath("/std/collections/map/map") ||
+            matchesPath("/std/collections/mapNew") ||
+            matchesPath("/std/collections/mapSingle") ||
+            matchesPath("/std/collections/mapDouble") ||
+            matchesPath("/std/collections/mapPair") ||
+            matchesPath("/std/collections/mapTriple") ||
+            matchesPath("/std/collections/mapQuad") ||
+            matchesPath("/std/collections/mapQuint") ||
+            matchesPath("/std/collections/mapSext") ||
+            matchesPath("/std/collections/mapSept") ||
+            matchesPath("/std/collections/mapOct") ||
+            matchesPath("/std/collections/experimental_map/mapNew") ||
+            matchesPath("/std/collections/experimental_map/mapSingle") ||
+            matchesPath("/std/collections/experimental_map/mapDouble") ||
+            matchesPath("/std/collections/experimental_map/mapPair") ||
+            matchesPath("/std/collections/experimental_map/mapTriple") ||
+            matchesPath("/std/collections/experimental_map/mapQuad") ||
+            matchesPath("/std/collections/experimental_map/mapQuint") ||
+            matchesPath("/std/collections/experimental_map/mapSext") ||
+            matchesPath("/std/collections/experimental_map/mapSept") ||
+            matchesPath("/std/collections/experimental_map/mapOct");
+        if (!isDirectMapConstructor) {
+          return false;
+        }
+        if (candidate.templateArgs.size() == 2) {
+          directOut.typeName = "map";
+          directOut.typeTemplateArg = candidate.templateArgs[0] + ", " + candidate.templateArgs[1];
+          return true;
+        }
+        if (candidate.args.empty() || candidate.args.size() % 2 != 0) {
+          return false;
+        }
+        auto inferSimpleTypeText = [&](const Expr &value, std::string &typeTextOut) -> bool {
+          typeTextOut.clear();
+          if (value.kind == Expr::Kind::Literal) {
+            typeTextOut = value.isUnsigned ? "u64" : (value.intWidth == 64 ? "i64" : "i32");
+            return true;
+          }
+          if (value.kind == Expr::Kind::BoolLiteral) {
+            typeTextOut = "bool";
+            return true;
+          }
+          if (value.kind == Expr::Kind::FloatLiteral) {
+            typeTextOut = value.floatWidth == 64 ? "f64" : "f32";
+            return true;
+          }
+          if (value.kind == Expr::Kind::StringLiteral) {
+            typeTextOut = "string";
+            return true;
+          }
+          if (value.kind == Expr::Kind::Name) {
+            if (const BindingInfo *paramBinding = findDefParamBinding(defParams, value.name)) {
+              typeTextOut = bindingTypeText(*paramBinding);
+              return !typeTextOut.empty();
+            }
+            auto localIt = defLocals.find(value.name);
+            if (localIt != defLocals.end()) {
+              typeTextOut = bindingTypeText(localIt->second);
+              return !typeTextOut.empty();
+            }
+          }
+          return false;
+        };
+        std::string keyType;
+        std::string valueType;
+        for (size_t i = 0; i < candidate.args.size(); i += 2) {
+          std::string currentKeyType;
+          std::string currentValueType;
+          if (!inferSimpleTypeText(candidate.args[i], currentKeyType) ||
+              !inferSimpleTypeText(candidate.args[i + 1], currentValueType)) {
+            return false;
+          }
+          if (keyType.empty()) {
+            keyType = currentKeyType;
+          } else if (normalizeBindingTypeName(keyType) != normalizeBindingTypeName(currentKeyType)) {
+            return false;
+          }
+          if (valueType.empty()) {
+            valueType = currentValueType;
+          } else if (normalizeBindingTypeName(valueType) != normalizeBindingTypeName(currentValueType)) {
+            return false;
+          }
+        }
+        if (keyType.empty() || valueType.empty()) {
+          return false;
+        }
+        directOut.typeName = "map";
+        directOut.typeTemplateArg = keyType + ", " + valueType;
+        return true;
+      };
+      std::function<bool(const Expr &, BindingInfo &)> inferValueBinding;
+      inferValueBinding = [&](const Expr &candidate, BindingInfo &inferredOut) -> bool {
+        if (candidate.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findDefParamBinding(defParams, candidate.name)) {
+            inferredOut = *paramBinding;
+            return true;
+          }
+          auto localIt = defLocals.find(candidate.name);
+          if (localIt != defLocals.end()) {
+            inferredOut = localIt->second;
+            return true;
+          }
+          return false;
+        }
+        if (isIfCall(candidate) && candidate.args.size() == 3) {
+          const Expr &thenArg = candidate.args[1];
+          const Expr &elseArg = candidate.args[2];
+          const Expr *thenValue = getEnvelopeValueExpr(thenArg, true);
+          const Expr *elseValue = getEnvelopeValueExpr(elseArg, true);
+          BindingInfo thenBinding;
+          BindingInfo elseBinding;
+          if (!inferValueBinding(thenValue ? *thenValue : thenArg, thenBinding) ||
+              !inferValueBinding(elseValue ? *elseValue : elseArg, elseBinding)) {
+            return false;
+          }
+          if (normalizeBindingTypeName(bindingTypeText(thenBinding)) !=
+              normalizeBindingTypeName(bindingTypeText(elseBinding))) {
+            return false;
+          }
+          inferredOut = thenBinding;
+          return true;
+        }
+        if (const Expr *innerValueExpr = getEnvelopeValueExpr(candidate, false)) {
+          if (isReturnCall(*innerValueExpr) && !innerValueExpr->args.empty()) {
+            return inferValueBinding(innerValueExpr->args.front(), inferredOut);
+          }
+          return inferValueBinding(*innerValueExpr, inferredOut);
+        }
+        if (extractDirectMapConstructorBinding(candidate, inferredOut)) {
+          return true;
+        }
+        return false;
+      };
       const Expr *valueExpr = nullptr;
       bool sawReturn = false;
       for (const auto &stmt : def.statements) {
@@ -1617,16 +1783,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (valueExpr == nullptr) {
         return false;
       }
-      if (valueExpr->kind == Expr::Kind::Name) {
-        if (const BindingInfo *paramBinding = findDefParamBinding(defParams, valueExpr->name)) {
-          bindingOut = *paramBinding;
-          return true;
-        }
-        auto localIt = defLocals.find(valueExpr->name);
-        if (localIt != defLocals.end()) {
-          bindingOut = localIt->second;
-          return true;
-        }
+      if (inferValueBinding(*valueExpr, bindingOut)) {
+        return true;
       }
       return inferBindingTypeFromInitializer(*valueExpr, defParams, defLocals, bindingOut);
     };
