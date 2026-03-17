@@ -4324,7 +4324,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`ppm.read(...)` currently parses ASCII `P3` and binary `P6` PPM files in VM/native/Wasm") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("unsupported max values, non-positive dimensions, missing binary-raster separators, truncated payloads, and out-of-range ASCII component values deterministically return `image_invalid_operation`") !=
+  CHECK(primeStructDoc.find("overflowed read-side size arithmetic, unsupported max values, non-positive dimensions, missing binary-raster separators, truncated payloads, and out-of-range ASCII component values deterministically return `image_invalid_operation`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`ppm.write(...)` now emits ASCII `P3` PPM files in VM/native/Wasm") !=
         std::string::npos);
@@ -4340,7 +4340,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("reconstructing Adam7 passes into image order while expanding packed grayscale samples to full-range RGB, downscaling 16-bit channel samples into RGB bytes, expanding palette indexes into RGB, and dropping alpha when decoding 8/16-bit grayscale+alpha or 8/16-bit RGBA inputs") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Malformed or missing PNGs, including critical-chunk CRC mismatches, invalid `PLTE`/`IDAT` ordering, malformed Adam7 scanline payloads, and indexed palette overruns, deterministically return `image_invalid_operation`") !=
+  CHECK(primeStructDoc.find("Malformed or missing PNGs, including critical-chunk CRC mismatches, overflowed read-side size arithmetic, invalid `PLTE`/`IDAT` ordering, malformed Adam7 scanline payloads, and indexed palette overruns, deterministically return `image_invalid_operation`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`png.write(...)` now emits non-interlaced 8-bit RGB PNG files in VM/native/Wasm (and C++ emitter flows via the shared stdlib implementation) using a single `IHDR`/`IDAT`/`IEND` layout, stored/no-compression deflate blocks, and filter-`0` scanlines for the current write subset; invalid dimensions, payload mismatches, overflowed write-side size arithmetic, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
         std::string::npos);
@@ -4399,6 +4399,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngBody.find("pngInflateCopyFromOutput") != std::string::npos);
   CHECK(pngBody.find("pngDecodeScanlines") != std::string::npos);
   CHECK(pngBody.find("pngPackedSampleAt") != std::string::npos);
+  CHECK(pngBody.find("pngScanlineBytesValid") != std::string::npos);
   CHECK(pngBody.find("pngScalePackedSampleToByte") != std::string::npos);
   CHECK(pngBody.find("pngScaleU16SampleToByte") != std::string::npos);
   CHECK(pngBody.find("pngScanlineChannelByte") != std::string::npos);

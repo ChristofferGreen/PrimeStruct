@@ -340,6 +340,85 @@ main() {
         "0\n");
 }
 
+TEST_CASE("rejects oversized vm image read dimensions before overflow") {
+  const std::string ppmInPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_overflow.ppm").string();
+  {
+    std::ofstream file(ppmInPath, std::ios::binary);
+    REQUIRE(file.good());
+    file << "P3\n1431655766 1\n255\n7 9\n";
+    REQUIRE(file.good());
+  }
+
+  const std::string pngInPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_overflow.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x55, 0x55, 0x55, 0x56, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x0e, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x01, 0x01, 0x03, 0x00, 0xfc, 0xff, 0x00,
+        0x07, 0x09, 0x00, 0x1a, 0x00, 0x11, 0x00, 0x00,
+        0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0x00, 0x00,
+        0x00, 0x00,
+    });
+    std::ofstream file(pngInPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPpmPath = escapeStringLiteral(ppmInPath);
+  const std::string escapedPngPath = escapeStringLiteral(pngInPath);
+  std::string source = R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{7i32}
+  [i32 mut] height{9i32}
+  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [Result<ImageError>] ppmStatus{/std/image/ppm/read(width, height, pixels, "__PPM_PATH__"utf8)}
+  print_line(Result.why(ppmStatus))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  assign(width, 11i32)
+  assign(height, 13i32)
+  assign(pixels, vector<i32>(4i32, 5i32, 6i32))
+  [Result<ImageError>] pngStatus{/std/image/png/read(width, height, pixels, "__PNG_PATH__"utf8)}
+  print_line(Result.why(pngStatus))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  return(0i32)
+}
+)";
+  const size_t ppmPathOffset = source.find("__PPM_PATH__");
+  REQUIRE(ppmPathOffset != std::string::npos);
+  source.replace(ppmPathOffset, std::string("__PPM_PATH__").size(), escapedPpmPath);
+  const size_t pngPathOffset = source.find("__PNG_PATH__");
+  REQUIRE(pngPathOffset != std::string::npos);
+  source.replace(pngPathOffset, std::string("__PNG_PATH__").size(), escapedPngPath);
+
+  const std::string srcPath = writeTemp("vm_image_read_overflow.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_overflow.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) ==
+        "image_invalid_operation\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "image_invalid_operation\n"
+        "0\n"
+        "0\n"
+        "0\n");
+}
+
 TEST_CASE("runs vm ppm write for ascii p3 outputs") {
   const std::filesystem::path outPath = std::filesystem::temp_directory_path() / "primec_vm_image_write.ppm";
   std::error_code ec;

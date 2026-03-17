@@ -970,6 +970,25 @@ namespace std {
     return(divide(plus(multiply(multiply(width, pngColorTypeSamplesPerPixel(colorType)), bitDepth), 7i32), 8i32))
   }
 
+  [return<bool>]
+  pngScanlineBytesValid([i32] width, [i32] bitDepth, [i32] colorType, [i32 mut] scanlineBytes) {
+    assign(scanlineBytes, 0i32)
+    if(less_equal(width, 0i32),
+       then() { return(false) },
+       else() { })
+    [i64] scanlineBitsWide{
+        multiply(multiply(convert<i64>(width), convert<i64>(pngColorTypeSamplesPerPixel(colorType))), convert<i64>(bitDepth))}
+    if(or(less_equal(scanlineBitsWide, 0i64), greater_than(scanlineBitsWide, 17179869176i64)),
+       then() { return(false) },
+       else() { })
+    [i64] scanlineBytesWide{divide(plus(scanlineBitsWide, 7i64), 8i64)}
+    if(greater_than(scanlineBytesWide, 2147483647i64),
+       then() { return(false) },
+       else() { })
+    assign(scanlineBytes, convert<i32>(scanlineBytesWide))
+    return(true)
+  }
+
   [return<i32>]
   pngSampleValueCount([i32] bitDepth) {
     [i32 mut] valueCount{1i32}
@@ -1079,16 +1098,23 @@ namespace std {
     return(divide(plus(minus(size, plus(start, 1i32)), step), step))
   }
 
-  [effects(heap_alloc), return<void>]
+  [effects(heap_alloc), return<int>]
   pngInitRgbPixels([i32] width, [i32] height, [vector<i32> mut] pixels) {
+    [i32 mut] pixelCount{0i32}
+    if(not(imageRgbWritePixelCount(width, height, pixelCount)),
+       then() {
+         clear(pixels)
+         return(1i32)
+       },
+       else() { })
     clear(pixels)
-    [i32] pixelCount{multiply(multiply(width, height), 3i32)}
     reserve(pixels, pixelCount)
     [i32 mut] pixelIndex{0i32}
     while(less_than(pixelIndex, pixelCount), do() {
       push(pixels, 0i32)
       increment(pixelIndex)
     })
+    return(0i32)
   }
 
   [effects(heap_alloc), return<int>]
@@ -1099,9 +1125,31 @@ namespace std {
        then() { return(1i32) },
        else() { })
 
+    [i32 mut] pixelCount{0i32}
+    if(not(imageRgbWritePixelCount(width, height, pixelCount)),
+       then() {
+         clear(pixels)
+         return(1i32)
+       },
+       else() { })
+    reserve(pixels, pixelCount)
+
     [i32] bytesPerPixel{pngFilterBytesPerPixel(bitDepth, colorType)}
-    [i32] scanlineBytes{pngScanlineBytes(width, bitDepth, colorType)}
-    if(less_than(minus(count(rawBytes), offset), multiply(height, plus(scanlineBytes, 1i32))),
+    [i32 mut] scanlineBytes{0i32}
+    if(not(pngScanlineBytesValid(width, bitDepth, colorType, scanlineBytes)),
+       then() {
+         clear(pixels)
+         return(1i32)
+       },
+       else() { })
+    [i64] requiredRowBytesWide{multiply(convert<i64>(height), plus(convert<i64>(scanlineBytes), 1i64))}
+    if(or(less_equal(requiredRowBytesWide, 0i64), greater_than(requiredRowBytesWide, 2147483647i64)),
+       then() {
+         clear(pixels)
+         return(1i32)
+       },
+       else() { })
+    if(less_than(minus(count(rawBytes), offset), convert<i32>(requiredRowBytesWide)),
        then() { return(1i32) },
        else() { })
 
@@ -2345,12 +2393,18 @@ namespace std {
             },
             else() { })
        },
-       else() {
-         if(not_equal(interlace, 1i32),
-            then() { return(2i32) },
-            else() { })
-         pngInitRgbPixels(width, height, pixels)
-         [vector<i32> mut] passPixels{vector<i32>()}
+	       else() {
+	         if(not_equal(interlace, 1i32),
+	            then() { return(2i32) },
+	            else() { })
+	         [i32] initStatus{pngInitRgbPixels(width, height, pixels)}
+	         if(not_equal(initStatus, 0i32),
+	            then() {
+	              clear(pixels)
+	              return(1i32)
+	            },
+	            else() { })
+	         [vector<i32> mut] passPixels{vector<i32>()}
          [i32 mut] passIndex{0i32}
          while(less_than(passIndex, 7i32), do() {
            [i32] passStartX{pngAdam7PassStartX(passIndex)}
@@ -2442,7 +2496,10 @@ namespace std {
          then() { return(1i32) },
          else() { })
 
-      [i32] pixelCount{multiply(multiply(parsedWidth, parsedHeight), 3i32)}
+      [i32 mut] pixelCount{0i32}
+      if(not(imageRgbWritePixelCount(parsedWidth, parsedHeight, pixelCount)),
+         then() { return(1i32) },
+         else() { })
       [i32 mut] index{0i32}
       [i32 mut] component{0i32}
       if(equal(formatByte, 51i32),
