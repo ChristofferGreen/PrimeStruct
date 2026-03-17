@@ -431,6 +431,33 @@
     }
     return defMap.count("/" + normalized) == 0;
   };
+  auto explicitVectorAccessResolvedStructTypePath = [&](const Expr &candidate) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return "";
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "vector/at" && normalized != "vector/at_unsafe" &&
+        normalized != "std/collections/vector/at" &&
+        normalized != "std/collections/vector/at_unsafe") {
+      return "";
+    }
+    for (const auto &resolvedCandidate : collectionHelperPathCandidates(resolveExprPath(candidate))) {
+      auto structIt = returnStructs.find(resolvedCandidate);
+      if (structIt != returnStructs.end()) {
+        const std::string normalizedStruct = normalizedTypePath(structIt->second);
+        if (!normalizedStruct.empty()) {
+          return normalizedStruct;
+        }
+      }
+      if (returnKinds.find(resolvedCandidate) != returnKinds.end()) {
+        return "";
+      }
+    }
+    return "";
+  };
   auto probedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
     Expr probeCall;
     probeCall.kind = Expr::Kind::Call;
@@ -681,6 +708,11 @@
       }
     }
     if (!targetExpr.isMethodCall) {
+      const std::string resolvedExplicitVectorAccessStructType =
+          explicitVectorAccessResolvedStructTypePath(targetExpr);
+      if (!resolvedExplicitVectorAccessStructType.empty()) {
+        return resolvedExplicitVectorAccessStructType;
+      }
       const bool shouldProbeBuiltinVectorAccessType =
           isExplicitVectorAccessCompatibilityCall(targetExpr) ||
           !builtinCanonicalVectorAccessReceiverTypePath(targetExpr).empty();
