@@ -12641,6 +12641,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector namespaced capacity accepts same-path helper on array target") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([array<i32>] values) {
+  return(43i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  return(/vector/capacity(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced capacity rejects named arguments as builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -12792,6 +12810,19 @@ TEST_CASE("vector namespaced capacity keeps non-vector target diagnostics") {
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/vector/capacity(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity array target without helper reports unknown target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
   return(/vector/capacity(values))
 }
 )";

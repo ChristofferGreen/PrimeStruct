@@ -9027,6 +9027,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (!validateExpr(params, locals, expr.args.front())) {
             return false;
           }
+          if (isAliasCapacity && resolveArrayTarget(expr.args.front(), elemType)) {
+            error_ = "unknown call target: /vector/capacity";
+            return false;
+          }
           std::string mapKeyType;
           std::string mapValueType;
           if (resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {

@@ -9243,6 +9243,50 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
+TEST_CASE("vm alias capacity array target accepts same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([array<i32>] values) {
+  return(46i32)
+}
+
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/vector/capacity(wrapArray()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_alias_capacity_array_same_path_helper.prime", source);
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 46);
+}
+
+TEST_CASE("rejects vm alias capacity array target without helper") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/vector/capacity(wrapArray()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_alias_capacity_array_target_import_requirement.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_alias_capacity_array_target_import_requirement_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("runs vm with std namespaced count expression canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
