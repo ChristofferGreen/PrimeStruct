@@ -34,6 +34,8 @@ main() {
 
 TEST_CASE("runs vm with numeric vector literals") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int> effects(io_out, heap_alloc)]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
@@ -1583,6 +1585,8 @@ main() {
 
 TEST_CASE("runs vm with collection bracket literals") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [array<i32>] values{array<i32>[1i32, 2i32]}
@@ -1608,7 +1612,7 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm with vector literal count method") {
+TEST_CASE("rejects vm vector literal count method without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -1616,8 +1620,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_literal_count.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 3);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_count_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm with vector method call") {
@@ -1784,12 +1791,12 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  return(count(values))
+  return(plus(count(values), values.count()))
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_count_helper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 3);
+  CHECK(runCommand(runCmd) == 6);
 }
 
 TEST_CASE("rejects vm bare vector count without imported helper") {
@@ -1806,6 +1813,45 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("rejects vm bare vector count method without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_count_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_vector_count_method_import_requirement_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("rejects vm wrapper temporary vector count method without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32, 3i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_wrapper_vector_count_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_vector_count_method_import_requirement_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim helpers") {
@@ -8336,6 +8382,8 @@ main() {
 
 TEST_CASE("runs vm with vector mutator method calls") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}

@@ -2034,7 +2034,7 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("compiles and runs native vector literal count method") {
+TEST_CASE("rejects native vector literal count method without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2042,12 +2042,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_literal_count.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_literal_count_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_literal_count_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native vector method call") {
@@ -2171,7 +2171,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  return(count(values))
+  return(plus(count(values), values.count()))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_count_helper.prime", source);
@@ -2180,7 +2180,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(exePath) == 6);
 }
 
 TEST_CASE("rejects native bare vector count without imported helper") {
@@ -2198,6 +2198,49 @@ main() {
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("rejects native bare vector count method without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_count_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_vector_count_method_import_requirement_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("rejects native wrapper temporary vector count method without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32, 3i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_wrapper_vector_count_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_wrapper_vector_count_method_import_requirement_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native stdlib collection shim helpers") {
@@ -9509,6 +9552,8 @@ main() {
 
 TEST_CASE("compiles and runs native vector mutator method calls") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -11223,6 +11268,8 @@ main() {
 
 TEST_CASE("compiles and runs native collection bracket literals") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [array<i32>] values{array<i32>[1i32, 2i32]}

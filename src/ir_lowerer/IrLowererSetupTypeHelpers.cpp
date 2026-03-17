@@ -2251,7 +2251,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     }
   }
   if (resolvedDef == nullptr) {
-    if (allowBuiltinFallback) {
+    const bool blocksBuiltinBareVectorCountMethod =
+        isSimpleCallName(callExpr, "count") && typeName == "vector";
+    if (allowBuiltinFallback && !blocksBuiltinBareVectorCountMethod) {
       errorOut = priorError;
       return nullptr;
     }
