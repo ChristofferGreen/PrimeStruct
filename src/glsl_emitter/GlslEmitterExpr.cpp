@@ -2,6 +2,155 @@
 
 namespace primec::glsl_emitter {
 
+ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error);
+
+namespace {
+
+int matrixDimension(GlslType type) {
+  switch (type) {
+  case GlslType::Mat2:
+    return 2;
+  case GlslType::Mat3:
+    return 3;
+  case GlslType::Mat4:
+    return 4;
+  default:
+    return 0;
+  }
+}
+
+bool matrixFieldRowColumn(const std::string &name, int dimension, int &rowOut, int &columnOut) {
+  if (name.size() != 3 || name[0] != 'm' || name[1] < '0' || name[1] > '9' || name[2] < '0' || name[2] > '9') {
+    return false;
+  }
+  const int row = name[1] - '0';
+  const int column = name[2] - '0';
+  if (row < 0 || row >= dimension || column < 0 || column >= dimension) {
+    return false;
+  }
+  rowOut = row;
+  columnOut = column;
+  return true;
+}
+
+ExprResult castScalarToMatrixElementFloat(const ExprResult &expr) {
+  return castExpr(expr, GlslType::Float);
+}
+
+bool emitMatrixConstructor(const Expr &expr,
+                           const std::string &name,
+                           GlslType type,
+                           EmitState &state,
+                           std::string &error,
+                           ExprResult &out) {
+  const int dimension = matrixDimension(type);
+  const size_t expectedArgs = static_cast<size_t>(dimension * dimension);
+  if (expr.args.size() != expectedArgs) {
+    error = "glsl backend requires " + name + " constructor with " + std::to_string(expectedArgs) + " arguments";
+    return false;
+  }
+  out = {};
+  out.type = type;
+  std::vector<std::string> rows(expectedArgs);
+  for (size_t i = 0; i < expectedArgs; ++i) {
+    ExprResult arg = emitExpr(expr.args[i], state, error);
+    if (!error.empty()) {
+      return false;
+    }
+    if (!isNumericType(arg.type)) {
+      error = "glsl backend requires numeric matrix constructor arguments";
+      return false;
+    }
+    arg = castScalarToMatrixElementFloat(arg);
+    out.prelude += arg.prelude;
+    rows[i] = arg.code;
+  }
+  out.code = glslTypeName(type) + "(";
+  bool first = true;
+  for (int column = 0; column < dimension; ++column) {
+    for (int row = 0; row < dimension; ++row) {
+      if (!first) {
+        out.code += ", ";
+      }
+      first = false;
+      out.code += rows[static_cast<size_t>(row * dimension + column)];
+    }
+  }
+  out.code += ")";
+  return true;
+}
+
+bool emitMatrixArithmetic(const Expr &expr,
+                          const std::string &name,
+                          EmitState &state,
+                          std::string &error,
+                          ExprResult &out) {
+  if (expr.args.size() != 2) {
+    error = "glsl backend requires binary matrix operator arguments";
+    return false;
+  }
+  ExprResult left = emitExpr(expr.args[0], state, error);
+  if (!error.empty()) {
+    return false;
+  }
+  ExprResult right = emitExpr(expr.args[1], state, error);
+  if (!error.empty()) {
+    return false;
+  }
+  const bool leftMatrix = isMatrixType(left.type);
+  const bool rightMatrix = isMatrixType(right.type);
+  if (name == "plus" || name == "minus") {
+    if (!leftMatrix || !rightMatrix || left.type != right.type) {
+      error = "glsl backend requires matching matrix operands for " + name;
+      return false;
+    }
+    out.type = left.type;
+    out.code = "(" + left.code + (name == "plus" ? " + " : " - ") + right.code + ")";
+    out.prelude = left.prelude + right.prelude;
+    return true;
+  }
+  if (name == "multiply") {
+    if (leftMatrix && rightMatrix) {
+      if (left.type != right.type) {
+        error = "glsl backend requires matching matrix operands for multiply";
+        return false;
+      }
+      out.type = left.type;
+      out.code = "(" + left.code + " * " + right.code + ")";
+      out.prelude = left.prelude + right.prelude;
+      return true;
+    }
+    if (leftMatrix && isNumericType(right.type)) {
+      right = castScalarToMatrixElementFloat(right);
+      out.type = left.type;
+      out.code = "(" + left.code + " * " + right.code + ")";
+      out.prelude = left.prelude + right.prelude;
+      return true;
+    }
+    if (isNumericType(left.type) && rightMatrix) {
+      left = castScalarToMatrixElementFloat(left);
+      out.type = right.type;
+      out.code = "(" + left.code + " * " + right.code + ")";
+      out.prelude = left.prelude + right.prelude;
+      return true;
+    }
+    return false;
+  }
+  if (name == "divide") {
+    if (!leftMatrix || !isNumericType(right.type)) {
+      return false;
+    }
+    right = castScalarToMatrixElementFloat(right);
+    out.type = left.type;
+    out.code = "(" + left.code + " / " + right.code + ")";
+    out.prelude = left.prelude + right.prelude;
+    return true;
+  }
+  return false;
+}
+
+} // namespace
+
 ExprResult emitBinaryNumeric(const Expr &leftExpr, const Expr &rightExpr, const char *op, EmitState &state, std::string &error) {
   ExprResult left = emitExpr(leftExpr, state, error);
   if (error.empty() == false) {
@@ -105,7 +254,54 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     error = "glsl backend encountered unsupported expression";
     return {};
   }
+  if (expr.isFieldAccess) {
+    if (expr.args.size() != 1) {
+      error = "glsl backend requires field access receiver";
+      return {};
+    }
+    ExprResult receiver = emitExpr(expr.args.front(), state, error);
+    if (!error.empty()) {
+      return {};
+    }
+    const int dimension = matrixDimension(receiver.type);
+    if (dimension == 0) {
+      error = "glsl backend only supports matrix field access";
+      return {};
+    }
+    int row = 0;
+    int column = 0;
+    if (!matrixFieldRowColumn(expr.name, dimension, row, column)) {
+      error = "glsl backend does not support matrix field: " + expr.name;
+      return {};
+    }
+    ExprResult out;
+    out.type = GlslType::Float;
+    out.code = "(" + receiver.code + ")[" + std::to_string(column) + "][" + std::to_string(row) + "]";
+    out.prelude = receiver.prelude;
+    return out;
+  }
   const std::string name = normalizeName(expr);
+  if (name == "Mat2") {
+    ExprResult out;
+    if (!emitMatrixConstructor(expr, name, GlslType::Mat2, state, error, out)) {
+      return {};
+    }
+    return out;
+  }
+  if (name == "Mat3") {
+    ExprResult out;
+    if (!emitMatrixConstructor(expr, name, GlslType::Mat3, state, error, out)) {
+      return {};
+    }
+    return out;
+  }
+  if (name == "Mat4") {
+    ExprResult out;
+    if (!emitMatrixConstructor(expr, name, GlslType::Mat4, state, error, out)) {
+      return {};
+    }
+    return out;
+  }
   if (name == "block") {
     if (!expr.hasBodyArguments) {
       error = "glsl backend requires block() { ... }";
@@ -145,6 +341,13 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     return out;
   }
   if (name == "plus" || name == "minus" || name == "multiply" || name == "divide") {
+    ExprResult matrixOut;
+    if (emitMatrixArithmetic(expr, name, state, error, matrixOut)) {
+      return matrixOut;
+    }
+    if (!error.empty()) {
+      return {};
+    }
     if (expr.args.size() != 2) {
       error = "glsl backend requires binary numeric operator arguments";
       return {};

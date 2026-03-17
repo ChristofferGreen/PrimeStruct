@@ -18,6 +18,9 @@ enum class GlslType {
   UInt64,
   Float,
   Double,
+  Mat2,
+  Mat3,
+  Mat4,
   Unknown,
 };
 
@@ -59,6 +62,7 @@ bool isEntryArgsParam(const Expr &expr);
 GlslType glslTypeFromName(const std::string &name, EmitState &state, std::string &error);
 std::string glslTypeName(GlslType type);
 bool isNumericType(GlslType type);
+bool isMatrixType(GlslType type);
 bool isIntegerType(GlslType type);
 bool isSignedInteger(GlslType type);
 bool isUnsignedInteger(GlslType type);

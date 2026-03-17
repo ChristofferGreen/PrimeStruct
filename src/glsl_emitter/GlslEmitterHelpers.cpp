@@ -257,6 +257,15 @@ GlslType glslTypeFromName(const std::string &name, EmitState &state, std::string
     state.needsFp64Ext = true;
     return GlslType::Double;
   }
+  if (name == "Mat2") {
+    return GlslType::Mat2;
+  }
+  if (name == "Mat3") {
+    return GlslType::Mat3;
+  }
+  if (name == "Mat4") {
+    return GlslType::Mat4;
+  }
   error = "glsl backend does not support type: " + name;
   return GlslType::Unknown;
 }
@@ -277,6 +286,12 @@ std::string glslTypeName(GlslType type) {
     return "float";
   case GlslType::Double:
     return "double";
+  case GlslType::Mat2:
+    return "mat2";
+  case GlslType::Mat3:
+    return "mat3";
+  case GlslType::Mat4:
+    return "mat4";
   case GlslType::Unknown:
     return "";
   }
@@ -286,6 +301,10 @@ std::string glslTypeName(GlslType type) {
 bool isNumericType(GlslType type) {
   return type == GlslType::Int || type == GlslType::UInt || type == GlslType::Int64 || type == GlslType::UInt64 ||
          type == GlslType::Float || type == GlslType::Double;
+}
+
+bool isMatrixType(GlslType type) {
+  return type == GlslType::Mat2 || type == GlslType::Mat3 || type == GlslType::Mat4;
 }
 
 bool isIntegerType(GlslType type) {

@@ -928,64 +928,7 @@ main() {
 }
 
 TEST_CASE("glsl emitter rejects unavailable support-matrix math types") {
-  struct RejectCase {
-    const char *name;
-    const char *source;
-    const char *diagnostic;
-  };
-
-  const std::vector<RejectCase> cases = {
-      {
-          "mat2",
-          R"(
-import /std/math/*
-
-[return<void>]
-main() {
-  [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  return()
-}
-)",
-          "glsl backend does not support type: Mat2",
-      },
-      {
-          "mat3",
-          R"(
-import /std/math/*
-
-[return<void>]
-main() {
-  [Mat3] value{Mat3(
-    1.0f32, 0.0f32, 0.0f32,
-    0.0f32, 1.0f32, 0.0f32,
-    0.0f32, 0.0f32, 1.0f32
-  )}
-  return()
-}
-)",
-          "glsl backend does not support type: Mat3",
-      },
-      {
-          "mat4",
-          R"(
-import /std/math/*
-
-[return<void>]
-main() {
-  [Mat4] value{Mat4(
-    1.0f32, 0.0f32, 0.0f32, 0.0f32,
-    0.0f32, 1.0f32, 0.0f32, 0.0f32,
-    0.0f32, 0.0f32, 1.0f32, 0.0f32,
-    0.0f32, 0.0f32, 0.0f32, 1.0f32
-  )}
-  return()
-}
-)",
-          "glsl backend does not support type: Mat4",
-      },
-      {
-          "quat",
-          R"(
+  const std::string source = R"(
 import /std/math/*
 
 [return<void>]
@@ -993,25 +936,66 @@ main() {
   [Quat] value{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
   return()
 }
-)",
-          "glsl backend does not support type: Quat",
-      },
-  };
+)";
+  const std::string srcPath = writeTemp("compile_glsl_support_matrix_reject_quat.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_reject_quat.err").string();
 
-  for (const auto &testCase : cases) {
-    CAPTURE(testCase.name);
-    const std::string srcPath =
-        writeTemp(std::string("compile_glsl_support_matrix_reject_") + testCase.name + ".prime", testCase.source);
-    const std::string errPath =
-        (std::filesystem::temp_directory_path() /
-         (std::string("primec_glsl_support_matrix_reject_") + testCase.name + ".err"))
-            .string();
+  const std::string compileCmd =
+      "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("glsl backend does not support type: Quat") != std::string::npos);
+}
 
-    const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) +
-                                   " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-    CHECK(runCommand(compileCmd) != 0);
-    CHECK(readFile(errPath).find(testCase.diagnostic) != std::string::npos);
-  }
+TEST_CASE("glsl emitter lowers matrix nominal values field access and matrix operators") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<void>]
+main() {
+  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat2] sum2{plus(m2, Mat2(5.0f32, 6.0f32, 7.0f32, 8.0f32))}
+  [Mat2] scaled2{multiply(sum2, 2i32)}
+  [Mat2] div2{divide(scaled2, 2.0f32)}
+  [Mat2] prod2{multiply(m2, sum2)}
+  [f32] sample2{plus(div2.m01, prod2.m10)}
+  [Mat3] m3{Mat3(
+    1.0f32, 2.0f32, 3.0f32,
+    4.0f32, 5.0f32, 6.0f32,
+    7.0f32, 8.0f32, 9.0f32
+  )}
+  [f32] sample3{m3.m21}
+  [Mat4] m4{Mat4(
+    1.0f32, 2.0f32, 3.0f32, 4.0f32,
+    5.0f32, 6.0f32, 7.0f32, 8.0f32,
+    9.0f32, 10.0f32, 11.0f32, 12.0f32,
+    13.0f32, 14.0f32, 15.0f32, 16.0f32
+  )}
+  [f32] sample4{m4.m32}
+  [i32 mut] sink{0i32}
+  if(true, then() { assign(sink, convert<int>(plus(sample2, plus(sample3, sample4)))) }, else() { })
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_support_matrix_nominal_values.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_nominal_values.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("const mat2 m2 = mat2(1.0, 3.0, 2.0, 4.0);") != std::string::npos);
+  CHECK(output.find("const mat2 sum2 = (m2 + mat2(5.0, 7.0, 6.0, 8.0));") != std::string::npos);
+  CHECK(output.find("const mat2 scaled2 = (sum2 * float(2));") != std::string::npos);
+  CHECK(output.find("const mat2 div2 = (scaled2 / 2.0);") != std::string::npos);
+  CHECK(output.find("const mat2 prod2 = (m2 * sum2);") != std::string::npos);
+  CHECK(output.find("const float sample2 = ") != std::string::npos);
+  CHECK(output.find("(div2)[1][0]") != std::string::npos);
+  CHECK(output.find("(prod2)[0][1]") != std::string::npos);
+  CHECK(output.find("const mat3 m3 = mat3(1.0, 4.0, 7.0, 2.0, 5.0, 8.0, 3.0, 6.0, 9.0);") != std::string::npos);
+  CHECK(output.find("const float sample3 = (m3)[1][2];") != std::string::npos);
+  CHECK(output.find("const mat4 m4 = mat4(1.0, 5.0, 9.0, 13.0, 2.0, 6.0, 10.0, 14.0, 3.0, 7.0, 11.0, 15.0, 4.0, 8.0, 12.0, 16.0);") != std::string::npos);
+  CHECK(output.find("const float sample4 = (m4)[2][3];") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles math constants") {
