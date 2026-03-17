@@ -2938,7 +2938,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error,
     std::function<bool(const Expr &)> isCollectionAccessReceiverExpr) {
-  if (isExplicitMapHelperFallbackPath(expr)) {
+  if (isExplicitMapHelperFallbackPath(expr) || isExplicitVectorHelperFallbackPath(expr)) {
     return CountMethodFallbackResult::NotHandled;
   }
   std::string normalizedVectorHelperName;

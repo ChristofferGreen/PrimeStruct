@@ -12803,6 +12803,72 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
   CHECK(canonicalMapCountResolveDefinitionCalls == 1);
   CHECK(canonicalMapCountEmitCalls == 1);
 
+  primec::Expr explicitVectorCountCall = countCall;
+  explicitVectorCountCall.name = "/vector/count";
+  int explicitVectorCountResolveMethodCalls = 0;
+  int explicitVectorCountResolveDefinitionCalls = 0;
+  int explicitVectorCountEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            explicitVectorCountCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++explicitVectorCountResolveMethodCalls;
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++explicitVectorCountResolveDefinitionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++explicitVectorCountEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(explicitVectorCountResolveMethodCalls == 0);
+  CHECK(explicitVectorCountResolveDefinitionCalls == 1);
+  CHECK(explicitVectorCountEmitCalls == 0);
+
+  primec::Definition vectorAccessDef;
+  vectorAccessDef.fullPath = "/std/collections/vector/at";
+  primec::Expr explicitVectorAtCall = methodAccessCall;
+  explicitVectorAtCall.isMethodCall = false;
+  explicitVectorAtCall.name = "/std/collections/vector/at";
+  int explicitVectorAtResolveMethodCalls = 0;
+  int explicitVectorAtResolveDefinitionCalls = 0;
+  int explicitVectorAtEmitCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            explicitVectorAtCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++explicitVectorAtResolveMethodCalls;
+              return &callee;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              ++explicitVectorAtResolveDefinitionCalls;
+              CHECK(callExpr.name == "/std/collections/vector/at");
+              CHECK_FALSE(callExpr.isMethodCall);
+              return &vectorAccessDef;
+            },
+            [&](const primec::Expr &callExpr, const primec::Definition &resolvedCallee) {
+              ++explicitVectorAtEmitCalls;
+              CHECK(callExpr.name == "/std/collections/vector/at");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/std/collections/vector/at");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(explicitVectorAtResolveMethodCalls == 0);
+  CHECK(explicitVectorAtResolveDefinitionCalls == 1);
+  CHECK(explicitVectorAtEmitCalls == 1);
+
   int secondResolveMethodCalls = 0;
   error.clear();
   CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
@@ -13224,6 +13290,41 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               return true;
             },
             error) == Result::Emitted);
+
+  primec::Expr explicitVectorCountCall;
+  explicitVectorCountCall.kind = primec::Expr::Kind::Call;
+  explicitVectorCountCall.name = "/vector/count";
+  primec::Expr explicitVectorCountArg;
+  explicitVectorCountArg.kind = primec::Expr::Kind::Name;
+  explicitVectorCountArg.name = "ctx";
+  explicitVectorCountCall.args.push_back(explicitVectorCountArg);
+  int explicitVectorCountLocalResolveMethodCalls = 0;
+  int explicitVectorCountLocalResolveDefinitionCalls = 0;
+  int explicitVectorCountLocalEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            explicitVectorCountCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              ++explicitVectorCountLocalResolveMethodCalls;
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++explicitVectorCountLocalResolveDefinitionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              ++explicitVectorCountLocalEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(explicitVectorCountLocalResolveMethodCalls == 0);
+  CHECK(explicitVectorCountLocalResolveDefinitionCalls == 1);
+  CHECK(explicitVectorCountLocalEmitCalls == 0);
 
   primec::Expr plainCall;
   plainCall.kind = primec::Expr::Kind::Call;
@@ -16420,10 +16521,36 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(aliasCountResolveCalls == 1);
-  CHECK(aliasCountEmitCalls == 1);
+  CHECK(aliasCountResolveCalls == 0);
+  CHECK(aliasCountEmitCalls == 0);
+
+  primec::Expr canonicalCountCall = countCall;
+  canonicalCountCall.name = "/std/collections/vector/count";
+  int canonicalCountResolveCalls = 0;
+  int canonicalCountEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            canonicalCountCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++canonicalCountResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "count");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++canonicalCountEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "count");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(canonicalCountResolveCalls == 0);
+  CHECK(canonicalCountEmitCalls == 0);
 
   primec::Expr aliasMapCountCall = countCall;
   aliasMapCountCall.name = "/std/collections/map/count";
@@ -16480,6 +16607,32 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(capacityResolveCalls == 1);
   CHECK(capacityEmitCalls == 1);
 
+  primec::Expr canonicalCapacityCall = capacityCall;
+  canonicalCapacityCall.name = "/std/collections/vector/capacity";
+  int canonicalCapacityResolveCalls = 0;
+  int canonicalCapacityEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            canonicalCapacityCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++canonicalCapacityResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "capacity");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++canonicalCapacityEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "capacity");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(canonicalCapacityResolveCalls == 0);
+  CHECK(canonicalCapacityEmitCalls == 0);
+
   primec::Expr indexArg;
   indexArg.kind = primec::Expr::Kind::Literal;
   indexArg.intWidth = 32;
@@ -16534,10 +16687,36 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(canonicalAtResolveCalls == 1);
-  CHECK(canonicalAtEmitCalls == 1);
+  CHECK(canonicalAtResolveCalls == 0);
+  CHECK(canonicalAtEmitCalls == 0);
+
+  primec::Expr aliasAtCall = atCall;
+  aliasAtCall.name = "/vector/at";
+  int aliasAtResolveCalls = 0;
+  int aliasAtEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            aliasAtCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++aliasAtResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++aliasAtEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(aliasAtResolveCalls == 0);
+  CHECK(aliasAtEmitCalls == 0);
 
   primec::Expr aliasMapAtCall = atCall;
   aliasMapAtCall.name = "/map/at";
@@ -16762,6 +16941,32 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(error.empty());
   CHECK(atUnsafeResolveCalls == 1);
   CHECK(atUnsafeEmitCalls == 1);
+
+  primec::Expr canonicalAtUnsafeCall = atUnsafeCall;
+  canonicalAtUnsafeCall.name = "/std/collections/vector/at_unsafe";
+  int canonicalAtUnsafeResolveCalls = 0;
+  int canonicalAtUnsafeEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            canonicalAtUnsafeCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++canonicalAtUnsafeResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at_unsafe");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++canonicalAtUnsafeEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "at_unsafe");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(canonicalAtUnsafeResolveCalls == 0);
+  CHECK(canonicalAtUnsafeEmitCalls == 0);
 
   primec::Expr reorderedAtUnsafeStringCall = atUnsafeCall;
   reorderedAtUnsafeStringCall.args = {stringKeyArg, targetArg};
