@@ -4494,20 +4494,284 @@ main() {
         "109\n");
 }
 
-TEST_CASE("compiles and reports interlaced native png inputs as unsupported") {
+TEST_CASE("compiles and runs native png read for Adam7 interlaced rgb inputs") {
   const std::string inPath =
-      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_unsupported.png").string();
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_rgb.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x05,
         0x08, 0x02, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x0f, 0x49, 0x44, 0x41,
-        0x54, 0x78, 0x01, 0x01, 0x04, 0x00, 0xfb, 0xff,
-        0x00, 0xff, 0x00, 0x00, 0x03, 0x01, 0x01, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x61, 0x49, 0x44, 0x41,
+        0x54, 0x78, 0x01, 0x01, 0x56, 0x00, 0xa9, 0xff,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0xa0, 0x34, 0x68,
+        0x00, 0x1c, 0xc8, 0x2c, 0xbc, 0xfc, 0x94, 0x00,
+        0x50, 0x1a, 0xb4, 0x00, 0x6c, 0xe2, 0xe0, 0x00,
+        0x0e, 0x64, 0x16, 0x5e, 0x7e, 0xca, 0xae, 0x98,
+        0x7e, 0x00, 0x28, 0x0d, 0x5a, 0x78, 0x27, 0x0e,
+        0x00, 0x36, 0x71, 0x70, 0x86, 0x8b, 0x24, 0x00,
+        0x44, 0xd5, 0x86, 0x94, 0xef, 0x3a, 0x00, 0x07,
+        0x32, 0x0b, 0x2f, 0x3f, 0x65, 0x57, 0x4c, 0xbf,
+        0x7f, 0x59, 0x19, 0xa7, 0x66, 0x73, 0x00, 0x15,
+        0x96, 0x21, 0x3d, 0xa3, 0x7b, 0x65, 0xb0, 0xd5,
+        0x8d, 0xbd, 0x2f, 0xb5, 0xca, 0x89, 0xcf, 0x85,
+        0x1f, 0x37,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x49, 0x45, 0x4e, 0x44, 0x00, 0x00, 0x00, 0x00,
+    });
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = injectEscapedPath(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  print_line(pixels[12i32])
+  print_line(pixels[13i32])
+  print_line(pixels[14i32])
+  print_line(pixels[60i32])
+  print_line(pixels[61i32])
+  print_line(pixels[62i32])
+  print_line(pixels[6i32])
+  print_line(pixels[7i32])
+  print_line(pixels[8i32])
+  print_line(pixels[9i32])
+  print_line(pixels[10i32])
+  print_line(pixels[11i32])
+  print_line(pixels[30i32])
+  print_line(pixels[31i32])
+  print_line(pixels[32i32])
+  print_line(pixels[3i32])
+  print_line(pixels[4i32])
+  print_line(pixels[5i32])
+  print_line(pixels[15i32])
+  print_line(pixels[16i32])
+  print_line(pixels[17i32])
+  print_line(pixels[54i32])
+  print_line(pixels[55i32])
+  print_line(pixels[56i32])
+  print_line(pixels[72i32])
+  print_line(pixels[73i32])
+  print_line(pixels[74i32])
+  return(plus(width, height))
+}
+)", escapedPath);
+  const std::string srcPath = writeTemp("compile_native_image_read_interlaced_rgb_png.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_rgb_png").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_rgb_png.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 10);
+  CHECK(readFile(outPath) ==
+        "5\n"
+        "5\n"
+        "75\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "160\n"
+        "52\n"
+        "104\n"
+        "28\n"
+        "200\n"
+        "44\n"
+        "80\n"
+        "26\n"
+        "180\n"
+        "120\n"
+        "39\n"
+        "14\n"
+        "14\n"
+        "100\n"
+        "22\n"
+        "40\n"
+        "13\n"
+        "90\n"
+        "7\n"
+        "50\n"
+        "11\n"
+        "141\n"
+        "189\n"
+        "47\n"
+        "188\n"
+        "252\n"
+        "148\n");
+}
+
+TEST_CASE("compiles and runs native png read for Adam7 interlaced indexed-color inputs") {
+  const std::string inPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_indexed.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x05,
+        0x02, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x0c, 0x50, 0x4c, 0x54,
+        0x45, 0x00, 0x00, 0x00, 0x40, 0x20, 0x10, 0x80,
+        0x60, 0x30, 0xff, 0xc8, 0x64, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x23, 0x49, 0x44, 0x41,
+        0x54, 0x78, 0x01, 0x01, 0x18, 0x00, 0xe7, 0xff,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
+        0x00, 0x80, 0x00, 0x88, 0x00, 0x70, 0x00, 0xd0,
+        0x00, 0x70, 0x00, 0x6c, 0x40, 0x00, 0xc6, 0xc0,
+        0x2b, 0x98, 0x05, 0x6b, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x00,
+    });
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = injectEscapedPath(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  print_line(pixels[12i32])
+  print_line(pixels[13i32])
+  print_line(pixels[14i32])
+  print_line(pixels[60i32])
+  print_line(pixels[61i32])
+  print_line(pixels[62i32])
+  print_line(pixels[6i32])
+  print_line(pixels[7i32])
+  print_line(pixels[8i32])
+  print_line(pixels[9i32])
+  print_line(pixels[10i32])
+  print_line(pixels[11i32])
+  print_line(pixels[30i32])
+  print_line(pixels[31i32])
+  print_line(pixels[32i32])
+  print_line(pixels[3i32])
+  print_line(pixels[4i32])
+  print_line(pixels[5i32])
+  print_line(pixels[15i32])
+  print_line(pixels[16i32])
+  print_line(pixels[17i32])
+  print_line(pixels[54i32])
+  print_line(pixels[55i32])
+  print_line(pixels[56i32])
+  print_line(pixels[72i32])
+  print_line(pixels[73i32])
+  print_line(pixels[74i32])
+  return(plus(width, height))
+}
+)", escapedPath);
+  const std::string srcPath = writeTemp("compile_native_image_read_interlaced_indexed_png.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_indexed_png").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_indexed_png.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 10);
+  CHECK(readFile(outPath) ==
+        "5\n"
+        "5\n"
+        "75\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "0\n"
+        "128\n"
+        "96\n"
+        "48\n"
+        "255\n"
+        "200\n"
+        "100\n"
+        "128\n"
+        "96\n"
+        "48\n"
+        "64\n"
+        "32\n"
+        "16\n"
+        "64\n"
+        "32\n"
+        "16\n"
+        "128\n"
+        "96\n"
+        "48\n"
+        "0\n"
+        "0\n"
+        "0\n");
+}
+
+TEST_CASE("compiles and rejects malformed Adam7 interlaced native png inputs") {
+  const std::string inPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_invalid.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x05,
+        0x08, 0x02, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x60, 0x49, 0x44, 0x41,
+        0x54, 0x78, 0x01, 0x01, 0x55, 0x00, 0xaa, 0xff,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0xa0, 0x34, 0x68,
+        0x00, 0x1c, 0xc8, 0x2c, 0xbc, 0xfc, 0x94, 0x00,
+        0x50, 0x1a, 0xb4, 0x00, 0x6c, 0xe2, 0xe0, 0x00,
+        0x0e, 0x64, 0x16, 0x5e, 0x7e, 0xca, 0xae, 0x98,
+        0x7e, 0x00, 0x28, 0x0d, 0x5a, 0x78, 0x27, 0x0e,
+        0x00, 0x36, 0x71, 0x70, 0x86, 0x8b, 0x24, 0x00,
+        0x44, 0xd5, 0x86, 0x94, 0xef, 0x3a, 0x00, 0x07,
+        0x32, 0x0b, 0x2f, 0x3f, 0x65, 0x57, 0x4c, 0xbf,
+        0x7f, 0x59, 0x19, 0xa7, 0x66, 0x73, 0x00, 0x15,
+        0x96, 0x21, 0x3d, 0xa3, 0x7b, 0x65, 0xb0, 0xd5,
+        0x8d, 0xbd, 0x2f, 0xb5, 0xca, 0xb0, 0x4e, 0x1e,
+        0xae, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x49, 0x45, 0x4e, 0x44, 0x00, 0x00, 0x00,
+        0x00,
     });
     std::ofstream file(inPath, std::ios::binary);
     REQUIRE(file.good());
@@ -4532,17 +4796,17 @@ main() {
   return(0i32)
 }
 )", escapedPath);
-  const std::string srcPath = writeTemp("compile_native_image_read_interlaced_unsupported_png.prime", source);
+  const std::string srcPath = writeTemp("compile_native_image_read_interlaced_invalid_png.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_unsupported_png").string();
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_invalid_png").string();
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_unsupported_png.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_interlaced_invalid_png.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath + " > " + outPath) == 0);
   CHECK(readFile(outPath) ==
-        "image_read_unsupported\n"
+        "image_invalid_operation\n"
         "0\n"
         "0\n"
         "0\n");
