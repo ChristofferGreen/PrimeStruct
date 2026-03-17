@@ -6722,6 +6722,45 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
+TEST_CASE("rejects vm bare vector capacity method without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values.capacity())
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_capacity_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_vector_capacity_method_import_requirement_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("rejects vm wrapper temporary vector capacity method without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32, 3i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().capacity())
+}
+)";
+  const std::string srcPath = writeTemp("vm_wrapper_vector_capacity_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_vector_capacity_method_import_requirement_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("runs vm with bare vector capacity after pop through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*

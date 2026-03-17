@@ -22106,7 +22106,7 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
-TEST_CASE("ir lowerer setup type helper keeps builtin count/capacity fallback when no override definition exists") {
+TEST_CASE("ir lowerer setup type helper keeps builtin count fallback and rejects bare vector capacity fallback") {
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;
   receiverExpr.name = "items";
@@ -22138,6 +22138,34 @@ TEST_CASE("ir lowerer setup type helper keeps builtin count/capacity fallback wh
             {},
             error) == nullptr);
   CHECK(error == "stale");
+
+  primec::Expr vectorReceiverExpr;
+  vectorReceiverExpr.kind = primec::Expr::Kind::Name;
+  vectorReceiverExpr.name = "values";
+
+  primec::ir_lowerer::LocalMap vectorLocals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  vectorLocals.emplace("values", valuesLocal);
+
+  methodCall.name = "capacity";
+  methodCall.args = {vectorReceiverExpr};
+  error = "stale";
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            vectorLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return std::string(); },
+            {},
+            error) == nullptr);
+  CHECK(error == "unknown method: /vector/capacity");
 
   methodCall.name = "at";
   primec::Expr indexArg;

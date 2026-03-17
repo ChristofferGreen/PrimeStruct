@@ -792,6 +792,9 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   const bool isBuiltinCountOrCapacityCall =
       isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count") ||
       isVectorBuiltinName(callExpr, "capacity");
+  const bool isBuiltinBareVectorCapacityMethod =
+      isSimpleCallName(callExpr, "capacity") &&
+      isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn);
   const bool isBuiltinVectorMutatorCall =
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
@@ -802,6 +805,7 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt");
   const bool allowBuiltinFallback =
       !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
+      !isBuiltinBareVectorCapacityMethod &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
        isBuiltinMapContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
@@ -1961,6 +1965,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const bool isBuiltinCountOrCapacityCall =
       isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count") ||
       isVectorBuiltinName(callExpr, "capacity");
+  const bool isBuiltinBareVectorCapacityMethod =
+      isSimpleCallName(callExpr, "capacity") &&
+      isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn);
   const bool isBuiltinVectorMutatorCall =
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
@@ -1971,6 +1978,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt");
   const bool allowBuiltinFallback =
       !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
+      !isBuiltinBareVectorCapacityMethod &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
        isBuiltinMapContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
