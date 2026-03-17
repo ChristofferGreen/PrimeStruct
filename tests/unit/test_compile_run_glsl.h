@@ -927,6 +927,93 @@ main() {
   CHECK(output.find("pc = (cond == 0) ?") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter rejects unavailable support-matrix math types") {
+  struct RejectCase {
+    const char *name;
+    const char *source;
+    const char *diagnostic;
+  };
+
+  const std::vector<RejectCase> cases = {
+      {
+          "mat2",
+          R"(
+import /std/math/*
+
+[return<void>]
+main() {
+  [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  return()
+}
+)",
+          "glsl backend does not support type: Mat2",
+      },
+      {
+          "mat3",
+          R"(
+import /std/math/*
+
+[return<void>]
+main() {
+  [Mat3] value{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  return()
+}
+)",
+          "glsl backend does not support type: Mat3",
+      },
+      {
+          "mat4",
+          R"(
+import /std/math/*
+
+[return<void>]
+main() {
+  [Mat4] value{Mat4(
+    1.0f32, 0.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 0.0f32, 1.0f32
+  )}
+  return()
+}
+)",
+          "glsl backend does not support type: Mat4",
+      },
+      {
+          "quat",
+          R"(
+import /std/math/*
+
+[return<void>]
+main() {
+  [Quat] value{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  return()
+}
+)",
+          "glsl backend does not support type: Quat",
+      },
+  };
+
+  for (const auto &testCase : cases) {
+    CAPTURE(testCase.name);
+    const std::string srcPath =
+        writeTemp(std::string("compile_glsl_support_matrix_reject_") + testCase.name + ".prime", testCase.source);
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() /
+         (std::string("primec_glsl_support_matrix_reject_") + testCase.name + ".err"))
+            .string();
+
+    const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) +
+                                   " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(compileCmd) != 0);
+    CHECK(readFile(errPath).find(testCase.diagnostic) != std::string::npos);
+  }
+}
+
 TEST_CASE("glsl emitter handles math constants") {
   const std::string source = R"(
 [return<void>]
