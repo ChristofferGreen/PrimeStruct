@@ -73,8 +73,9 @@ semantics after canonicalization.
   a shared canonical gfx launch helper, the native window host runtime shell
   now lives in a shared presenter helper, the Metal launcher now delegates to
   a shared metal launch helper, the Metal offscreen runtime shell now lives in
-  a shared helper, and broader backend conformance plus the remaining browser
-  launcher-thinning slice remain staged.
+  a shared helper, the browser launcher now delegates to a shared browser
+  launch helper, the browser runtime shell now lives in a shared JS helper,
+  and broader backend conformance remains staged.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
   Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with
@@ -102,8 +103,7 @@ stdlib in this repo ships vector/color math only; matrix/quaternion contracts
 are now documented but still pending backend/runtime support. The `/std/gfx/*`
 rendering surface shown below (including `VertexColored`) now has an initial
 helper-backed `.prime` implementation, but still needs broader
-backend/runtime coverage plus the remaining browser launcher-thinning
-work on top of the current unsupported-backend diagnostics.
+backend/runtime coverage on top of the current unsupported-backend diagnostics.
 
 ```prime
 import /std/math/*

@@ -10,7 +10,8 @@ This example is a milestone target for cross-platform backend work.
 ## Current Native Status (Parity Gap)
 - Native emit `/main` is currently unsupported (`native backend does not support return type on /cubeInit`).
 - Native smoke runs through `/mainNative` and `examples/native/spinning_cube/main.cpp`.
-- For a visible rotating window today, use the browser path (`index.html` + `main.js`).
+- For a visible rotating window today, use the browser path
+  (`/spinning_cube/index.html` + the thin `main.js` wrapper).
 - macOS now has a real native window host sample at
   `examples/native/spinning_cube/window_host.mm` (window/layer/render-loop bring-up).
 - Windowed native parity target is tracked in `docs/todo.md` under `Native Windowed Spinning Cube (Roadmap)`.
@@ -28,7 +29,11 @@ This example is a milestone target for cross-platform backend work.
 ## Planned Artifacts
 - `cube.prime`: PrimeStruct source for cube transform/update logic.
 - `index.html`: minimal host page and canvas bootstrap.
-- `main.js`: browser runtime glue (load `.wasm`, bind uniforms/buffers, drive frame loop).
+- `main.js`: thin browser sample bootstrap that binds selectors/assets onto the
+  shared browser runtime helper.
+- `examples/web/shared/browser_runtime_shared.js`: shared browser runtime
+  helper that loads `.wasm`, validates shader/bootstrap assets, updates status
+  text, and drives the deterministic proxy frame loop.
 - `cube.wgsl` (or generated shader output): shader module used by the browser graphics backend.
 - `cube_native` (or platform equivalent): native executable produced from the same sample logic.
 - `cube.metal` (or generated Metal shader output): shader module for macOS Metal path.
@@ -58,9 +63,12 @@ This example is a milestone target for cross-platform backend work.
 
 ## Current Browser Host Assets
 - `index.html` provides the canvas shell and module bootstrap.
-- `main.js` loads `cube.wasm` when present and renders a deterministic
-  wireframe cube proxy so host bootstrap can be smoke-tested before WebGPU
-  integration lands.
+- `main.js` is now only a thin sample wrapper over
+  `examples/web/shared/browser_runtime_shared.js`.
+- `examples/web/shared/browser_runtime_shared.js` loads `cube.wasm` when
+  present, validates `cube.wgsl`, updates deterministic status text, and
+  renders the wireframe cube proxy so host bootstrap can be smoke-tested
+  before WebGPU integration lands.
 - `cube.wgsl` is the minimal WebGPU shader path for the browser profile.
 - `examples/metal/spinning_cube/cube.metal` is the minimal macOS Metal shader
   path (`metal-osx` profile artifact path).
@@ -102,7 +110,9 @@ This example is a milestone target for cross-platform backend work.
 - CI/compile-run integration coverage builds:
   - `cube.wasm` (browser profile)
   - `cube_native` (native profile)
-  - loader assets (`index.html`, `main.js`, `cube.wgsl`)
+  - loader assets (`spinning_cube/index.html`, `spinning_cube/main.js`,
+    `spinning_cube/cube.wgsl`, `spinning_cube/cube.wasm`, and
+    `shared/browser_runtime_shared.js`)
   - optional macOS shader outputs (`cube.air`, `cube.metallib`) when `xcrun`
     is available.
 - The integration test emits an `artifact_manifest.json` with per-artifact size
@@ -121,15 +131,33 @@ This example is a milestone target for cross-platform backend work.
 ### Browser
 ```bash
 ./primec --emit=wasm --wasm-profile browser examples/web/spinning_cube/cube.prime -o examples/web/spinning_cube/cube.wasm --entry /main
-python3 -m http.server 8080 --bind 127.0.0.1 --directory examples/web/spinning_cube
+python3 -m http.server 8080 --bind 127.0.0.1 --directory examples/web
 ```
-Open `http://127.0.0.1:8080/`.
+Open `http://127.0.0.1:8080/spinning_cube/index.html`.
 
 Expected runtime behavior:
 - Startup: page title and canvas appear, then status text reports host bootstrap.
 - Controls: none yet (v1 sample has no camera/input bindings).
 - FPS/diagnostic overlay: status text under the canvas is the current
   diagnostics surface (no dedicated FPS counter yet).
+- The sample `main.js` now only binds `#cube-canvas`, `#status`, and the local
+  asset URLs onto `examples/web/shared/browser_runtime_shared.js`.
+
+### Browser Launcher
+```bash
+./scripts/run_browser_spinning_cube.sh --primec ./build-debug/primec
+./scripts/run_browser_spinning_cube.sh --primec ./build-debug/primec --headless-smoke
+```
+- The sample wrapper now delegates its reusable compile/stage/serve/headless
+  smoke flow to `scripts/run_canonical_browser_sample.sh`.
+- The launcher stages a root directory that contains both
+  `spinning_cube/index.html` assets and the sibling shared helper
+  `shared/browser_runtime_shared.js`, so the browser path no longer depends on
+  serving the sample directory in isolation.
+- `--headless-smoke` compiles `cube.wasm`, stages the browser root, serves it
+  locally, and verifies the deterministic status text
+  `Host running with cube.wasm and cube.wgsl bootstrap.` when browser tooling
+  is available.
 
 ### Native
 ```bash

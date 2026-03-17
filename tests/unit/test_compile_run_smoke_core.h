@@ -3777,7 +3777,17 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
     CHECK(primeStructDoc.find("offscreen runtime shell lives in one shared helper") != std::string::npos);
     CHECK(guidelinesDoc.find("Metal launcher now delegates to") != std::string::npos);
     CHECK(guidelinesDoc.find("shared metal launch helper") != std::string::npos);
-    CHECK(guidelinesDoc.find("remaining browser") != std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-V1-BROWSER-HOST-LAUNCHER-THINNING-STATUS");
+    CHECK(graphicsDoc.find("browser runtime shell now lives in") != std::string::npos);
+    CHECK(graphicsDoc.find("browser sample launcher now delegates to") != std::string::npos);
+    CHECK(primeStructDoc.find("browser sample launcher now also delegates to one shared browser launch helper") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("browser_runtime_shared.js") != std::string::npos);
+    CHECK(guidelinesDoc.find("shared browser launch helper") != std::string::npos);
+    CHECK(guidelinesDoc.find("shared JS helper") != std::string::npos);
   }
 
   {

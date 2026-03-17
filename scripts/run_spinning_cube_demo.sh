@@ -98,85 +98,49 @@ set_result() {
   fi
 }
 
-find_browser() {
-  local candidates=(chromium google-chrome chrome google-chrome-stable)
-  local candidate=""
-  for candidate in "${candidates[@]}"; do
-    if "$candidate" --version >/dev/null 2>&1; then
-      echo "$candidate"
-      return 0
-    fi
-  done
-  return 1
-}
-
 run_web_check() {
-  local sample_dir="$ROOT_DIR/examples/web/spinning_cube"
   local web_dir="$WORK_DIR/web"
-  local wasm_path="$web_dir/cube.wasm"
-  local browser_dom="$web_dir/browser.dom.txt"
-  local browser_err="$web_dir/browser.err.txt"
-  local server_log="$web_dir/server.log"
-  local browser_cmd=""
+  local launcher_script="$ROOT_DIR/scripts/run_browser_spinning_cube.sh"
+  local launcher_out="$web_dir/browser_launcher.out.txt"
+  local launcher_err="$web_dir/browser_launcher.err.txt"
   local port=$((PORT_BASE + 0))
 
-  if [[ ! -f "$sample_dir/cube.prime" || ! -f "$sample_dir/index.html" || ! -f "$sample_dir/main.js" || ! -f "$sample_dir/cube.wgsl" ]]; then
-    set_result web FAIL "missing spinning cube web sample files"
-    return
-  fi
-
-  if ! python3 --version >/dev/null 2>&1; then
-    set_result web SKIP "python3 unavailable"
-    return
-  fi
-
-  if ! browser_cmd="$(find_browser)"; then
-    set_result web SKIP "headless browser unavailable"
-    return
-  fi
-
-  if ! "$browser_cmd" --headless --disable-gpu --dump-dom about:blank >/dev/null 2>&1; then
-    set_result web SKIP "browser headless mode unavailable"
+  if [[ ! -f "$launcher_script" ]]; then
+    set_result web FAIL "missing spinning cube browser launcher"
     return
   fi
 
   rm -rf "$web_dir"
   mkdir -p "$web_dir"
 
-  if ! "$PRIMEC_BIN" --emit=wasm --wasm-profile browser "$sample_dir/cube.prime" -o "$wasm_path" --entry /main; then
-    set_result web FAIL "failed to compile cube.wasm"
+  if ! "$launcher_script" --primec "$PRIMEC_BIN" --out-dir "$web_dir" --port "$port" --headless-smoke \
+      >"$launcher_out" 2>"$launcher_err"; then
+    if grep -Fq "failed to compile cube.wasm" "$launcher_err"; then
+      set_result web FAIL "failed to compile cube.wasm"
+      return
+    fi
+    set_result web FAIL "browser launcher execution failed"
     return
   fi
 
-  cp "$sample_dir/index.html" "$web_dir/index.html"
-  cp "$sample_dir/main.js" "$web_dir/main.js"
-  cp "$sample_dir/cube.wgsl" "$web_dir/cube.wgsl"
-
-  python3 -m http.server "$port" --bind 127.0.0.1 --directory "$web_dir" >"$server_log" 2>&1 &
-  local server_pid=$!
-  sleep 1
-
-  if ! "$browser_cmd" --headless --disable-gpu --virtual-time-budget=6000 --dump-dom \
-      "http://127.0.0.1:${port}/index.html" >"$browser_dom" 2>"$browser_err"; then
-    kill "$server_pid" >/dev/null 2>&1 || true
-    wait "$server_pid" 2>/dev/null || true
-    set_result web FAIL "headless browser execution failed"
+  if grep -Fq "SMOKE: SKIP python3 unavailable" "$launcher_out"; then
+    set_result web SKIP "python3 unavailable"
+    return
+  fi
+  if grep -Fq "SMOKE: SKIP headless browser unavailable" "$launcher_out"; then
+    set_result web SKIP "headless browser unavailable"
+    return
+  fi
+  if grep -Fq "SMOKE: SKIP browser headless mode unavailable" "$launcher_out"; then
+    set_result web SKIP "browser headless mode unavailable"
+    return
+  fi
+  if grep -Fq "PASS: wasm bootstrap status verified" "$launcher_out"; then
+    set_result web PASS "wasm bootstrap status verified"
     return
   fi
 
-  kill "$server_pid" >/dev/null 2>&1 || true
-  wait "$server_pid" 2>/dev/null || true
-
-  if ! grep -Fq "Host running with cube.wasm and cube.wgsl bootstrap." "$browser_dom"; then
-    set_result web FAIL "missing wasm bootstrap status text"
-    return
-  fi
-  if grep -Fq "Wasm load skipped" "$browser_dom"; then
-    set_result web FAIL "found wasm fallback status text"
-    return
-  fi
-
-  set_result web PASS "wasm bootstrap status verified"
+  set_result web FAIL "missing browser launcher success marker"
 }
 
 run_native_check() {
