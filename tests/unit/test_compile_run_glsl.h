@@ -927,24 +927,115 @@ main() {
   CHECK(output.find("pc = (cond == 0) ?") != std::string::npos);
 }
 
-TEST_CASE("glsl emitter rejects remaining unavailable support-matrix quaternion types") {
+TEST_CASE("glsl emitter lowers quaternion nominal values and quaternion operators") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<void>]
+main() {
+  [Quat] raw{Quat(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Quat] other{Quat(0.5f32, 1.5f32, 0.25f32, 2.0f32)}
+  [Quat] normalized{raw.toNormalized()}
+  [Quat] sum{plus(raw, other)}
+  [Quat] diff{minus(raw, other)}
+  [Quat] scaled{multiply(2i32, raw)}
+  [Quat] divided{divide(other, 2.0f32)}
+  [Quat] product{multiply(raw, other)}
+  [Vec3] rotated{multiply(raw, Vec3(1.0f32, 0.0f32, 0.0f32))}
+  [f32] sample{plus(normalized.x, plus(sum.w, plus(diff.y, plus(scaled.z, plus(divided.w, plus(product.x, rotated.y))))))}
+  [i32 mut] sink{0i32}
+  if(true, then() { assign(sink, convert<int>(sample)) }, else() { })
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_support_quaternion_nominal_values.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_support_quaternion_nominal_values.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
+                                 " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("const vec4 raw = vec4(1.0, 2.0, 3.0, 4.0);") != std::string::npos);
+  CHECK(output.find("const vec4 other = vec4(0.5, 1.5, 0.25, 2.0);") != std::string::npos);
+  CHECK(output.find("_ps_quat_norm_") != std::string::npos);
+  CHECK(output.find("dot(_ps_quat_") != std::string::npos);
+  CHECK(output.find("const vec4 sum = (raw + other);") != std::string::npos);
+  CHECK(output.find("const vec4 diff = (raw - other);") != std::string::npos);
+  CHECK(output.find("const vec4 scaled = (float(2) * raw);") != std::string::npos);
+  CHECK(output.find("const vec4 divided = (other / 2.0);") != std::string::npos);
+  CHECK(output.find("const vec4 product = vec4(") != std::string::npos);
+  CHECK(output.find("(raw).w * (other).x") != std::string::npos);
+  CHECK(output.find("(raw).w * (other).w") != std::string::npos);
+  CHECK(output.find("const vec3 rotated = (") != std::string::npos);
+  CHECK(output.find("* vec3(1.0, 0.0, 0.0)") != std::string::npos);
+  CHECK(output.find("(normalized).x") != std::string::npos);
+  CHECK(output.find("(sum).w") != std::string::npos);
+  CHECK(output.find("(product).x") != std::string::npos);
+  CHECK(output.find("(rotated).y") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter lowers quaternion conversion helpers") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<void>]
+main() {
+  [Quat] raw{Quat(0.0f32, 0.0f32, 0.70710677f32, 0.70710677f32)}
+  [Mat3] basis3{quat_to_mat3(raw)}
+  [Mat4] basis4{quat_to_mat4(raw)}
+  [Quat] restored{mat3_to_quat(basis3)}
+  [Quat] zero{Quat(0.0f32, 0.0f32, 0.0f32, 0.0f32).normalize()}
+  [f32] sample{plus(basis3.m01, plus(basis4.m33, plus(restored.w, zero.x)))}
+  [i32 mut] sink{0i32}
+  if(true, then() { assign(sink, convert<int>(sample)) }, else() { })
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_support_quaternion_helpers.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_support_quaternion_helpers.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
+                                 " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("const vec4 raw = vec4(0.0, 0.0, 0.70710677, 0.70710677);") != std::string::npos);
+  CHECK(output.find("const mat3 basis3 = mat3(") != std::string::npos);
+  CHECK(output.find("const mat4 basis4 = mat4(") != std::string::npos);
+  CHECK(output.find("_ps_mat3_trace_") != std::string::npos);
+  CHECK(output.find("_ps_mat3_to_quat_raw_") != std::string::npos);
+  CHECK(output.find("const vec4 restored = _ps_mat3_to_quat_") != std::string::npos);
+  CHECK(output.find("const vec4 zero = _ps_quat_norm_") != std::string::npos);
+  CHECK(output.find("const float sample = ") != std::string::npos);
+  CHECK(output.find("(basis3)[1][0]") != std::string::npos);
+  CHECK(output.find("(basis4)[3][3]") != std::string::npos);
+  CHECK(output.find("(restored).w") != std::string::npos);
+  CHECK(output.find("(zero).x") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter surfaces quaternion shape diagnostics") {
   const std::string source = R"(
 import /std/math/*
 
 [return<void>]
 main() {
   [Quat] value{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Vec4] wrong{Vec4(1.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [auto] bad{multiply(value, wrong)}
   return()
 }
 )";
-  const std::string srcPath = writeTemp("compile_glsl_support_matrix_reject_quat.prime", source);
+  const std::string srcPath = writeTemp("compile_glsl_support_quaternion_shape_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_reject_quat.err").string();
+      (std::filesystem::temp_directory_path() / "primec_glsl_support_quaternion_shape_reject.err").string();
 
   const std::string compileCmd =
       "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("glsl backend does not support type: Quat") != std::string::npos);
+  CHECK(readFile(errPath).find(
+            "multiply requires scalar scaling, matrix-vector, matrix-matrix, quaternion-quaternion, or quaternion-Vec3 operands") !=
+        std::string::npos);
 }
 
 TEST_CASE("glsl emitter lowers matrix nominal values field access and matrix operators") {

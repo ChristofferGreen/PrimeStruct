@@ -266,6 +266,9 @@ GlslType glslTypeFromName(const std::string &name, EmitState &state, std::string
   if (name == "Vec4") {
     return GlslType::Vec4;
   }
+  if (name == "Quat") {
+    return GlslType::Quat;
+  }
   if (name == "Mat2") {
     return GlslType::Mat2;
   }
@@ -301,6 +304,8 @@ std::string glslTypeName(GlslType type) {
     return "vec3";
   case GlslType::Vec4:
     return "vec4";
+  case GlslType::Quat:
+    return "vec4";
   case GlslType::Mat2:
     return "mat2";
   case GlslType::Mat3:
@@ -320,6 +325,10 @@ bool isNumericType(GlslType type) {
 
 bool isVectorType(GlslType type) {
   return type == GlslType::Vec2 || type == GlslType::Vec3 || type == GlslType::Vec4;
+}
+
+bool isQuaternionType(GlslType type) {
+  return type == GlslType::Quat;
 }
 
 bool isMatrixType(GlslType type) {

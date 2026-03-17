@@ -21,6 +21,7 @@ enum class GlslType {
   Vec2,
   Vec3,
   Vec4,
+  Quat,
   Mat2,
   Mat3,
   Mat4,
@@ -66,6 +67,7 @@ GlslType glslTypeFromName(const std::string &name, EmitState &state, std::string
 std::string glslTypeName(GlslType type);
 bool isNumericType(GlslType type);
 bool isVectorType(GlslType type);
+bool isQuaternionType(GlslType type);
 bool isMatrixType(GlslType type);
 bool isIntegerType(GlslType type);
 bool isSignedInteger(GlslType type);
