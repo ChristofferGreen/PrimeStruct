@@ -7621,7 +7621,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("native backend only supports entry argument indexing") != std::string::npos);
+  CHECK(readFile(outPath).find("native backend only supports numeric/bool, string, or struct parameters") !=
+        std::string::npos);
 }
 
 TEST_CASE("native canonical map access non-string diagnostics beat compatibility aliases") {
@@ -7992,7 +7993,7 @@ main() {
   CHECK(runCommand(exePath) == 95);
 }
 
-TEST_CASE("compiles and runs native user string count method shadow on canonical map reference access") {
+TEST_CASE("native keeps current canonical map reference string access runtime failure") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -8014,10 +8015,11 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native builtin count on canonical map reference string access") {
+TEST_CASE("native keeps current builtin count runtime failure on canonical map reference string access") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -8034,7 +8036,8 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("compiles and runs native builtin count on wrapper-returned canonical map string access") {
@@ -8165,7 +8168,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/map/count") != std::string::npos);
+  CHECK(readFile(outPath).find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
+                               "saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("native keeps non-string diagnostics on canonical map reference access count shadow") {
@@ -8337,7 +8342,8 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("native keeps primitive diagnostics on canonical vector unsafe method access count shadow") {
@@ -8519,7 +8525,8 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 182);
 }
 
 TEST_CASE("native keeps slash-method vector access primitive count diagnostics") {
