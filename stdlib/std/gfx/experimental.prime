@@ -65,7 +65,7 @@ namespace std {
       return(Queue([token] plus(this.token, 1i32)))
     }
 
-    [public return<Result<Swapchain, GfxError>>]
+    [public return<Result<Swapchain, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
     create_swapchain([Window] window,
                      [ColorFormat] color_format,
                      [DepthFormat] depth_format,
@@ -92,7 +92,7 @@ namespace std {
               [presentMode] present_mode)))
     }
 
-    [public return<Result<Mesh, GfxError>>]
+    [public return<Result<Mesh, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
     create_mesh([array<VertexColored>] vertices, [array<i32>] indices) {
       [i32] vertexCount{count(vertices)}
       [i32] indexCount{count(indices)}
@@ -115,7 +115,7 @@ namespace std {
               [indexCount] indexCount)))
     }
 
-    [public return<Result<Pipeline, GfxError>>]
+    [public return<Result<Pipeline, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
     create_pipeline_VertexColored([ShaderLibrary] shader,
                                   [ColorFormat] color_format,
                                   [DepthFormat] depth_format) {
@@ -147,7 +147,7 @@ namespace std {
     [public DepthFormat] depthFormat{DepthFormat(0i32)}
     [public PresentMode] presentMode{PresentMode(0i32)}
 
-    [public return<Result<Frame, GfxError>>]
+    [public return<Result<Frame, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
     frame() {
       if(less_than(this.token, 1i32)) {
         return(gfxErrorResult<Frame>(frameAcquireFailed()))
@@ -384,6 +384,11 @@ namespace std {
     return(multiply(convert<i64>(err.code), 4294967296i64))
   }
 
+  [return<void>]
+  ignoreGfxError([GfxError] err) {
+    return()
+  }
+
   namespace GraphicsSubstrate {
     [public return<Result<i32, GfxError>>]
     createWindow([SubstrateWindowConfig] config) {
@@ -495,7 +500,7 @@ namespace std {
     }
   }
 
-  [return<Result<Window, GfxError>>]
+  [return<Result<Window, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
   windowCreate([string] title, [i32] width, [i32] height) {
     [SubstrateWindowConfig] config{
       SubstrateWindowConfig([hostToken] 1i32, [width] width, [height] height)
@@ -504,7 +509,7 @@ namespace std {
     return(Result.ok(Window([token] windowToken, [width] width, [height] height)))
   }
 
-  [return<Result<Device, GfxError>>]
+  [return<Result<Device, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
   deviceCreate() {
     [Window] window{Window([token] 1i32, [width] 1i32, [height] 1i32)}
     [SubstrateDeviceConfig] config{

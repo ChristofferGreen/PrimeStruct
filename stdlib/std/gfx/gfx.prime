@@ -64,7 +64,7 @@ namespace std {
       return(Queue([token] plus(this.token, 1i32)))
     }
 
-    [public return<Result<Swapchain, GfxError>>]
+    [public return<Result<Swapchain, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
     create_swapchain([Window] window,
                      [ColorFormat] color_format,
                      [DepthFormat] depth_format,
@@ -80,7 +80,7 @@ namespace std {
               [presentMode] present_mode)))
     }
 
-    [public return<Result<Mesh, GfxError>>]
+    [public return<Result<Mesh, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
     create_mesh([array<VertexColored>] vertices, [array<i32>] indices) {
       [i32] vertexCount{count(vertices)}
       [i32] indexCount{count(indices)}
@@ -95,7 +95,7 @@ namespace std {
               [indexCount] indexCount)))
     }
 
-    [public return<Result<Pipeline, GfxError>>]
+    [public return<Result<Pipeline, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
     create_pipeline_VertexColored([ShaderLibrary] shader,
                                   [ColorFormat] color_format,
                                   [DepthFormat] depth_format) {
@@ -119,7 +119,7 @@ namespace std {
     [public DepthFormat] depthFormat{DepthFormat(0i32)}
     [public PresentMode] presentMode{PresentMode(0i32)}
 
-    [public return<Result<Frame, GfxError>>]
+    [public return<Result<Frame, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
     frame() {
       if(less_than(this.token, 1i32)) {
         return(gfxErrorResult<Frame>(frameAcquireFailed()))
@@ -206,7 +206,7 @@ namespace std {
   Pipeline() {
     [public i32] token{0i32}
 
-    [public return<Result<Material, GfxError>>]
+    [public return<Result<Material, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
     material() {
       if(less_than(this.token, 1i32)) {
         return(gfxErrorResult<Material>(materialCreateFailed()))
@@ -269,7 +269,12 @@ namespace std {
     return(multiply(convert<i64>(err.code), 4294967296i64))
   }
 
-  [return<Result<Window, GfxError>>]
+  [return<void>]
+  ignoreGfxError([GfxError] err) {
+    return()
+  }
+
+  [return<Result<Window, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
   windowCreate([string] title, [i32] width, [i32] height) {
     if(or(less_than(width, 1i32), less_than(height, 1i32))) {
       return(gfxErrorResult<Window>(windowCreateFailed()))
@@ -277,7 +282,7 @@ namespace std {
     return(Result.ok(Window([token] 1i32, [width] width, [height] height)))
   }
 
-  [return<Result<Device, GfxError>>]
+  [return<Result<Device, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
   deviceCreate() {
     [i32] deviceToken{2i32}
     [i32] queueToken{3i32}

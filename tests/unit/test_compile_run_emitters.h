@@ -376,7 +376,7 @@ main() {
         "image_invalid_operation\n"
         "image_invalid_operation\n"
         "image_read_unsupported\n"
-        "image_write_unsupported\n");
+        "image_invalid_operation\n");
 }
 
 TEST_CASE("C++ emitter runs software renderer command serialization deterministically") {

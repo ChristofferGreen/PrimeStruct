@@ -1,3 +1,5 @@
+import /std/math/*
+
 namespace std {
   namespace image {
   [public struct]
@@ -1181,7 +1183,7 @@ namespace std {
         if(less_than(byteIndex, count(previousRowBytes)),
            then() { assign(upByte, previousRowBytes[byteIndex]) },
            else() { })
-        if(and(greater_equal(byteIndex, bytesPerPixel), less_than(minus(byteIndex, bytesPerPixel), count(previousRowBytes)))),
+        if(and(greater_equal(byteIndex, bytesPerPixel), less_than(minus(byteIndex, bytesPerPixel), count(previousRowBytes))),
            then() { assign(upLeftByte, previousRowBytes[minus(byteIndex, bytesPerPixel)]) },
            else() { })
         if(and(equal(filterType, 1i32), greater_equal(byteIndex, bytesPerPixel)),
@@ -2651,7 +2653,7 @@ namespace std {
              push(ihdrBytes, 0i32)
              push(ihdrBytes, 0i32)
              push(ihdrBytes, interlace)
-             if(not(pngChunkCrcMatches(typeA, typeB, typeC, typeD, ihdrBytes, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD))),
+             if(not(pngChunkCrcMatches(typeA, typeB, typeC, typeD, ihdrBytes, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD)),
                 then() { return(1i32) },
                 else() { })
            },

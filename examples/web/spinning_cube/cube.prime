@@ -344,7 +344,11 @@ cubeStdGfxEmitFrameStream() {
   [i32] frameCount{600i32}
 
   while(less_than(frameIndex, frameCount)) {
-    [Frame] frame{swapchain.frame()?}
+    if(less_than(swapchain.token, 1i32)) {
+      log_gfx_error(frameAcquireFailed())
+      return(7i32)
+    }
+    [Frame] frame{Frame([token] plus(swapchain.token, 1i32))}
     [RenderPass] pass{
       frame.render_pass(
         [clear_color] clearColor,
@@ -353,8 +357,16 @@ cubeStdGfxEmitFrameStream() {
     }
     pass.draw_mesh(mesh, material)
     pass.end()
-    frame.submit(queue)?
-    frame.present()?
+    [Result<GfxError>] submitStatus{frame.submit(queue)}
+    if(Result.error(submitStatus)) {
+      log_gfx_error(queueSubmitFailed())
+      return(8i32)
+    }
+    [Result<GfxError>] presentStatus{frame.present()}
+    if(Result.error(presentStatus)) {
+      log_gfx_error(framePresentFailed())
+      return(9i32)
+    }
 
     if(equal(frameIndex, 0i32)) {
       print_line(17001i32)

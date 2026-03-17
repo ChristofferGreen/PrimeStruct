@@ -600,7 +600,8 @@ bool SemanticsValidator::validateDefinitions() {
           }
           effectScope.emplace(*this, std::move(executionEffects));
         }
-        if (!expr.isBinding && !expr.name.empty() && !isBuiltinCall(expr)) {
+        if (!expr.isBinding && !expr.name.empty() && !expr.isMethodCall && !expr.isFieldAccess &&
+            !isBuiltinCall(expr)) {
           std::string reflectionDiagnostic;
           if (describeReflectionCallDiagnostic(expr, definitionParams, definitionLocals, reflectionDiagnostic)) {
             appendDefinitionRecord(expr, std::move(reflectionDiagnostic));
@@ -1763,7 +1764,8 @@ bool SemanticsValidator::validateExecutions() {
           }
           effectScope.emplace(*this, std::move(executionEffects));
         }
-        if (!expr.isBinding && !expr.name.empty() && !isBuiltinCall(expr)) {
+        if (!expr.isBinding && !expr.name.empty() && !expr.isMethodCall && !expr.isFieldAccess &&
+            !isBuiltinCall(expr)) {
           std::string reflectionDiagnostic;
           if (describeReflectionCallDiagnostic(expr, executionParams, executionLocals, reflectionDiagnostic)) {
             appendExecutionRecord(expr, std::move(reflectionDiagnostic));

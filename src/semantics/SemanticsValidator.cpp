@@ -317,6 +317,7 @@ bool SemanticsValidator::run() {
 }
 
 bool SemanticsValidator::allowMathBareName(const std::string &name) const {
+  (void)name;
   if (name.empty() || name.find('/') != std::string::npos) {
     return false;
   }
@@ -325,7 +326,7 @@ bool SemanticsValidator::allowMathBareName(const std::string &name) const {
       return true;
     }
   }
-  return mathImportAll_ || mathImports_.count(name) > 0;
+  return hasAnyMathImport();
 }
 
 bool SemanticsValidator::hasAnyMathImport() const {

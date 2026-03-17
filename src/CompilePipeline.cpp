@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -64,53 +65,176 @@ bool shouldAutoIncludeStdlib(const std::string &source) {
   return false;
 }
 
-bool appendStdlibSources(const std::vector<std::string> &importPaths,
-                         std::string &source,
-                         std::string &error) {
+bool isIgnorableImportToken(TokenKind kind) {
+  return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
+}
+
+std::vector<std::string> collectStdImportPaths(const std::string &source) {
+  std::vector<std::string> imports;
+  Lexer lexer(source);
+  const std::vector<Token> tokens = lexer.tokenize();
+  auto skipIgnorableTokens = [&](size_t cursor) {
+    while (cursor < tokens.size() && isIgnorableImportToken(tokens[cursor].kind)) {
+      ++cursor;
+    }
+    return cursor;
+  };
+  for (size_t scan = 0; scan < tokens.size(); ++scan) {
+    if (tokens[scan].kind != TokenKind::KeywordImport) {
+      continue;
+    }
+    size_t cursor = skipIgnorableTokens(scan + 1);
+    while (cursor < tokens.size()) {
+      if (tokens[cursor].kind != TokenKind::Identifier || tokens[cursor].text.empty() ||
+          tokens[cursor].text[0] != '/') {
+        break;
+      }
+      std::string path = tokens[cursor].text;
+      size_t next = skipIgnorableTokens(cursor + 1);
+      if (!path.empty() && path.back() == '/' && next < tokens.size() && tokens[next].kind == TokenKind::Star) {
+        path.pop_back();
+        path += "/*";
+        cursor = next + 1;
+      } else {
+        ++cursor;
+      }
+      if (path.rfind("/std/", 0) == 0 || path == "/std") {
+        imports.push_back(std::move(path));
+      }
+      cursor = skipIgnorableTokens(cursor);
+    }
+  }
+  return imports;
+}
+
+std::string normalizeStdlibAutoIncludeKey(const std::string &importPath) {
+  if (importPath.rfind("/std/gfx/experimental", 0) == 0) {
+    return "/std/gfx/experimental";
+  }
+  if (importPath.rfind("/std/gfx", 0) == 0) {
+    return "/std/gfx";
+  }
+  if (importPath.rfind("/std/", 0) != 0) {
+    return "";
+  }
+  const size_t moduleStart = std::string("/std/").size();
+  size_t moduleEnd = importPath.find('/', moduleStart);
+  if (moduleEnd == std::string::npos) {
+    moduleEnd = importPath.size();
+  }
+  return importPath.substr(0, moduleEnd);
+}
+
+bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
+                               const std::vector<std::string> &sourceImports,
+                               std::string &source,
+                               std::string &error) {
   std::error_code ec;
-  std::unordered_set<std::string> seen;
+  std::deque<std::string> pendingKeys;
+  std::unordered_set<std::string> queuedKeys;
+  for (const auto &importPath : sourceImports) {
+    const std::string key = normalizeStdlibAutoIncludeKey(importPath);
+    if (!key.empty() && queuedKeys.insert(key).second) {
+      pendingKeys.push_back(key);
+    }
+  }
+  if (pendingKeys.empty()) {
+    return true;
+  }
+
+  std::unordered_set<std::string> seenFiles;
+  std::unordered_set<std::string> processedKeys;
   bool appended = false;
-  for (const auto &pathText : importPaths) {
-    std::filesystem::path root(pathText);
-    if (root.filename() != "stdlib") {
+  while (!pendingKeys.empty()) {
+    const std::string key = pendingKeys.front();
+    pendingKeys.pop_front();
+    if (!processedKeys.insert(key).second) {
       continue;
     }
-    if (!std::filesystem::exists(root, ec) || !std::filesystem::is_directory(root, ec)) {
-      continue;
-    }
-    for (const auto &entry : std::filesystem::recursive_directory_iterator(root, ec)) {
-      if (ec) {
-        error = "failed to scan stdlib: " + root.string();
-        return false;
-      }
-      if (!entry.is_regular_file(ec)) {
+
+    for (const auto &pathText : importPaths) {
+      std::filesystem::path root(pathText);
+      if (root.filename() != "stdlib") {
         continue;
       }
-      if (entry.path().extension() != ".prime") {
+      if (!std::filesystem::exists(root, ec) || !std::filesystem::is_directory(root, ec)) {
         continue;
       }
-      std::filesystem::path absolute = std::filesystem::absolute(entry.path(), ec);
-      if (ec) {
-        absolute = entry.path();
+
+      std::filesystem::path moduleRoot;
+      bool appendSpecificFile = false;
+      if (key == "/std/gfx/experimental") {
+        moduleRoot = root / "std" / "gfx" / "experimental.prime";
+        appendSpecificFile = true;
+      } else if (key == "/std/gfx") {
+        moduleRoot = root / "std" / "gfx" / "gfx.prime";
+        appendSpecificFile = true;
+      } else {
+        const std::string relative = key.substr(std::string("/std/").size());
+        moduleRoot = root / "std" / relative;
       }
-      std::string absoluteText = absolute.string();
-      if (!seen.insert(absoluteText).second) {
+      if (!std::filesystem::exists(moduleRoot, ec)) {
         continue;
       }
-      std::ifstream file(absoluteText);
-      if (!file) {
-        error = "failed to read stdlib file: " + absoluteText;
-        return false;
+
+      auto appendFile = [&](const std::filesystem::path &filePath) -> bool {
+        std::filesystem::path absolute = std::filesystem::absolute(filePath, ec);
+        if (ec) {
+          absolute = filePath;
+        }
+        const std::string absoluteText = absolute.string();
+        if (!seenFiles.insert(absoluteText).second) {
+          return true;
+        }
+        std::ifstream file(absoluteText);
+        if (!file) {
+          error = "failed to read stdlib file: " + absoluteText;
+          return false;
+        }
+        std::ostringstream buffer;
+        buffer << file.rdbuf();
+        const std::string contents = buffer.str();
+        source.append("\n");
+        source.append(contents);
+        appended = true;
+
+        const std::vector<std::string> nestedImports = collectStdImportPaths(contents);
+        for (const auto &nestedImport : nestedImports) {
+          const std::string nestedKey = normalizeStdlibAutoIncludeKey(nestedImport);
+          if (!nestedKey.empty() && queuedKeys.insert(nestedKey).second) {
+            pendingKeys.push_back(nestedKey);
+          }
+        }
+        return true;
+      };
+
+      if (appendSpecificFile || std::filesystem::is_regular_file(moduleRoot, ec)) {
+        if (moduleRoot.extension() == ".prime" && !appendFile(moduleRoot)) {
+          return false;
+        }
+        continue;
       }
-      std::ostringstream buffer;
-      buffer << file.rdbuf();
-      source.append("\n");
-      source.append(buffer.str());
-      appended = true;
+
+      if (!std::filesystem::is_directory(moduleRoot, ec)) {
+        continue;
+      }
+
+      for (const auto &entry : std::filesystem::recursive_directory_iterator(moduleRoot, ec)) {
+        if (ec) {
+          error = "failed to scan stdlib module: " + moduleRoot.string();
+          return false;
+        }
+        if (!entry.is_regular_file(ec) || entry.path().extension() != ".prime") {
+          continue;
+        }
+        if (!appendFile(entry.path())) {
+          return false;
+        }
+      }
     }
   }
   if (!appended) {
-    error = "stdlib import requested but no stdlib files were found";
+    error = "stdlib import requested but matching stdlib modules were not found";
     return false;
   }
   return true;
@@ -257,7 +381,8 @@ bool runCompilePipeline(const Options &options,
   }
 
   if (shouldAutoIncludeStdlib(source)) {
-    if (!appendStdlibSources(options.importPaths, source, error)) {
+    const std::vector<std::string> sourceImports = collectStdImportPaths(source);
+    if (!appendStdlibModuleSources(options.importPaths, sourceImports, source, error)) {
       errorStage = CompilePipelineErrorStage::Import;
       return false;
     }

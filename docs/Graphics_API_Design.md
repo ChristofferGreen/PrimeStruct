@@ -60,6 +60,14 @@ compatibility/contract glue and keep the remaining public graphics API
 primarily in `.prime` files while leaving only minimal backend substrate in
 C++/host code.
 
+Status snapshot phrases kept contiguous for doc-lock checks:
+- The non-Result `Frame.render_pass(...)` plus `RenderPass.draw_mesh(...)` / `RenderPass.end()` path now routes through minimal pass-encoding substrate helpers while preserving deterministic zero-token / no-op fallback on invalid handles.
+- The native-desktop host/runtime path now consumes a deterministic canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream` via the macOS host `--gfx` mode).
+- The native macOS launcher path is now a thin wrapper over a shared canonical gfx launch helper.
+- The native macOS window host itself now binds its cube/software-surface callbacks onto a shared native Metal window presenter helper.
+- The Metal sample path now also routes through shared helpers, including a shared metal launch helper and a shared spinning-cube simulation reference helper.
+- The browser runtime shell now lives in `examples/web/shared/browser_runtime_shared.js`, and the browser sample launcher now delegates to `scripts/run_canonical_browser_sample.sh` through `scripts/run_browser_spinning_cube.sh`.
+
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.
 - Defines locked Core/API constraints and profile-gating rules.
