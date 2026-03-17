@@ -22227,7 +22227,7 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
-TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and rejects bare vector count capacity fallback") {
+TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and rejects bare vector method fallback") {
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;
   receiverExpr.name = "items";
@@ -22348,6 +22348,34 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
             {},
             error) == nullptr);
   CHECK(error == "unknown method: /vector/at_unsafe");
+
+  auto expectUnknownVectorMutatorMethod = [&](const char *methodName, const std::vector<primec::Expr> &args) {
+    methodCall.name = methodName;
+    methodCall.args = args;
+    error = "stale";
+    CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+              methodCall,
+              vectorLocals,
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              {},
+              {},
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+              },
+              [](const primec::Expr &) { return std::string(); },
+              {},
+              error) == nullptr);
+    CHECK(error == std::string("unknown method: /vector/") + methodName);
+  };
+
+  expectUnknownVectorMutatorMethod("push", {vectorReceiverExpr, indexArg});
+  expectUnknownVectorMutatorMethod("pop", {vectorReceiverExpr});
+  expectUnknownVectorMutatorMethod("reserve", {vectorReceiverExpr, indexArg});
+  expectUnknownVectorMutatorMethod("clear", {vectorReceiverExpr});
+  expectUnknownVectorMutatorMethod("remove_at", {vectorReceiverExpr, indexArg});
+  expectUnknownVectorMutatorMethod("remove_swap", {vectorReceiverExpr, indexArg});
 
   methodCall.name = "at";
   methodCall.args = {receiverExpr, indexArg};

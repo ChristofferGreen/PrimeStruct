@@ -2009,6 +2009,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       callExpr.isMethodCall && callExpr.args.size() == 2 &&
       (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) &&
       resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn).isVectorTarget;
+  const bool isBuiltinBareVectorMutatorMethod =
+      callExpr.isMethodCall &&
+      (isSimpleCallName(callExpr, "push") || isSimpleCallName(callExpr, "pop") ||
+       isSimpleCallName(callExpr, "reserve") || isSimpleCallName(callExpr, "clear") ||
+       isSimpleCallName(callExpr, "remove_at") || isSimpleCallName(callExpr, "remove_swap")) &&
+      !callExpr.args.empty() && resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn).isVectorTarget;
   const bool isBuiltinVectorMutatorCall =
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
@@ -2020,6 +2026,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const bool allowBuiltinFallback =
       !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
       !isBuiltinBareVectorCapacityMethod && !isBuiltinBareVectorAccessMethod &&
+      !isBuiltinBareVectorMutatorMethod &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
        isBuiltinMapContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
@@ -2297,8 +2304,13 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const bool blocksBuiltinBareVectorAccessMethod =
         (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) &&
         typeName == "vector";
+    const bool blocksBuiltinBareVectorMutatorMethod =
+        (isSimpleCallName(callExpr, "push") || isSimpleCallName(callExpr, "pop") ||
+         isSimpleCallName(callExpr, "reserve") || isSimpleCallName(callExpr, "clear") ||
+         isSimpleCallName(callExpr, "remove_at") || isSimpleCallName(callExpr, "remove_swap")) &&
+        typeName == "vector";
     if (allowBuiltinFallback && !blocksBuiltinBareVectorCountMethod &&
-        !blocksBuiltinBareVectorAccessMethod) {
+        !blocksBuiltinBareVectorAccessMethod && !blocksBuiltinBareVectorMutatorMethod) {
       errorOut = priorError;
       return nullptr;
     }

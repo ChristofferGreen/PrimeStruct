@@ -6910,6 +6910,15 @@ TEST_CASE("rejects vm bare vector mutators without imported helpers") {
   expectBareVectorMutatorImportRequirement("vm", "remove_swap", "values, 1i32");
 }
 
+TEST_CASE("rejects vm bare vector mutator methods without imported helpers") {
+  expectBareVectorMutatorMethodImportRequirement("vm", "push", "7i32");
+  expectBareVectorMutatorMethodImportRequirement("vm", "pop", "");
+  expectBareVectorMutatorMethodImportRequirement("vm", "reserve", "8i32");
+  expectBareVectorMutatorMethodImportRequirement("vm", "clear", "");
+  expectBareVectorMutatorMethodImportRequirement("vm", "remove_at", "1i32");
+  expectBareVectorMutatorMethodImportRequirement("vm", "remove_swap", "1i32");
+}
+
 TEST_CASE("runs vm with user array count method shadow") {
   const std::string source = R"(
 [return<int>]

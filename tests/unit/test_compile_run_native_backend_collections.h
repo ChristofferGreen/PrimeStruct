@@ -7717,6 +7717,15 @@ TEST_CASE("rejects native bare vector mutators without imported helpers") {
   expectBareVectorMutatorImportRequirement("native", "remove_swap", "values, 1i32");
 }
 
+TEST_CASE("rejects native bare vector mutator methods without imported helpers") {
+  expectBareVectorMutatorMethodImportRequirement("native", "push", "7i32");
+  expectBareVectorMutatorMethodImportRequirement("native", "pop", "");
+  expectBareVectorMutatorMethodImportRequirement("native", "reserve", "8i32");
+  expectBareVectorMutatorMethodImportRequirement("native", "clear", "");
+  expectBareVectorMutatorMethodImportRequirement("native", "remove_at", "1i32");
+  expectBareVectorMutatorMethodImportRequirement("native", "remove_swap", "1i32");
+}
+
 TEST_CASE("compiles and runs native user array count method shadow") {
   const std::string source = R"(
 [return<int>]
