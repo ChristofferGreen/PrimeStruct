@@ -3667,6 +3667,75 @@ main() {
         "0\n");
 }
 
+TEST_CASE("compiles and runs native png read for optional plte and split idat inputs") {
+  const std::string inPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_plte_split_idat.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x03, 0x50, 0x4c, 0x54, 0x45,
+        0xaa, 0xbb, 0xcc, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x08, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x01, 0x01, 0x04, 0x00, 0xfb, 0xff, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x07, 0x49, 0x44, 0x41, 0x54,
+        0xff, 0x00, 0x00, 0x03, 0x01, 0x01, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x00,
+    });
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = injectEscapedPath(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  return(plus(width, height))
+}
+)", escapedPath);
+  const std::string srcPath = writeTemp("compile_native_image_read_plte_split_idat_png.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_plte_split_idat_png").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_plte_split_idat_png.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 2);
+  CHECK(readFile(outPath) ==
+        "1\n"
+        "1\n"
+        "3\n"
+        "255\n"
+        "0\n"
+        "0\n");
+}
+
 TEST_CASE("compiles and rejects native png inputs with critical chunk crc mismatches") {
   const std::string inPath =
       (std::filesystem::temp_directory_path() / "primec_native_image_read_invalid_crc.png").string();
@@ -3710,6 +3779,65 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_native_image_read_invalid_crc_png").string();
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_native_image_read_invalid_crc_png.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) ==
+        "image_invalid_operation\n"
+        "0\n"
+        "0\n"
+        "0\n");
+}
+
+TEST_CASE("compiles and rejects native png inputs with plte after idat") {
+  const std::string inPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_invalid_plte_order.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x08, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x01, 0x01, 0x04, 0x00, 0xfb, 0xff, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x03, 0x50, 0x4c, 0x54, 0x45,
+        0xaa, 0xbb, 0xcc, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x07, 0x49, 0x44, 0x41, 0x54,
+        0xff, 0x00, 0x00, 0x03, 0x01, 0x01, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x00,
+    });
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = injectEscapedPath(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{7i32}
+  [i32 mut] height{9i32}
+  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
+  print_line(Result.why(status))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  return(0i32)
+}
+)", escapedPath);
+  const std::string srcPath = writeTemp("compile_native_image_read_invalid_plte_order_png.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_invalid_plte_order_png").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_read_invalid_plte_order_png.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

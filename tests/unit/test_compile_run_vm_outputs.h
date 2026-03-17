@@ -891,6 +891,61 @@ main() {
         "0\n");
 }
 
+TEST_CASE("rejects vm png inputs with non-consecutive idat chunks deterministically") {
+  const std::string inPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid_idat_order.png").string();
+  {
+    const std::vector<unsigned char> pngBytes = withValidPngCrcs({
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x08, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x01, 0x01, 0x04, 0x00, 0xfb, 0xff, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x72, 0x75, 0x53, 0x74,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x07, 0x49, 0x44, 0x41, 0x54,
+        0xff, 0x00, 0x00, 0x03, 0x01, 0x01, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
+        0x00, 0x00, 0x00, 0x00,
+    });
+    std::ofstream file(inPath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(file.good());
+  }
+
+  const std::string escapedPath = escapeStringLiteral(inPath);
+  const std::string source = injectEscapedPath(R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{7i32}
+  [i32 mut] height{9i32}
+  [vector<i32> mut] pixels{vector<i32>(1i32, 2i32, 3i32)}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "__PATH__"utf8)}
+  print_line(Result.why(status))
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  return(0i32)
+}
+)", escapedPath);
+  const std::string srcPath = writeTemp("vm_image_read_invalid_idat_order_png.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid_idat_order_png.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) ==
+        "image_invalid_operation\n"
+        "0\n"
+        "0\n"
+        "0\n");
+}
+
 TEST_CASE("defaults to cpp extension for emit=cpp") {
   const std::string source = R"(
 [return<int>]

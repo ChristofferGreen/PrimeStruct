@@ -4330,15 +4330,17 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("invalid dimensions, payload mismatches, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures/chunks, including CRCs for critical chunks, and fully decodes the current PNG read subset") !=
+  CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures/chunks, including CRCs for critical chunks and stricter `PLTE`/`IDAT` ordering for the current subset, and fully decodes the current PNG read subset") !=
         std::string::npos);
   CHECK(primeStructDoc.find("non-interlaced 8-bit RGB/RGBA images whose `IDAT` payload uses stored/no-compression deflate blocks, fixed-Huffman deflate blocks, or dynamic-Huffman deflate blocks, with filter-`0`, filter-`1` (`Sub`), filter-`2` (`Up`), filter-`3` (`Average`), and filter-`4` (`Paeth`) scanlines") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("The shared decoder accepts an optional single `PLTE` chunk before the `IDAT` run, and multi-chunk `IDAT` payloads must stay consecutive once decoding data begins") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Fixed-Huffman reads now cover both literal-only payloads and length/distance backreferences with overlapping copy semantics, and dynamic-Huffman reads now cover both literal-only payloads and length/distance backreferences with explicit code-length tables") !=
         std::string::npos);
   CHECK(primeStructDoc.find("dropping alpha when decoding RGBA inputs") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Malformed or missing PNGs, including critical-chunk CRC mismatches, still return `image_invalid_operation`, while still-valid PNGs that require broader color, bit-depth, or interlace handling currently return `image_read_unsupported`") !=
+  CHECK(primeStructDoc.find("Malformed or missing PNGs, including critical-chunk CRC mismatches and invalid `PLTE`/`IDAT` ordering, still return `image_invalid_operation`, while still-valid PNGs that require broader color, bit-depth, or interlace handling currently return `image_read_unsupported`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`png.write` still deterministically returns unsupported `ImageError` values") !=
         std::string::npos);
@@ -4358,6 +4360,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(imageStdlib.find("\"image_invalid_operation\"utf8") != std::string::npos);
   CHECK(imageStdlib.find("namespace ppm") != std::string::npos);
   CHECK(imageStdlib.find("namespace png") != std::string::npos);
+  CHECK(imageStdlib.find("pngChunkIsPlte(") != std::string::npos);
   CHECK(imageStdlib.find("pngChunkCrcMatches(") != std::string::npos);
   CHECK(imageStdlib.find("[public return<Result<ImageError>> effects(file_write, heap_alloc)]\n    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path)") !=
         std::string::npos);

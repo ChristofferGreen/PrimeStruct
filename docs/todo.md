@@ -198,7 +198,7 @@ Deferred graph follow-up note: explicit/implicit template inference, local `auto
 **Backends & IR**
 - ✓ Extend `/std/image/png/read(...)` to filter-`4` (`Paeth`) scanline reconstruction for 8-bit RGB/RGBA inputs. Progress: the shared stdlib decoder now reconstructs `Paeth` scanlines with the standard left/up/up-left predictor while preserving the public flat RGB output contract and dropping alpha when decoding RGBA inputs; compile-run coverage now locks stored `Paeth` reads for both RGB and RGBA fixtures on the native backend.
 - ✓ Extend `/std/image/png/read(...)` to CRC validation for critical chunks. Progress: the shared stdlib PNG reader now validates CRCs on critical chunks, rejects mismatches as `image_invalid_operation`, and compile-run coverage rewrites fixture CRCs plus locks explicit bad-CRC failures on native and VM paths.
-- ○ Extend `/std/image/png/read(...)` to stricter PNG chunk-order validation beyond the current `IHDR`/`IDAT`/`IEND` checks.
+- ✓ Extend `/std/image/png/read(...)` to stricter PNG chunk-order validation beyond the current `IHDR`/`IDAT`/`IEND` checks. Progress: the shared stdlib PNG reader now enforces optional single-`PLTE` ordering ahead of the `IDAT` run, rejects late or duplicate `PLTE` chunks, and locks multi-chunk `IDAT` inputs to a single consecutive run with compile-run coverage for valid split-`IDAT` decodes plus malformed-order failures on native and VM paths.
 - ○ Extend `/std/image/png/read(...)` to remaining non-interlaced PNG color and bit-depth variants.
 - ○ Extend `/std/image/png/read(...)` to Adam7 interlaced inputs.
 - ○ Add `/std/image/png/*` write implementations and conformance tests for VM/native/Wasm.
