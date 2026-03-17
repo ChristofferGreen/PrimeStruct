@@ -9727,6 +9727,87 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_vector_capacity_method_helper") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps alias slash-method vector capacity same-path helper on map receiver") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+/vector/capacity([map<i32, i32>] values) {
+  return(98i32)
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_slash_vector_capacity_map_same_path_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_alias_slash_vector_capacity_map_same_path_helper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 98);
+}
+
+TEST_CASE("C++ emitter lowers alias slash-method vector capacity on map receiver to deleted stub") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_slash_vector_capacity_map_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_alias_slash_vector_capacity_map_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_capacity_method_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_capacity_method_helper(wrapMap())") != std::string::npos);
+  CHECK(output.find("ps_vector_capacity(") == std::string::npos);
+}
+
+TEST_CASE("rejects alias slash-method vector capacity builtin fallback on map receiver in C++ emitter") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_slash_vector_capacity_map_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_alias_slash_vector_capacity_map_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_capacity_method_helper") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter infers wrapper collection builtin fallback") {
   const std::string source = R"(
 wrapMap() {
