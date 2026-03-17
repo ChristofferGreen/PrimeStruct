@@ -3,6 +3,7 @@
             localsIn,
             emitExpr,
             inferExprKind,
+            inferStructExprPath,
             combineNumericKinds,
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
             error);

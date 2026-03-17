@@ -40,6 +40,26 @@ namespace std {
     }
   }
 
+  [return<Quat>]
+  quat_multiply_internal([Quat] left, [Quat] right) {
+    return(Quat(
+      left.w * right.x + left.x * right.w + left.y * right.z - left.z * right.y,
+      left.w * right.y - left.x * right.z + left.y * right.w + left.z * right.x,
+      left.w * right.z + left.x * right.y - left.y * right.x + left.z * right.w,
+      left.w * right.w - left.x * right.x - left.y * right.y - left.z * right.z
+    ))
+  }
+
+  [return<Vec3>]
+  quat_rotate_vec3_internal([Quat] rotation, [Vec3] value) {
+    [Mat3] basis{quat_to_mat3(rotation)}
+    return(Vec3(
+      basis.m00 * value.x + basis.m01 * value.y + basis.m02 * value.z,
+      basis.m10 * value.x + basis.m11 * value.y + basis.m12 * value.z,
+      basis.m20 * value.x + basis.m21 * value.y + basis.m22 * value.z
+    ))
+  }
+
   [public return<Mat3>]
   quat_to_mat3([Quat] value) {
     [Quat] q{value.toNormalized()}

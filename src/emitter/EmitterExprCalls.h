@@ -1131,6 +1131,61 @@
       }
       return out.str();
     }
+    auto rewriteQuaternionMultiplyExpr = [&](const Expr &candidate, Expr &rewrittenExpr) {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || !isSimpleCallName(candidate, "multiply") ||
+          candidate.args.size() != 2) {
+        return false;
+      }
+      auto resolvedMathTypeForTarget = [&](const Expr &targetExpr) -> std::string {
+        if (targetExpr.kind == Expr::Kind::Name) {
+          auto localIt = localTypes.find(targetExpr.name);
+          if (localIt != localTypes.end()) {
+            std::string localType = normalizeBindingTypeName(localIt->second.typeName);
+            if (!localType.empty() && localType.front() == '/') {
+              return normalizedTypePath(localType);
+            }
+            auto importIt = importAliases.find(localType);
+            if (importIt != importAliases.end()) {
+              return normalizedTypePath(importIt->second);
+            }
+          }
+        }
+        return resolvedTypePathForTarget(targetExpr);
+      };
+      const std::string leftType = resolvedMathTypeForTarget(candidate.args[0]);
+      const std::string rightType = resolvedMathTypeForTarget(candidate.args[1]);
+      if (leftType == "/std/math/Quat" && rightType == "/std/math/Quat") {
+        rewrittenExpr = candidate;
+        rewrittenExpr.name = "/std/math/quat_multiply_internal";
+        rewrittenExpr.namespacePrefix.clear();
+        rewrittenExpr.isMethodCall = false;
+        rewrittenExpr.isFieldAccess = false;
+        return true;
+      }
+      if (leftType == "/std/math/Quat" && rightType == "/std/math/Vec3") {
+        rewrittenExpr = candidate;
+        rewrittenExpr.name = "/std/math/quat_rotate_vec3_internal";
+        rewrittenExpr.namespacePrefix.clear();
+        rewrittenExpr.isMethodCall = false;
+        rewrittenExpr.isFieldAccess = false;
+        return true;
+      }
+      return false;
+    };
+    Expr rewrittenQuaternionMultiplyExpr;
+    if (rewriteQuaternionMultiplyExpr(expr, rewrittenQuaternionMultiplyExpr)) {
+      return emitExpr(rewrittenQuaternionMultiplyExpr,
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare);
+    }
     char op = '\0';
     if (getBuiltinOperator(expr, op) && expr.args.size() == 2) {
       std::ostringstream out;

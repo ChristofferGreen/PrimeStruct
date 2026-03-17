@@ -6,10 +6,43 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool rewriteQuaternionMultiplyCall(const Expr &expr,
+                                   const LocalMap &localsIn,
+                                   const InferStructExprPathWithLocalsFn &inferStructExprPath,
+                                   Expr &rewrittenExpr) {
+  if (!isSimpleCallName(expr, "multiply") || expr.args.size() != 2) {
+    return false;
+  }
+  const std::string leftType = inferStructExprPath(expr.args[0], localsIn);
+  const std::string rightType = inferStructExprPath(expr.args[1], localsIn);
+  if (leftType == "/std/math/Quat" && rightType == "/std/math/Quat") {
+    rewrittenExpr = expr;
+    rewrittenExpr.name = "/std/math/quat_multiply_internal";
+    rewrittenExpr.namespacePrefix.clear();
+    rewrittenExpr.isMethodCall = false;
+    rewrittenExpr.isFieldAccess = false;
+    return true;
+  }
+  if (leftType == "/std/math/Quat" && rightType == "/std/math/Vec3") {
+    rewrittenExpr = expr;
+    rewrittenExpr.name = "/std/math/quat_rotate_vec3_internal";
+    rewrittenExpr.namespacePrefix.clear();
+    rewrittenExpr.isMethodCall = false;
+    rewrittenExpr.isFieldAccess = false;
+    return true;
+  }
+  return false;
+}
+
+} // namespace
+
 OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
                                                         const LocalMap &localsIn,
                                                         const EmitExprWithLocalsFn &emitExpr,
                                                         const InferExprKindWithLocalsFn &inferExprKind,
+                                                        const InferStructExprPathWithLocalsFn &inferStructExprPath,
                                                         const CombineNumericKindsFn &combineNumericKinds,
                                                         const EmitInstructionFn &emitInstruction,
                                                         std::string &error) {
@@ -50,6 +83,13 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
   if (expr.args.size() != 2) {
     error = builtin + " requires exactly two arguments";
     return OperatorArithmeticEmitResult::Error;
+  }
+  if (builtin == "multiply") {
+    Expr rewrittenExpr;
+    if (rewriteQuaternionMultiplyCall(expr, localsIn, inferStructExprPath, rewrittenExpr)) {
+      return emitExpr(rewrittenExpr, localsIn) ? OperatorArithmeticEmitResult::Handled
+                                               : OperatorArithmeticEmitResult::Error;
+    }
   }
   std::function<bool(const Expr &, const LocalMap &)> isPointerOperand;
   isPointerOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {

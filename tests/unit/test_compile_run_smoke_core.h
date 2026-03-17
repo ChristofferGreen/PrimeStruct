@@ -1563,6 +1563,49 @@ main() {
   }
 }
 
+TEST_CASE("primec emits wasm bytecode for quaternion reference multiply and rotation") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] turnX{Quat(1.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Quat] turnY{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
+  [Quat] product{multiply(turnX, turnY)}
+  [Vec3] input{Vec3(1.0f32, 2.0f32, 3.0f32)}
+  [Vec3] rotated{multiply(product, input)}
+  [f32] total{product.z - product.x - product.y - product.w + rotated.z - rotated.x - rotated.y}
+  return(convert<int>(total))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_quaternion_reference_multiply_rotation.prime", source);
+  const std::string wasmPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_quaternion_reference_multiply_rotation.wasm")
+          .string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_emit_wasm_quaternion_reference_multiply_rotation_err.txt")
+          .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_emit_wasm_quaternion_reference_multiply_rotation_out.txt")
+          .string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  if (hasWasmtime()) {
+    const std::string runCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    const std::string output = readFile(outPath);
+    CHECK(output.find("7") != std::string::npos);
+  }
+}
+
 TEST_CASE("primec rejects wasm support-matrix plus mismatch with deterministic diagnostic") {
   const std::string source = R"(
 import /std/math/*

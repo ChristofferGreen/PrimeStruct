@@ -755,7 +755,7 @@ Current quaternion surface:
 Draft constraints:
 - No implicit scalar/vector/matrix/quaternion conversion; use explicit constructors/helpers.
 - `plus`/`minus` require matching envelopes and dimensions.
-- Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` and `minus` rules, the documented `Mat*`/`Quat` `multiply` allowlist, `Mat* / scalar` plus `Quat / scalar` divide validation, and deterministic binding/return/call diagnostics for implicit `Mat*`/`Quat` family conversions.
+- Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` and `minus` rules, the documented `Mat*`/`Quat` `multiply` allowlist, `Mat* / scalar` plus `Quat / scalar` divide validation, and deterministic binding/return/call diagnostics for implicit `Mat*`/`Quat` family conversions. VM/native, Wasm, and the C++ emitter now also lower quaternion-quaternion Hamilton products and quaternion-`Vec3` rotation through the documented `multiply` contract; broader runtime matrix operator support is still follow-up work.
 - `multiply` supports:
   - Scalar scaling (`S * VecN`, `VecN * S`, `S * Mat`, `Mat * S`, `S * Quat`, `Quat * S`)
   - Matrix-vector (`Mat * VecN`) when inner dimensions match
@@ -792,8 +792,9 @@ Draft constraints:
   - Non-scalar bindings and string literals are rejected; entry definitions must return `void`.
   - `convert<T>` targets match the numeric/bool list above.
 - Matrix/quaternion status:
-  - Matrix/quaternion rules are specified as draft language contracts, but VM/native and GLSL currently reject
-    matrix/quaternion lowering until backend/runtime support is implemented.
+  - VM/native, Wasm, and the C++ emitter currently support nominal matrix/quaternion values, conversion helpers,
+    quaternion-quaternion Hamilton products, and quaternion-`Vec3` rotation.
+  - GLSL still rejects matrix/quaternion lowering, and broader runtime matrix operator support remains follow-up work.
 
 ## 10. Error Handling (Draft)
 

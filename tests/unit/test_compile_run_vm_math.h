@@ -384,6 +384,26 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
+TEST_CASE("runs vm quaternion reference multiply and rotation") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] turnX{Quat(1.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Quat] turnY{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
+  [Quat] product{multiply(turnX, turnY)}
+  [Vec3] input{Vec3(1.0f32, 2.0f32, 3.0f32)}
+  [Vec3] rotated{multiply(product, input)}
+  [f32] total{product.z - product.x - product.y - product.w + rotated.z - rotated.x - rotated.y}
+  return(convert<int>(total))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_quaternion_reference_multiply_rotation.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
+}
+
 TEST_CASE("rejects vm support-matrix plus mismatch diagnostic") {
   const std::string source = R"(
 import /std/math/*
