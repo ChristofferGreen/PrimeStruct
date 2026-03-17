@@ -1111,6 +1111,23 @@
           << ")";
       return out.str();
     }
+    if (!expr.isMethodCall && isExplicitStdlibVectorHelper(expr.name, "count") && expr.args.size() == 1) {
+      std::ostringstream out;
+      out << "ps_missing_vector_count_call_helper("
+          << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
     if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 && isResolvedMapTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_map_count("

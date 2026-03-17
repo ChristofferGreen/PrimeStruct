@@ -7354,6 +7354,87 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_vector_count_method_helper") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps canonical direct-call vector count same-path helper on string receiver") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+/std/collections/vector/count([string] values) {
+  return(92i32)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/count(wrapText()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_direct_vector_count_string_same_path_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_direct_vector_count_string_same_path_helper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 92);
+}
+
+TEST_CASE("C++ emitter lowers canonical direct-call vector count on string receiver to deleted stub") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/count(wrapText()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_direct_vector_count_string_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_direct_vector_count_string_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_count_call_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_count_call_helper(wrapText())") != std::string::npos);
+  CHECK(output.find("ps_string_count(") == std::string::npos);
+}
+
+TEST_CASE("rejects canonical direct-call vector count builtin fallback on string receiver in C++ emitter") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/count(wrapText()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_direct_vector_count_string_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_direct_vector_count_string_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_count_call_helper") != std::string::npos);
+}
+
 TEST_CASE("rejects namespaced access method chain compatibility fallback in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
