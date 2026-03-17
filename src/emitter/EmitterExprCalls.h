@@ -836,6 +836,16 @@
     return normalized == std::string("vector/") + helper ||
            normalized == std::string("std/collections/vector/") + helper;
   };
+  auto isExplicitStdlibVectorAccessSlashMethod = [&](const Expr &candidate, const char *helper) {
+    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    return normalized == std::string("std/collections/vector/") + helper;
+  };
   auto pickExplicitVectorCountCapacityReceiverIndex = [&](const Expr &candidate) -> size_t {
     if (candidate.args.size() != 1) {
       return 0;
@@ -1282,7 +1292,9 @@
           << ")";
       return out.str();
     }
-    if (isSimpleCallName(expr, "at") && expr.args.size() == 2) {
+    if ((isSimpleCallName(expr, "at") ||
+         isExplicitStdlibVectorAccessSlashMethod(expr, "at")) &&
+        expr.args.size() == 2) {
       std::ostringstream out;
       const size_t receiverIndex = pickAccessReceiverIndex();
       const size_t indexIndex = receiverIndex == 0 ? 1 : 0;
@@ -1410,7 +1422,9 @@
       }
       return out.str();
     }
-    if (isSimpleCallName(expr, "at_unsafe") && expr.args.size() == 2) {
+    if ((isSimpleCallName(expr, "at_unsafe") ||
+         isExplicitStdlibVectorAccessSlashMethod(expr, "at_unsafe")) &&
+        expr.args.size() == 2) {
       std::ostringstream out;
       const size_t receiverIndex = pickAccessReceiverIndex();
       const size_t indexIndex = receiverIndex == 0 ? 1 : 0;
