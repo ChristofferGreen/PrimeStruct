@@ -7293,7 +7293,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("count requires vector target") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps array namespaced wrapper count builtin fallback") {
@@ -7322,6 +7322,35 @@ main() {
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("C++ emitter keeps canonical direct-call vector count same-path helper on map receiver") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/count(wrapMap()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_vector_count_map_same_path_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_vector_count_map_same_path_helper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 41);
 }
 
 TEST_CASE("C++ emitter rejects array namespaced wrapper capacity builtin fallback") {

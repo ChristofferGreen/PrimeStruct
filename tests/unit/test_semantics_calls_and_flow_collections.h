@@ -12486,6 +12486,23 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector count map target without helper reports unknown target") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/count(wrapMap()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count rejects named arguments as builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

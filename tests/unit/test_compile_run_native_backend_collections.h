@@ -10426,6 +10426,33 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("rejects native std namespaced count map target without helper") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/count(wrapMap()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_std_namespaced_count_map_target_import_requirement.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_std_namespaced_count_map_target_import_requirement_exe")
+                                  .string();
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_native_std_namespaced_count_map_target_import_requirement_out.txt")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("compiles native std namespaced count expression canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
