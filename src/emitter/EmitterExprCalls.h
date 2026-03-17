@@ -431,6 +431,18 @@
     }
     return defMap.count("/" + normalized) == 0;
   };
+  auto isExplicitVectorAccessDirectCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    return normalized == "vector/at" || normalized == "vector/at_unsafe" ||
+           normalized == "std/collections/vector/at" ||
+           normalized == "std/collections/vector/at_unsafe";
+  };
   auto explicitVectorAccessResolvedTypePath = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
@@ -870,6 +882,25 @@
     }
   }
   if (it == nameMap.end()) {
+    if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+        isExplicitVectorAccessDirectCall(expr.args.front()) &&
+        explicitVectorAccessResolvedTypePath(expr.args.front()).empty()) {
+      std::ostringstream out;
+      out << "ps_missing_vector_access_count_receiver_helper("
+          << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
     if (expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
         isResolvedVectorTarget(expr.args.front())) {
       std::ostringstream out;
