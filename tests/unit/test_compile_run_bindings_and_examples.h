@@ -4328,7 +4328,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`ppm.write(...)` now emits ASCII `P3` PPM files in VM/native/Wasm") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("invalid dimensions, payload mismatches, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
+  CHECK(primeStructDoc.find("invalid dimensions, payload mismatches, overflowed write-side size arithmetic, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures/chunks, including CRCs for critical chunks and stricter `PLTE`/`IDAT` ordering for the current subset, and fully decodes the current PNG read subset") !=
         std::string::npos);
@@ -4342,7 +4342,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("Malformed or missing PNGs, including critical-chunk CRC mismatches, invalid `PLTE`/`IDAT` ordering, malformed Adam7 scanline payloads, and indexed palette overruns, deterministically return `image_invalid_operation`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`png.write(...)` now emits non-interlaced 8-bit RGB PNG files in VM/native/Wasm (and C++ emitter flows via the shared stdlib implementation) using a single `IHDR`/`IDAT`/`IEND` layout, stored/no-compression deflate blocks, and filter-`0` scanlines for the current write subset; invalid dimensions, payload mismatches, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
+  CHECK(primeStructDoc.find("`png.write(...)` now emits non-interlaced 8-bit RGB PNG files in VM/native/Wasm (and C++ emitter flows via the shared stdlib implementation) using a single `IHDR`/`IDAT`/`IEND` layout, stored/no-compression deflate blocks, and filter-`0` scanlines for the current write subset; invalid dimensions, payload mismatches, overflowed write-side size arithmetic, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`ImageError.why()` currently returns `image_read_unsupported`, `image_write_unsupported`, or `image_invalid_operation`") !=
         std::string::npos);
@@ -4377,6 +4377,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(ppmBody.find("ppmReadBinaryRasterLead") != std::string::npos);
   CHECK(ppmBody.find("ppmOpenRead") != std::string::npos);
   CHECK(ppmBody.find("ppmOpenWrite") != std::string::npos);
+  CHECK(ppmBody.find("imageRgbWritePixelCount") != std::string::npos);
   CHECK(ppmBody.find("ppmWriteInputValid") != std::string::npos);
   CHECK(ppmBody.find("ppmWriteHeader") != std::string::npos);
   CHECK(ppmBody.find("ppmWriteComponent") != std::string::npos);
@@ -4405,6 +4406,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngBody.find("pngDecodeRows") != std::string::npos);
   CHECK(pngBody.find("pngWriteSignature") != std::string::npos);
   CHECK(pngBody.find("pngWriteIdatChunk") != std::string::npos);
+  CHECK(pngBody.find("pngWriteSizingValid") != std::string::npos);
   CHECK(pngBody.find("equal(colorType, 0i32)") != std::string::npos);
   CHECK(pngBody.find("equal(colorType, 3i32)") != std::string::npos);
   CHECK(pngBody.find("equal(colorType, 4i32)") != std::string::npos);

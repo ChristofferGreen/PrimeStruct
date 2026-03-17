@@ -3022,6 +3022,51 @@ main() {
   CHECK(!std::filesystem::exists(outPath));
 }
 
+TEST_CASE("rejects oversized native image write dimensions before overflow") {
+  const std::filesystem::path ppmOutPath =
+      std::filesystem::temp_directory_path() / "primec_native_image_write_overflow.ppm";
+  const std::filesystem::path pngOutPath =
+      std::filesystem::temp_directory_path() / "primec_native_image_write_overflow.png";
+  std::error_code ec;
+  std::filesystem::remove(ppmOutPath, ec);
+  std::filesystem::remove(pngOutPath, ec);
+
+  const std::string escapedPpmPath = escapeStringLiteral(ppmOutPath.string());
+  const std::string escapedPngPath = escapeStringLiteral(pngOutPath.string());
+  std::string source = R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [vector<i32>] pixels{vector<i32>(7i32, 9i32)}
+  print_line(Result.why(/std/image/ppm/write("__PPM_PATH__"utf8, 1431655766i32, 1i32, pixels)))
+  print_line(Result.why(/std/image/png/write("__PNG_PATH__"utf8, 1431655766i32, 1i32, pixels)))
+  return(0i32)
+}
+)";
+  const size_t ppmPathOffset = source.find("__PPM_PATH__");
+  REQUIRE(ppmPathOffset != std::string::npos);
+  source.replace(ppmPathOffset, std::string("__PPM_PATH__").size(), escapedPpmPath);
+  const size_t pngPathOffset = source.find("__PNG_PATH__");
+  REQUIRE(pngPathOffset != std::string::npos);
+  source.replace(pngPathOffset, std::string("__PNG_PATH__").size(), escapedPngPath);
+
+  const std::string srcPath = writeTemp("compile_native_image_write_overflow.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_write_overflow").string();
+  const std::string stdoutPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_write_overflow.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + stdoutPath) == 0);
+  CHECK(readFile(stdoutPath) ==
+        "image_invalid_operation\n"
+        "image_invalid_operation\n");
+  CHECK(!std::filesystem::exists(ppmOutPath));
+  CHECK(!std::filesystem::exists(pngOutPath));
+}
+
 TEST_CASE("compiles and runs native png read for stored rgb inputs") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_native_image_read.png").string();
   {

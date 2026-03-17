@@ -170,13 +170,28 @@ namespace std {
   }
 
   [return<bool>]
-  ppmWriteInputValid([i32] width, [i32] height, [vector<i32>] pixels) {
+  imageRgbWritePixelCount([i32] width, [i32] height, [i32 mut] pixelCount) {
+    assign(pixelCount, 0i32)
     if(or(less_equal(width, 0i32), less_equal(height, 0i32)),
        then() { return(false) },
        else() { })
 
+    [i64] pixelCountWide{multiply(multiply(convert<i64>(width), convert<i64>(height)), 3i64)}
+    if(or(less_equal(pixelCountWide, 0i64), greater_than(pixelCountWide, 2147483647i64)),
+       then() { return(false) },
+       else() { })
+    assign(pixelCount, convert<i32>(pixelCountWide))
+    return(true)
+  }
+
+  [return<bool>]
+  ppmWriteInputValid([i32] width, [i32] height, [vector<i32>] pixels) {
     [i32] pixelCount{count(pixels)}
-    if(not_equal(pixelCount, multiply(multiply(width, height), 3i32)),
+    [i32 mut] expectedPixelCount{0i32}
+    if(not(imageRgbWritePixelCount(width, height, expectedPixelCount)),
+       then() { return(false) },
+       else() { })
+    if(not_equal(pixelCount, expectedPixelCount),
        then() { return(false) },
        else() { })
 
@@ -622,6 +637,31 @@ namespace std {
     return(plus(plus(rawByteCount, multiply(pngStoredBlockCount(rawByteCount), 5i32)), 6i32))
   }
 
+  [return<bool>]
+  pngWriteSizingValid([i32] width, [i32] height, [i32 mut] rawByteCount, [i32 mut] payloadLength) {
+    assign(rawByteCount, 0i32)
+    assign(payloadLength, 0i32)
+    [i32 mut] pixelCount{0i32}
+    if(not(imageRgbWritePixelCount(width, height, pixelCount)),
+       then() { return(false) },
+       else() { })
+
+    [i64] rawByteCountWide{plus(convert<i64>(pixelCount), convert<i64>(height))}
+    if(or(less_equal(rawByteCountWide, 0i64), greater_than(rawByteCountWide, 2147483647i64)),
+       then() { return(false) },
+       else() { })
+
+    [i64] storedBlockCountWide{divide(plus(rawByteCountWide, 65534i64), 65535i64)}
+    [i64] payloadLengthWide{plus(plus(rawByteCountWide, multiply(storedBlockCountWide, 5i64)), 6i64)}
+    if(greater_than(payloadLengthWide, 2147483647i64),
+       then() { return(false) },
+       else() { })
+
+    assign(rawByteCount, convert<i32>(rawByteCountWide))
+    assign(payloadLength, convert<i32>(payloadLengthWide))
+    return(true)
+  }
+
   [return<void>]
   pngAdlerUpdateByte([i32] byte, [i32 mut] a, [i32 mut] b) {
     assign(a, pngMod(plus(a, byte), 65521i32))
@@ -795,9 +835,8 @@ namespace std {
   }
 
   [effects(file_write), return<int>]
-  pngWriteIdatChunk([File<Write>] file, [i32] width, [i32] height, [vector<i32>] pixels) {
-    [i32] rawByteCount{multiply(height, plus(multiply(width, 3i32), 1i32))}
-    [i32] payloadLength{pngZlibStoredPayloadLength(rawByteCount)}
+  pngWriteIdatChunk([File<Write>] file, [i32] width, [i32] height, [vector<i32>] pixels,
+                    [i32] rawByteCount, [i32] payloadLength) {
     [u64 mut] crc{0u64}
     [i32] openStatus{pngWriteChunkOpen(file, payloadLength, 73i32, 68i32, 65i32, 84i32, crc)}
     if(not_equal(openStatus, 0i32),
@@ -2682,6 +2721,11 @@ namespace std {
       if(not(ppmWriteInputValid(width, height, pixels)),
          then() { return(1i32) },
          else() { })
+      [i32 mut] rawByteCount{0i32}
+      [i32 mut] payloadLength{0i32}
+      if(not(pngWriteSizingValid(width, height, rawByteCount, payloadLength)),
+         then() { return(1i32) },
+         else() { })
 
       [File<Write>] file{File<Write>(path)?}
       [i32] signatureStatus{pngWriteSignature(file)}
@@ -2692,7 +2736,7 @@ namespace std {
       if(not_equal(ihdrStatus, 0i32),
          then() { return(ihdrStatus) },
          else() { })
-      [i32] idatStatus{pngWriteIdatChunk(file, width, height, pixels)}
+      [i32] idatStatus{pngWriteIdatChunk(file, width, height, pixels, rawByteCount, payloadLength)}
       if(not_equal(idatStatus, 0i32),
          then() { return(idatStatus) },
          else() { })
