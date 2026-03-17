@@ -79,6 +79,109 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   return false;
 }
 
+bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
+  auto matchesHelper = [&](std::string_view basePath) {
+    return callee.fullPath == basePath ||
+           callee.fullPath.rfind(std::string(basePath) + "__t", 0) == 0;
+  };
+  if (!expr.isMethodCall) {
+    std::string normalizedName = expr.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    std::string accessName;
+    if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
+      return matchesHelper("/std/collections/map/at") || matchesHelper("/map/at") ||
+             matchesHelper("/std/collections/mapAt") ||
+             matchesHelper("/std/collections/experimental_map/mapAt") ||
+             matchesHelper("/std/collections/map/at_unsafe") || matchesHelper("/map/at_unsafe") ||
+             matchesHelper("/std/collections/mapAtUnsafe") ||
+             matchesHelper("/std/collections/experimental_map/mapAtUnsafe");
+    }
+    if ((normalizedName == "contains" || normalizedName == "map/contains" ||
+         normalizedName == "std/collections/map/contains") &&
+        expr.args.size() == 2) {
+      return matchesHelper("/std/collections/map/contains") || matchesHelper("/map/contains") ||
+             matchesHelper("/std/collections/mapContains") ||
+             matchesHelper("/std/collections/experimental_map/mapContains");
+    }
+    if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
+         normalizedName == "std/collections/map/tryAt") &&
+        expr.args.size() == 2) {
+      return matchesHelper("/std/collections/map/tryAt") || matchesHelper("/map/tryAt") ||
+             matchesHelper("/std/collections/mapTryAt") ||
+             matchesHelper("/std/collections/experimental_map/mapTryAt");
+    }
+    if ((normalizedName == "count" || normalizedName == "map/count" ||
+         normalizedName == "std/collections/map/count") &&
+        expr.args.size() == 1) {
+      return matchesHelper("/std/collections/map/count") || matchesHelper("/map/count") ||
+             matchesHelper("/std/collections/mapCount") ||
+             matchesHelper("/std/collections/experimental_map/mapCount");
+    }
+    return false;
+  }
+  const size_t slash = callee.fullPath.find_last_of('/');
+  if (slash == std::string::npos || slash == 0) {
+    return false;
+  }
+  const std::string receiverPath = callee.fullPath.substr(0, slash);
+  if (receiverPath.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
+    return false;
+  }
+  const std::string helperName = callee.fullPath.substr(slash + 1);
+  return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
+         helperName == "at" || helperName == "at_unsafe";
+}
+
+bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath) {
+  auto matchesResolvedPath = [&](std::string_view basePath) {
+    return resolvedPath == basePath ||
+           resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
+  };
+  if (!expr.isMethodCall) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
+      return matchesResolvedPath("/std/collections/map/at") || matchesResolvedPath("/map/at") ||
+             matchesResolvedPath("/std/collections/mapAt") ||
+             matchesResolvedPath("/std/collections/experimental_map/mapAt") ||
+             matchesResolvedPath("/std/collections/map/at_unsafe") ||
+             matchesResolvedPath("/map/at_unsafe") ||
+             matchesResolvedPath("/std/collections/mapAtUnsafe") ||
+             matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafe");
+    }
+    std::string normalizedName = expr.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    if ((normalizedName == "contains" || normalizedName == "map/contains" ||
+         normalizedName == "std/collections/map/contains") &&
+        expr.args.size() == 2) {
+      return matchesResolvedPath("/std/collections/map/contains") ||
+             matchesResolvedPath("/map/contains") ||
+             matchesResolvedPath("/std/collections/mapContains") ||
+             matchesResolvedPath("/std/collections/experimental_map/mapContains");
+    }
+    if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
+         normalizedName == "std/collections/map/tryAt") &&
+        expr.args.size() == 2) {
+      return matchesResolvedPath("/std/collections/map/tryAt") ||
+             matchesResolvedPath("/map/tryAt") ||
+             matchesResolvedPath("/std/collections/mapTryAt") ||
+             matchesResolvedPath("/std/collections/experimental_map/mapTryAt");
+    }
+    if ((normalizedName == "count" || normalizedName == "map/count" ||
+         normalizedName == "std/collections/map/count") &&
+        expr.args.size() == 1) {
+      return matchesResolvedPath("/std/collections/map/count") ||
+             matchesResolvedPath("/map/count") ||
+             matchesResolvedPath("/std/collections/mapCount") ||
+             matchesResolvedPath("/std/collections/experimental_map/mapCount");
+    }
+  }
+  return false;
+}
+
 bool isArgsPackParam(const Expr &param) {
   for (const auto &transform : param.transforms) {
     if (transform.name == "effects" || transform.name == "capabilities") {
@@ -194,6 +297,9 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
     return nullptr;
   }
   const std::string resolved = resolveExprPath(callExpr);
+  if (isMapBuiltinResolvedPath(callExpr, resolved)) {
+    return nullptr;
+  }
   return resolveDefinitionByPath(defMap, resolved);
 }
 
@@ -458,6 +564,11 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
         isBuiltinMapTryAtName;
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
+      if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
+          isCollectionAccessReceiverExpr(expr.args.front()) &&
+          isMapBuiltinInlinePath(expr, *callee)) {
+        return InlineCallDispatchResult::NotHandled;
+      }
       const auto emitResult = emitResolvedInlineDefinitionCall(
           expr, callee, emitInlineDefinitionCall, error);
       return emitResult == ResolvedInlineCallResult::Emitted
@@ -471,6 +582,11 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
   }
 
   if (const Definition *callee = resolveDefinitionCall(expr)) {
+    if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
+        isCollectionAccessReceiverExpr(expr.args.front()) &&
+        isMapBuiltinInlinePath(expr, *callee)) {
+      return InlineCallDispatchResult::NotHandled;
+    }
     const auto emitResult = emitResolvedInlineDefinitionCall(
         expr, callee, emitInlineDefinitionCall, error);
     return emitResult == ResolvedInlineCallResult::Emitted
@@ -566,23 +682,40 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       [&](const Expr &callExpr) { return isStringCountCallFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return isVectorCapacityCallFn(callExpr, localsIn); },
       [&](const Expr &receiverExpr) {
-        if (receiverExpr.kind != Expr::Kind::Name) {
+        if (receiverExpr.kind == Expr::Kind::Name) {
+          auto it = localsIn.find(receiverExpr.name);
+          if (it == localsIn.end()) {
+            return false;
+          }
+          const LocalInfo &info = it->second;
+          if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
+              info.kind == LocalInfo::Kind::Map) {
+            return true;
+          }
+          if (info.kind == LocalInfo::Kind::Reference &&
+              (info.referenceToArray || info.referenceToVector || info.referenceToMap)) {
+            return true;
+          }
+          return info.valueKind == LocalInfo::ValueKind::String;
+        }
+        if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {
           return false;
         }
-        auto it = localsIn.find(receiverExpr.name);
-        if (it == localsIn.end()) {
+        std::string collectionName;
+        if (getBuiltinCollectionName(receiverExpr, collectionName)) {
+          return collectionName == "array" || collectionName == "vector" ||
+                 collectionName == "map" || collectionName == "string";
+        }
+        const Definition *receiverDef = resolveDefinitionCallFn(receiverExpr);
+        if (receiverDef == nullptr) {
           return false;
         }
-        const LocalInfo &info = it->second;
-        if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
-            info.kind == LocalInfo::Kind::Map) {
-          return true;
+        std::vector<std::string> collectionArgs;
+        if (inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs)) {
+          return collectionName == "array" || collectionName == "vector" ||
+                 collectionName == "map" || collectionName == "string";
         }
-        if (info.kind == LocalInfo::Kind::Reference &&
-            (info.referenceToArray || info.referenceToVector || info.referenceToMap)) {
-          return true;
-        }
-        return info.valueKind == LocalInfo::ValueKind::String;
+        return false;
       },
       [&](const Expr &callExpr) { return resolveMethodCallDefinitionFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return resolveDefinitionCallFn(callExpr); },

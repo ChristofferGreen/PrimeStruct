@@ -609,6 +609,95 @@
         if (bufferBuiltinResult != ir_lowerer::BufferBuiltinDispatchResult::NotHandled) {
           return bufferBuiltinResult == ir_lowerer::BufferBuiltinDispatchResult::Emitted;
         }
+        auto rewriteStdlibMapConstructorExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+            return false;
+          }
+          const Definition *callee = resolveDefinitionCall(callExpr);
+          if (callee == nullptr) {
+            return false;
+          }
+          auto matchesWrapperPath = [&](std::string_view basePath) {
+            return callee->fullPath == basePath ||
+                   callee->fullPath.rfind(std::string(basePath) + "__t", 0) == 0;
+          };
+          const bool isStdlibMapConstructor =
+              matchesWrapperPath("/std/collections/map/map") ||
+              matchesWrapperPath("/std/collections/mapNew") ||
+              matchesWrapperPath("/std/collections/mapSingle") ||
+              matchesWrapperPath("/std/collections/mapDouble") ||
+              matchesWrapperPath("/std/collections/mapPair") ||
+              matchesWrapperPath("/std/collections/mapTriple") ||
+              matchesWrapperPath("/std/collections/mapQuad") ||
+              matchesWrapperPath("/std/collections/mapQuint") ||
+              matchesWrapperPath("/std/collections/mapSext") ||
+              matchesWrapperPath("/std/collections/mapSept") ||
+              matchesWrapperPath("/std/collections/mapOct");
+          if (!isStdlibMapConstructor) {
+            return false;
+          }
+          rewrittenExpr = callExpr;
+          rewrittenExpr.name = "/map/map";
+          rewrittenExpr.namespacePrefix.clear();
+          rewrittenExpr.isMethodCall = false;
+          if (rewrittenExpr.templateArgs.empty()) {
+            for (const auto &transform : callee->transforms) {
+              if (transform.name != "return" || transform.templateArgs.size() != 1) {
+                continue;
+              }
+              std::string base;
+              std::string argList;
+              if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, argList)) {
+                break;
+              }
+              if (normalizeCollectionBindingTypeName(base) != "map") {
+                break;
+              }
+              std::vector<std::string> templateArgs;
+              if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 2) {
+                break;
+              }
+              templateArgs[0] = trimTemplateTypeText(templateArgs[0]);
+              templateArgs[1] = trimTemplateTypeText(templateArgs[1]);
+              rewrittenExpr.templateArgs = std::move(templateArgs);
+              break;
+            }
+          }
+          return true;
+        };
+        Expr rewrittenStdlibMapConstructorExpr;
+        if (rewriteStdlibMapConstructorExpr(expr, rewrittenStdlibMapConstructorExpr)) {
+          return emitExpr(rewrittenStdlibMapConstructorExpr, localsIn);
+        }
+        auto rewriteTemporaryMapBuiltinAccessToMethodExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.size() != 2) {
+            return false;
+          }
+          if (callExpr.name != "at" && callExpr.name != "at_unsafe") {
+            return false;
+          }
+          const Expr &receiverExpr = callExpr.args.front();
+          if (receiverExpr.kind != Expr::Kind::Call) {
+            return false;
+          }
+          const Definition *receiverDef = resolveDefinitionCall(receiverExpr);
+          if (receiverDef == nullptr) {
+            return false;
+          }
+          std::string collectionName;
+          std::vector<std::string> collectionArgs;
+          if (!ir_lowerer::inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs) ||
+              collectionName != "map" || collectionArgs.size() != 2) {
+            return false;
+          }
+          rewrittenExpr = callExpr;
+          rewrittenExpr.isMethodCall = true;
+          return true;
+        };
+        Expr rewrittenTemporaryMapBuiltinAccessExpr;
+        if (rewriteTemporaryMapBuiltinAccessToMethodExpr(expr, rewrittenTemporaryMapBuiltinAccessExpr)) {
+          return emitExpr(rewrittenTemporaryMapBuiltinAccessExpr, localsIn);
+        }
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             expr,
             localsIn,
