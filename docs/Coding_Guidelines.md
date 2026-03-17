@@ -69,8 +69,9 @@ semantics after canonicalization.
   those targets gain runtime substrate, while source-level profile literals
   and unsupported pipeline vertex types are still intentionally rejected, the
   native/Metal sample hosts now share one canonical host-side `GfxError` +
-  `VertexColored` contract header, and broader backend conformance plus
-  launcher-thinning slices remain staged.
+  `VertexColored` contract header, the native window launcher now delegates to
+  a shared canonical gfx launch helper, and broader backend conformance plus
+  native-host/Metal/browser launcher-thinning slices remain staged.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
   Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with
@@ -98,8 +99,8 @@ stdlib in this repo ships vector/color math only; matrix/quaternion contracts
 are now documented but still pending backend/runtime support. The `/std/gfx/*`
 rendering surface shown below (including `VertexColored`) now has an initial
 helper-backed `.prime` implementation, but still needs broader
-backend/runtime coverage plus the remaining launcher-thinning work on top of
-the current unsupported-backend diagnostics.
+backend/runtime coverage plus the remaining native-host/Metal/browser
+launcher-thinning work on top of the current unsupported-backend diagnostics.
 
 ```prime
 import /std/math/*

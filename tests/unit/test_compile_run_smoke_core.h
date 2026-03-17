@@ -3748,6 +3748,16 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   }
 
   {
+    CAPTURE("GFX-V1-NATIVE-LAUNCHER-THINNING-STATUS");
+    CHECK(graphicsDoc.find("native macOS launcher path is now a thin wrapper over a shared canonical gfx launch helper") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("native launcher script itself is now only a thin wrapper over a shared canonical gfx launch helper") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("native window launcher now delegates to") != std::string::npos);
+    CHECK(guidelinesDoc.find("shared canonical gfx launch helper") != std::string::npos);
+  }
+
+  {
     CAPTURE("GFX-V1-CANONICAL-STDLIB-STATUS");
     CHECK(graphicsDoc.find("first canonical `/std/gfx/*` stdlib surface") != std::string::npos);
     CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)` and `Device()` entry points") !=

@@ -31,6 +31,9 @@ From the repo root, a one-command launcher can build and run the window host:
 - `./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec --visual-smoke`
   (checks `window_shown`, `render_loop_alive`, and `rotation_changes_over_time`;
   emits `VISUAL-SMOKE: SKIP ...` and exits `0` on non-macOS/non-GUI CI runners)
+- The sample wrapper now delegates its build/launch/smoke orchestration to the
+  shared `scripts/run_canonical_gfx_native_window.sh` helper while keeping the
+  same public CLI and output markers.
 
 Or run the manual steps:
 1. Build the canonical `/std/gfx/*` stream binary:

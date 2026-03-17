@@ -187,6 +187,9 @@ xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm
   host into `build-debug/spinning-cube-native-window`, then launches the host.
 - The launcher compiles `cubeStdGfxEmitFrameStream` and runs the host through
   `--gfx`, so scripted smoke no longer depends on the old `--cube-sim` mode.
+- The sample wrapper now delegates the reusable build/launch/smoke flow to
+  `scripts/run_canonical_gfx_native_window.sh`, leaving only spinning-cube
+  path/entrypoint binding in `run_native_spinning_cube_window.sh`.
 - Defaults to `--max-frames 600` for normal windowed runs (about 10 seconds at
   60 fps), satisfying the native done-condition smoke target.
 - Runs `scripts/preflight_native_spinning_cube_window.sh` first unless

@@ -28,8 +28,10 @@ deterministic canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream` via
 the macOS host `--gfx` mode) emitted by the shared spinning-cube `.prime`
 sample so submit/present can drive one real macOS window host end-to-end, and
 the launcher/docs/smoke coverage for that native window path no longer depend
-on the older `--cube-sim` host mode. Browser/native/Metal host samples still
-otherwise sit around shared `.prime` simulation/data paths. The repo now also
+on the older `--cube-sim` host mode. The native macOS launcher path is now a
+thin wrapper over a shared canonical gfx launch helper, but the
+browser/native/Metal host runtimes still otherwise sit around shared `.prime`
+simulation/data paths. The repo now also
 ships real compile-run
 conformance programs that import both `/std/gfx/experimental/*` and
 `/std/gfx/*` and exercise `Window(...)`, `Device()`, `create_swapchain(...)`,
@@ -43,9 +45,9 @@ now also rejects `/std/gfx/*` and `/std/gfx/experimental/*` imports
 deterministically on wasm (`wasm-browser`, `wasm-wasi`) and shader-only
 (`glsl`, `spirv`) emits because those targets still lack the required runtime
 substrate. Follow-up work still needs to reduce the remaining sample-owned
-compatibility/contract glue and keep the remaining public graphics API
-primarily in `.prime` files while leaving only minimal backend substrate in
-C++/host code.
+compatibility/contract glue, thin the remaining native/Metal/browser host
+launch/runtime code, and keep the remaining public graphics API primarily in
+`.prime` files while leaving only minimal backend substrate in C++/host code.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.
