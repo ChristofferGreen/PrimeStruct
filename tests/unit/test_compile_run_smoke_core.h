@@ -463,6 +463,60 @@ main() {
   CHECK(runCommand(nativePath) == 2);
 }
 
+TEST_CASE("experimental gfx pipeline entry point runs across backends") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Device] device{Device()?}
+  [Pipeline] pipeline{
+    device.create_pipeline(
+      [shader] ShaderLibrary.CubeBasic,
+      [vertex_type] VertexColored,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F
+    )?
+  }
+  [Material] material{pipeline.material()?}
+  [i32 mut] score{0i32}
+
+  if(equal(pipeline.token, 7i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(90i32)
+  }
+  if(equal(material.token, 8i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(91i32)
+  }
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_gfx_experimental_pipeline_entry.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_pipeline_entry_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_pipeline_entry_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 2);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 2);
+}
+
 TEST_CASE("experimental gfx static fields import across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -2964,6 +3018,16 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
     CHECK(graphicsDoc.find("dedicated substrate-backed stdlib helper") != std::string::npos);
     CHECK(primeStructDoc.find("constructor-shaped experimental `Device()` entry point now rewrites") !=
           std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-V1-PIPELINE-CONSTRUCTOR-STATUS");
+    CHECK(graphicsDoc.find("type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)`") !=
+          std::string::npos);
+    CHECK(graphicsDoc.find("rewrites onto a dedicated substrate-backed stdlib helper") != std::string::npos);
+    CHECK(primeStructDoc.find("experimental `Device.create_pipeline([vertex_type] VertexColored, ...)` entry point") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("`Device.create_pipeline([vertex_type] VertexColored, ...)`") != std::string::npos);
   }
 
   {

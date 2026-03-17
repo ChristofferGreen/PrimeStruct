@@ -18,11 +18,12 @@ experimental import/type-surface coverage, an explicit `.prime`
 operations, method-form `.prime` wrappers for the currently expressible
 window/frame lifecycle surface, constructor-shaped `Window(...)` and `Device()`
 entry points that now rewrite through dedicated substrate-backed stdlib
-helpers, and browser/native/Metal host samples around shared `.prime`
-simulation/data paths. The type-valued `Device.create_pipeline(...)`
-signature is still pending canonical entry-point work, so the current
-experimental package intentionally keeps deterministic rejects for source-level
-profile literals and the type-valued `create_pipeline(...)` shape instead of
+helpers, and a type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)`
+entry point that now rewrites onto a dedicated substrate-backed stdlib helper
+for the locked v1 vertex wire type. Browser/native/Metal host samples still
+sit around shared `.prime` simulation/data paths. The current experimental
+package intentionally keeps deterministic rejects for source-level profile
+literals and for unsupported `create_pipeline` vertex types instead of
 inventing more compiler-owned routing, and Result-carrying method wrappers now
 also reject bare explicit non-`Result` struct bindings during semantics rather
 than deferring those failures to lowering; follow-up work should keep the

@@ -1457,18 +1457,54 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     importAliases.emplace(remainder, importPath);
   }
 
-  auto rewriteExpr = [&](auto &self, Expr &expr) -> bool {
+  auto resolveImportedStructPath = [&](const std::string &name, const std::string &namespacePrefix) {
+    std::string resolved = semantics::resolveStructTypePath(name, namespacePrefix, structNames);
+    if (resolved.empty()) {
+      auto it = importAliases.find(name);
+      if (it != importAliases.end() && structNames.count(it->second) > 0) {
+        resolved = it->second;
+      }
+    }
+    return resolved;
+  };
+
+  using LocalBindings = std::unordered_map<std::string, semantics::BindingInfo>;
+
+  auto resolveBindingStructPath = [&](const semantics::BindingInfo &binding, const std::string &namespacePrefix) {
+    if (!binding.typeName.empty() && binding.typeName.front() == '/' && structNames.count(binding.typeName) > 0) {
+      return binding.typeName;
+    }
+    return resolveImportedStructPath(binding.typeName, namespacePrefix);
+  };
+
+  auto rememberBinding = [&](const Expr &expr, const std::string &namespacePrefix, LocalBindings &locals) {
+    if (!expr.isBinding) {
+      return;
+    }
+    semantics::BindingInfo binding;
+    std::optional<std::string> restrictType;
+    std::string parseError;
+    if (!semantics::parseBindingInfo(expr, namespacePrefix, structNames, importAliases, binding, restrictType, parseError)) {
+      return;
+    }
+    locals[expr.name] = std::move(binding);
+  };
+
+  auto rewriteExpr = [&](auto &self, Expr &expr, const std::string &namespacePrefix,
+                         const LocalBindings &locals) -> bool {
     for (auto &arg : expr.args) {
-      if (!self(self, arg)) {
+      if (!self(self, arg, namespacePrefix, locals)) {
         return false;
       }
     }
+    LocalBindings bodyLocals = locals;
     for (auto &arg : expr.bodyArguments) {
-      if (!self(self, arg)) {
+      if (!self(self, arg, namespacePrefix, bodyLocals)) {
         return false;
       }
+      rememberBinding(arg, namespacePrefix, bodyLocals);
     }
-    if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.isMethodCall) {
+    if (expr.kind != Expr::Kind::Call || expr.isBinding) {
       return true;
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
@@ -1477,13 +1513,49 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     if (!expr.templateArgs.empty()) {
       return true;
     }
-    std::string resolved = semantics::resolveStructTypePath(expr.name, expr.namespacePrefix, structNames);
-    if (resolved.empty()) {
-      auto it = importAliases.find(expr.name);
-      if (it != importAliases.end() && structNames.count(it->second) > 0) {
-        resolved = it->second;
+    if (expr.isMethodCall) {
+      if (expr.args.empty() || expr.name != "create_pipeline") {
+        return true;
       }
+      const Expr &receiverExpr = expr.args.front();
+      std::string receiverPath;
+      if (receiverExpr.kind == Expr::Kind::Name) {
+        auto localIt = locals.find(receiverExpr.name);
+        if (localIt != locals.end()) {
+          receiverPath = resolveBindingStructPath(localIt->second, namespacePrefix);
+        } else {
+          receiverPath = resolveImportedStructPath(receiverExpr.name, receiverExpr.namespacePrefix);
+        }
+      }
+      if (receiverPath != "/std/gfx/experimental/Device") {
+        return true;
+      }
+      size_t vertexTypeIndex = expr.args.size();
+      for (size_t i = 0; i < expr.argNames.size() && i < expr.args.size(); ++i) {
+        if (expr.argNames[i].has_value() && *expr.argNames[i] == "vertex_type") {
+          vertexTypeIndex = i;
+          break;
+        }
+      }
+      if (vertexTypeIndex >= expr.args.size()) {
+        return true;
+      }
+      const Expr &vertexTypeExpr = expr.args[vertexTypeIndex];
+      if (vertexTypeExpr.kind != Expr::Kind::Name) {
+        error = "experimental gfx create_pipeline requires bare struct type on [vertex_type]";
+        return false;
+      }
+      const std::string vertexTypePath = resolveImportedStructPath(vertexTypeExpr.name, vertexTypeExpr.namespacePrefix);
+      if (vertexTypePath != "/std/gfx/experimental/VertexColored") {
+        error = "experimental gfx create_pipeline currently supports only VertexColored";
+        return false;
+      }
+      expr.name = "create_pipeline_VertexColored";
+      expr.args.erase(expr.args.begin() + static_cast<std::ptrdiff_t>(vertexTypeIndex));
+      expr.argNames.erase(expr.argNames.begin() + static_cast<std::ptrdiff_t>(vertexTypeIndex));
+      return true;
     }
+    std::string resolved = resolveImportedStructPath(expr.name, expr.namespacePrefix);
     if (resolved.empty()) {
       return true;
     }
@@ -1505,37 +1577,44 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         expr.bodyArguments.empty() && !semantics::hasNamedArguments(expr.argNames)) {
       expr.name = "/std/gfx/experimental/deviceCreate";
       expr.namespacePrefix.clear();
+      return true;
     }
     return true;
   };
 
   for (auto &def : program.definitions) {
+    LocalBindings locals;
     for (auto &param : def.parameters) {
-      if (!rewriteExpr(rewriteExpr, param)) {
+      if (!rewriteExpr(rewriteExpr, param, def.namespacePrefix, locals)) {
         return false;
       }
+      rememberBinding(param, def.namespacePrefix, locals);
     }
     for (auto &stmt : def.statements) {
-      if (!rewriteExpr(rewriteExpr, stmt)) {
+      if (!rewriteExpr(rewriteExpr, stmt, def.namespacePrefix, locals)) {
         return false;
       }
+      rememberBinding(stmt, def.namespacePrefix, locals);
     }
     if (def.returnExpr.has_value()) {
-      if (!rewriteExpr(rewriteExpr, *def.returnExpr)) {
+      if (!rewriteExpr(rewriteExpr, *def.returnExpr, def.namespacePrefix, locals)) {
         return false;
       }
     }
   }
   for (auto &exec : program.executions) {
+    LocalBindings locals;
     for (auto &arg : exec.arguments) {
-      if (!rewriteExpr(rewriteExpr, arg)) {
+      if (!rewriteExpr(rewriteExpr, arg, exec.namespacePrefix, locals)) {
         return false;
       }
+      rememberBinding(arg, exec.namespacePrefix, locals);
     }
     for (auto &arg : exec.bodyArguments) {
-      if (!rewriteExpr(rewriteExpr, arg)) {
+      if (!rewriteExpr(rewriteExpr, arg, exec.namespacePrefix, locals)) {
         return false;
       }
+      rememberBinding(arg, exec.namespacePrefix, locals);
     }
   }
   return true;

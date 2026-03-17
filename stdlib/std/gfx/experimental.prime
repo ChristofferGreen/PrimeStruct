@@ -95,6 +95,25 @@ namespace std {
               [vertexCount] vertexCount,
               [indexCount] indexCount)))
     }
+
+    [public return<Result<Pipeline, GfxError>>]
+    create_pipeline_VertexColored([ShaderLibrary] shader,
+                                  [ColorFormat] color_format,
+                                  [DepthFormat] depth_format) {
+      if(less_than(this.token, 1i32)) {
+        return(gfxErrorResult<Pipeline>(pipelineCreateFailed()))
+      }
+      [SubstratePipelineConfig] config{
+        SubstratePipelineConfig(
+          [pipelineToken] plus(shader.value, plus(this.token, 5i32)),
+          [shader] shader,
+          [colorFormat] color_format,
+          [depthFormat] depth_format
+        )
+      }
+      [i32] pipelineToken{GraphicsSubstrate.createPipeline(config)?}
+      return(Result.ok(Pipeline([token] pipelineToken)))
+    }
   }
 
   [public struct]
