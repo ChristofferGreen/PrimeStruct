@@ -543,13 +543,16 @@ namespace std {
     if(equal(colorType, 0i32),
        then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, 16i32)) },
        else() { })
+    if(or(equal(colorType, 2i32), equal(colorType, 6i32)),
+       then() { return(or(equal(bitDepth, 8i32), equal(bitDepth, 16i32))) },
+       else() { })
     if(equal(colorType, 4i32),
        then() { return(or(equal(bitDepth, 8i32), equal(bitDepth, 16i32))) },
        else() { })
     if(equal(colorType, 3i32),
        then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, -1i32)) },
        else() { })
-    return(equal(bitDepth, 8i32))
+    return(false)
   }
 
   [return<i32>]
@@ -600,6 +603,14 @@ namespace std {
   [return<i32>]
   pngScaleU16SampleToByte([i32] highByte, [i32] lowByte) {
     return(divide(plus(multiply(highByte, 256i32), lowByte), 257i32))
+  }
+
+  [return<i32>]
+  pngScanlineChannelByte([vector<i32>] rowBytes, [i32] byteIndex, [i32] bitDepth) {
+    if(equal(bitDepth, 16i32),
+       then() { return(pngScaleU16SampleToByte(rowBytes[byteIndex], rowBytes[plus(byteIndex, 1i32)])) },
+       else() { })
+    return(rowBytes[byteIndex])
   }
 
   [return<bool>]
@@ -1785,15 +1796,11 @@ namespace std {
          },
          else() {
            [i32 mut] pixelByteIndex{0i32}
+           [i32] channelByteStride{divide(bitDepth, 8i32)}
            while(less_than(pixelByteIndex, scanlineBytes), do() {
              if(equal(colorType, 0i32),
                 then() {
-                  [i32 mut] grayByte{rowBytes[pixelByteIndex]}
-                  if(equal(bitDepth, 16i32),
-                     then() {
-                       assign(grayByte, pngScaleU16SampleToByte(rowBytes[pixelByteIndex], rowBytes[plus(pixelByteIndex, 1i32)]))
-                     },
-                     else() { })
+                  [i32] grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
                   push(pixels, grayByte)
                   push(pixels, grayByte)
                   push(pixels, grayByte)
@@ -1801,12 +1808,7 @@ namespace std {
                 else() {
                   if(equal(colorType, 4i32),
                      then() {
-                       [i32 mut] grayByte{rowBytes[pixelByteIndex]}
-                       if(equal(bitDepth, 16i32),
-                          then() {
-                            assign(grayByte, pngScaleU16SampleToByte(rowBytes[pixelByteIndex], rowBytes[plus(pixelByteIndex, 1i32)]))
-                          },
-                          else() { })
+                       [i32] grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
                        push(pixels, grayByte)
                        push(pixels, grayByte)
                        push(pixels, grayByte)
@@ -1826,9 +1828,9 @@ namespace std {
                             push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
                           },
                           else() {
-                            push(pixels, rowBytes[pixelByteIndex])
-                            push(pixels, rowBytes[plus(pixelByteIndex, 1i32)])
-                            push(pixels, rowBytes[plus(pixelByteIndex, 2i32)])
+                            push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth))
+                            push(pixels, pngScanlineChannelByte(rowBytes, plus(pixelByteIndex, channelByteStride), bitDepth))
+                            push(pixels, pngScanlineChannelByte(rowBytes, plus(pixelByteIndex, multiply(channelByteStride, 2i32)), bitDepth))
                           })
                      })
                 })
