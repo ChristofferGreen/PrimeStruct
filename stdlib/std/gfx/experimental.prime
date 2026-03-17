@@ -73,9 +73,20 @@ namespace std {
       if(or(less_than(this.token, 1i32), less_than(window.token, 1i32))) {
         return(gfxErrorResult<Swapchain>(swapchainCreateFailed()))
       }
+      [SubstrateSwapchainConfig] config{
+        SubstrateSwapchainConfig(
+          [window] window,
+          [device] this,
+          [swapchainToken] plus(plus(this.token, window.token), 1i32),
+          [colorFormat] color_format,
+          [depthFormat] depth_format,
+          [presentMode] present_mode
+        )
+      }
+      [i32] swapchainToken{GraphicsSubstrate.createSwapchain(config)?}
       return(Result.ok(
           Swapchain(
-              [token] plus(plus(this.token, window.token), 1i32),
+              [token] swapchainToken,
               [colorFormat] color_format,
               [depthFormat] depth_format,
               [presentMode] present_mode)))
@@ -89,9 +100,17 @@ namespace std {
             or(less_than(vertexCount, 1i32), less_than(indexCount, 1i32)))) {
         return(gfxErrorResult<Mesh>(meshCreateFailed()))
       }
+      [SubstrateMeshConfig] config{
+        SubstrateMeshConfig(
+          [meshToken] plus(plus(this.token, vertexCount), indexCount),
+          [vertexCount] vertexCount,
+          [indexCount] indexCount
+        )
+      }
+      [i32] meshToken{GraphicsSubstrate.createMesh(config)?}
       return(Result.ok(
           Mesh(
-              [token] plus(plus(this.token, vertexCount), indexCount),
+              [token] meshToken,
               [vertexCount] vertexCount,
               [indexCount] indexCount)))
     }
@@ -133,7 +152,11 @@ namespace std {
       if(less_than(this.token, 1i32)) {
         return(gfxErrorResult<Frame>(frameAcquireFailed()))
       }
-      return(Result.ok(Frame([token] plus(this.token, 1i32))))
+      [SubstrateFrameConfig] config{
+        SubstrateFrameConfig([swapchain] this, [frameToken] plus(this.token, 1i32))
+      }
+      [i32] frameToken{GraphicsSubstrate.acquireFrame(config)?}
+      return(Result.ok(Frame([token] frameToken)))
     }
   }
 

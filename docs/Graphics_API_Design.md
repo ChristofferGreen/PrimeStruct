@@ -15,20 +15,24 @@ helper semantics and lowering/runtime support are not yet implemented
 end-to-end. Current repo coverage therefore consists of contract checks,
 experimental import/type-surface coverage, an explicit `.prime`
 `GraphicsSubstrate` token/config boundary for create/acquire/submit/present
-operations, method-form `.prime` wrappers for the currently expressible
-window/frame lifecycle surface, constructor-shaped `Window(...)` and `Device()`
-entry points that now rewrite through dedicated substrate-backed stdlib
-helpers, and a type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)`
-entry point that now rewrites onto a dedicated substrate-backed stdlib helper
-for the locked v1 vertex wire type. Browser/native/Metal host samples still
-sit around shared `.prime` simulation/data paths. The current experimental
-package intentionally keeps deterministic rejects for source-level profile
-literals and for unsupported `create_pipeline` vertex types instead of
-inventing more compiler-owned routing, and Result-carrying method wrappers now
-also reject bare explicit non-`Result` struct bindings during semantics rather
-than deferring those failures to lowering; follow-up work should keep the
-public graphics API primarily in `.prime` files while leaving only minimal
-backend substrate in C++/host code.
+operations, constructor-shaped `Window(...)` and `Device()` entry points that
+now rewrite through dedicated substrate-backed stdlib helpers, fallible
+`Device.create_swapchain(...)`, `Device.create_mesh(...)`, and
+`Swapchain.frame()` wrapper paths that now route through substrate-backed
+configs/helpers, and a type-valued
+`Device.create_pipeline([vertex_type] VertexColored, ...)` entry point that now
+rewrites onto a dedicated substrate-backed stdlib helper for the locked v1
+vertex wire type. `Frame.render_pass(...)`, `RenderPass.draw_mesh(...)`, and
+`RenderPass.end()` still remain staged as the next explicit substrate step.
+Browser/native/Metal host samples still sit around shared `.prime`
+simulation/data paths. The current experimental package intentionally keeps
+deterministic rejects for source-level profile literals and for unsupported
+`create_pipeline` vertex types instead of inventing more compiler-owned
+routing, and Result-carrying method wrappers now also reject bare explicit
+non-`Result` struct bindings during semantics rather than deferring those
+failures to lowering; follow-up work should keep the public graphics API
+primarily in `.prime` files while leaving only minimal backend substrate in
+C++/host code.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.

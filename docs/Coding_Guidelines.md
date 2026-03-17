@@ -50,11 +50,14 @@ semantics after canonicalization.
   over `device{Device([profile] "...")?}`.
   Current `/std/gfx/experimental/*` status: the constructor-shaped
   `Window(...)` and `Device()` entry points now rewrite through
-  substrate-backed helpers there, and
+  substrate-backed helpers there, the fallible `create_swapchain(...)`,
+  `create_mesh(...)`, and `frame()` wrapper paths now route through
+  substrate-backed configs/helpers, and
   `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites
   through the matching pipeline helper, but source-level profile literals and
-  unsupported pipeline vertex types are still intentionally rejected until the
-  remaining canonical entry points land.
+  unsupported pipeline vertex types are still intentionally rejected while
+  render-pass encoding remains staged until the remaining canonical entry
+  points land.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
   Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with

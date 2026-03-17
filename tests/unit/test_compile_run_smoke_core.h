@@ -463,6 +463,138 @@ main() {
   CHECK(runCommand(nativePath) == 2);
 }
 
+TEST_CASE("experimental gfx resource wrapper slice runs across backends") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Window] window{Window([title] "PrimeStruct"utf8, [width] 1280i32, [height] 720i32)?}
+  [Device] device{Device()?}
+  [Queue] queue{device.default_queue()}
+  [Swapchain] swapchain{
+    device.create_swapchain(
+      window,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F,
+      [present_mode] PresentMode.Fifo
+    )?
+  }
+  [array<VertexColored>] vertices{
+    array<VertexColored>(
+      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
+      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
+      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+    )
+  }
+  [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
+  [Mesh] mesh{device.create_mesh([vertices] vertices, [indices] indices)?}
+  [Frame] frame{swapchain.frame()?}
+  [i32 mut] score{0i32}
+
+  if(equal(queue.token, 3i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(90i32)
+  }
+  if(equal(swapchain.token, 4i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(91i32)
+  }
+  if(equal(mesh.token, 8i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(92i32)
+  }
+  if(equal(mesh.vertexCount, 3i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(93i32)
+  }
+  if(equal(mesh.indexCount, 3i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(94i32)
+  }
+  if(equal(frame.token, 5i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(95i32)
+  }
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_gfx_experimental_resource_wrappers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_resource_wrappers_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_resource_wrappers_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 6);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 6);
+}
+
+TEST_CASE("experimental gfx resource wrapper errors stay deterministic across backends") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int>]
+main() {
+  [Device] device{Device([token] 0i32)}
+  [array<VertexColored>] vertices{
+    array<VertexColored>(
+      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32)
+    )
+  }
+  [array<i32>] indices{array<i32>(0i32)}
+  [Result<Mesh, GfxError>] meshResult{device.create_mesh([vertices] vertices, [indices] indices)}
+  [i32 mut] score{0i32}
+
+  if(Result.error(meshResult)) {
+    score = plus(score, 1i32)
+  } else {
+    return(90i32)
+  }
+  if(greater_than(count(Result.why(meshResult)), 0i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(91i32)
+  }
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_gfx_experimental_resource_wrapper_errors.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_resource_wrapper_errors_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_resource_wrapper_errors_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 2);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 2);
+}
+
 TEST_CASE("experimental gfx pipeline entry point runs across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -3028,6 +3160,19 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
     CHECK(primeStructDoc.find("experimental `Device.create_pipeline([vertex_type] VertexColored, ...)` entry point") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("`Device.create_pipeline([vertex_type] VertexColored, ...)`") != std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-V1-RESOURCE-WRAPPER-STATUS");
+    CHECK(graphicsDoc.find("`Device.create_swapchain(...)`, `Device.create_mesh(...)`, and") != std::string::npos);
+    CHECK(graphicsDoc.find("`Swapchain.frame()` wrapper paths that now route through substrate-backed") !=
+          std::string::npos);
+    CHECK(graphicsDoc.find("route through substrate-backed configs/helpers") != std::string::npos);
+    CHECK(primeStructDoc.find("experimental `create_swapchain(...)`, `create_mesh(...)`, and `frame()` wrapper paths now") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("the fallible `create_swapchain(...)`,") != std::string::npos);
+    CHECK(guidelinesDoc.find("`create_mesh(...)`, and `frame()` wrapper paths now route through") !=
+          std::string::npos);
   }
 
   {
