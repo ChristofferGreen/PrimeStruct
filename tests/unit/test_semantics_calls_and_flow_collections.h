@@ -2517,12 +2517,12 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("push requires mutable vector binding") {
+TEST_CASE("vector push alias requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
-  push(values, 2i32)
+  /vector/push(values, 2i32)
   return(0i32)
 }
 )";
@@ -2531,12 +2531,12 @@ main() {
   CHECK(error.find("push requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("push requires heap_alloc effect") {
+TEST_CASE("vector push alias requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>()}
-  push(values, 2i32)
+  /vector/push(values, 2i32)
   return(0i32)
 }
 )";
@@ -2565,8 +2565,10 @@ TEST_CASE("push on array reports vector binding before effect requirement") {
   checkInvalidPush("values.push(2i32)");
 }
 
-TEST_CASE("push validates on mutable vector binding") {
+TEST_CASE("bare vector push validates through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -2581,6 +2583,8 @@ main() {
 
 TEST_CASE("push rejects non-relocation-trivial vector element types") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Mover() {
   [i32] value{1i32}
@@ -2607,6 +2611,8 @@ main() {
 
 TEST_CASE("push allows relocation-trivial string vector elements") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<string> mut] values{vector<string>("left"raw_utf8)}
@@ -2621,6 +2627,8 @@ main() {
 
 TEST_CASE("push validates on mutable vector field access") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Buffer() {
   [vector<i32> mut] values{vector<i32>()}
@@ -2710,7 +2718,7 @@ TEST_CASE("collection indexing syntax parity keeps integer-index diagnostics") {
   checkInvalidIndex("values[\"oops\"utf8]");
 }
 
-TEST_CASE("push rejects template arguments") {
+TEST_CASE("bare vector push requires imported stdlib helper before template specialization") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2721,10 +2729,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
-TEST_CASE("push rejects wrong argument count") {
+TEST_CASE("bare vector push requires imported stdlib helper before arity validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2735,7 +2743,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push requires exactly two arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("push call keeps user-defined vector helper precedence") {
@@ -2774,12 +2782,12 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("reserve requires mutable vector binding") {
+TEST_CASE("vector reserve alias requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
-  reserve(values, 8i32)
+  /vector/reserve(values, 8i32)
   return(0i32)
 }
 )";
@@ -2788,12 +2796,12 @@ main() {
   CHECK(error.find("reserve requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("reserve requires heap_alloc effect") {
+TEST_CASE("vector reserve alias requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>()}
-  reserve(values, 8i32)
+  /vector/reserve(values, 8i32)
   return(0i32)
 }
 )";
@@ -2822,12 +2830,12 @@ TEST_CASE("reserve on array reports vector binding before effect requirement") {
   checkInvalidReserve("values.reserve(8i32)");
 }
 
-TEST_CASE("reserve requires integer capacity") {
+TEST_CASE("vector reserve alias requires integer capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, "hi"utf8)
+  /vector/reserve(values, "hi"utf8)
   return(0i32)
 }
 )";
@@ -2852,11 +2860,11 @@ TEST_CASE("reserve rejects bool capacity in call and method forms") {
     CHECK(error.find("reserve requires integer capacity") != std::string::npos);
   };
 
-  checkInvalidReserve("reserve(values, true)");
+  checkInvalidReserve("/vector/reserve(values, true)");
   checkInvalidReserve("values.reserve(true)");
 }
 
-TEST_CASE("reserve rejects template arguments") {
+TEST_CASE("bare vector reserve requires imported stdlib helper before template specialization") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2867,10 +2875,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reserve does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("reserve rejects wrong argument count") {
+TEST_CASE("bare vector reserve requires imported stdlib helper before arity validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2881,11 +2889,13 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reserve requires exactly two arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("reserve validates on mutable vector binding") {
+TEST_CASE("bare vector reserve validates through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -2900,6 +2910,8 @@ main() {
 
 TEST_CASE("reserve rejects nested non-relocation-trivial vector element types") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Mover() {
   [i32] value{1i32}
@@ -3007,12 +3019,12 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("pop requires mutable vector binding") {
+TEST_CASE("vector pop alias requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
-  pop(values)
+  /vector/pop(values)
   return(0i32)
 }
 )";
@@ -3021,8 +3033,10 @@ main() {
   CHECK(error.find("pop requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("pop validates on mutable vector binding") {
+TEST_CASE("bare vector pop validates through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -3037,6 +3051,8 @@ main() {
 
 TEST_CASE("pop rejects non-drop-trivial vector element types") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Owned() {
   [i32] value{1i32}
@@ -3060,6 +3076,8 @@ main() {
 
 TEST_CASE("pop allows drop-trivial string vector elements") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<string> mut] values{vector<string>("left"raw_utf8, "right"raw_utf8)}
@@ -3072,7 +3090,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("pop rejects block arguments") {
+TEST_CASE("bare vector pop requires imported stdlib helper before block-arg validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3083,10 +3101,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("pop does not accept block arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/pop") != std::string::npos);
 }
 
-TEST_CASE("pop rejects template arguments") {
+TEST_CASE("bare vector pop requires imported stdlib helper before template specialization") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3097,10 +3115,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("pop does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/pop") != std::string::npos);
 }
 
-TEST_CASE("pop rejects wrong argument count") {
+TEST_CASE("bare vector pop requires imported stdlib helper before arity validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3111,7 +3129,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("pop requires exactly one argument") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/pop") != std::string::npos);
 }
 
 TEST_CASE("pop call keeps user-defined vector helper precedence") {
@@ -3150,12 +3168,12 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("clear requires mutable vector binding") {
+TEST_CASE("vector clear alias requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
-  clear(values)
+  /vector/clear(values)
   return(0i32)
 }
 )";
@@ -3164,8 +3182,10 @@ main() {
   CHECK(error.find("clear requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("clear validates on mutable vector binding") {
+TEST_CASE("bare vector clear validates through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -3180,6 +3200,8 @@ main() {
 
 TEST_CASE("clear rejects vector elements with nested drop requirements") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Owned() {
   [i32] value{1i32}
@@ -3242,7 +3264,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("clear rejects template arguments") {
+TEST_CASE("bare vector clear requires imported stdlib helper before template specialization") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3253,10 +3275,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("clear does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/clear") != std::string::npos);
 }
 
-TEST_CASE("clear rejects wrong argument count") {
+TEST_CASE("bare vector clear requires imported stdlib helper before arity validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3267,15 +3289,15 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("clear requires exactly one argument") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/clear") != std::string::npos);
 }
 
-TEST_CASE("remove_at requires mutable vector binding") {
+TEST_CASE("vector remove_at alias requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
-  remove_at(values, 0i32)
+  /vector/remove_at(values, 0i32)
   return(0i32)
 }
 )";
@@ -3284,12 +3306,12 @@ main() {
   CHECK(error.find("remove_at requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("remove_at requires integer index") {
+TEST_CASE("vector remove_at alias requires integer index") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  remove_at(values, "hi"utf8)
+  /vector/remove_at(values, "hi"utf8)
   return(0i32)
 }
 )";
@@ -3314,11 +3336,11 @@ TEST_CASE("remove_at rejects bool index in call and method forms") {
     CHECK(error.find("remove_at requires integer index") != std::string::npos);
   };
 
-  checkInvalidRemoveAt("remove_at(values, true)");
+  checkInvalidRemoveAt("/vector/remove_at(values, true)");
   checkInvalidRemoveAt("values.remove_at(true)");
 }
 
-TEST_CASE("remove_at rejects template arguments") {
+TEST_CASE("bare vector remove_at requires imported stdlib helper before template specialization") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3329,10 +3351,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_at does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/remove_at") != std::string::npos);
 }
 
-TEST_CASE("remove_at rejects wrong argument count") {
+TEST_CASE("bare vector remove_at requires imported stdlib helper before arity validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3343,11 +3365,13 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_at requires exactly two arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/remove_at") != std::string::npos);
 }
 
 TEST_CASE("remove_at rejects non-drop-trivial vector element types") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Owned() {
   [i32] value{1i32}
@@ -3372,6 +3396,8 @@ main() {
 
 TEST_CASE("remove_at rejects nested non-relocation-trivial vector element types") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Mover() {
   [i32] value{1i32}
@@ -3437,12 +3463,12 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("remove_swap requires integer index") {
+TEST_CASE("vector remove_swap alias requires integer index") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  remove_swap(values, "hi"utf8)
+  /vector/remove_swap(values, "hi"utf8)
   return(0i32)
 }
 )";
@@ -3467,16 +3493,16 @@ TEST_CASE("remove_swap rejects bool index in call and method forms") {
     CHECK(error.find("remove_swap requires integer index") != std::string::npos);
   };
 
-  checkInvalidRemoveSwap("remove_swap(values, true)");
+  checkInvalidRemoveSwap("/vector/remove_swap(values, true)");
   checkInvalidRemoveSwap("values.remove_swap(true)");
 }
 
-TEST_CASE("remove_swap requires mutable vector binding") {
+TEST_CASE("vector remove_swap alias requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  remove_swap(values, 1i32)
+  /vector/remove_swap(values, 1i32)
   return(0i32)
 }
 )";
@@ -3485,7 +3511,7 @@ main() {
   CHECK(error.find("remove_swap requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("remove_swap rejects template arguments") {
+TEST_CASE("bare vector remove_swap requires imported stdlib helper before template specialization") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3496,10 +3522,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_swap does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/remove_swap") != std::string::npos);
 }
 
-TEST_CASE("remove_swap rejects wrong argument count") {
+TEST_CASE("bare vector remove_swap requires imported stdlib helper before arity validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3510,11 +3536,13 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_swap requires exactly two arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/remove_swap") != std::string::npos);
 }
 
 TEST_CASE("remove_swap rejects non-drop-trivial vector element types") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Owned() {
   [i32] value{1i32}
@@ -3539,6 +3567,8 @@ main() {
 
 TEST_CASE("remove_swap rejects nested non-relocation-trivial vector element types") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Mover() {
   [i32] value{1i32}
@@ -3568,8 +3598,10 @@ main() {
             "are implemented: Wrapper") != std::string::npos);
 }
 
-TEST_CASE("remove_swap validates on mutable vector binding") {
+TEST_CASE("bare vector remove_swap validates through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
@@ -3669,8 +3701,34 @@ TEST_CASE("vector helper named args on array targets report vector binding") {
   checkInvalidStatement("values.remove_swap([index] 0i32)");
 }
 
-TEST_CASE("vector helper named args keep named-arg error on vector targets") {
-  const auto checkInvalidStatement = [](const std::string &stmtText) {
+TEST_CASE("bare vector mutator named args validate through imported stdlib helpers") {
+  const auto checkValidStatement = [](const std::string &stmtText) {
+    const std::string source =
+        "import /std/collections/*\n\n"
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK(validateProgram(source, "/main", error));
+    CHECK(error.empty());
+  };
+
+  checkValidStatement("push([value] 3i32, [values] values)");
+  checkValidStatement("reserve([capacity] 8i32, [values] values)");
+  checkValidStatement("remove_at([index] 0i32, [values] values)");
+  checkValidStatement("remove_swap([index] 0i32, [values] values)");
+  checkValidStatement("pop([values] values)");
+  checkValidStatement("clear([values] values)");
+}
+
+TEST_CASE("bare vector mutator named args require imported stdlib helpers") {
+  const auto checkInvalidStatement = [](const std::string &stmtText,
+                                        const std::string &helperName) {
     const std::string source =
         "[effects(heap_alloc), return<int>]\n"
         "main() {\n"
@@ -3682,15 +3740,15 @@ TEST_CASE("vector helper named args keep named-arg error on vector targets") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+    CHECK(error.find("unknown call target: /std/collections/vector/" + helperName) != std::string::npos);
   };
 
-  checkInvalidStatement("push([value] 3i32, [payload] values)");
-  checkInvalidStatement("reserve([capacity] 8i32, [payload] values)");
-  checkInvalidStatement("remove_at([index] 0i32, [payload] values)");
-  checkInvalidStatement("remove_swap([index] 0i32, [payload] values)");
-  checkInvalidStatement("pop([payload] values)");
-  checkInvalidStatement("clear([payload] values)");
+  checkInvalidStatement("push([value] 3i32, [values] values)", "push");
+  checkInvalidStatement("reserve([capacity] 8i32, [values] values)", "reserve");
+  checkInvalidStatement("remove_at([index] 0i32, [values] values)", "remove_at");
+  checkInvalidStatement("remove_swap([index] 0i32, [values] values)", "remove_swap");
+  checkInvalidStatement("pop([values] values)", "pop");
+  checkInvalidStatement("clear([values] values)", "clear");
 }
 
 TEST_CASE("vector helper expressions with named arguments stay statement-only") {
@@ -15516,7 +15574,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("vector helper statement skips temp-leading positional receiver probing") {
@@ -15547,6 +15605,8 @@ main() {
 
 TEST_CASE("vector helper statement validates on variadic vector pack receivers") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 mutate([args<vector<i32>>] values) {
   push(at(values, 0i32), 9i32)
@@ -15571,6 +15631,8 @@ main() {
 
 TEST_CASE("vector helper statement validates on dereferenced variadic vector pack receivers") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 mutate_refs([args<Reference<vector<i32>>>] values) {
   push(dereference(at(values, 0i32)), 9i32)
@@ -15867,7 +15929,7 @@ main() {
   CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("vector helper builtin still rejects named arguments") {
+TEST_CASE("bare vector clear named args require imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -15878,7 +15940,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/clear") != std::string::npos);
 }
 
 TEST_CASE("user definition named count accepts named arguments") {

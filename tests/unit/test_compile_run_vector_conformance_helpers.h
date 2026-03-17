@@ -358,6 +358,18 @@ inline std::string makeCanonicalVectorMutatorImportRequirementSource(const std::
   return source;
 }
 
+inline std::string makeBareVectorMutatorImportRequirementSource(const std::string &helperName,
+                                                                const std::string &callArgs) {
+  std::string source;
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32> mut] values{vector<i32>(4i32, 5i32, 6i32)}\n";
+  source += "  " + helperName + "(" + callArgs + ")\n";
+  source += "  return(count(values))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorNamespaceCountShadowSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -709,6 +721,32 @@ inline void expectCanonicalVectorMutatorImportRequirement(const std::string &emi
   const std::string outPath =
       (std::filesystem::temp_directory_path() /
        ("primec_vector_" + helperName + "_canonical_import_requirement_" + emitMode + "_out.txt"))
+          .string();
+  const std::string expected = "unknown call target: /std/collections/vector/" + helperName;
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(outPath).find(expected) != std::string::npos);
+    return;
+  }
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find(expected) != std::string::npos);
+}
+
+inline void expectBareVectorMutatorImportRequirement(const std::string &emitMode,
+                                                     const std::string &helperName,
+                                                     const std::string &callArgs) {
+  const std::string source = makeBareVectorMutatorImportRequirementSource(helperName, callArgs);
+  const std::string srcPath =
+      writeTemp("vector_bare_" + helperName + "_import_requirement_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_vector_bare_" + helperName + "_import_requirement_" + emitMode + "_out.txt"))
           .string();
   const std::string expected = "unknown call target: /std/collections/vector/" + helperName;
 

@@ -1516,6 +1516,8 @@ main() {
 
 TEST_CASE("compiles and runs vector helpers in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -9748,6 +9750,8 @@ main() {
 
 TEST_CASE("rejects vector pop with non-drop-trivial elements in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Owned() {
   [i32] value{1i32}
@@ -9779,6 +9783,8 @@ main() {
 
 TEST_CASE("rejects vector reserve with non-relocation-trivial elements in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Mover() {
   [i32] value{1i32}

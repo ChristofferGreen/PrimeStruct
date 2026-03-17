@@ -826,6 +826,25 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return true;
   };
+  auto hasImportedDefinitionPath = [&](const std::string &path) {
+    std::string canonicalPath = path;
+    const size_t suffix = canonicalPath.find("__t");
+    if (suffix != std::string::npos) {
+      canonicalPath.erase(suffix);
+    }
+    for (const auto &importPath : program_.imports) {
+      if (importPath == canonicalPath) {
+        return true;
+      }
+      if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+        const std::string prefix = importPath.substr(0, importPath.size() - 2);
+        if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
   auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
     if (isSimpleCallName(candidate, helper)) {
       return true;
@@ -869,6 +888,17 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return true;
     }
     return false;
+  };
+  auto preferredBareVectorHelperTarget = [&](std::string_view helperName) {
+    const std::string canonical = "/std/collections/vector/" + std::string(helperName);
+    if (defMap_.find(canonical) != defMap_.end() || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    const std::string alias = "/vector/" + std::string(helperName);
+    if (defMap_.find(alias) != defMap_.end()) {
+      return alias;
+    }
+    return canonical;
   };
   auto preferVectorStdlibHelperPath = [&](const std::string &path) -> std::string {
     auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
@@ -2734,6 +2764,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     bool hasResolvedReceiverIndex = false;
     size_t resolvedReceiverIndex = 0;
+    bool hasBareVectorReceiverIndex = false;
+    size_t bareVectorReceiverIndex = 0;
+    const bool isBareVectorStatementHelperCall =
+        !stmt.isMethodCall && stmt.name == vectorHelper && stmt.name.find('/') == std::string::npos &&
+        stmt.namespacePrefix.empty() && defMap_.find("/" + vectorHelper) == defMap_.end();
     if (stmt.isMethodCall && !stmt.args.empty()) {
       hasResolvedReceiverIndex = true;
       resolvedReceiverIndex = 0;
@@ -2803,6 +2838,14 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           continue;
         }
         const Expr &receiverCandidate = stmt.args[receiverIndex];
+        if (isBareVectorStatementHelperCall && !hasBareVectorReceiverIndex) {
+          const BindingInfo *receiverBinding = nullptr;
+          if (resolveVectorBinding(receiverCandidate, receiverBinding) && receiverBinding != nullptr &&
+              receiverBinding->typeName == "vector") {
+            hasBareVectorReceiverIndex = true;
+            bareVectorReceiverIndex = receiverIndex;
+          }
+        }
         std::string methodTarget;
         if (resolveVectorHelperTargetPath(receiverCandidate, vectorHelper, methodTarget)) {
           methodTarget = preferVectorStdlibHelperPath(methodTarget);
@@ -2825,6 +2868,22 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           helperCall.argNames.resize(helperCall.args.size());
         }
         std::swap(helperCall.argNames[0], helperCall.argNames[resolvedReceiverIndex]);
+      }
+      return validateExpr(params, locals, helperCall, enclosingStatements, statementIndex);
+    }
+    if (defMap_.find(vectorHelperResolved) == defMap_.end() &&
+        isBareVectorStatementHelperCall &&
+        hasBareVectorReceiverIndex) {
+      Expr helperCall = stmt;
+      helperCall.name = preferredBareVectorHelperTarget(vectorHelper);
+      helperCall.namespacePrefix.clear();
+      helperCall.isMethodCall = false;
+      if (bareVectorReceiverIndex > 0 && bareVectorReceiverIndex < helperCall.args.size()) {
+        std::swap(helperCall.args[0], helperCall.args[bareVectorReceiverIndex]);
+        if (helperCall.argNames.size() < helperCall.args.size()) {
+          helperCall.argNames.resize(helperCall.args.size());
+        }
+        std::swap(helperCall.argNames[0], helperCall.argNames[bareVectorReceiverIndex]);
       }
       return validateExpr(params, locals, helperCall, enclosingStatements, statementIndex);
     }

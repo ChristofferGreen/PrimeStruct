@@ -6738,6 +6738,15 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("rejects vm bare vector mutators without imported helpers") {
+  expectBareVectorMutatorImportRequirement("vm", "push", "values, 7i32");
+  expectBareVectorMutatorImportRequirement("vm", "pop", "values");
+  expectBareVectorMutatorImportRequirement("vm", "reserve", "values, 8i32");
+  expectBareVectorMutatorImportRequirement("vm", "clear", "values");
+  expectBareVectorMutatorImportRequirement("vm", "remove_at", "values, 1i32");
+  expectBareVectorMutatorImportRequirement("vm", "remove_swap", "values, 1i32");
+}
+
 TEST_CASE("runs vm with user array count method shadow") {
   const std::string source = R"(
 [return<int>]
@@ -8270,6 +8279,8 @@ main() {
 
 TEST_CASE("runs vm with vector push helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -8305,6 +8316,8 @@ main() {
 
 TEST_CASE("rejects vm vector pop with non-drop-trivial elements") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Owned() {
   [i32] value{1i32}
@@ -8332,6 +8345,8 @@ main() {
 
 TEST_CASE("rejects vm vector push with non-relocation-trivial elements") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Mover() {
   [i32] value{1i32}
@@ -9297,6 +9312,8 @@ main() {
 
 TEST_CASE("grows vm vector reserve beyond initial capacity") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
@@ -9312,6 +9329,8 @@ main() {
 
 TEST_CASE("preserves vm vector values across reserve growth") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(4i32, 8i32)}
@@ -9327,6 +9346,8 @@ main() {
 
 TEST_CASE("grows vm vector push beyond initial capacity") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9341,6 +9362,8 @@ main() {
 
 TEST_CASE("preserves vm vector values across push growth") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(5i32)}
@@ -9410,6 +9433,8 @@ TEST_CASE("rejects vm vector literal above local dynamic limit") {
 
 TEST_CASE("rejects vm vector reserve beyond local dynamic limit") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9426,6 +9451,8 @@ main() {
 
 TEST_CASE("rejects vm vector reserve negative literal at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9443,6 +9470,8 @@ main() {
 
 TEST_CASE("rejects vm vector reserve folded expression beyond local dynamic limit") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9460,6 +9489,8 @@ main() {
 
 TEST_CASE("rejects vm vector reserve folded negative expression at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9477,6 +9508,8 @@ main() {
 
 TEST_CASE("rejects vm vector reserve folded signed overflow at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9494,6 +9527,8 @@ main() {
 
 TEST_CASE("rejects vm vector reserve folded negate negative at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9511,6 +9546,8 @@ main() {
 
 TEST_CASE("rejects vm vector reserve folded negate overflow at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9528,6 +9565,8 @@ main() {
 
 TEST_CASE("rejects vm vector reserve folded unsigned expression beyond local dynamic limit") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9545,6 +9584,8 @@ main() {
 
 TEST_CASE("rejects vm vector reserve folded unsigned wraparound at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9562,6 +9603,8 @@ main() {
 
 TEST_CASE("rejects vm vector reserve folded unsigned add overflow at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9580,6 +9623,8 @@ main() {
 
 TEST_CASE("rejects vm vector reserve dynamic value beyond local dynamic limit") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main([array<string>] args) {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -9597,6 +9642,8 @@ main([array<string>] args) {
 
 TEST_CASE("rejects vm vector push beyond local dynamic limit") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>()}
@@ -9615,6 +9662,8 @@ main() {
 
 TEST_CASE("runs vm with vector shrink helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32, 4i32)}
@@ -9634,6 +9683,8 @@ main() {
 
 TEST_CASE("runs vm with collection syntax parity for call and method forms") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] viaCall{vector<i32>(10i32, 20i32, 30i32)}

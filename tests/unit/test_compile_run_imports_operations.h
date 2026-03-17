@@ -245,6 +245,15 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
+TEST_CASE("rejects bare vector mutators without imported helpers in C++ emitter") {
+  expectBareVectorMutatorImportRequirement("exe", "push", "values, 7i32");
+  expectBareVectorMutatorImportRequirement("exe", "pop", "values");
+  expectBareVectorMutatorImportRequirement("exe", "reserve", "values, 8i32");
+  expectBareVectorMutatorImportRequirement("exe", "clear", "values");
+  expectBareVectorMutatorImportRequirement("exe", "remove_at", "values, 1i32");
+  expectBareVectorMutatorImportRequirement("exe", "remove_swap", "values, 1i32");
+}
+
 TEST_CASE("compiles and runs experimental vector helper runtime contracts in C++ emitter") {
   expectExperimentalVectorRuntimeContracts("exe");
 }

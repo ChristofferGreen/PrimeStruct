@@ -7535,6 +7535,15 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("rejects native bare vector mutators without imported helpers") {
+  expectBareVectorMutatorImportRequirement("native", "push", "values, 7i32");
+  expectBareVectorMutatorImportRequirement("native", "pop", "values");
+  expectBareVectorMutatorImportRequirement("native", "reserve", "values, 8i32");
+  expectBareVectorMutatorImportRequirement("native", "clear", "values");
+  expectBareVectorMutatorImportRequirement("native", "remove_at", "values, 1i32");
+  expectBareVectorMutatorImportRequirement("native", "remove_swap", "values, 1i32");
+}
+
 TEST_CASE("compiles and runs native user array count method shadow") {
   const std::string source = R"(
 [return<int>]
@@ -9172,6 +9181,8 @@ main() {
 
 TEST_CASE("rejects native vector clear with non-drop-trivial elements") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Owned() {
   [i32] value{1i32}
@@ -9204,6 +9215,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve with non-relocation-trivial elements") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Mover() {
   [i32] value{1i32}
@@ -9432,6 +9445,8 @@ main() {
 
 TEST_CASE("compiles and runs native vector push helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -10672,6 +10687,8 @@ main() {
 
 TEST_CASE("grows native vector reserve beyond initial capacity") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
@@ -10691,6 +10708,8 @@ main() {
 
 TEST_CASE("preserves native vector values across reserve growth") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(4i32, 8i32)}
@@ -10710,6 +10729,8 @@ main() {
 
 TEST_CASE("grows native vector push beyond initial capacity") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10727,6 +10748,8 @@ main() {
 
 TEST_CASE("preserves native vector values across push growth") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(5i32)}
@@ -10805,6 +10828,8 @@ TEST_CASE("rejects native vector literal above local dynamic limit") {
 
 TEST_CASE("rejects native vector reserve beyond local dynamic limit") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10824,6 +10849,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve negative literal at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10843,6 +10870,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve folded expression beyond local dynamic limit") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10862,6 +10891,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve folded negative expression at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10881,6 +10912,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve folded signed overflow at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10901,6 +10934,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve folded negate negative at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10921,6 +10956,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve folded negate overflow at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10941,6 +10978,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve folded unsigned expression beyond local dynamic limit") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10960,6 +10999,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve folded unsigned wraparound at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10979,6 +11020,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve folded unsigned add overflow at lowering") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -10999,6 +11042,8 @@ main() {
 
 TEST_CASE("rejects native vector reserve dynamic value beyond local dynamic limit") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main([array<string>] args) {
   [vector<i32> mut] values{vector<i32>(1i32)}
@@ -11021,6 +11066,8 @@ main([array<string>] args) {
 
 TEST_CASE("rejects native vector push beyond local dynamic limit") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>()}
@@ -11045,6 +11092,8 @@ main() {
 
 TEST_CASE("compiles and runs native vector shrink helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32, 4i32)}
@@ -11068,6 +11117,8 @@ main() {
 
 TEST_CASE("compiles and runs native collection syntax parity for call and method forms") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] viaCall{vector<i32>(10i32, 20i32, 30i32)}
