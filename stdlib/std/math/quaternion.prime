@@ -39,5 +39,30 @@ namespace std {
       return(self.toNormalized())
     }
   }
+
+  [public return<Mat3>]
+  quat_to_mat3([Quat] value) {
+    [Quat] q{value.toNormalized()}
+    [f32] xx{q.x * q.x}
+    [f32] yy{q.y * q.y}
+    [f32] zz{q.z * q.z}
+    [f32] xy{q.x * q.y}
+    [f32] xz{q.x * q.z}
+    [f32] yz{q.y * q.z}
+    [f32] wx{q.w * q.x}
+    [f32] wy{q.w * q.y}
+    [f32] wz{q.w * q.z}
+    return(Mat3(
+      1.0 - 2.0 * (yy + zz),
+      2.0 * (xy - wz),
+      2.0 * (xz + wy),
+      2.0 * (xy + wz),
+      1.0 - 2.0 * (xx + zz),
+      2.0 * (yz - wx),
+      2.0 * (xz - wy),
+      2.0 * (yz + wx),
+      1.0 - 2.0 * (xx + yy)
+    ))
+  }
   }
 }

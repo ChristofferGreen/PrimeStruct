@@ -120,6 +120,49 @@ main() {
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
+TEST_CASE("math quat_to_mat3 helper requires import") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [auto] value{quat_to_mat3(0i32)}
+  return(convert<int>(value.m00))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: quat_to_mat3") != std::string::npos);
+}
+
+TEST_CASE("math quat_to_mat3 helper resolves with import") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Quat] raw{Quat(2.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Mat3] basis{quat_to_mat3(raw)}
+  return(convert<int>(basis.m00 - basis.m11 - basis.m22))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("math quat_to_mat3 helper resolves with explicit import") {
+  const std::string source = R"(
+import /std/math/quat_to_mat3
+import /std/math/Quat
+[return<int>]
+main() {
+  [auto] basis{quat_to_mat3(Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32))}
+  return(convert<int>(basis.m00 + basis.m11 + basis.m22))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("math trig builtin requires import") {
   const std::string source = R"(
 [return<f32>]

@@ -112,7 +112,7 @@ Minimal vector substrate note: the remaining items below are only worth keeping 
 - ✓ Implement matrix/quaternion `minus` shape validation with deterministic diagnostics. Progress: semantics now accepts `minus` only when both operands resolve to the same stdlib matrix/quaternion type (`Mat2`, `Mat3`, `Mat4`, or `Quat`) and emits a stable mismatch diagnostic otherwise.
 - ✓ Implement matrix/quaternion `multiply` allowlist validation with deterministic diagnostics. Progress: semantics now accepts only the documented `multiply` combinations that mention `Mat*`/`Quat` (scalar scaling, `Mat*Vec*`, matching `Mat*Mat*`, `Quat*Quat`, and `Quat*Vec3`) and emits a stable mismatch diagnostic otherwise.
 - ✓ Implement matrix/quaternion `divide` composite-by-scalar-only validation with deterministic diagnostics. Progress: semantics now accepts only `Mat* / scalar` and `Quat / scalar` in the matrix/quaternion family and emits a stable mismatch diagnostic otherwise.
-- ○ Implement `quat_to_mat3`.
+- ✓ Implement `quat_to_mat3`. Progress: stdlib now ships `/std/math/quat_to_mat3`, which normalizes the input quaternion and returns the corresponding `Mat3` rotation matrix under `import /std/math/*`.
 - ○ Implement `quat_to_mat4`.
 - ○ Implement `mat3_to_quat`.
 - ○ Reject implicit matrix/quaternion family conversions with deterministic diagnostics.

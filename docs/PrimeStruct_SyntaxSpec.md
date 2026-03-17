@@ -748,6 +748,7 @@ Current matrix surface:
 Current quaternion surface:
 - `Quat` uses ordinary struct construction and public scalar `x`, `y`, `z`, and `w` fields.
 - `Quat.toNormalized()` returns a normalized quaternion, and `Quat.normalize()` is the method-sugar equivalent.
+- `quat_to_mat3(q)` returns a `Mat3` rotation matrix after normalizing `q`.
 
 Draft constraints:
 - No implicit scalar/vector/matrix/quaternion conversion; use explicit constructors/helpers.
