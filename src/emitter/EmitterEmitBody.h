@@ -593,7 +593,7 @@
                   returnStructs,
                   helperPath);
               if (resolvedMethodPath) {
-                if (!explicitRequestedVectorHelperPath.empty() && receiverIndex == 0 &&
+                if (!explicitRequestedVectorHelperPath.empty() &&
                     helperPath != explicitRequestedVectorHelperPath) {
                   missingHelperCall = stmt;
                   hasMissingVectorHelper = true;
