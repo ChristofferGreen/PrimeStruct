@@ -1397,6 +1397,35 @@ main() {
   CHECK(readFile(outPath).find("ps_missing_vector_push_call_helper(values, 5)") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lambda lowers cross-path explicit vector mutator statement to deleted stub") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  assign(values[0i32], plus(value, 50i32))
+}
+
+[return<int>]
+main() {
+  holder{[]([i32] seed) {
+    [vector<i32> mut] values{vector<i32>(1i32, 2i32, seed)}
+    /vector/push(values, 5i32)
+    return(values[0i32])
+  }}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_lambda_cross_path_vector_mutator_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_lambda_cross_path_vector_mutator_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).find("ps_missing_vector_push_call_helper(values, 5)") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter lambda lowers explicit vector mutator method statement without helper to deleted stub") {
   const std::string source = R"(
 [return<int>]
@@ -10431,6 +10460,140 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("ps_missing_vector_clear_method_helper") != std::string::npos);
+}
+
+TEST_CASE("compiles and runs explicit canonical vector mutator statement helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  assign(values[1i32], plus(value, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /std/collections/vector/push(values, 3i32)
+  return(values[1i32])
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_explicit_canonical_vector_mutator_statement_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_explicit_canonical_vector_mutator_statement_helper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 43);
+}
+
+TEST_CASE("C++ emitter lowers alias vector mutator statements with canonical-only helper to deleted stub") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  assign(values[1i32], plus(value, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /vector/push(values, 3i32)
+  return(values[1i32])
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_vector_mutator_canonical_only_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_alias_vector_mutator_canonical_only_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_push_call_helper(values, 3)") != std::string::npos);
+}
+
+TEST_CASE("rejects alias vector mutator statements with canonical-only helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  assign(values[1i32], plus(value, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /vector/push(values, 3i32)
+  return(values[1i32])
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_vector_mutator_canonical_only_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_alias_vector_mutator_canonical_only_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_push_call_helper") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter lowers canonical vector mutator statements with alias-only helper to deleted stub") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/vector/push([vector<i32> mut] values, [i32] value) {
+  assign(values[1i32], plus(value, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /std/collections/vector/push(values, 3i32)
+  return(values[1i32])
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_vector_mutator_alias_only_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_vector_mutator_alias_only_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_push_call_helper(values, 3)") != std::string::npos);
+}
+
+TEST_CASE("rejects canonical vector mutator statements with alias-only helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/vector/push([vector<i32> mut] values, [i32] value) {
+  assign(values[1i32], plus(value, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  /std/collections/vector/push(values, 3i32)
+  return(values[1i32])
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_vector_mutator_alias_only_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_vector_mutator_alias_only_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_push_call_helper") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers canonical clear remove statements without alias bridge to deleted stubs") {

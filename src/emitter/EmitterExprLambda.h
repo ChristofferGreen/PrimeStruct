@@ -539,6 +539,12 @@ std::string Emitter::emitExpr(const Expr &expr,
       if (stmt.kind == Expr::Kind::Call) {
         std::string vectorHelper;
         if (getVectorMutatorName(stmt, nameMap, vectorHelper)) {
+          const std::string explicitRequestedVectorHelperPath =
+              (!stmt.isMethodCall &&
+               (resolveExprPath(stmt).rfind("/vector/", 0) == 0 ||
+                resolveExprPath(stmt).rfind("/std/collections/vector/", 0) == 0))
+                  ? resolveExprPath(stmt)
+                  : std::string{};
           std::string helperPath;
           bool hasUserVectorHelper = false;
           Expr helperCall = stmt;
@@ -625,10 +631,17 @@ std::string Emitter::emitExpr(const Expr &expr,
                   returnStructs,
                   helperPath);
               if (resolvedMethodPath) {
-                helperPath = preferVectorStdlibHelperPath(helperPath, nameMap);
-                rememberMissingVectorHelperCall(methodCandidate, helperPath);
+                if (!explicitRequestedVectorHelperPath.empty() && receiverIndex == 0 &&
+                    helperPath != explicitRequestedVectorHelperPath) {
+                  missingHelperCall = stmt;
+                  hasMissingVectorHelper = true;
+                  helperPath.clear();
+                } else {
+                  helperPath = preferVectorStdlibHelperPath(helperPath, nameMap);
+                  rememberMissingVectorHelperCall(methodCandidate, helperPath);
+                }
               }
-              if (resolvedMethodPath && nameMap.find(helperPath) != nameMap.end()) {
+              if (resolvedMethodPath && !helperPath.empty() && nameMap.find(helperPath) != nameMap.end()) {
                 hasUserVectorHelper = true;
                 helperCall = std::move(methodCandidate);
                 break;
