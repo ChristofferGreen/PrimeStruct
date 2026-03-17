@@ -9030,6 +9030,47 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_vector_capacity_method_helper") != std::string::npos);
 }
 
+TEST_CASE("compiles and runs vector namespaced count capacity slash methods through explicit alias helpers in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(20i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/vector/capacity([vector<i32>] values) {
+  return(8i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./vector/count(),
+              values./vector/capacity()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_count_capacity_slash_methods_alias_same_path.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_count_capacity_slash_methods_alias_same_path_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 110);
+}
+
 TEST_CASE("compiles and runs stdlib namespaced vector count capacity slash methods in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -9060,6 +9101,31 @@ main() {
   CHECK(runCommand(exePath) == 110);
 }
 
+TEST_CASE("C++ emitter lowers vector namespaced count capacity slash methods without helper to deleted stubs") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./vector/count(),
+              values./vector/capacity()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_count_capacity_slash_methods_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_count_capacity_slash_methods_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_count_method_helper(values)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_capacity_method_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_capacity_method_helper(values)") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter lowers stdlib namespaced vector count capacity slash methods without helper to deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -9083,6 +9149,30 @@ main() {
   CHECK(output.find("ps_missing_vector_count_method_helper(values)") != std::string::npos);
   CHECK(output.find("ps_missing_vector_capacity_method_helper") != std::string::npos);
   CHECK(output.find("ps_missing_vector_capacity_method_helper(values)") != std::string::npos);
+}
+
+TEST_CASE("rejects vector namespaced count capacity slash methods without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./vector/count(),
+              values./vector/capacity()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_count_capacity_slash_methods_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_count_capacity_slash_methods_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string errors = readFile(errPath);
+  CHECK(errors.find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(errors.find("ps_missing_vector_capacity_method_helper") != std::string::npos);
 }
 
 TEST_CASE("rejects stdlib namespaced vector count capacity slash methods without helper in C++ emitter") {
