@@ -13071,7 +13071,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced helper auto inference keeps receiver helper precedence") {
+TEST_CASE("vector stdlib namespaced helper auto inference rejects compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -13092,8 +13092,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced push auto inference uses canonical helper definition") {
@@ -13116,7 +13117,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector namespaced count-capacity call-form infers auto bindings") {
+TEST_CASE("vector namespaced count-capacity call-form requires explicit vector helper definitions") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -13127,11 +13128,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced count helper auto inference keeps receiver helper precedence") {
+TEST_CASE("vector stdlib namespaced count helper auto inference keeps canonical precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -13151,8 +13152,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count helper auto inference keeps inferred return mismatch diagnostics") {
@@ -13199,7 +13201,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced count auto inference keeps receiver helper precedence for non-builtin arity") {
+TEST_CASE("vector stdlib namespaced count auto inference rejects compatibility alias precedence for non-builtin arity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -13219,8 +13221,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count auto inference keeps non-builtin arity mismatch diagnostics") {
@@ -13267,7 +13270,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced count expression keeps receiver helper precedence") {
+TEST_CASE("vector stdlib namespaced count expression keeps canonical precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -13286,8 +13289,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count expression keeps return mismatch diagnostics") {
@@ -13332,7 +13336,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced count expression keeps receiver helper precedence for non-builtin arity") {
+TEST_CASE("vector stdlib namespaced count expression rejects compatibility alias precedence for non-builtin arity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -13351,8 +13355,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count expression keeps non-builtin arity mismatch diagnostics") {
@@ -13397,7 +13402,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced count expression rejects non-builtin compatibility arity fallback") {
+TEST_CASE("vector stdlib namespaced count expression rejects non-builtin compatibility alias fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -13411,11 +13416,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced count expression compatibility fallback keeps return mismatch diagnostics") {
+TEST_CASE("vector stdlib namespaced count expression compatibility alias fallback reports unknown target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -13430,8 +13435,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count auto inference rejects non-builtin compatibility arity fallback") {
@@ -15006,7 +15010,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced capacity expression keeps receiver helper precedence") {
+TEST_CASE("vector stdlib namespaced capacity expression keeps canonical precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -15025,8 +15029,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced capacity expression keeps return mismatch diagnostics") {
@@ -15053,7 +15058,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced capacity expression rejects canonical helper fallback") {
+TEST_CASE("vector stdlib namespaced capacity expression uses canonical helper definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
@@ -15067,12 +15072,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced capacity expression keeps receiver helper precedence for non-builtin arity") {
+TEST_CASE("vector stdlib namespaced capacity expression rejects compatibility alias precedence for non-builtin arity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values, [bool] marker) {
@@ -15091,8 +15095,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced capacity expression keeps non-builtin arity mismatch diagnostics") {
@@ -15119,7 +15124,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced capacity expression rejects non-builtin compatibility arity fallback") {
+TEST_CASE("vector stdlib namespaced capacity expression uses canonical helper definition for non-builtin arity") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
@@ -15133,11 +15138,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin capacity") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced access expression keeps receiver helper precedence") {
+TEST_CASE("vector stdlib namespaced access expression keeps canonical precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -15156,8 +15161,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced access expression keeps return mismatch diagnostics") {
@@ -15184,7 +15190,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced access expression rejects canonical helper fallback") {
+TEST_CASE("vector stdlib namespaced access expression uses canonical helper definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
@@ -15198,12 +15204,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced access expression keeps helper precedence for non-builtin arity") {
+TEST_CASE("vector stdlib namespaced access expression rejects compatibility alias precedence for non-builtin arity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values) {
@@ -15222,8 +15227,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced access expression keeps non-builtin arity mismatch diagnostics") {
@@ -15250,7 +15256,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced access expression rejects non-builtin compatibility arity fallback") {
+TEST_CASE("vector stdlib namespaced access expression uses canonical helper definition for non-builtin arity") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values) {
@@ -15264,8 +15270,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced capacity auto inference keeps non-vector target diagnostics") {
@@ -15307,7 +15313,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced access helper auto inference keeps receiver helper precedence") {
+TEST_CASE("vector stdlib namespaced access helper auto inference keeps canonical precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -15327,8 +15333,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced access helper auto inference keeps inferred return mismatch diagnostics") {

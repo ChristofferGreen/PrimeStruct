@@ -1415,6 +1415,37 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    auto getDirectVectorHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+        return "";
+      }
+      std::string normalized = candidate.name;
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      std::string normalizedPrefix = candidate.namespacePrefix;
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+        normalizedPrefix.erase(normalizedPrefix.begin());
+      }
+      std::string helperName;
+      if (normalized.rfind("vector/", 0) == 0) {
+        helperName = normalized.substr(std::string("vector/").size());
+      } else if (normalizedPrefix == "vector") {
+        helperName = normalized;
+      } else if (resolveCalleePath(candidate).rfind("/vector/", 0) == 0) {
+        helperName = resolveCalleePath(candidate).substr(std::string("/vector/").size());
+      } else {
+        return "";
+      }
+      if (helperName != "count" && helperName != "capacity" && helperName != "at" &&
+          helperName != "at_unsafe" && helperName != "push" && helperName != "pop" &&
+          helperName != "reserve" && helperName != "clear" && helperName != "remove_at" &&
+          helperName != "remove_swap") {
+        return "";
+      }
+      const std::string removedPath = "/vector/" + helperName;
+      return defMap_.find(removedPath) == defMap_.end() ? removedPath : "";
+    };
     auto preferVectorStdlibHelperPath = [&](const std::string &path) -> std::string {
       auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
         return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
@@ -1513,9 +1544,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
            namespacedHelper == "remove_swap");
       const bool hasImportedStdNamespacedVectorCanonicalHelper =
           isStdNamespacedVectorCanonicalHelperCall && hasImportedDefinitionPath(resolved);
-      const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback =
-          isStdNamespacedVectorCanonicalHelperCall && !namespacedHelper.empty() &&
-          defMap_.find("/vector/" + namespacedHelper) != defMap_.end();
+      const std::string removedVectorCompatibilityPath = getDirectVectorHelperCompatibilityPath(expr);
+      if (!removedVectorCompatibilityPath.empty()) {
+        error_ = "unknown call target: " + removedVectorCompatibilityPath;
+        return false;
+      }
       if (isStdNamespacedVectorCanonicalHelperCall && !hasImportedStdNamespacedVectorCanonicalHelper &&
           defMap_.find(resolved) == defMap_.end()) {
         error_ = "unknown call target: " + resolved;
@@ -1523,10 +1556,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       size_t resolvedReceiverIndex = 0;
       const bool shouldProbeVectorHelperReceiver =
-          !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(resolved) == defMap_.end() &&
-            !shouldAllowStdNamespacedVectorHelperCompatibilityFallback) &&
-          (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
-          !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(resolved) != defMap_.end());
+          !isStdNamespacedVectorCanonicalHelperCall && defMap_.find(resolved) == defMap_.end();
       if (shouldProbeVectorHelperReceiver && !expr.args.empty()) {
         auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
           if (candidate.kind != Expr::Kind::Name) {
@@ -1602,8 +1632,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (defMap_.find(resolved) == defMap_.end()) {
-        if (!(isStdNamespacedVectorCanonicalHelperCall &&
-              !shouldAllowStdNamespacedVectorHelperCompatibilityFallback)) {
+        if (!isStdNamespacedVectorCanonicalHelperCall) {
           error_ = vectorHelper + " is only supported as a statement";
           return false;
         }
@@ -4849,6 +4878,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     if (!expr.isMethodCall) {
+      const std::string removedVectorCompatibilityPath = getDirectVectorHelperCompatibilityPath(expr);
+      if (!removedVectorCompatibilityPath.empty()) {
+        error_ = "unknown call target: " + removedVectorCompatibilityPath;
+        return false;
+      }
+    }
+    if (!expr.isMethodCall) {
       const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(expr);
       if (!removedMapCompatibilityPath.empty()) {
         error_ = "unknown call target: " + removedMapCompatibilityPath;
@@ -4975,8 +5011,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isNamespacedMapHelperCall =
         isNamespacedCollectionHelperCall && namespacedCollection == "map";
     const bool isNamespacedVectorCountCall =
-        !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
+        !expr.isMethodCall && !isStdNamespacedVectorCountCall &&
+        isNamespacedVectorHelperCall && namespacedHelper == "count" &&
         isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+        defMap_.find(resolved) == defMap_.end() &&
         !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
@@ -4988,17 +5026,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         !expr.isMethodCall && resolved == "/map/count" &&
         !isMapNamespacedCountCompatibilityCall(expr) &&
         !isUnnamespacedMapCountFallbackCall;
-    const bool isNamespacedVectorCapacityCall =
-        !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
-        isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1;
     const bool isStdNamespacedVectorCapacityCall =
         !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
     const bool hasStdNamespacedVectorCapacityDefinition =
         hasImportedDefinitionPath("/std/collections/vector/capacity");
+    const bool isNamespacedVectorCapacityCall =
+        !expr.isMethodCall && !isStdNamespacedVectorCapacityCall &&
+        isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
+        isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+        defMap_.find(resolved) == defMap_.end();
     const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =
         isStdNamespacedVectorCapacityCall && hasStdNamespacedVectorCapacityDefinition;
-    const bool shouldSkipStdCapacityMethodFallback =
-        isStdNamespacedVectorCapacityCall && defMap_.find("/vector/capacity") != defMap_.end();
+    const bool shouldSkipStdCapacityMethodFallback = false;
     const bool hasBuiltinAccessSpelling =
         !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
     const bool isStdNamespacedVectorAccessCall =
@@ -5025,20 +5064,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         defMap_.find("/map/" +
                      ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : namespacedHelper)) !=
             defMap_.end();
-    const bool shouldAllowStdAccessCompatibilityFallback =
-        isStdNamespacedVectorAccessCall && !accessHelperName.empty() &&
-        defMap_.find("/vector/" + accessHelperName) != defMap_.end();
+    const bool shouldAllowStdAccessCompatibilityFallback = false;
     const bool isBuiltinAccessName =
         hasBuiltinAccessSpelling &&
         (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback ||
          hasStdNamespacedVectorAccessDefinition) &&
         !isStdNamespacedMapAccessCall && !isResolvedMapAccessCall;
     const bool isNamespacedVectorAccessCall =
-        isBuiltinAccessName && isNamespacedVectorHelperCall &&
-        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
-    const bool shouldSkipStdAccessMethodFallback =
-        isStdNamespacedVectorAccessCall && !accessHelperName.empty() &&
-        defMap_.find("/vector/" + accessHelperName) != defMap_.end();
+        !isStdNamespacedVectorAccessCall && isBuiltinAccessName && isNamespacedVectorHelperCall &&
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
+        defMap_.find(resolved) == defMap_.end();
+    const bool shouldSkipStdAccessMethodFallback = false;
     const bool isNamespacedMapAccessCall =
         isBuiltinAccessName && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
@@ -5049,7 +5085,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         expr.args.front().kind == Expr::Kind::Call && resolveMapTarget(expr.args.front());
     const bool hasStdNamespacedVectorCountAliasDefinition =
         defMap_.find("/std/collections/vector/count") != defMap_.end() ||
-        defMap_.find("/vector/count") != defMap_.end();
+        hasImportedDefinitionPath("/std/collections/vector/count");
     const bool prefersCanonicalVectorCountAliasDefinition =
         !expr.isMethodCall && resolved == "/vector/count" && defMap_.find(resolved) == defMap_.end() &&
         defMap_.find("/std/collections/vector/count") != defMap_.end();

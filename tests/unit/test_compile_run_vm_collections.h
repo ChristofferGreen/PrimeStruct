@@ -8821,7 +8821,7 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("runs vm with auto-inferred std namespaced vector push expression receiver precedence") {
+TEST_CASE("rejects vm auto-inferred std namespaced vector push compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -8843,8 +8843,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_std_namespaced_vector_push_expr_named_receiver_precedence_auto.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 11);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_std_namespaced_vector_push_expr_named_receiver_precedence_auto_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected int") != std::string::npos);
 }
 
 TEST_CASE("runs vm with auto-inferred std namespaced vector push canonical definition") {
@@ -8868,7 +8873,7 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("runs vm with auto-inferred std namespaced count helper receiver precedence") {
+TEST_CASE("rejects vm auto-inferred std namespaced count helper compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -8888,8 +8893,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_vector_count_receiver_precedence_auto.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 12);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_vector_count_receiver_precedence_auto_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected int") != std::string::npos);
 }
 
 TEST_CASE("runs vm with auto-inferred std namespaced count helper canonical fallback") {
@@ -8914,7 +8923,7 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("runs vm with std namespaced count expression receiver precedence") {
+TEST_CASE("rejects vm std namespaced count expression compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -8933,8 +8942,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_vector_count_expr_receiver_precedence.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 12);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_vector_count_expr_receiver_precedence_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected int") != std::string::npos);
 }
 
 TEST_CASE("rejects vm std namespaced count without imported helper") {
@@ -8994,7 +9007,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector namespaced count non-builtin array fallback") {
@@ -9015,7 +9028,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with std namespaced capacity expression receiver precedence") {
+TEST_CASE("rejects vm std namespaced capacity expression compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -9034,11 +9047,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_vector_capacity_expr_receiver_precedence.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 12);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_std_namespaced_vector_capacity_expr_receiver_precedence_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected int") != std::string::npos);
 }
 
-TEST_CASE("rejects vm std namespaced capacity expression canonical fallback") {
+TEST_CASE("runs vm with std namespaced capacity expression canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
@@ -9052,12 +9070,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_vector_capacity_expr_canonical_fallback.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_vector_capacity_expr_canonical_fallback_out.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("return type mismatch: expected bool") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("runs vm with auto-inferred named access helper receiver precedence") {
@@ -9085,7 +9099,7 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("runs vm with auto-inferred std namespaced access helper receiver precedence") {
+TEST_CASE("rejects vm auto-inferred std namespaced access helper compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -9106,8 +9120,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_std_namespaced_vector_access_expr_named_receiver_precedence_auto.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 12);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_std_namespaced_vector_access_expr_named_receiver_precedence_auto_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("return type mismatch: expected int") != std::string::npos);
 }
 
 TEST_CASE("runs vm with auto-inferred std namespaced access helper canonical definition") {
