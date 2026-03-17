@@ -40,5 +40,79 @@ namespace std {
     [public f32] m32{0.0}
     [public f32] m33{0.0}
   }
+
+  [return<Vec2>]
+  mat2_mul_vec2_internal([Mat2] left, [Vec2] right) {
+    return(Vec2(
+      left.m00 * right.x + left.m01 * right.y,
+      left.m10 * right.x + left.m11 * right.y
+    ))
+  }
+
+  [return<Vec3>]
+  mat3_mul_vec3_internal([Mat3] left, [Vec3] right) {
+    return(Vec3(
+      left.m00 * right.x + left.m01 * right.y + left.m02 * right.z,
+      left.m10 * right.x + left.m11 * right.y + left.m12 * right.z,
+      left.m20 * right.x + left.m21 * right.y + left.m22 * right.z
+    ))
+  }
+
+  [return<Vec4>]
+  mat4_mul_vec4_internal([Mat4] left, [Vec4] right) {
+    return(Vec4(
+      left.m00 * right.x + left.m01 * right.y + left.m02 * right.z + left.m03 * right.w,
+      left.m10 * right.x + left.m11 * right.y + left.m12 * right.z + left.m13 * right.w,
+      left.m20 * right.x + left.m21 * right.y + left.m22 * right.z + left.m23 * right.w,
+      left.m30 * right.x + left.m31 * right.y + left.m32 * right.z + left.m33 * right.w
+    ))
+  }
+
+  [return<Mat2>]
+  mat2_mul_mat2_internal([Mat2] left, [Mat2] right) {
+    return(Mat2(
+      left.m00 * right.m00 + left.m01 * right.m10,
+      left.m00 * right.m01 + left.m01 * right.m11,
+      left.m10 * right.m00 + left.m11 * right.m10,
+      left.m10 * right.m01 + left.m11 * right.m11
+    ))
+  }
+
+  [return<Mat3>]
+  mat3_mul_mat3_internal([Mat3] left, [Mat3] right) {
+    return(Mat3(
+      left.m00 * right.m00 + left.m01 * right.m10 + left.m02 * right.m20,
+      left.m00 * right.m01 + left.m01 * right.m11 + left.m02 * right.m21,
+      left.m00 * right.m02 + left.m01 * right.m12 + left.m02 * right.m22,
+      left.m10 * right.m00 + left.m11 * right.m10 + left.m12 * right.m20,
+      left.m10 * right.m01 + left.m11 * right.m11 + left.m12 * right.m21,
+      left.m10 * right.m02 + left.m11 * right.m12 + left.m12 * right.m22,
+      left.m20 * right.m00 + left.m21 * right.m10 + left.m22 * right.m20,
+      left.m20 * right.m01 + left.m21 * right.m11 + left.m22 * right.m21,
+      left.m20 * right.m02 + left.m21 * right.m12 + left.m22 * right.m22
+    ))
+  }
+
+  [return<Mat4>]
+  mat4_mul_mat4_internal([Mat4] left, [Mat4] right) {
+    return(Mat4(
+      left.m00 * right.m00 + left.m01 * right.m10 + left.m02 * right.m20 + left.m03 * right.m30,
+      left.m00 * right.m01 + left.m01 * right.m11 + left.m02 * right.m21 + left.m03 * right.m31,
+      left.m00 * right.m02 + left.m01 * right.m12 + left.m02 * right.m22 + left.m03 * right.m32,
+      left.m00 * right.m03 + left.m01 * right.m13 + left.m02 * right.m23 + left.m03 * right.m33,
+      left.m10 * right.m00 + left.m11 * right.m10 + left.m12 * right.m20 + left.m13 * right.m30,
+      left.m10 * right.m01 + left.m11 * right.m11 + left.m12 * right.m21 + left.m13 * right.m31,
+      left.m10 * right.m02 + left.m11 * right.m12 + left.m12 * right.m22 + left.m13 * right.m32,
+      left.m10 * right.m03 + left.m11 * right.m13 + left.m12 * right.m23 + left.m13 * right.m33,
+      left.m20 * right.m00 + left.m21 * right.m10 + left.m22 * right.m20 + left.m23 * right.m30,
+      left.m20 * right.m01 + left.m21 * right.m11 + left.m22 * right.m21 + left.m23 * right.m31,
+      left.m20 * right.m02 + left.m21 * right.m12 + left.m22 * right.m22 + left.m23 * right.m32,
+      left.m20 * right.m03 + left.m21 * right.m13 + left.m22 * right.m23 + left.m23 * right.m33,
+      left.m30 * right.m00 + left.m31 * right.m10 + left.m32 * right.m20 + left.m33 * right.m30,
+      left.m30 * right.m01 + left.m31 * right.m11 + left.m32 * right.m21 + left.m33 * right.m31,
+      left.m30 * right.m02 + left.m31 * right.m12 + left.m32 * right.m22 + left.m33 * right.m32,
+      left.m30 * right.m03 + left.m31 * right.m13 + left.m32 * right.m23 + left.m33 * right.m33
+    ))
+  }
   }
 }

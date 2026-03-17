@@ -1606,6 +1606,59 @@ main() {
   }
 }
 
+TEST_CASE("primec emits wasm bytecode for matrix composition order references with tolerance") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat3] rotate{Mat3(
+    0.0f32, -1.0f32, 0.0f32,
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [Mat3] scale{Mat3(
+    2.0f32, 0.0f32, 0.0f32,
+    0.0f32, 3.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [Vec3] input{Vec3(1.0f32, 2.0f32, 4.0f32)}
+  [Vec3] rotatedInput{multiply(rotate, input)}
+  [Vec3] nested{multiply(scale, rotatedInput)}
+  [Mat3] combined{multiply(scale, rotate)}
+  [Vec3] viaCombined{multiply(combined, input)}
+  [Mat3] wrongCombined{multiply(rotate, scale)}
+  [Vec3] wrongOrder{multiply(wrongCombined, input)}
+  [f32] tolerance{0.0001f32}
+  [f32] nestedError{abs(nested.x + 4.0f32) + abs(nested.y - 3.0f32) + abs(nested.z - 4.0f32)}
+  [f32] combinedError{abs(viaCombined.x + 4.0f32) + abs(viaCombined.y - 3.0f32) + abs(viaCombined.z - 4.0f32)}
+  [f32] wrongOrderError{abs(wrongOrder.x + 6.0f32) + abs(wrongOrder.y - 2.0f32) + abs(wrongOrder.z - 4.0f32)}
+  return(convert<int>(nestedError <= tolerance && combinedError <= tolerance && wrongOrderError <= tolerance))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_matrix_composition_reference.prime", source);
+  const std::string wasmPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_matrix_composition_reference.wasm").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_matrix_composition_reference_err.txt").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_matrix_composition_reference_out.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  if (hasWasmtime()) {
+    const std::string runCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    const std::string output = readFile(outPath);
+    CHECK(output.find("1") != std::string::npos);
+  }
+}
+
 TEST_CASE("primec rejects wasm support-matrix plus mismatch with deterministic diagnostic") {
   const std::string source = R"(
 import /std/math/*

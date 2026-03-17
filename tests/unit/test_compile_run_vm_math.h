@@ -404,6 +404,41 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
+TEST_CASE("runs vm matrix composition order references with tolerance") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat3] rotate{Mat3(
+    0.0f32, -1.0f32, 0.0f32,
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [Mat3] scale{Mat3(
+    2.0f32, 0.0f32, 0.0f32,
+    0.0f32, 3.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [Vec3] input{Vec3(1.0f32, 2.0f32, 4.0f32)}
+  [Vec3] rotatedInput{multiply(rotate, input)}
+  [Vec3] nested{multiply(scale, rotatedInput)}
+  [Mat3] combined{multiply(scale, rotate)}
+  [Vec3] viaCombined{multiply(combined, input)}
+  [Mat3] wrongCombined{multiply(rotate, scale)}
+  [Vec3] wrongOrder{multiply(wrongCombined, input)}
+  [f32] tolerance{0.0001f32}
+  [f32] nestedError{abs(nested.x + 4.0f32) + abs(nested.y - 3.0f32) + abs(nested.z - 4.0f32)}
+  [f32] combinedError{abs(viaCombined.x + 4.0f32) + abs(viaCombined.y - 3.0f32) + abs(viaCombined.z - 4.0f32)}
+  [f32] wrongOrderError{abs(wrongOrder.x + 6.0f32) + abs(wrongOrder.y - 2.0f32) + abs(wrongOrder.z - 4.0f32)}
+  return(convert<int>(nestedError <= tolerance && combinedError <= tolerance && wrongOrderError <= tolerance))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_matrix_composition_reference.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
 TEST_CASE("rejects vm support-matrix plus mismatch diagnostic") {
   const std::string source = R"(
 import /std/math/*
