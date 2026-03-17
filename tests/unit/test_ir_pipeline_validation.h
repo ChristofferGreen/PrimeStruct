@@ -13459,6 +13459,111 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   expectNotHandled("/std/collections/map/at_unsafe", {mapName, keyName});
 }
 
+TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out of native builtin emission") {
+  using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using MapAccessTargetInfo = primec::ir_lowerer::MapAccessTargetInfo;
+  using ArrayVectorAccessTargetInfo = primec::ir_lowerer::ArrayVectorAccessTargetInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo vectorInfo;
+  vectorInfo.kind = LocalInfo::Kind::Vector;
+  vectorInfo.index = 7;
+  vectorInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("values", vectorInfo);
+
+  LocalInfo indexInfo;
+  indexInfo.kind = LocalInfo::Kind::Value;
+  indexInfo.index = 9;
+  indexInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("index", indexInfo);
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr indexName;
+  indexName.kind = primec::Expr::Kind::Name;
+  indexName.name = "index";
+
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto instructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, uint64_t imm) { instructions.at(index).imm = imm; };
+  auto emitExpr = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &emitLocals) {
+    if (expr.kind != primec::Expr::Kind::Name) {
+      return false;
+    }
+    auto it = emitLocals.find(expr.name);
+    if (it == emitLocals.end()) {
+      return false;
+    }
+    emitInstruction(primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+    return true;
+  };
+  auto resolveMapAccessTargetInfo = [](const primec::Expr &, MapAccessTargetInfo &) { return false; };
+  auto resolveArrayVectorAccessTargetInfo =
+      [](const primec::Expr &targetExpr, ArrayVectorAccessTargetInfo &out) {
+        if (targetExpr.kind != primec::Expr::Kind::Name || targetExpr.name != "values") {
+          return false;
+        }
+        out.isArrayOrVectorTarget = true;
+        out.isVectorTarget = true;
+        out.elemKind = LocalInfo::ValueKind::Int32;
+        return true;
+      };
+
+  auto expectNotHandled = [&](const char *helperName, const std::vector<primec::Expr> &args) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.name = helperName;
+    callExpr.args = args;
+
+    instructions.clear();
+    std::string error = "stale";
+    CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+              callExpr,
+              locals,
+              [](const primec::Expr &, std::string &) { return false; },
+              [](const std::string &) { return true; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+                return false;
+              },
+              emitExpr,
+              resolveMapAccessTargetInfo,
+              resolveArrayVectorAccessTargetInfo,
+              [](const primec::Expr &, std::string &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return LocalInfo::ValueKind::Unknown;
+              },
+              []() { return 0; },
+              []() {},
+              []() {},
+              []() {},
+              instructionCount,
+              emitInstruction,
+              patchInstructionImm,
+              error) == Result::NotHandled);
+    CHECK(error == "stale");
+    CHECK(instructions.empty());
+  };
+
+  expectNotHandled("/vector/count", {valuesName});
+  expectNotHandled("/std/collections/vector/count", {valuesName});
+  expectNotHandled("/vector/capacity", {valuesName});
+  expectNotHandled("/std/collections/vector/capacity", {valuesName});
+  expectNotHandled("/vector/at", {valuesName, indexName});
+  expectNotHandled("/std/collections/vector/at", {valuesName, indexName});
+  expectNotHandled("/vector/at_unsafe", {valuesName, indexName});
+  expectNotHandled("/std/collections/vector/at_unsafe", {valuesName, indexName});
+}
+
 TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
@@ -13613,7 +13718,7 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   primec::Expr soaVectorAliasCountCall = soaCountCall;
   soaVectorAliasCountCall.name = "/vector/count";
   instructions.clear();
-  error.clear();
+  error = "stale";
   CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
             soaVectorAliasCountCall,
             locals,
@@ -13640,14 +13745,14 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Error);
-  CHECK(error == "count requires array, vector, map, or string target");
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
   CHECK(instructions.empty());
 
   primec::Expr soaStdlibAliasCountCall = soaCountCall;
   soaStdlibAliasCountCall.name = "/std/collections/vector/count";
   instructions.clear();
-  error.clear();
+  error = "stale";
   CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
             soaStdlibAliasCountCall,
             locals,
@@ -13674,9 +13779,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK_FALSE(instructions.empty());
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(instructions.empty());
 
   primec::Expr soaGetCall;
   soaGetCall.kind = primec::Expr::Kind::Call;

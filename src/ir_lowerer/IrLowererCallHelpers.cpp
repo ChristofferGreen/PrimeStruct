@@ -199,6 +199,7 @@ bool isArgsPackParam(const Expr &param) {
 }
 
 std::string normalizeMapImportAliasPath(const std::string &path);
+std::string normalizeVectorImportAliasPath(const std::string &path);
 
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
   if (isSimpleCallName(expr, name)) {
@@ -234,6 +235,19 @@ bool isExplicitMapHelperFallbackPath(const Expr &expr) {
          normalizedPath == "/std/collections/map/at_unsafe";
 }
 
+bool isExplicitVectorHelperFallbackPath(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
+    return false;
+  }
+  const std::string normalizedPath = normalizeVectorImportAliasPath(expr.name);
+  return normalizedPath == "/vector/count" || normalizedPath == "/vector/capacity" ||
+         normalizedPath == "/vector/at" || normalizedPath == "/vector/at_unsafe" ||
+         normalizedPath == "/std/collections/vector/count" ||
+         normalizedPath == "/std/collections/vector/capacity" ||
+         normalizedPath == "/std/collections/vector/at" ||
+         normalizedPath == "/std/collections/vector/at_unsafe";
+}
+
 std::string normalizeMapImportAliasPath(const std::string &path) {
   if (path.empty() || path.front() == '/') {
     return path;
@@ -241,6 +255,18 @@ std::string normalizeMapImportAliasPath(const std::string &path) {
   constexpr std::string_view mapPrefix = "map/";
   constexpr std::string_view stdMapPrefix = "std/collections/map/";
   if (path.rfind(mapPrefix, 0) == 0 || path.rfind(stdMapPrefix, 0) == 0) {
+    return "/" + path;
+  }
+  return path;
+}
+
+std::string normalizeVectorImportAliasPath(const std::string &path) {
+  if (path.empty() || path.front() == '/') {
+    return path;
+  }
+  constexpr std::string_view vectorPrefix = "vector/";
+  constexpr std::string_view stdVectorPrefix = "std/collections/vector/";
+  if (path.rfind(vectorPrefix, 0) == 0 || path.rfind(stdVectorPrefix, 0) == 0) {
     return "/" + path;
   }
   return path;
@@ -827,6 +853,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::Error;
   }
   if (isExplicitMapHelperFallbackPath(expr)) {
+    return NativeCallTailDispatchResult::NotHandled;
+  }
+  if (isExplicitVectorHelperFallbackPath(expr)) {
     return NativeCallTailDispatchResult::NotHandled;
   }
 
