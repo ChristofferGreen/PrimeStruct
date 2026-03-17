@@ -1142,6 +1142,45 @@ bool resolveMethodCallPath(const Expr &call,
            findReturnStructMetadata(path) != nullptr || findReturnKindMetadata(path) != nullptr;
   };
   std::function<std::string(const Expr &)> inferPrimitiveTypeName;
+  auto isBareVectorAccessMethod = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
+        candidate.args.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "at" && normalized != "at_unsafe") {
+      return false;
+    }
+    if (normalized.find('/') != std::string::npos) {
+      return false;
+    }
+    const Expr &receiverExpr = candidate.args.front();
+    if (isVectorValue(receiverExpr, localTypes)) {
+      return true;
+    }
+    if (inferPrimitiveTypeName) {
+      const std::string inferredReceiverType = normalizeBindingTypeName(inferPrimitiveTypeName(receiverExpr));
+      return inferredReceiverType == "vector";
+    }
+    return false;
+  };
+  auto resolveBareVectorAccessMethodHelperPath = [&](const Expr &candidate) -> std::string {
+    if (!isBareVectorAccessMethod(candidate)) {
+      return "";
+    }
+    const std::string aliasPath = "/vector/" + candidate.name;
+    if (hasDefinitionOrMetadata(aliasPath)) {
+      return aliasPath;
+    }
+    const std::string canonicalPath = "/std/collections/vector/" + candidate.name;
+    if (hasDefinitionOrMetadata(canonicalPath)) {
+      return canonicalPath;
+    }
+    return "";
+  };
   auto resolveCollectionElementTypeFromCall = [&](const Expr &candidate, std::string &typeOut) -> bool {
     typeOut.clear();
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
@@ -1330,6 +1369,26 @@ bool resolveMethodCallPath(const Expr &call,
         return "";
       }
       case Expr::Kind::Call: {
+        if (expr.isMethodCall) {
+          if (const std::string vectorAccessMethodPath = resolveBareVectorAccessMethodHelperPath(expr);
+              !vectorAccessMethodPath.empty()) {
+            if (const std::string *structPath = findReturnStructMetadata(vectorAccessMethodPath)) {
+              return normalizeCollectionReceiverType(*structPath);
+            }
+            if (const ReturnKind *kind = findReturnKindMetadata(vectorAccessMethodPath)) {
+              if (*kind == ReturnKind::Array) {
+                return "array";
+              }
+              const std::string inferredType = typeNameForReturnKind(*kind);
+              if (!inferredType.empty()) {
+                return inferredType;
+              }
+            }
+            return "";
+          } else if (isBareVectorAccessMethod(expr)) {
+            return "";
+          }
+        }
         if (!expr.isMethodCall) {
           if (const std::string explicitVectorAccessType = inferExplicitVectorAccessCompatibilityTypeName(expr);
               !explicitVectorAccessType.empty()) {
