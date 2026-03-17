@@ -198,6 +198,27 @@ Expected runtime behavior:
   `startup_failure_exit_code`, and graphics-path `gfx_error_code` /
   `gfx_error_why` fields before exit.
 
+Experimental gfx stream path:
+```bash
+./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_experimental_gfx_stream --entry /cubeExperimentalGfxEmitFrameStream
+xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host
+/tmp/spinning_cube_window_host --experimental-gfx /tmp/cube_experimental_gfx_stream --max-frames 120
+```
+- Startup: compiles and runs the shared experimental gfx `.prime` stream from
+  `cubeExperimentalGfxEmitFrameStream`, then feeds the native window host with
+  deterministic window/swapchain/pass metadata plus the shared simulation
+  tail.
+- Rendering: the macOS host consumes the experimental gfx stream header for
+  window size and clear settings while the shared simulation frames still drive
+  cube rotation uniforms.
+- Diagnostics: prints `experimental_gfx_stream_loaded=1`,
+  `experimental_gfx_window_width=1280`,
+  `experimental_gfx_window_height=720`,
+  `experimental_gfx_mesh_vertex_count=8`,
+  `experimental_gfx_mesh_index_count=36`,
+  `experimental_gfx_submit_present_mask=3`, `startup_success=1`,
+  `frame_rendered=1`, and `exit_reason=max_frames`.
+
 Software surface bridge demo:
 ```bash
 xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host

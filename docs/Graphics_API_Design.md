@@ -25,9 +25,11 @@ rewrites onto a dedicated substrate-backed stdlib helper for the locked v1
 vertex wire type. The non-Result `Frame.render_pass(...)` plus
 `RenderPass.draw_mesh(...)` / `RenderPass.end()` path now routes through
 minimal pass-encoding substrate helpers while preserving deterministic
-zero-token / no-op fallback on invalid handles; threading those helpers through
-one real host/runtime path is still the next explicit step. Browser/native/Metal
-host samples still sit around shared `.prime` simulation/data paths. The
+zero-token / no-op fallback on invalid handles, and the first real
+native-desktop host/runtime path now consumes a deterministic experimental gfx
+stream emitted by the shared spinning-cube `.prime` sample so submit/present
+can drive one real macOS window host end-to-end. Browser/native/Metal host
+samples still otherwise sit around shared `.prime` simulation/data paths. The
 current experimental package intentionally keeps deterministic rejects for
 source-level profile literals and for unsupported `create_pipeline` vertex
 types instead of inventing more compiler-owned routing, and Result-carrying

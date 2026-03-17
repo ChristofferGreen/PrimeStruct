@@ -58,6 +58,9 @@ fragment float4 windowFragmentMain(VertexOut in [[stage_in]]) {
 
 constexpr int SimulationStreamFieldsPerFrame = 4;
 constexpr int SimulationFixedStepMillis = 16;
+constexpr int ExperimentalGfxStreamMagic = 17001;
+constexpr int ExperimentalGfxStreamVersion = 1;
+constexpr size_t ExperimentalGfxHeaderFieldCount = 26;
 
 enum class GfxErrorCode {
   None,
@@ -155,6 +158,36 @@ struct SimulationFrameState {
   int axisXCenti = 0;
   int axisYCenti = 0;
 };
+
+struct ExperimentalGfxStreamHeader {
+  int windowWidth = 1280;
+  int windowHeight = 720;
+  int colorFormat = 0;
+  int depthFormat = 0;
+  int presentMode = 0;
+  int clearColorRMilli = 0;
+  int clearColorGMilli = 0;
+  int clearColorBMilli = 0;
+  int clearColorAMilli = 1000;
+  int clearDepthMilli = 1000;
+  int meshVertexCount = 0;
+  int meshIndexCount = 0;
+  int windowToken = 0;
+  int deviceToken = 0;
+  int queueToken = 0;
+  int swapchainToken = 0;
+  int meshToken = 0;
+  int pipelineToken = 0;
+  int materialToken = 0;
+  int frameToken = 0;
+  int renderPassToken = 0;
+  int drawToken = 0;
+  int endToken = 0;
+  int submitPresentMask = 0;
+};
+
+std::string shellQuote(const std::string &value);
+int decodeExitCode(int rawCode);
 
 struct WindowVertex {
   float px;
@@ -274,6 +307,49 @@ bool parseSignedInt(const char *text, int &valueOut) {
   return true;
 }
 
+bool loadIntegerStream(const std::string &programPath,
+                       const char *emptyStreamError,
+                       std::vector<int> &valuesOut,
+                       std::string &errorOut) {
+  valuesOut.clear();
+  const std::string command = shellQuote(programPath);
+  FILE *pipe = popen(command.c_str(), "r");
+  if (pipe == nullptr) {
+    errorOut = "failed to execute stream binary";
+    return false;
+  }
+
+  std::array<char, 256> buffer{};
+  while (std::fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
+    std::string line(buffer.data());
+    while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
+      line.pop_back();
+    }
+    if (line.empty()) {
+      continue;
+    }
+    int parsedValue = 0;
+    if (!parseSignedInt(line.c_str(), parsedValue)) {
+      errorOut = "invalid stream value: " + line;
+      pclose(pipe);
+      return false;
+    }
+    valuesOut.push_back(parsedValue);
+  }
+
+  const int rawExitCode = pclose(pipe);
+  const int exitCode = decodeExitCode(rawExitCode);
+  if (exitCode != 0) {
+    errorOut = "stream binary exited with code " + std::to_string(exitCode);
+    return false;
+  }
+  if (valuesOut.empty()) {
+    errorOut = emptyStreamError;
+    return false;
+  }
+  return true;
+}
+
 std::string shellQuote(const std::string &value) {
   std::string quoted = "'";
   for (char c : value) {
@@ -305,40 +381,15 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
                           std::vector<SimulationFrameState> &framesOut,
                           std::string &errorOut) {
   framesOut.clear();
-  const std::string command = shellQuote(cubeSimulationPath);
-  FILE *pipe = popen(command.c_str(), "r");
-  if (pipe == nullptr) {
-    errorOut = "failed to execute cube simulation binary";
-    return false;
-  }
-
   std::vector<int> values;
-  std::array<char, 256> buffer{};
-  while (std::fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
-    std::string line(buffer.data());
-    while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
-      line.pop_back();
+  if (!loadIntegerStream(cubeSimulationPath, "cube simulation stream was empty", values, errorOut)) {
+    if (errorOut == "failed to execute stream binary") {
+      errorOut = "failed to execute cube simulation binary";
+    } else if (errorOut.rfind("invalid stream value: ", 0) == 0) {
+      errorOut.replace(0, std::strlen("invalid stream value: "), "invalid cube simulation stream value: ");
+    } else if (errorOut.rfind("stream binary exited with code ", 0) == 0) {
+      errorOut.replace(0, std::strlen("stream binary exited with code "), "cube simulation binary exited with code ");
     }
-    if (line.empty()) {
-      continue;
-    }
-    int parsedValue = 0;
-    if (!parseSignedInt(line.c_str(), parsedValue)) {
-      errorOut = "invalid cube simulation stream value: " + line;
-      pclose(pipe);
-      return false;
-    }
-    values.push_back(parsedValue);
-  }
-
-  const int rawExitCode = pclose(pipe);
-  const int exitCode = decodeExitCode(rawExitCode);
-  if (exitCode != 0) {
-    errorOut = "cube simulation binary exited with code " + std::to_string(exitCode);
-    return false;
-  }
-  if (values.empty()) {
-    errorOut = "cube simulation stream was empty";
     return false;
   }
   if (values.size() % SimulationStreamFieldsPerFrame != 0) {
@@ -347,6 +398,105 @@ bool loadSimulationFrames(const std::string &cubeSimulationPath,
   }
 
   for (size_t i = 0; i < values.size(); i += SimulationStreamFieldsPerFrame) {
+    SimulationFrameState frame;
+    frame.tick = values[i];
+    frame.angleMilli = values[i + 1];
+    frame.axisXCenti = values[i + 2];
+    frame.axisYCenti = values[i + 3];
+    framesOut.push_back(frame);
+  }
+
+  return true;
+}
+
+bool loadExperimentalGfxStream(const std::string &programPath,
+                               ExperimentalGfxStreamHeader &headerOut,
+                               std::vector<SimulationFrameState> &framesOut,
+                               std::string &errorOut) {
+  framesOut.clear();
+  std::vector<int> values;
+  if (!loadIntegerStream(programPath, "experimental gfx stream was empty", values, errorOut)) {
+    if (errorOut == "failed to execute stream binary") {
+      errorOut = "failed to execute experimental gfx stream binary";
+    } else if (errorOut.rfind("invalid stream value: ", 0) == 0) {
+      errorOut.replace(0, std::strlen("invalid stream value: "), "invalid experimental gfx stream value: ");
+    } else if (errorOut.rfind("stream binary exited with code ", 0) == 0) {
+      errorOut.replace(0, std::strlen("stream binary exited with code "),
+                       "experimental gfx stream binary exited with code ");
+    }
+    return false;
+  }
+
+  if (values.size() < ExperimentalGfxHeaderFieldCount) {
+    errorOut = "experimental gfx stream header was truncated";
+    return false;
+  }
+  if (values[0] != ExperimentalGfxStreamMagic) {
+    errorOut = "experimental gfx stream magic mismatch";
+    return false;
+  }
+  if (values[1] != ExperimentalGfxStreamVersion) {
+    errorOut = "experimental gfx stream version mismatch";
+    return false;
+  }
+
+  headerOut.windowWidth = values[2];
+  headerOut.windowHeight = values[3];
+  headerOut.colorFormat = values[4];
+  headerOut.depthFormat = values[5];
+  headerOut.presentMode = values[6];
+  headerOut.clearColorRMilli = values[7];
+  headerOut.clearColorGMilli = values[8];
+  headerOut.clearColorBMilli = values[9];
+  headerOut.clearColorAMilli = values[10];
+  headerOut.clearDepthMilli = values[11];
+  headerOut.meshVertexCount = values[12];
+  headerOut.meshIndexCount = values[13];
+  headerOut.windowToken = values[14];
+  headerOut.deviceToken = values[15];
+  headerOut.queueToken = values[16];
+  headerOut.swapchainToken = values[17];
+  headerOut.meshToken = values[18];
+  headerOut.pipelineToken = values[19];
+  headerOut.materialToken = values[20];
+  headerOut.frameToken = values[21];
+  headerOut.renderPassToken = values[22];
+  headerOut.drawToken = values[23];
+  headerOut.endToken = values[24];
+  headerOut.submitPresentMask = values[25];
+
+  if (headerOut.windowWidth < 1 || headerOut.windowHeight < 1) {
+    errorOut = "experimental gfx stream reported invalid window size";
+    return false;
+  }
+  if (headerOut.colorFormat != 0 || headerOut.depthFormat != 0 || headerOut.presentMode != 0) {
+    errorOut = "experimental gfx stream requested unsupported swapchain format";
+    return false;
+  }
+  if (headerOut.meshVertexCount != static_cast<int>(CubeVertices.size()) ||
+      headerOut.meshIndexCount != static_cast<int>(CubeIndices.size())) {
+    errorOut = "experimental gfx stream mesh counts did not match the locked cube layout";
+    return false;
+  }
+  if (headerOut.submitPresentMask != 3) {
+    errorOut = "experimental gfx stream did not report successful submit/present";
+    return false;
+  }
+  if (headerOut.windowToken < 1 || headerOut.deviceToken < 1 || headerOut.queueToken < 1 ||
+      headerOut.swapchainToken < 1 || headerOut.meshToken < 1 || headerOut.pipelineToken < 1 ||
+      headerOut.materialToken < 1 || headerOut.frameToken < 1 || headerOut.renderPassToken < 1 ||
+      headerOut.drawToken < 1 || headerOut.endToken < 1) {
+    errorOut = "experimental gfx stream reported invalid resource tokens";
+    return false;
+  }
+
+  const size_t frameValueCount = values.size() - ExperimentalGfxHeaderFieldCount;
+  if (frameValueCount == 0 || (frameValueCount % SimulationStreamFieldsPerFrame) != 0) {
+    errorOut = "experimental gfx stream frame payload was not divisible by 4";
+    return false;
+  }
+
+  for (size_t i = ExperimentalGfxHeaderFieldCount; i < values.size(); i += SimulationStreamFieldsPerFrame) {
     SimulationFrameState frame;
     frame.tick = values[i];
     frame.angleMilli = values[i + 1];
@@ -402,6 +552,7 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
 @interface PrimeStructWindowHostDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
 - (instancetype)initWithMaxFrames:(int)maxFrames
                 cubeSimulationPath:(const std::string &)cubeSimulationPath
+                experimentalGfxPath:(const std::string &)experimentalGfxPath
                simulationSmokeMode:(bool)simulationSmokeMode
            softwareSurfaceDemoMode:(bool)softwareSurfaceDemoMode;
 - (void)failStartupStage:(StartupFailureStage)stage
@@ -451,9 +602,12 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
   bool _printedSimulationFrame;
   bool _simulationSmokeMode;
   bool _softwareSurfaceDemoMode;
+  bool _experimentalGfxMode;
   bool _firstFrameSubmitted;
   std::string _cubeSimulationPath;
+  std::string _experimentalGfxPath;
   std::vector<SimulationFrameState> _simulationFrames;
+  ExperimentalGfxStreamHeader _experimentalGfxHeader;
   id<MTLTexture> _softwareSurfaceTexture;
   NSUInteger _indexCount;
   CGSize _depthTextureSize;
@@ -461,6 +615,7 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
 
 - (instancetype)initWithMaxFrames:(int)maxFrames
                 cubeSimulationPath:(const std::string &)cubeSimulationPath
+                experimentalGfxPath:(const std::string &)experimentalGfxPath
                simulationSmokeMode:(bool)simulationSmokeMode
            softwareSurfaceDemoMode:(bool)softwareSurfaceDemoMode {
   self = [super init];
@@ -472,8 +627,10 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
     _printedSimulationFrame = false;
     _simulationSmokeMode = simulationSmokeMode;
     _softwareSurfaceDemoMode = softwareSurfaceDemoMode;
+    _experimentalGfxMode = !experimentalGfxPath.empty();
     _firstFrameSubmitted = false;
     _cubeSimulationPath = cubeSimulationPath;
+    _experimentalGfxPath = experimentalGfxPath;
     _indexCount = CubeIndices.size();
     _depthTextureSize = CGSizeMake(0.0, 0.0);
   }
@@ -545,12 +702,30 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
 
   if (!_softwareSurfaceDemoMode) {
     std::string simulationError;
-    if (!loadSimulationFrames(_cubeSimulationPath, _simulationFrames, simulationError)) {
-      [self failStartupStage:StartupFailureStage::SimulationStreamLoad
-                      reason:"simulation_stream_load_failed"
-                     details:simulationError.c_str()
-                gfxErrorCode:GfxErrorCode::None];
-      return;
+    if (_experimentalGfxMode) {
+      if (!loadExperimentalGfxStream(_experimentalGfxPath, _experimentalGfxHeader, _simulationFrames, simulationError)) {
+        [self failStartupStage:StartupFailureStage::SimulationStreamLoad
+                        reason:"experimental_gfx_stream_load_failed"
+                       details:simulationError.c_str()
+                  gfxErrorCode:GfxErrorCode::None];
+        return;
+      }
+      std::cout << "experimental_gfx_stream_loaded=1\n";
+      std::cout << "experimental_gfx_window_width=" << _experimentalGfxHeader.windowWidth << "\n";
+      std::cout << "experimental_gfx_window_height=" << _experimentalGfxHeader.windowHeight << "\n";
+      std::cout << "experimental_gfx_mesh_vertex_count=" << _experimentalGfxHeader.meshVertexCount << "\n";
+      std::cout << "experimental_gfx_mesh_index_count=" << _experimentalGfxHeader.meshIndexCount << "\n";
+      std::cout << "experimental_gfx_submit_present_mask=" << _experimentalGfxHeader.submitPresentMask << "\n";
+      std::cout << "experimental_gfx_frame_token=" << _experimentalGfxHeader.frameToken << "\n";
+      std::cout << "experimental_gfx_render_pass_token=" << _experimentalGfxHeader.renderPassToken << "\n";
+    } else {
+      if (!loadSimulationFrames(_cubeSimulationPath, _simulationFrames, simulationError)) {
+        [self failStartupStage:StartupFailureStage::SimulationStreamLoad
+                        reason:"simulation_stream_load_failed"
+                       details:simulationError.c_str()
+                  gfxErrorCode:GfxErrorCode::None];
+        return;
+      }
     }
 
     std::cout << "simulation_stream_loaded=1\n";
@@ -702,7 +877,9 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
     std::cout << "uniform_buffer_ready=1\n";
   }
 
-  NSRect frame = NSMakeRect(120.0, 120.0, 960.0, 640.0);
+  const CGFloat windowWidth = _experimentalGfxMode ? static_cast<CGFloat>(_experimentalGfxHeader.windowWidth) : 960.0;
+  const CGFloat windowHeight = _experimentalGfxMode ? static_cast<CGFloat>(_experimentalGfxHeader.windowHeight) : 640.0;
+  NSRect frame = NSMakeRect(120.0, 120.0, windowWidth, windowHeight);
   const NSWindowStyleMask styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                                       NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
   _window = [[PrimeStructWindow alloc] initWithContentRect:frame
@@ -717,7 +894,8 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
     return;
   }
   _window.hostDelegate = self;
-  _window.title = @"PrimeStruct Spinning Cube (Window Host)";
+  _window.title = _experimentalGfxMode ? @"PrimeStruct Experimental Gfx (Window Host)"
+                                       : @"PrimeStruct Spinning Cube (Window Host)";
   _window.delegate = self;
 
   NSView *contentView = _window.contentView;
@@ -924,17 +1102,26 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
         std::clamp((static_cast<double>(simulationFrame.axisXCenti) + 100.0) / 200.0, 0.0, 1.0);
     const double axisYNorm =
         std::clamp((static_cast<double>(simulationFrame.axisYCenti) + 100.0) / 200.0, 0.0, 1.0);
+    const double clearRed = _experimentalGfxMode ? (static_cast<double>(_experimentalGfxHeader.clearColorRMilli) / 1000.0)
+                                                 : 0.03 + (0.08 * axisXNorm);
+    const double clearGreen = _experimentalGfxMode ? (static_cast<double>(_experimentalGfxHeader.clearColorGMilli) / 1000.0)
+                                                   : 0.04 + (0.08 * axisYNorm);
+    const double clearBlue =
+        _experimentalGfxMode ? (static_cast<double>(_experimentalGfxHeader.clearColorBMilli) / 1000.0) : 0.06;
+    const double clearAlpha =
+        _experimentalGfxMode ? (static_cast<double>(_experimentalGfxHeader.clearColorAMilli) / 1000.0) : 1.0;
+    const double clearDepth =
+        _experimentalGfxMode ? (static_cast<double>(_experimentalGfxHeader.clearDepthMilli) / 1000.0) : 1.0;
 
     MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
     pass.colorAttachments[0].texture = drawable.texture;
     pass.colorAttachments[0].loadAction = MTLLoadActionClear;
     pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-    pass.colorAttachments[0].clearColor =
-        MTLClearColorMake(0.03 + (0.08 * axisXNorm), 0.04 + (0.08 * axisYNorm), 0.06, 1.0);
+    pass.colorAttachments[0].clearColor = MTLClearColorMake(clearRed, clearGreen, clearBlue, clearAlpha);
     pass.depthAttachment.texture = _depthTexture;
     pass.depthAttachment.loadAction = MTLLoadActionClear;
     pass.depthAttachment.storeAction = MTLStoreActionDontCare;
-    pass.depthAttachment.clearDepth = 1.0;
+    pass.depthAttachment.clearDepth = clearDepth;
 
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
     if (commandBuffer == nil) {
@@ -1050,6 +1237,7 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
 int main(int argc, char **argv) {
   int maxFrames = 0;
   std::string cubeSimulationPath;
+  std::string experimentalGfxPath;
   bool simulationSmokeMode = false;
   bool softwareSurfaceDemoMode = false;
 
@@ -1057,7 +1245,7 @@ int main(int argc, char **argv) {
     const std::string arg = argv[i];
     if (arg == "--help") {
       std::cout
-          << "usage: window_host (--cube-sim <path> | --software-surface-demo) "
+          << "usage: window_host (--cube-sim <path> | --experimental-gfx <path> | --software-surface-demo) "
              "[--max-frames <positive-int>] [--simulation-smoke]\n";
       return 0;
     }
@@ -1084,6 +1272,15 @@ int main(int argc, char **argv) {
       i += 1;
       continue;
     }
+    if (arg == "--experimental-gfx") {
+      if (i + 1 >= argc) {
+        std::cerr << "missing value for --experimental-gfx\n";
+        return 64;
+      }
+      experimentalGfxPath = argv[i + 1];
+      i += 1;
+      continue;
+    }
     if (arg == "--simulation-smoke") {
       simulationSmokeMode = true;
       continue;
@@ -1096,16 +1293,24 @@ int main(int argc, char **argv) {
     return 64;
   }
 
+  if (!cubeSimulationPath.empty() && !experimentalGfxPath.empty()) {
+    std::cerr << "--cube-sim is incompatible with --experimental-gfx\n";
+    return 64;
+  }
   if (!cubeSimulationPath.empty() && softwareSurfaceDemoMode) {
     std::cerr << "--cube-sim is incompatible with --software-surface-demo\n";
+    return 64;
+  }
+  if (!experimentalGfxPath.empty() && softwareSurfaceDemoMode) {
+    std::cerr << "--experimental-gfx is incompatible with --software-surface-demo\n";
     return 64;
   }
   if (simulationSmokeMode && softwareSurfaceDemoMode) {
     std::cerr << "--simulation-smoke is incompatible with --software-surface-demo\n";
     return 64;
   }
-  if (cubeSimulationPath.empty() && !softwareSurfaceDemoMode) {
-    std::cerr << "missing required --cube-sim <path> or --software-surface-demo\n";
+  if (cubeSimulationPath.empty() && experimentalGfxPath.empty() && !softwareSurfaceDemoMode) {
+    std::cerr << "missing required --cube-sim <path>, --experimental-gfx <path>, or --software-surface-demo\n";
     return 64;
   }
 
@@ -1115,6 +1320,7 @@ int main(int argc, char **argv) {
         simulationSmokeMode ? NSApplicationActivationPolicyProhibited : NSApplicationActivationPolicyRegular;
     PrimeStructWindowHostDelegate *delegate = [[PrimeStructWindowHostDelegate alloc] initWithMaxFrames:maxFrames
                                                                                      cubeSimulationPath:cubeSimulationPath
+                                                                                     experimentalGfxPath:experimentalGfxPath
                                                                                     simulationSmokeMode:simulationSmokeMode
                                                                                 softwareSurfaceDemoMode:softwareSurfaceDemoMode];
     app.delegate = delegate;

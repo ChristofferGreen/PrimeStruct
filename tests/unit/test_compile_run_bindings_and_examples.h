@@ -552,6 +552,66 @@ TEST_CASE("spinning cube native window host frame stream entry stays determinist
   CHECK(streamOutput.find("\n2\n32\n98\n2\n") != std::string::npos);
 }
 
+TEST_CASE("spinning cube experimental gfx frame stream entry stays source locked") {
+  std::filesystem::path cubePath =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "cube.prime";
+  if (!std::filesystem::exists(cubePath)) {
+    cubePath = std::filesystem::current_path() / "examples" / "web" / "spinning_cube" / "cube.prime";
+  }
+  REQUIRE(std::filesystem::exists(cubePath));
+
+  const std::string cubeSource = readFile(cubePath.string());
+  CHECK(cubeSource.find("cubeExperimentalGfxEmitFrameStream") != std::string::npos);
+  CHECK(cubeSource.find("Window(\n      [title] \"PrimeStruct Experimental Gfx\"utf8,") != std::string::npos);
+  CHECK(cubeSource.find("[Device] device{Device()?}") != std::string::npos);
+  CHECK(cubeSource.find("device.create_swapchain(") != std::string::npos);
+  CHECK(cubeSource.find("device.create_mesh([vertices] vertices, [indices] indices)?") != std::string::npos);
+  CHECK(cubeSource.find("device.create_pipeline(") != std::string::npos);
+  CHECK(cubeSource.find("frame.render_pass(") != std::string::npos);
+  CHECK(cubeSource.find("pass.draw_mesh(mesh, material)") != std::string::npos);
+  CHECK(cubeSource.find("pass.end()") != std::string::npos);
+  CHECK(cubeSource.find("frame.submit(queue)?") != std::string::npos);
+  CHECK(cubeSource.find("frame.present()?") != std::string::npos);
+  CHECK(cubeSource.find("print_line(17001i32)") != std::string::npos);
+}
+
+TEST_CASE("spinning cube experimental gfx frame stream entry stays deterministic") {
+  if (!spinningCubeBackendsSupportArrayReturns()) {
+    INFO("Skipping spinning cube experimental gfx frame stream checks until array-return lowering support lands");
+    CHECK(true);
+    return;
+  }
+  std::filesystem::path cubePath =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "cube.prime";
+  if (!std::filesystem::exists(cubePath)) {
+    cubePath = std::filesystem::current_path() / "examples" / "web" / "spinning_cube" / "cube.prime";
+  }
+  REQUIRE(std::filesystem::exists(cubePath));
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_experimental_gfx_frame_stream";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path streamBinaryPath = outDir / "cube_experimental_gfx_frame_stream";
+  const std::string compileCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(streamBinaryPath.string()) +
+      " --entry /cubeExperimentalGfxEmitFrameStream";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(std::filesystem::exists(streamBinaryPath));
+
+  const std::filesystem::path streamOutPath = outDir / "cube_experimental_gfx_frame_stream.out.txt";
+  const std::string runCmd =
+      quoteShellArg(streamBinaryPath.string()) + " > " + quoteShellArg(streamOutPath.string());
+  CHECK(runCommand(runCmd) == 0);
+
+  const std::string streamOutput = readFile(streamOutPath.string());
+  CHECK(streamOutput.rfind("17001\n1\n1280\n720\n0\n0\n0\n50\n70\n100\n1000\n1000\n8\n36\n1\n2\n3\n4\n46\n7\n8\n5\n6\n60\n7\n3\n0\n0\n100\n0\n1\n16\n99\n1\n", 0) == 0);
+  CHECK(streamOutput.find("\n2\n32\n98\n2\n") != std::string::npos);
+}
+
 TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
   if (!spinningCubeBackendsSupportArrayReturns()) {
     INFO("Skipping spinning cube browser asset checks until array-return lowering support lands");
@@ -813,6 +873,11 @@ TEST_CASE("spinning cube native window host locks indexed cube pipeline resource
   CHECK(hostSource.find("startup_failure_stage=shader_load") != std::string::npos);
   CHECK(hostSource.find("startup_failure_stage=gpu_device_acquisition") != std::string::npos);
   CHECK(hostSource.find("startup_failure_stage=simulation_stream_load") != std::string::npos);
+  CHECK(hostSource.find("--experimental-gfx") != std::string::npos);
+  CHECK(hostSource.find("experimental_gfx_stream_loaded=1") != std::string::npos);
+  CHECK(hostSource.find("experimental_gfx_window_width=") != std::string::npos);
+  CHECK(hostSource.find("experimental_gfx_submit_present_mask=") != std::string::npos);
+  CHECK(hostSource.find("experimental_gfx_stream_load_failed") != std::string::npos);
   CHECK(hostSource.find("exit_reason=window_close") != std::string::npos);
   CHECK(hostSource.find("exit_reason=esc_key") != std::string::npos);
   CHECK(hostSource.find("exit_reason=max_frames") != std::string::npos);
@@ -873,8 +938,13 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(hostSource.find("#import <AppKit/AppKit.h>") != std::string::npos);
   CHECK(hostSource.find("#import <QuartzCore/CAMetalLayer.h>") != std::string::npos);
   CHECK(hostSource.find("--cube-sim") != std::string::npos);
+  CHECK(hostSource.find("--experimental-gfx") != std::string::npos);
   CHECK(hostSource.find("--simulation-smoke") != std::string::npos);
   CHECK(hostSource.find("--software-surface-demo") != std::string::npos);
+  CHECK(hostSource.find("experimental_gfx_stream_loaded=1") != std::string::npos);
+  CHECK(hostSource.find("experimental_gfx_window_width=") != std::string::npos);
+  CHECK(hostSource.find("experimental_gfx_mesh_vertex_count=") != std::string::npos);
+  CHECK(hostSource.find("experimental_gfx_submit_present_mask=") != std::string::npos);
   CHECK(hostSource.find("simulation_stream_loaded=1") != std::string::npos);
   CHECK(hostSource.find("simulation_fixed_step_millis=16") != std::string::npos);
   CHECK(hostSource.find("gfx_profile=native-desktop") != std::string::npos);
@@ -925,7 +995,7 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(runCommand(helpCmd) == 0);
   CHECK(readFile(helpErrPath.string()).empty());
   CHECK(readFile(helpOutPath.string())
-            .find("usage: window_host (--cube-sim <path> | --software-surface-demo) [--max-frames <positive-int>] "
+            .find("usage: window_host (--cube-sim <path> | --experimental-gfx <path> | --software-surface-demo) [--max-frames <positive-int>] "
                   "[--simulation-smoke]") !=
         std::string::npos);
 
@@ -936,7 +1006,8 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
       quoteShellArg(missingCubeErrPath.string());
   CHECK(runCommand(missingCubeCmd) == 64);
   CHECK(readFile(missingCubeOutPath.string()).empty());
-  CHECK(readFile(missingCubeErrPath.string()).find("missing required --cube-sim <path> or --software-surface-demo") !=
+  CHECK(readFile(missingCubeErrPath.string())
+            .find("missing required --cube-sim <path>, --experimental-gfx <path>, or --software-surface-demo") !=
         std::string::npos);
 
   const std::filesystem::path missingCubeValueOutPath = outDir / "window_host.missing_cube_value.out.txt";
@@ -947,6 +1018,15 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(runCommand(missingCubeValueCmd) == 64);
   CHECK(readFile(missingCubeValueOutPath.string()).empty());
   CHECK(readFile(missingCubeValueErrPath.string()).find("missing value for --cube-sim") != std::string::npos);
+
+  const std::filesystem::path missingExperimentalOutPath = outDir / "window_host.missing_experimental_value.out.txt";
+  const std::filesystem::path missingExperimentalErrPath = outDir / "window_host.missing_experimental_value.err.txt";
+  const std::string missingExperimentalCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --experimental-gfx > " +
+      quoteShellArg(missingExperimentalOutPath.string()) + " 2> " + quoteShellArg(missingExperimentalErrPath.string());
+  CHECK(runCommand(missingExperimentalCmd) == 64);
+  CHECK(readFile(missingExperimentalOutPath.string()).empty());
+  CHECK(readFile(missingExperimentalErrPath.string()).find("missing value for --experimental-gfx") != std::string::npos);
 
   const std::filesystem::path badArgOutPath = outDir / "window_host.bad_arg.out.txt";
   const std::filesystem::path badArgErrPath = outDir / "window_host.bad_arg.err.txt";
@@ -974,6 +1054,17 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(runCommand(incompatibleModeCmd) == 64);
   CHECK(readFile(incompatibleModeOutPath.string()).empty());
   CHECK(readFile(incompatibleModeErrPath.string()).find("--simulation-smoke is incompatible with --software-surface-demo") !=
+        std::string::npos);
+
+  const std::filesystem::path incompatibleExperimentalOutPath = outDir / "window_host.incompatible_experimental.out.txt";
+  const std::filesystem::path incompatibleExperimentalErrPath = outDir / "window_host.incompatible_experimental.err.txt";
+  const std::string incompatibleExperimentalCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --cube-sim /usr/bin/true --experimental-gfx /usr/bin/true > " +
+      quoteShellArg(incompatibleExperimentalOutPath.string()) + " 2> " +
+      quoteShellArg(incompatibleExperimentalErrPath.string());
+  CHECK(runCommand(incompatibleExperimentalCmd) == 64);
+  CHECK(readFile(incompatibleExperimentalOutPath.string()).empty());
+  CHECK(readFile(incompatibleExperimentalErrPath.string()).find("--cube-sim is incompatible with --experimental-gfx") !=
         std::string::npos);
 
   const std::filesystem::path badStreamOutPath = outDir / "window_host.bad_stream.out.txt";
@@ -1014,6 +1105,36 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(smokeOutput.find("simulation_smoke_angle_milli=0") != std::string::npos);
   CHECK(smokeOutput.find("simulation_smoke_axis_x_centi=100") != std::string::npos);
   CHECK(smokeOutput.find("simulation_smoke_axis_y_centi=0") != std::string::npos);
+
+  const std::filesystem::path experimentalStreamBinaryPath = outDir / "cube_experimental_gfx_frame_stream";
+  const std::string compileExperimentalStreamCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(experimentalStreamBinaryPath.string()) + " --entry /cubeExperimentalGfxEmitFrameStream";
+  CHECK(runCommand(compileExperimentalStreamCmd) == 0);
+  CHECK(std::filesystem::exists(experimentalStreamBinaryPath));
+
+  const std::filesystem::path experimentalSmokeOutPath = outDir / "window_host.experimental_gfx_smoke.out.txt";
+  const std::filesystem::path experimentalSmokeErrPath = outDir / "window_host.experimental_gfx_smoke.err.txt";
+  const std::string experimentalSmokeCmd =
+      quoteShellArg(hostBinaryPath.string()) + " --experimental-gfx " +
+      quoteShellArg(experimentalStreamBinaryPath.string()) +
+      " --simulation-smoke > " + quoteShellArg(experimentalSmokeOutPath.string()) + " 2> " +
+      quoteShellArg(experimentalSmokeErrPath.string());
+  CHECK(runCommand(experimentalSmokeCmd) == 0);
+  CHECK(readFile(experimentalSmokeErrPath.string()).empty());
+  const std::string experimentalSmokeOutput = readFile(experimentalSmokeOutPath.string());
+  CHECK(experimentalSmokeOutput.find("experimental_gfx_stream_loaded=1") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("experimental_gfx_window_width=1280") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("experimental_gfx_window_height=720") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("experimental_gfx_mesh_vertex_count=8") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("experimental_gfx_mesh_index_count=36") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("experimental_gfx_submit_present_mask=3") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("experimental_gfx_frame_token=5") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("experimental_gfx_render_pass_token=6") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("simulation_stream_loaded=1") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("simulation_frames_loaded=600") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("simulation_smoke_tick=0") != std::string::npos);
+  CHECK(experimentalSmokeOutput.find("simulation_smoke_angle_milli=0") != std::string::npos);
 }
 
 TEST_CASE("spinning cube native window host software surface bridge visual smoke") {
@@ -1676,9 +1797,11 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native --entry /mainNative",
       "c++ -std=c++17 examples/native/spinning_cube/main.cpp -o /tmp/spinning_cube_host",
       "./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native_frame_stream --entry /cubeNativeAbiEmitFrameStream",
+      "./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_experimental_gfx_stream --entry /cubeExperimentalGfxEmitFrameStream",
       "xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework "
       "AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host",
       "/tmp/spinning_cube_window_host --cube-sim /tmp/cube_native_frame_stream --max-frames 120",
+      "/tmp/spinning_cube_window_host --experimental-gfx /tmp/cube_experimental_gfx_stream --max-frames 120",
       "/tmp/spinning_cube_window_host --software-surface-demo --max-frames 1",
       "uploads a deterministic BGRA8 software color buffer into a",
       "shared Metal texture and blits it into the window drawable.",
@@ -1717,6 +1840,7 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "`cubeNativeMeshVertexCount`, `cubeNativeMeshIndexCount`, and",
       "`cubeNativeFrameStepSnapshotCode`.",
       "`cubeNativeAbiEmitFrameStream`.",
+      "`cubeExperimentalGfxEmitFrameStream`",
       "## Native Window Host ABI Contract (v1)",
       "`cubeNativeAbiVersion` returns `1`.",
       "`cubeNativeAbiFixedStepMillis` returns `16` (host step size in milliseconds).",
@@ -1737,6 +1861,11 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "`gfx_profile`, `startup_failure_stage`, `startup_failure_reason`,",
       "`startup_failure_exit_code`, and graphics-path `gfx_error_code` /",
       "`gfx_error_why` fields before exit.",
+      "Experimental gfx stream path:",
+      "feeds the native window host with deterministic window/swapchain/pass",
+      "`experimental_gfx_stream_loaded=1`,",
+      "`experimental_gfx_window_width=1280`,",
+      "`experimental_gfx_submit_present_mask=3`, `startup_success=1`,",
       "For a visible rotating window today, use the browser path (`index.html` + `main.js`).",
       "shared-source `/main` is still unsupported for native emit until",
       "Diagnostics: prints `native host verified cube simulation output`.",
@@ -1839,6 +1968,13 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
   CHECK(runCommand(compileNativeFrameStreamCmd) == 0);
   CHECK(std::filesystem::exists(nativeFrameStreamPath));
 
+  const std::filesystem::path experimentalGfxStreamPath = outDir / "cube_experimental_gfx_stream";
+  const std::string compileExperimentalGfxStreamCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(experimentalGfxStreamPath.string()) + " --entry /cubeExperimentalGfxEmitFrameStream";
+  CHECK(runCommand(compileExperimentalGfxStreamCmd) == 0);
+  CHECK(std::filesystem::exists(experimentalGfxStreamPath));
+
   std::string cxx = "";
   if (runCommand("c++ --version > /dev/null 2>&1") == 0) {
     cxx = "c++";
@@ -1869,6 +2005,17 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
         quoteShellArg(nativeWindowHostBinPath.string());
     CHECK(runCommand(compileWindowHostCmd) == 0);
     CHECK(std::filesystem::exists(nativeWindowHostBinPath));
+
+    const std::filesystem::path experimentalHostOutPath = outDir / "window_host.experimental_gfx_smoke.out.txt";
+    const std::filesystem::path experimentalHostErrPath = outDir / "window_host.experimental_gfx_smoke.err.txt";
+    const std::string experimentalHostCmd =
+        quoteShellArg(nativeWindowHostBinPath.string()) + " --experimental-gfx " +
+        quoteShellArg(experimentalGfxStreamPath.string()) +
+        " --simulation-smoke > " + quoteShellArg(experimentalHostOutPath.string()) + " 2> " +
+        quoteShellArg(experimentalHostErrPath.string());
+    CHECK(runCommand(experimentalHostCmd) == 0);
+    CHECK(readFile(experimentalHostErrPath.string()).empty());
+    CHECK(readFile(experimentalHostOutPath.string()).find("experimental_gfx_stream_loaded=1") != std::string::npos);
 
     const std::filesystem::path airPath = outDir / "cube.air";
     const std::filesystem::path metallibPath = outDir / "cube.metallib";

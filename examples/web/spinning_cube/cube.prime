@@ -1,4 +1,5 @@
 import /std/math/*
+import /std/gfx/experimental/*
 
 [struct]
 CubeMeshLayout() {
@@ -441,6 +442,134 @@ cubeNativeAbiEmitFrameStream() {
     axisXCenti = nextAxisXCenti
     axisYCenti = nextAxisYCenti
     frame = plus(frame, 1i32)
+  }
+
+  return(cubeNativeAbiStatusOk())
+}
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> effects(io_out, io_err) on_error<GfxError, /log_gfx_error>]
+cubeExperimentalGfxEmitFrameStream() {
+  [Window] window{
+    Window(
+      [title] "PrimeStruct Experimental Gfx"utf8,
+      [width] 1280i32,
+      [height] 720i32
+    )?
+  }
+  [Device] device{Device()?}
+  [Queue] queue{device.default_queue()}
+  [Swapchain] swapchain{
+    device.create_swapchain(
+      window,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F,
+      [present_mode] PresentMode.Fifo
+    )?
+  }
+  [array<VertexColored>] vertices{
+    array<VertexColored>(
+      VertexColored([px] -0.6f32, [py] -0.6f32, [pz] -0.6f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.2f32, [b] 0.2f32, [a] 1.0f32),
+      VertexColored([px]  0.6f32, [py] -0.6f32, [pz] -0.6f32, [pw] 1.0f32, [r] 0.2f32, [g] 1.0f32, [b] 0.2f32, [a] 1.0f32),
+      VertexColored([px]  0.6f32, [py]  0.6f32, [pz] -0.6f32, [pw] 1.0f32, [r] 0.2f32, [g] 0.2f32, [b] 1.0f32, [a] 1.0f32),
+      VertexColored([px] -0.6f32, [py]  0.6f32, [pz] -0.6f32, [pw] 1.0f32, [r] 1.0f32, [g] 1.0f32, [b] 0.2f32, [a] 1.0f32),
+      VertexColored([px] -0.6f32, [py] -0.6f32, [pz]  0.6f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.2f32, [b] 1.0f32, [a] 1.0f32),
+      VertexColored([px]  0.6f32, [py] -0.6f32, [pz]  0.6f32, [pw] 1.0f32, [r] 0.2f32, [g] 1.0f32, [b] 1.0f32, [a] 1.0f32),
+      VertexColored([px]  0.6f32, [py]  0.6f32, [pz]  0.6f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.6f32, [b] 0.2f32, [a] 1.0f32),
+      VertexColored([px] -0.6f32, [py]  0.6f32, [pz]  0.6f32, [pw] 1.0f32, [r] 0.7f32, [g] 0.7f32, [b] 0.7f32, [a] 1.0f32)
+    )
+  }
+  [array<i32>] indices{
+    array<i32>(
+      4i32, 5i32, 6i32, 4i32, 6i32, 7i32,
+      0i32, 2i32, 1i32, 0i32, 3i32, 2i32,
+      0i32, 4i32, 7i32, 0i32, 7i32, 3i32,
+      1i32, 2i32, 6i32, 1i32, 6i32, 5i32,
+      3i32, 7i32, 6i32, 3i32, 6i32, 2i32,
+      0i32, 1i32, 5i32, 0i32, 5i32, 4i32
+    )
+  }
+  [Mesh] mesh{device.create_mesh([vertices] vertices, [indices] indices)?}
+  [Pipeline] pipeline{
+    device.create_pipeline(
+      [shader] ShaderLibrary.CubeBasic,
+      [vertex_type] VertexColored,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F
+    )?
+  }
+  [Material] material{pipeline.material()?}
+  [ColorRGBA] clearColor{ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32)}
+  [f32] clearDepth{1.0f32}
+  [i32] fixedDeltaMillis{cubeNativeAbiFixedStepMillis()}
+  [i32 mut] tick{cubeNativeAbiInitTick()}
+  [i32 mut] angleMilli{cubeNativeAbiInitAngleMilli()}
+  [i32 mut] axisXCenti{cubeNativeAbiInitAxisXCenti()}
+  [i32 mut] axisYCenti{cubeNativeAbiInitAxisYCenti()}
+  [i32 mut] frameIndex{0i32}
+  [i32] frameCount{600i32}
+
+  while(less_than(frameIndex, frameCount)) {
+    [Frame] frame{swapchain.frame()?}
+    [RenderPass] pass{
+      frame.render_pass(
+        [clear_color] clearColor,
+        [clear_depth] clearDepth
+      )
+    }
+    pass.draw_mesh(mesh, material)
+    pass.end()
+    frame.submit(queue)?
+    frame.present()?
+
+    if(equal(frameIndex, 0i32)) {
+      print_line(17001i32)
+      print_line(1i32)
+      print_line(window.width)
+      print_line(window.height)
+      print_line(swapchain.colorFormat.value)
+      print_line(swapchain.depthFormat.value)
+      print_line(swapchain.presentMode.value)
+      print_line(convert<int>(multiply(clearColor.r, 1000.0f32)))
+      print_line(convert<int>(multiply(clearColor.g, 1000.0f32)))
+      print_line(convert<int>(multiply(clearColor.b, 1000.0f32)))
+      print_line(convert<int>(multiply(clearColor.a, 1000.0f32)))
+      print_line(convert<int>(multiply(clearDepth, 1000.0f32)))
+      print_line(mesh.vertexCount)
+      print_line(mesh.indexCount)
+      print_line(window.token)
+      print_line(device.token)
+      print_line(queue.token)
+      print_line(swapchain.token)
+      print_line(mesh.token)
+      print_line(pipeline.token)
+      print_line(material.token)
+      print_line(frame.token)
+      print_line(pass.token)
+      print_line(plus(pass.token, plus(mesh.token, material.token)))
+      print_line(plus(pass.token, 1i32))
+      print_line(3i32)
+    }
+
+    print_line(tick)
+    print_line(angleMilli)
+    print_line(axisXCenti)
+    print_line(axisYCenti)
+
+    [i32] nextTick{cubeNativeAbiTickNextTick(tick)}
+    [i32] nextAngleMilli{cubeNativeAbiTickNextAngleMilli(angleMilli, fixedDeltaMillis)}
+    [i32] nextAxisXCenti{cubeNativeAbiTickNextAxisXCenti(axisXCenti, axisYCenti)}
+    [i32] nextAxisYCenti{cubeNativeAbiTickNextAxisYCenti(axisXCenti, axisYCenti)}
+
+    tick = nextTick
+    angleMilli = nextAngleMilli
+    axisXCenti = nextAxisXCenti
+    axisYCenti = nextAxisYCenti
+    frameIndex = plus(frameIndex, 1i32)
   }
 
   return(cubeNativeAbiStatusOk())

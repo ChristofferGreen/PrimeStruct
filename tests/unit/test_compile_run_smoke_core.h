@@ -3269,6 +3269,19 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   }
 
   {
+    CAPTURE("GFX-V1-HOST-RUNTIME-STATUS");
+    CHECK(graphicsDoc.find("first real") != std::string::npos);
+    CHECK(graphicsDoc.find("native-desktop host/runtime path now consumes a deterministic experimental gfx") !=
+          std::string::npos);
+    CHECK(graphicsDoc.find("submit/present") != std::string::npos);
+    CHECK(primeStructDoc.find("first real native-desktop host/runtime path now consumes a deterministic experimental gfx") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("first real native-desktop host path now consumes the") != std::string::npos);
+    CHECK(guidelinesDoc.find("deterministic experimental gfx stream emitted by the shared spinning-cube") !=
+          std::string::npos);
+  }
+
+  {
     CAPTURE("GFX-V1-RESULT-PROPAGATION");
     CHECK(graphicsDoc.find("Examples and conformance for this mini-spec must use `Result` propagation (`?`)") !=
           std::string::npos);
