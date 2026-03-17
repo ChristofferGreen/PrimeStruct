@@ -542,6 +542,7 @@ AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(
 
 bool buildCallableDefinitionCallContext(
     const Definition &def,
+    const std::unordered_set<std::string> &structNames,
     int32_t &nextLocal,
     LocalMap &definitionLocals,
     Expr &callExpr,
@@ -571,6 +572,26 @@ bool buildCallableDefinitionCallContext(
     addGpuLocal(kGpuGlobalIdXName);
     addGpuLocal(kGpuGlobalIdYName);
     addGpuLocal(kGpuGlobalIdZName);
+  }
+
+  std::string helperParent;
+  if (isStructHelperDefinition(def, structNames, helperParent) &&
+      !definitionHasTransform(def, "static")) {
+    Expr thisParam = makeStructHelperThisParam(
+        helperParent,
+        definitionHasTransform(def, "mut"));
+    LocalInfo thisInfo;
+    thisInfo.index = nextLocal++;
+    if (!inferParameterLocalInfo(thisParam, definitionLocals, thisInfo, error)) {
+      return false;
+    }
+    definitionLocals.emplace(thisParam.name, thisInfo);
+
+    Expr argExpr;
+    argExpr.kind = Expr::Kind::Name;
+    argExpr.name = thisParam.name;
+    callExpr.args.push_back(std::move(argExpr));
+    callExpr.argNames.push_back(std::nullopt);
   }
 
   for (const auto &param : def.parameters) {

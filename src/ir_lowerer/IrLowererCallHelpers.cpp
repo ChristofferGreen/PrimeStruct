@@ -624,11 +624,11 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const Expr &expr,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     std::string &error) {
-  if (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) {
+  if (!expr.isMethodCall && (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count"))) {
     error = "count requires array, vector, map, or string target";
     return UnsupportedNativeCallResult::Error;
   }
-  if (isVectorBuiltinName(expr, "capacity")) {
+  if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity")) {
     error = "capacity requires vector target";
     return UnsupportedNativeCallResult::Error;
   }
@@ -705,6 +705,15 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       isStringCountCall,
       isEntryArgsName,
       [&](const Expr &targetExpr, const LocalMap &targetLocals) {
+        if (targetExpr.kind == Expr::Kind::Call) {
+          std::string builtinCollection;
+          std::string accessName;
+          if (!getBuiltinCollectionName(targetExpr, builtinCollection) &&
+              !targetExpr.isFieldAccess &&
+              !getBuiltinArrayAccessName(targetExpr, accessName)) {
+            return false;
+          }
+        }
         if (resolveMapAccessTargetInfo(targetExpr, targetLocals, resolveCallMapAccessTargetInfo).isMapTarget) {
           return true;
         }
@@ -713,6 +722,15 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
             .isArrayOrVectorTarget;
       },
       [&](const Expr &targetExpr, const LocalMap &targetLocals) {
+        if (targetExpr.kind == Expr::Kind::Call) {
+          std::string builtinCollection;
+          std::string accessName;
+          if (!getBuiltinCollectionName(targetExpr, builtinCollection) &&
+              !targetExpr.isFieldAccess &&
+              !getBuiltinArrayAccessName(targetExpr, accessName)) {
+            return false;
+          }
+        }
         const auto targetInfo = resolveArrayVectorAccessTargetInfo(
             targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo);
         return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
@@ -2922,6 +2940,7 @@ bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,
                                std::vector<const Expr *> &ordered,
                                std::string &error) {
+  const std::string callName = callExpr.name.empty() ? "<anonymous>" : callExpr.name;
   ordered.assign(params.size(), nullptr);
   size_t positionalIndex = 0;
   for (size_t i = 0; i < callExpr.args.size(); ++i) {
@@ -2949,7 +2968,7 @@ bool buildOrderedCallArguments(const Expr &callExpr,
       ++positionalIndex;
     }
     if (positionalIndex >= ordered.size()) {
-      error = "argument count mismatch";
+      error = "argument count mismatch for " + callName;
       return false;
     }
     ordered[positionalIndex] = &callExpr.args[i];
@@ -2964,7 +2983,7 @@ bool buildOrderedCallArguments(const Expr &callExpr,
       ordered[i] = &params[i].args.front();
       continue;
     }
-    error = "argument count mismatch";
+    error = "argument count mismatch for " + callName;
     return false;
   }
   return true;
@@ -2976,6 +2995,7 @@ bool buildOrderedCallArgumentsWithPackedArgs(const Expr &callExpr,
                                             std::vector<const Expr *> &packedArgs,
                                             size_t &packedParamIndex,
                                             std::string &error) {
+  const std::string callName = callExpr.name.empty() ? "<anonymous>" : callExpr.name;
   ordered.assign(params.size(), nullptr);
   packedArgs.clear();
   packedParamIndex = params.size();
@@ -3027,7 +3047,7 @@ bool buildOrderedCallArgumentsWithPackedArgs(const Expr &callExpr,
       continue;
     }
     if (positionalIndex >= params.size()) {
-      error = "argument count mismatch";
+      error = "argument count mismatch for " + callName;
       return false;
     }
     ordered[positionalIndex] = &callExpr.args[i];
@@ -3045,7 +3065,7 @@ bool buildOrderedCallArgumentsWithPackedArgs(const Expr &callExpr,
       ordered[i] = &params[i].args.front();
       continue;
     }
-    error = "argument count mismatch";
+    error = "argument count mismatch for " + callName;
     return false;
   }
 

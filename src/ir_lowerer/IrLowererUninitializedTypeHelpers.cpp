@@ -6,6 +6,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -543,6 +544,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot) {
   std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
+  std::unordered_set<std::string> visitedDefs;
   inferStructExprPath = [&](const Expr &exprIn, const LocalMap &localsInExpr) -> std::string {
     const std::string nameStructPath = inferStructPathFromNameExpr(exprIn, localsInExpr);
     if (!nameStructPath.empty()) {
@@ -593,8 +595,32 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       if (!exprIn.isMethodCall) {
         const std::string resolvedPath = resolveExprPath(exprIn);
         auto defIt = defMap.find(resolvedPath);
-        if (defIt != defMap.end() && defIt->second != nullptr && isStructDefinition(*defIt->second)) {
-          return resolvedPath;
+        if (defIt != defMap.end() && defIt->second != nullptr) {
+          if (isStructDefinition(*defIt->second)) {
+            return resolvedPath;
+          }
+          const std::string indexedStruct = inferStructPathFromCallTargetWithFieldBindingIndex(
+              exprIn,
+              resolveExprPath,
+              fieldIndex,
+              [&](const std::string &defPath) {
+                return inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
+                    defPath, defMap, resolveStructTypeName, resolveExprPath, fieldIndex);
+              });
+          if (!indexedStruct.empty()) {
+            return indexedStruct;
+          }
+          if (visitedDefs.insert(resolvedPath).second) {
+            const Definition &nestedDef = *defIt->second;
+            std::string returnedStruct = inferStructReturnPathFromDefinition(
+                nestedDef,
+                resolveStructTypeName,
+                [&](const Expr &nestedExpr) { return inferStructExprPath(nestedExpr, localsInExpr); });
+            visitedDefs.erase(resolvedPath);
+            if (!returnedStruct.empty()) {
+              return returnedStruct;
+            }
+          }
         }
       }
       if (exprIn.isMethodCall && !exprIn.args.empty()) {

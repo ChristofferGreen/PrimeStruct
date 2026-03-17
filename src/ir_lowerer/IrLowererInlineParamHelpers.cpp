@@ -426,7 +426,8 @@ bool emitInlineDefinitionCallParameters(
       }
       std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
       if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
-        error = "struct parameter type mismatch";
+        error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
+                (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
       }
       const Expr &argExpr = *orderedArg;
@@ -461,7 +462,8 @@ bool emitInlineDefinitionCallParameters(
       }
       std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
       if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
-        error = "struct parameter type mismatch";
+        error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
+                (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
       }
       StructSlotLayoutInfo layout;
@@ -493,7 +495,8 @@ bool emitInlineDefinitionCallParameters(
       }
       std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
       if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
-        error = "struct parameter type mismatch";
+        error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
+                (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
       }
       const Expr &argExpr = *orderedArg;
@@ -511,13 +514,8 @@ bool emitInlineDefinitionCallParameters(
             }
           }
         }
-        if (!emitExpr(arg, callerLocals)) {
-          return false;
-        }
-        const int32_t tempLocal = allocTempLocal();
-        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(tempLocal));
-        emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(tempLocal));
-        return true;
+        // Struct-valued expressions already lower to a pointer to their storage.
+        return emitExpr(arg, callerLocals);
       };
       if (!emitStructReference(argExpr)) {
         return false;

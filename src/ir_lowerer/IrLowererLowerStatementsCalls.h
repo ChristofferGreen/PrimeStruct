@@ -101,6 +101,7 @@
                       std::string &callError) {
                     return ir_lowerer::buildCallableDefinitionCallContext(
                         def,
+                        structNames,
                         definitionNextLocal,
                         definitionLocals,
                         callExpr,

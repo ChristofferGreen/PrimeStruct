@@ -84,6 +84,7 @@ AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(
     std::vector<IrInstruction> &instructions);
 bool buildCallableDefinitionCallContext(
     const Definition &def,
+    const std::unordered_set<std::string> &structNames,
     int32_t &nextLocal,
     LocalMap &definitionLocals,
     Expr &callExpr,
