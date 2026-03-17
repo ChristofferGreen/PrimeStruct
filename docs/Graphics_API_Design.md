@@ -26,9 +26,11 @@ path preserves deterministic zero-token / no-op fallback on invalid handles,
 and the first real native-desktop host/runtime path now consumes a
 deterministic canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream` via
 the macOS host `--gfx` mode) emitted by the shared spinning-cube `.prime`
-sample so submit/present can drive one real macOS window host end-to-end.
-Browser/native/Metal host samples still otherwise sit around shared `.prime`
-simulation/data paths. The repo now also ships real compile-run
+sample so submit/present can drive one real macOS window host end-to-end, and
+the launcher/docs/smoke coverage for that native window path no longer depend
+on the older `--cube-sim` host mode. Browser/native/Metal host samples still
+otherwise sit around shared `.prime` simulation/data paths. The repo now also
+ships real compile-run
 conformance programs that import both `/std/gfx/experimental/*` and
 `/std/gfx/*` and exercise `Window(...)`, `Device()`, `create_swapchain(...)`,
 `create_mesh(...)`, `create_pipeline(...)`, `frame()`, `render_pass(...)`,
@@ -37,9 +39,10 @@ of relying only on doc-lock coverage for that API surface. Source-level profile
 literals and unsupported `create_pipeline` vertex types are still
 intentionally rejected, Result-carrying method wrappers still reject bare
 explicit non-`Result` struct bindings during semantics, and follow-up work
-still needs to migrate samples, add unsupported-backend diagnostics, and keep
-the remaining public graphics API primarily in `.prime` files while leaving
-only minimal backend substrate in C++/host code.
+still needs to delete the remaining non-graphics compatibility helpers, add
+unsupported-backend diagnostics, and keep the remaining public graphics API
+primarily in `.prime` files while leaving only minimal backend substrate in
+C++/host code.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.

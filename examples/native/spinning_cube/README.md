@@ -30,30 +30,24 @@ From the repo root, a one-command launcher can build and run the window host:
   emits `VISUAL-SMOKE: SKIP ...` and exits `0` on non-macOS/non-GUI CI runners)
 
 Or run the manual steps:
-1. Build the deterministic simulation stream binary:
-   - `./primec --emit=native ../../web/spinning_cube/cube.prime -o ./cube_native_frame_stream --entry /cubeNativeAbiEmitFrameStream`
+1. Build the canonical `/std/gfx/*` stream binary:
+   - `./primec --emit=native ../../web/spinning_cube/cube.prime -o ./cube_stdlib_gfx_stream --entry /cubeStdGfxEmitFrameStream`
 2. Build the native window host:
    - `xcrun clang++ -std=c++17 -fobjc-arc window_host.mm -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o spinning_cube_window_host`
 3. Run the window host:
-   - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream`
+   - `./spinning_cube_window_host --gfx ./cube_stdlib_gfx_stream`
 4. Optional bounded smoke run:
-   - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream --max-frames 120`
-5. Optional non-GUI integration smoke:
-   - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream --simulation-smoke`
-6. Optional canonical `/std/gfx/*` stream build:
-   - `./primec --emit=native ../../web/spinning_cube/cube.prime -o ./cube_stdlib_gfx_stream --entry /cubeStdGfxEmitFrameStream`
-7. Optional canonical `/std/gfx/*` window run:
    - `./spinning_cube_window_host --gfx ./cube_stdlib_gfx_stream --max-frames 120`
-8. Optional canonical `/std/gfx/*` non-GUI smoke:
+5. Optional non-GUI integration smoke:
    - `./spinning_cube_window_host --gfx ./cube_stdlib_gfx_stream --simulation-smoke`
-9. Optional software-surface bridge demo:
+6. Optional software-surface bridge demo:
    - `./spinning_cube_window_host --software-surface-demo --max-frames 1`
 
 The window host now renders an indexed cube mesh each frame and updates
-transform uniforms from the deterministic fixed-step simulation stream.
-The canonical `/std/gfx/*` path reuses that same Metal host, but its window
-size, clear color/depth, and submit/present readiness now come from the
-deterministic stdlib gfx stream emitted by `cubeStdGfxEmitFrameStream`.
+transform uniforms from the deterministic simulation tail embedded in the
+canonical stdlib gfx stream emitted by `cubeStdGfxEmitFrameStream`. That same
+stream now carries the window size, clear color/depth, and submit/present
+readiness metadata consumed by the shared Metal host.
 The software-surface demo reuses the same window presenter path, uploads a
 deterministic BGRA8 software buffer into a shared Metal texture, and blits it
 into the drawable.

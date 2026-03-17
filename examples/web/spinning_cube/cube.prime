@@ -416,37 +416,6 @@ cubeNativeAbiConformanceTransformUniformSnapshotCode() {
   return(plus(plus(uniformAngle, uniformAxisX), plus(uniformAxisY, uniformMeshIndexCount)))
 }
 
-[return<int>]
-cubeNativeAbiEmitFrameStream() {
-  [i32] fixedDeltaMillis{cubeNativeAbiFixedStepMillis()}
-  [i32 mut] tick{cubeNativeAbiInitTick()}
-  [i32 mut] angleMilli{cubeNativeAbiInitAngleMilli()}
-  [i32 mut] axisXCenti{cubeNativeAbiInitAxisXCenti()}
-  [i32 mut] axisYCenti{cubeNativeAbiInitAxisYCenti()}
-  [i32 mut] frame{0i32}
-  [i32] frameCount{600i32}
-
-  while(less_than(frame, frameCount)) {
-    print_line(tick)
-    print_line(angleMilli)
-    print_line(axisXCenti)
-    print_line(axisYCenti)
-
-    [i32] nextTick{cubeNativeAbiTickNextTick(tick)}
-    [i32] nextAngleMilli{cubeNativeAbiTickNextAngleMilli(angleMilli, fixedDeltaMillis)}
-    [i32] nextAxisXCenti{cubeNativeAbiTickNextAxisXCenti(axisXCenti, axisYCenti)}
-    [i32] nextAxisYCenti{cubeNativeAbiTickNextAxisYCenti(axisXCenti, axisYCenti)}
-
-    tick = nextTick
-    angleMilli = nextAngleMilli
-    axisXCenti = nextAxisXCenti
-    axisYCenti = nextAxisYCenti
-    frame = plus(frame, 1i32)
-  }
-
-  return(cubeNativeAbiStatusOk())
-}
-
 [effects(io_err)]
 log_gfx_error([GfxError] err) {
   print_line_error(GfxError.why(err))

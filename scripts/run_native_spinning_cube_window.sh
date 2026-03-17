@@ -138,7 +138,7 @@ fi
 
 mkdir -p "$OUT_DIR"
 
-CUBE_SIM_BIN="$OUT_DIR/cube_native_frame_stream"
+GFX_STREAM_BIN="$OUT_DIR/cube_stdlib_gfx_stream"
 HOST_BIN="$OUT_DIR/spinning_cube_window_host"
 
 if (( SKIP_PREFLIGHT == 0 )); then
@@ -150,9 +150,9 @@ else
   echo "${PREFIX} Skipping preflight checks (--skip-preflight)"
 fi
 
-echo "${PREFIX} Compiling cube simulation stream binary"
-if ! "$PRIMEC_BIN" --emit=native "$CUBE_SOURCE" -o "$CUBE_SIM_BIN" --entry /cubeNativeAbiEmitFrameStream; then
-  fail "failed to compile cube simulation stream binary"
+echo "${PREFIX} Compiling cube stdlib gfx stream binary"
+if ! "$PRIMEC_BIN" --emit=native "$CUBE_SOURCE" -o "$GFX_STREAM_BIN" --entry /cubeStdGfxEmitFrameStream; then
+  fail "failed to compile cube stdlib gfx stream binary"
 fi
 
 echo "${PREFIX} Compiling native window host"
@@ -161,7 +161,7 @@ if ! xcrun clang++ -std=c++17 -fobjc-arc "$HOST_SOURCE" \
   fail "failed to compile native window host"
 fi
 
-runArgs=("$HOST_BIN" "--cube-sim" "$CUBE_SIM_BIN")
+runArgs=("$HOST_BIN" "--gfx" "$GFX_STREAM_BIN")
 if [[ -n "$MAX_FRAMES" ]]; then
   runArgs+=("--max-frames" "$MAX_FRAMES")
 fi
@@ -200,13 +200,16 @@ if (( VISUAL_SMOKE == 1 )); then
     fail "visual smoke criterion failed: render_loop_alive"
   fi
 
-  streamOutPath="$OUT_DIR/cube_native_frame_stream.visual_smoke.out.txt"
-  if ! "$CUBE_SIM_BIN" >"$streamOutPath"; then
+  streamOutPath="$OUT_DIR/cube_stdlib_gfx_stream.visual_smoke.out.txt"
+  if ! "$GFX_STREAM_BIN" >"$streamOutPath"; then
     fail "visual smoke criterion failed: rotation_changes_over_time (unable to execute stream binary)"
   fi
 
-  firstAngle="$(sed -n '2p' "$streamOutPath")"
-  secondAngle="$(sed -n '6p' "$streamOutPath")"
+  gfxHeaderFieldCount=26
+  firstAngleLine=$((gfxHeaderFieldCount + 2))
+  secondAngleLine=$((gfxHeaderFieldCount + 6))
+  firstAngle="$(sed -n "${firstAngleLine}p" "$streamOutPath")"
+  secondAngle="$(sed -n "${secondAngleLine}p" "$streamOutPath")"
   if [[ -z "$firstAngle" || -z "$secondAngle" ]]; then
     fail "visual smoke criterion failed: rotation_changes_over_time (insufficient frame stream output)"
   fi

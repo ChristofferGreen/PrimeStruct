@@ -377,38 +377,6 @@ int decodeExitCode(int rawCode) {
 #endif
 }
 
-bool loadSimulationFrames(const std::string &cubeSimulationPath,
-                          std::vector<SimulationFrameState> &framesOut,
-                          std::string &errorOut) {
-  framesOut.clear();
-  std::vector<int> values;
-  if (!loadIntegerStream(cubeSimulationPath, "cube simulation stream was empty", values, errorOut)) {
-    if (errorOut == "failed to execute stream binary") {
-      errorOut = "failed to execute cube simulation binary";
-    } else if (errorOut.rfind("invalid stream value: ", 0) == 0) {
-      errorOut.replace(0, std::strlen("invalid stream value: "), "invalid cube simulation stream value: ");
-    } else if (errorOut.rfind("stream binary exited with code ", 0) == 0) {
-      errorOut.replace(0, std::strlen("stream binary exited with code "), "cube simulation binary exited with code ");
-    }
-    return false;
-  }
-  if (values.size() % SimulationStreamFieldsPerFrame != 0) {
-    errorOut = "cube simulation stream value count was not divisible by 4";
-    return false;
-  }
-
-  for (size_t i = 0; i < values.size(); i += SimulationStreamFieldsPerFrame) {
-    SimulationFrameState frame;
-    frame.tick = values[i];
-    frame.angleMilli = values[i + 1];
-    frame.axisXCenti = values[i + 2];
-    frame.axisYCenti = values[i + 3];
-    framesOut.push_back(frame);
-  }
-
-  return true;
-}
-
 bool loadGfxStream(const std::string &programPath,
                    GfxStreamHeader &headerOut,
                    std::vector<SimulationFrameState> &framesOut,
@@ -550,7 +518,6 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
 
 @interface PrimeStructWindowHostDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
 - (instancetype)initWithMaxFrames:(int)maxFrames
-                cubeSimulationPath:(const std::string &)cubeSimulationPath
                            gfxPath:(const std::string &)gfxPath
                simulationSmokeMode:(bool)simulationSmokeMode
            softwareSurfaceDemoMode:(bool)softwareSurfaceDemoMode;
@@ -603,7 +570,6 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
   bool _softwareSurfaceDemoMode;
   bool _gfxMode;
   bool _firstFrameSubmitted;
-  std::string _cubeSimulationPath;
   std::string _gfxPath;
   std::vector<SimulationFrameState> _simulationFrames;
   GfxStreamHeader _gfxHeader;
@@ -613,7 +579,6 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
 }
 
 - (instancetype)initWithMaxFrames:(int)maxFrames
-                cubeSimulationPath:(const std::string &)cubeSimulationPath
                            gfxPath:(const std::string &)gfxPath
                simulationSmokeMode:(bool)simulationSmokeMode
            softwareSurfaceDemoMode:(bool)softwareSurfaceDemoMode {
@@ -628,7 +593,6 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
     _softwareSurfaceDemoMode = softwareSurfaceDemoMode;
     _gfxMode = !gfxPath.empty();
     _firstFrameSubmitted = false;
-    _cubeSimulationPath = cubeSimulationPath;
     _gfxPath = gfxPath;
     _indexCount = CubeIndices.size();
     _depthTextureSize = CGSizeMake(0.0, 0.0);
@@ -701,31 +665,21 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
 
   if (!_softwareSurfaceDemoMode) {
     std::string simulationError;
-    if (_gfxMode) {
-      if (!loadGfxStream(_gfxPath, _gfxHeader, _simulationFrames, simulationError)) {
-        [self failStartupStage:StartupFailureStage::SimulationStreamLoad
-                        reason:"gfx_stream_load_failed"
-                       details:simulationError.c_str()
-                  gfxErrorCode:GfxErrorCode::None];
-        return;
-      }
-      std::cout << "gfx_stream_loaded=1\n";
-      std::cout << "gfx_window_width=" << _gfxHeader.windowWidth << "\n";
-      std::cout << "gfx_window_height=" << _gfxHeader.windowHeight << "\n";
-      std::cout << "gfx_mesh_vertex_count=" << _gfxHeader.meshVertexCount << "\n";
-      std::cout << "gfx_mesh_index_count=" << _gfxHeader.meshIndexCount << "\n";
-      std::cout << "gfx_submit_present_mask=" << _gfxHeader.submitPresentMask << "\n";
-      std::cout << "gfx_frame_token=" << _gfxHeader.frameToken << "\n";
-      std::cout << "gfx_render_pass_token=" << _gfxHeader.renderPassToken << "\n";
-    } else {
-      if (!loadSimulationFrames(_cubeSimulationPath, _simulationFrames, simulationError)) {
-        [self failStartupStage:StartupFailureStage::SimulationStreamLoad
-                        reason:"simulation_stream_load_failed"
-                       details:simulationError.c_str()
-                  gfxErrorCode:GfxErrorCode::None];
-        return;
-      }
+    if (!loadGfxStream(_gfxPath, _gfxHeader, _simulationFrames, simulationError)) {
+      [self failStartupStage:StartupFailureStage::SimulationStreamLoad
+                      reason:"gfx_stream_load_failed"
+                     details:simulationError.c_str()
+                gfxErrorCode:GfxErrorCode::None];
+      return;
     }
+    std::cout << "gfx_stream_loaded=1\n";
+    std::cout << "gfx_window_width=" << _gfxHeader.windowWidth << "\n";
+    std::cout << "gfx_window_height=" << _gfxHeader.windowHeight << "\n";
+    std::cout << "gfx_mesh_vertex_count=" << _gfxHeader.meshVertexCount << "\n";
+    std::cout << "gfx_mesh_index_count=" << _gfxHeader.meshIndexCount << "\n";
+    std::cout << "gfx_submit_present_mask=" << _gfxHeader.submitPresentMask << "\n";
+    std::cout << "gfx_frame_token=" << _gfxHeader.frameToken << "\n";
+    std::cout << "gfx_render_pass_token=" << _gfxHeader.renderPassToken << "\n";
 
     std::cout << "simulation_stream_loaded=1\n";
     std::cout << "simulation_frames_loaded=" << _simulationFrames.size() << "\n";
@@ -1232,7 +1186,6 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
 
 int main(int argc, char **argv) {
   int maxFrames = 0;
-  std::string cubeSimulationPath;
   std::string gfxPath;
   bool simulationSmokeMode = false;
   bool softwareSurfaceDemoMode = false;
@@ -1241,7 +1194,7 @@ int main(int argc, char **argv) {
     const std::string arg = argv[i];
     if (arg == "--help") {
       std::cout
-          << "usage: window_host (--cube-sim <path> | --gfx <path> | --software-surface-demo) "
+          << "usage: window_host (--gfx <path> | --software-surface-demo) "
              "[--max-frames <positive-int>] [--simulation-smoke]\n";
       return 0;
     }
@@ -1256,15 +1209,6 @@ int main(int argc, char **argv) {
         return 64;
       }
       maxFrames = parsed;
-      i += 1;
-      continue;
-    }
-    if (arg == "--cube-sim") {
-      if (i + 1 >= argc) {
-        std::cerr << "missing value for --cube-sim\n";
-        return 64;
-      }
-      cubeSimulationPath = argv[i + 1];
       i += 1;
       continue;
     }
@@ -1289,14 +1233,6 @@ int main(int argc, char **argv) {
     return 64;
   }
 
-  if (!cubeSimulationPath.empty() && !gfxPath.empty()) {
-    std::cerr << "--cube-sim is incompatible with --gfx\n";
-    return 64;
-  }
-  if (!cubeSimulationPath.empty() && softwareSurfaceDemoMode) {
-    std::cerr << "--cube-sim is incompatible with --software-surface-demo\n";
-    return 64;
-  }
   if (!gfxPath.empty() && softwareSurfaceDemoMode) {
     std::cerr << "--gfx is incompatible with --software-surface-demo\n";
     return 64;
@@ -1305,8 +1241,8 @@ int main(int argc, char **argv) {
     std::cerr << "--simulation-smoke is incompatible with --software-surface-demo\n";
     return 64;
   }
-  if (cubeSimulationPath.empty() && gfxPath.empty() && !softwareSurfaceDemoMode) {
-    std::cerr << "missing required --cube-sim <path>, --gfx <path>, or --software-surface-demo\n";
+  if (gfxPath.empty() && !softwareSurfaceDemoMode) {
+    std::cerr << "missing required --gfx <path> or --software-surface-demo\n";
     return 64;
   }
 
@@ -1315,7 +1251,6 @@ int main(int argc, char **argv) {
     app.activationPolicy =
         simulationSmokeMode ? NSApplicationActivationPolicyProhibited : NSApplicationActivationPolicyRegular;
     PrimeStructWindowHostDelegate *delegate = [[PrimeStructWindowHostDelegate alloc] initWithMaxFrames:maxFrames
-                                                                                     cubeSimulationPath:cubeSimulationPath
                                                                                                 gfxPath:gfxPath
                                                                                     simulationSmokeMode:simulationSmokeMode
                                                                                 softwareSurfaceDemoMode:softwareSurfaceDemoMode];

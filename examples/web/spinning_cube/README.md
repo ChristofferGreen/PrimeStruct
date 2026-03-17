@@ -49,43 +49,12 @@ This example is a milestone target for cross-platform backend work.
     `cubeNativeFrameInit*`, `cubeNativeFrameStep*`,
     `cubeNativeMeshVertexCount`, `cubeNativeMeshIndexCount`, and
     `cubeNativeFrameStepSnapshotCode`.
-  - Native window host ABI v1 entrypoints:
-    `cubeNativeAbiVersion`, `cubeNativeAbiInit*`, `cubeNativeAbiTick*`,
-    `cubeNativeAbiUniform*`, `cubeNativeAbiConformance*`, and
-    `cubeNativeAbiEmitFrameStream`.
+  - Native window-host gfx stream entrypoint:
+    `cubeStdGfxEmitFrameStream` emits deterministic `/std/gfx/*` header data
+    plus the shared simulation tail consumed by the macOS window host and
+    launcher smoke path.
   - `mainNative`: native-only split entrypoint for host smoke while native
     `/main` support remains blocked on struct-return lowering.
-
-## Native Window Host ABI Contract (v1)
-- Versioning:
-  - `cubeNativeAbiVersion` returns `1`.
-- Init surface (scalar fixed-point outputs):
-  - `cubeNativeAbiInitTick`
-  - `cubeNativeAbiInitAngleMilli`
-  - `cubeNativeAbiInitAxisXCenti`
-  - `cubeNativeAbiInitAxisYCenti`
-  - `cubeNativeAbiInitMeshVertexCount`
-  - `cubeNativeAbiInitMeshIndexCount`
-- Fixed-step tick surface:
-  - `cubeNativeAbiFixedStepMillis` returns `16` (host step size in milliseconds).
-  - `cubeNativeAbiTickStatus(deltaMillis)` validates step input.
-  - `cubeNativeAbiTickNextTick`, `cubeNativeAbiTickNextAngleMilli`,
-    `cubeNativeAbiTickNextAxisXCenti`, and `cubeNativeAbiTickNextAxisYCenti`
-    produce next-frame scalar outputs.
-- Transform/uniform scalar outputs:
-  - `cubeNativeAbiUniformAngleMilli`
-  - `cubeNativeAbiUniformAxisXCenti`
-  - `cubeNativeAbiUniformAxisYCenti`
-  - `cubeNativeAbiUniformMeshIndexCount`
-- Error/return conventions:
-  - `0` (`cubeNativeAbiStatusOk`) means success.
-  - `201` (`cubeNativeAbiStatusInvalidDeltaMillis`) means invalid tick delta.
-  - Conformance wrappers (`cubeNativeAbiConformance*`) lock deterministic ABI
-    behavior in compile-run tests.
-- Host integration stream:
-  - `cubeNativeAbiEmitFrameStream` prints deterministic fixed-step frame-state
-    quads (`tick`, `angleMilli`, `axisXCenti`, `axisYCenti`) for host-driven
-    render loops.
 
 ## Current Browser Host Assets
 - `index.html` provides the canvas shell and module bootstrap.
@@ -176,30 +145,6 @@ Expected runtime behavior:
 
 ### Native Window Host (macOS)
 ```bash
-./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native_frame_stream --entry /cubeNativeAbiEmitFrameStream
-xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host
-/tmp/spinning_cube_window_host --cube-sim /tmp/cube_native_frame_stream --max-frames 120
-```
-Expected runtime behavior:
-- Startup: opens a desktop window, configures a `CAMetalLayer` swapchain, and
-  creates cube pipeline resources (shader library + vertex/index/uniform
-  buffers).
-- Rendering: submits indexed cube draw calls each frame with transform
-  uniforms updated from the deterministic simulation stream.
-- Diagnostics: prints `gfx_profile=native-desktop`,
-  `simulation_stream_loaded=1`,
-  `simulation_fixed_step_millis=16`, `shader_library_ready=1`,
-  `vertex_buffer_ready=1`, `index_buffer_ready=1`,
-  `uniform_buffer_ready=1`, `window_created=1`,
-  `swapchain_layer_created=1`, `pipeline_ready=1`, `startup_success=1`,
-  `frame_rendered=1`, and `exit_reason=max_frames`.
-- Failure diagnostics: startup-stage failures print deterministic
-  `gfx_profile`, `startup_failure_stage`, `startup_failure_reason`,
-  `startup_failure_exit_code`, and graphics-path `gfx_error_code` /
-  `gfx_error_why` fields before exit.
-
-Canonical `/std/gfx/*` stream path:
-```bash
 ./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_stdlib_gfx_stream --entry /cubeStdGfxEmitFrameStream
 xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm -framework Foundation -framework AppKit -framework QuartzCore -framework Metal -o /tmp/spinning_cube_window_host
 /tmp/spinning_cube_window_host --gfx /tmp/cube_stdlib_gfx_stream --max-frames 120
@@ -238,8 +183,10 @@ xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm
 ./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec
 ./scripts/run_native_spinning_cube_window.sh --primec ./build-debug/primec --visual-smoke
 ```
-- Builds both the cube simulation stream binary and the native window host into
-  `build-debug/spinning-cube-native-window`, then launches the host.
+- Builds both the canonical stdlib gfx stream binary and the native window
+  host into `build-debug/spinning-cube-native-window`, then launches the host.
+- The launcher compiles `cubeStdGfxEmitFrameStream` and runs the host through
+  `--gfx`, so scripted smoke no longer depends on the old `--cube-sim` mode.
 - Defaults to `--max-frames 600` for normal windowed runs (about 10 seconds at
   60 fps), satisfying the native done-condition smoke target.
 - Runs `scripts/preflight_native_spinning_cube_window.sh` first unless
@@ -249,8 +196,8 @@ xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm
 - Visual smoke criteria:
   - `window_shown`: `window_created=1` and `startup_success=1`.
   - `render_loop_alive`: `frame_rendered=1` and `exit_reason=max_frames`.
-  - `rotation_changes_over_time`: first two `angleMilli` values from
-    `cube_native_frame_stream` differ.
+  - `rotation_changes_over_time`: first two `angleMilli` values from the
+    simulation payload in `cube_stdlib_gfx_stream` differ.
 - CI skip rules for `--visual-smoke`: exits `0` with a `VISUAL-SMOKE: SKIP`
   marker on non-macOS runners or when `launchctl print gui/<uid>` fails.
 
