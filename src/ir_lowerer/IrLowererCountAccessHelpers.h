@@ -68,6 +68,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &)> &isDynamicCollectionCountTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &isDynamicVectorCountTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &isDynamicVectorCapacityTarget,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,

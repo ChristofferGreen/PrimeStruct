@@ -264,6 +264,25 @@ bool isExplicitVectorNonTailHelperFallbackPath(const Expr &expr) {
          normalizedPath == "/std/collections/vector/remove_swap";
 }
 
+bool matchesResolvedHelperPath(const std::string &path, std::string_view basePath) {
+  return path == basePath || path.rfind(std::string(basePath) + "__t", 0) == 0;
+}
+
+bool isResolvedVectorCountCapacityFallbackCallee(const Expr &expr, const Definition &callee) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  if (isSimpleCallName(expr, "count")) {
+    return matchesResolvedHelperPath(callee.fullPath, "/vector/count") ||
+           matchesResolvedHelperPath(callee.fullPath, "/std/collections/vector/count");
+  }
+  if (isSimpleCallName(expr, "capacity")) {
+    return matchesResolvedHelperPath(callee.fullPath, "/vector/capacity") ||
+           matchesResolvedHelperPath(callee.fullPath, "/std/collections/vector/capacity");
+  }
+  return false;
+}
+
 std::string normalizeMapImportAliasPath(const std::string &path) {
   if (path.empty() || path.front() == '/') {
     return path;
@@ -889,6 +908,11 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         return resolveArrayVectorAccessTargetInfo(
                    targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo)
             .isArrayOrVectorTarget;
+      },
+      [&](const Expr &targetExpr, const LocalMap &targetLocals) {
+        const auto targetInfo = resolveArrayVectorAccessTargetInfo(
+            targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo);
+        return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
       },
       [&](const Expr &targetExpr, const LocalMap &targetLocals) {
         const auto targetInfo = resolveArrayVectorAccessTargetInfo(
@@ -3080,6 +3104,10 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   for (size_t receiverIndex : receiverIndices) {
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
     const Definition *callee = resolveMethodCallDefinition(methodExpr);
+    if (callee != nullptr && isResolvedVectorCountCapacityFallbackCallee(expr, *callee)) {
+      error = priorError;
+      continue;
+    }
     if (hasAlternativeCollectionReceiver && receiverIndex == 0 && callee != nullptr) {
       continue;
     }

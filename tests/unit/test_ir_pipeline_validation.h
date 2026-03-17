@@ -13759,6 +13759,82 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
   expectNotHandled("/std/collections/vector/at", {valuesName, indexName});
   expectNotHandled("/vector/at_unsafe", {valuesName, indexName});
   expectNotHandled("/std/collections/vector/at_unsafe", {valuesName, indexName});
+
+  primec::Expr bareCountCall;
+  bareCountCall.kind = primec::Expr::Kind::Call;
+  bareCountCall.name = "count";
+  bareCountCall.args = {valuesName};
+  instructions.clear();
+  std::string bareCountError = "stale";
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+            bareCountCall,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &candidateLocals) {
+              return primec::ir_lowerer::isArrayCountCall(candidate, candidateLocals, false, "argv");
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            emitExpr,
+            resolveMapAccessTargetInfo,
+            resolveArrayVectorAccessTargetInfo,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Unknown;
+            },
+            []() { return 0; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            bareCountError) == Result::NotHandled);
+  CHECK(bareCountError == "stale");
+  CHECK(instructions.empty());
+
+  primec::Expr bareCapacityCall;
+  bareCapacityCall.kind = primec::Expr::Kind::Call;
+  bareCapacityCall.name = "capacity";
+  bareCapacityCall.args = {valuesName};
+  instructions.clear();
+  std::string bareCapacityError = "stale";
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+            bareCapacityCall,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &candidateLocals) {
+              return primec::ir_lowerer::isVectorCapacityCall(candidate, candidateLocals);
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            emitExpr,
+            resolveMapAccessTargetInfo,
+            resolveArrayVectorAccessTargetInfo,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Unknown;
+            },
+            []() { return 0; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            bareCapacityError) == Result::NotHandled);
+  CHECK(bareCapacityError == "stale");
+  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
@@ -16596,6 +16672,52 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(resolveCalls == 1);
   CHECK(emitCalls == 1);
 
+  primec::Definition vectorCountCallee;
+  vectorCountCallee.fullPath = "/vector/count";
+  int vectorCountResolveCalls = 0;
+  int vectorCountEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            countCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++vectorCountResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "count");
+              return &vectorCountCallee;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++vectorCountEmitCalls;
+              return true;
+            },
+            error) == Result::NoCallee);
+  CHECK(error.empty());
+  CHECK(vectorCountResolveCalls == 1);
+  CHECK(vectorCountEmitCalls == 0);
+
+  primec::Definition canonicalVectorCountCallee;
+  canonicalVectorCountCallee.fullPath = "/std/collections/vector/count";
+  int canonicalVectorCountResolveCalls = 0;
+  int canonicalVectorCountEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            countCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++canonicalVectorCountResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "count");
+              return &canonicalVectorCountCallee;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++canonicalVectorCountEmitCalls;
+              return true;
+            },
+            error) == Result::NoCallee);
+  CHECK(error.empty());
+  CHECK(canonicalVectorCountResolveCalls == 1);
+  CHECK(canonicalVectorCountEmitCalls == 0);
+
   primec::Expr aliasCountCall = countCall;
   aliasCountCall.name = "/vector/count";
   int aliasCountResolveCalls = 0;
@@ -16679,6 +16801,8 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   capacityCall.name = "capacity";
   capacityCall.args.push_back(targetArg);
 
+  primec::Definition vectorCapacityCallee;
+  vectorCapacityCallee.fullPath = "/vector/capacity";
   int capacityResolveCalls = 0;
   int capacityEmitCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
@@ -16689,19 +16813,16 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               ++capacityResolveCalls;
               CHECK(methodExpr.isMethodCall);
               CHECK(methodExpr.name == "capacity");
-              return &callee;
+              return &vectorCapacityCallee;
             },
-            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+            [&](const primec::Expr &, const primec::Definition &) {
               ++capacityEmitCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "capacity");
-              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NoCallee);
   CHECK(error.empty());
   CHECK(capacityResolveCalls == 1);
-  CHECK(capacityEmitCalls == 1);
+  CHECK(capacityEmitCalls == 0);
 
   primec::Expr canonicalCapacityCall = capacityCall;
   canonicalCapacityCall.name = "/std/collections/vector/capacity";
@@ -35414,15 +35535,43 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   CHECK(instructions[0].op == primec::IrOpcode::PushI32);
   CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
+  primec::ir_lowerer::LocalMap vectorLocals;
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  vectorLocals.emplace("values", vectorInfo);
+
+  instructions.clear();
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            vectorLocals,
+            [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &candidateLocals) {
+              return primec::ir_lowerer::isArrayCountCall(candidate, candidateLocals, false, "argv");
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            [&](primec::IrOpcode, uint64_t) { CHECK(false); },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(instructions.empty());
+
   instructions.clear();
   error.clear();
   callExpr.name = "capacity";
   int capacityEmitExprCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
             callExpr,
-            locals,
+            vectorLocals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &candidateLocals) {
+              return primec::ir_lowerer::isVectorCapacityCall(candidate, candidateLocals);
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
@@ -35432,27 +35581,26 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(capacityEmitExprCalls == 1);
-  REQUIRE(instructions.size() == 4);
-  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].imm == primec::IrSlotBytes);
-  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
-  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+            error) == Result::NotHandled);
+  CHECK(capacityEmitExprCalls == 0);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
 
   instructions.clear();
   error.clear();
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
             callExpr,
-            locals,
+            vectorLocals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &candidateLocals) {
+              return primec::ir_lowerer::isVectorCapacityCall(candidate, candidateLocals);
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Error);
+            error) == Result::NotHandled);
   CHECK(instructions.empty());
 
   instructions.clear();
@@ -35490,6 +35638,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
             },
@@ -35513,6 +35662,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
             callExpr,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },

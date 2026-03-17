@@ -7919,7 +7919,7 @@ main() {
   CHECK(runCommand(runCmd) == 77);
 }
 
-TEST_CASE("runs vm with user vector count call shadow") {
+TEST_CASE("rejects vm user vector count call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -7933,11 +7933,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_count_call_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 97);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_count_call_shadow_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("runs vm with user vector capacity call shadow") {
+TEST_CASE("rejects vm user vector capacity call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -7951,8 +7954,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_capacity_call_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 77);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_capacity_call_shadow_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("runs vm with user array capacity call shadow") {
@@ -8709,6 +8715,8 @@ main() {
 
 TEST_CASE("runs vm with user vector push call shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/push([vector<i32> mut] values, [i32] value) {
 }
@@ -8727,6 +8735,8 @@ main() {
 
 TEST_CASE("rejects vm reordered namespaced vector push call compatibility alias") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
@@ -8749,6 +8759,8 @@ main() {
 
 TEST_CASE("runs vm std namespaced reordered mutator compatibility helper shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/push([vector<i32> mut] values, [i32] value) {
 }
@@ -8767,6 +8779,8 @@ main() {
 
 TEST_CASE("runs vm with user vector push bool positional call shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/push([vector<i32> mut] values, [bool] value) {
 }
@@ -8785,6 +8799,8 @@ main() {
 
 TEST_CASE("runs vm with user vector push call named shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/push([vector<i32> mut] values, [i32] value) {
 }
@@ -8803,6 +8819,8 @@ main() {
 
 TEST_CASE("runs vm with user vector push method shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/push([vector<i32> mut] values, [i32] value) {
 }
@@ -9238,6 +9256,8 @@ main() {
 
 TEST_CASE("runs vm with user vector pop call shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/pop([vector<i32> mut] values) {
 }
@@ -9256,6 +9276,8 @@ main() {
 
 TEST_CASE("runs vm with user vector pop method shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/pop([vector<i32> mut] values) {
 }
@@ -9274,6 +9296,8 @@ main() {
 
 TEST_CASE("runs vm with user vector reserve call shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/reserve([vector<i32> mut] values, [i32] capacity) {
 }
@@ -9292,6 +9316,8 @@ main() {
 
 TEST_CASE("runs vm with user vector reserve method shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/reserve([vector<i32> mut] values, [i32] capacity) {
 }
@@ -9310,6 +9336,8 @@ main() {
 
 TEST_CASE("runs vm with user vector clear call shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/clear([vector<i32> mut] values) {
 }
@@ -9328,6 +9356,8 @@ main() {
 
 TEST_CASE("runs vm with user vector clear method shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/clear([vector<i32> mut] values) {
 }
@@ -9346,6 +9376,8 @@ main() {
 
 TEST_CASE("runs vm with user vector remove_at call shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/remove_at([vector<i32> mut] values, [i32] index) {
 }
@@ -9364,6 +9396,8 @@ main() {
 
 TEST_CASE("runs vm with user vector remove_at method shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/remove_at([vector<i32> mut] values, [i32] index) {
 }
@@ -9382,6 +9416,8 @@ main() {
 
 TEST_CASE("runs vm with user vector remove_swap call shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/remove_swap([vector<i32> mut] values, [i32] index) {
 }
@@ -9400,6 +9436,8 @@ main() {
 
 TEST_CASE("runs vm with user vector remove_swap method shadow") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/remove_swap([vector<i32> mut] values, [i32] index) {
 }
@@ -9496,6 +9534,7 @@ TEST_CASE("runs vm vector literal at local dynamic limit") {
   };
 
   const std::string source = std::string(
+      "import /std/collections/*\n\n"
       "[effects(heap_alloc), return<int>]\n"
       "main() {\n"
       "  [vector<i32> mut] values{vector<i32>(") +
@@ -9523,6 +9562,7 @@ TEST_CASE("rejects vm vector literal above local dynamic limit") {
   };
 
   const std::string source = std::string(
+      "import /std/collections/*\n\n"
       "[effects(heap_alloc), return<int>]\n"
       "main() {\n"
       "  [vector<i32> mut] values{vector<i32>(") +
@@ -9813,6 +9853,8 @@ main() {
 
 TEST_CASE("runs vm with vector literal count helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   return(count(vector<i32>(1i32, 2i32, 3i32)))
