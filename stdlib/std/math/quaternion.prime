@@ -75,5 +75,57 @@ namespace std {
       0.0, 0.0, 0.0, 1.0
     ))
   }
+
+  [public return<Quat>]
+  mat3_to_quat([Mat3] value) {
+    [f32] trace{value.m00 + value.m11 + value.m22}
+    if(trace > 0.0) {
+      [f32] s{sqrt(trace + 1.0) * 2.0}
+      return(Quat(
+        (value.m21 - value.m12) / s,
+        (value.m02 - value.m20) / s,
+        (value.m10 - value.m01) / s,
+        0.25 * s
+      ).toNormalized())
+    } else {
+      if(value.m00 > value.m11) {
+        if(value.m00 > value.m22) {
+          [f32] s{sqrt(1.0 + value.m00 - value.m11 - value.m22) * 2.0}
+          return(Quat(
+            0.25 * s,
+            (value.m01 + value.m10) / s,
+            (value.m02 + value.m20) / s,
+            (value.m21 - value.m12) / s
+          ).toNormalized())
+        } else {
+          [f32] s{sqrt(1.0 + value.m22 - value.m00 - value.m11) * 2.0}
+          return(Quat(
+            (value.m02 + value.m20) / s,
+            (value.m12 + value.m21) / s,
+            0.25 * s,
+            (value.m10 - value.m01) / s
+          ).toNormalized())
+        }
+      } else {
+        if(value.m11 > value.m22) {
+          [f32] s{sqrt(1.0 + value.m11 - value.m00 - value.m22) * 2.0}
+          return(Quat(
+            (value.m01 + value.m10) / s,
+            0.25 * s,
+            (value.m12 + value.m21) / s,
+            (value.m02 - value.m20) / s
+          ).toNormalized())
+        } else {
+          [f32] s{sqrt(1.0 + value.m22 - value.m00 - value.m11) * 2.0}
+          return(Quat(
+            (value.m02 + value.m20) / s,
+            (value.m12 + value.m21) / s,
+            0.25 * s,
+            (value.m10 - value.m01) / s
+          ).toNormalized())
+        }
+      }
+    }
+  }
   }
 }

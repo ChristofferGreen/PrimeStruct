@@ -750,6 +750,7 @@ Current quaternion surface:
 - `Quat.toNormalized()` returns a normalized quaternion, and `Quat.normalize()` is the method-sugar equivalent.
 - `quat_to_mat3(q)` returns a `Mat3` rotation matrix after normalizing `q`.
 - `quat_to_mat4(q)` returns a homogeneous `Mat4` rotation matrix after normalizing `q`.
+- `mat3_to_quat(m)` returns a normalized `Quat` from a `Mat3` rotation basis.
 
 Draft constraints:
 - No implicit scalar/vector/matrix/quaternion conversion; use explicit constructors/helpers.

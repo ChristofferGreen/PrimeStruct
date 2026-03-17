@@ -206,6 +206,57 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("math mat3_to_quat helper requires import") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [auto] value{mat3_to_quat(0i32)}
+  return(convert<int>(value.w))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: mat3_to_quat") != std::string::npos);
+}
+
+TEST_CASE("math mat3_to_quat helper resolves with import") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Mat3] basis{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [Quat] value{mat3_to_quat(basis)}
+  return(convert<int>(value.w + value.x + value.y + value.z))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("math mat3_to_quat helper resolves with explicit import") {
+  const std::string source = R"(
+import /std/math/mat3_to_quat
+import /std/math/Mat3
+[return<int>]
+main() {
+  [auto] value{mat3_to_quat(Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  ))}
+  return(convert<int>(value.w + value.x + value.y + value.z))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("math trig builtin requires import") {
   const std::string source = R"(
 [return<f32>]

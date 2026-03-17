@@ -531,7 +531,7 @@ The lists above reflect the built-in transforms recognized by the compiler today
     - **Vectors:** constructors, component accessors, and member methods like `length()`, `normalize()` (in-place), and `toNormalized()` (returns a new value).
     - **Colors:** constructors plus color-space helpers (e.g., sRGB/linear conversions) and per-channel ops. sRGB types remain distinct from linear `ColorRGB`/`ColorRGBA`.
     - **Matrices:** constructors plus direct public scalar component access via `mRC` field names (`m00`, `m01`, ...), where the first index is the row and the second index is the column.
-    - **Quaternions:** constructors plus direct public scalar component access via `x`, `y`, `z`, and `w`, along with `toNormalized()` / `normalize()` helpers. The stdlib now also ships `quat_to_mat3(q)` and `quat_to_mat4(q)`; the remaining explicit conversion helper `mat3_to_quat` remains follow-up work.
+    - **Quaternions:** constructors plus direct public scalar component access via `x`, `y`, `z`, and `w`, along with `toNormalized()` / `normalize()` helpers. The stdlib now also ships `quat_to_mat3(q)`, `quat_to_mat4(q)`, and `mat3_to_quat(m)`.
   - **Matrix/quaternion interaction contract (draft):**
     - No implicit conversion between scalar/vector/matrix/quaternion families; use explicit constructor/helper calls.
     - `plus`/`minus` require identical operand envelopes (`VecN` with same `N`, `MatRxC` with same shape, or `Quat` with `Quat`).
