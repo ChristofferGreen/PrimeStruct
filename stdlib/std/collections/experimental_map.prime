@@ -310,7 +310,10 @@ namespace std {
     [i32] index{mapFindIndex<K, V>(entries, key)}
     if(less_than(index, count(entries.keys)),
        then() { return(entries.payloads[index]) },
-       else() { return(at(map<K, V>(), key)) })
+       else() {
+         [map<K, V>] empty{/std/collections/map/map<K, V>()}
+         return(/std/collections/map/at<K, V>(empty, key))
+       })
   }
 
   [public return<V> Comparable<K>]
@@ -318,7 +321,10 @@ namespace std {
     [i32] index{mapFindIndexRef<K, V>(entries, key)}
     if(less_than(index, count(entries.keys)),
        then() { return(entries.payloads[index]) },
-       else() { return(at(map<K, V>(), key)) })
+       else() {
+         [map<K, V>] empty{/std/collections/map/map<K, V>()}
+         return(/std/collections/map/at<K, V>(empty, key))
+       })
   }
 
   [public return<V> Comparable<K>]
