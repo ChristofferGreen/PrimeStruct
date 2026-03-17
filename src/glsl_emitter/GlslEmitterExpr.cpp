@@ -66,6 +66,69 @@ ExprResult castScalarToMatrixElementFloat(const ExprResult &expr) {
   return castExpr(expr, GlslType::Float);
 }
 
+bool emitVectorArithmetic(const Expr &expr,
+                          const std::string &name,
+                          EmitState &state,
+                          std::string &error,
+                          ExprResult &out) {
+  if (expr.args.size() != 2) {
+    return false;
+  }
+  ExprResult left = emitExpr(expr.args[0], state, error);
+  if (!error.empty()) {
+    return false;
+  }
+  ExprResult right = emitExpr(expr.args[1], state, error);
+  if (!error.empty()) {
+    return false;
+  }
+  const bool leftVector = isVectorType(left.type);
+  const bool rightVector = isVectorType(right.type);
+  if (!leftVector && !rightVector) {
+    return false;
+  }
+  if (name == "plus" || name == "minus") {
+    if (!leftVector || !rightVector || left.type != right.type) {
+      error = "glsl backend requires matching vector operands for " + name;
+      return false;
+    }
+    out.type = left.type;
+    out.code = "(" + left.code + (name == "plus" ? " + " : " - ") + right.code + ")";
+    out.prelude = left.prelude + right.prelude;
+    return true;
+  }
+  if (name == "multiply") {
+    if (leftVector && isNumericType(right.type)) {
+      right = castScalarToMatrixElementFloat(right);
+      out.type = left.type;
+      out.code = "(" + left.code + " * " + right.code + ")";
+      out.prelude = left.prelude + right.prelude;
+      return true;
+    }
+    if (isNumericType(left.type) && rightVector) {
+      left = castScalarToMatrixElementFloat(left);
+      out.type = right.type;
+      out.code = "(" + left.code + " * " + right.code + ")";
+      out.prelude = left.prelude + right.prelude;
+      return true;
+    }
+    error = "glsl backend requires vector-scalar operands for multiply";
+    return false;
+  }
+  if (name == "divide") {
+    if (!leftVector || !isNumericType(right.type)) {
+      error = "glsl backend requires vector-scalar operands for divide";
+      return false;
+    }
+    right = castScalarToMatrixElementFloat(right);
+    out.type = left.type;
+    out.code = "(" + left.code + " / " + right.code + ")";
+    out.prelude = left.prelude + right.prelude;
+    return true;
+  }
+  return false;
+}
+
 bool emitVectorConstructor(const Expr &expr, const std::string &name, GlslType type, EmitState &state, std::string &error, ExprResult &out) {
   const int dimension = vectorDimension(type);
   const size_t expectedArgs = static_cast<size_t>(dimension);
@@ -145,7 +208,6 @@ bool emitMatrixArithmetic(const Expr &expr,
                           std::string &error,
                           ExprResult &out) {
   if (expr.args.size() != 2) {
-    error = "glsl backend requires binary matrix operator arguments";
     return false;
   }
   ExprResult left = emitExpr(expr.args[0], state, error);
@@ -445,6 +507,13 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     return out;
   }
   if (name == "plus" || name == "minus" || name == "multiply" || name == "divide") {
+    ExprResult vectorOut;
+    if (emitVectorArithmetic(expr, name, state, error, vectorOut)) {
+      return vectorOut;
+    }
+    if (!error.empty()) {
+      return {};
+    }
     ExprResult matrixOut;
     if (emitMatrixArithmetic(expr, name, state, error, matrixOut)) {
       return matrixOut;

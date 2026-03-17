@@ -1047,6 +1047,58 @@ main() {
   CHECK(output.find("(out4).w") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter lowers documented vector arithmetic operators") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<void>]
+main() {
+  [Vec2] base2{Vec2(1.0f32, 2.0f32)}
+  [Vec2] delta2{Vec2(3.0f32, 4.0f32)}
+  [Vec2] sum2{plus(base2, delta2)}
+  [Vec2] diff2{minus(base2, delta2)}
+  [Vec2] scaledLeft2{multiply(2i32, base2)}
+  [Vec2] scaledRight2{multiply(delta2, 0.5f32)}
+  [Vec2] div2{divide(scaledLeft2, 2.0f32)}
+  [Vec3] base3{Vec3(5.0f32, 6.0f32, 7.0f32)}
+  [Vec3] scaled3{multiply(base3, 3i32)}
+  [Vec3] div3{divide(scaled3, 3.0f32)}
+  [Vec4] base4{Vec4(8.0f32, 9.0f32, 10.0f32, 11.0f32)}
+  [Vec4] delta4{Vec4(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Vec4] sum4{plus(base4, delta4)}
+  [Vec4] diff4{minus(base4, delta4)}
+  [f32] sample{plus(sum2.x, plus(diff2.y, plus(scaledRight2.x, plus(div2.y, plus(div3.z, plus(sum4.w, diff4.z))))))}
+  [i32 mut] sink{0i32}
+  if(true, then() { assign(sink, convert<int>(sample)) }, else() { })
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_support_vector_arithmetic.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_support_vector_arithmetic.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("const vec2 sum2 = (base2 + delta2);") != std::string::npos);
+  CHECK(output.find("const vec2 diff2 = (base2 - delta2);") != std::string::npos);
+  CHECK(output.find("const vec2 scaledLeft2 = (float(2) * base2);") != std::string::npos);
+  CHECK(output.find("const vec2 scaledRight2 = (delta2 * 0.5);") != std::string::npos);
+  CHECK(output.find("const vec2 div2 = (scaledLeft2 / 2.0);") != std::string::npos);
+  CHECK(output.find("const vec3 scaled3 = (base3 * float(3));") != std::string::npos);
+  CHECK(output.find("const vec3 div3 = (scaled3 / 3.0);") != std::string::npos);
+  CHECK(output.find("const vec4 sum4 = (base4 + delta4);") != std::string::npos);
+  CHECK(output.find("const vec4 diff4 = (base4 - delta4);") != std::string::npos);
+  CHECK(output.find("const float sample = ") != std::string::npos);
+  CHECK(output.find("(sum2).x") != std::string::npos);
+  CHECK(output.find("(diff2).y") != std::string::npos);
+  CHECK(output.find("(scaledRight2).x") != std::string::npos);
+  CHECK(output.find("(div2).y") != std::string::npos);
+  CHECK(output.find("(div3).z") != std::string::npos);
+  CHECK(output.find("(sum4).w") != std::string::npos);
+  CHECK(output.find("(diff4).z") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter handles math constants") {
   const std::string source = R"(
 [return<void>]

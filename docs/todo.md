@@ -127,7 +127,7 @@ Minimal vector substrate note: the remaining items below are only worth keeping 
 - ✓ Lower remaining runtime quaternion arithmetic paths (`plus`, `minus`, scalar scaling, divide`) for VM/native/Wasm/C++ and add conformance coverage. Progress: VM/native/Wasm/C++ now lower component-wise `Quat` `plus` + `minus`, scalar-left/right quaternion scaling, and quaternion-by-scalar `divide`, with representative runtime conformance references locked under the existing absolute `1e-4` tolerance policy.
 - ✓ Implement GLSL lowering for nominal `Mat2`/`Mat3`/`Mat4` values, `mRC` field access, and the matrix-only operator subset (`plus`, `minus`, scalar scale/divide, matching matrix-matrix multiply) in GLSL, replacing those unsupported-type diagnostics with conformance coverage.
 - ✓ Implement GLSL lowering for `Vec2`/`Vec3`/`Vec4` values plus matrix-vector interop, with conformance coverage.
-- ○ Implement GLSL lowering for documented vector arithmetic (`plus`, `minus`, scalar scale/divide`) with conformance coverage.
+- ✓ Implement GLSL lowering for documented vector arithmetic (`plus`, `minus`, scalar scale/divide`) with conformance coverage.
 - ○ Implement GLSL lowering for `Quat` nominal values and quaternion conversion/operator helpers, with conformance coverage.
 
 **Maintainability**

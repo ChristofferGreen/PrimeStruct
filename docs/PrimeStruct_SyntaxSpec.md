@@ -755,7 +755,7 @@ Current quaternion surface:
 Draft constraints:
 - No implicit scalar/vector/matrix/quaternion conversion; use explicit constructors/helpers.
 - `plus`/`minus` require matching envelopes and dimensions.
-- Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` and `minus` rules, the documented `Mat*`/`Quat` `multiply` allowlist, `Mat* / scalar` plus `Quat / scalar` divide validation, and deterministic binding/return/call diagnostics for implicit `Mat*`/`Quat` family conversions. VM/native, Wasm, and the C++ emitter now also lower component-wise `Mat2`/`Mat3`/`Mat4` and `Quat` `plus` + `minus`, scalar-left/right matrix/quaternion scaling, matrix/quaternion-by-scalar divide, matrix-vector multiply, matching matrix-matrix multiply, quaternion-quaternion Hamilton products, and quaternion-`Vec3` rotation through the documented contract. GLSL now lowers nominal `Vec2`/`Vec3`/`Vec4` and `Mat2`/`Mat3`/`Mat4` values, direct vector/matrix field access, and `MatN * VecN` interop alongside the matrix-only operator subset (`plus`, `minus`, scalar scale/divide, matching matrix-matrix multiply); vector arithmetic and quaternion lowering are still follow-up work.
+- Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` and `minus` rules, the documented `Mat*`/`Quat` `multiply` allowlist, `Mat* / scalar` plus `Quat / scalar` divide validation, and deterministic binding/return/call diagnostics for implicit `Mat*`/`Quat` family conversions. VM/native, Wasm, and the C++ emitter now also lower component-wise `Mat2`/`Mat3`/`Mat4` and `Quat` `plus` + `minus`, scalar-left/right matrix/quaternion scaling, matrix/quaternion-by-scalar divide, matrix-vector multiply, matching matrix-matrix multiply, quaternion-quaternion Hamilton products, and quaternion-`Vec3` rotation through the documented contract. GLSL now lowers nominal `Vec2`/`Vec3`/`Vec4` and `Mat2`/`Mat3`/`Mat4` values, direct vector/matrix field access, component-wise vector `plus`/`minus`, vector scalar scale/divide, `MatN * VecN` interop, and the matrix-only operator subset (`plus`, `minus`, scalar scale/divide, matching matrix-matrix multiply); quaternion lowering is still follow-up work.
 - `multiply` supports:
   - Scalar scaling (`S * VecN`, `VecN * S`, `S * Mat`, `Mat * S`, `S * Quat`, `Quat * S`)
   - Matrix-vector (`Mat * VecN`) when inner dimensions match
@@ -800,8 +800,9 @@ Draft constraints:
     `Mat2`/`Mat3`/`Mat4` matrix-vector multiply, matching matrix-matrix multiply, quaternion-quaternion Hamilton
     products, and quaternion-`Vec3` rotation.
   - GLSL currently supports nominal `Vec2`/`Vec3`/`Vec4` and `Mat2`/`Mat3`/`Mat4` values, direct vector/matrix
-    field access, and `MatN * VecN` interop alongside the matrix-only operator subset (`plus`, `minus`, scalar
-    scale/divide, matching matrix-matrix multiply); vector arithmetic and quaternion lowering remain follow-up work.
+    field access, component-wise vector `plus`/`minus`, vector scalar scale/divide, `MatN * VecN` interop, and
+    the matrix-only operator subset (`plus`, `minus`, scalar scale/divide, matching matrix-matrix multiply);
+    quaternion lowering remains follow-up work.
 
 ## 10. Error Handling (Draft)
 
