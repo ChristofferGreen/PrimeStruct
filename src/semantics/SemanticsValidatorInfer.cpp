@@ -3613,6 +3613,17 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return canonical;
     };
+    auto preferredBareVectorHelperTarget = [&](std::string_view helperName) {
+      const std::string canonical = "/std/collections/vector/" + std::string(helperName);
+      if (defMap_.find(canonical) != defMap_.end() || hasImportedDefinitionPath(canonical)) {
+        return canonical;
+      }
+      const std::string alias = "/vector/" + std::string(helperName);
+      if (defMap_.find(alias) != defMap_.end()) {
+        return alias;
+      }
+      return canonical;
+    };
     auto tryRewriteBareMapHelperCall = [&](const Expr &candidate,
                                            std::string_view helperName,
                                            Expr &rewrittenOut) -> bool {
@@ -3637,6 +3648,32 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       } else {
         rewrittenOut.name = preferredBareMapHelperTarget(helperName);
       }
+      rewrittenOut.namespacePrefix.clear();
+      return true;
+    };
+    auto tryRewriteBareVectorHelperCall = [&](const Expr &candidate,
+                                              std::string_view helperName,
+                                              Expr &rewrittenOut) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
+        return false;
+      }
+      if (candidate.name != helperName || candidate.name.find('/') != std::string::npos ||
+          !candidate.namespacePrefix.empty()) {
+        return false;
+      }
+      if (defMap_.find("/" + std::string(helperName)) != defMap_.end()) {
+        return false;
+      }
+      const size_t receiverIndex = mapHelperReceiverIndex(candidate);
+      if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      std::string elemType;
+      if (!resolveVectorTarget(candidate.args[receiverIndex], elemType)) {
+        return false;
+      }
+      rewrittenOut = candidate;
+      rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
       rewrittenOut.namespacePrefix.clear();
       return true;
     };
@@ -3847,6 +3884,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
          isNamespacedVectorCountCall || isStdNamespacedMapCountCall || isNamespacedMapCountCall ||
          isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
+      Expr rewrittenVectorHelperCall;
+      if (tryRewriteBareVectorHelperCall(expr, "count", rewrittenVectorHelperCall)) {
+        return inferExprReturnKind(rewrittenVectorHelperCall, params, locals);
+      }
       if (!shouldInferBuiltinBareMapCountCall) {
         Expr rewrittenMapHelperCall;
         if (tryRewriteBareMapHelperCall(expr, "count", rewrittenMapHelperCall)) {
@@ -3901,6 +3942,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
          isNamespacedVectorCountCall || isStdNamespacedMapCountCall || isNamespacedMapCountCall ||
          isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
+      Expr rewrittenVectorHelperCall;
+      if (tryRewriteBareVectorHelperCall(expr, "count", rewrittenVectorHelperCall)) {
+        return inferExprReturnKind(rewrittenVectorHelperCall, params, locals);
+      }
       if (!shouldInferBuiltinBareMapCountCall) {
         Expr rewrittenMapHelperCall;
         if (tryRewriteBareMapHelperCall(expr, "count", rewrittenMapHelperCall)) {
@@ -3928,6 +3973,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall) &&
         !expr.args.empty() && expr.args.size() != 1 &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
+      Expr rewrittenVectorHelperCall;
+      if (tryRewriteBareVectorHelperCall(expr, "capacity", rewrittenVectorHelperCall)) {
+        return inferExprReturnKind(rewrittenVectorHelperCall, params, locals);
+      }
       std::string methodResolved;
       if (resolveMethodCallPath("capacity", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -3941,6 +3990,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall) &&
         expr.args.size() == 1 &&
         (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
+      Expr rewrittenVectorHelperCall;
+      if (tryRewriteBareVectorHelperCall(expr, "capacity", rewrittenVectorHelperCall)) {
+        return inferExprReturnKind(rewrittenVectorHelperCall, params, locals);
+      }
       std::string methodResolved;
       if (resolveMethodCallPath("capacity", methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);

@@ -191,6 +191,60 @@ TEST_CASE("rejects canonical namespaced vector mutators without imported helpers
   expectCanonicalVectorRemoveSwapImportRequirement("exe");
 }
 
+TEST_CASE("compiles and runs bare vector count and capacity through imported stdlib helpers in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(plus(count(values), capacity(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_bare_vector_count_capacity_imported.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_exe_bare_vector_count_capacity_imported_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("rejects bare vector count without imported helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_bare_vector_count_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_exe_bare_vector_count_import_requirement_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("rejects bare vector capacity without imported helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(capacity(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_bare_vector_capacity_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_exe_bare_vector_capacity_import_requirement_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs experimental vector helper runtime contracts in C++ emitter") {
   expectExperimentalVectorRuntimeContracts("exe");
 }

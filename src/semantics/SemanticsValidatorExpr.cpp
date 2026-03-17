@@ -3266,6 +3266,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return canonical;
     };
+    auto preferredBareVectorHelperTarget = [&](std::string_view helperName) {
+      const std::string canonical = "/std/collections/vector/" + std::string(helperName);
+      if (defMap_.find(canonical) != defMap_.end() || hasImportedDefinitionPath(canonical)) {
+        return canonical;
+      }
+      const std::string alias = "/vector/" + std::string(helperName);
+      if (defMap_.find(alias) != defMap_.end()) {
+        return alias;
+      }
+      return canonical;
+    };
     auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {
       if (helperName == "count") {
         return std::string("mapCount");
@@ -3328,6 +3339,32 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         rewrittenOut.name = preferredBareMapHelperTarget(helperName);
       }
+      rewrittenOut.namespacePrefix.clear();
+      return true;
+    };
+    auto tryRewriteBareVectorHelperCall = [&](const Expr &candidate,
+                                              std::string_view helperName,
+                                              Expr &rewrittenOut) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
+        return false;
+      }
+      if (candidate.name != helperName || candidate.name.find('/') != std::string::npos ||
+          !candidate.namespacePrefix.empty()) {
+        return false;
+      }
+      if (defMap_.find("/" + std::string(helperName)) != defMap_.end()) {
+        return false;
+      }
+      const size_t receiverIndex = mapHelperReceiverIndex(candidate);
+      if (receiverIndex >= candidate.args.size()) {
+        return false;
+      }
+      std::string elemType;
+      if (!resolveVectorTarget(candidate.args[receiverIndex], elemType)) {
+        return false;
+      }
+      rewrittenOut = candidate;
+      rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
       rewrittenOut.namespacePrefix.clear();
       return true;
     };
@@ -5271,7 +5308,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     } else if (isDirectStdNamespacedVectorCountWrapperMapTarget) {
       error_ = "template arguments required for /std/collections/vector/count";
       return false;
-    } else if ((isStdNamespacedVectorCountCall && expr.args.size() == 1 && resolveMapTarget(expr.args.front())) &&
+    }
+    Expr rewrittenVectorHelperCall;
+    if (tryRewriteBareVectorHelperCall(expr, "count", rewrittenVectorHelperCall) ||
+        tryRewriteBareVectorHelperCall(expr, "capacity", rewrittenVectorHelperCall)) {
+      return validateExpr(params, locals, rewrittenVectorHelperCall);
+    }
+    if ((isStdNamespacedVectorCountCall && expr.args.size() == 1 && resolveMapTarget(expr.args.front())) &&
                (defMap_.find("/std/collections/vector/count") == defMap_.end() ||
                 hasImportedDefinitionPath("/std/collections/vector/count")) &&
                hasStdNamespacedVectorCountAliasDefinition) {

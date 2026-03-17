@@ -1687,8 +1687,10 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm with vector count helper") {
+TEST_CASE("runs vm with bare vector count through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -1698,6 +1700,22 @@ main() {
   const std::string srcPath = writeTemp("vm_vector_count_helper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 3);
+}
+
+TEST_CASE("rejects vm bare vector count without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_count_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_vector_count_import_requirement_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim helpers") {
@@ -6582,8 +6600,10 @@ main() {
   CHECK(runCommand(runCmd) == 8);
 }
 
-TEST_CASE("runs vm with vector capacity helpers") {
+TEST_CASE("runs vm with bare vector capacity through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -6596,8 +6616,26 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
-TEST_CASE("runs vm with vector capacity after pop") {
+TEST_CASE("rejects vm bare vector capacity without imported helper") {
   const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(capacity(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_capacity_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_vector_capacity_import_requirement_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("runs vm with bare vector capacity after pop through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}

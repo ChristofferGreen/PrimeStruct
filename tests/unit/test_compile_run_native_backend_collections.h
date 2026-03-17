@@ -2088,8 +2088,10 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native vector count helper") {
+TEST_CASE("compiles and runs native bare vector count through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -2103,6 +2105,23 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("rejects native bare vector count without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_count_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_count_import_requirement_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native stdlib collection shim helpers") {
@@ -7383,8 +7402,10 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("compiles and runs native vector capacity helpers") {
+TEST_CASE("compiles and runs native bare vector capacity through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -7401,8 +7422,27 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs native vector capacity after pop") {
+TEST_CASE("rejects native bare vector capacity without imported helper") {
   const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(capacity(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_capacity_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_capacity_import_requirement_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("compiles and runs native bare vector capacity after pop through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}

@@ -678,8 +678,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count helper validates on vector binding") {
+TEST_CASE("bare vector count call resolves through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
@@ -689,6 +691,19 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("bare vector count call requires imported stdlib helper or explicit definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("count helper validates on soa_vector binding") {
@@ -1613,8 +1628,10 @@ main() {
   CHECK(error.find("unknown call target") != std::string::npos);
 }
 
-TEST_CASE("capacity builtin validates on vector binding") {
+TEST_CASE("bare vector capacity call resolves through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
@@ -1626,12 +1643,25 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("capacity rejects template arguments") {
+TEST_CASE("bare vector capacity call requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(capacity<i32>(values))
+  return(capacity(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("vector capacity compatibility alias rejects template arguments") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/vector/capacity<i32>(values))
 }
 )";
   std::string error;
@@ -1639,12 +1669,12 @@ main() {
   CHECK(error.find("capacity does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("capacity rejects block arguments") {
+TEST_CASE("vector capacity compatibility alias rejects block arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(capacity(values) { 1i32 })
+  return(/vector/capacity(values) { 1i32 })
 }
 )";
   std::string error;
@@ -1652,12 +1682,12 @@ main() {
   CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
-TEST_CASE("capacity rejects wrong argument count") {
+TEST_CASE("vector capacity compatibility alias rejects wrong argument count") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(capacity(values, 1i32))
+  return(/vector/capacity(values, 1i32))
 }
 )";
   std::string error;
@@ -2089,7 +2119,7 @@ TEST_CASE("capacity method keeps user-defined vector helper precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
-  return(plus(count(values), 20i32))
+  return(20i32)
 }
 
 [effects(heap_alloc), return<int>]
@@ -2107,7 +2137,7 @@ TEST_CASE("count call keeps user-defined vector helper precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
-  return(plus(count(values), 21i32))
+  return(21i32)
 }
 
 [effects(heap_alloc), return<int>]
@@ -2125,7 +2155,7 @@ TEST_CASE("capacity call keeps user-defined vector helper precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
-  return(plus(count(values), 20i32))
+  return(20i32)
 }
 
 [effects(heap_alloc), return<int>]
@@ -2137,6 +2167,66 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("bare vector count auto inference resolves through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare vector count auto inference requires imported stdlib helper or explicit definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("bare vector capacity auto inference resolves through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{capacity(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare vector capacity auto inference requires imported stdlib helper or explicit definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{capacity(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("at call keeps user-defined array helper precedence") {
