@@ -7367,7 +7367,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("ps_missing_vector_at_method_helper") != std::string::npos);
 }
 
 TEST_CASE("rejects slash-method wrapper string access method chain i32 diagnostics in C++ emitter") {
@@ -7393,6 +7393,65 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /i32/missing_tag") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter lowers slash-method string vector access helpers to deleted stubs") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(plus(wrapText()./std/collections/vector/at(1i32),
+              wrapText()./vector/at_unsafe(0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_slash_method_string_vector_access_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_slash_method_string_vector_access_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_at_method_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_at_method_helper(wrapText(), 1)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_at_unsafe_method_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_at_unsafe_method_helper(wrapText(), 0)") != std::string::npos);
+  CHECK(output.find("ps_string_at(") == std::string::npos);
+  CHECK(output.find("ps_string_at_unsafe(") == std::string::npos);
+}
+
+TEST_CASE("rejects slash-method string vector access builtin fallback in C++ emitter") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(plus(wrapText()./std/collections/vector/at(1i32),
+              wrapText()./vector/at_unsafe(0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_slash_method_string_vector_access_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_slash_method_string_vector_access_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string errors = readFile(errPath);
+  CHECK(errors.find("ps_missing_vector_at_method_helper") != std::string::npos);
+  CHECK(errors.find("ps_missing_vector_at_unsafe_method_helper") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps vector alias access struct method chain canonical forwarding") {
