@@ -613,7 +613,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity
     PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims
     PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence
-    PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax
     PrimeStruct_primestruct_compile_run_native_backend_collections_templated_wrapper_parity
     PrimeStruct_primestruct_compile_run_imports_operations_and_collections
     PROPERTIES DISABLED TRUE)

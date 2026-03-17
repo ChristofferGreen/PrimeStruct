@@ -6833,7 +6833,7 @@ main() {
   CHECK_FALSE(readFile(outPath).empty());
 }
 
-TEST_CASE("runs vm map compatibility count call with canonical templated helper present") {
+TEST_CASE("rejects vm map compatibility count call with canonical templated helper present") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -6853,8 +6853,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_map_count_call_alias_precedence_with_canonical_templated_helper.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 96);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_map_count_call_alias_precedence_with_canonical_templated_helper_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
 }
 
 TEST_CASE("rejects vm map compatibility count call mismatch with canonical templated helper present") {
