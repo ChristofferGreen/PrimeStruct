@@ -196,7 +196,7 @@ Type-resolution graph rollout note: keep the graph migration blocked on the rema
 Deferred graph follow-up note: explicit/implicit template inference, local `auto`, omitted-envelope inference, illegal-cycle diagnostics, performance guardrails, optional parallel solve, query/invalidation work, CT-eval interaction, remaining inference-island migration, sustained performance suites, legacy removal, and end-to-end graph conformance expansion stay parked until the return-kind graph path is stable.
 
 **Backends & IR**
-- ○ Extend `/std/image/png/read(...)` to filter-`4` (`Paeth`) scanline reconstruction for 8-bit RGB/RGBA inputs.
+- ✓ Extend `/std/image/png/read(...)` to filter-`4` (`Paeth`) scanline reconstruction for 8-bit RGB/RGBA inputs. Progress: the shared stdlib decoder now reconstructs `Paeth` scanlines with the standard left/up/up-left predictor while preserving the public flat RGB output contract and dropping alpha when decoding RGBA inputs; compile-run coverage now locks stored `Paeth` reads for both RGB and RGBA fixtures on the native backend.
 - ○ Extend `/std/image/png/read(...)` to CRC validation for critical chunks.
 - ○ Extend `/std/image/png/read(...)` to stricter PNG chunk-order validation beyond the current `IHDR`/`IDAT`/`IEND` checks.
 - ○ Extend `/std/image/png/read(...)` to remaining non-interlaced PNG color and bit-depth variants.

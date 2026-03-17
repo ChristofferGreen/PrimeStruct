@@ -416,6 +416,21 @@ namespace std {
     return(minus(value, multiply(divide(value, divisor), divisor)))
   }
 
+  [return<i32>]
+  pngPaethPredictor([i32] left, [i32] up, [i32] upLeft) {
+    [i32] predictor{minus(plus(left, up), upLeft)}
+    [i32] leftDistance{abs(minus(predictor, left))}
+    [i32] upDistance{abs(minus(predictor, up))}
+    [i32] upLeftDistance{abs(minus(predictor, upLeft))}
+    if(and(less_equal(leftDistance, upDistance), less_equal(leftDistance, upLeftDistance)),
+       then() { return(left) },
+       else() { })
+    if(less_equal(upDistance, upLeftDistance),
+       then() { return(up) },
+       else() { })
+    return(upLeft)
+  }
+
   [return<bool>]
   pngZlibHeaderValid([i32] cmf, [i32] flg) {
     if(or(not_equal(pngMod(cmf, 16i32), 8i32), greater_than(divide(cmf, 16i32), 7i32)),
@@ -1507,8 +1522,9 @@ namespace std {
     [vector<i32> mut] previousRowBytes{vector<i32>()}
     while(less_than(row, height), do() {
       [i32] filterType{rawBytes[offset]}
-      if(and(and(and(not_equal(filterType, 0i32), not_equal(filterType, 1i32)), not_equal(filterType, 2i32)),
-             not_equal(filterType, 3i32)),
+      if(and(and(and(and(not_equal(filterType, 0i32), not_equal(filterType, 1i32)), not_equal(filterType, 2i32)),
+                 not_equal(filterType, 3i32)),
+             not_equal(filterType, 4i32)),
          then() {
            clear(pixels)
            return(2i32)
@@ -1522,11 +1538,15 @@ namespace std {
         [i32 mut] reconstructed{rawBytes[plus(offset, byteIndex)]}
         [i32 mut] leftByte{0i32}
         [i32 mut] upByte{0i32}
+        [i32 mut] upLeftByte{0i32}
         if(greater_equal(byteIndex, bytesPerPixel),
            then() { assign(leftByte, rowBytes[minus(byteIndex, bytesPerPixel)]) },
            else() { })
         if(less_than(byteIndex, count(previousRowBytes)),
            then() { assign(upByte, previousRowBytes[byteIndex]) },
+           else() { })
+        if(and(greater_equal(byteIndex, bytesPerPixel), less_than(minus(byteIndex, bytesPerPixel), count(previousRowBytes)))),
+           then() { assign(upLeftByte, previousRowBytes[minus(byteIndex, bytesPerPixel)]) },
            else() { })
         if(and(equal(filterType, 1i32), greater_equal(byteIndex, bytesPerPixel)),
            then() {
@@ -1541,6 +1561,11 @@ namespace std {
         if(equal(filterType, 3i32),
            then() {
              assign(reconstructed, pngMod(plus(reconstructed, divide(plus(leftByte, upByte), 2i32)), 256i32))
+           },
+           else() { })
+        if(equal(filterType, 4i32),
+           then() {
+             assign(reconstructed, pngMod(plus(reconstructed, pngPaethPredictor(leftByte, upByte, upLeftByte)), 256i32))
            },
            else() { })
         push(rowBytes, reconstructed)

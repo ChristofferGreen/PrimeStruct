@@ -1216,6 +1216,77 @@ main() {
   CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
+TEST_CASE("primec wasm wasi rejects stored paeth-filter rgb png inputs with unsupported effects") {
+  const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_paeth_runtime";
+  std::error_code ec;
+  std::filesystem::remove_all(tempRoot, ec);
+  std::filesystem::create_directories(tempRoot, ec);
+  REQUIRE(!ec);
+
+  {
+    const std::vector<unsigned char> pngBytes = {
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x19, 0x49, 0x44, 0x41,
+        0x54,
+        0x78, 0x01, 0x01, 0x0e, 0x00, 0xf1, 0xff, 0x04,
+        0x0a, 0x14, 0x1e, 0x28, 0x32, 0x3c, 0x04, 0x05,
+        0x07, 0x09, 0x0a, 0x14, 0x1e, 0x09, 0x19, 0x01,
+        0x2c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x49, 0x45, 0x4e, 0x44, 0x00, 0x00, 0x00,
+        0x00,
+    };
+    std::ofstream input(tempRoot / "input.png", std::ios::binary);
+    REQUIRE(input.good());
+    input.write(reinterpret_cast<const char *>(pngBytes.data()), static_cast<std::streamsize>(pngBytes.size()));
+    REQUIRE(input.good());
+  }
+
+  const std::string source = R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "input.png"utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(1i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(count(pixels))
+  print_line(pixels[0i32])
+  print_line(pixels[1i32])
+  print_line(pixels[2i32])
+  print_line(pixels[3i32])
+  print_line(pixels[4i32])
+  print_line(pixels[5i32])
+  print_line(pixels[6i32])
+  print_line(pixels[7i32])
+  print_line(pixels[8i32])
+  print_line(pixels[9i32])
+  print_line(pixels[10i32])
+  print_line(pixels[11i32])
+  return(plus(width, height))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_png_paeth.prime", source);
+  const std::string wasmPath = (tempRoot / "png_paeth.wasm").string();
+  const std::string compileErrPath = (tempRoot / "png_paeth_compile_err.txt").string();
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
+}
+
 TEST_CASE("primec wasm wasi rejects fixed-huffman backreference rgb png inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_fixed_runtime";
   std::error_code ec;
@@ -1416,8 +1487,8 @@ main() {
   CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi rejects remaining png filters with unsupported effects") {
-  const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_filter_runtime";
+TEST_CASE("primec wasm wasi rejects broader unsupported png decode paths with unsupported effects") {
+  const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_unsupported_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
   std::filesystem::create_directories(tempRoot, ec);
@@ -1428,12 +1499,12 @@ TEST_CASE("primec wasm wasi rejects remaining png filters with unsupported effec
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
         0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-        0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x0f, 0x49, 0x44, 0x41,
+        0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41,
         0x54,
-        0x78, 0x01, 0x01, 0x04, 0x00, 0xfb, 0xff, 0x04,
-        0xff, 0x00, 0x00, 0x03, 0x11, 0x01, 0x04, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x78, 0x01, 0x01, 0x02, 0x00, 0xfd, 0xff, 0x00,
+        0x7f, 0x00, 0x81, 0x00, 0x80, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00,
         0x49, 0x45, 0x4e, 0x44,
         0x00, 0x00, 0x00, 0x00,
     };
@@ -1459,9 +1530,9 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_emit_wasm_png_filter_unsupported.prime", source);
-  const std::string wasmPath = (tempRoot / "png_filter_unsupported.wasm").string();
-  const std::string compileErrPath = (tempRoot / "png_filter_unsupported_compile_err.txt").string();
+  const std::string srcPath = writeTemp("compile_emit_wasm_png_decode_unsupported.prime", source);
+  const std::string wasmPath = (tempRoot / "png_decode_unsupported.wasm").string();
+  const std::string compileErrPath = (tempRoot / "png_decode_unsupported_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
   CHECK(runCommand(wasmCmd) == 2);
