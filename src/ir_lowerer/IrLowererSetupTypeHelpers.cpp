@@ -186,6 +186,18 @@ bool isExplicitMapHelperFallbackPath(const Expr &expr) {
          normalizedPath == "/std/collections/map/at_unsafe";
 }
 
+bool isExplicitVectorAccessHelperPath(const std::string &path) {
+  const std::string normalizedPath = normalizeCollectionHelperPath(path);
+  return normalizedPath == "/vector/at" || normalizedPath == "/vector/at_unsafe" ||
+         normalizedPath == "/std/collections/vector/at" ||
+         normalizedPath == "/std/collections/vector/at_unsafe";
+}
+
+bool isExplicitVectorAccessHelperExpr(const Expr &expr) {
+  return expr.kind == Expr::Kind::Call && !expr.name.empty() &&
+         isExplicitVectorAccessHelperPath(expr.name);
+}
+
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path);
 
 bool isBuiltinMapHelperSuffix(const std::string &suffix) {
@@ -894,7 +906,8 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
                                           LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
   if ((receiverCallExpr.isMethodCall && isExplicitMapMethodAliasPath(receiverCallExpr.name)) ||
-      isExplicitMapHelperFallbackPath(receiverCallExpr)) {
+      isExplicitMapHelperFallbackPath(receiverCallExpr) ||
+      isExplicitVectorAccessHelperExpr(receiverCallExpr)) {
     return false;
   }
 
@@ -2138,9 +2151,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       }
     } else {
       LocalInfo::ValueKind inferredReceiverKind = LocalInfo::ValueKind::Unknown;
+      const bool blocksExplicitVectorAccessKindFallback = isExplicitVectorAccessHelperExpr(*receiver);
       if (!inferBuiltinAccessReceiverResultKind(
               *receiver, localsIn, inferExprKind, resolveExprPath, getReturnInfo, defMap, inferredReceiverKind) &&
-          inferExprKind) {
+          inferExprKind && !blocksExplicitVectorAccessKindFallback) {
         inferredReceiverKind = inferExprKind(*receiver, localsIn);
       }
       const std::string inferredReceiverTypeName = typeNameForValueKind(inferredReceiverKind);
@@ -2436,10 +2450,14 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         return true;
       }
     }
+    const bool blocksExplicitVectorAccessKindFallback = isExplicitVectorAccessHelperExpr(receiverExpr);
     const LocalInfo::ValueKind inferredKind =
-        inferExprKind ? inferExprKind(receiverExpr, localsIn) : LocalInfo::ValueKind::Unknown;
+        (inferExprKind && !blocksExplicitVectorAccessKindFallback)
+            ? inferExprKind(receiverExpr, localsIn)
+            : LocalInfo::ValueKind::Unknown;
     typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind);
-    if (typeNameOut.empty() && receiverExpr.isMethodCall && receiverExpr.args.size() == 2) {
+    if (typeNameOut.empty() && !blocksExplicitVectorAccessKindFallback && receiverExpr.isMethodCall &&
+        receiverExpr.args.size() == 2) {
       std::string accessName;
       if (getBuiltinArrayAccessName(receiverExpr, accessName) &&
           inferExprKind && inferExprKind(receiverExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
