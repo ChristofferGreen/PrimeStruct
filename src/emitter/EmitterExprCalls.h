@@ -970,7 +970,16 @@
     }
     return std::string{};
   };
-  std::string resolvedFull = preferStructReturningCollectionHelperPath(full);
+  auto preferExplicitVectorCountCapacityHelperPath = [&](const Expr &candidate, const std::string &path) {
+    if (!isExplicitVectorCountCapacityDirectCall(candidate)) {
+      return preferStructReturningCollectionHelperPath(path);
+    }
+    if (path == "/vector/count" || path == "/vector/capacity") {
+      return path;
+    }
+    return preferStructReturningCollectionHelperPath(path);
+  };
+  std::string resolvedFull = preferExplicitVectorCountCapacityHelperPath(expr, full);
   auto it = nameMap.find(resolvedFull);
   if (it == nameMap.end()) {
     const std::string preferredBareMapContainsPath = preferBareMapHelperPath(expr, "contains");

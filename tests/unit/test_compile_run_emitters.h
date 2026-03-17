@@ -2947,6 +2947,49 @@ TEST_CASE("C++ emitter helper keeps bare vector access alias metadata precedence
   CHECK(resolved == "/AliasMarker/tag");
 }
 
+TEST_CASE("C++ emitter helper rejects canonical metadata fallback for explicit vector count capacity aliases") {
+  auto expectRejected = [&](const char *helperName, const char *canonicalPath) {
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.name = std::string("/vector/") + helperName;
+
+    primec::Expr receiverName;
+    receiverName.kind = primec::Expr::Kind::Name;
+    receiverName.name = "values";
+    receiverCall.args.push_back(receiverName);
+    receiverCall.argNames.push_back(std::nullopt);
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.isMethodCall = true;
+    methodCall.name = "tag";
+    methodCall.args.push_back(receiverCall);
+    methodCall.argNames.push_back(std::nullopt);
+
+    std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+    primec::emitter::BindingInfo receiverInfo;
+    receiverInfo.typeName = "vector";
+    receiverInfo.typeTemplateArg = "i32";
+    localTypes.emplace("values", receiverInfo);
+
+    std::unordered_map<std::string, const primec::Definition *> defMap;
+    std::unordered_map<std::string, std::string> importAliases;
+    std::unordered_map<std::string, std::string> structTypeMap;
+    std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+    std::unordered_map<std::string, std::string> returnStructs = {
+        {canonicalPath, "/CanonicalMarker"},
+    };
+
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved.empty());
+  };
+
+  expectRejected("count", "/std/collections/vector/count");
+  expectRejected("capacity", "/std/collections/vector/capacity");
+}
+
 TEST_CASE("C++ emitter helper rejects removed full-path vector method aliases") {
   primec::Expr call;
   call.kind = primec::Expr::Kind::Call;
@@ -4368,7 +4411,45 @@ main() {
   CHECK(readFile(errPath).find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("runs vector namespaced call aliases canonically in C++ emitter") {
+TEST_CASE("runs vector namespaced count capacity aliases through explicit alias helpers in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(90i32)
+}
+
+[return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(20i32)
+}
+
+[return<int>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(7i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity([vector<i32>] values) {
+  return(8i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values), /vector/capacity(values)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_namespaced_count_capacity_alias_same_path.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_capacity_alias_same_path_exe")
+          .string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 110);
+}
+
+TEST_CASE("rejects vector namespaced count capacity aliases with only canonical helpers in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -4376,23 +4457,28 @@ TEST_CASE("runs vector namespaced call aliases canonically in C++ emitter") {
 }
 
 [return<int>]
-/std/collections/vector/at([vector<i32>] values, [i32] index) {
-  return(plus(index, 40i32))
+/std/collections/vector/capacity([vector<i32>] values) {
+  return(20i32)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(plus(/vector/count(values), /vector/at(values, 2i32)))
+  return(plus(/vector/count(values), /vector/capacity(values)))
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_call_alias_canonical_precedence.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_call_alias_canonical_precedence_exe")
-          .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_namespaced_count_capacity_alias_canonical_only_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_vector_namespaced_count_capacity_alias_canonical_only_reject.err")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string errors = readFile(errPath);
+  CHECK(errors.find("ps_missing_vector_count_call_helper") != std::string::npos);
+  CHECK(errors.find("ps_missing_vector_capacity_call_helper") != std::string::npos);
 }
 
 TEST_CASE("rejects vector namespaced templated canonical helper alias call without alias definition in C++ emitter") {
@@ -8709,6 +8795,46 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() /
        "primec_cpp_wrapper_explicit_vector_count_capacity_call_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_count_call_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_count_call_helper(wrapVector())") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_capacity_call_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_capacity_call_helper(wrapVector())") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter keeps explicit vector count capacity aliases on deleted stubs when only canonical helpers exist") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(90i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity([vector<i32>] values) {
+  return(20i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(/vector/count(wrapVector()),
+              /vector/capacity(wrapVector())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_explicit_vector_count_capacity_alias_canonical_only_deleted_stub.prime",
+                source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_explicit_vector_count_capacity_alias_canonical_only_deleted_stub.cpp")
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";

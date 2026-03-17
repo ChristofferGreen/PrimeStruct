@@ -1311,6 +1311,18 @@ bool resolveMethodCallPath(const Expr &call,
     return isArrayValue(candidate.args[receiverIndex], localTypes) || isVectorValue(candidate.args[receiverIndex], localTypes) ||
            isStringValue(candidate.args[receiverIndex], localTypes);
   };
+  auto isExplicitVectorCountCapacityDirectCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    return normalized == "vector/count" || normalized == "vector/capacity" ||
+           normalized == "std/collections/vector/count" ||
+           normalized == "std/collections/vector/capacity";
+  };
   auto inferExplicitMapAccessCompatibilityTypeName = [&](const Expr &candidate) -> std::string {
     if (!isExplicitMapAccessCompatibilityCall(candidate)) {
       return "";
@@ -1366,6 +1378,38 @@ bool resolveMethodCallPath(const Expr &call,
 
     const std::string resolvedExprPath = resolveExprPath(candidate);
     std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
+    for (const auto &resolvedCandidate : resolvedCandidates) {
+      if (const std::string *structPath = findReturnStructMetadata(resolvedCandidate)) {
+        return normalizeCollectionReceiverType(*structPath);
+      }
+    }
+    for (const auto &resolvedCandidate : resolvedCandidates) {
+      const ReturnKind *kind = findReturnKindMetadata(resolvedCandidate);
+      if (kind == nullptr) {
+        continue;
+      }
+      if (*kind == ReturnKind::Array) {
+        return "array";
+      }
+      const std::string inferredType = typeNameForReturnKind(*kind);
+      if (!inferredType.empty()) {
+        return inferredType;
+      }
+      return "";
+    }
+    return "";
+  };
+  auto inferExplicitVectorCountCapacityResolvedTypeName = [&](const Expr &candidate) -> std::string {
+    if (!isExplicitVectorCountCapacityDirectCall(candidate)) {
+      return "";
+    }
+    const std::string resolvedExprPath = resolveExprPath(candidate);
+    std::vector<std::string> resolvedCandidates;
+    if (resolvedExprPath == "/vector/count" || resolvedExprPath == "/vector/capacity") {
+      resolvedCandidates.push_back(resolvedExprPath);
+    } else {
+      resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
+    }
     for (const auto &resolvedCandidate : resolvedCandidates) {
       if (const std::string *structPath = findReturnStructMetadata(resolvedCandidate)) {
         return normalizeCollectionReceiverType(*structPath);
@@ -1467,6 +1511,14 @@ bool resolveMethodCallPath(const Expr &call,
           }
         }
         if (!expr.isMethodCall) {
+          if (const std::string explicitVectorCountCapacityType =
+                  inferExplicitVectorCountCapacityResolvedTypeName(expr);
+              !explicitVectorCountCapacityType.empty()) {
+            return explicitVectorCountCapacityType;
+          }
+          if (isExplicitVectorCountCapacityDirectCall(expr)) {
+            return "";
+          }
           if (const std::string explicitVectorAccessType = inferExplicitVectorAccessResolvedTypeName(expr);
               !explicitVectorAccessType.empty()) {
             return explicitVectorAccessType;
