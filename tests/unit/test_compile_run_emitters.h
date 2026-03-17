@@ -9020,6 +9020,88 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs C++ support-matrix math nominal helpers") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Quat] raw{Quat(0.0f32, 0.0f32, 0.0f32, 2.0f32)}
+  [Quat] normalized{raw.toNormalized()}
+  [Mat3] basis3{quat_to_mat3(raw)}
+  [Mat4] basis4{quat_to_mat4(raw)}
+  [Quat] restored{mat3_to_quat(Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, -1.0f32, 0.0f32,
+    0.0f32, 0.0f32, -1.0f32
+  ))}
+  [f32] total{m2.m00 + m2.m11 + normalized.w + basis3.m00 + basis4.m33 + restored.x + restored.w}
+  return(convert<int>(total))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_support_matrix_math_nominal_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_support_matrix_math_nominal_helpers_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("C++ emitter keeps support-matrix plus mismatch diagnostics") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat2] lhs{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat3] rhs{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [Mat2] value{plus(lhs, rhs)}
+  return(convert<int>(value.m00))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_support_matrix_plus_mismatch.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_support_matrix_plus_mismatch_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("plus requires matching matrix/quaternion operand types") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter keeps support-matrix implicit conversion diagnostics") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat3] basis{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [auto] value{quat_to_mat3(basis)}
+  return(convert<int>(value.m00))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_support_matrix_implicit_conversion.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_support_matrix_implicit_conversion_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got "
+            "/std/math/Mat3") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs string-keyed map literal in C++ emitter") {
   const std::string source = R"(
 [return<int>]
