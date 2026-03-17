@@ -4332,15 +4332,15 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures/chunks, including CRCs for critical chunks and stricter `PLTE`/`IDAT` ordering for the current subset, and fully decodes the current PNG read subset") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("non-interlaced 1/2/4/8/16-bit grayscale, non-interlaced 1/2/4/8-bit indexed-color, and non-interlaced 8-bit grayscale+alpha/RGB/RGBA images whose `IDAT` payload uses stored/no-compression deflate blocks, fixed-Huffman deflate blocks, or dynamic-Huffman deflate blocks, with filter-`0`, filter-`1` (`Sub`), filter-`2` (`Up`), filter-`3` (`Average`), and filter-`4` (`Paeth`) scanlines") !=
+  CHECK(primeStructDoc.find("non-interlaced 1/2/4/8/16-bit grayscale, non-interlaced 1/2/4/8-bit indexed-color, non-interlaced 8/16-bit grayscale+alpha, and non-interlaced 8-bit RGB/RGBA images whose `IDAT` payload uses stored/no-compression deflate blocks, fixed-Huffman deflate blocks, or dynamic-Huffman deflate blocks, with filter-`0`, filter-`1` (`Sub`), filter-`2` (`Up`), filter-`3` (`Average`), and filter-`4` (`Paeth`) scanlines") !=
         std::string::npos);
   CHECK(primeStructDoc.find("The shared decoder accepts a single `PLTE` chunk before the `IDAT` run when present, indexed-color inputs require that palette before decode, and multi-chunk `IDAT` payloads must stay consecutive once decoding data begins") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Fixed-Huffman reads now cover both literal-only payloads and length/distance backreferences with overlapping copy semantics, and dynamic-Huffman reads now cover both literal-only payloads and length/distance backreferences with explicit code-length tables") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("expanding packed grayscale samples to full-range RGB, downscaling 16-bit grayscale samples into RGB bytes, expanding palette indexes into RGB, and dropping alpha when decoding grayscale+alpha or RGBA inputs") !=
+  CHECK(primeStructDoc.find("expanding packed grayscale samples to full-range RGB, downscaling 16-bit grayscale-channel samples into RGB bytes, expanding palette indexes into RGB, and dropping alpha when decoding 8/16-bit grayscale+alpha or 8-bit RGBA inputs") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Malformed or missing PNGs, including critical-chunk CRC mismatches, invalid `PLTE`/`IDAT` ordering, and indexed palette overruns, still return `image_invalid_operation`, while still-valid PNGs that still require 16-bit grayscale+alpha, 16-bit RGB/RGBA, or interlace handling currently return `image_read_unsupported`") !=
+  CHECK(primeStructDoc.find("Malformed or missing PNGs, including critical-chunk CRC mismatches, invalid `PLTE`/`IDAT` ordering, and indexed palette overruns, still return `image_invalid_operation`, while still-valid PNGs that still require 16-bit RGB/RGBA or interlace handling currently return `image_read_unsupported`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`png.write` still deterministically returns unsupported `ImageError` values") !=
         std::string::npos);

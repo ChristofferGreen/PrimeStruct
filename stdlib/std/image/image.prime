@@ -543,6 +543,9 @@ namespace std {
     if(equal(colorType, 0i32),
        then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, 16i32)) },
        else() { })
+    if(equal(colorType, 4i32),
+       then() { return(or(equal(bitDepth, 8i32), equal(bitDepth, 16i32))) },
+       else() { })
     if(equal(colorType, 3i32),
        then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, -1i32)) },
        else() { })
@@ -1798,9 +1801,15 @@ namespace std {
                 else() {
                   if(equal(colorType, 4i32),
                      then() {
-                       push(pixels, rowBytes[pixelByteIndex])
-                       push(pixels, rowBytes[pixelByteIndex])
-                       push(pixels, rowBytes[pixelByteIndex])
+                       [i32 mut] grayByte{rowBytes[pixelByteIndex]}
+                       if(equal(bitDepth, 16i32),
+                          then() {
+                            assign(grayByte, pngScaleU16SampleToByte(rowBytes[pixelByteIndex], rowBytes[plus(pixelByteIndex, 1i32)]))
+                          },
+                          else() { })
+                       push(pixels, grayByte)
+                       push(pixels, grayByte)
+                       push(pixels, grayByte)
                      },
                      else() {
                        if(equal(colorType, 3i32),
