@@ -57,7 +57,8 @@ semantics after canonicalization.
   substrate helpers with deterministic zero-token / no-op fallback on invalid
   handles, the first real native-desktop host path now consumes the
   deterministic experimental gfx stream emitted by the shared spinning-cube
-  sample, and
+  sample, real compile-run conformance now imports `/std/gfx/experimental/*`
+  and exercises that wrapper path across exe/vm/native, and
   `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites
   through the matching pipeline helper, but source-level profile literals and
   unsupported pipeline vertex types are still intentionally rejected while the

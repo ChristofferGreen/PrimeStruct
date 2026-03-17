@@ -728,6 +728,135 @@ main() {
   CHECK(runCommand(nativePath) == 2);
 }
 
+TEST_CASE("experimental gfx end-to-end conformance runs across backends") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Window] window{Window([title] "PrimeStruct"utf8, [width] 1280i32, [height] 720i32)?}
+  [Device] device{Device()?}
+  [Queue] queue{device.default_queue()}
+  if(window.is_open()) {
+    window.poll_events()
+  } else {
+    return(90i32)
+  }
+  [Swapchain] swapchain{
+    device.create_swapchain(
+      window,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F,
+      [present_mode] PresentMode.Fifo
+    )?
+  }
+  [array<VertexColored>] vertices{
+    array<VertexColored>(
+      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
+      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
+      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+    )
+  }
+  [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
+  [Mesh] mesh{device.create_mesh([vertices] vertices, [indices] indices)?}
+  [Pipeline] pipeline{
+    device.create_pipeline(
+      [shader] ShaderLibrary.CubeBasic,
+      [vertex_type] VertexColored,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F
+    )?
+  }
+  [Material] material{pipeline.material()?}
+  [Frame] frame{swapchain.frame()?}
+  [RenderPass] pass{
+    frame.render_pass(
+      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_depth] 1.0f32
+    )
+  }
+  pass.draw_mesh(mesh, material)
+  pass.end()
+  frame.submit(queue)?
+  frame.present()?
+  [i32 mut] score{0i32}
+
+  if(equal(window.token, 1i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(91i32)
+  }
+  if(equal(device.token, 2i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(92i32)
+  }
+  if(equal(queue.token, 3i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(93i32)
+  }
+  if(equal(swapchain.token, 4i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(94i32)
+  }
+  if(equal(mesh.token, 8i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(95i32)
+  }
+  if(equal(pipeline.token, 7i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(96i32)
+  }
+  if(equal(material.token, 8i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(97i32)
+  }
+  if(equal(frame.token, 5i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(98i32)
+  }
+  if(equal(pass.token, 6i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(99i32)
+  }
+  if(greater_than(window.aspect_ratio(), 1.7f32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(100i32)
+  }
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_gfx_experimental_end_to_end_conformance.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_end_to_end_conformance_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_end_to_end_conformance_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 10);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 10);
+}
+
 TEST_CASE("experimental gfx static fields import across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -3111,10 +3240,13 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   };
 
   const std::filesystem::path graphicsDocPath = resolveDocPath("Graphics_API_Design.md");
+  const std::filesystem::path primeStructPath = resolveDocPath("PrimeStruct.md");
   const std::filesystem::path guidelinesDocPath = resolveDocPath("Coding_Guidelines.md");
   REQUIRE(std::filesystem::exists(graphicsDocPath));
+  REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(guidelinesDocPath));
   const std::string graphicsDoc = readFile(graphicsDocPath.string());
+  const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string guidelinesDoc = readFile(guidelinesDocPath.string());
 
   const std::vector<std::string> lockedConstraintIds = {
@@ -3278,6 +3410,17 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
           std::string::npos);
     CHECK(guidelinesDoc.find("first real native-desktop host path now consumes the") != std::string::npos);
     CHECK(guidelinesDoc.find("deterministic experimental gfx stream emitted by the shared spinning-cube") !=
+          std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-V1-CONFORMANCE-STATUS");
+    CHECK(graphicsDoc.find("real compile-run conformance program that imports") != std::string::npos);
+    CHECK(graphicsDoc.find("`/std/gfx/experimental/*` and exercises") != std::string::npos);
+    CHECK(graphicsDoc.find("across exe/vm/native") != std::string::npos);
+    CHECK(primeStructDoc.find("real compile-run conformance now imports `/std/gfx/experimental/*`") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("real compile-run conformance now imports `/std/gfx/experimental/*`") !=
           std::string::npos);
   }
 

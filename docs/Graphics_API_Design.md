@@ -30,13 +30,19 @@ native-desktop host/runtime path now consumes a deterministic experimental gfx
 stream emitted by the shared spinning-cube `.prime` sample so submit/present
 can drive one real macOS window host end-to-end. Browser/native/Metal host
 samples still otherwise sit around shared `.prime` simulation/data paths. The
-current experimental package intentionally keeps deterministic rejects for
-source-level profile literals and for unsupported `create_pipeline` vertex
-types instead of inventing more compiler-owned routing, and Result-carrying
-method wrappers now also reject bare explicit non-`Result` struct bindings
-during semantics rather than deferring those failures to lowering; follow-up
-work should keep the public graphics API primarily in `.prime` files while
-leaving only minimal backend substrate in C++/host code.
+repo now also ships a real compile-run conformance program that imports
+`/std/gfx/experimental/*` and exercises `Window(...)`, `Device()`,
+`create_swapchain(...)`, `create_mesh(...)`, `create_pipeline(...)`, `frame()`,
+`render_pass(...)`, `draw_mesh(...)`, `submit(...)`, and `present()` across
+exe/vm/native instead of relying only on doc-lock coverage for that API
+surface. The current experimental package intentionally keeps deterministic
+rejects for source-level profile literals and for unsupported
+`create_pipeline` vertex types instead of inventing more compiler-owned
+routing, and Result-carrying method wrappers now also reject bare explicit
+non-`Result` struct bindings during semantics rather than deferring those
+failures to lowering; follow-up work should keep the public graphics API
+primarily in `.prime` files while leaving only minimal backend substrate in
+C++/host code.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.

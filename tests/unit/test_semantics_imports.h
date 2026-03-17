@@ -785,7 +785,14 @@ main() {
   }
   [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
   [Mesh] mesh{device.create_mesh([vertices] vertices, [indices] indices)?}
-  [Pipeline] pipeline{Pipeline([token] 23i32)}
+  [Pipeline] pipeline{
+    device.create_pipeline(
+      [shader] ShaderLibrary.CubeBasic,
+      [vertex_type] VertexColored,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F
+    )?
+  }
   [Material] material{pipeline.material()?}
   if(window.is_open(), then() { window.poll_events() }, else() { })
   [f32] aspect{window.aspect_ratio()}
