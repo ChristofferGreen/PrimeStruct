@@ -1397,6 +1397,30 @@ main() {
   CHECK(readFile(outPath).find("ps_missing_vector_push_call_helper(values, 5)") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lambda lowers explicit vector mutator method statement without helper to deleted stub") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  holder{[]([i32] seed) {
+    [vector<i32> mut] values{vector<i32>(1i32, 2i32, seed)}
+    values./std/collections/vector/push(5i32)
+    return(0i32)
+  }}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_lambda_explicit_vector_mutator_method_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_lambda_explicit_vector_mutator_method_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).find("ps_missing_vector_push_method_helper(values, 5)") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter lambda mutator mismatch rejects user helper signatures") {
   const std::string source = R"(
 /vector/push([vector<i32> mut] values, [bool] value) { }
@@ -9041,6 +9065,29 @@ main() {
   CHECK(output.find("ps_missing_vector_remove_swap_method_helper(values, 0)") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lowers explicit vector mutator method statements without helper to deleted stubs") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  values./vector/push(4i32)
+  values./std/collections/vector/clear()
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_explicit_vector_mutator_method_deleted_stubs.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_explicit_vector_mutator_method_deleted_stubs.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_push_method_helper(values, 4)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_clear_method_helper(values)") != std::string::npos);
+}
+
 TEST_CASE("rejects bare vector mutator call statements without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -9077,6 +9124,50 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("ps_missing_vector_push_method_helper") != std::string::npos);
+}
+
+TEST_CASE("rejects explicit vector mutator alias method statements without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  values./vector/push(4i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_explicit_vector_mutator_alias_method_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_explicit_vector_mutator_alias_method_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_push_method_helper") != std::string::npos);
+}
+
+TEST_CASE("rejects explicit vector mutator canonical method statements without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  values./std/collections/vector/clear()
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_explicit_vector_mutator_canonical_method_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_explicit_vector_mutator_canonical_method_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_clear_method_helper") != std::string::npos);
 }
 
 TEST_CASE("rejects inferred wrapper map capacity target in C++ emitter") {

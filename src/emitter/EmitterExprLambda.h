@@ -672,6 +672,27 @@ std::string Emitter::emitExpr(const Expr &expr,
             out << "); ";
             return;
           }
+          if (stmt.isMethodCall && !stmt.name.empty() && stmt.name.front() == '/') {
+            out << "ps_missing_vector_" << vectorHelper << "_method_helper(";
+            for (size_t i = 0; i < stmt.args.size(); ++i) {
+              if (i > 0) {
+                out << ", ";
+              }
+              out << emitExpr(stmt.args[i],
+                              nameMap,
+                              paramMap,
+                              defMap,
+                              structTypeMap,
+                              importAliases,
+                              activeTypes,
+                              returnKinds,
+                              resultInfos,
+                              returnStructs,
+                              allowMathBare);
+            }
+            out << "); ";
+            return;
+          }
           if (vectorHelper == "push") {
             out << "ps_vector_push("
                 << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)

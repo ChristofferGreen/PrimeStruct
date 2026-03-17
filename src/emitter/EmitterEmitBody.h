@@ -628,6 +628,27 @@
             out << ");\n";
             return;
           }
+          if (stmt.isMethodCall && !stmt.name.empty() && stmt.name.front() == '/') {
+            out << pad << "ps_missing_vector_" << vectorHelper << "_method_helper(";
+            for (size_t i = 0; i < stmt.args.size(); ++i) {
+              if (i > 0) {
+                out << ", ";
+              }
+              out << emitExpr(stmt.args[i],
+                              nameMap,
+                              paramMap,
+                              defMap,
+                              structTypeMap,
+                              importAliases,
+                              localTypes,
+                              returnKinds,
+                              resultInfos,
+                              returnStructs,
+                              hasMathImport);
+            }
+            out << ");\n";
+            return;
+          }
           if (vectorHelper == "push") {
             out << pad << "ps_vector_push("
                 << emitExpr(stmt.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
