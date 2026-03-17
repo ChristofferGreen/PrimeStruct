@@ -792,6 +792,62 @@
   auto isResolvedVectorTarget = [&](const Expr &targetExpr) -> bool {
     return resolvedTypePathForTarget(targetExpr) == "/vector";
   };
+  auto pickExplicitVectorAccessReceiverIndex = [&](const Expr &candidate) -> size_t {
+    if (candidate.args.size() != 2) {
+      return 0;
+    }
+    if (hasNamedArguments(candidate.argNames)) {
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          return i;
+        }
+      }
+    }
+    return 0;
+  };
+  auto isNoHelperExplicitVectorAccessCallFallback = [&](const Expr &candidate) {
+    if (!isExplicitVectorAccessDirectCall(candidate) || !explicitVectorAccessResolvedTypePath(candidate).empty() ||
+        candidate.args.size() != 2) {
+      return false;
+    }
+    const size_t receiverIndex = pickExplicitVectorAccessReceiverIndex(candidate);
+    return receiverIndex < candidate.args.size() && isResolvedVectorTarget(candidate.args[receiverIndex]);
+  };
+  auto emitMissingExplicitVectorAccessCall = [&](const Expr &candidate) {
+    const size_t receiverIndex = pickExplicitVectorAccessReceiverIndex(candidate);
+    const size_t indexIndex = receiverIndex == 0 ? 1 : 0;
+    const std::string resolvedPath = resolveExprPath(candidate);
+    const bool isUnsafe = resolvedPath == "/vector/at_unsafe" ||
+                          resolvedPath == "/std/collections/vector/at_unsafe";
+    std::ostringstream out;
+    out << "ps_missing_vector_" << (isUnsafe ? "at_unsafe" : "at") << "_call_helper("
+        << emitExpr(candidate.args[receiverIndex],
+                    nameMap,
+                    paramMap,
+                    defMap,
+                    structTypeMap,
+                    importAliases,
+                    localTypes,
+                    returnKinds,
+                    resultInfos,
+                    returnStructs,
+                    allowMathBare)
+        << ", "
+        << emitExpr(candidate.args[indexIndex],
+                    nameMap,
+                    paramMap,
+                    defMap,
+                    structTypeMap,
+                    importAliases,
+                    localTypes,
+                    returnKinds,
+                    resultInfos,
+                    returnStructs,
+                    allowMathBare)
+        << ")";
+    return out.str();
+  };
   auto pickAccessReceiverIndex = [&]() -> size_t {
     if (expr.args.size() != 2) {
       return 0;
@@ -887,17 +943,19 @@
         explicitVectorAccessResolvedTypePath(expr.args.front()).empty()) {
       std::ostringstream out;
       out << "ps_missing_vector_access_count_receiver_helper("
-          << emitExpr(expr.args.front(),
-                      nameMap,
-                      paramMap,
-                      defMap,
-                      structTypeMap,
-                      importAliases,
-                      localTypes,
-                      returnKinds,
-                      resultInfos,
-                      returnStructs,
-                      allowMathBare)
+          << (isNoHelperExplicitVectorAccessCallFallback(expr.args.front())
+                  ? emitMissingExplicitVectorAccessCall(expr.args.front())
+                  : emitExpr(expr.args.front(),
+                             nameMap,
+                             paramMap,
+                             defMap,
+                             structTypeMap,
+                             importAliases,
+                             localTypes,
+                             returnKinds,
+                             resultInfos,
+                             returnStructs,
+                             allowMathBare))
           << ")";
       return out.str();
     }

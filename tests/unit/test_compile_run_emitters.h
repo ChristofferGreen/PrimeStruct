@@ -9630,7 +9630,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers wrapper vector alias direct-call count without helper to deleted stub") {
+TEST_CASE("C++ emitter lowers wrapper vector direct-call count receivers to deleted access stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<string>>]
 wrapValues() {
@@ -9639,7 +9639,8 @@ wrapValues() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(count(/vector/at(wrapValues(), 0i32)))
+  return(plus(count(/vector/at(wrapValues(), 0i32)),
+              count(/std/collections/vector/at_unsafe(wrapValues(), 1i32))))
 }
 )";
   const std::string srcPath =
@@ -9652,7 +9653,10 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("ps_missing_vector_access_count_receiver_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_access_count_receiver_helper(ps_vector_at(wrapValues(), 0))") !=
+  CHECK(output.find("ps_missing_vector_access_count_receiver_helper(ps_missing_vector_at_call_helper(wrapValues(), 0))") !=
+        std::string::npos);
+  CHECK(output.find(
+            "ps_missing_vector_access_count_receiver_helper(ps_missing_vector_at_unsafe_call_helper(wrapValues(), 1))") !=
         std::string::npos);
 }
 
@@ -9678,7 +9682,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_access_count_receiver_helper") != std::string::npos);
+  const std::string errors = readFile(errPath);
+  CHECK((errors.find("ps_missing_vector_at_call_helper") != std::string::npos ||
+         errors.find("ps_missing_vector_access_count_receiver_helper") != std::string::npos));
 }
 
 TEST_CASE("rejects stdlib namespaced vector access count for non-string element in C++ emitter") {
