@@ -283,6 +283,56 @@ main() {
   CHECK(decodedIt->totalSizeBytes == 16u);
 }
 
+TEST_CASE("ir emits std math quaternion layout metadata") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] value{Quat(0.0f32, 0.0f32, 0.0f32, 2.0f32)}
+  [Quat] normalized{value.toNormalized()}
+  return(convert<int>(normalized.w))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  auto layoutIt = std::find_if(module.structLayouts.begin(),
+                               module.structLayouts.end(),
+                               [](const primec::IrStructLayout &layout) { return layout.name == "/std/math/Quat"; });
+  REQUIRE(layoutIt != module.structLayouts.end());
+  REQUIRE(layoutIt->fields.size() == 4u);
+  CHECK(layoutIt->fields[0].name == "x");
+  CHECK(layoutIt->fields[0].envelope == "f32");
+  CHECK(layoutIt->fields[1].name == "y");
+  CHECK(layoutIt->fields[1].envelope == "f32");
+  CHECK(layoutIt->fields[2].name == "z");
+  CHECK(layoutIt->fields[2].envelope == "f32");
+  CHECK(layoutIt->fields[3].name == "w");
+  CHECK(layoutIt->fields[3].envelope == "f32");
+  CHECK(layoutIt->totalSizeBytes == 16u);
+
+  std::vector<uint8_t> data;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  auto decodedIt = std::find_if(decoded.structLayouts.begin(),
+                                decoded.structLayouts.end(),
+                                [](const primec::IrStructLayout &layout) { return layout.name == "/std/math/Quat"; });
+  REQUIRE(decodedIt != decoded.structLayouts.end());
+  CHECK(decodedIt->fields.size() == 4u);
+  CHECK(decodedIt->totalSizeBytes == 16u);
+}
+
 TEST_CASE("ir infers omitted struct field envelopes before layout emission") {
   const std::string source = R"(
 [struct]

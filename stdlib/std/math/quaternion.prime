@@ -1,0 +1,43 @@
+namespace std {
+  namespace math {
+  [public struct]
+  Quat() {
+    [public f32] x{0.0}
+    [public f32] y{0.0}
+    [public f32] z{0.0}
+    [public f32] w{0.0}
+  }
+
+  namespace Quat {
+    [public return<f32>]
+    lengthSquared([Quat] self) {
+      return(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
+    }
+
+    [public return<f32>]
+    length([Quat] self) {
+      return(sqrt(self.lengthSquared()))
+    }
+
+    [public return<Quat>]
+    toNormalized([Quat] self) {
+      [f32] len{self.length()}
+      if(len <= 0.0) {
+        return(self)
+      } else {
+        return(Quat(
+          self.x / len,
+          self.y / len,
+          self.z / len,
+          self.w / len
+        ))
+      }
+    }
+
+    [public return<Quat>]
+    normalize([Quat] self) {
+      return(self.toNormalized())
+    }
+  }
+  }
+}

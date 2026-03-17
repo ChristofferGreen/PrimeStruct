@@ -104,11 +104,12 @@ main() {
 ## Gold-Standard Surface Example (Pure PrimeStruct)
 
 Note: this example locks a proposed API shape for graphics/math naming. Current
-stdlib in this repo ships vector/color math only; matrix/quaternion contracts
-are now documented but still pending backend/runtime support. The `/std/gfx/*`
-rendering surface shown below (including `VertexColored`) now has an initial
-helper-backed `.prime` implementation, but still needs broader
-backend/runtime coverage on top of the current unsupported-backend diagnostics.
+stdlib in this repo ships vector/color/matrix/quaternion nominal math types,
+and the documented matrix/quaternion operator/runtime subset is now lowered on
+VM/native/Wasm/C++ plus GLSL. The `/std/gfx/*` rendering surface shown below
+(including `VertexColored`) now has an initial helper-backed `.prime`
+implementation, but still needs broader backend/runtime coverage on top of the
+current unsupported-backend diagnostics.
 
 ```prime
 import /std/math/*

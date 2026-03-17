@@ -77,6 +77,49 @@ main() {
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
+TEST_CASE("math quaternion stdlib constructor requires import") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [auto] value{Quat()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: Quat") != std::string::npos);
+}
+
+TEST_CASE("math quaternion stdlib constructor resolves with import") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Quat] raw{Quat(0.0f32, 0.0f32, 0.0f32, 2.0f32)}
+  [Quat] normalized{raw.toNormalized()}
+  [Quat] zero{Quat(0.0f32, 0.0f32, 0.0f32, 0.0f32).normalize()}
+  return(convert<int>(normalized.w + zero.x + zero.y + zero.z + zero.w))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("math quaternion stdlib constructor keeps mismatch diagnostics") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Quat] value{Quat(0.0f32, 0.0f32, 1.0f32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+}
+
 TEST_CASE("math trig builtin requires import") {
   const std::string source = R"(
 [return<f32>]

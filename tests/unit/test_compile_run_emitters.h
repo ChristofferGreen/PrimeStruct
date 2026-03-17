@@ -8938,6 +8938,27 @@ main() {
   CHECK(runCommand(exePath) == 44);
 }
 
+TEST_CASE("compiles and runs std math quaternion type") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] raw{Quat(0.0f32, 0.0f32, 0.0f32, 2.0f32)}
+  [Quat] normalized{raw.toNormalized()}
+  [Quat] zero{Quat(0.0f32, 0.0f32, 0.0f32, 0.0f32).normalize()}
+  [f32] total{normalized.w + zero.x + zero.y + zero.z + zero.w}
+  return(convert<int>(total))
+}
+)";
+  const std::string srcPath = writeTemp("compile_std_math_quat.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_std_math_quat_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs string-keyed map literal in C++ emitter") {
   const std::string source = R"(
 [return<int>]
