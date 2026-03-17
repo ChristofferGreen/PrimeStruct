@@ -115,7 +115,7 @@ Minimal vector substrate note: the remaining items below are only worth keeping 
 - ✓ Implement `quat_to_mat3`. Progress: stdlib now ships `/std/math/quat_to_mat3`, which normalizes the input quaternion and returns the corresponding `Mat3` rotation matrix under `import /std/math/*`.
 - ✓ Implement `quat_to_mat4`. Progress: stdlib now ships `/std/math/quat_to_mat4`, which reuses `quat_to_mat3` for the rotation basis and expands it into a homogeneous `Mat4` under `import /std/math/*`.
 - ✓ Implement `mat3_to_quat`. Progress: stdlib now ships `/std/math/mat3_to_quat`, which converts a `Mat3` rotation basis into a normalized `Quat` using a deterministic branch order under `import /std/math/*`.
-- ○ Reject implicit matrix/quaternion family conversions with deterministic diagnostics.
+- ✓ Reject implicit matrix/quaternion family conversions with deterministic diagnostics. Progress: semantics now rejects implicit `Mat*`/`Quat` family conversions at binding initialization, return sites, and helper-call arguments with a stable diagnostic that points users to explicit constructor/helper flows instead.
 - ○ Add VM support-matrix conformance tests for matrix/quaternion behavior, including accept/reject cases and deterministic diagnostics.
 - ○ Add native support-matrix conformance tests for matrix/quaternion behavior, including accept/reject cases and deterministic diagnostics.
 - ○ Add Wasm support-matrix conformance tests for matrix/quaternion behavior, including accept/reject cases and deterministic diagnostics.

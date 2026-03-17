@@ -29,6 +29,51 @@ bool templateArgsContainTypeName(const std::vector<std::string> *templateArgs, c
   return false;
 }
 
+bool isMatrixQuaternionTypePathForDiagnostic(const std::string &typePath) {
+  return typePath == "/std/math/Mat2" || typePath == "/std/math/Mat3" || typePath == "/std/math/Mat4" ||
+         typePath == "/std/math/Quat";
+}
+
+bool isVectorTypePathForDiagnostic(const std::string &typePath) {
+  return typePath == "/std/math/Vec2" || typePath == "/std/math/Vec3" || typePath == "/std/math/Vec4";
+}
+
+bool isMatrixQuaternionConversionTypePath(const std::string &typePath) {
+  return isMatrixQuaternionTypePathForDiagnostic(typePath) || isVectorTypePathForDiagnostic(typePath);
+}
+
+bool isImplicitMatrixQuaternionConversion(const std::string &expectedTypePath, const std::string &actualTypePath) {
+  return !expectedTypePath.empty() && !actualTypePath.empty() && expectedTypePath != actualTypePath &&
+         isMatrixQuaternionConversionTypePath(expectedTypePath) &&
+         isMatrixQuaternionConversionTypePath(actualTypePath) &&
+         (isMatrixQuaternionTypePathForDiagnostic(expectedTypePath) ||
+          isMatrixQuaternionTypePathForDiagnostic(actualTypePath));
+}
+
+std::string implicitMatrixQuaternionConversionDiagnostic(const std::string &expectedTypePath,
+                                                        const std::string &actualTypePath) {
+  return "implicit matrix/quaternion family conversion requires explicit helper: expected " + expectedTypePath +
+         " got " + actualTypePath;
+}
+
+std::string initValueTypeMismatchDiagnostic(const std::string &expectedTypePath, const std::string &actualTypePath) {
+  if (isImplicitMatrixQuaternionConversion(expectedTypePath, actualTypePath)) {
+    return "init value type mismatch: " +
+           implicitMatrixQuaternionConversionDiagnostic(expectedTypePath, actualTypePath);
+  }
+  return "init value type mismatch";
+}
+
+std::string returnTypeMismatchDiagnostic(const std::string &expectedTypePath,
+                                         const std::string &actualTypePath,
+                                         const std::string &fallbackExpectedType) {
+  if (isImplicitMatrixQuaternionConversion(expectedTypePath, actualTypePath)) {
+    return "return type mismatch: " +
+           implicitMatrixQuaternionConversionDiagnostic(expectedTypePath, actualTypePath);
+  }
+  return "return type mismatch: expected " + fallbackExpectedType;
+}
+
 } // namespace
 
 bool SemanticsValidator::isDropTrivialContainerElementType(const std::string &typeName,
@@ -1730,7 +1775,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       std::string actualType;
       if (inferValueTypeString(stmt.args[1], actualType)) {
         if (!typesMatch(expectedType, actualType)) {
-          error_ = "init value type mismatch";
+          const std::string expectedStruct = resolveStructTypePath(expectedType, namespacePrefix);
+          const std::string actualStruct = resolveStructTypePath(actualType, namespacePrefix);
+          error_ = initValueTypeMismatchDiagnostic(expectedStruct, actualStruct);
           return false;
         }
         return true;
@@ -1756,7 +1803,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           if (valueKind == ReturnKind::Array) {
             std::string actualStruct = inferStructReturnPath(stmt.args[1], params, locals);
             if (!actualStruct.empty() && actualStruct != expectedStruct) {
-              error_ = "init value type mismatch";
+              error_ = initValueTypeMismatchDiagnostic(expectedStruct, actualStruct);
               return false;
             }
           }
@@ -1932,7 +1979,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                   expectedType == "/string") {
                 expectedType.erase(0, 1);
               }
-              error_ = "return type mismatch: expected " + expectedType;
+              error_ = returnTypeMismatchDiagnostic(structIt->second, actualStruct, expectedType);
               return false;
             }
           } else if (exprKind != ReturnKind::Array) {

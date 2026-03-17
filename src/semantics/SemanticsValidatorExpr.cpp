@@ -378,6 +378,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
   auto isVectorTypePath = [](const std::string &typePath) {
     return typePath == "/std/math/Vec2" || typePath == "/std/math/Vec3" || typePath == "/std/math/Vec4";
   };
+  auto isMatrixQuaternionConversionTypePath = [&](const std::string &typePath) {
+    return isMatrixQuaternionTypePath(typePath) || isVectorTypePath(typePath);
+  };
   auto vectorDimensionForTypePath = [](const std::string &typePath) -> size_t {
     if (typePath == "/std/math/Vec2") {
       return 2;
@@ -403,6 +406,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return "";
     }
     return typePath;
+  };
+  auto isImplicitMatrixQuaternionConversion = [&](const std::string &expectedTypePath,
+                                                  const std::string &actualTypePath) {
+    return !expectedTypePath.empty() && !actualTypePath.empty() && expectedTypePath != actualTypePath &&
+           isMatrixQuaternionConversionTypePath(expectedTypePath) &&
+           isMatrixQuaternionConversionTypePath(actualTypePath) &&
+           (isMatrixQuaternionTypePath(expectedTypePath) || isMatrixQuaternionTypePath(actualTypePath));
+  };
+  auto implicitMatrixQuaternionConversionDiagnostic = [&](const std::string &expectedTypePath,
+                                                          const std::string &actualTypePath) {
+    return "implicit matrix/quaternion family conversion requires explicit helper: expected " + expectedTypePath +
+           " got " + actualTypePath;
   };
   struct MatrixQuaternionMultiplyInfo {
     bool handled = false;
@@ -9057,6 +9072,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     const auto &calleeParams = paramsByDef_[resolved];
     const std::string diagnosticResolved = diagnosticCallTargetPath(resolved);
+    auto argumentStructMismatchDiagnostic = [&](const std::string &paramName,
+                                                const std::string &expectedTypePath,
+                                                const std::string &actualTypePath) {
+      const std::string prefix =
+          "argument type mismatch for " + diagnosticResolved + " parameter " + paramName + ": ";
+      if (isImplicitMatrixQuaternionConversion(expectedTypePath, actualTypePath)) {
+        return prefix + implicitMatrixQuaternionConversionDiagnostic(expectedTypePath, actualTypePath);
+      }
+      return prefix + "expected " + expectedTypePath + " got " + actualTypePath;
+    };
     if (calleeParams.empty() && structNames_.count(resolved) > 0) {
       if (expr.args.empty() && !hasNamedArguments(expr.argNames) && !expr.hasBodyArguments &&
           expr.bodyArguments.empty()) {
@@ -9359,9 +9384,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       const std::string actualStructPath = inferStructReturnPath(arg, params, locals);
       if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
-        error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                 ": expected " +
-                 expectedStructPath + " got " + actualStructPath;
+        error_ = argumentStructMismatchDiagnostic(param.name, expectedStructPath, actualStructPath);
         return false;
       }
       return true;
@@ -9392,8 +9415,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         const std::string actualStructPath =
             resolveStructTypePath(actualElementTypeText, arg.namespacePrefix, structNames_);
         if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name + ": expected " +
-                   expectedStructPath + " got " + actualStructPath;
+          error_ = argumentStructMismatchDiagnostic(param.name, expectedStructPath, actualStructPath);
           return false;
         }
         if (actualStructPath.empty() && normalizeBindingTypeName(actualElementTypeText) != expectedStructPath) {

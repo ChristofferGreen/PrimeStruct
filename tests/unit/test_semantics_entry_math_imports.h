@@ -257,6 +257,63 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("math binding rejects implicit matrix quaternion conversion with stable diagnostic") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Quat] value{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got /std/math/Mat3") !=
+        std::string::npos);
+}
+
+TEST_CASE("math helper rejects implicit matrix quaternion conversion with stable diagnostic") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Mat3] basis{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [auto] value{quat_to_mat3(basis)}
+  return(convert<int>(value.m00))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/math/quat_to_mat3 parameter value: implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got /std/math/Mat3") !=
+        std::string::npos);
+}
+
+TEST_CASE("math return rejects implicit matrix quaternion conversion with stable diagnostic") {
+  const std::string source = R"(
+import /std/math/*
+[return<Quat>]
+main() {
+  return(Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  ))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch: implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got /std/math/Mat3") !=
+        std::string::npos);
+}
+
 TEST_CASE("math trig builtin requires import") {
   const std::string source = R"(
 [return<f32>]
