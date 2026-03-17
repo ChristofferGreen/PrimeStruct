@@ -49263,22 +49263,28 @@ TEST_CASE("ir validator wasm target accepts wasi file read opcode and file_write
   CHECK(error.empty());
 }
 
-TEST_CASE("ir validator wasm target rejects unsupported effects and capabilities") {
+TEST_CASE("ir validator wasm target accepts heap_alloc effects and capabilities") {
   primec::IrModule module;
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.metadata.effectMask = primec::EffectHeapAlloc;
-  fn.metadata.capabilityMask = primec::EffectIoOut;
+  fn.metadata.effectMask = primec::EffectHeapAlloc | primec::EffectFileWrite;
+  fn.metadata.capabilityMask = primec::EffectHeapAlloc | primec::EffectFileWrite;
   fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(fn);
 
   std::string error;
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
+  CHECK(error.empty());
+
+  fn.metadata.effectMask = primec::EffectPathSpaceNotify;
+  fn.metadata.capabilityMask = primec::EffectIoOut;
+  module.functions[0] = fn;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
   CHECK(error.find("unsupported effect mask bits for wasm target") != std::string::npos);
 
   fn.metadata.effectMask = primec::EffectIoOut;
-  fn.metadata.capabilityMask = primec::EffectHeapAlloc;
+  fn.metadata.capabilityMask = primec::EffectPathSpaceNotify;
   module.functions[0] = fn;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
   CHECK(error.find("unsupported capability mask bits for wasm target") != std::string::npos);

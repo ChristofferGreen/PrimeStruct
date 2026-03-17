@@ -219,6 +219,27 @@ bool hasWasmtime() {
   return runCommand("wasmtime --version > /dev/null 2>&1") == 0;
 }
 
+int compileWasmWasiProgram(const std::string &srcPath, const std::string &wasmPath, const std::string &errPath) {
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                              quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  return runCommand(wasmCmd);
+}
+
+void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
+                               const std::string &wasmPath,
+                               const std::string &outPath,
+                               int expectedExitCode,
+                               const std::string &expectedStdout) {
+  if (!hasWasmtime()) {
+    return;
+  }
+
+  const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
+                                 quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(wasmRunCmd) == expectedExitCode);
+  CHECK(readFile(outPath) == expectedStdout);
+}
+
 bool hasPython3() {
   return runCommand("python3 --version > /dev/null 2>&1") == 0;
 }

@@ -4324,6 +4324,8 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`ppm.read(...)` currently parses ASCII `P3` and binary `P6` PPM files in VM/native/Wasm") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("On Wasm-wasi, the current `effects(file_write, heap_alloc)` read contract now compiles through target validation") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("overflowed read-side size arithmetic, unsupported max values, non-positive dimensions, missing binary-raster separators, truncated payloads, and out-of-range ASCII component values deterministically return `image_invalid_operation`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`ppm.write(...)` now emits ASCII `P3` PPM files in VM/native/Wasm") !=
