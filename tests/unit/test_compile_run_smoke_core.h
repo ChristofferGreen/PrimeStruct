@@ -1518,6 +1518,109 @@ main() {
   }
 }
 
+TEST_CASE("primec emits wasm bytecode for support-matrix math nominal helpers") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Quat] raw{Quat(0.0f32, 0.0f32, 0.0f32, 2.0f32)}
+  [Quat] normalized{raw.toNormalized()}
+  [Mat3] basis3{quat_to_mat3(raw)}
+  [Mat4] basis4{quat_to_mat4(raw)}
+  [Quat] restored{mat3_to_quat(Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, -1.0f32, 0.0f32,
+    0.0f32, 0.0f32, -1.0f32
+  ))}
+  [f32] total{m2.m00 + m2.m11 + normalized.w + basis3.m00 + basis4.m33 + restored.x + restored.w}
+  return(convert<int>(total))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_support_matrix_math_nominal_helpers.prime", source);
+  const std::string wasmPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_support_matrix_math_nominal_helpers.wasm").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_emit_wasm_support_matrix_math_nominal_helpers_err.txt")
+                                  .string();
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_emit_wasm_support_matrix_math_nominal_helpers_out.txt")
+                                  .string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  if (hasWasmtime()) {
+    const std::string runCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    const std::string output = readFile(outPath);
+    CHECK(output.find("9") != std::string::npos);
+  }
+}
+
+TEST_CASE("primec rejects wasm support-matrix plus mismatch with deterministic diagnostic") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat2] lhs{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat3] rhs{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [Mat2] value{plus(lhs, rhs)}
+  return(convert<int>(value.m00))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_support_matrix_plus_mismatch.prime", source);
+  const std::string wasmPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_support_matrix_plus_mismatch.wasm").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_support_matrix_plus_mismatch_err.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(readFile(errPath).find("plus requires matching matrix/quaternion operand types") != std::string::npos);
+}
+
+TEST_CASE("primec rejects wasm support-matrix implicit conversion with deterministic diagnostic") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat3] basis{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [auto] value{quat_to_mat3(basis)}
+  return(convert<int>(value.m00))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_support_matrix_implicit_conversion.prime", source);
+  const std::string wasmPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_support_matrix_implicit_conversion.wasm").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_support_matrix_implicit_conversion_err.txt")
+          .string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got "
+            "/std/math/Mat3") != std::string::npos);
+}
+
 TEST_CASE("primec emits wasm bytecode for direct callable definitions") {
   const std::string source = R"(
 [return<int>]
