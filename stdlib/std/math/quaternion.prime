@@ -64,5 +64,16 @@ namespace std {
       1.0 - 2.0 * (xx + yy)
     ))
   }
+
+  [public return<Mat4>]
+  quat_to_mat4([Quat] value) {
+    [Mat3] basis{quat_to_mat3(value)}
+    return(Mat4(
+      basis.m00, basis.m01, basis.m02, 0.0,
+      basis.m10, basis.m11, basis.m12, 0.0,
+      basis.m20, basis.m21, basis.m22, 0.0,
+      0.0, 0.0, 0.0, 1.0
+    ))
+  }
   }
 }

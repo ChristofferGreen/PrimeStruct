@@ -8978,6 +8978,25 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs std math quat_to_mat4 helper") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] raw{Quat(2.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Mat4] basis{quat_to_mat4(raw)}
+  return(convert<int>(basis.m00 - basis.m11 - basis.m22 + basis.m33))
+}
+)";
+  const std::string srcPath = writeTemp("compile_std_math_quat_to_mat4.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_std_math_quat_to_mat4_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
 TEST_CASE("compiles and runs string-keyed map literal in C++ emitter") {
   const std::string source = R"(
 [return<int>]
