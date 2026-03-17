@@ -1380,7 +1380,15 @@ bool resolveMethodCallPath(const Expr &call,
     }
 
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
+    std::vector<std::string> resolvedCandidates;
+    if (candidate.isMethodCall &&
+        (resolvedExprPath == "/vector/at" || resolvedExprPath == "/vector/at_unsafe" ||
+         resolvedExprPath == "/std/collections/vector/at" ||
+         resolvedExprPath == "/std/collections/vector/at_unsafe")) {
+      resolvedCandidates.push_back(resolvedExprPath);
+    } else {
+      resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
+    }
     for (const auto &resolvedCandidate : resolvedCandidates) {
       if (const std::string *structPath = findReturnStructMetadata(resolvedCandidate)) {
         return normalizeCollectionReceiverType(*structPath);
