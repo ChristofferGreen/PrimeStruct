@@ -1602,7 +1602,8 @@ namespace std {
     if(or(not_equal(bitDepth, 8i32), not_equal(interlace, 0i32)),
        then() { return(2i32) },
        else() { })
-    if(and(not_equal(colorType, 0i32), and(not_equal(colorType, 2i32), not_equal(colorType, 6i32))),
+    if(and(not_equal(colorType, 0i32),
+           and(not_equal(colorType, 2i32), and(not_equal(colorType, 4i32), not_equal(colorType, 6i32)))),
        then() { return(2i32) },
        else() { })
 
@@ -1612,7 +1613,11 @@ namespace std {
        else() {
          if(equal(colorType, 2i32),
             then() { assign(bytesPerPixel, 3i32) },
-            else() { })
+            else() {
+              if(equal(colorType, 4i32),
+                 then() { assign(bytesPerPixel, 2i32) },
+                 else() { })
+            })
        })
     [i32] scanlineBytes{multiply(width, bytesPerPixel)}
     if(not_equal(count(rawBytes), multiply(height, plus(scanlineBytes, 1i32))),
@@ -1677,7 +1682,7 @@ namespace std {
 
       [i32 mut] pixelByteIndex{0i32}
       while(less_than(pixelByteIndex, scanlineBytes), do() {
-        if(equal(colorType, 0i32),
+        if(or(equal(colorType, 0i32), equal(colorType, 4i32)),
            then() {
              push(pixels, rowBytes[pixelByteIndex])
              push(pixels, rowBytes[pixelByteIndex])
