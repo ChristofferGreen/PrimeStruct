@@ -540,7 +540,10 @@ namespace std {
 
   [return<bool>]
   pngDecodeBitDepthSupported([i32] bitDepth, [i32] colorType) {
-    if(or(equal(colorType, 0i32), equal(colorType, 3i32)),
+    if(equal(colorType, 0i32),
+       then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, 16i32)) },
+       else() { })
+    if(equal(colorType, 3i32),
        then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, -1i32)) },
        else() { })
     return(equal(bitDepth, 8i32))
@@ -589,6 +592,11 @@ namespace std {
        then() { return(0i32) },
        else() { })
     return(divide(multiply(sample, 255i32), maxSample))
+  }
+
+  [return<i32>]
+  pngScaleU16SampleToByte([i32] highByte, [i32] lowByte) {
+    return(divide(plus(multiply(highByte, 256i32), lowByte), 257i32))
   }
 
   [return<bool>]
@@ -1775,30 +1783,44 @@ namespace std {
          else() {
            [i32 mut] pixelByteIndex{0i32}
            while(less_than(pixelByteIndex, scanlineBytes), do() {
-             if(or(equal(colorType, 0i32), equal(colorType, 4i32)),
+             if(equal(colorType, 0i32),
                 then() {
-                  push(pixels, rowBytes[pixelByteIndex])
-                  push(pixels, rowBytes[pixelByteIndex])
-                  push(pixels, rowBytes[pixelByteIndex])
+                  [i32 mut] grayByte{rowBytes[pixelByteIndex]}
+                  if(equal(bitDepth, 16i32),
+                     then() {
+                       assign(grayByte, pngScaleU16SampleToByte(rowBytes[pixelByteIndex], rowBytes[plus(pixelByteIndex, 1i32)]))
+                     },
+                     else() { })
+                  push(pixels, grayByte)
+                  push(pixels, grayByte)
+                  push(pixels, grayByte)
                 },
                 else() {
-                  if(equal(colorType, 3i32),
+                  if(equal(colorType, 4i32),
                      then() {
-                       [i32] paletteOffset{multiply(rowBytes[pixelByteIndex], 3i32)}
-                       if(greater_equal(plus(paletteOffset, 2i32), count(paletteBytes)),
-                          then() {
-                            clear(pixels)
-                            return(1i32)
-                          },
-                          else() { })
-                       push(pixels, paletteBytes[paletteOffset])
-                       push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
-                       push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
+                       push(pixels, rowBytes[pixelByteIndex])
+                       push(pixels, rowBytes[pixelByteIndex])
+                       push(pixels, rowBytes[pixelByteIndex])
                      },
                      else() {
-                       push(pixels, rowBytes[pixelByteIndex])
-                       push(pixels, rowBytes[plus(pixelByteIndex, 1i32)])
-                       push(pixels, rowBytes[plus(pixelByteIndex, 2i32)])
+                       if(equal(colorType, 3i32),
+                          then() {
+                            [i32] paletteOffset{multiply(rowBytes[pixelByteIndex], 3i32)}
+                            if(greater_equal(plus(paletteOffset, 2i32), count(paletteBytes)),
+                               then() {
+                                 clear(pixels)
+                                 return(1i32)
+                               },
+                               else() { })
+                            push(pixels, paletteBytes[paletteOffset])
+                            push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
+                            push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
+                          },
+                          else() {
+                            push(pixels, rowBytes[pixelByteIndex])
+                            push(pixels, rowBytes[plus(pixelByteIndex, 1i32)])
+                            push(pixels, rowBytes[plus(pixelByteIndex, 2i32)])
+                          })
                      })
                 })
              assign(pixelByteIndex, plus(pixelByteIndex, bytesPerPixel))
