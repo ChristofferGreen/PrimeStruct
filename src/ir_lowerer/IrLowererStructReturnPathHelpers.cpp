@@ -1,6 +1,7 @@
 #include "IrLowererStructReturnPathHelpers.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererStructFieldBindingHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -349,25 +350,43 @@ std::string inferStructReturnPathFromDefinitionInternal(
     break;
   }
 
-  auto inferFromReturnValue = [&](const Expr &valueExpr) {
-    const std::unordered_map<std::string, LayoutFieldBinding> noFields;
+  auto inferFromReturnValue = [&](const Expr &valueExpr,
+                                  const std::unordered_map<std::string, LayoutFieldBinding> &knownFields) {
     return inferStructReturnPathFromExprInternal(
-        valueExpr, noFields, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);
+        valueExpr, knownFields, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);
   };
 
   if (def.returnExpr.has_value()) {
-    const std::string inferred = inferFromReturnValue(*def.returnExpr);
+    const std::unordered_map<std::string, LayoutFieldBinding> noFields;
+    const std::string inferred = inferFromReturnValue(*def.returnExpr, noFields);
     if (!inferred.empty()) {
       return inferred;
     }
   }
 
   std::string inferred;
+  std::unordered_map<std::string, LayoutFieldBinding> knownLocalBindings;
   for (const auto &stmt : def.statements) {
+    if (stmt.isBinding) {
+      LayoutFieldBinding bindingInfo;
+      std::string bindingError;
+      if (resolveLayoutFieldBinding(def,
+                                    stmt,
+                                    knownLocalBindings,
+                                    structNames,
+                                    resolveStructTypePath,
+                                    resolveStructLayoutExprPath,
+                                    defMap,
+                                    bindingInfo,
+                                    bindingError)) {
+        knownLocalBindings[stmt.name] = std::move(bindingInfo);
+      }
+      continue;
+    }
     if (!isReturnCall(stmt) || stmt.args.size() != 1) {
       continue;
     }
-    const std::string candidate = inferFromReturnValue(stmt.args.front());
+    const std::string candidate = inferFromReturnValue(stmt.args.front(), knownLocalBindings);
     if (candidate.empty()) {
       continue;
     }

@@ -595,6 +595,15 @@ bool declareForConditionBinding(
   }
   applyStructArrayInfo(binding, info);
   applyStructValueInfo(binding, info);
+  if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value) {
+    std::string inferredStruct = inferStructExprPath(binding.args.front(), locals);
+    if (!inferredStruct.empty()) {
+      info.structTypeName = inferredStruct;
+    }
+  }
+  if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
+    info.valueKind = LocalInfo::ValueKind::Int64;
+  }
   locals.emplace(binding.name, info);
   return true;
 }

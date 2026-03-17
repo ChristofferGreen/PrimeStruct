@@ -1,4 +1,131 @@
   emitStatement = [&](const Expr &stmt, LocalMap &localsIn) -> bool {
+    auto rewriteBuiltinMapConstructorExpr = [&](const Expr &callExpr,
+                                                const std::vector<std::string> &declaredTemplateArgs,
+                                                LocalInfo::ValueKind fallbackKeyKind,
+                                                LocalInfo::ValueKind fallbackValueKind,
+                                                Expr &rewrittenExpr) {
+      if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+        return false;
+      }
+      const Definition *callee = resolveDefinitionCall(callExpr);
+      if (callee == nullptr) {
+        return false;
+      }
+      auto matchesExperimentalMapConstructor = [&](std::string_view basePath) {
+        return callee->fullPath == basePath || callee->fullPath.rfind(std::string(basePath) + "__t", 0) == 0;
+      };
+      if (!(matchesExperimentalMapConstructor("/std/collections/experimental_map/mapNew") ||
+            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapSingle") ||
+            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapDouble") ||
+            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapPair") ||
+            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapTriple") ||
+            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapQuad") ||
+            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapQuint") ||
+            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapSext") ||
+            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapSept") ||
+            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapOct"))) {
+        return false;
+      }
+      rewrittenExpr = callExpr;
+      rewrittenExpr.name = "/map/map";
+      rewrittenExpr.namespacePrefix.clear();
+      rewrittenExpr.isMethodCall = false;
+      if (rewrittenExpr.templateArgs.empty()) {
+        if (declaredTemplateArgs.size() == 2) {
+          rewrittenExpr.templateArgs = declaredTemplateArgs;
+        } else if (callee->parameters.size() >= 2) {
+          auto extractParameterTypeName = [&](const Expr &paramExpr) {
+            for (const auto &transform : paramExpr.transforms) {
+              if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+                  transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
+                  transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
+                  transform.name == "effects" || transform.name == "capabilities") {
+                continue;
+              }
+              if (!transform.arguments.empty()) {
+                continue;
+              }
+              std::string typeName = transform.name;
+              if (!transform.templateArgs.empty()) {
+                typeName += "<";
+                for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
+                  if (index != 0) {
+                    typeName += ", ";
+                  }
+                  typeName += trimTemplateTypeText(transform.templateArgs[index]);
+                }
+                typeName += ">";
+              }
+              return typeName;
+            }
+            return std::string{};
+          };
+          const std::string keyTypeName = extractParameterTypeName(callee->parameters[0]);
+          const std::string valueTypeName = extractParameterTypeName(callee->parameters[1]);
+          if (!keyTypeName.empty() && !valueTypeName.empty()) {
+            rewrittenExpr.templateArgs = {keyTypeName, valueTypeName};
+          }
+        } else if (fallbackKeyKind != LocalInfo::ValueKind::Unknown &&
+                   fallbackValueKind != LocalInfo::ValueKind::Unknown) {
+          rewrittenExpr.templateArgs = {
+              typeNameForValueKind(fallbackKeyKind),
+              typeNameForValueKind(fallbackValueKind),
+          };
+        }
+      }
+      return true;
+    };
+    auto extractBuiltinMapReturnTemplateArgs = [&]() {
+      std::vector<std::string> templateArgs;
+      const std::string &definitionPath =
+          activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
+      auto defIt = defMap.find(definitionPath);
+      if (defIt == defMap.end() || defIt->second == nullptr) {
+        return templateArgs;
+      }
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string base;
+        std::string argList;
+        if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, argList)) {
+          return std::vector<std::string>{};
+        }
+        if (normalizeCollectionBindingTypeName(base) != "map") {
+          return std::vector<std::string>{};
+        }
+        if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 2) {
+          return std::vector<std::string>{};
+        }
+        templateArgs[0] = trimTemplateTypeText(templateArgs[0]);
+        templateArgs[1] = trimTemplateTypeText(templateArgs[1]);
+        return templateArgs;
+      }
+      return templateArgs;
+    };
+    auto extractDeclaredStructReturnPath = [&]() {
+      const std::string &definitionPath =
+          activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
+      auto defIt = defMap.find(definitionPath);
+      if (defIt == defMap.end() || defIt->second == nullptr) {
+        return std::string{};
+      }
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        const std::string typeName = trimTemplateTypeText(transform.templateArgs.front());
+        if (!typeName.empty() && typeName.front() == '/') {
+          return typeName;
+        }
+        std::string resolvedStructPath;
+        if (resolveStructTypeName(typeName, defIt->second->namespacePrefix, resolvedStructPath)) {
+          return resolvedStructPath;
+        }
+      }
+      return std::string{};
+    };
     if (!stmt.isBinding && stmt.kind == Expr::Kind::StringLiteral) {
       error = "native backend does not support string literal statements";
       return false;
@@ -139,14 +266,16 @@
         };
         info.structTypeName = inferPointerStructType(init);
       }
-      if (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::Unknown &&
-          info.structTypeName.empty()) {
+      if (info.kind == LocalInfo::Kind::Value && info.structTypeName.empty()) {
         std::string inferredStruct = inferStructExprPath(init, localsIn);
         if (!inferredStruct.empty()) {
           info.structTypeName = inferredStruct;
-        } else {
+        } else if (info.valueKind == LocalInfo::ValueKind::Unknown) {
           info.valueKind = LocalInfo::ValueKind::Int32;
         }
+      }
+      if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
+        info.valueKind = LocalInfo::ValueKind::Int64;
       }
       for (const auto &transform : stmt.transforms) {
         if (transform.name == "File") {
@@ -187,7 +316,22 @@
 
       if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
         std::string initStruct = inferStructExprPath(init, localsIn);
-        if (initStruct.empty() || initStruct != info.structTypeName) {
+        if (initStruct.empty() && init.kind == Expr::Kind::Call) {
+          const Definition *initCallee = resolveDefinitionCall(init);
+          if (initCallee != nullptr) {
+            initStruct = ir_lowerer::inferStructReturnPathFromDefinition(
+                initCallee->fullPath,
+                structNames,
+                [&](const std::string &typeName, const std::string &namespacePrefix) {
+                  std::string structPathOut;
+                  return resolveStructTypeName(typeName, namespacePrefix, structPathOut) ? structPathOut
+                                                                                        : std::string{};
+                },
+                [&](const Expr &exprIn) { return resolveExprPath(exprIn); },
+                defMap);
+          }
+        }
+        if (!initStruct.empty() && initStruct != info.structTypeName) {
           error = "struct binding initializer type mismatch on " + stmt.name;
           return false;
         }
@@ -249,7 +393,15 @@
         error = "native backend requires typed bindings";
         return false;
       }
-      if (!emitExpr(init, localsIn)) {
+      Expr rewrittenMapInitExpr;
+      const Expr *emittedInitExpr = &init;
+      if (info.kind == LocalInfo::Kind::Map && init.kind == Expr::Kind::Call && !init.isMethodCall) {
+        if (rewriteBuiltinMapConstructorExpr(
+                init, {}, info.mapKeyKind, info.mapValueKind, rewrittenMapInitExpr)) {
+          emittedInitExpr = &rewrittenMapInitExpr;
+        }
+      }
+      if (!emitExpr(*emittedInitExpr, localsIn)) {
         return false;
       }
       info.index = nextLocal++;
@@ -328,13 +480,85 @@
       return ir_lowerer::ReturnStatementInlineContext{
           activeInlineContext->returnsVoid,
           activeInlineContext->returnsArray,
+          activeInlineContext->returnKind,
           activeInlineContext->returnLocal,
           &activeInlineContext->returnJumps,
       };
     }();
+    Expr rewrittenReturnStmt;
+    const Expr *emittedReturnStmt = &stmt;
+    LocalMap rewrittenReturnLocals;
+    const LocalMap *emittedReturnLocals = &localsIn;
+    if (isReturnCall(stmt) && stmt.args.size() == 1) {
+      Expr rewrittenReturnValueExpr;
+      const std::vector<std::string> declaredMapTemplateArgs = extractBuiltinMapReturnTemplateArgs();
+      LocalInfo::ValueKind returnMapKeyKind = LocalInfo::ValueKind::Unknown;
+      LocalInfo::ValueKind returnMapValueKind = LocalInfo::ValueKind::Unknown;
+      if (stmt.args.front().kind == Expr::Kind::Call && stmt.args.front().args.size() >= 2) {
+        returnMapKeyKind = inferExprKind(stmt.args.front().args.front(), localsIn);
+        returnMapValueKind = inferExprKind(stmt.args.front().args[1], localsIn);
+      }
+      if (rewriteBuiltinMapConstructorExpr(stmt.args.front(),
+                                          declaredMapTemplateArgs,
+                                          returnMapKeyKind,
+                                          returnMapValueKind,
+                                          rewrittenReturnValueExpr)) {
+        rewrittenReturnStmt = stmt;
+        rewrittenReturnStmt.args.front() = std::move(rewrittenReturnValueExpr);
+        emittedReturnStmt = &rewrittenReturnStmt;
+      }
+      const Expr &returnValueExpr = emittedReturnStmt->args.front();
+      if (returnValueExpr.kind == Expr::Kind::Call) {
+        StructSlotLayout layout;
+        std::string aggregateStructPath;
+        const std::string inferredStructPath = inferStructExprPath(returnValueExpr, localsIn);
+        if (!inferredStructPath.empty() && resolveStructSlotLayout(inferredStructPath, layout)) {
+          aggregateStructPath = inferredStructPath;
+        }
+        if (aggregateStructPath.empty()) {
+          const std::string declaredStructPath = extractDeclaredStructReturnPath();
+          if (!declaredStructPath.empty() && resolveStructSlotLayout(declaredStructPath, layout)) {
+            aggregateStructPath = declaredStructPath;
+          }
+        }
+        if (!aggregateStructPath.empty()) {
+          const int32_t baseLocal = nextLocal;
+          nextLocal += layout.totalSlots;
+          const int32_t ptrLocal = nextLocal++;
+          function.instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+          const int32_t srcPtrLocal = allocTempLocal();
+          if (!emitExpr(returnValueExpr, localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+          if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
+            return false;
+          }
+          rewrittenReturnLocals = localsIn;
+          LocalInfo returnInfo;
+          returnInfo.kind = LocalInfo::Kind::Value;
+          returnInfo.valueKind = LocalInfo::ValueKind::Int64;
+          returnInfo.structTypeName = aggregateStructPath;
+          returnInfo.index = ptrLocal;
+          const std::string tempReturnName = "__native_return_struct_" + std::to_string(ptrLocal);
+          rewrittenReturnLocals.emplace(tempReturnName, returnInfo);
+          rewrittenReturnStmt = *emittedReturnStmt;
+          Expr stableReturnValueExpr;
+          stableReturnValueExpr.kind = Expr::Kind::Name;
+          stableReturnValueExpr.name = tempReturnName;
+          rewrittenReturnStmt.args.front() = std::move(stableReturnValueExpr);
+          emittedReturnStmt = &rewrittenReturnStmt;
+          emittedReturnLocals = &rewrittenReturnLocals;
+        }
+      }
+    }
     const auto returnResult = ir_lowerer::tryEmitReturnStatement(
-        stmt,
-        localsIn,
+        *emittedReturnStmt,
+        *emittedReturnLocals,
         function.instructions,
         returnInlineContext,
         returnsVoid,

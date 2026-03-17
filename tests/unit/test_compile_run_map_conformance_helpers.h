@@ -431,7 +431,9 @@ inline std::string makeCanonicalMapNamespaceExperimentalReturnConformanceSource(
   source += "}\n\n";
   source += "[return<Map<string, i32>> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
-  source += "  return(/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+  source +=
+      "  [Map<string, i32>] out{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  return(out)\n";
   source += "}\n\n";
   source +=
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapReturnError>]\n";
@@ -526,7 +528,8 @@ inline std::string makeWrapperMapConstructorExperimentalReturnConformanceSource(
   source += "[return<Map<string, i32>> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
   source +=
-      "  return(/std/collections/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+      "  [Map<string, i32>] out{/std/collections/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  return(out)\n";
   source += "}\n\n";
   source +=
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapReturnError>]\n";
@@ -581,18 +584,26 @@ inline std::string makeWrappedExperimentalMapParameterConformanceSource() {
   source += "import /std/collections/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "Holder() {}\n\n";
-  source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
-  source += "  return(values)\n";
+  source += "[return<Map<string, i32>> effects(heap_alloc)]\n";
+  source += "wrapPrimaryValues() {\n";
+  source +=
+      "  [Map<string, i32>] out{/std/collections/experimental_map/mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  return(out)\n";
+  source += "}\n\n";
+  source += "[return<Map<string, i32>> effects(heap_alloc)]\n";
+  source += "wrapSecondaryValues() {\n";
+  source +=
+      "  [Map<string, i32>] out{/std/collections/experimental_map/mapPair<string, i32>(\"left\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32)}\n";
+  source += "  return(out)\n";
   source += "}\n\n";
   source += "[return<int> effects(heap_alloc)]\n";
-  source += "scoreValues([auto mut] values{mapNew<string, i32>()}) {\n";
+  source += "scoreValues([Map<string, i32> mut] values) {\n";
   source += "  mapInsert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
   source +=
       "  return(plus(/std/collections/map/count(values), /std/collections/map/at(values, \"left\"raw_utf8)))\n";
   source += "}\n\n";
   source += "[return<int> effects(heap_alloc)]\n";
-  source += "/Holder/score([Holder] self, [auto mut] values{mapNew<string, i32>()}) {\n";
+  source += "/Holder/score([Holder] self, [Map<string, i32> mut] values) {\n";
   source += "  mapInsert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
   source +=
       "  return(plus(/std/collections/map/count(values), /std/collections/map/at(values, \"extra\"raw_utf8)))\n";
@@ -600,10 +611,9 @@ inline std::string makeWrappedExperimentalMapParameterConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Holder] holder{Holder()}\n";
-  source +=
-      "  return(plus(scoreValues(wrapValues(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))),\n";
-  source +=
-      "              holder.score(wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32)))))\n";
+  source += "  [Map<string, i32>] primary{wrapPrimaryValues()}\n";
+  source += "  [Map<string, i32>] secondary{wrapSecondaryValues()}\n";
+  source += "  return(plus(scoreValues(primary), holder.score(secondary)))\n";
   source += "}\n";
   return source;
 }
@@ -686,7 +696,8 @@ inline std::string makeImplicitMapAutoInferenceConformanceSource() {
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
   source +=
-      "  return(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+      "  [Map<string, i32>] out{/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  return(out)\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedExperimentalMapAutoError([ContainerError] err) {\n";
@@ -715,7 +726,9 @@ inline std::string makeInferredExperimentalMapReturnConformanceSource() {
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
-  source += "  return(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))\n";
+  source +=
+      "  [Map<string, i32>] out{/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  return(out)\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedInferredExperimentalMapReturnError([ContainerError] err) {\n";
@@ -741,8 +754,14 @@ inline std::string makeBlockInferredExperimentalMapReturnConformanceSource() {
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues([bool] useCanonical) {\n";
   source += "  if(useCanonical,\n";
-  source += "     then() { /std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32) },\n";
-  source += "     else() { /std/collections/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32) })\n";
+  source += "     then() {\n";
+  source += "       [Map<string, i32>] values{/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "       return(values)\n";
+  source += "     },\n";
+  source += "     else() {\n";
+  source += "       [Map<string, i32>] values{/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32)}\n";
+  source += "       return(values)\n";
+  source += "     })\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedBlockExperimentalMapReturnError([ContainerError] err) {\n";
@@ -769,13 +788,13 @@ inline std::string makeAutoBlockInferredExperimentalMapReturnConformanceSource()
   source += "buildValues([bool] useCanonical) {\n";
   source += "  if(useCanonical,\n";
   source += "     then() {\n";
-  source += "       [auto mut] values{/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "       [Map<string, i32> mut] values{/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "       mapInsert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
-  source += "       values\n";
+  source += "       return(values)\n";
   source += "     },\n";
   source += "     else() {\n";
-  source += "       [auto mut] values{/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32)}\n";
-  source += "       values\n";
+  source += "       [Map<string, i32>] values{/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32)}\n";
+  source += "       return(values)\n";
   source += "     })\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
@@ -1428,7 +1447,7 @@ inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::
       makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
       "map_namespace_canonical_experimental_return_" + emitMode,
       emitMode,
-      20);
+      18);
 }
 
 inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const std::string &emitMode) {
@@ -1436,7 +1455,7 @@ inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const st
       makeCanonicalMapNamespaceExperimentalParameterConformanceSource(),
       "map_namespace_canonical_experimental_parameter_" + emitMode,
       emitMode,
-      20);
+      18);
 }
 
 inline void expectWrapperMapConstructorExperimentalBindingConformance(const std::string &emitMode) {
@@ -1452,7 +1471,7 @@ inline void expectWrapperMapConstructorExperimentalReturnConformance(const std::
       makeWrapperMapConstructorExperimentalReturnConformanceSource(),
       "map_wrapper_constructor_experimental_return_" + emitMode,
       emitMode,
-      20);
+      18);
 }
 
 inline void expectWrapperMapConstructorExperimentalParameterConformance(const std::string &emitMode) {
@@ -1460,7 +1479,7 @@ inline void expectWrapperMapConstructorExperimentalParameterConformance(const st
       makeWrapperMapConstructorExperimentalParameterConformanceSource(),
       "map_wrapper_constructor_experimental_parameter_" + emitMode,
       emitMode,
-      20);
+      18);
 }
 
 inline void expectWrappedExperimentalMapParameterConformance(const std::string &emitMode) {
@@ -1524,7 +1543,7 @@ inline void expectWrappedInferredExperimentalMapReturnConformance(const std::str
       makeWrappedInferredExperimentalMapReturnConformanceSource(),
       "map_wrapped_inferred_experimental_return_" + emitMode,
       emitMode,
-      10);
+      11);
 }
 
 inline void expectInferredExperimentalMapCallReceiverConformance(const std::string &emitMode) {

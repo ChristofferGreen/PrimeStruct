@@ -946,6 +946,41 @@ std::string inferStructReturnPathFromDefinition(
     const Definition &def,
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const InferStructExprPathFn &inferStructExprPath) {
+  auto inferBindingStructPath = [&](const Expr &bindingExpr,
+                                    const std::unordered_map<std::string, std::string> &knownBindings) {
+    for (const auto &transform : bindingExpr.transforms) {
+      if (transform.name == "effects" || transform.name == "capabilities") {
+        continue;
+      }
+      if (isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (!transform.arguments.empty()) {
+        continue;
+      }
+      std::string resolved;
+      if (resolveStructTypeName(transform.name, bindingExpr.namespacePrefix, resolved)) {
+        return resolved;
+      }
+      if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1 &&
+          resolveStructTypeName(transform.templateArgs.front(), bindingExpr.namespacePrefix, resolved)) {
+        return resolved;
+      }
+      break;
+    }
+    if (bindingExpr.args.size() != 1) {
+      return std::string{};
+    }
+    const Expr &initializer = bindingExpr.args.front();
+    if (initializer.kind == Expr::Kind::Name) {
+      auto bindingIt = knownBindings.find(initializer.name);
+      if (bindingIt != knownBindings.end()) {
+        return bindingIt->second;
+      }
+    }
+    return inferStructExprPath(initializer);
+  };
+
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
@@ -983,11 +1018,28 @@ std::string inferStructReturnPathFromDefinition(
     }
   }
 
+  std::unordered_map<std::string, std::string> knownBindings;
   for (const auto &stmt : def.statements) {
+    if (stmt.isBinding) {
+      std::string inferredBinding = inferBindingStructPath(stmt, knownBindings);
+      if (!inferredBinding.empty()) {
+        knownBindings.emplace(stmt.name, std::move(inferredBinding));
+      }
+      continue;
+    }
     if (!isReturnCall(stmt) || stmt.args.size() != 1) {
       continue;
     }
-    std::string inferred = inferStructExprPath(stmt.args.front());
+    std::string inferred;
+    if (stmt.args.front().kind == Expr::Kind::Name) {
+      auto bindingIt = knownBindings.find(stmt.args.front().name);
+      if (bindingIt != knownBindings.end()) {
+        inferred = bindingIt->second;
+      }
+    }
+    if (inferred.empty()) {
+      inferred = inferStructExprPath(stmt.args.front());
+    }
     if (!inferred.empty()) {
       return inferred;
     }

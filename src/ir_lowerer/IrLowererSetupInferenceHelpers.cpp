@@ -487,12 +487,14 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
       info.valueKind = valueKind;
       applyStructArrayInfo(bodyExpr, info);
       applyStructValueInfo(bodyExpr, info);
-      if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value &&
-          info.valueKind == LocalInfo::ValueKind::Unknown) {
+      if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value) {
         std::string inferredStruct = inferStructExprPath(bodyExpr.args.front(), bodyLocals);
         if (!inferredStruct.empty()) {
           info.structTypeName = inferredStruct;
         }
+      }
+      if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
+        info.valueKind = LocalInfo::ValueKind::Int64;
       }
       bodyLocals.emplace(bodyExpr.name, info);
       continue;

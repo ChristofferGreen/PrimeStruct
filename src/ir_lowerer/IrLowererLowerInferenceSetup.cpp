@@ -1054,6 +1054,7 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
               inferBindingIntoLocals,
               [&](const Expr &expr, const LocalMap &localsIn) { return inferExprKind(expr, localsIn); },
               [&](const Expr &expr, const LocalMap &localsIn) { return inferArrayElementKind(expr, localsIn); },
+              [&](const Expr &expr, const LocalMap &localsIn) { return inferStructExprPath(expr, localsIn); },
               [&](const Expr &expr, Expr &expanded, std::string &inferError) {
                 return lowerMatchToIf(expr, expanded, inferError);
               },
@@ -1090,6 +1091,7 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
             inferBindingIntoLocals,
             [&](const Expr &expr, const LocalMap &localsIn) { return inferExprKind(expr, localsIn); },
             [&](const Expr &expr, const LocalMap &localsIn) { return inferArrayElementKind(expr, localsIn); },
+            [&](const Expr &expr, const LocalMap &localsIn) { return inferStructExprPath(expr, localsIn); },
             [&](const Expr &expr, Expr &expanded, std::string &inferError) {
               return lowerMatchToIf(expr, expanded, inferError);
             },

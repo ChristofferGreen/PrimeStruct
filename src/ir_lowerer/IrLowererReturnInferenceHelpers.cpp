@@ -177,10 +177,14 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
     }
     std::string structPath;
     StructArrayTypeInfo structInfo;
-    if (resolveStructTypeName(typeName, def.namespacePrefix, structPath) &&
-        resolveStructArrayInfoFromPath(structPath, structInfo)) {
-      info.returnsArray = true;
-      info.kind = structInfo.elementKind;
+    if (resolveStructTypeName(typeName, def.namespacePrefix, structPath)) {
+      if (resolveStructArrayInfoFromPath(structPath, structInfo)) {
+        info.returnsArray = true;
+        info.kind = structInfo.elementKind;
+      } else {
+        info.returnsArray = false;
+        info.kind = LocalInfo::ValueKind::Int64;
+      }
       info.returnsVoid = false;
       break;
     }
@@ -217,9 +221,6 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
     bindingInfo.valueKind = bindingValueKind(bindingExpr, bindingInfo.kind);
   } else if (bindingExpr.args.size() == 1 && bindingInfo.kind == LocalInfo::Kind::Value) {
     bindingInfo.valueKind = inferExprKindFromLocals(bindingExpr.args.front(), activeLocals);
-    if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown) {
-      bindingInfo.valueKind = LocalInfo::ValueKind::Int32;
-    }
   } else if (isParameter) {
     bindingInfo.valueKind = bindingValueKind(bindingExpr, bindingInfo.kind);
   } else {
@@ -253,11 +254,14 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
   applyStructArrayInfo(bindingExpr, bindingInfo);
   applyStructValueInfo(bindingExpr, bindingInfo);
   if (!isParameter && bindingInfo.structTypeName.empty() && bindingInfo.kind == LocalInfo::Kind::Value &&
-      bindingInfo.valueKind == LocalInfo::ValueKind::Unknown && bindingExpr.args.size() == 1) {
+      bindingExpr.args.size() == 1) {
     std::string inferredStruct = inferStructExprPathFromLocals(bindingExpr.args.front(), activeLocals);
     if (!inferredStruct.empty()) {
       bindingInfo.structTypeName = inferredStruct;
     }
+  }
+  if (bindingInfo.kind == LocalInfo::Kind::Value && !bindingInfo.structTypeName.empty()) {
+    bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
   }
   if (isStringBinding(bindingExpr) && bindingInfo.kind != LocalInfo::Kind::Value &&
       bindingInfo.kind != LocalInfo::Kind::Map) {
@@ -283,6 +287,7 @@ bool inferDefinitionReturnType(const Definition &def,
                                const InferBindingIntoLocalsFn &inferBindingIntoLocals,
                                const InferValueKindFromLocalsFn &inferExprKindFromLocals,
                                const InferValueKindFromLocalsFn &inferArrayElementKindFromLocals,
+                               const InferStructExprPathFromLocalsFn &inferStructExprPathFromLocals,
                                const ExpandMatchToIfFn &expandMatchToIf,
                                const ReturnInferenceOptions &options,
                                ReturnInfo &outInfo,
@@ -293,7 +298,45 @@ bool inferDefinitionReturnType(const Definition &def,
   bool sawReturn = false;
   bool inferredVoid = false;
 
-  auto recordInferredReturn = [&](const Expr &valueExpr, const LocalMap &activeLocals) -> bool {
+  std::function<bool(const Expr &, const LocalMap &)> recordInferredReturn;
+  recordInferredReturn = [&](const Expr &valueExpr, const LocalMap &activeLocals) -> bool {
+    if (isMatchCall(valueExpr)) {
+      Expr expanded;
+      if (!expandMatchToIf(valueExpr, expanded, error)) {
+        return false;
+      }
+      return recordInferredReturn(expanded, activeLocals);
+    }
+
+    if (isIfCall(valueExpr) && valueExpr.args.size() == 3) {
+      auto recordBlockValue = [&](const Expr &block) -> bool {
+        LocalMap blockLocals = activeLocals;
+        const Expr *lastValueExpr = nullptr;
+        for (const auto &bodyStmt : block.bodyArguments) {
+          if (bodyStmt.isBinding) {
+            if (!inferBindingIntoLocals(bodyStmt, false, blockLocals, error)) {
+              return false;
+            }
+            continue;
+          }
+          if (isReturnCall(bodyStmt)) {
+            if (bodyStmt.args.empty()) {
+              inferredVoid = true;
+              return true;
+            }
+            return recordInferredReturn(bodyStmt.args.front(), blockLocals);
+          }
+          lastValueExpr = &bodyStmt;
+        }
+        if (lastValueExpr == nullptr) {
+          error = "unable to infer return type on " + def.fullPath;
+          return false;
+        }
+        return recordInferredReturn(*lastValueExpr, blockLocals);
+      };
+      return recordBlockValue(valueExpr.args[1]) && recordBlockValue(valueExpr.args[2]);
+    }
+
     const LocalInfo::ValueKind arrayKind = inferArrayElementKindFromLocals(valueExpr, activeLocals);
     if (arrayKind != LocalInfo::ValueKind::Unknown) {
       if (arrayKind == LocalInfo::ValueKind::String) {
@@ -312,7 +355,13 @@ bool inferDefinitionReturnType(const Definition &def,
       return false;
     }
 
-    const LocalInfo::ValueKind kind = inferExprKindFromLocals(valueExpr, activeLocals);
+    LocalInfo::ValueKind kind = inferExprKindFromLocals(valueExpr, activeLocals);
+    if (kind == LocalInfo::ValueKind::Unknown) {
+      const std::string inferredStruct = inferStructExprPathFromLocals(valueExpr, activeLocals);
+      if (!inferredStruct.empty()) {
+        kind = LocalInfo::ValueKind::Int64;
+      }
+    }
     if (kind == LocalInfo::ValueKind::Unknown) {
       error = "unable to infer return type on " + def.fullPath;
       return false;
@@ -394,7 +443,13 @@ bool inferDefinitionReturnType(const Definition &def,
   }
 
   LocalMap locals = localsForInference;
+  const Expr *lastValueStmt = nullptr;
+  LocalMap localsAtLastValue = locals;
   for (const auto &stmt : def.statements) {
+    if (!stmt.isBinding) {
+      lastValueStmt = &stmt;
+      localsAtLastValue = locals;
+    }
     if (!inferStatement(stmt, locals)) {
       return false;
     }
@@ -403,6 +458,11 @@ bool inferDefinitionReturnType(const Definition &def,
   if (options.includeDefinitionReturnExpr && def.returnExpr.has_value()) {
     sawReturn = true;
     if (!recordInferredReturn(*def.returnExpr, locals)) {
+      return false;
+    }
+  } else if (options.includeDefinitionReturnExpr && !sawReturn && lastValueStmt != nullptr) {
+    sawReturn = true;
+    if (!recordInferredReturn(*lastValueStmt, localsAtLastValue)) {
       return false;
     }
   }
@@ -442,6 +502,28 @@ bool inferDefinitionReturnType(const Definition &def,
     return false;
   }
   return true;
+}
+
+bool inferDefinitionReturnType(const Definition &def,
+                               LocalMap localsForInference,
+                               const InferBindingIntoLocalsFn &inferBindingIntoLocals,
+                               const InferValueKindFromLocalsFn &inferExprKindFromLocals,
+                               const InferValueKindFromLocalsFn &inferArrayElementKindFromLocals,
+                               const ExpandMatchToIfFn &expandMatchToIf,
+                               const ReturnInferenceOptions &options,
+                               ReturnInfo &outInfo,
+                               std::string &error) {
+  return inferDefinitionReturnType(
+      def,
+      std::move(localsForInference),
+      inferBindingIntoLocals,
+      inferExprKindFromLocals,
+      inferArrayElementKindFromLocals,
+      [](const Expr &, const LocalMap &) { return std::string{}; },
+      expandMatchToIf,
+      options,
+      outInfo,
+      error);
 }
 
 } // namespace primec::ir_lowerer
