@@ -1165,6 +1165,12 @@
         }
         return "";
       };
+      auto quaternionHelperBaseForType = [&](const std::string &typePath) -> std::string {
+        if (typePath == "/std/math/Quat") {
+          return "/std/math/quat";
+        }
+        return "";
+      };
       auto isNumericScalarTarget = [&](const Expr &targetExpr) {
         ReturnKind kind = inferPrimitiveReturnKind(targetExpr, localTypes, returnKinds, allowMathBare);
         return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
@@ -1182,20 +1188,37 @@
       const std::string rightType = resolvedMathTypeForTarget(candidate.args[1]);
       const std::string leftMatrixBase = matrixHelperBaseForType(leftType);
       const std::string rightMatrixBase = matrixHelperBaseForType(rightType);
+      const std::string leftQuaternionBase = quaternionHelperBaseForType(leftType);
+      const std::string rightQuaternionBase = quaternionHelperBaseForType(rightType);
       if (candidateOp == '+' && !leftMatrixBase.empty() && leftType == rightType) {
         return rewriteHelperCall(leftMatrixBase + "_add_internal");
+      }
+      if (candidateOp == '+' && !leftQuaternionBase.empty() && leftType == rightType) {
+        return rewriteHelperCall(leftQuaternionBase + "_add_internal");
       }
       if (candidateOp == '-' && !leftMatrixBase.empty() && leftType == rightType) {
         return rewriteHelperCall(leftMatrixBase + "_sub_internal");
       }
+      if (candidateOp == '-' && !leftQuaternionBase.empty() && leftType == rightType) {
+        return rewriteHelperCall(leftQuaternionBase + "_sub_internal");
+      }
       if (candidateOp == '*' && !leftMatrixBase.empty() && isNumericScalarTarget(candidate.args[1])) {
         return rewriteHelperCall(leftMatrixBase + "_scale_internal");
+      }
+      if (candidateOp == '*' && !leftQuaternionBase.empty() && isNumericScalarTarget(candidate.args[1])) {
+        return rewriteHelperCall(leftQuaternionBase + "_scale_internal");
       }
       if (candidateOp == '*' && isNumericScalarTarget(candidate.args[0]) && !rightMatrixBase.empty()) {
         return rewriteHelperCall(rightMatrixBase + "_scale_left_internal");
       }
+      if (candidateOp == '*' && isNumericScalarTarget(candidate.args[0]) && !rightQuaternionBase.empty()) {
+        return rewriteHelperCall(rightQuaternionBase + "_scale_left_internal");
+      }
       if (candidateOp == '/' && !leftMatrixBase.empty() && isNumericScalarTarget(candidate.args[1])) {
         return rewriteHelperCall(leftMatrixBase + "_div_scalar_internal");
+      }
+      if (candidateOp == '/' && !leftQuaternionBase.empty() && isNumericScalarTarget(candidate.args[1])) {
+        return rewriteHelperCall(leftQuaternionBase + "_div_scalar_internal");
       }
       if (leftType == "/std/math/Mat2" && rightType == "/std/math/Vec2") {
         return rewriteHelperCall("/std/math/mat2_mul_vec2_internal");

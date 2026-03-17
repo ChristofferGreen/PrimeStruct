@@ -21,6 +21,13 @@ std::string matrixHelperBaseForPath(const std::string &typePath) {
   return "";
 }
 
+std::string quaternionHelperBaseForPath(const std::string &typePath) {
+  if (typePath == "/std/math/Quat") {
+    return "/std/math/quat";
+  }
+  return "";
+}
+
 bool isNumericScalarKind(LocalInfo::ValueKind kind) {
   return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
          kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Float32 ||
@@ -48,26 +55,48 @@ bool rewriteMathArithmeticCall(const Expr &expr,
   const std::string rightType = inferStructExprPath(expr.args[1], localsIn);
   const std::string leftMatrixBase = matrixHelperBaseForPath(leftType);
   const std::string rightMatrixBase = matrixHelperBaseForPath(rightType);
+  const std::string leftQuaternionBase = quaternionHelperBaseForPath(leftType);
+  const std::string rightQuaternionBase = quaternionHelperBaseForPath(rightType);
   const LocalInfo::ValueKind leftKind = inferExprKind(expr.args[0], localsIn);
   const LocalInfo::ValueKind rightKind = inferExprKind(expr.args[1], localsIn);
   if (builtin == "plus" && !leftMatrixBase.empty() && leftType == rightType) {
     rewriteHelperCall(expr, leftMatrixBase + "_add_internal", rewrittenExpr);
     return true;
   }
+  if (builtin == "plus" && !leftQuaternionBase.empty() && leftType == rightType) {
+    rewriteHelperCall(expr, leftQuaternionBase + "_add_internal", rewrittenExpr);
+    return true;
+  }
   if (builtin == "minus" && !leftMatrixBase.empty() && leftType == rightType) {
     rewriteHelperCall(expr, leftMatrixBase + "_sub_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "minus" && !leftQuaternionBase.empty() && leftType == rightType) {
+    rewriteHelperCall(expr, leftQuaternionBase + "_sub_internal", rewrittenExpr);
     return true;
   }
   if (builtin == "multiply" && !leftMatrixBase.empty() && isNumericScalarKind(rightKind)) {
     rewriteHelperCall(expr, leftMatrixBase + "_scale_internal", rewrittenExpr);
     return true;
   }
+  if (builtin == "multiply" && !leftQuaternionBase.empty() && isNumericScalarKind(rightKind)) {
+    rewriteHelperCall(expr, leftQuaternionBase + "_scale_internal", rewrittenExpr);
+    return true;
+  }
   if (builtin == "multiply" && isNumericScalarKind(leftKind) && !rightMatrixBase.empty()) {
     rewriteHelperCall(expr, rightMatrixBase + "_scale_left_internal", rewrittenExpr);
     return true;
   }
+  if (builtin == "multiply" && isNumericScalarKind(leftKind) && !rightQuaternionBase.empty()) {
+    rewriteHelperCall(expr, rightQuaternionBase + "_scale_left_internal", rewrittenExpr);
+    return true;
+  }
   if (builtin == "divide" && !leftMatrixBase.empty() && isNumericScalarKind(rightKind)) {
     rewriteHelperCall(expr, leftMatrixBase + "_div_scalar_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "divide" && !leftQuaternionBase.empty() && isNumericScalarKind(rightKind)) {
+    rewriteHelperCall(expr, leftQuaternionBase + "_div_scalar_internal", rewrittenExpr);
     return true;
   }
   if (leftType == "/std/math/Mat2" && rightType == "/std/math/Vec2") {

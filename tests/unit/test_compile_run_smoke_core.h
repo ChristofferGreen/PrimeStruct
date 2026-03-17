@@ -1744,6 +1744,68 @@ main() {
   }
 }
 
+TEST_CASE("primec emits wasm bytecode for quaternion arithmetic helpers with tolerance") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] base{Quat(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Quat] delta{Quat(0.5f32, -1.0f32, 1.5f32, 2.0f32)}
+  [Quat] sum{plus(base, delta)}
+  [Quat] diff{minus(base, delta)}
+  [Quat] scaledLeft{multiply(2i32, base)}
+  [Quat] scaledRight{multiply(base, 0.5f32)}
+  [Quat] divided{divide(sum, 2i32)}
+  [f32] tolerance{0.0001f32}
+  [f32] totalError{
+    abs(sum.x - 1.5f32) +
+    abs(sum.y - 1.0f32) +
+    abs(sum.z - 4.5f32) +
+    abs(sum.w - 6.0f32) +
+    abs(diff.x - 0.5f32) +
+    abs(diff.y - 3.0f32) +
+    abs(diff.z - 1.5f32) +
+    abs(diff.w - 2.0f32) +
+    abs(scaledLeft.x - 2.0f32) +
+    abs(scaledLeft.y - 4.0f32) +
+    abs(scaledLeft.z - 6.0f32) +
+    abs(scaledLeft.w - 8.0f32) +
+    abs(scaledRight.x - 0.5f32) +
+    abs(scaledRight.y - 1.0f32) +
+    abs(scaledRight.z - 1.5f32) +
+    abs(scaledRight.w - 2.0f32) +
+    abs(divided.x - 0.75f32) +
+    abs(divided.y - 0.5f32) +
+    abs(divided.z - 2.25f32) +
+    abs(divided.w - 3.0f32)
+  }
+  return(convert<int>(totalError <= tolerance))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_quaternion_arithmetic_helpers.prime", source);
+  const std::string wasmPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_quaternion_arithmetic_helpers.wasm").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_quaternion_arithmetic_helpers_err.txt").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_quaternion_arithmetic_helpers_out.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  if (hasWasmtime()) {
+    const std::string runCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    const std::string output = readFile(outPath);
+    CHECK(output.find("1") != std::string::npos);
+  }
+}
+
 TEST_CASE("primec rejects wasm support-matrix plus mismatch with deterministic diagnostic") {
   const std::string source = R"(
 import /std/math/*

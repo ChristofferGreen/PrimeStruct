@@ -9183,6 +9183,54 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs C++ quaternion arithmetic helpers with tolerance") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] base{Quat(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Quat] delta{Quat(0.5f32, -1.0f32, 1.5f32, 2.0f32)}
+  [Quat] sum{plus(base, delta)}
+  [Quat] diff{minus(base, delta)}
+  [Quat] scaledLeft{multiply(2i32, base)}
+  [Quat] scaledRight{multiply(base, 0.5f32)}
+  [Quat] divided{divide(sum, 2i32)}
+  [f32] tolerance{0.0001f32}
+  [f32] totalError{
+    abs(sum.x - 1.5f32) +
+    abs(sum.y - 1.0f32) +
+    abs(sum.z - 4.5f32) +
+    abs(sum.w - 6.0f32) +
+    abs(diff.x - 0.5f32) +
+    abs(diff.y - 3.0f32) +
+    abs(diff.z - 1.5f32) +
+    abs(diff.w - 2.0f32) +
+    abs(scaledLeft.x - 2.0f32) +
+    abs(scaledLeft.y - 4.0f32) +
+    abs(scaledLeft.z - 6.0f32) +
+    abs(scaledLeft.w - 8.0f32) +
+    abs(scaledRight.x - 0.5f32) +
+    abs(scaledRight.y - 1.0f32) +
+    abs(scaledRight.z - 1.5f32) +
+    abs(scaledRight.w - 2.0f32) +
+    abs(divided.x - 0.75f32) +
+    abs(divided.y - 0.5f32) +
+    abs(divided.z - 2.25f32) +
+    abs(divided.w - 3.0f32)
+  }
+  return(convert<int>(totalError <= tolerance))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_quaternion_arithmetic_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_quaternion_arithmetic_helpers_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("C++ emitter keeps support-matrix plus mismatch diagnostics") {
   const std::string source = R"(
 import /std/math/*

@@ -41,6 +41,53 @@ namespace std {
   }
 
   [return<Quat>]
+  quat_add_internal([Quat] left, [Quat] right) {
+    return(Quat(
+      left.x + right.x,
+      left.y + right.y,
+      left.z + right.z,
+      left.w + right.w
+    ))
+  }
+
+  [return<Quat>]
+  quat_sub_internal([Quat] left, [Quat] right) {
+    return(Quat(
+      left.x - right.x,
+      left.y - right.y,
+      left.z - right.z,
+      left.w - right.w
+    ))
+  }
+
+  [return<Quat>]
+  quat_scale_internal([Quat] value, [auto] scale) {
+    [f32] scalar{convert<f32>(scale)}
+    return(Quat(
+      value.x * scalar,
+      value.y * scalar,
+      value.z * scalar,
+      value.w * scalar
+    ))
+  }
+
+  [return<Quat>]
+  quat_scale_left_internal([auto] scale, [Quat] value) {
+    return(quat_scale_internal(value, scale))
+  }
+
+  [return<Quat>]
+  quat_div_scalar_internal([Quat] value, [auto] scale) {
+    [f32] scalar{convert<f32>(scale)}
+    return(Quat(
+      value.x / scalar,
+      value.y / scalar,
+      value.z / scalar,
+      value.w / scalar
+    ))
+  }
+
+  [return<Quat>]
   quat_multiply_internal([Quat] left, [Quat] right) {
     return(Quat(
       left.w * right.x + left.x * right.w + left.y * right.z - left.z * right.y,
