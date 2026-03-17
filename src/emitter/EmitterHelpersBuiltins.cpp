@@ -1776,11 +1776,6 @@ bool getVectorMutatorName(const Expr &expr,
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (isExplicitStdlibVectorHelper &&
-      (name == "clear" || name == "remove_at" || name == "remove_swap") &&
-      nameMap.count("/vector/" + name) == 0) {
-    return false;
-  }
   if (name == "push" || name == "pop" || name == "reserve" || name == "clear" || name == "remove_at" ||
       name == "remove_swap") {
     out = name;
