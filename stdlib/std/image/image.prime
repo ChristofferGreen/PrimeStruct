@@ -524,6 +524,73 @@ namespace std {
     return(upLeft)
   }
 
+  [return<i32>]
+  pngColorTypeSamplesPerPixel([i32] colorType) {
+    if(or(equal(colorType, 0i32), equal(colorType, 3i32)),
+       then() { return(1i32) },
+       else() { })
+    if(equal(colorType, 2i32),
+       then() { return(3i32) },
+       else() { })
+    if(equal(colorType, 4i32),
+       then() { return(2i32) },
+       else() { })
+    return(4i32)
+  }
+
+  [return<bool>]
+  pngDecodeBitDepthSupported([i32] bitDepth, [i32] colorType) {
+    if(or(equal(colorType, 0i32), equal(colorType, 3i32)),
+       then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, -1i32)) },
+       else() { })
+    return(equal(bitDepth, 8i32))
+  }
+
+  [return<i32>]
+  pngFilterBytesPerPixel([i32] bitDepth, [i32] colorType) {
+    return(divide(plus(multiply(pngColorTypeSamplesPerPixel(colorType), bitDepth), 7i32), 8i32))
+  }
+
+  [return<i32>]
+  pngScanlineBytes([i32] width, [i32] bitDepth, [i32] colorType) {
+    return(divide(plus(multiply(multiply(width, pngColorTypeSamplesPerPixel(colorType)), bitDepth), 7i32), 8i32))
+  }
+
+  [return<i32>]
+  pngSampleValueCount([i32] bitDepth) {
+    [i32 mut] valueCount{1i32}
+    [i32 mut] shift{0i32}
+    while(less_than(shift, bitDepth), do() {
+      assign(valueCount, multiply(valueCount, 2i32))
+      increment(shift)
+    })
+    return(valueCount)
+  }
+
+  [return<i32>]
+  pngPackedSampleAt([vector<i32>] rowBytes, [i32] pixelIndex, [i32] bitDepth) {
+    [i32] samplesPerByte{divide(8i32, bitDepth)}
+    [i32] byteIndex{divide(pixelIndex, samplesPerByte)}
+    [i32] sampleIndex{pngMod(pixelIndex, samplesPerByte)}
+    [i32] shiftAmount{multiply(minus(minus(samplesPerByte, 1i32), sampleIndex), bitDepth)}
+    [i32 mut] shifted{rowBytes[byteIndex]}
+    [i32 mut] shiftCount{0i32}
+    while(less_than(shiftCount, shiftAmount), do() {
+      assign(shifted, divide(shifted, 2i32))
+      increment(shiftCount)
+    })
+    return(pngMod(shifted, pngSampleValueCount(bitDepth)))
+  }
+
+  [return<i32>]
+  pngScalePackedSampleToByte([i32] sample, [i32] bitDepth) {
+    [i32] maxSample{minus(pngSampleValueCount(bitDepth), 1i32)}
+    if(less_equal(maxSample, 0i32),
+       then() { return(0i32) },
+       else() { })
+    return(divide(multiply(sample, 255i32), maxSample))
+  }
+
   [return<bool>]
   pngZlibHeaderValid([i32] cmf, [i32] flg) {
     if(or(not_equal(pngMod(cmf, 16i32), 8i32), greater_than(divide(cmf, 16i32), 7i32)),
@@ -1599,31 +1666,17 @@ namespace std {
   pngDecodeScanlines([vector<i32>] rawBytes, [i32] width, [i32] height, [i32] bitDepth, [i32] colorType,
                      [i32] interlace, [vector<i32>] paletteBytes, [vector<i32> mut] pixels) {
     clear(pixels)
-    if(or(not_equal(bitDepth, 8i32), not_equal(interlace, 0i32)),
-       then() { return(2i32) },
-       else() { })
     if(and(not_equal(colorType, 0i32),
            and(not_equal(colorType, 2i32),
                and(not_equal(colorType, 3i32), and(not_equal(colorType, 4i32), not_equal(colorType, 6i32))))),
        then() { return(2i32) },
        else() { })
-
-    [i32 mut] bytesPerPixel{4i32}
-    if(equal(colorType, 0i32),
-       then() { assign(bytesPerPixel, 1i32) },
-       else() {
-         if(equal(colorType, 2i32),
-            then() { assign(bytesPerPixel, 3i32) },
-            else() {
-              if(equal(colorType, 3i32),
-                 then() { assign(bytesPerPixel, 1i32) },
-                 else() { })
-            })
-       })
-    if(equal(colorType, 4i32),
-       then() { assign(bytesPerPixel, 2i32) },
+    if(or(not_equal(interlace, 0i32), not(pngDecodeBitDepthSupported(bitDepth, colorType))),
+       then() { return(2i32) },
        else() { })
-    [i32] scanlineBytes{multiply(width, bytesPerPixel)}
+
+    [i32] bytesPerPixel{pngFilterBytesPerPixel(bitDepth, colorType)}
+    [i32] scanlineBytes{pngScanlineBytes(width, bitDepth, colorType)}
     if(not_equal(count(rawBytes), multiply(height, plus(scanlineBytes, 1i32))),
        then() { return(1i32) },
        else() { })
@@ -1692,18 +1745,20 @@ namespace std {
         increment(byteIndex)
       })
 
-      [i32 mut] pixelByteIndex{0i32}
-      while(less_than(pixelByteIndex, scanlineBytes), do() {
-        if(or(equal(colorType, 0i32), equal(colorType, 4i32)),
-           then() {
-             push(pixels, rowBytes[pixelByteIndex])
-             push(pixels, rowBytes[pixelByteIndex])
-             push(pixels, rowBytes[pixelByteIndex])
-           },
-           else() {
-             if(equal(colorType, 3i32),
+      if(less_than(bitDepth, 8i32),
+         then() {
+           [i32 mut] pixelIndex{0i32}
+           while(less_than(pixelIndex, width), do() {
+             [i32] sample{pngPackedSampleAt(rowBytes, pixelIndex, bitDepth)}
+             if(equal(colorType, 0i32),
                 then() {
-                  [i32] paletteOffset{multiply(rowBytes[pixelByteIndex], 3i32)}
+                  [i32] grayByte{pngScalePackedSampleToByte(sample, bitDepth)}
+                  push(pixels, grayByte)
+                  push(pixels, grayByte)
+                  push(pixels, grayByte)
+                },
+                else() {
+                  [i32] paletteOffset{multiply(sample, 3i32)}
                   if(greater_equal(plus(paletteOffset, 2i32), count(paletteBytes)),
                      then() {
                        clear(pixels)
@@ -1713,15 +1768,42 @@ namespace std {
                   push(pixels, paletteBytes[paletteOffset])
                   push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
                   push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
+                })
+             increment(pixelIndex)
+           })
+         },
+         else() {
+           [i32 mut] pixelByteIndex{0i32}
+           while(less_than(pixelByteIndex, scanlineBytes), do() {
+             if(or(equal(colorType, 0i32), equal(colorType, 4i32)),
+                then() {
+                  push(pixels, rowBytes[pixelByteIndex])
+                  push(pixels, rowBytes[pixelByteIndex])
+                  push(pixels, rowBytes[pixelByteIndex])
                 },
                 else() {
-                  push(pixels, rowBytes[pixelByteIndex])
-                  push(pixels, rowBytes[plus(pixelByteIndex, 1i32)])
-                  push(pixels, rowBytes[plus(pixelByteIndex, 2i32)])
+                  if(equal(colorType, 3i32),
+                     then() {
+                       [i32] paletteOffset{multiply(rowBytes[pixelByteIndex], 3i32)}
+                       if(greater_equal(plus(paletteOffset, 2i32), count(paletteBytes)),
+                          then() {
+                            clear(pixels)
+                            return(1i32)
+                          },
+                          else() { })
+                       push(pixels, paletteBytes[paletteOffset])
+                       push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
+                       push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
+                     },
+                     else() {
+                       push(pixels, rowBytes[pixelByteIndex])
+                       push(pixels, rowBytes[plus(pixelByteIndex, 1i32)])
+                       push(pixels, rowBytes[plus(pixelByteIndex, 2i32)])
+                     })
                 })
+             assign(pixelByteIndex, plus(pixelByteIndex, bytesPerPixel))
            })
-        assign(pixelByteIndex, plus(pixelByteIndex, bytesPerPixel))
-      })
+         })
       clear(previousRowBytes)
       [i32 mut] previousRowIndex{0i32}
       while(less_than(previousRowIndex, scanlineBytes), do() {
