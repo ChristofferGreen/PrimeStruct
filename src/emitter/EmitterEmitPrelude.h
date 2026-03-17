@@ -348,6 +348,10 @@
   out << "static inline void ps_vector_push(std::vector<T> &value, Value element) {\n";
   out << "  value.push_back(static_cast<T>(element));\n";
   out << "}\n";
+  out << "template <typename T, typename Value>\n";
+  out << "static inline void ps_missing_vector_push_call_helper(T &&, Value) = delete;\n";
+  out << "template <typename T, typename Value>\n";
+  out << "static inline void ps_missing_vector_push_method_helper(T &&, Value) = delete;\n";
   out << "template <typename T, typename Index>\n";
   out << "static inline void ps_vector_reserve(std::vector<T> &value, Index capacity) {\n";
   out << "  int64_t cap = static_cast<int64_t>(capacity);\n";
@@ -357,6 +361,10 @@
   out << "  }\n";
   out << "  value.reserve(static_cast<size_t>(cap));\n";
   out << "}\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline void ps_missing_vector_reserve_call_helper(T &&, Index) = delete;\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline void ps_missing_vector_reserve_method_helper(T &&, Index) = delete;\n";
   out << "template <typename T>\n";
   out << "static inline void ps_vector_pop(std::vector<T> &value) {\n";
   out << "  if (value.empty()) {\n";
@@ -365,6 +373,14 @@
   out << "  }\n";
   out << "  value.pop_back();\n";
   out << "}\n";
+  out << "template <typename T>\n";
+  out << "static inline void ps_missing_vector_pop_call_helper(T &&) = delete;\n";
+  out << "template <typename T>\n";
+  out << "static inline void ps_missing_vector_pop_method_helper(T &&) = delete;\n";
+  out << "template <typename T>\n";
+  out << "static inline void ps_missing_vector_clear_call_helper(T &&) = delete;\n";
+  out << "template <typename T>\n";
+  out << "static inline void ps_missing_vector_clear_method_helper(T &&) = delete;\n";
   out << "template <typename T, typename Index>\n";
   out << "static inline void ps_vector_remove_at(std::vector<T> &value, Index index) {\n";
   out << "  int64_t i = static_cast<int64_t>(index);\n";
@@ -374,6 +390,10 @@
   out << "  }\n";
   out << "  value.erase(value.begin() + static_cast<size_t>(i));\n";
   out << "}\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline void ps_missing_vector_remove_at_call_helper(T &&, Index) = delete;\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline void ps_missing_vector_remove_at_method_helper(T &&, Index) = delete;\n";
   out << "template <typename T, typename Index>\n";
   out << "static inline void ps_vector_remove_swap(std::vector<T> &value, Index index) {\n";
   out << "  int64_t i = static_cast<int64_t>(index);\n";
@@ -387,6 +407,10 @@
   out << "  }\n";
   out << "  value.pop_back();\n";
   out << "}\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline void ps_missing_vector_remove_swap_call_helper(T &&, Index) = delete;\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline void ps_missing_vector_remove_swap_method_helper(T &&, Index) = delete;\n";
   out << "static inline int ps_string_count(std::string_view value) {\n";
   out << "  return static_cast<int>(value.size());\n";
   out << "}\n";

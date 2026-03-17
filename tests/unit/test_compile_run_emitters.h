@@ -8589,6 +8589,85 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_vector_at_unsafe_call_helper") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lowers bare vector mutator statements without helper to deleted stubs") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  push(values, 4i32)
+  values.push(5i32)
+  pop(values)
+  values.pop()
+  reserve(values, 8i32)
+  values.reserve(9i32)
+  clear(values)
+  values.clear()
+  remove_at(values, 0i32)
+  values.remove_at(0i32)
+  remove_swap(values, 0i32)
+  values.remove_swap(0i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_vector_mutator_deleted_stubs.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_mutator_deleted_stubs.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_push_call_helper(values, 4)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_push_method_helper(values, 5)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_pop_call_helper(values)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_pop_method_helper(values)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_reserve_call_helper(values, 8)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_reserve_method_helper(values, 9)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_clear_call_helper(values)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_clear_method_helper(values)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_remove_at_call_helper(values, 0)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_remove_at_method_helper(values, 0)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_remove_swap_call_helper(values, 0)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_remove_swap_method_helper(values, 0)") != std::string::npos);
+}
+
+TEST_CASE("rejects bare vector mutator call statements without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  push(values, 4i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_vector_mutator_call_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_mutator_call_deleted_stub.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_push_call_helper") != std::string::npos);
+}
+
+TEST_CASE("rejects bare vector mutator method statements without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  values.push(4i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_vector_mutator_method_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_mutator_method_deleted_stub.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_push_method_helper") != std::string::npos);
+}
+
 TEST_CASE("rejects inferred wrapper map capacity target in C++ emitter") {
   const std::string source = R"(
 wrapMap() {
