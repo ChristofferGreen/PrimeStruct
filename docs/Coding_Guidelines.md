@@ -73,9 +73,10 @@ semantics after canonicalization.
   a shared canonical gfx launch helper, the native window host runtime shell
   now lives in a shared presenter helper, the Metal launcher now delegates to
   a shared metal launch helper, the Metal offscreen runtime shell now lives in
-  a shared helper, the browser launcher now delegates to a shared browser
-  launch helper, the browser runtime shell now lives in a shared JS helper,
-  and broader backend conformance remains staged.
+  a shared helper, the Metal snapshot/parity helper modes now also bind to a
+  shared spinning-cube simulation reference helper, the browser launcher now
+  delegates to a shared browser launch helper, the browser runtime shell now
+  lives in a shared JS helper, and broader backend conformance remains staged.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
   Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with

@@ -10,6 +10,9 @@ spinning-cube sample.
 - `../../shared/gfx_contract_shared.h`: shared host-side `GfxError` mapping and
   locked `/std/gfx/VertexColored` upload-layout definition used by the native
   and Metal sample hosts.
+- `../../shared/spinning_cube_simulation_reference.h`: shared deterministic
+  fixed-step simulation reference helper used by the Metal snapshot/parity CLI
+  modes.
 - `../../shared/metal_offscreen_host.h`: shared offscreen Metal runtime helper
   that owns device/library/queue setup, shader-loading failures, command
   submission, and the software-surface demo path.
@@ -45,7 +48,8 @@ spinning-cube sample.
 - `--software-surface-demo` skips shader/metallib compilation, runs the shared
   software-surface path, and requires `software_surface_presented=1`.
 - `--snapshot-code` and `--parity-check` compile only the host and forward the
-  requested deterministic helper mode.
+  requested deterministic helper mode through the shared
+  `spinning_cube_simulation_reference.h` path.
 
 The host prints `gfx_profile=metal-osx` and `frame_rendered=1` and exits 0
 when frame submission completes.
@@ -63,6 +67,8 @@ Failure diagnostics print deterministic:
 - `./metal_host --snapshot-code 120` prints the fixed-step snapshot code.
 - `./metal_host --parity-check 120` runs tolerance-based transform/rotation
   parity checks against chunked stepping (`parity_ok=1` means pass).
+- Those helper modes now call the shared spinning-cube simulation reference
+  helper rather than keeping a second inline C++ copy inside `metal_host.mm`.
 - The launcher exposes the same modes: `./scripts/run_metal_spinning_cube.sh
   --snapshot-code 120` and `./scripts/run_metal_spinning_cube.sh
   --parity-check 120`.

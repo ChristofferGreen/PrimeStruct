@@ -4302,6 +4302,7 @@ TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiri
   const std::string source = readFile(metalHostPath.string());
   CHECK(source.find("#include \"../../shared/gfx_contract_shared.h\"") != std::string::npos);
   CHECK(source.find("#include \"../../shared/metal_offscreen_host.h\"") != std::string::npos);
+  CHECK(source.find("#include \"../../shared/spinning_cube_simulation_reference.h\"") != std::string::npos);
   CHECK(source.find("metal-osx") != std::string::npos);
   CHECK(source.find("using GfxErrorCode = primestruct::gfx_contract::GfxErrorCode;") != std::string::npos);
   CHECK(source.find("using RenderCallbacks = primestruct::metal_offscreen_host::RenderCallbacks;") !=
@@ -4310,11 +4311,19 @@ TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiri
         std::string::npos);
   CHECK(source.find("using Vertex = primestruct::gfx_contract::VertexColoredHost;") != std::string::npos);
   CHECK(source.find("struct Vertex {") == std::string::npos);
+  CHECK(source.find("struct CubeSimulationState {") == std::string::npos);
+  CHECK(source.find("struct CubeStepResult {") == std::string::npos);
   CHECK(source.find("const char *gfxErrorCodeName(") == std::string::npos);
   CHECK(source.find("configureTrianglePipeline") != std::string::npos);
   CHECK(source.find("prepareTriangleResources") != std::string::npos);
   CHECK(source.find("encodeTriangleFrame") != std::string::npos);
+  CHECK(source.find("primestruct::spinning_cube_simulation::snapshotCodeForTicks") != std::string::npos);
+  CHECK(source.find("primestruct::spinning_cube_simulation::parityOk") != std::string::npos);
   CHECK(source.find("primestruct::metal_offscreen_host::runLibraryRender") != std::string::npos);
+  CHECK(source.find("cubeRunFixedTicks(") == std::string::npos);
+  CHECK(source.find("cubeRunFixedTicksChunked(") == std::string::npos);
+  CHECK(source.find("cubeAdvanceFixed(") == std::string::npos);
+  CHECK(source.find("cubeTick(") == std::string::npos);
   CHECK(source.find("newLibraryWithURL") == std::string::npos);
   CHECK(source.find("newCommandQueue") == std::string::npos);
   CHECK(source.find("renderCommandEncoderWithDescriptor") == std::string::npos);
@@ -4377,6 +4386,26 @@ TEST_CASE("shared metal offscreen host helper stays source locked") {
   CHECK(source.find("software_surface_bridge=1") != std::string::npos);
   CHECK(source.find("software_surface_presented=1") != std::string::npos);
   CHECK(source.find("frame_rendered=1") != std::string::npos);
+}
+
+TEST_CASE("shared spinning cube simulation reference helper stays source locked") {
+  std::filesystem::path sharedDir = std::filesystem::path("..") / "examples" / "shared";
+  if (!std::filesystem::exists(sharedDir)) {
+    sharedDir = std::filesystem::current_path() / "examples" / "shared";
+  }
+  REQUIRE(std::filesystem::exists(sharedDir));
+
+  const std::filesystem::path helperPath = sharedDir / "spinning_cube_simulation_reference.h";
+  REQUIRE(std::filesystem::exists(helperPath));
+
+  const std::string source = readFile(helperPath.string());
+  CHECK(source.find("namespace primestruct::spinning_cube_simulation {") != std::string::npos);
+  CHECK(source.find("struct State {") != std::string::npos);
+  CHECK(source.find("struct StepResult {") != std::string::npos);
+  CHECK(source.find("inline State runFixedTicks(int ticks)") != std::string::npos);
+  CHECK(source.find("inline State runFixedTicksChunked(int ticks)") != std::string::npos);
+  CHECK(source.find("inline int snapshotCodeForTicks(int ticks)") != std::string::npos);
+  CHECK(source.find("inline bool parityOk(int ticks)") != std::string::npos);
 }
 
 TEST_CASE("shared browser runtime helper stays source locked") {

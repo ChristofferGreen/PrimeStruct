@@ -3772,11 +3772,14 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
     CAPTURE("GFX-V1-METAL-HOST-LAUNCHER-THINNING-STATUS");
     CHECK(graphicsDoc.find("Metal sample path now also routes through shared helpers") != std::string::npos);
     CHECK(graphicsDoc.find("shared metal launch helper") != std::string::npos);
+    CHECK(graphicsDoc.find("shared spinning-cube simulation reference helper") != std::string::npos);
     CHECK(primeStructDoc.find("Metal sample launcher now also delegates to one shared metal launch helper") !=
           std::string::npos);
+    CHECK(primeStructDoc.find("shared spinning-cube simulation reference helper") != std::string::npos);
     CHECK(primeStructDoc.find("offscreen runtime shell lives in one shared helper") != std::string::npos);
     CHECK(guidelinesDoc.find("Metal launcher now delegates to") != std::string::npos);
     CHECK(guidelinesDoc.find("shared metal launch helper") != std::string::npos);
+    CHECK(guidelinesDoc.find("shared spinning-cube simulation reference helper") != std::string::npos);
   }
 
   {

@@ -36,9 +36,12 @@ native Metal window presenter helper instead of owning the `NSWindow`,
 Metal sample path now also routes through shared helpers: the offscreen Metal
 runtime shell lives in `examples/shared/metal_offscreen_host.h`, the sample
 launcher now delegates to `scripts/run_canonical_metal_host.sh` through
-`scripts/run_metal_spinning_cube.sh`, the browser runtime shell now lives in
-`examples/web/shared/browser_runtime_shared.js`, and the browser sample
-launcher now delegates to `scripts/run_canonical_browser_sample.sh` through
+`scripts/run_metal_spinning_cube.sh`, the Metal sample’s snapshot/parity helper
+modes now also bind to `examples/shared/spinning_cube_simulation_reference.h`
+instead of keeping a second inline copy of the cube fixed-step reference logic
+inside `metal_host.mm`, the browser runtime shell now lives in
+`examples/web/shared/browser_runtime_shared.js`, and the browser sample launcher
+now delegates to `scripts/run_canonical_browser_sample.sh` through
 `scripts/run_browser_spinning_cube.sh`. The repo now also
 ships real compile-run
 conformance programs that import both `/std/gfx/experimental/*` and
