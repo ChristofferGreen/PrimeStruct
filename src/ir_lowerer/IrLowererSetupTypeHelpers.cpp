@@ -215,6 +215,28 @@ void pruneRemovedMapCompatibilityCallReturnCandidates(std::vector<std::string> &
   }
 }
 
+void pruneRemovedVectorCompatibilityCallReturnCandidates(std::vector<std::string> &candidates,
+                                                         const std::string &path) {
+  const std::string normalizedPath = normalizeCollectionHelperPath(path);
+  if (normalizedPath.rfind("/vector/", 0) != 0) {
+    return;
+  }
+
+  const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
+  if (suffix != "at" && suffix != "at_unsafe") {
+    return;
+  }
+
+  const std::string canonicalCandidate = "/std/collections/vector/" + suffix;
+  for (auto it = candidates.begin(); it != candidates.end();) {
+    if (*it == canonicalCandidate) {
+      it = candidates.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
 bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::string &resolvedPath) {
   if (!isExplicitMapMethodAliasPath(callPath)) {
     return true;
@@ -222,6 +244,20 @@ bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::
 
   auto allowedCandidates = collectionHelperPathCandidates(callPath);
   pruneRemovedMapCompatibilityCallReturnCandidates(allowedCandidates, callPath);
+  const std::string normalizedResolvedPath = normalizeCollectionHelperPath(resolvedPath);
+  return std::any_of(allowedCandidates.begin(), allowedCandidates.end(), [&](const std::string &candidate) {
+    return candidate == normalizedResolvedPath;
+  });
+}
+
+bool isAllowedResolvedVectorDirectCallPath(const std::string &callPath, const std::string &resolvedPath) {
+  const std::string normalizedCallPath = normalizeCollectionHelperPath(callPath);
+  if (normalizedCallPath.rfind("/vector/", 0) != 0 &&
+      normalizedCallPath.rfind("/std/collections/vector/", 0) != 0) {
+    return true;
+  }
+  auto allowedCandidates = collectionHelperPathCandidates(callPath);
+  pruneRemovedVectorCompatibilityCallReturnCandidates(allowedCandidates, callPath);
   const std::string normalizedResolvedPath = normalizeCollectionHelperPath(resolvedPath);
   return std::any_of(allowedCandidates.begin(), allowedCandidates.end(), [&](const std::string &candidate) {
     return candidate == normalizedResolvedPath;
@@ -1535,6 +1571,7 @@ bool resolveDefinitionCallReturnKind(const Expr &callExpr,
   }
 
   auto candidates = collectionHelperPathCandidates(resolveExprPath(callExpr));
+  pruneRemovedVectorCompatibilityCallReturnCandidates(candidates, resolveExprPath(callExpr));
   pruneRemovedMapCompatibilityCallReturnCandidates(candidates, resolveExprPath(callExpr));
   bool matchedDefinition = false;
   for (const auto &candidate : candidates) {
@@ -1762,7 +1799,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       continue;
     }
     const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
-    if (callee == nullptr || !isAllowedResolvedMapDirectCallPath(callExpr.name, callee->fullPath)) {
+    if (callee == nullptr || !isAllowedResolvedVectorDirectCallPath(callExpr.name, callee->fullPath) ||
+        !isAllowedResolvedMapDirectCallPath(callExpr.name, callee->fullPath)) {
       continue;
     }
     if (resolveReturnInfoKindForPath(callee->fullPath, getReturnInfo, requireArrayReturn, kindOut)) {
