@@ -7336,6 +7336,65 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lowers direct-call string vector access helpers to deleted stubs") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(plus(/std/collections/vector/at(wrapText(), 1i32),
+              /vector/at_unsafe(wrapText(), 0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_direct_string_vector_access_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_direct_string_vector_access_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_at_call_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_at_call_helper(wrapText(), 1)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_at_unsafe_call_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_at_unsafe_call_helper(wrapText(), 0)") != std::string::npos);
+  CHECK(output.find("ps_string_at(") == std::string::npos);
+  CHECK(output.find("ps_string_at_unsafe(") == std::string::npos);
+}
+
+TEST_CASE("rejects direct-call string vector access builtin fallback in C++ emitter") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(plus(/std/collections/vector/at(wrapText(), 1i32),
+              /vector/at_unsafe(wrapText(), 0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_direct_string_vector_access_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_direct_string_vector_access_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string errors = readFile(errPath);
+  CHECK(errors.find("ps_missing_vector_at_call_helper") != std::string::npos);
+  CHECK(errors.find("ps_missing_vector_at_unsafe_call_helper") != std::string::npos);
+}
+
 TEST_CASE("rejects slash-method wrapper string access method chain compatibility fallback in C++ emitter") {
   const std::string source = R"(
 namespace i32 {

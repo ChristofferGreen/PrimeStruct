@@ -1338,6 +1338,9 @@
             << ")";
         return out.str();
       }
+      if (!expr.isMethodCall && isExplicitVectorAccessDirectCall(expr)) {
+        return emitMissingExplicitVectorAccessCall(expr);
+      }
       if (expr.isMethodCall && isResolvedVectorTarget(target)) {
         out << "ps_missing_vector_at_method_helper("
             << emitExpr(target,
@@ -1495,6 +1498,9 @@
                         allowMathBare)
             << ")";
         return out.str();
+      }
+      if (!expr.isMethodCall && isExplicitVectorAccessDirectCall(expr)) {
+        return emitMissingExplicitVectorAccessCall(expr);
       }
       if (expr.isMethodCall && isResolvedVectorTarget(target)) {
         out << "ps_missing_vector_at_unsafe_method_helper("
