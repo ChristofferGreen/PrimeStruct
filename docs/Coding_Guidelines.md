@@ -55,9 +55,10 @@ semantics after canonicalization.
   substrate-backed configs/helpers, the non-Result `render_pass(...)` /
   `draw_mesh(...)` / `end()` path now routes through minimal pass-encoding
   substrate helpers with deterministic zero-token / no-op fallback on invalid
-  handles, the first real native-desktop host path now consumes the
-  deterministic experimental gfx stream emitted by the shared spinning-cube
-  sample, real compile-run conformance now imports `/std/gfx/experimental/*`
+  handles, the shared spinning-cube native-window sample path now emits and
+  consumes a deterministic canonical `/std/gfx/*` stream
+  (`cubeStdGfxEmitFrameStream` via `--gfx`), real compile-run conformance now
+  imports `/std/gfx/experimental/*`
   and exercises that wrapper path across exe/vm/native, and
   `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites
   through the matching pipeline helper. The canonical `/std/gfx/*` entry

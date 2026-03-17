@@ -24,10 +24,11 @@ point for the locked v1 vertex wire type. The non-Result
 `Frame.render_pass(...)` plus `RenderPass.draw_mesh(...)` / `RenderPass.end()`
 path preserves deterministic zero-token / no-op fallback on invalid handles,
 and the first real native-desktop host/runtime path now consumes a
-deterministic experimental gfx stream emitted by the shared spinning-cube
-`.prime` sample so submit/present can drive one real macOS window host
-end-to-end. Browser/native/Metal host samples still otherwise sit around shared
-`.prime` simulation/data paths. The repo now also ships real compile-run
+deterministic canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream` via
+the macOS host `--gfx` mode) emitted by the shared spinning-cube `.prime`
+sample so submit/present can drive one real macOS window host end-to-end.
+Browser/native/Metal host samples still otherwise sit around shared `.prime`
+simulation/data paths. The repo now also ships real compile-run
 conformance programs that import both `/std/gfx/experimental/*` and
 `/std/gfx/*` and exercise `Window(...)`, `Device()`, `create_swapchain(...)`,
 `create_mesh(...)`, `create_pipeline(...)`, `frame()`, `render_pass(...)`,

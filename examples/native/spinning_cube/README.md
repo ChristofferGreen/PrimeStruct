@@ -40,20 +40,20 @@ Or run the manual steps:
    - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream --max-frames 120`
 5. Optional non-GUI integration smoke:
    - `./spinning_cube_window_host --cube-sim ./cube_native_frame_stream --simulation-smoke`
-6. Optional experimental gfx stream build:
-   - `./primec --emit=native ../../web/spinning_cube/cube.prime -o ./cube_experimental_gfx_stream --entry /cubeExperimentalGfxEmitFrameStream`
-7. Optional experimental gfx window run:
-   - `./spinning_cube_window_host --experimental-gfx ./cube_experimental_gfx_stream --max-frames 120`
-8. Optional experimental gfx non-GUI smoke:
-   - `./spinning_cube_window_host --experimental-gfx ./cube_experimental_gfx_stream --simulation-smoke`
+6. Optional canonical `/std/gfx/*` stream build:
+   - `./primec --emit=native ../../web/spinning_cube/cube.prime -o ./cube_stdlib_gfx_stream --entry /cubeStdGfxEmitFrameStream`
+7. Optional canonical `/std/gfx/*` window run:
+   - `./spinning_cube_window_host --gfx ./cube_stdlib_gfx_stream --max-frames 120`
+8. Optional canonical `/std/gfx/*` non-GUI smoke:
+   - `./spinning_cube_window_host --gfx ./cube_stdlib_gfx_stream --simulation-smoke`
 9. Optional software-surface bridge demo:
    - `./spinning_cube_window_host --software-surface-demo --max-frames 1`
 
 The window host now renders an indexed cube mesh each frame and updates
 transform uniforms from the deterministic fixed-step simulation stream.
-The experimental gfx path reuses that same Metal host, but its window size,
-clear color/depth, and submit/present readiness now come from the deterministic
-experimental gfx stream emitted by `cubeExperimentalGfxEmitFrameStream`.
+The canonical `/std/gfx/*` path reuses that same Metal host, but its window
+size, clear color/depth, and submit/present readiness now come from the
+deterministic stdlib gfx stream emitted by `cubeStdGfxEmitFrameStream`.
 The software-surface demo reuses the same window presenter path, uploads a
 deterministic BGRA8 software buffer into a shared Metal texture, and blits it
 into the drawable.
@@ -71,12 +71,12 @@ Expected diagnostics include:
 - `pipeline_ready=1`
 - `startup_success=1`
 - `frame_rendered=1`
-- `experimental_gfx_stream_loaded=1`
-- `experimental_gfx_window_width=1280`
-- `experimental_gfx_window_height=720`
-- `experimental_gfx_mesh_vertex_count=8`
-- `experimental_gfx_mesh_index_count=36`
-- `experimental_gfx_submit_present_mask=3`
+- `gfx_stream_loaded=1`
+- `gfx_window_width=1280`
+- `gfx_window_height=720`
+- `gfx_mesh_vertex_count=8`
+- `gfx_mesh_index_count=36`
+- `gfx_submit_present_mask=3`
 - `exit_reason=max_frames` (bounded smoke run)
 - `software_surface_bridge=1`
 - `software_surface_width=64`

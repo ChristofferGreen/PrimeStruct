@@ -1,5 +1,5 @@
 import /std/math/*
-import /std/gfx/experimental/*
+import /std/gfx/*
 
 [struct]
 CubeMeshLayout() {
@@ -453,10 +453,10 @@ log_gfx_error([GfxError] err) {
 }
 
 [return<int> effects(io_out, io_err) on_error<GfxError, /log_gfx_error>]
-cubeExperimentalGfxEmitFrameStream() {
+cubeStdGfxEmitFrameStream() {
   [Window] window{
     Window(
-      [title] "PrimeStruct Experimental Gfx"utf8,
+      [title] "PrimeStruct Stdlib Gfx"utf8,
       [width] 1280i32,
       [height] 720i32
     )?
