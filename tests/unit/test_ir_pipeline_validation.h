@@ -12869,6 +12869,70 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
   CHECK(explicitVectorAtResolveDefinitionCalls == 1);
   CHECK(explicitVectorAtEmitCalls == 1);
 
+  primec::Expr canonicalPushCall = countCall;
+  canonicalPushCall.name = "/std/collections/vector/push";
+  canonicalPushCall.args.push_back(indexArg);
+  int canonicalPushResolveMethodCalls = 0;
+  int canonicalPushResolveDefinitionCalls = 0;
+  int canonicalPushEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            canonicalPushCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++canonicalPushResolveMethodCalls;
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++canonicalPushResolveDefinitionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++canonicalPushEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(canonicalPushResolveMethodCalls == 0);
+  CHECK(canonicalPushResolveDefinitionCalls == 1);
+  CHECK(canonicalPushEmitCalls == 0);
+
+  primec::Definition vectorPushDef;
+  vectorPushDef.fullPath = "/std/collections/vector/push";
+  int canonicalPushDirectResolveMethodCalls = 0;
+  int canonicalPushDirectResolveDefinitionCalls = 0;
+  int canonicalPushDirectEmitCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            canonicalPushCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++canonicalPushDirectResolveMethodCalls;
+              return &callee;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              ++canonicalPushDirectResolveDefinitionCalls;
+              CHECK(callExpr.name == "/std/collections/vector/push");
+              CHECK_FALSE(callExpr.isMethodCall);
+              return &vectorPushDef;
+            },
+            [&](const primec::Expr &callExpr, const primec::Definition &resolvedCallee) {
+              ++canonicalPushDirectEmitCalls;
+              CHECK(callExpr.name == "/std/collections/vector/push");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/std/collections/vector/push");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(canonicalPushDirectResolveMethodCalls == 0);
+  CHECK(canonicalPushDirectResolveDefinitionCalls == 1);
+  CHECK(canonicalPushDirectEmitCalls == 1);
+
   int secondResolveMethodCalls = 0;
   error.clear();
   CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
@@ -13325,6 +13389,38 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
   CHECK(explicitVectorCountLocalResolveMethodCalls == 0);
   CHECK(explicitVectorCountLocalResolveDefinitionCalls == 1);
   CHECK(explicitVectorCountLocalEmitCalls == 0);
+
+  primec::Expr canonicalPushCall;
+  canonicalPushCall.kind = primec::Expr::Kind::Call;
+  canonicalPushCall.name = "/std/collections/vector/push";
+  canonicalPushCall.args = {explicitVectorCountArg, indexArg};
+  int canonicalPushLocalResolveMethodCalls = 0;
+  int canonicalPushLocalResolveDefinitionCalls = 0;
+  int canonicalPushLocalEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            canonicalPushCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              ++canonicalPushLocalResolveMethodCalls;
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++canonicalPushLocalResolveDefinitionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              ++canonicalPushLocalEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(canonicalPushLocalResolveMethodCalls == 0);
+  CHECK(canonicalPushLocalResolveDefinitionCalls == 1);
+  CHECK(canonicalPushLocalEmitCalls == 0);
 
   primec::Expr plainCall;
   plainCall.kind = primec::Expr::Kind::Call;
@@ -17124,6 +17220,67 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   CHECK(error.empty());
   CHECK(aliasPushResolveCalls == 0);
   CHECK(aliasPushEmitCalls == 0);
+
+  primec::Expr canonicalPushCall = reorderedPushCall;
+  canonicalPushCall.name = "/std/collections/vector/push";
+  int canonicalPushResolveCalls = 0;
+  int canonicalPushEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            canonicalPushCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++canonicalPushResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "push");
+              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+                  methodExpr.args.front().name == "items") {
+                return &callee;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++canonicalPushEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "push");
+              REQUIRE_FALSE(methodExpr.args.empty());
+              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
+              CHECK(methodExpr.args.front().name == "items");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(canonicalPushResolveCalls == 0);
+  CHECK(canonicalPushEmitCalls == 0);
+
+  primec::Expr canonicalClearCall;
+  canonicalClearCall.kind = primec::Expr::Kind::Call;
+  canonicalClearCall.name = "/std/collections/vector/clear";
+  canonicalClearCall.args = {targetArg};
+  int canonicalClearResolveCalls = 0;
+  int canonicalClearEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            canonicalClearCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++canonicalClearResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "clear");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++canonicalClearEmitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "clear");
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(canonicalClearResolveCalls == 0);
+  CHECK(canonicalClearEmitCalls == 0);
 
   primec::Expr boolArg;
   boolArg.kind = primec::Expr::Kind::BoolLiteral;

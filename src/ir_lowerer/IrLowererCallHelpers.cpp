@@ -248,6 +248,22 @@ bool isExplicitVectorHelperFallbackPath(const Expr &expr) {
          normalizedPath == "/std/collections/vector/at_unsafe";
 }
 
+bool isExplicitVectorNonTailHelperFallbackPath(const Expr &expr) {
+  if (isExplicitVectorHelperFallbackPath(expr)) {
+    return true;
+  }
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
+    return false;
+  }
+  const std::string normalizedPath = normalizeVectorImportAliasPath(expr.name);
+  return normalizedPath == "/std/collections/vector/push" ||
+         normalizedPath == "/std/collections/vector/pop" ||
+         normalizedPath == "/std/collections/vector/reserve" ||
+         normalizedPath == "/std/collections/vector/clear" ||
+         normalizedPath == "/std/collections/vector/remove_at" ||
+         normalizedPath == "/std/collections/vector/remove_swap";
+}
+
 std::string normalizeMapImportAliasPath(const std::string &path) {
   if (path.empty() || path.front() == '/') {
     return path;
@@ -2938,7 +2954,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error,
     std::function<bool(const Expr &)> isCollectionAccessReceiverExpr) {
-  if (isExplicitMapHelperFallbackPath(expr) || isExplicitVectorHelperFallbackPath(expr)) {
+  if (isExplicitMapHelperFallbackPath(expr) || isExplicitVectorNonTailHelperFallbackPath(expr)) {
     return CountMethodFallbackResult::NotHandled;
   }
   std::string normalizedVectorHelperName;
