@@ -12588,6 +12588,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector namespaced capacity accepts same-path helper on map target") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([map<i32, i32>] values) {
+  return(42i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/vector/capacity(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced capacity rejects named arguments as builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -12744,7 +12762,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity requires vector target") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("namespaced vector helper with named arguments is statement-only in expressions") {
@@ -13165,6 +13183,20 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity auto inference rejects map target without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [auto] inferred{/vector/capacity(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count helper auto inference keeps canonical precedence") {

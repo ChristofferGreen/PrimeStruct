@@ -9246,6 +9246,35 @@ main() {
   CHECK(runCommand(exePath) == 93);
 }
 
+TEST_CASE("C++ emitter keeps alias direct-call vector capacity same-path helper on map receiver") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+/vector/capacity([map<i32, i32>] values) {
+  return(94i32)
+}
+
+[return<int>]
+main() {
+  return(/vector/capacity(wrapMap()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_direct_vector_capacity_map_same_path_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_alias_direct_vector_capacity_map_same_path_helper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 94);
+}
+
 TEST_CASE("rejects canonical direct-call vector capacity on map receiver without helper in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -9269,6 +9298,31 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("rejects alias direct-call vector capacity on map receiver without helper in C++ emitter") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(/vector/capacity(wrapMap()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_direct_vector_capacity_map_unknown_target.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_alias_direct_vector_capacity_map_unknown_target.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects canonical direct-call vector capacity builtin fallback on map receiver in C++ emitter") {

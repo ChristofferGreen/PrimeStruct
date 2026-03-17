@@ -9015,8 +9015,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
       }
-      if (!expr.isMethodCall && resolved == "/std/collections/vector/capacity" && expr.args.size() == 1 &&
-          defMap_.find(resolved) == defMap_.end()) {
+      if (!expr.isMethodCall &&
+          (resolved == "/std/collections/vector/capacity" || resolved == "/vector/capacity") &&
+          expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
+        const bool isAliasCapacity = resolved == "/vector/capacity";
         std::string elemType;
         if (!resolveVectorTarget(expr.args.front(), elemType)) {
           if (!validateExpr(params, locals, expr.args.front())) {
@@ -9025,7 +9027,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           std::string mapKeyType;
           std::string mapValueType;
           if (resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {
-            error_ = "unknown call target: /std/collections/vector/capacity";
+            error_ = isAliasCapacity ? "unknown call target: /vector/capacity"
+                                     : "unknown call target: /std/collections/vector/capacity";
             return false;
           }
           error_ = "capacity requires vector target";

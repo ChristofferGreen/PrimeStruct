@@ -4022,6 +4022,18 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
     }
+    if (!expr.isMethodCall && resolved == "/vector/capacity" && expr.args.size() == 1 &&
+        defMap_.find(resolved) == defMap_.end()) {
+      std::string elemType;
+      if (!resolveVectorTarget(expr.args.front(), elemType)) {
+        std::string mapKeyType;
+        std::string mapValueType;
+        if (resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {
+          error_ = "unknown call target: /vector/capacity";
+          return ReturnKind::Unknown;
+        }
+      }
+    }
     if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
         (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall) &&
         expr.args.size() == 1 &&
