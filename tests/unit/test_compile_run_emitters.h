@@ -7864,6 +7864,87 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_vector_count_call_helper") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps alias direct-call vector count same-path helper on array receiver") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+/vector/count([array<i32>] values) {
+  return(99i32)
+}
+
+[return<int>]
+main() {
+  return(/vector/count(wrapArray()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_direct_vector_count_array_same_path_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_alias_direct_vector_count_array_same_path_helper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 99);
+}
+
+TEST_CASE("C++ emitter lowers alias direct-call vector count on array receiver to deleted stub") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(/vector/count(wrapArray()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_direct_vector_count_array_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_alias_direct_vector_count_array_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_count_call_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_count_call_helper(wrapArray())") != std::string::npos);
+  CHECK(output.find("ps_array_count(") == std::string::npos);
+}
+
+TEST_CASE("rejects alias direct-call vector count builtin fallback on array receiver in C++ emitter") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(/vector/count(wrapArray()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_direct_vector_count_array_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_alias_direct_vector_count_array_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_count_call_helper") != std::string::npos);
+}
+
 TEST_CASE("rejects namespaced access method chain compatibility fallback in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
