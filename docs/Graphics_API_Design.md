@@ -39,10 +39,10 @@ of relying only on doc-lock coverage for that API surface. Source-level profile
 literals and unsupported `create_pipeline` vertex types are still
 intentionally rejected, Result-carrying method wrappers still reject bare
 explicit non-`Result` struct bindings during semantics, and follow-up work
-still needs to delete the remaining non-graphics compatibility helpers, add
-unsupported-backend diagnostics, and keep the remaining public graphics API
-primarily in `.prime` files while leaving only minimal backend substrate in
-C++/host code.
+still needs to add unsupported-backend diagnostics, reduce the remaining
+sample-owned compatibility/contract glue, and keep the remaining public
+graphics API primarily in `.prime` files while leaving only minimal backend
+substrate in C++/host code.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.
