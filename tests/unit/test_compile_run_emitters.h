@@ -4350,6 +4350,97 @@ TEST_CASE("C++ emitter helper rejects explicit vector slash-method receivers wit
   expectRejected("/std/collections/vector/at_unsafe");
 }
 
+TEST_CASE("C++ emitter helper keeps same-path vector slash count capacity precedence") {
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  receiverInfo.typeTemplateArg = "i32";
+  localTypes.emplace("values", receiverInfo);
+
+  primec::Definition aliasCountDef;
+  aliasCountDef.fullPath = "/vector/count";
+  primec::Definition aliasCapacityDef;
+  aliasCapacityDef.fullPath = "/vector/capacity";
+  primec::Definition canonicalCountDef;
+  canonicalCountDef.fullPath = "/std/collections/vector/count";
+  primec::Definition canonicalCapacityDef;
+  canonicalCapacityDef.fullPath = "/std/collections/vector/capacity";
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {aliasCountDef.fullPath, &aliasCountDef},
+      {aliasCapacityDef.fullPath, &aliasCapacityDef},
+      {canonicalCountDef.fullPath, &canonicalCountDef},
+      {canonicalCapacityDef.fullPath, &canonicalCapacityDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+
+  auto expectResolved = [&](const char *methodName, const char *expectedPath) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = methodName;
+    call.args = {receiver};
+    call.argNames = {std::nullopt};
+
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == expectedPath);
+  };
+
+  expectResolved("/vector/count", "/vector/count");
+  expectResolved("/vector/capacity", "/vector/capacity");
+  expectResolved("/std/collections/vector/count", "/std/collections/vector/count");
+  expectResolved("/std/collections/vector/capacity", "/std/collections/vector/capacity");
+}
+
+TEST_CASE("C++ emitter helper rejects cross-path vector slash count capacity fallback") {
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  receiverInfo.typeTemplateArg = "i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+
+  auto expectRejected = [&](const char *methodName, const char *availablePath) {
+    returnKinds.clear();
+    returnKinds.emplace(availablePath, primec::emitter::ReturnKind::Int);
+
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = methodName;
+    call.args = {receiver};
+    call.argNames = {std::nullopt};
+
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+        call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved.empty());
+  };
+
+  expectRejected("/vector/count", "/std/collections/vector/count");
+  expectRejected("/vector/capacity", "/std/collections/vector/capacity");
+  expectRejected("/std/collections/vector/count", "/vector/count");
+  expectRejected("/std/collections/vector/capacity", "/vector/capacity");
+}
+
 TEST_CASE("rejects stdlib canonical vector helper method-precedence forwarding in C++ emitter") {
   const std::string source = R"(
 [return<int>]
@@ -9189,6 +9280,75 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() /
        "primec_cpp_stdlib_vector_count_capacity_slash_methods_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string errors = readFile(errPath);
+  CHECK(errors.find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(errors.find("ps_missing_vector_capacity_method_helper") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter lowers cross-path vector count capacity slash methods to deleted stubs") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(20i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./vector/count(),
+              values./std/collections/vector/capacity()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_cross_path_count_capacity_slash_methods_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_cross_path_count_capacity_slash_methods_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_count_method_helper(values)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_capacity_method_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_capacity_method_helper(values)") != std::string::npos);
+}
+
+TEST_CASE("rejects cross-path vector count capacity slash helper routing in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(20i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./vector/count(),
+              values./std/collections/vector/capacity()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_cross_path_count_capacity_slash_methods_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_cross_path_count_capacity_slash_methods_deleted_stub.err")
           .string();
 
   const std::string compileCmd =

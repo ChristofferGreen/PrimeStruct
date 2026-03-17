@@ -929,6 +929,9 @@ bool resolveMethodCallPath(const Expr &call,
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
   }
+  const bool isExplicitVectorAliasMethod = normalizedMethodName.rfind("vector/", 0) == 0;
+  const bool isExplicitStdlibVectorMethod =
+      normalizedMethodName.rfind("std/collections/vector/", 0) == 0;
   if (normalizedMethodName.rfind("vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
   } else if (normalizedMethodName.rfind("array/", 0) == 0) {
@@ -1701,11 +1704,21 @@ bool resolveMethodCallPath(const Expr &call,
   if (resolvedType == "/vector" || resolvedType == "vector") {
     const bool isCountLikeMethod = normalizedMethodName == "count";
     const bool isCapacityLikeMethod = normalizedMethodName == "capacity";
-    if ((isCountLikeMethod || isCapacityLikeMethod) &&
-        !hasDefinitionOrMetadata("/vector/" + normalizedMethodName) &&
-        !hasDefinitionOrMetadata("/std/collections/vector/" + normalizedMethodName)) {
-      resolvedOut.clear();
-      return false;
+    if (isCountLikeMethod || isCapacityLikeMethod) {
+      const std::string aliasPath = "/vector/" + normalizedMethodName;
+      const std::string canonicalPath = "/std/collections/vector/" + normalizedMethodName;
+      if (isExplicitVectorAliasMethod && !hasDefinitionOrMetadata(aliasPath)) {
+        resolvedOut.clear();
+        return false;
+      }
+      if (isExplicitStdlibVectorMethod && !hasDefinitionOrMetadata(canonicalPath)) {
+        resolvedOut.clear();
+        return false;
+      }
+      if (!hasDefinitionOrMetadata(aliasPath) && !hasDefinitionOrMetadata(canonicalPath)) {
+        resolvedOut.clear();
+        return false;
+      }
     }
   }
   resolvedOut = preferCanonicalMapMethodHelperPath(resolvedType + "/" + normalizedMethodName);
