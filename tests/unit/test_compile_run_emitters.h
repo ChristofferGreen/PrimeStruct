@@ -5074,7 +5074,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("runs vector namespaced count capacity access aliases canonically in C++ emitter") {
+TEST_CASE("rejects vector namespaced count capacity access aliases without helpers in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -5087,11 +5087,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_count_access_aliases.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_access_aliases_exe").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 13);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_access_aliases.err").string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string errors = readFile(errPath);
+  CHECK(errors.find("ps_missing_vector_count_call_helper") != std::string::npos ||
+        errors.find("ps_missing_vector_at_call_helper") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers stdlib namespaced vector mutator statement without helper to deleted stub") {
@@ -8688,6 +8691,35 @@ main() {
   CHECK(output.find("ps_missing_vector_count_call_helper(wrapVector())") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lowers wrapper explicit vector count capacity calls without helper to deleted stubs") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(/vector/count(wrapVector()),
+              /std/collections/vector/capacity(wrapVector())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_explicit_vector_count_capacity_call_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_explicit_vector_count_capacity_call_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_count_call_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_count_call_helper(wrapVector())") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_capacity_call_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_capacity_call_helper(wrapVector())") != std::string::npos);
+}
+
 TEST_CASE("rejects wrapper bare vector count calls without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
@@ -8710,6 +8742,31 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("ps_missing_vector_count_call_helper") != std::string::npos);
+}
+
+TEST_CASE("rejects wrapper explicit vector capacity calls without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/vector/capacity(wrapVector()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_explicit_vector_capacity_call_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_explicit_vector_capacity_call_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_vector_capacity_call_helper") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs wrapper bare vector capacity through imported stdlib helper in C++ emitter") {
