@@ -10,6 +10,14 @@ build and layout solidify.
 - Canonical IR and multi-backend lowering (C++/native, GPU, VM).
 - Deterministic semantics and tooling (IR dumps, diagnostics, conformance tests).
 
+## Prerequisites
+- Bash-compatible shell environment.
+- CMake 3.20+.
+- A C++23-capable compiler (`clang++` or `g++`).
+- Python 3 for helper scripts and validation utilities.
+- `rg` (`ripgrep`) for repository helper scripts such as `scripts/lines_of_code.sh`.
+- For coverage: `clang++`, `llvm-profdata`, and `llvm-cov` available in `PATH` (or discoverable via `xcrun` on macOS).
+
 ## Naming rules (code)
 - **Types (classes/structs/enums/aliases):** PascalCase (`PrimeStructParser`, `IrNode`).
 - **Functions (free/member):** lowerCamelCase (`parseModule`, `emitIr`).
@@ -35,14 +43,23 @@ build and layout solidify.
 
 ## Build/test workflow
 - **Primary entry:** `./scripts/compile.sh` (Debug build in `build-debug`, runs tests).
+- **Clean debug build:** `./scripts/compile.sh --clean` (deletes `build-debug` before configuring).
 - **Release build:** `./scripts/compile.sh --release` (Release build in `build-release`).
+- **Clean release build:** `./scripts/compile.sh --clean --release` (deletes `build-release` before configuring).
 - **Configure only:** `./scripts/compile.sh --configure` (regenerates build dir only).
 - **Skip tests:** `./scripts/compile.sh --skip-tests` (build only).
 - **Benchmark regression:** `./scripts/compile.sh --benchmark-regression` runs benchmark suite, writes `build-*/benchmarks/benchmark_report.json`, and checks against `benchmarks/benchmark_baseline.json`.
 - **Optional Wasm runtime checks:** `./scripts/compile.sh --wasm-runtime-checks` runs `scripts/run_wasm_runtime_checks.sh`; it executes Wasm outputs with `wasmtime` when available and emits an explicit skip message otherwise.
 - **Coverage:** `./scripts/compile.sh --coverage` builds with clang coverage flags, runs tests, and writes reports to `build-debug/coverage/coverage.txt` plus `build-debug/coverage/html/`.
+- **Coverage helper:** `./scripts/code_coverage.sh` runs a clean debug coverage build, prints total function/line coverage, and prints artifact paths.
+- **Lines-of-code helper:** `./scripts/lines_of_code.sh` reports line totals for `src/` and `include/`.
 - **CTest:** from `build-debug/` run `ctest --output-on-failure`.
 - **Direct test binary runs:** execute `build-debug/PrimeStruct_tests` from `build-debug/` so compile-run suites can resolve `./primec`.
+
+## Generated artifacts
+- Debug builds go in `build-debug/`; release builds go in `build-release/`.
+- `compile_commands.json` is exported in each build directory on every configure.
+- Coverage artifacts live in `build-debug/coverage/` (`coverage.txt`, `html/`, and `PrimeStruct.profdata`).
 
 ## Semantics pipeline note
 - `Semantics::validate` runs in this order: apply semantic transforms → maybe-constructor rewrite →

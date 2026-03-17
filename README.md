@@ -84,17 +84,53 @@ semantics and deterministic behavior across targets.
 
 ## Getting Started
 
+### Prerequisites
+
+- Bash-compatible shell environment
+- CMake 3.20 or newer
+- A C++23-capable compiler such as `clang++` or `g++`
+- Python 3
+- `rg` (`ripgrep`) for helper scripts such as `scripts/lines_of_code.sh`
+- For coverage: `clang++`, `llvm-profdata`, and `llvm-cov` in `PATH` (or discoverable through `xcrun` on macOS)
+
 ### Build
 
     ./scripts/compile.sh
+
+Clean debug build:
+
+    ./scripts/compile.sh --clean
 
 Release build:
 
     ./scripts/compile.sh --release
 
+Clean release build:
+
+    ./scripts/compile.sh --clean --release
+
+Configure only:
+
+    ./scripts/compile.sh --configure
+
 Optional Wasm runtime checks (auto-skip when `wasmtime` is unavailable):
 
     ./scripts/compile.sh --wasm-runtime-checks
+
+Coverage helper:
+
+    ./scripts/code_coverage.sh
+
+Lines-of-code helper:
+
+    ./scripts/lines_of_code.sh
+
+### Generated Artifacts
+
+- Debug artifacts are written to `build-debug/`
+- Release artifacts are written to `build-release/`
+- `compile_commands.json` is generated in each build directory on configure
+- Coverage outputs are written to `build-debug/coverage/`
 
 ### Run
 

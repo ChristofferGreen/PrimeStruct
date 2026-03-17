@@ -6,6 +6,7 @@ BUILD_DIR="$ROOT_DIR/build-debug"
 BUILD_TYPE="Debug"
 RUN_TESTS=1
 CONFIGURE_ONLY=0
+CLEAN=0
 COVERAGE=0
 RUN_BENCHMARK=0
 RUN_WASM_RUNTIME_CHECKS=0
@@ -24,6 +25,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --configure)
       CONFIGURE_ONLY=1
+      shift
+      ;;
+    --clean)
+      CLEAN=1
       shift
       ;;
     --skip-tests)
@@ -69,21 +74,26 @@ if [[ $COVERAGE -eq 1 ]]; then
     exit 2
   fi
   COVERAGE_CMAKE_ARGS+=("-DCMAKE_CXX_COMPILER=clang++")
-  if command -v clang >/dev/null 2>&1; then
-    COVERAGE_CMAKE_ARGS+=("-DCMAKE_C_COMPILER=clang")
-  fi
   COVERAGE_CXX_FLAGS="${CXXFLAGS:-} -fprofile-instr-generate -fcoverage-mapping"
   COVERAGE_LINK_FLAGS="${LDFLAGS:-} -fprofile-instr-generate"
   COVERAGE_CMAKE_ARGS+=("-DCMAKE_CXX_FLAGS=${COVERAGE_CXX_FLAGS}")
   COVERAGE_CMAKE_ARGS+=("-DCMAKE_EXE_LINKER_FLAGS=${COVERAGE_LINK_FLAGS}")
 fi
 
-cmake -S "$ROOT_DIR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" "${COVERAGE_CMAKE_ARGS[@]}"
-cmake --build "$BUILD_DIR" --parallel "$BUILD_JOBS"
+if [[ $CLEAN -eq 1 ]]; then
+  rm -rf "$BUILD_DIR"
+fi
+
+cmake -S "$ROOT_DIR" -B "$BUILD_DIR" \
+  -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  "${COVERAGE_CMAKE_ARGS[@]}"
 
 if [[ $CONFIGURE_ONLY -eq 1 ]]; then
   exit 0
 fi
+
+cmake --build "$BUILD_DIR" --parallel "$BUILD_JOBS"
 
 if [[ $RUN_TESTS -eq 1 ]]; then
   if [[ $COVERAGE -eq 1 ]]; then
