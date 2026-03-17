@@ -22,17 +22,19 @@ now rewrite through dedicated substrate-backed stdlib helpers, fallible
 configs/helpers, and a type-valued
 `Device.create_pipeline([vertex_type] VertexColored, ...)` entry point that now
 rewrites onto a dedicated substrate-backed stdlib helper for the locked v1
-vertex wire type. `Frame.render_pass(...)`, `RenderPass.draw_mesh(...)`, and
-`RenderPass.end()` still remain staged as the next explicit substrate step.
-Browser/native/Metal host samples still sit around shared `.prime`
-simulation/data paths. The current experimental package intentionally keeps
-deterministic rejects for source-level profile literals and for unsupported
-`create_pipeline` vertex types instead of inventing more compiler-owned
-routing, and Result-carrying method wrappers now also reject bare explicit
-non-`Result` struct bindings during semantics rather than deferring those
-failures to lowering; follow-up work should keep the public graphics API
-primarily in `.prime` files while leaving only minimal backend substrate in
-C++/host code.
+vertex wire type. The non-Result `Frame.render_pass(...)` plus
+`RenderPass.draw_mesh(...)` / `RenderPass.end()` path now routes through
+minimal pass-encoding substrate helpers while preserving deterministic
+zero-token / no-op fallback on invalid handles; threading those helpers through
+one real host/runtime path is still the next explicit step. Browser/native/Metal
+host samples still sit around shared `.prime` simulation/data paths. The
+current experimental package intentionally keeps deterministic rejects for
+source-level profile literals and for unsupported `create_pipeline` vertex
+types instead of inventing more compiler-owned routing, and Result-carrying
+method wrappers now also reject bare explicit non-`Result` struct bindings
+during semantics rather than deferring those failures to lowering; follow-up
+work should keep the public graphics API primarily in `.prime` files while
+leaving only minimal backend substrate in C++/host code.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.

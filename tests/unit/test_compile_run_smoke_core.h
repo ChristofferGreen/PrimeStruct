@@ -308,10 +308,24 @@ main() {
   [i32] frameToken{GraphicsSubstrate.acquireFrame(frameConfig)?}
   [Frame] frame{Frame([token] frameToken)}
   [SubstrateRenderPassConfig] renderPassConfig{
-    SubstrateRenderPassConfig([frame] frame, [renderPassToken] 29i32)
+    SubstrateRenderPassConfig(
+      [frame] frame,
+      [renderPassToken] 29i32,
+      [clearColor] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clearDepth] 1.0f32
+    )
   }
   [i32] renderPassToken{GraphicsSubstrate.beginRenderPass(renderPassConfig)?}
   [RenderPass] renderPass{RenderPass([token] renderPassToken)}
+  [Material] material{Material([token] 31i32)}
+  [SubstrateDrawMeshConfig] drawMeshConfig{
+    SubstrateDrawMeshConfig([renderPass] renderPass, [mesh] mesh, [material] material, [drawToken] 79i32)
+  }
+  [i32] drawToken{GraphicsSubstrate.drawMesh(drawMeshConfig)}
+  [SubstrateRenderPassEndConfig] endConfig{
+    SubstrateRenderPassEndConfig([renderPass] renderPass, [endToken] 83i32)
+  }
+  [i32] endToken{GraphicsSubstrate.endRenderPass(endConfig)}
   [i32 mut] score{0i32}
 
   if(equal(window.token, 11i32)) {
@@ -338,6 +352,12 @@ main() {
   if(equal(renderPass.token, 29i32)) {
     score = plus(score, 1i32)
   }
+  if(equal(drawToken, 79i32)) {
+    score = plus(score, 1i32)
+  }
+  if(equal(endToken, 83i32)) {
+    score = plus(score, 1i32)
+  }
 
   GraphicsSubstrate.submitFrame(frame.token, queue.token)?
   GraphicsSubstrate.presentFrame(frame.token)?
@@ -352,14 +372,14 @@ main() {
 
   const std::string compileExeCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileExeCmd) == 0);
-  CHECK(runCommand(exePath) == 8);
+  CHECK(runCommand(exePath) == 10);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runVmCmd) == 8);
+  CHECK(runCommand(runVmCmd) == 10);
 
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 8);
+  CHECK(runCommand(nativePath) == 10);
 }
 
 TEST_CASE("experimental gfx window constructor entry point runs across backends") {
@@ -546,6 +566,65 @@ main() {
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 6);
+}
+
+TEST_CASE("experimental gfx render pass wrapper slice runs across backends") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int>]
+main() {
+  [Frame] frame{Frame([token] 31i32)}
+  [Mesh] mesh{Mesh([token] 37i32, [vertexCount] 3i32, [indexCount] 3i32)}
+  [Material] material{Material([token] 41i32)}
+  [RenderPass] pass{
+    frame.render_pass(
+      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_depth] 1.0f32
+    )
+  }
+  [Frame] badFrame{Frame([token] 0i32)}
+  [RenderPass] badPass{
+    badFrame.render_pass(
+      [clear_color] ColorRGBA(0.0f32, 0.0f32, 0.0f32, 1.0f32),
+      [clear_depth] 1.0f32
+    )
+  }
+  pass.draw_mesh(mesh, material)
+  pass.end()
+  badPass.draw_mesh(mesh, material)
+  badPass.end()
+  [i32 mut] score{0i32}
+
+  if(equal(pass.token, 32i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(90i32)
+  }
+  if(equal(badPass.token, 0i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(91i32)
+  }
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_gfx_experimental_render_pass_wrappers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_render_pass_wrappers_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_experimental_render_pass_wrappers_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 2);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 2);
 }
 
 TEST_CASE("experimental gfx resource wrapper errors stay deterministic across backends") {
@@ -3172,6 +3251,20 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
           std::string::npos);
     CHECK(guidelinesDoc.find("the fallible `create_swapchain(...)`,") != std::string::npos);
     CHECK(guidelinesDoc.find("`create_mesh(...)`, and `frame()` wrapper paths now route through") !=
+          std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-V1-RENDER-PASS-STATUS");
+    CHECK(graphicsDoc.find("The non-Result `Frame.render_pass(...)` plus") != std::string::npos);
+    CHECK(graphicsDoc.find("`RenderPass.draw_mesh(...)` / `RenderPass.end()` path now routes through") !=
+          std::string::npos);
+    CHECK(graphicsDoc.find("minimal pass-encoding substrate helpers while preserving deterministic") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("non-Result `render_pass(...)` / `draw_mesh(...)` / `end()` path now routes") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("the non-Result `render_pass(...)` /") != std::string::npos);
+    CHECK(guidelinesDoc.find("`draw_mesh(...)` / `end()` path now routes through minimal pass-encoding") !=
           std::string::npos);
   }
 

@@ -52,12 +52,15 @@ semantics after canonicalization.
   `Window(...)` and `Device()` entry points now rewrite through
   substrate-backed helpers there, the fallible `create_swapchain(...)`,
   `create_mesh(...)`, and `frame()` wrapper paths now route through
-  substrate-backed configs/helpers, and
+  substrate-backed configs/helpers, the non-Result `render_pass(...)` /
+  `draw_mesh(...)` / `end()` path now routes through minimal pass-encoding
+  substrate helpers with deterministic zero-token / no-op fallback on invalid
+  handles, and
   `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites
   through the matching pipeline helper, but source-level profile literals and
-  unsupported pipeline vertex types are still intentionally rejected while
-  render-pass encoding remains staged until the remaining canonical entry
-  points land.
+  unsupported pipeline vertex types are still intentionally rejected while the
+  first real host/runtime pass-encoding path remains staged until the
+  remaining canonical entry points land.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
   Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with

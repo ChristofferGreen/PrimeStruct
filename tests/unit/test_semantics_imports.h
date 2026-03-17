@@ -724,9 +724,28 @@ main() {
   [SubstrateFrameConfig] frameConfig{SubstrateFrameConfig([swapchain] swapchain, [frameToken] 23i32)}
   [i32] frameToken{GraphicsSubstrate.acquireFrame(frameConfig)?}
   [Frame] frame{Frame([token] frameToken)}
+  [SubstrateRenderPassConfig] renderPassConfig{
+    SubstrateRenderPassConfig(
+      [frame] frame,
+      [renderPassToken] 29i32,
+      [clearColor] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clearDepth] 1.0f32
+    )
+  }
+  [i32] renderPassToken{GraphicsSubstrate.beginRenderPass(renderPassConfig)?}
+  [RenderPass] renderPass{RenderPass([token] renderPassToken)}
+  [Material] material{Material([token] 31i32)}
+  [SubstrateDrawMeshConfig] drawMeshConfig{
+    SubstrateDrawMeshConfig([renderPass] renderPass, [mesh] Mesh([token] 27i32, [vertexCount] 3i32, [indexCount] 3i32), [material] material, [drawToken] 41i32)
+  }
+  [i32] drawToken{GraphicsSubstrate.drawMesh(drawMeshConfig)}
+  [SubstrateRenderPassEndConfig] endConfig{
+    SubstrateRenderPassEndConfig([renderPass] renderPass, [endToken] 43i32)
+  }
+  [i32] endToken{GraphicsSubstrate.endRenderPass(endConfig)}
   GraphicsSubstrate.submitFrame(frame.token, queue.token)?
   GraphicsSubstrate.presentFrame(frame.token)?
-  return(plus(window.width, device.token))
+  return(plus(plus(window.width, device.token), plus(drawToken, endToken)))
 }
 )";
   std::string error;
