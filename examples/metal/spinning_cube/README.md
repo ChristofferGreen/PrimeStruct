@@ -5,11 +5,16 @@ spinning-cube sample.
 
 ## Files
 - `cube.metal`: minimal Metal vertex/fragment shaders for the cube sample.
-- `metal_host.mm`: minimal macOS Metal host glue that loads the compiled
-  shader library and submits a one-frame draw pass.
+- `metal_host.mm`: thin sample-owned CLI/parity wrapper that binds triangle
+  resource callbacks onto the shared offscreen Metal helper.
 - `../../shared/gfx_contract_shared.h`: shared host-side `GfxError` mapping and
   locked `/std/gfx/VertexColored` upload-layout definition used by the native
   and Metal sample hosts.
+- `../../shared/metal_offscreen_host.h`: shared offscreen Metal runtime helper
+  that owns device/library/queue setup, shader-loading failures, command
+  submission, and the software-surface demo path.
+- `../../../scripts/run_metal_spinning_cube.sh`: thin sample launcher over the
+  shared Metal build/run helper.
 
 ## Local Shader Build (macOS)
 1. Compile Metal source to AIR:
@@ -22,6 +27,25 @@ spinning-cube sample.
    - `./metal_host ./cube.metallib`
 5. Optional software-surface bridge smoke:
    - `./metal_host --software-surface-demo`
+
+## Shared Launcher (macOS)
+```bash
+./scripts/run_metal_spinning_cube.sh
+./scripts/run_metal_spinning_cube.sh --software-surface-demo
+./scripts/run_metal_spinning_cube.sh --snapshot-code 120
+./scripts/run_metal_spinning_cube.sh --parity-check 120
+```
+- Builds into `build-debug/spinning-cube-metal` by default, unless `--out-dir`
+  is provided.
+- Delegates the reusable shader/metallib/host compile flow to
+  `scripts/run_canonical_metal_host.sh`, leaving only sample path binding in
+  `run_metal_spinning_cube.sh`.
+- Default mode compiles `cube.metal`, links `cube.metallib`, builds the host,
+  runs one offscreen frame, and requires `frame_rendered=1`.
+- `--software-surface-demo` skips shader/metallib compilation, runs the shared
+  software-surface path, and requires `software_surface_presented=1`.
+- `--snapshot-code` and `--parity-check` compile only the host and forward the
+  requested deterministic helper mode.
 
 The host prints `gfx_profile=metal-osx` and `frame_rendered=1` and exits 0
 when frame submission completes.
@@ -39,6 +63,9 @@ Failure diagnostics print deterministic:
 - `./metal_host --snapshot-code 120` prints the fixed-step snapshot code.
 - `./metal_host --parity-check 120` runs tolerance-based transform/rotation
   parity checks against chunked stepping (`parity_ok=1` means pass).
+- The launcher exposes the same modes: `./scripts/run_metal_spinning_cube.sh
+  --snapshot-code 120` and `./scripts/run_metal_spinning_cube.sh
+  --parity-check 120`.
 
 ## Profile Gating
 - Browser profile remains `--emit=wasm --wasm-profile browser`.

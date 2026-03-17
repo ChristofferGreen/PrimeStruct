@@ -3,6 +3,7 @@
 #include <simd/simd.h>
 
 #include "../../shared/gfx_contract_shared.h"
+#include "../../shared/metal_offscreen_host.h"
 #include "../../shared/software_surface_bridge.h"
 
 #include <cstddef>
@@ -14,6 +15,10 @@
 namespace {
 
 using GfxErrorCode = primestruct::gfx_contract::GfxErrorCode;
+using FailureInfo = primestruct::metal_offscreen_host::FailureInfo;
+using RenderCallbacks = primestruct::metal_offscreen_host::RenderCallbacks;
+using RenderConfig = primestruct::metal_offscreen_host::RenderConfig;
+using SoftwareSurfaceDemoConfig = primestruct::metal_offscreen_host::SoftwareSurfaceDemoConfig;
 using Vertex = primestruct::gfx_contract::VertexColoredHost;
 
 constexpr Vertex TriangleVertices[3] = {
@@ -33,125 +38,6 @@ bool hasArgument(int argc, char **argv, const std::string &flag) {
 
 const char *deducedGfxProfileName() {
   return "metal-osx";
-}
-
-void emitGfxError(std::ostream &out, GfxErrorCode code, const std::string &why) {
-  out << "gfx_profile=" << deducedGfxProfileName() << "\n";
-  out << "gfx_error_code=" << primestruct::gfx_contract::gfxErrorCodeName(code) << "\n";
-  out << "gfx_error_why=" << why << "\n";
-}
-
-bool uploadSoftwareSurfaceFrame(id<MTLDevice> device,
-                                const primestruct::software_surface::SoftwareSurfaceFrame &frame,
-                                id<MTLTexture> __strong &textureOut,
-                                std::string &whyOut) {
-  if (device == nil) {
-    whyOut = "failed to create Metal device";
-    return false;
-  }
-  if (!primestruct::software_surface::validateFrame(frame, whyOut)) {
-    return false;
-  }
-
-  MTLTextureDescriptor *descriptor =
-      [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
-                                                         width:static_cast<NSUInteger>(frame.width)
-                                                        height:static_cast<NSUInteger>(frame.height)
-                                                     mipmapped:NO];
-  descriptor.storageMode = MTLStorageModeShared;
-  descriptor.usage = MTLTextureUsageShaderRead;
-  textureOut = [device newTextureWithDescriptor:descriptor];
-  if (textureOut == nil) {
-    whyOut = "failed to create software surface texture";
-    return false;
-  }
-
-  const MTLRegion region = MTLRegionMake2D(0, 0, static_cast<NSUInteger>(frame.width), static_cast<NSUInteger>(frame.height));
-  [textureOut replaceRegion:region
-                mipmapLevel:0
-                  withBytes:frame.pixelsBgra8.data()
-                bytesPerRow:static_cast<NSUInteger>(frame.width * 4)];
-  return true;
-}
-
-int renderSoftwareSurfaceDemo() {
-  @autoreleasepool {
-    id<MTLDevice> device = MTLCreateSystemDefaultDevice();
-    if (device == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::DeviceCreateFailed, "failed to create Metal device");
-      return 70;
-    }
-
-    id<MTLCommandQueue> queue = [device newCommandQueue];
-    if (queue == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::DeviceCreateFailed, "failed to create command queue");
-      return 74;
-    }
-
-    const primestruct::software_surface::SoftwareSurfaceFrame surfaceFrame =
-        primestruct::software_surface::makeDemoFrame();
-    id<MTLTexture> softwareSurfaceTexture = nil;
-    std::string softwareSurfaceWhy;
-    if (!uploadSoftwareSurfaceFrame(device, surfaceFrame, softwareSurfaceTexture, softwareSurfaceWhy)) {
-      emitGfxError(std::cerr, GfxErrorCode::MeshCreateFailed, softwareSurfaceWhy);
-      return 75;
-    }
-
-    MTLTextureDescriptor *targetDesc =
-        [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
-                                                           width:static_cast<NSUInteger>(surfaceFrame.width)
-                                                          height:static_cast<NSUInteger>(surfaceFrame.height)
-                                                       mipmapped:NO];
-    targetDesc.storageMode = MTLStorageModePrivate;
-    targetDesc.usage = MTLTextureUsageRenderTarget;
-    id<MTLTexture> targetTexture = [device newTextureWithDescriptor:targetDesc];
-    if (targetTexture == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::FrameAcquireFailed, "failed to create software surface target texture");
-      return 76;
-    }
-
-    id<MTLCommandBuffer> commandBuffer = [queue commandBuffer];
-    if (commandBuffer == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, "failed to create command buffer");
-      return 77;
-    }
-    id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
-    if (blitEncoder == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, "failed to create software surface blit encoder");
-      return 77;
-    }
-    [blitEncoder copyFromTexture:softwareSurfaceTexture
-                     sourceSlice:0
-                     sourceLevel:0
-                    sourceOrigin:MTLOriginMake(0, 0, 0)
-                      sourceSize:MTLSizeMake(static_cast<NSUInteger>(surfaceFrame.width),
-                                             static_cast<NSUInteger>(surfaceFrame.height),
-                                             1)
-                       toTexture:targetTexture
-                destinationSlice:0
-                destinationLevel:0
-               destinationOrigin:MTLOriginMake(0, 0, 0)];
-    [blitEncoder endEncoding];
-
-    [commandBuffer commit];
-    [commandBuffer waitUntilCompleted];
-    if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
-      NSError *commandBufferError = commandBuffer.error;
-      const std::string why = "software surface blit failed: " +
-                              std::string(commandBufferError == nil ? "unknown"
-                                                                    : commandBufferError.localizedDescription.UTF8String);
-      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, why);
-      return 78;
-    }
-
-    std::cout << "gfx_profile=" << deducedGfxProfileName() << "\n";
-    std::cout << "software_surface_bridge=1\n";
-    std::cout << "software_surface_width=" << surfaceFrame.width << "\n";
-    std::cout << "software_surface_height=" << surfaceFrame.height << "\n";
-    std::cout << "software_surface_presented=1\n";
-    std::cout << "frame_rendered=1\n";
-    return 0;
-  }
 }
 
 struct CubeSimulationState {
@@ -259,6 +145,63 @@ bool parseIntArg(const char *text, int &value) {
   return true;
 }
 
+struct MetalHostState {
+  id<MTLBuffer> vertexBuffer = nil;
+};
+
+bool configureTrianglePipeline(void *context,
+                               MTLRenderPipelineDescriptor *pipelineDesc,
+                               FailureInfo &failureOut) {
+  (void)context;
+  (void)failureOut;
+
+  MTLVertexDescriptor *vertexDesc = [[MTLVertexDescriptor alloc] init];
+  vertexDesc.attributes[0].format = MTLVertexFormatFloat4;
+  vertexDesc.attributes[0].offset = offsetof(Vertex, px);
+  vertexDesc.attributes[0].bufferIndex = 0;
+  vertexDesc.attributes[1].format = MTLVertexFormatFloat4;
+  vertexDesc.attributes[1].offset = offsetof(Vertex, r);
+  vertexDesc.attributes[1].bufferIndex = 0;
+  vertexDesc.layouts[0].stride = sizeof(Vertex);
+  vertexDesc.layouts[0].stepRate = 1;
+  vertexDesc.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+  pipelineDesc.vertexDescriptor = vertexDesc;
+  return true;
+}
+
+bool prepareTriangleResources(void *context, id<MTLDevice> device, FailureInfo &failureOut) {
+  auto &state = *reinterpret_cast<MetalHostState *>(context);
+  state.vertexBuffer =
+      [device newBufferWithBytes:TriangleVertices
+                          length:sizeof(TriangleVertices)
+                         options:MTLResourceStorageModeShared];
+  if (state.vertexBuffer == nil) {
+    failureOut.exitCode = 76;
+    failureOut.gfxErrorCode = GfxErrorCode::MeshCreateFailed;
+    failureOut.why = "failed to create vertex buffer";
+    return false;
+  }
+  return true;
+}
+
+bool encodeTriangleFrame(void *context,
+                         id<MTLRenderPipelineState> pipeline,
+                         id<MTLRenderCommandEncoder> encoder,
+                         FailureInfo &failureOut) {
+  auto &state = *reinterpret_cast<MetalHostState *>(context);
+  if (state.vertexBuffer == nil) {
+    failureOut.exitCode = 76;
+    failureOut.gfxErrorCode = GfxErrorCode::MeshCreateFailed;
+    failureOut.why = "vertex buffer was unavailable";
+    return false;
+  }
+
+  [encoder setRenderPipelineState:pipeline];
+  [encoder setVertexBuffer:state.vertexBuffer offset:0 atIndex:0];
+  [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+  return true;
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -296,123 +239,21 @@ int main(int argc, char **argv) {
   }
 
   if (std::string(argv[1]) == "--software-surface-demo") {
-    return renderSoftwareSurfaceDemo();
+    SoftwareSurfaceDemoConfig config;
+    config.gfxProfile = deducedGfxProfileName();
+    return primestruct::metal_offscreen_host::runSoftwareSurfaceDemo(config);
   }
 
-  @autoreleasepool {
-    id<MTLDevice> device = MTLCreateSystemDefaultDevice();
-    if (device == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::DeviceCreateFailed, "failed to create Metal device");
-      return 70;
-    }
+  MetalHostState state;
+  RenderConfig config;
+  config.gfxProfile = deducedGfxProfileName();
+  config.libraryPath = argv[1];
+  config.vertexFunctionName = "cubeVertexMain";
+  config.fragmentFunctionName = "cubeFragmentMain";
 
-    NSError *error = nil;
-    NSString *libraryPath = [NSString stringWithUTF8String:argv[1]];
-    NSURL *libraryUrl = [NSURL fileURLWithPath:libraryPath];
-    id<MTLLibrary> library = [device newLibraryWithURL:libraryUrl error:&error];
-    if (library == nil) {
-      const std::string why =
-          "failed to load metallib: " + std::string(error == nil ? "unknown" : error.localizedDescription.UTF8String);
-      emitGfxError(std::cerr, GfxErrorCode::PipelineCreateFailed, why);
-      return 71;
-    }
-
-    id<MTLFunction> vertexFn = [library newFunctionWithName:@"cubeVertexMain"];
-    id<MTLFunction> fragmentFn = [library newFunctionWithName:@"cubeFragmentMain"];
-    if (vertexFn == nil || fragmentFn == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::PipelineCreateFailed, "missing cube shader entrypoints");
-      return 72;
-    }
-
-    MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
-    pipelineDesc.vertexFunction = vertexFn;
-    pipelineDesc.fragmentFunction = fragmentFn;
-    pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-    MTLVertexDescriptor *vertexDesc = [[MTLVertexDescriptor alloc] init];
-    vertexDesc.attributes[0].format = MTLVertexFormatFloat4;
-    vertexDesc.attributes[0].offset = offsetof(Vertex, px);
-    vertexDesc.attributes[0].bufferIndex = 0;
-    vertexDesc.attributes[1].format = MTLVertexFormatFloat4;
-    vertexDesc.attributes[1].offset = offsetof(Vertex, r);
-    vertexDesc.attributes[1].bufferIndex = 0;
-    vertexDesc.layouts[0].stride = sizeof(Vertex);
-    vertexDesc.layouts[0].stepRate = 1;
-    vertexDesc.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
-    pipelineDesc.vertexDescriptor = vertexDesc;
-
-    id<MTLRenderPipelineState> pipeline =
-        [device newRenderPipelineStateWithDescriptor:pipelineDesc error:&error];
-    if (pipeline == nil) {
-      const std::string why = "failed to create render pipeline: " +
-                              std::string(error == nil ? "unknown" : error.localizedDescription.UTF8String);
-      emitGfxError(std::cerr, GfxErrorCode::PipelineCreateFailed, why);
-      return 73;
-    }
-
-    id<MTLCommandQueue> queue = [device newCommandQueue];
-    if (queue == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::DeviceCreateFailed, "failed to create command queue");
-      return 74;
-    }
-
-    MTLTextureDescriptor *targetDesc =
-        [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
-                                                           width:64
-                                                          height:64
-                                                       mipmapped:NO];
-    targetDesc.storageMode = MTLStorageModePrivate;
-    targetDesc.usage = MTLTextureUsageRenderTarget;
-
-    id<MTLTexture> target = [device newTextureWithDescriptor:targetDesc];
-    if (target == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::FrameAcquireFailed, "failed to create render target texture");
-      return 75;
-    }
-
-    id<MTLBuffer> vertexBuffer =
-        [device newBufferWithBytes:TriangleVertices
-                            length:sizeof(TriangleVertices)
-                           options:MTLResourceStorageModeShared];
-    if (vertexBuffer == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::MeshCreateFailed, "failed to create vertex buffer");
-      return 76;
-    }
-
-    MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
-    pass.colorAttachments[0].texture = target;
-    pass.colorAttachments[0].loadAction = MTLLoadActionClear;
-    pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-    pass.colorAttachments[0].clearColor = MTLClearColorMake(0.03, 0.04, 0.06, 1.0);
-
-    id<MTLCommandBuffer> commandBuffer = [queue commandBuffer];
-    if (commandBuffer == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, "failed to create command buffer");
-      return 77;
-    }
-    id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
-    if (encoder == nil) {
-      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, "failed to create render command encoder");
-      return 77;
-    }
-
-    [encoder setRenderPipelineState:pipeline];
-    [encoder setVertexBuffer:vertexBuffer offset:0 atIndex:0];
-    [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
-    [encoder endEncoding];
-
-    [commandBuffer commit];
-    [commandBuffer waitUntilCompleted];
-    if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
-      NSError *commandBufferError = commandBuffer.error;
-      const std::string why = "render command buffer failed: " +
-                              std::string(commandBufferError == nil ? "unknown"
-                                                                    : commandBufferError.localizedDescription.UTF8String);
-      emitGfxError(std::cerr, GfxErrorCode::QueueSubmitFailed, why);
-      return 78;
-    }
-
-    std::cout << "gfx_profile=" << deducedGfxProfileName() << "\n";
-    std::cout << "frame_rendered=1\n";
-    return 0;
-  }
+  RenderCallbacks callbacks;
+  callbacks.configurePipeline = configureTrianglePipeline;
+  callbacks.prepareResources = prepareTriangleResources;
+  callbacks.encodeFrame = encodeTriangleFrame;
+  return primestruct::metal_offscreen_host::runLibraryRender(config, &state, callbacks);
 }

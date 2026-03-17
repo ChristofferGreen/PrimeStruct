@@ -236,53 +236,33 @@ run_native_check() {
 }
 
 run_metal_check() {
-  local metal_sample_dir="$ROOT_DIR/examples/metal/spinning_cube"
   local metal_dir="$WORK_DIR/metal"
-  local air_path="$metal_dir/cube.air"
-  local metallib_path="$metal_dir/cube.metallib"
-  local host_bin="$metal_dir/metal_host"
   local host_out="$metal_dir/metal_host.out.txt"
   local host_err="$metal_dir/metal_host.err.txt"
+  local launcher_script="$ROOT_DIR/scripts/run_metal_spinning_cube.sh"
 
-  if [[ ! -f "$metal_sample_dir/cube.metal" || ! -f "$metal_sample_dir/metal_host.mm" ]]; then
-    set_result metal FAIL "missing spinning cube metal sample files"
-    return
-  fi
-
-  if ! xcrun --version >/dev/null 2>&1; then
-    set_result metal SKIP "xcrun unavailable"
-    return
-  fi
-  if ! xcrun --find metal >/dev/null 2>&1; then
-    set_result metal SKIP "xcrun metal unavailable"
-    return
-  fi
-  if ! xcrun --find metallib >/dev/null 2>&1; then
-    set_result metal SKIP "xcrun metallib unavailable"
+  if [[ ! -f "$launcher_script" ]]; then
+    set_result metal FAIL "missing spinning cube metal launcher"
     return
   fi
 
   rm -rf "$metal_dir"
   mkdir -p "$metal_dir"
 
-  if ! xcrun metal -std=metal3.0 -c "$metal_sample_dir/cube.metal" -o "$air_path"; then
-    set_result metal FAIL "metal shader compile failed"
-    return
-  fi
-
-  if ! xcrun metallib "$air_path" -o "$metallib_path"; then
-    set_result metal FAIL "metallib link failed"
-    return
-  fi
-
-  if ! xcrun clang++ -std=c++17 -fobjc-arc "$metal_sample_dir/metal_host.mm" \
-      -framework Foundation -framework Metal -o "$host_bin"; then
-    set_result metal FAIL "metal host compile failed"
-    return
-  fi
-
-  if ! "$host_bin" "$metallib_path" >"$host_out" 2>"$host_err"; then
-    set_result metal FAIL "metal host execution failed"
+  if ! "$launcher_script" --out-dir "$metal_dir" >"$host_out" 2>"$host_err"; then
+    if grep -Fq "xcrun unavailable" "$host_err"; then
+      set_result metal SKIP "xcrun unavailable"
+      return
+    fi
+    if grep -Fq "xcrun metal unavailable" "$host_err"; then
+      set_result metal SKIP "xcrun metal unavailable"
+      return
+    fi
+    if grep -Fq "xcrun metallib unavailable" "$host_err"; then
+      set_result metal SKIP "xcrun metallib unavailable"
+      return
+    fi
+    set_result metal FAIL "metal launcher execution failed"
     return
   fi
 

@@ -213,10 +213,18 @@ xcrun metal -std=metal3.0 -c examples/metal/spinning_cube/cube.metal -o /tmp/cub
 xcrun metallib /tmp/cube.air -o /tmp/cube.metallib
 xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework Metal -o /tmp/metal_host
 /tmp/metal_host /tmp/cube.metallib
+./scripts/run_metal_spinning_cube.sh
+./scripts/run_metal_spinning_cube.sh --software-surface-demo
 ```
 Expected runtime behavior:
 - Startup: host process returns 0 after one frame submission.
 - Diagnostics: prints `frame_rendered=1`.
+- The sample wrapper now delegates the reusable shader/metallib/host build and
+  launch flow to `scripts/run_canonical_metal_host.sh`, leaving only
+  spinning-cube path binding in `run_metal_spinning_cube.sh`.
+- The Metal host itself now binds its triangle/resource callbacks onto
+  `examples/shared/metal_offscreen_host.h`, so the sample file no longer owns
+  the offscreen device/library/queue/submit shell directly.
 
 Software surface bridge demo:
 ```bash

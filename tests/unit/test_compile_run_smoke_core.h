@@ -3769,6 +3769,18 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   }
 
   {
+    CAPTURE("GFX-V1-METAL-HOST-LAUNCHER-THINNING-STATUS");
+    CHECK(graphicsDoc.find("Metal sample path now also routes through shared helpers") != std::string::npos);
+    CHECK(graphicsDoc.find("shared metal launch helper") != std::string::npos);
+    CHECK(primeStructDoc.find("Metal sample launcher now also delegates to one shared metal launch helper") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("offscreen runtime shell lives in one shared helper") != std::string::npos);
+    CHECK(guidelinesDoc.find("Metal launcher now delegates to") != std::string::npos);
+    CHECK(guidelinesDoc.find("shared metal launch helper") != std::string::npos);
+    CHECK(guidelinesDoc.find("remaining browser") != std::string::npos);
+  }
+
+  {
     CAPTURE("GFX-V1-CANONICAL-STDLIB-STATUS");
     CHECK(graphicsDoc.find("first canonical `/std/gfx/*` stdlib surface") != std::string::npos);
     CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)` and `Device()` entry points") !=

@@ -1771,6 +1771,11 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "Metal -o /tmp/metal_host",
       "/tmp/metal_host /tmp/cube.metallib",
       "/tmp/metal_host --software-surface-demo",
+      "./scripts/run_metal_spinning_cube.sh",
+      "./scripts/run_metal_spinning_cube.sh --software-surface-demo",
+      "./scripts/run_metal_spinning_cube.sh --snapshot-code 120",
+      "./scripts/run_metal_spinning_cube.sh --parity-check 120",
+      "`scripts/run_canonical_metal_host.sh`",
       "shared Metal texture and blits it into the host target texture.",
       "### Native Windowed Execution Preflight (macOS)",
       "./scripts/preflight_native_spinning_cube_window.sh",
@@ -4184,17 +4189,23 @@ TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiri
 
   const std::string source = readFile(metalHostPath.string());
   CHECK(source.find("#include \"../../shared/gfx_contract_shared.h\"") != std::string::npos);
-  CHECK(source.find("gfx_profile=") != std::string::npos);
+  CHECK(source.find("#include \"../../shared/metal_offscreen_host.h\"") != std::string::npos);
   CHECK(source.find("metal-osx") != std::string::npos);
-  CHECK(source.find("gfx_error_code=") != std::string::npos);
-  CHECK(source.find("gfx_error_why=") != std::string::npos);
   CHECK(source.find("using GfxErrorCode = primestruct::gfx_contract::GfxErrorCode;") != std::string::npos);
-  CHECK(source.find("primestruct::gfx_contract::gfxErrorCodeName(code)") != std::string::npos);
-  CHECK(source.find("newLibraryWithURL") != std::string::npos);
-  CHECK(source.find("newLibraryWithFile") == std::string::npos);
+  CHECK(source.find("using RenderCallbacks = primestruct::metal_offscreen_host::RenderCallbacks;") !=
+        std::string::npos);
+  CHECK(source.find("using RenderConfig = primestruct::metal_offscreen_host::RenderConfig;") !=
+        std::string::npos);
   CHECK(source.find("using Vertex = primestruct::gfx_contract::VertexColoredHost;") != std::string::npos);
   CHECK(source.find("struct Vertex {") == std::string::npos);
   CHECK(source.find("const char *gfxErrorCodeName(") == std::string::npos);
+  CHECK(source.find("configureTrianglePipeline") != std::string::npos);
+  CHECK(source.find("prepareTriangleResources") != std::string::npos);
+  CHECK(source.find("encodeTriangleFrame") != std::string::npos);
+  CHECK(source.find("primestruct::metal_offscreen_host::runLibraryRender") != std::string::npos);
+  CHECK(source.find("newLibraryWithURL") == std::string::npos);
+  CHECK(source.find("newCommandQueue") == std::string::npos);
+  CHECK(source.find("renderCommandEncoderWithDescriptor") == std::string::npos);
   CHECK(source.find("MTLVertexDescriptor *vertexDesc = [[MTLVertexDescriptor alloc] init];") != std::string::npos);
   CHECK(source.find("vertexDesc.attributes[0].format = MTLVertexFormatFloat4;") != std::string::npos);
   CHECK(source.find("vertexDesc.attributes[0].offset = offsetof(Vertex, px);") != std::string::npos);
@@ -4202,6 +4213,9 @@ TEST_CASE("spinning cube metal host pipeline config locks vertex descriptor wiri
   CHECK(source.find("vertexDesc.attributes[1].offset = offsetof(Vertex, r);") != std::string::npos);
   CHECK(source.find("vertexDesc.layouts[0].stride = sizeof(Vertex);") != std::string::npos);
   CHECK(source.find("pipelineDesc.vertexDescriptor = vertexDesc;") != std::string::npos);
+  CHECK(source.find("state.vertexBuffer =") != std::string::npos);
+  CHECK(source.find("setRenderPipelineState:pipeline") != std::string::npos);
+  CHECK(source.find("setVertexBuffer:state.vertexBuffer offset:0 atIndex:0") != std::string::npos);
 }
 
 TEST_CASE("spinning cube metal host software surface bridge stays source locked") {
@@ -4217,17 +4231,132 @@ TEST_CASE("spinning cube metal host software surface bridge stays source locked"
 
   const std::string source = readFile(metalHostPath.string());
   CHECK(source.find("#include \"../../shared/gfx_contract_shared.h\"") != std::string::npos);
-  CHECK(source.find("#include \"../../shared/software_surface_bridge.h\"") != std::string::npos);
-  CHECK(source.find("uploadSoftwareSurfaceFrame(") != std::string::npos);
-  CHECK(source.find("renderSoftwareSurfaceDemo()") != std::string::npos);
+  CHECK(source.find("#include \"../../shared/metal_offscreen_host.h\"") != std::string::npos);
   CHECK(source.find("--software-surface-demo") != std::string::npos);
+  CHECK(source.find("SoftwareSurfaceDemoConfig config;") != std::string::npos);
+  CHECK(source.find("primestruct::metal_offscreen_host::runSoftwareSurfaceDemo(config)") != std::string::npos);
+  CHECK(source.find("uploadSoftwareSurfaceFrame(") == std::string::npos);
+  CHECK(source.find("renderSoftwareSurfaceDemo()") == std::string::npos);
+}
+
+TEST_CASE("shared metal offscreen host helper stays source locked") {
+  std::filesystem::path sharedDir = std::filesystem::path("..") / "examples" / "shared";
+  if (!std::filesystem::exists(sharedDir)) {
+    sharedDir = std::filesystem::current_path() / "examples" / "shared";
+  }
+  REQUIRE(std::filesystem::exists(sharedDir));
+
+  const std::filesystem::path sharedHeaderPath = sharedDir / "metal_offscreen_host.h";
+  REQUIRE(std::filesystem::exists(sharedHeaderPath));
+
+  const std::string source = readFile(sharedHeaderPath.string());
+  CHECK(source.find("namespace primestruct::metal_offscreen_host {") != std::string::npos);
+  CHECK(source.find("struct SoftwareSurfaceDemoConfig {") != std::string::npos);
+  CHECK(source.find("struct RenderConfig {") != std::string::npos);
+  CHECK(source.find("struct RenderCallbacks {") != std::string::npos);
+  CHECK(source.find("gfx_error_code=") != std::string::npos);
+  CHECK(source.find("gfx_error_why=") != std::string::npos);
+  CHECK(source.find("uploadSoftwareSurfaceFrame(") != std::string::npos);
+  CHECK(source.find("runSoftwareSurfaceDemo") != std::string::npos);
+  CHECK(source.find("runLibraryRender") != std::string::npos);
+  CHECK(source.find("newLibraryWithURL") != std::string::npos);
+  CHECK(source.find("newCommandQueue") != std::string::npos);
+  CHECK(source.find("renderCommandEncoderWithDescriptor") != std::string::npos);
   CHECK(source.find("software_surface_bridge=1") != std::string::npos);
-  CHECK(source.find("software_surface_width=") != std::string::npos);
-  CHECK(source.find("software_surface_height=") != std::string::npos);
   CHECK(source.find("software_surface_presented=1") != std::string::npos);
-  CHECK(source.find("id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];") !=
+  CHECK(source.find("frame_rendered=1") != std::string::npos);
+}
+
+TEST_CASE("metal spinning cube launcher wrapper stays thin over shared helper") {
+  std::filesystem::path scriptPath = std::filesystem::path("..") / "scripts" / "run_metal_spinning_cube.sh";
+  std::filesystem::path helperPath = std::filesystem::path("..") / "scripts" / "run_canonical_metal_host.sh";
+  std::filesystem::path demoScriptPath = std::filesystem::path("..") / "scripts" / "run_spinning_cube_demo.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_metal_spinning_cube.sh";
+  }
+  if (!std::filesystem::exists(helperPath)) {
+    helperPath = std::filesystem::current_path() / "scripts" / "run_canonical_metal_host.sh";
+  }
+  if (!std::filesystem::exists(demoScriptPath)) {
+    demoScriptPath = std::filesystem::current_path() / "scripts" / "run_spinning_cube_demo.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+  REQUIRE(std::filesystem::exists(helperPath));
+  REQUIRE(std::filesystem::exists(demoScriptPath));
+
+  const std::string scriptSource = readFile(scriptPath.string());
+  const std::string helperSource = readFile(helperPath.string());
+  const std::string demoSource = readFile(demoScriptPath.string());
+
+  CHECK(scriptSource.find("exec bash \"$ROOT_DIR/scripts/run_canonical_metal_host.sh\"") != std::string::npos);
+  CHECK(scriptSource.find("--shader-source \"$ROOT_DIR/examples/metal/spinning_cube/cube.metal\"") !=
         std::string::npos);
-  CHECK(source.find("copyFromTexture:softwareSurfaceTexture") != std::string::npos);
+  CHECK(scriptSource.find("--host-source \"$ROOT_DIR/examples/metal/spinning_cube/metal_host.mm\"") !=
+        std::string::npos);
+  CHECK(helperSource.find("Compiling Metal shader") != std::string::npos);
+  CHECK(helperSource.find("Linking metallib") != std::string::npos);
+  CHECK(helperSource.find("Launching ${HOST_DESCRIPTION}") != std::string::npos);
+  CHECK(helperSource.find("frame_rendered=1") != std::string::npos);
+  CHECK(helperSource.find("software_surface_presented=1") != std::string::npos);
+  CHECK(helperSource.find("snapshot_code=") != std::string::npos);
+  CHECK(helperSource.find("parity_ok=1") != std::string::npos);
+  CHECK(demoSource.find("run_metal_spinning_cube.sh") != std::string::npos);
+  CHECK(demoSource.find("metal launcher execution failed") != std::string::npos);
+  CHECK(demoSource.find("metal shader compile failed") == std::string::npos);
+  CHECK(demoSource.find("metallib link failed") == std::string::npos);
+  CHECK(demoSource.find("metal host compile failed") == std::string::npos);
+}
+
+TEST_CASE("metal launcher compile run coverage validates shared helper path") {
+  std::filesystem::path scriptPath = std::filesystem::path("..") / "scripts" / "run_metal_spinning_cube.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_metal_spinning_cube.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun unavailable; metal launcher coverage requires macOS tooling");
+    return;
+  }
+  if (runCommand("xcrun --find metal > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun metal unavailable; metal launcher coverage requires Metal tooling");
+    return;
+  }
+  if (runCommand("xcrun --find metallib > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun metallib unavailable; metal launcher coverage requires Metal tooling");
+    return;
+  }
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_launcher_compile_run_coverage";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path launcherOutPath = outDir / "launcher.out.txt";
+  const std::filesystem::path launcherErrPath = outDir / "launcher.err.txt";
+  const std::string command =
+      quoteShellArg(scriptPath.string()) + " --out-dir " + quoteShellArg(outDir.string()) + " > " +
+      quoteShellArg(launcherOutPath.string()) + " 2> " + quoteShellArg(launcherErrPath.string());
+  CHECK(runCommand(command) == 0);
+
+  const std::string output = readFile(launcherOutPath.string());
+  const std::string diagnostics = readFile(launcherErrPath.string());
+  CHECK(diagnostics.find("[metal-launcher] ERROR:") == std::string::npos);
+  CHECK(output.find("[metal-launcher] Compiling metal host") != std::string::npos);
+  CHECK(output.find("[metal-launcher] Compiling Metal shader") != std::string::npos);
+  CHECK(output.find("[metal-launcher] Linking metallib") != std::string::npos);
+  CHECK(output.find("[metal-launcher] Launching metal host") != std::string::npos);
+  CHECK(output.find("gfx_profile=metal-osx") != std::string::npos);
+  CHECK(output.find("frame_rendered=1") != std::string::npos);
+  CHECK(output.find("[metal-launcher] PASS: launch completed") != std::string::npos);
+
+  CHECK(std::filesystem::exists(outDir / "cube.air"));
+  CHECK(std::filesystem::exists(outDir / "cube.metallib"));
+  CHECK(std::filesystem::exists(outDir / "spinning_cube_metal_host"));
+  CHECK(std::filesystem::exists(outDir / "spinning_cube_metal_host.stdout.txt"));
+  CHECK(std::filesystem::exists(outDir / "spinning_cube_metal_host.stderr.txt"));
 }
 
 TEST_CASE("spinning cube vertexcolored snippets stay source locked") {

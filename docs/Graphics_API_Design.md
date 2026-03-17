@@ -33,7 +33,11 @@ thin wrapper over a shared canonical gfx launch helper, and the native macOS
 window host itself now binds its cube/software-surface callbacks onto a shared
 native Metal window presenter helper instead of owning the `NSWindow`,
 `CAMetalLayer`, timer, and first-frame/exit shell directly. The browser and
-Metal host runtimes still otherwise sit around shared `.prime`
+Metal sample path now also routes through shared helpers: the offscreen Metal
+runtime shell lives in `examples/shared/metal_offscreen_host.h`, and the
+sample launcher now delegates to `scripts/run_canonical_metal_host.sh` through
+`scripts/run_metal_spinning_cube.sh`. The browser host/runtime still otherwise
+sits around shared `.prime`
 simulation/data paths. The repo now also
 ships real compile-run
 conformance programs that import both `/std/gfx/experimental/*` and
@@ -48,7 +52,7 @@ now also rejects `/std/gfx/*` and `/std/gfx/experimental/*` imports
 deterministically on wasm (`wasm-browser`, `wasm-wasi`) and shader-only
 (`glsl`, `spirv`) emits because those targets still lack the required runtime
 substrate. Follow-up work still needs to reduce the remaining sample-owned
-compatibility/contract glue, thin the remaining Metal/browser host
+compatibility/contract glue, thin the remaining browser host
 launch/runtime code, and keep the remaining public graphics API primarily in
 `.prime` files while leaving only minimal backend substrate in C++/host code.
 
