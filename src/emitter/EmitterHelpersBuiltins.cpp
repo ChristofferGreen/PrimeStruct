@@ -1531,6 +1531,7 @@ bool getVectorMutatorName(const Expr &expr,
   if (nameMap.count(full) > 0) {
     return false;
   }
+  const bool isExplicitStdlibVectorHelper = full.rfind("/std/collections/vector/", 0) == 0;
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
@@ -1543,6 +1544,11 @@ bool getVectorMutatorName(const Expr &expr,
     return false;
   }
   if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (isExplicitStdlibVectorHelper &&
+      (name == "clear" || name == "remove_at" || name == "remove_swap") &&
+      nameMap.count("/vector/" + name) == 0) {
     return false;
   }
   if (name == "push" || name == "pop" || name == "reserve" || name == "clear" || name == "remove_at" ||

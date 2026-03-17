@@ -129,6 +129,10 @@ static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
   if (!isVectorMutatorCall || stmt.args.empty()) {
     return DirectCallStatementEmitResult::NotMatched;
   }
+  std::string explicitStdlibHelperName;
+  const bool isExplicitStdlibVectorHelper =
+      resolveVectorHelperAliasName(stmt, explicitStdlibHelperName) &&
+      stmt.name.rfind("/std/collections/vector/", 0) == 0;
 
   std::vector<size_t> receiverIndices;
   auto appendReceiverIndex = [&](size_t index) {
@@ -199,6 +203,12 @@ static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
       return DirectCallStatementEmitResult::Error;
     }
     return DirectCallStatementEmitResult::Emitted;
+  }
+
+  if (isExplicitStdlibVectorHelper &&
+      (explicitStdlibHelperName == "clear" || explicitStdlibHelperName == "remove_at" ||
+       explicitStdlibHelperName == "remove_swap")) {
+    return DirectCallStatementEmitResult::NotMatched;
   }
 
   return DirectCallStatementEmitResult::NotMatched;

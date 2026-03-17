@@ -346,6 +346,18 @@ inline std::string makeCanonicalVectorReserveImportRequirementSource() {
   return source;
 }
 
+inline std::string makeCanonicalVectorMutatorImportRequirementSource(const std::string &helperName,
+                                                                     const std::string &callArgs) {
+  std::string source;
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32> mut] values{vector<i32>(4i32, 5i32, 6i32)}\n";
+  source += "  /std/collections/vector/" + helperName + "(" + callArgs + ")\n";
+  source += "  return(count(values))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorNamespaceCountShadowSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -686,6 +698,44 @@ inline void expectCanonicalVectorReserveVmImportRequirement() {
                                        "vector_reserve_canonical_import_requirement",
                                        "vm",
                                        "/std/collections/vector/reserve");
+}
+
+inline void expectCanonicalVectorMutatorImportRequirement(const std::string &emitMode,
+                                                          const std::string &helperName,
+                                                          const std::string &callArgs) {
+  const std::string source = makeCanonicalVectorMutatorImportRequirementSource(helperName, callArgs);
+  const std::string srcPath =
+      writeTemp("vector_" + helperName + "_canonical_import_requirement_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_vector_" + helperName + "_canonical_import_requirement_" + emitMode + "_out.txt"))
+          .string();
+  const std::string expected = "unknown call target: /std/collections/vector/" + helperName;
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(outPath).find(expected) != std::string::npos);
+    return;
+  }
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find(expected) != std::string::npos);
+}
+
+inline void expectCanonicalVectorClearImportRequirement(const std::string &emitMode) {
+  expectCanonicalVectorMutatorImportRequirement(emitMode, "clear", "values");
+}
+
+inline void expectCanonicalVectorRemoveAtImportRequirement(const std::string &emitMode) {
+  expectCanonicalVectorMutatorImportRequirement(emitMode, "remove_at", "values, 1i32");
+}
+
+inline void expectCanonicalVectorRemoveSwapImportRequirement(const std::string &emitMode) {
+  expectCanonicalVectorMutatorImportRequirement(emitMode, "remove_swap", "values, 1i32");
 }
 
 inline void expectCanonicalVectorNamespaceCountShadow(const std::string &emitMode) {

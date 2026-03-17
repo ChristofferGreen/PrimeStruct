@@ -2408,6 +2408,27 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("compiles and runs native shared vector conformance harness for stdlib and experimental helpers") {
+  expectSharedVectorConformanceHarness("native");
+}
+
+TEST_CASE("compiles and runs native canonical namespaced vector helpers") {
+  expectCanonicalVectorNamespaceConformance("native");
+}
+
+TEST_CASE("rejects native canonical namespaced vector mutators without imported helpers") {
+  expectCanonicalVectorClearImportRequirement("native");
+  expectCanonicalVectorRemoveAtImportRequirement("native");
+  expectCanonicalVectorRemoveSwapImportRequirement("native");
+}
+
+TEST_CASE("compiles and runs native experimental vector helper runtime contracts") {
+  expectExperimentalVectorRuntimeContracts("native");
+}
+
+TEST_CASE("rejects native experimental vector ownership-sensitive helpers") {
+  expectExperimentalVectorOwnershipRejects("native");
+}
 TEST_CASE("compiles and runs native vector pop empty runtime contract") {
   SUBCASE("call") {
     expectVectorPopEmptyRuntimeContract("native", false);

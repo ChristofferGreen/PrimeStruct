@@ -177,6 +177,27 @@ TEST_CASE("rejects experimental map bracket access in C++ emitter") {
   expectExperimentalMapIndexConformance("exe");
 }
 
+TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") {
+  expectSharedVectorConformanceHarness("exe");
+}
+
+TEST_CASE("compiles and runs canonical namespaced vector helpers in C++ emitter") {
+  expectCanonicalVectorNamespaceConformance("exe");
+}
+
+TEST_CASE("rejects canonical namespaced vector mutators without imported helpers in C++ emitter") {
+  expectCanonicalVectorClearImportRequirement("exe");
+  expectCanonicalVectorRemoveAtImportRequirement("exe");
+  expectCanonicalVectorRemoveSwapImportRequirement("exe");
+}
+
+TEST_CASE("compiles and runs experimental vector helper runtime contracts in C++ emitter") {
+  expectExperimentalVectorRuntimeContracts("exe");
+}
+
+TEST_CASE("rejects experimental vector ownership-sensitive helpers in C++ emitter") {
+  expectExperimentalVectorOwnershipRejects("exe");
+}
 TEST_CASE("compiles and runs vector pop empty runtime contract in C++ emitter") {
   SUBCASE("call") {
     expectVectorPopEmptyRuntimeContract("exe", false);

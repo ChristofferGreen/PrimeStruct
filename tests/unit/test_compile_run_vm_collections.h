@@ -1990,6 +1990,28 @@ TEST_CASE("runs vm shared stdlib vector conformance harness") {
   expectVmSharedStdlibVectorConformanceHarness();
 }
 
+TEST_CASE("runs vm shared vector conformance harness for stdlib and experimental helpers") {
+  expectSharedVectorConformanceHarness("vm");
+}
+
+TEST_CASE("runs vm canonical namespaced vector helpers") {
+  expectCanonicalVectorNamespaceConformance("vm");
+}
+
+TEST_CASE("rejects vm canonical namespaced vector mutators without imported helpers") {
+  expectCanonicalVectorClearImportRequirement("vm");
+  expectCanonicalVectorRemoveAtImportRequirement("vm");
+  expectCanonicalVectorRemoveSwapImportRequirement("vm");
+}
+
+TEST_CASE("runs vm experimental vector helper runtime contracts") {
+  expectExperimentalVectorRuntimeContracts("vm");
+}
+
+TEST_CASE("rejects vm experimental vector ownership-sensitive helpers") {
+  expectExperimentalVectorOwnershipRejects("vm");
+}
+
 TEST_CASE("runs vm vector pop empty runtime contract") {
   SUBCASE("call") {
     expectVectorPopEmptyRuntimeContract("vm", false);
