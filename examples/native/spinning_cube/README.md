@@ -11,6 +11,9 @@ This sample hosts the shared spinning-cube simulation source from
 - `../../shared/gfx_contract_shared.h`: shared host-side `GfxError` mapping and
   locked `/std/gfx/VertexColored` upload-layout definition used by the native
   and Metal sample hosts.
+- `../../shared/native_metal_window_host.h`: shared native window presenter
+  shell that owns `NSWindow`/`CAMetalLayer` bring-up, frame-loop scheduling,
+  and first-frame/exit diagnostics for the native gfx host path.
 
 ## Local Build Steps
 1. Build the shared cube sample to a native binary:

@@ -3,6 +3,7 @@
 #import <QuartzCore/CAMetalLayer.h>
 
 #include "../../shared/gfx_contract_shared.h"
+#include "../../shared/native_metal_window_host.h"
 #include "../../shared/software_surface_bridge.h"
 
 #include <algorithm>
@@ -64,58 +65,16 @@ constexpr int GfxStreamVersion = 1;
 constexpr size_t GfxHeaderFieldCount = 26;
 
 using GfxErrorCode = primestruct::gfx_contract::GfxErrorCode;
+using FailureInfo = primestruct::native_metal_window::FailureInfo;
+using PresenterCallbacks = primestruct::native_metal_window::PresenterCallbacks;
+using PresenterConfig = primestruct::native_metal_window::PresenterConfig;
+using RenderFrameResult = primestruct::native_metal_window::RenderFrameResult;
+using StartupFailureStage = primestruct::native_metal_window::StartupFailureStage;
 using WindowVertex = primestruct::gfx_contract::VertexColoredHost;
-
-enum class StartupFailureStage {
-  SimulationStreamLoad,
-  GpuDeviceAcquisition,
-  ShaderLoad,
-  PipelineSetup,
-  WindowCreation,
-  FirstFrameSubmission,
-};
-
-const char *startupStageName(StartupFailureStage stage) {
-  switch (stage) {
-    case StartupFailureStage::SimulationStreamLoad:
-      return "simulation_stream_load";
-    case StartupFailureStage::GpuDeviceAcquisition:
-      return "gpu_device_acquisition";
-    case StartupFailureStage::ShaderLoad:
-      return "shader_load";
-    case StartupFailureStage::PipelineSetup:
-      return "pipeline_setup";
-    case StartupFailureStage::WindowCreation:
-      return "window_creation";
-    case StartupFailureStage::FirstFrameSubmission:
-      return "first_frame_submission";
-  }
-  return "unknown";
-}
-
-int startupStageExitCode(StartupFailureStage stage) {
-  switch (stage) {
-    case StartupFailureStage::SimulationStreamLoad:
-      return 69;
-    case StartupFailureStage::GpuDeviceAcquisition:
-      return 70;
-    case StartupFailureStage::ShaderLoad:
-      return 71;
-    case StartupFailureStage::PipelineSetup:
-      return 72;
-    case StartupFailureStage::WindowCreation:
-      return 73;
-    case StartupFailureStage::FirstFrameSubmission:
-      return 74;
-  }
-  return 78;
-}
 
 const char *deducedGfxProfileName() {
   return "native-desktop";
 }
-
-int gExitCode = 0;
 
 struct SimulationFrameState {
   int tick = 0;
@@ -456,144 +415,29 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
   return true;
 }
 
-} // namespace
+struct PrimeStructWindowHostState {
+  bool softwareSurfaceDemoMode = false;
+  bool gfxMode = false;
+  id<MTLDevice> device = nil;
+  id<MTLRenderPipelineState> pipeline = nil;
+  id<MTLDepthStencilState> depthState = nil;
+  id<MTLBuffer> vertexBuffer = nil;
+  id<MTLBuffer> indexBuffer = nil;
+  id<MTLBuffer> uniformBuffer = nil;
+  id<MTLTexture> depthTexture = nil;
+  id<MTLTexture> softwareSurfaceTexture = nil;
+  std::vector<SimulationFrameState> simulationFrames;
+  GfxStreamHeader gfxHeader;
+  NSUInteger indexCount = static_cast<NSUInteger>(CubeIndices.size());
+  CGSize depthTextureSize = CGSizeMake(0.0, 0.0);
+  int frameIndex = 0;
+  bool printedSimulationFrame = false;
+  bool printedSoftwareSurfacePresented = false;
+};
 
-@class PrimeStructWindowHostDelegate;
-
-@interface PrimeStructWindow : NSWindow
-@property(nonatomic, assign) PrimeStructWindowHostDelegate *hostDelegate;
-@end
-
-@interface PrimeStructWindowHostDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
-- (instancetype)initWithMaxFrames:(int)maxFrames
-                           gfxPath:(const std::string &)gfxPath
-               simulationSmokeMode:(bool)simulationSmokeMode
-           softwareSurfaceDemoMode:(bool)softwareSurfaceDemoMode;
-- (void)failStartupStage:(StartupFailureStage)stage
-                  reason:(const char *)reason
-                 details:(const char *)details
-            gfxErrorCode:(GfxErrorCode)gfxErrorCode;
-- (void)failRuntimeCode:(int)code
-                 reason:(const char *)reason
-                details:(const char *)details
-           gfxErrorCode:(GfxErrorCode)gfxErrorCode;
-- (void)handleEscapeKey;
-- (void)renderFrame:(NSTimer *)timer;
-@end
-
-@implementation PrimeStructWindow
-
-- (void)keyDown:(NSEvent *)event {
-  NSString *characters = [event charactersIgnoringModifiers];
-  const bool isEscapeChar = (characters != nil && [characters length] == 1 && [characters characterAtIndex:0] == 27);
-  if (event.keyCode == 53 || isEscapeChar) {
-    if (self.hostDelegate != nil) {
-      [self.hostDelegate handleEscapeKey];
-      return;
-    }
-  }
-  [super keyDown:event];
-}
-
-@end
-
-@implementation PrimeStructWindowHostDelegate {
-  PrimeStructWindow *_window;
-  CAMetalLayer *_metalLayer;
-  id<MTLDevice> _device;
-  id<MTLCommandQueue> _queue;
-  id<MTLRenderPipelineState> _pipeline;
-  id<MTLDepthStencilState> _depthState;
-  id<MTLBuffer> _vertexBuffer;
-  id<MTLBuffer> _indexBuffer;
-  id<MTLBuffer> _uniformBuffer;
-  id<MTLTexture> _depthTexture;
-  NSTimer *_frameTimer;
-  int _maxFrames;
-  int _frameIndex;
-  int _renderedFrameCount;
-  bool _printedFirstFrame;
-  bool _printedSimulationFrame;
-  bool _simulationSmokeMode;
-  bool _softwareSurfaceDemoMode;
-  bool _gfxMode;
-  bool _firstFrameSubmitted;
-  std::string _gfxPath;
-  std::vector<SimulationFrameState> _simulationFrames;
-  GfxStreamHeader _gfxHeader;
-  id<MTLTexture> _softwareSurfaceTexture;
-  NSUInteger _indexCount;
-  CGSize _depthTextureSize;
-}
-
-- (instancetype)initWithMaxFrames:(int)maxFrames
-                           gfxPath:(const std::string &)gfxPath
-               simulationSmokeMode:(bool)simulationSmokeMode
-           softwareSurfaceDemoMode:(bool)softwareSurfaceDemoMode {
-  self = [super init];
-  if (self != nil) {
-    _maxFrames = maxFrames;
-    _frameIndex = 0;
-    _renderedFrameCount = 0;
-    _printedFirstFrame = false;
-    _printedSimulationFrame = false;
-    _simulationSmokeMode = simulationSmokeMode;
-    _softwareSurfaceDemoMode = softwareSurfaceDemoMode;
-    _gfxMode = !gfxPath.empty();
-    _firstFrameSubmitted = false;
-    _gfxPath = gfxPath;
-    _indexCount = CubeIndices.size();
-    _depthTextureSize = CGSizeMake(0.0, 0.0);
-  }
-  return self;
-}
-
-- (void)failStartupStage:(StartupFailureStage)stage
-                  reason:(const char *)reason
-                 details:(const char *)details
-            gfxErrorCode:(GfxErrorCode)gfxErrorCode {
-  const int exitCode = startupStageExitCode(stage);
-  std::cerr << "startup_failure=1\n";
-  std::cerr << "gfx_profile=" << deducedGfxProfileName() << "\n";
-  std::cerr << "startup_failure_stage=" << startupStageName(stage) << "\n";
-  std::cerr << "startup_failure_reason=" << reason << "\n";
-  std::cerr << "startup_failure_exit_code=" << exitCode << "\n";
-  if (gfxErrorCode != GfxErrorCode::None) {
-    std::cerr << "gfx_error_code=" << primestruct::gfx_contract::gfxErrorCodeName(gfxErrorCode) << "\n";
-  }
-  if (details != nullptr && details[0] != '\0') {
-    std::cerr << "startup_failure_detail=" << details << "\n";
-    if (gfxErrorCode != GfxErrorCode::None) {
-      std::cerr << "gfx_error_why=" << details << "\n";
-    }
-  }
-  gExitCode = exitCode;
-  [NSApp terminate:nil];
-}
-
-- (void)failRuntimeCode:(int)code
-                 reason:(const char *)reason
-                details:(const char *)details
-           gfxErrorCode:(GfxErrorCode)gfxErrorCode {
-  std::cerr << "runtime_failure=1\n";
-  std::cerr << "gfx_profile=" << deducedGfxProfileName() << "\n";
-  std::cerr << "runtime_failure_reason=" << reason << "\n";
-  std::cerr << "runtime_failure_exit_code=" << code << "\n";
-  if (gfxErrorCode != GfxErrorCode::None) {
-    std::cerr << "gfx_error_code=" << primestruct::gfx_contract::gfxErrorCodeName(gfxErrorCode) << "\n";
-  }
-  if (details != nullptr && details[0] != '\0') {
-    std::cerr << "runtime_failure_detail=" << details << "\n";
-    if (gfxErrorCode != GfxErrorCode::None) {
-      std::cerr << "gfx_error_why=" << details << "\n";
-    }
-  }
-  gExitCode = code;
-  [NSApp terminate:nil];
-}
-
-- (void)ensureDepthTextureForSize:(CGSize)drawableSize {
-  if (_depthTexture != nil && _depthTextureSize.width == drawableSize.width && _depthTextureSize.height == drawableSize.height) {
+void ensureDepthTextureForSize(PrimeStructWindowHostState &state, CGSize drawableSize) {
+  if (state.depthTexture != nil && state.depthTextureSize.width == drawableSize.width &&
+      state.depthTextureSize.height == drawableSize.height) {
     return;
   }
 
@@ -604,533 +448,340 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
                                                      mipmapped:NO];
   depthDescriptor.storageMode = MTLStorageModePrivate;
   depthDescriptor.usage = MTLTextureUsageRenderTarget;
-  _depthTexture = [_device newTextureWithDescriptor:depthDescriptor];
-  _depthTextureSize = drawableSize;
+  state.depthTexture = [state.device newTextureWithDescriptor:depthDescriptor];
+  state.depthTextureSize = drawableSize;
 }
 
-- (void)applicationDidFinishLaunching:(NSNotification *)notification {
-  (void)notification;
+bool prepareWindowHostContent(void *context,
+                              id<MTLDevice> device,
+                              id<MTLCommandQueue> queue,
+                              FailureInfo &failureOut) {
+  (void)queue;
+  auto &state = *reinterpret_cast<PrimeStructWindowHostState *>(context);
+  state.device = device;
 
-  if (!_softwareSurfaceDemoMode) {
-    std::string simulationError;
-    if (!loadGfxStream(_gfxPath, _gfxHeader, _simulationFrames, simulationError)) {
-      [self failStartupStage:StartupFailureStage::SimulationStreamLoad
-                      reason:"gfx_stream_load_failed"
-                     details:simulationError.c_str()
-                gfxErrorCode:GfxErrorCode::None];
-      return;
-    }
-    std::cout << "gfx_stream_loaded=1\n";
-    std::cout << "gfx_window_width=" << _gfxHeader.windowWidth << "\n";
-    std::cout << "gfx_window_height=" << _gfxHeader.windowHeight << "\n";
-    std::cout << "gfx_mesh_vertex_count=" << _gfxHeader.meshVertexCount << "\n";
-    std::cout << "gfx_mesh_index_count=" << _gfxHeader.meshIndexCount << "\n";
-    std::cout << "gfx_submit_present_mask=" << _gfxHeader.submitPresentMask << "\n";
-    std::cout << "gfx_frame_token=" << _gfxHeader.frameToken << "\n";
-    std::cout << "gfx_render_pass_token=" << _gfxHeader.renderPassToken << "\n";
-
-    std::cout << "simulation_stream_loaded=1\n";
-    std::cout << "simulation_frames_loaded=" << _simulationFrames.size() << "\n";
-    std::cout << "simulation_fixed_step_millis=" << SimulationFixedStepMillis << "\n";
-
-    if (_simulationSmokeMode) {
-      const SimulationFrameState &frame = _simulationFrames.front();
-      std::cout << "simulation_smoke_tick=" << frame.tick << "\n";
-      std::cout << "simulation_smoke_angle_milli=" << frame.angleMilli << "\n";
-      std::cout << "simulation_smoke_axis_x_centi=" << frame.axisXCenti << "\n";
-      std::cout << "simulation_smoke_axis_y_centi=" << frame.axisYCenti << "\n";
-      gExitCode = 0;
-      [NSApp terminate:nil];
-      return;
-    }
-  }
-
-  _device = MTLCreateSystemDefaultDevice();
-  if (_device == nil) {
-    [self failStartupStage:StartupFailureStage::GpuDeviceAcquisition
-                    reason:"metal_device_creation_failed"
-                   details:"failed to create Metal device"
-              gfxErrorCode:GfxErrorCode::DeviceCreateFailed];
-    return;
-  }
-
-  _queue = [_device newCommandQueue];
-  if (_queue == nil) {
-    [self failStartupStage:StartupFailureStage::GpuDeviceAcquisition
-                    reason:"command_queue_creation_failed"
-                   details:"failed to create command queue"
-              gfxErrorCode:GfxErrorCode::DeviceCreateFailed];
-    return;
-  }
-
-  if (_softwareSurfaceDemoMode) {
+  if (state.softwareSurfaceDemoMode) {
     const primestruct::software_surface::SoftwareSurfaceFrame surfaceFrame =
         primestruct::software_surface::makeDemoFrame();
     std::string surfaceError;
-    if (!uploadSoftwareSurfaceFrameToTexture(_device, surfaceFrame, _softwareSurfaceTexture, surfaceError)) {
-      [self failStartupStage:StartupFailureStage::PipelineSetup
-                      reason:"software_surface_texture_creation_failed"
-                     details:surfaceError.c_str()
-                gfxErrorCode:GfxErrorCode::MaterialCreateFailed];
-      return;
+    if (!uploadSoftwareSurfaceFrameToTexture(device, surfaceFrame, state.softwareSurfaceTexture, surfaceError)) {
+      failureOut.startupStage = StartupFailureStage::PipelineSetup;
+      failureOut.reason = "software_surface_texture_creation_failed";
+      failureOut.details = surfaceError;
+      failureOut.gfxErrorCode = GfxErrorCode::MaterialCreateFailed;
+      return false;
     }
     std::cout << "software_surface_bridge=1\n";
     std::cout << "software_surface_width=" << surfaceFrame.width << "\n";
     std::cout << "software_surface_height=" << surfaceFrame.height << "\n";
-  } else {
-    NSError *libraryError = nil;
-    NSString *shaderSource = [NSString stringWithUTF8String:WindowShaderSource];
-    id<MTLLibrary> library = [_device newLibraryWithSource:shaderSource options:nil error:&libraryError];
-    if (library == nil) {
-      const char *details = libraryError == nil ? "unknown" : libraryError.localizedDescription.UTF8String;
-      [self failStartupStage:StartupFailureStage::ShaderLoad
-                      reason:"shader_library_compile_failed"
-                     details:details
-                gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
-      return;
-    }
-    std::cout << "shader_library_ready=1\n";
+    return true;
+  }
 
-    id<MTLFunction> vertexFn = [library newFunctionWithName:@"windowVertexMain"];
-    id<MTLFunction> fragmentFn = [library newFunctionWithName:@"windowFragmentMain"];
-    if (vertexFn == nil || fragmentFn == nil) {
-      [self failStartupStage:StartupFailureStage::ShaderLoad
-                      reason:"shader_entrypoint_missing"
-                     details:"missing window host shader entrypoints"
-                gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
-      return;
-    }
+  NSError *libraryError = nil;
+  NSString *shaderSource = [NSString stringWithUTF8String:WindowShaderSource];
+  id<MTLLibrary> library = [device newLibraryWithSource:shaderSource options:nil error:&libraryError];
+  if (library == nil) {
+    failureOut.startupStage = StartupFailureStage::ShaderLoad;
+    failureOut.reason = "shader_library_compile_failed";
+    failureOut.details = libraryError == nil ? "unknown" : libraryError.localizedDescription.UTF8String;
+    failureOut.gfxErrorCode = GfxErrorCode::PipelineCreateFailed;
+    return false;
+  }
+  std::cout << "shader_library_ready=1\n";
 
-    MTLVertexDescriptor *vertexDescriptor = [[MTLVertexDescriptor alloc] init];
-    vertexDescriptor.attributes[0].format = MTLVertexFormatFloat4;
-    vertexDescriptor.attributes[0].offset = offsetof(WindowVertex, px);
-    vertexDescriptor.attributes[0].bufferIndex = 0;
-    vertexDescriptor.attributes[1].format = MTLVertexFormatFloat4;
-    vertexDescriptor.attributes[1].offset = offsetof(WindowVertex, r);
-    vertexDescriptor.attributes[1].bufferIndex = 0;
-    vertexDescriptor.layouts[0].stride = sizeof(WindowVertex);
-    vertexDescriptor.layouts[0].stepRate = 1;
-    vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+  id<MTLFunction> vertexFn = [library newFunctionWithName:@"windowVertexMain"];
+  id<MTLFunction> fragmentFn = [library newFunctionWithName:@"windowFragmentMain"];
+  if (vertexFn == nil || fragmentFn == nil) {
+    failureOut.startupStage = StartupFailureStage::ShaderLoad;
+    failureOut.reason = "shader_entrypoint_missing";
+    failureOut.details = "missing window host shader entrypoints";
+    failureOut.gfxErrorCode = GfxErrorCode::PipelineCreateFailed;
+    return false;
+  }
 
-    MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
-    pipelineDesc.vertexFunction = vertexFn;
-    pipelineDesc.fragmentFunction = fragmentFn;
-    pipelineDesc.vertexDescriptor = vertexDescriptor;
-    pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-    pipelineDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+  MTLVertexDescriptor *vertexDescriptor = [[MTLVertexDescriptor alloc] init];
+  vertexDescriptor.attributes[0].format = MTLVertexFormatFloat4;
+  vertexDescriptor.attributes[0].offset = offsetof(WindowVertex, px);
+  vertexDescriptor.attributes[0].bufferIndex = 0;
+  vertexDescriptor.attributes[1].format = MTLVertexFormatFloat4;
+  vertexDescriptor.attributes[1].offset = offsetof(WindowVertex, r);
+  vertexDescriptor.attributes[1].bufferIndex = 0;
+  vertexDescriptor.layouts[0].stride = sizeof(WindowVertex);
+  vertexDescriptor.layouts[0].stepRate = 1;
+  vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
 
-    NSError *pipelineError = nil;
-    _pipeline = [_device newRenderPipelineStateWithDescriptor:pipelineDesc error:&pipelineError];
-    if (_pipeline == nil) {
-      const char *details = pipelineError == nil ? "unknown" : pipelineError.localizedDescription.UTF8String;
-      [self failStartupStage:StartupFailureStage::PipelineSetup
-                      reason:"render_pipeline_creation_failed"
-                     details:details
-                gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
-      return;
-    }
+  MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
+  pipelineDesc.vertexFunction = vertexFn;
+  pipelineDesc.fragmentFunction = fragmentFn;
+  pipelineDesc.vertexDescriptor = vertexDescriptor;
+  pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+  pipelineDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 
-    MTLDepthStencilDescriptor *depthDescriptor = [[MTLDepthStencilDescriptor alloc] init];
-    depthDescriptor.depthCompareFunction = MTLCompareFunctionLess;
-    depthDescriptor.depthWriteEnabled = YES;
-    _depthState = [_device newDepthStencilStateWithDescriptor:depthDescriptor];
-    if (_depthState == nil) {
-      [self failStartupStage:StartupFailureStage::PipelineSetup
-                      reason:"depth_state_creation_failed"
-                     details:"failed to create depth state"
-                gfxErrorCode:GfxErrorCode::PipelineCreateFailed];
-      return;
-    }
+  NSError *pipelineError = nil;
+  state.pipeline = [device newRenderPipelineStateWithDescriptor:pipelineDesc error:&pipelineError];
+  if (state.pipeline == nil) {
+    failureOut.startupStage = StartupFailureStage::PipelineSetup;
+    failureOut.reason = "render_pipeline_creation_failed";
+    failureOut.details = pipelineError == nil ? "unknown" : pipelineError.localizedDescription.UTF8String;
+    failureOut.gfxErrorCode = GfxErrorCode::PipelineCreateFailed;
+    return false;
+  }
 
-    _vertexBuffer = [_device newBufferWithBytes:CubeVertices.data()
-                                          length:(CubeVertices.size() * sizeof(WindowVertex))
+  MTLDepthStencilDescriptor *depthDescriptor = [[MTLDepthStencilDescriptor alloc] init];
+  depthDescriptor.depthCompareFunction = MTLCompareFunctionLess;
+  depthDescriptor.depthWriteEnabled = YES;
+  state.depthState = [device newDepthStencilStateWithDescriptor:depthDescriptor];
+  if (state.depthState == nil) {
+    failureOut.startupStage = StartupFailureStage::PipelineSetup;
+    failureOut.reason = "depth_state_creation_failed";
+    failureOut.details = "failed to create depth state";
+    failureOut.gfxErrorCode = GfxErrorCode::PipelineCreateFailed;
+    return false;
+  }
+
+  state.vertexBuffer = [device newBufferWithBytes:CubeVertices.data()
+                                           length:(CubeVertices.size() * sizeof(WindowVertex))
+                                          options:MTLResourceStorageModeShared];
+  if (state.vertexBuffer == nil) {
+    failureOut.startupStage = StartupFailureStage::PipelineSetup;
+    failureOut.reason = "vertex_buffer_creation_failed";
+    failureOut.details = "failed to create vertex buffer";
+    failureOut.gfxErrorCode = GfxErrorCode::MeshCreateFailed;
+    return false;
+  }
+
+  state.indexBuffer = [device newBufferWithBytes:CubeIndices.data()
+                                          length:(CubeIndices.size() * sizeof(uint16_t))
                                          options:MTLResourceStorageModeShared];
-    if (_vertexBuffer == nil) {
-      [self failStartupStage:StartupFailureStage::PipelineSetup
-                      reason:"vertex_buffer_creation_failed"
-                     details:"failed to create vertex buffer"
-                gfxErrorCode:GfxErrorCode::MeshCreateFailed];
-      return;
-    }
-
-    _indexBuffer = [_device newBufferWithBytes:CubeIndices.data()
-                                         length:(CubeIndices.size() * sizeof(uint16_t))
-                                        options:MTLResourceStorageModeShared];
-    if (_indexBuffer == nil) {
-      [self failStartupStage:StartupFailureStage::PipelineSetup
-                      reason:"index_buffer_creation_failed"
-                     details:"failed to create index buffer"
-                gfxErrorCode:GfxErrorCode::MeshCreateFailed];
-      return;
-    }
-
-    _uniformBuffer = [_device newBufferWithLength:sizeof(WindowUniforms) options:MTLResourceStorageModeShared];
-    if (_uniformBuffer == nil) {
-      [self failStartupStage:StartupFailureStage::PipelineSetup
-                      reason:"uniform_buffer_creation_failed"
-                     details:"failed to create uniform buffer"
-                gfxErrorCode:GfxErrorCode::MaterialCreateFailed];
-      return;
-    }
-
-    std::cout << "vertex_buffer_ready=1\n";
-    std::cout << "index_buffer_ready=1\n";
-    std::cout << "uniform_buffer_ready=1\n";
+  if (state.indexBuffer == nil) {
+    failureOut.startupStage = StartupFailureStage::PipelineSetup;
+    failureOut.reason = "index_buffer_creation_failed";
+    failureOut.details = "failed to create index buffer";
+    failureOut.gfxErrorCode = GfxErrorCode::MeshCreateFailed;
+    return false;
   }
 
-  const CGFloat windowWidth = _gfxMode ? static_cast<CGFloat>(_gfxHeader.windowWidth) : 960.0;
-  const CGFloat windowHeight = _gfxMode ? static_cast<CGFloat>(_gfxHeader.windowHeight) : 640.0;
-  NSRect frame = NSMakeRect(120.0, 120.0, windowWidth, windowHeight);
-  const NSWindowStyleMask styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
-                                      NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
-  _window = [[PrimeStructWindow alloc] initWithContentRect:frame
-                                                  styleMask:styleMask
-                                                    backing:NSBackingStoreBuffered
-                                                      defer:NO];
-  if (_window == nil) {
-    [self failStartupStage:StartupFailureStage::WindowCreation
-                    reason:"window_creation_failed"
-                   details:"failed to create native window"
-              gfxErrorCode:GfxErrorCode::WindowCreateFailed];
-    return;
-  }
-  _window.hostDelegate = self;
-  _window.title = _gfxMode ? @"PrimeStruct /std/gfx (Window Host)"
-                           : @"PrimeStruct Spinning Cube (Window Host)";
-  _window.delegate = self;
-
-  NSView *contentView = _window.contentView;
-  if (contentView == nil) {
-    [self failStartupStage:StartupFailureStage::WindowCreation
-                    reason:"window_content_view_missing"
-                   details:"native window content view was unavailable"
-              gfxErrorCode:GfxErrorCode::WindowCreateFailed];
-    return;
+  state.uniformBuffer = [device newBufferWithLength:sizeof(WindowUniforms) options:MTLResourceStorageModeShared];
+  if (state.uniformBuffer == nil) {
+    failureOut.startupStage = StartupFailureStage::PipelineSetup;
+    failureOut.reason = "uniform_buffer_creation_failed";
+    failureOut.details = "failed to create uniform buffer";
+    failureOut.gfxErrorCode = GfxErrorCode::MaterialCreateFailed;
+    return false;
   }
 
-  _metalLayer = [CAMetalLayer layer];
-  if (_metalLayer == nil) {
-    [self failStartupStage:StartupFailureStage::WindowCreation
-                    reason:"swapchain_layer_creation_failed"
-                   details:"failed to create CAMetalLayer swapchain"
-              gfxErrorCode:GfxErrorCode::SwapchainCreateFailed];
-    return;
-  }
-  _metalLayer.device = _device;
-  _metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-  _metalLayer.frame = contentView.bounds;
-  _metalLayer.contentsScale = _window.backingScaleFactor;
-  _metalLayer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
-  contentView.wantsLayer = YES;
-  contentView.layer = _metalLayer;
+  std::cout << "vertex_buffer_ready=1\n";
+  std::cout << "index_buffer_ready=1\n";
+  std::cout << "uniform_buffer_ready=1\n";
+  return true;
+}
 
-  [_window makeKeyAndOrderFront:nil];
-  [NSApp activateIgnoringOtherApps:YES];
-
-  std::cout << "window_created=1\n";
-  std::cout << "swapchain_layer_created=1\n";
-  if (_softwareSurfaceDemoMode) {
+void emitPresenterReadyDiagnostics(void *context) {
+  const auto &state = *reinterpret_cast<const PrimeStructWindowHostState *>(context);
+  if (state.softwareSurfaceDemoMode) {
     std::cout << "software_surface_presenter_ready=1\n";
   } else {
     std::cout << "pipeline_ready=1\n";
   }
-
-  _frameTimer = [NSTimer scheduledTimerWithTimeInterval:(1.0 / 60.0)
-                                                  target:self
-                                                selector:@selector(renderFrame:)
-                                                userInfo:nil
-                                                 repeats:YES];
 }
 
-- (void)renderFrame:(NSTimer *)timer {
-  (void)timer;
-  @autoreleasepool {
-    if (_metalLayer == nil || _queue == nil) {
-      return;
-    }
-    if (_softwareSurfaceDemoMode) {
-      if (_softwareSurfaceTexture == nil) {
-        return;
-      }
-    } else if (_pipeline == nil || _simulationFrames.empty()) {
-      return;
-    }
+RenderFrameResult renderWindowHostFrame(void *context,
+                                        id<MTLCommandQueue> queue,
+                                        id<CAMetalDrawable> drawable,
+                                        CGSize drawableSize,
+                                        bool firstFrameSubmitted) {
+  auto &state = *reinterpret_cast<PrimeStructWindowHostState *>(context);
+  RenderFrameResult result;
 
-    NSView *contentView = _window.contentView;
-    if (contentView == nil) {
-      return;
-    }
-    const CGSize drawableSize =
-        CGSizeMake(contentView.bounds.size.width * _window.backingScaleFactor,
-                   contentView.bounds.size.height * _window.backingScaleFactor);
-    if (drawableSize.width <= 1.0 || drawableSize.height <= 1.0) {
-      return;
-    }
-    _metalLayer.drawableSize = drawableSize;
-    id<CAMetalDrawable> drawable = [_metalLayer nextDrawable];
-    if (drawable == nil) {
-      if (!_firstFrameSubmitted) {
-        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
-                        reason:"frame_drawable_acquisition_failed"
-                       details:"failed to acquire drawable from CAMetalLayer"
-                  gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
-      } else {
-        [self failRuntimeCode:82
-                       reason:"frame_drawable_acquisition_failed"
-                      details:"failed to acquire drawable from CAMetalLayer"
-                 gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
-      }
-      return;
+  if (state.softwareSurfaceDemoMode) {
+    if (state.softwareSurfaceTexture == nil) {
+      return result;
     }
 
-    if (_softwareSurfaceDemoMode) {
-      id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
-      if (commandBuffer == nil) {
-        if (!_firstFrameSubmitted) {
-          [self failStartupStage:StartupFailureStage::FirstFrameSubmission
-                          reason:"command_buffer_creation_failed"
-                         details:"failed to create command buffer"
-                    gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
-        } else {
-          [self failRuntimeCode:83
-                         reason:"command_buffer_creation_failed"
-                        details:"failed to create command buffer"
-                   gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
-        }
-        return;
-      }
-      id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
-      if (blitEncoder == nil) {
-        if (!_firstFrameSubmitted) {
-          [self failStartupStage:StartupFailureStage::FirstFrameSubmission
-                          reason:"software_surface_blit_encoder_creation_failed"
-                         details:"failed to create software surface blit encoder"
-                    gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
-        } else {
-          [self failRuntimeCode:81
-                         reason:"software_surface_blit_encoder_creation_failed"
-                        details:"failed to create software surface blit encoder"
-                   gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
-        }
-        return;
-      }
-
-      const NSUInteger blitWidth = std::min(drawable.texture.width, _softwareSurfaceTexture.width);
-      const NSUInteger blitHeight = std::min(drawable.texture.height, _softwareSurfaceTexture.height);
-      [blitEncoder copyFromTexture:_softwareSurfaceTexture
-                       sourceSlice:0
-                       sourceLevel:0
-                      sourceOrigin:MTLOriginMake(0, 0, 0)
-                        sourceSize:MTLSizeMake(blitWidth, blitHeight, 1)
-                         toTexture:drawable.texture
-                  destinationSlice:0
-                  destinationLevel:0
-                 destinationOrigin:MTLOriginMake(0, 0, 0)];
-      [blitEncoder endEncoding];
-
-      [commandBuffer presentDrawable:drawable];
-      [commandBuffer commit];
-
-      if (!_firstFrameSubmitted) {
-        [commandBuffer waitUntilCompleted];
-        if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
-          NSError *commandBufferError = commandBuffer.error;
-          const char *details = commandBufferError == nil ? "software surface command buffer did not complete"
-                                                          : commandBufferError.localizedDescription.UTF8String;
-          [self failStartupStage:StartupFailureStage::FirstFrameSubmission
-                          reason:"software_surface_submit_failed"
-                         details:details
-                    gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
-          return;
-        }
-        std::cout << "gfx_profile=" << deducedGfxProfileName() << "\n";
-        std::cout << "startup_success=1\n";
-        _firstFrameSubmitted = true;
-      }
-
-      if (!_printedFirstFrame) {
-        std::cout << "software_surface_presented=1\n";
-        std::cout << "frame_rendered=1\n";
-        _printedFirstFrame = true;
-      }
-
-      _renderedFrameCount += 1;
-      if (_maxFrames > 0 && _renderedFrameCount >= _maxFrames) {
-        std::cout << "exit_reason=max_frames\n";
-        gExitCode = 0;
-        [NSApp terminate:nil];
-      }
-      return;
-    }
-
-    [self ensureDepthTextureForSize:drawableSize];
-    if (_depthTexture == nil) {
-      if (!_firstFrameSubmitted) {
-        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
-                        reason:"depth_texture_creation_failed"
-                       details:"failed to create depth texture"
-                  gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
-      } else {
-        [self failRuntimeCode:80
-                       reason:"depth_texture_creation_failed"
-                      details:"failed to create depth texture"
-                 gfxErrorCode:GfxErrorCode::FrameAcquireFailed];
-      }
-      return;
-    }
-
-    const size_t frameSlot =
-        std::min(static_cast<size_t>(_frameIndex), _simulationFrames.size() - 1);
-    const SimulationFrameState &simulationFrame = _simulationFrames[frameSlot];
-    const float angle = static_cast<float>(simulationFrame.angleMilli) / 1000.0f;
-
-    const simd_float3 axisRaw = {
-        static_cast<float>(simulationFrame.axisXCenti) / 100.0f,
-        static_cast<float>(simulationFrame.axisYCenti) / 100.0f,
-        0.35f,
-    };
-    const simd_float3 axis = simd_length(axisRaw) < 0.001f ? simd_float3{0.0f, 1.0f, 0.0f} : axisRaw;
-
-    const float aspect = static_cast<float>(drawableSize.width / drawableSize.height);
-    const simd_float4x4 model = makeRotationMatrix(angle, axis);
-    const simd_float4x4 view = makeTranslationMatrix(0.0f, 0.0f, -3.0f);
-    const simd_float4x4 projection = makePerspectiveMatrix(1.0471976f, aspect, 0.1f, 20.0f);
-
-    auto *uniforms = reinterpret_cast<WindowUniforms *>(_uniformBuffer.contents);
-    uniforms->modelViewProjection = simd_mul(projection, simd_mul(view, model));
-
-    const double axisXNorm =
-        std::clamp((static_cast<double>(simulationFrame.axisXCenti) + 100.0) / 200.0, 0.0, 1.0);
-    const double axisYNorm =
-        std::clamp((static_cast<double>(simulationFrame.axisYCenti) + 100.0) / 200.0, 0.0, 1.0);
-    const double clearRed = _gfxMode ? (static_cast<double>(_gfxHeader.clearColorRMilli) / 1000.0)
-                                     : 0.03 + (0.08 * axisXNorm);
-    const double clearGreen = _gfxMode ? (static_cast<double>(_gfxHeader.clearColorGMilli) / 1000.0)
-                                       : 0.04 + (0.08 * axisYNorm);
-    const double clearBlue = _gfxMode ? (static_cast<double>(_gfxHeader.clearColorBMilli) / 1000.0) : 0.06;
-    const double clearAlpha = _gfxMode ? (static_cast<double>(_gfxHeader.clearColorAMilli) / 1000.0) : 1.0;
-    const double clearDepth = _gfxMode ? (static_cast<double>(_gfxHeader.clearDepthMilli) / 1000.0) : 1.0;
-
-    MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
-    pass.colorAttachments[0].texture = drawable.texture;
-    pass.colorAttachments[0].loadAction = MTLLoadActionClear;
-    pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-    pass.colorAttachments[0].clearColor = MTLClearColorMake(clearRed, clearGreen, clearBlue, clearAlpha);
-    pass.depthAttachment.texture = _depthTexture;
-    pass.depthAttachment.loadAction = MTLLoadActionClear;
-    pass.depthAttachment.storeAction = MTLStoreActionDontCare;
-    pass.depthAttachment.clearDepth = clearDepth;
-
-    id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
+    id<MTLCommandBuffer> commandBuffer = [queue commandBuffer];
     if (commandBuffer == nil) {
-      if (!_firstFrameSubmitted) {
-        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
-                        reason:"command_buffer_creation_failed"
-                       details:"failed to create command buffer"
-                  gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
-      } else {
-        [self failRuntimeCode:83
-                       reason:"command_buffer_creation_failed"
-                      details:"failed to create command buffer"
-                 gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
-      }
-      return;
-    }
-    id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
-    if (encoder == nil) {
-      if (!_firstFrameSubmitted) {
-        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
-                        reason:"render_encoder_creation_failed"
-                       details:"failed to create render command encoder"
-                  gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
-      } else {
-        [self failRuntimeCode:81
-                     reason:"render_encoder_creation_failed"
-                    details:"failed to create render command encoder"
-               gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
-      }
-      return;
+      result.ok = false;
+      result.failure.startupStage = StartupFailureStage::FirstFrameSubmission;
+      result.failure.runtimeExitCode = 83;
+      result.failure.reason = "command_buffer_creation_failed";
+      result.failure.details = "failed to create command buffer";
+      result.failure.gfxErrorCode = GfxErrorCode::QueueSubmitFailed;
+      return result;
     }
 
-    [encoder setRenderPipelineState:_pipeline];
-    [encoder setDepthStencilState:_depthState];
-    [encoder setVertexBuffer:_vertexBuffer offset:0 atIndex:0];
-    [encoder setVertexBuffer:_uniformBuffer offset:0 atIndex:1];
-    [encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-                        indexCount:_indexCount
-                         indexType:MTLIndexTypeUInt16
-                       indexBuffer:_indexBuffer
-                 indexBufferOffset:0];
-    [encoder endEncoding];
+    id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];
+    if (blitEncoder == nil) {
+      result.ok = false;
+      result.failure.startupStage = StartupFailureStage::FirstFrameSubmission;
+      result.failure.runtimeExitCode = 81;
+      result.failure.reason = "software_surface_blit_encoder_creation_failed";
+      result.failure.details = "failed to create software surface blit encoder";
+      result.failure.gfxErrorCode = GfxErrorCode::QueueSubmitFailed;
+      return result;
+    }
+
+    const NSUInteger blitWidth = std::min(drawable.texture.width, state.softwareSurfaceTexture.width);
+    const NSUInteger blitHeight = std::min(drawable.texture.height, state.softwareSurfaceTexture.height);
+    [blitEncoder copyFromTexture:state.softwareSurfaceTexture
+                     sourceSlice:0
+                     sourceLevel:0
+                    sourceOrigin:MTLOriginMake(0, 0, 0)
+                      sourceSize:MTLSizeMake(blitWidth, blitHeight, 1)
+                       toTexture:drawable.texture
+                destinationSlice:0
+                destinationLevel:0
+               destinationOrigin:MTLOriginMake(0, 0, 0)];
+    [blitEncoder endEncoding];
 
     [commandBuffer presentDrawable:drawable];
     [commandBuffer commit];
 
-    if (!_firstFrameSubmitted) {
+    if (!firstFrameSubmitted) {
       [commandBuffer waitUntilCompleted];
       if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
         NSError *commandBufferError = commandBuffer.error;
-        const char *details = commandBufferError == nil ? "first frame command buffer did not complete"
-                                                        : commandBufferError.localizedDescription.UTF8String;
-        [self failStartupStage:StartupFailureStage::FirstFrameSubmission
-                        reason:"first_frame_submit_failed"
-                       details:details
-                  gfxErrorCode:GfxErrorCode::QueueSubmitFailed];
-        return;
+        result.ok = false;
+        result.failure.startupStage = StartupFailureStage::FirstFrameSubmission;
+        result.failure.reason = "software_surface_submit_failed";
+        result.failure.details = commandBufferError == nil ? "software surface command buffer did not complete"
+                                                           : commandBufferError.localizedDescription.UTF8String;
+        result.failure.gfxErrorCode = GfxErrorCode::QueueSubmitFailed;
+        return result;
       }
-      std::cout << "gfx_profile=" << deducedGfxProfileName() << "\n";
-      std::cout << "startup_success=1\n";
-      _firstFrameSubmitted = true;
     }
 
-    if (!_printedSimulationFrame) {
-      std::cout << "simulation_tick=" << simulationFrame.tick << "\n";
-      std::cout << "simulation_angle_milli=" << simulationFrame.angleMilli << "\n";
-      std::cout << "simulation_axis_x_centi=" << simulationFrame.axisXCenti << "\n";
-      std::cout << "simulation_axis_y_centi=" << simulationFrame.axisYCenti << "\n";
-      _printedSimulationFrame = true;
+    if (!state.printedSoftwareSurfacePresented) {
+      std::cout << "software_surface_presented=1\n";
+      state.printedSoftwareSurfacePresented = true;
     }
 
-    if (!_printedFirstFrame) {
-      std::cout << "frame_rendered=1\n";
-      _printedFirstFrame = true;
-    }
+    result.renderedFrame = true;
+    return result;
+  }
 
-    if (_frameIndex + 1 < static_cast<int>(_simulationFrames.size())) {
-      _frameIndex += 1;
-    }
-    _renderedFrameCount += 1;
+  if (state.pipeline == nil || state.simulationFrames.empty()) {
+    return result;
+  }
 
-    if (_maxFrames > 0 && _renderedFrameCount >= _maxFrames) {
-      std::cout << "exit_reason=max_frames\n";
-      gExitCode = 0;
-      [NSApp terminate:nil];
+  ensureDepthTextureForSize(state, drawableSize);
+  if (state.depthTexture == nil) {
+    result.ok = false;
+    result.failure.startupStage = StartupFailureStage::FirstFrameSubmission;
+    result.failure.runtimeExitCode = 80;
+    result.failure.reason = "depth_texture_creation_failed";
+    result.failure.details = "failed to create depth texture";
+    result.failure.gfxErrorCode = GfxErrorCode::FrameAcquireFailed;
+    return result;
+  }
+
+  const size_t frameSlot = std::min(static_cast<size_t>(state.frameIndex), state.simulationFrames.size() - 1);
+  const SimulationFrameState &simulationFrame = state.simulationFrames[frameSlot];
+  const float angle = static_cast<float>(simulationFrame.angleMilli) / 1000.0f;
+
+  const simd_float3 axisRaw = {
+      static_cast<float>(simulationFrame.axisXCenti) / 100.0f,
+      static_cast<float>(simulationFrame.axisYCenti) / 100.0f,
+      0.35f,
+  };
+  const simd_float3 axis = simd_length(axisRaw) < 0.001f ? simd_float3{0.0f, 1.0f, 0.0f} : axisRaw;
+
+  const float aspect = static_cast<float>(drawableSize.width / drawableSize.height);
+  const simd_float4x4 model = makeRotationMatrix(angle, axis);
+  const simd_float4x4 view = makeTranslationMatrix(0.0f, 0.0f, -3.0f);
+  const simd_float4x4 projection = makePerspectiveMatrix(1.0471976f, aspect, 0.1f, 20.0f);
+
+  auto *uniforms = reinterpret_cast<WindowUniforms *>(state.uniformBuffer.contents);
+  uniforms->modelViewProjection = simd_mul(projection, simd_mul(view, model));
+
+  const double axisXNorm =
+      std::clamp((static_cast<double>(simulationFrame.axisXCenti) + 100.0) / 200.0, 0.0, 1.0);
+  const double axisYNorm =
+      std::clamp((static_cast<double>(simulationFrame.axisYCenti) + 100.0) / 200.0, 0.0, 1.0);
+  const double clearRed = state.gfxMode ? (static_cast<double>(state.gfxHeader.clearColorRMilli) / 1000.0)
+                                        : 0.03 + (0.08 * axisXNorm);
+  const double clearGreen = state.gfxMode ? (static_cast<double>(state.gfxHeader.clearColorGMilli) / 1000.0)
+                                          : 0.04 + (0.08 * axisYNorm);
+  const double clearBlue = state.gfxMode ? (static_cast<double>(state.gfxHeader.clearColorBMilli) / 1000.0) : 0.06;
+  const double clearAlpha = state.gfxMode ? (static_cast<double>(state.gfxHeader.clearColorAMilli) / 1000.0) : 1.0;
+  const double clearDepth = state.gfxMode ? (static_cast<double>(state.gfxHeader.clearDepthMilli) / 1000.0) : 1.0;
+
+  MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
+  pass.colorAttachments[0].texture = drawable.texture;
+  pass.colorAttachments[0].loadAction = MTLLoadActionClear;
+  pass.colorAttachments[0].storeAction = MTLStoreActionStore;
+  pass.colorAttachments[0].clearColor = MTLClearColorMake(clearRed, clearGreen, clearBlue, clearAlpha);
+  pass.depthAttachment.texture = state.depthTexture;
+  pass.depthAttachment.loadAction = MTLLoadActionClear;
+  pass.depthAttachment.storeAction = MTLStoreActionDontCare;
+  pass.depthAttachment.clearDepth = clearDepth;
+
+  id<MTLCommandBuffer> commandBuffer = [queue commandBuffer];
+  if (commandBuffer == nil) {
+    result.ok = false;
+    result.failure.startupStage = StartupFailureStage::FirstFrameSubmission;
+    result.failure.runtimeExitCode = 83;
+    result.failure.reason = "command_buffer_creation_failed";
+    result.failure.details = "failed to create command buffer";
+    result.failure.gfxErrorCode = GfxErrorCode::QueueSubmitFailed;
+    return result;
+  }
+
+  id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
+  if (encoder == nil) {
+    result.ok = false;
+    result.failure.startupStage = StartupFailureStage::FirstFrameSubmission;
+    result.failure.runtimeExitCode = 81;
+    result.failure.reason = "render_encoder_creation_failed";
+    result.failure.details = "failed to create render command encoder";
+    result.failure.gfxErrorCode = GfxErrorCode::QueueSubmitFailed;
+    return result;
+  }
+
+  [encoder setRenderPipelineState:state.pipeline];
+  [encoder setDepthStencilState:state.depthState];
+  [encoder setVertexBuffer:state.vertexBuffer offset:0 atIndex:0];
+  [encoder setVertexBuffer:state.uniformBuffer offset:0 atIndex:1];
+  [encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+                      indexCount:state.indexCount
+                       indexType:MTLIndexTypeUInt16
+                     indexBuffer:state.indexBuffer
+               indexBufferOffset:0];
+  [encoder endEncoding];
+
+  [commandBuffer presentDrawable:drawable];
+  [commandBuffer commit];
+
+  if (!firstFrameSubmitted) {
+    [commandBuffer waitUntilCompleted];
+    if (commandBuffer.status != MTLCommandBufferStatusCompleted) {
+      NSError *commandBufferError = commandBuffer.error;
+      result.ok = false;
+      result.failure.startupStage = StartupFailureStage::FirstFrameSubmission;
+      result.failure.reason = "first_frame_submit_failed";
+      result.failure.details = commandBufferError == nil ? "first frame command buffer did not complete"
+                                                         : commandBufferError.localizedDescription.UTF8String;
+      result.failure.gfxErrorCode = GfxErrorCode::QueueSubmitFailed;
+      return result;
     }
   }
-}
 
-- (void)handleEscapeKey {
-  if (_frameTimer != nil) {
-    [_frameTimer invalidate];
-    _frameTimer = nil;
+  if (!state.printedSimulationFrame) {
+    std::cout << "simulation_tick=" << simulationFrame.tick << "\n";
+    std::cout << "simulation_angle_milli=" << simulationFrame.angleMilli << "\n";
+    std::cout << "simulation_axis_x_centi=" << simulationFrame.axisXCenti << "\n";
+    std::cout << "simulation_axis_y_centi=" << simulationFrame.axisYCenti << "\n";
+    state.printedSimulationFrame = true;
   }
-  std::cout << "exit_reason=esc_key\n";
-  gExitCode = 0;
-  [NSApp terminate:nil];
-}
 
-- (void)windowWillClose:(NSNotification *)notification {
-  (void)notification;
-  if (_frameTimer != nil) {
-    [_frameTimer invalidate];
-    _frameTimer = nil;
+  if (state.frameIndex + 1 < static_cast<int>(state.simulationFrames.size())) {
+    state.frameIndex += 1;
   }
-  std::cout << "exit_reason=window_close\n";
-  gExitCode = 0;
-  [NSApp terminate:nil];
+
+  result.renderedFrame = true;
+  return result;
 }
 
-@end
+} // namespace
 
 int main(int argc, char **argv) {
   int maxFrames = 0;
@@ -1194,16 +845,57 @@ int main(int argc, char **argv) {
     return 64;
   }
 
-  @autoreleasepool {
-    NSApplication *app = [NSApplication sharedApplication];
-    app.activationPolicy =
-        simulationSmokeMode ? NSApplicationActivationPolicyProhibited : NSApplicationActivationPolicyRegular;
-    PrimeStructWindowHostDelegate *delegate = [[PrimeStructWindowHostDelegate alloc] initWithMaxFrames:maxFrames
-                                                                                                gfxPath:gfxPath
-                                                                                    simulationSmokeMode:simulationSmokeMode
-                                                                                softwareSurfaceDemoMode:softwareSurfaceDemoMode];
-    app.delegate = delegate;
-    [app run];
+  PrimeStructWindowHostState state;
+  state.softwareSurfaceDemoMode = softwareSurfaceDemoMode;
+  state.gfxMode = !gfxPath.empty();
+
+  if (!softwareSurfaceDemoMode) {
+    std::string simulationError;
+    if (!loadGfxStream(gfxPath, state.gfxHeader, state.simulationFrames, simulationError)) {
+      return primestruct::native_metal_window::emitStartupFailure(
+          deducedGfxProfileName(),
+          StartupFailureStage::SimulationStreamLoad,
+          "gfx_stream_load_failed",
+          simulationError,
+          GfxErrorCode::None);
+    }
+
+    std::cout << "gfx_stream_loaded=1\n";
+    std::cout << "gfx_window_width=" << state.gfxHeader.windowWidth << "\n";
+    std::cout << "gfx_window_height=" << state.gfxHeader.windowHeight << "\n";
+    std::cout << "gfx_mesh_vertex_count=" << state.gfxHeader.meshVertexCount << "\n";
+    std::cout << "gfx_mesh_index_count=" << state.gfxHeader.meshIndexCount << "\n";
+    std::cout << "gfx_submit_present_mask=" << state.gfxHeader.submitPresentMask << "\n";
+    std::cout << "gfx_frame_token=" << state.gfxHeader.frameToken << "\n";
+    std::cout << "gfx_render_pass_token=" << state.gfxHeader.renderPassToken << "\n";
+
+    std::cout << "simulation_stream_loaded=1\n";
+    std::cout << "simulation_frames_loaded=" << state.simulationFrames.size() << "\n";
+    std::cout << "simulation_fixed_step_millis=" << SimulationFixedStepMillis << "\n";
+
+    if (simulationSmokeMode) {
+      const SimulationFrameState &frame = state.simulationFrames.front();
+      std::cout << "simulation_smoke_tick=" << frame.tick << "\n";
+      std::cout << "simulation_smoke_angle_milli=" << frame.angleMilli << "\n";
+      std::cout << "simulation_smoke_axis_x_centi=" << frame.axisXCenti << "\n";
+      std::cout << "simulation_smoke_axis_y_centi=" << frame.axisYCenti << "\n";
+      return 0;
+    }
   }
-  return gExitCode;
+
+  PresenterConfig config;
+  config.maxFrames = maxFrames;
+  config.windowWidth = state.gfxMode ? static_cast<CGFloat>(state.gfxHeader.windowWidth) : 960.0;
+  config.windowHeight = state.gfxMode ? static_cast<CGFloat>(state.gfxHeader.windowHeight) : 640.0;
+  config.windowTitle = state.gfxMode ? @"PrimeStruct /std/gfx (Window Host)"
+                                     : @"PrimeStruct Spinning Cube (Window Host)";
+  config.activationPolicy = NSApplicationActivationPolicyRegular;
+  config.gfxProfile = deducedGfxProfileName();
+
+  PresenterCallbacks callbacks;
+  callbacks.prepare = prepareWindowHostContent;
+  callbacks.presenterReady = emitPresenterReadyDiagnostics;
+  callbacks.render = renderWindowHostFrame;
+
+  return primestruct::native_metal_window::runPresenter(config, &state, callbacks);
 }

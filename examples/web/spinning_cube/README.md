@@ -190,6 +190,9 @@ xcrun clang++ -std=c++17 -fobjc-arc examples/native/spinning_cube/window_host.mm
 - The sample wrapper now delegates the reusable build/launch/smoke flow to
   `scripts/run_canonical_gfx_native_window.sh`, leaving only spinning-cube
   path/entrypoint binding in `run_native_spinning_cube_window.sh`.
+- The native host itself now binds its cube/software-surface callbacks onto
+  `examples/shared/native_metal_window_host.h`, so the sample file no longer
+  owns the `NSWindow`/`CAMetalLayer` presenter shell directly.
 - Defaults to `--max-frames 600` for normal windowed runs (about 10 seconds at
   60 fps), satisfying the native done-condition smoke target.
 - Runs `scripts/preflight_native_spinning_cube_window.sh` first unless

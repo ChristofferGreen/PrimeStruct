@@ -757,52 +757,42 @@ TEST_CASE("spinning cube native window host locks indexed cube pipeline resource
   const std::string hostSource = readFile(hostSourcePath.string());
 
   CHECK(hostSource.find("#include \"../../shared/gfx_contract_shared.h\"") != std::string::npos);
+  CHECK(hostSource.find("#include \"../../shared/native_metal_window_host.h\"") != std::string::npos);
   CHECK(hostSource.find("struct WindowVertexIn") != std::string::npos);
   CHECK(hostSource.find("float4 position [[attribute(0)]];") != std::string::npos);
   CHECK(hostSource.find("float4 color [[attribute(1)]];") != std::string::npos);
   CHECK(hostSource.find("out.position = uniforms.modelViewProjection * in.position;") != std::string::npos);
   CHECK(hostSource.find("using GfxErrorCode = primestruct::gfx_contract::GfxErrorCode;") != std::string::npos);
+  CHECK(hostSource.find("using StartupFailureStage = primestruct::native_metal_window::StartupFailureStage;") !=
+        std::string::npos);
   CHECK(hostSource.find("using WindowVertex = primestruct::gfx_contract::VertexColoredHost;") != std::string::npos);
   CHECK(hostSource.find("struct WindowVertex {") == std::string::npos);
   CHECK(hostSource.find("const char *gfxErrorCodeName(") == std::string::npos);
+  CHECK(hostSource.find("@implementation PrimeStructWindowHostDelegate") == std::string::npos);
+  CHECK(hostSource.find("event.keyCode == 53") == std::string::npos);
   CHECK(hostSource.find("constant WindowUniforms &uniforms [[buffer(1)]]") != std::string::npos);
   CHECK(hostSource.find("CubeVertices") != std::string::npos);
   CHECK(hostSource.find("CubeIndices") != std::string::npos);
   CHECK(hostSource.find("newBufferWithBytes:CubeVertices.data()") != std::string::npos);
   CHECK(hostSource.find("newBufferWithBytes:CubeIndices.data()") != std::string::npos);
   CHECK(hostSource.find("newBufferWithLength:sizeof(WindowUniforms)") != std::string::npos);
-  CHECK(hostSource.find("setVertexBuffer:_vertexBuffer offset:0 atIndex:0") != std::string::npos);
-  CHECK(hostSource.find("setVertexBuffer:_uniformBuffer offset:0 atIndex:1") != std::string::npos);
+  CHECK(hostSource.find("setVertexBuffer:state.vertexBuffer offset:0 atIndex:0") != std::string::npos);
+  CHECK(hostSource.find("setVertexBuffer:state.uniformBuffer offset:0 atIndex:1") != std::string::npos);
   CHECK(hostSource.find("vertexDescriptor.attributes[0].format = MTLVertexFormatFloat4;") != std::string::npos);
   CHECK(hostSource.find("vertexDescriptor.attributes[0].offset = offsetof(WindowVertex, px);") != std::string::npos);
   CHECK(hostSource.find("vertexDescriptor.attributes[1].offset = offsetof(WindowVertex, r);") != std::string::npos);
   CHECK(hostSource.find("drawIndexedPrimitives:MTLPrimitiveTypeTriangle") != std::string::npos);
-  CHECK(hostSource.find("keyCode == 53") != std::string::npos);
-  CHECK(hostSource.find("handleEscapeKey") != std::string::npos);
-  CHECK(hostSource.find("startup_success=1") != std::string::npos);
-  CHECK(hostSource.find("startup_failure=1") != std::string::npos);
-  CHECK(hostSource.find("gfx_profile=native-desktop") != std::string::npos);
-  CHECK(hostSource.find("gfx_error_code=") != std::string::npos);
-  CHECK(hostSource.find("primestruct::gfx_contract::gfxErrorCodeName") != std::string::npos);
-  CHECK(hostSource.find("gfx_error_why=") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_stage=") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_reason=") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_exit_code=") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_stage=first_frame_submission") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_stage=window_creation") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_stage=pipeline_setup") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_stage=shader_load") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_stage=gpu_device_acquisition") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_stage=simulation_stream_load") != std::string::npos);
+  CHECK(hostSource.find("emitPresenterReadyDiagnostics") != std::string::npos);
+  CHECK(hostSource.find("prepareWindowHostContent") != std::string::npos);
+  CHECK(hostSource.find("renderWindowHostFrame") != std::string::npos);
+  CHECK(hostSource.find("primestruct::native_metal_window::emitStartupFailure") != std::string::npos);
+  CHECK(hostSource.find("primestruct::native_metal_window::runPresenter") != std::string::npos);
   CHECK(hostSource.find("--gfx") != std::string::npos);
   CHECK(hostSource.find("--cube-sim") == std::string::npos);
   CHECK(hostSource.find("gfx_stream_loaded=1") != std::string::npos);
   CHECK(hostSource.find("gfx_window_width=") != std::string::npos);
   CHECK(hostSource.find("gfx_submit_present_mask=") != std::string::npos);
   CHECK(hostSource.find("gfx_stream_load_failed") != std::string::npos);
-  CHECK(hostSource.find("exit_reason=window_close") != std::string::npos);
-  CHECK(hostSource.find("exit_reason=esc_key") != std::string::npos);
-  CHECK(hostSource.find("exit_reason=max_frames") != std::string::npos);
 }
 
 TEST_CASE("spinning cube native window host software surface bridge stays source locked") {
@@ -871,6 +861,43 @@ TEST_CASE("shared gfx contract header stays source locked") {
   CHECK(source.find("static_assert(alignof(VertexColoredHost) == 4);") != std::string::npos);
 }
 
+TEST_CASE("shared native metal window helper stays source locked") {
+  std::filesystem::path sharedDir = std::filesystem::path("..") / "examples" / "shared";
+  if (!std::filesystem::exists(sharedDir)) {
+    sharedDir = std::filesystem::current_path() / "examples" / "shared";
+  }
+  REQUIRE(std::filesystem::exists(sharedDir));
+
+  const std::filesystem::path sharedHeaderPath = sharedDir / "native_metal_window_host.h";
+  REQUIRE(std::filesystem::exists(sharedHeaderPath));
+
+  const std::string source = readFile(sharedHeaderPath.string());
+  CHECK(source.find("namespace primestruct::native_metal_window {") != std::string::npos);
+  CHECK(source.find("enum class StartupFailureStage {") != std::string::npos);
+  CHECK(source.find("SimulationStreamLoad") != std::string::npos);
+  CHECK(source.find("GpuDeviceAcquisition") != std::string::npos);
+  CHECK(source.find("ShaderLoad") != std::string::npos);
+  CHECK(source.find("PipelineSetup") != std::string::npos);
+  CHECK(source.find("WindowCreation") != std::string::npos);
+  CHECK(source.find("FirstFrameSubmission") != std::string::npos);
+  CHECK(source.find("startup_failure_stage=") != std::string::npos);
+  CHECK(source.find("runtime_failure=1") != std::string::npos);
+  CHECK(source.find("gfx_error_code=") != std::string::npos);
+  CHECK(source.find("gfx_error_why=") != std::string::npos);
+  CHECK(source.find("@interface PrimeStructNativeMetalWindow : NSWindow") != std::string::npos);
+  CHECK(source.find("event.keyCode == 53") != std::string::npos);
+  CHECK(source.find("window_created=1") != std::string::npos);
+  CHECK(source.find("swapchain_layer_created=1") != std::string::npos);
+  CHECK(source.find("startup_success=1") != std::string::npos);
+  CHECK(source.find("frame_rendered=1") != std::string::npos);
+  CHECK(source.find("exit_reason=window_close") != std::string::npos);
+  CHECK(source.find("exit_reason=esc_key") != std::string::npos);
+  CHECK(source.find("exit_reason=max_frames") != std::string::npos);
+  CHECK(source.find("[CAMetalLayer layer]") != std::string::npos);
+  CHECK(source.find("[_metalLayer nextDrawable]") != std::string::npos);
+  CHECK(source.find("@selector(renderFrame:)") != std::string::npos);
+}
+
 TEST_CASE("spinning cube native window host sample compiles and validates args deterministically") {
   if (!spinningCubeBackendsSupportArrayReturns()) {
     INFO("Skipping spinning cube native host arg checks until array-return lowering support lands");
@@ -892,12 +919,20 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
 
   const std::filesystem::path cubePath = webSampleDir / "cube.prime";
   const std::filesystem::path hostSourcePath = nativeSampleDir / "window_host.mm";
+  std::filesystem::path sharedHelperPath =
+      std::filesystem::path("..") / "examples" / "shared" / "native_metal_window_host.h";
   REQUIRE(std::filesystem::exists(cubePath));
   REQUIRE(std::filesystem::exists(hostSourcePath));
+  if (!std::filesystem::exists(sharedHelperPath)) {
+    sharedHelperPath = std::filesystem::current_path() / "examples" / "shared" / "native_metal_window_host.h";
+  }
+  REQUIRE(std::filesystem::exists(sharedHelperPath));
 
   const std::string hostSource = readFile(hostSourcePath.string());
+  const std::string sharedHelperSource = readFile(sharedHelperPath.string());
   CHECK(hostSource.find("#import <AppKit/AppKit.h>") != std::string::npos);
   CHECK(hostSource.find("#import <QuartzCore/CAMetalLayer.h>") != std::string::npos);
+  CHECK(hostSource.find("#include \"../../shared/native_metal_window_host.h\"") != std::string::npos);
   CHECK(hostSource.find("--gfx") != std::string::npos);
   CHECK(hostSource.find("--simulation-smoke") != std::string::npos);
   CHECK(hostSource.find("--software-surface-demo") != std::string::npos);
@@ -907,26 +942,26 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(hostSource.find("gfx_submit_present_mask=") != std::string::npos);
   CHECK(hostSource.find("simulation_stream_loaded=1") != std::string::npos);
   CHECK(hostSource.find("simulation_fixed_step_millis=16") != std::string::npos);
-  CHECK(hostSource.find("gfx_profile=native-desktop") != std::string::npos);
   CHECK(hostSource.find("shader_library_ready=1") != std::string::npos);
   CHECK(hostSource.find("vertex_buffer_ready=1") != std::string::npos);
   CHECK(hostSource.find("index_buffer_ready=1") != std::string::npos);
   CHECK(hostSource.find("uniform_buffer_ready=1") != std::string::npos);
-  CHECK(hostSource.find("startup_success=1") != std::string::npos);
-  CHECK(hostSource.find("startup_failure=1") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_stage=") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_reason=") != std::string::npos);
-  CHECK(hostSource.find("startup_failure_exit_code=") != std::string::npos);
-  CHECK(hostSource.find("gfx_error_code=") != std::string::npos);
-  CHECK(hostSource.find("gfx_error_why=") != std::string::npos);
-  CHECK(hostSource.find("exit_reason=max_frames") != std::string::npos);
-  CHECK(hostSource.find("exit_reason=window_close") != std::string::npos);
-  CHECK(hostSource.find("exit_reason=esc_key") != std::string::npos);
   CHECK(hostSource.find("simulation_tick=") != std::string::npos);
-  CHECK(hostSource.find("window_created=1") != std::string::npos);
-  CHECK(hostSource.find("swapchain_layer_created=1") != std::string::npos);
   CHECK(hostSource.find("pipeline_ready=1") != std::string::npos);
-  CHECK(hostSource.find("frame_rendered=1") != std::string::npos);
+  CHECK(sharedHelperSource.find("gfx_profile=") != std::string::npos);
+  CHECK(sharedHelperSource.find("startup_success=1") != std::string::npos);
+  CHECK(sharedHelperSource.find("startup_failure=1") != std::string::npos);
+  CHECK(sharedHelperSource.find("startup_failure_stage=") != std::string::npos);
+  CHECK(sharedHelperSource.find("startup_failure_reason=") != std::string::npos);
+  CHECK(sharedHelperSource.find("startup_failure_exit_code=") != std::string::npos);
+  CHECK(sharedHelperSource.find("gfx_error_code=") != std::string::npos);
+  CHECK(sharedHelperSource.find("gfx_error_why=") != std::string::npos);
+  CHECK(sharedHelperSource.find("exit_reason=max_frames") != std::string::npos);
+  CHECK(sharedHelperSource.find("exit_reason=window_close") != std::string::npos);
+  CHECK(sharedHelperSource.find("exit_reason=esc_key") != std::string::npos);
+  CHECK(sharedHelperSource.find("window_created=1") != std::string::npos);
+  CHECK(sharedHelperSource.find("swapchain_layer_created=1") != std::string::npos);
+  CHECK(sharedHelperSource.find("frame_rendered=1") != std::string::npos);
 
   if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
     INFO("xcrun unavailable; skipping native window host compile smoke");

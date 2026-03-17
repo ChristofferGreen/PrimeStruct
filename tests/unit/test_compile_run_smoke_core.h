@@ -3758,6 +3758,17 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   }
 
   {
+    CAPTURE("GFX-V1-NATIVE-HOST-THINNING-STATUS");
+    CHECK(graphicsDoc.find("native macOS window host itself now binds its cube/software-surface callbacks onto a shared") !=
+          std::string::npos);
+    CHECK(graphicsDoc.find("native Metal window presenter helper") != std::string::npos);
+    CHECK(primeStructDoc.find("native window host runtime shell now also lives in one shared presenter helper") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("native window host runtime shell") != std::string::npos);
+    CHECK(guidelinesDoc.find("now lives in a shared presenter helper") != std::string::npos);
+  }
+
+  {
     CAPTURE("GFX-V1-CANONICAL-STDLIB-STATUS");
     CHECK(graphicsDoc.find("first canonical `/std/gfx/*` stdlib surface") != std::string::npos);
     CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)` and `Device()` entry points") !=
