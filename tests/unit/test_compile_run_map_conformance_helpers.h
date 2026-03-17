@@ -947,13 +947,13 @@ inline std::string makeInferredExperimentalMapParameterConformanceSource() {
   source += "import /std/collections/experimental_map/*\n\n";
   source += "Holder() {}\n\n";
   source += "[return<int> effects(heap_alloc)]\n";
-  source += "scoreValues([auto mut] values{mapNew<string, i32>()}) {\n";
+  source += "scoreValues([auto mut] values) {\n";
   source += "  mapInsert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
   source +=
       "  return(plus(/std/collections/map/count(values), /std/collections/map/at(values, \"left\"raw_utf8)))\n";
   source += "}\n\n";
   source += "[return<int> effects(heap_alloc)]\n";
-  source += "/Holder/score([Holder] self, [auto mut] values{mapNew<string, i32>()}) {\n";
+  source += "/Holder/score([Holder] self, [auto mut] values) {\n";
   source += "  mapInsert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
   source +=
       "  return(plus(/std/collections/map/count(values), /std/collections/map/at(values, \"extra\"raw_utf8)))\n";
