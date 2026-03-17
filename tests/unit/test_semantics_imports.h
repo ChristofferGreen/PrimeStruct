@@ -868,7 +868,28 @@ main() {
   CHECK(error.find("unknown named argument: profile") != std::string::npos);
 }
 
-TEST_CASE("experimental gfx device constructor entry point keeps deterministic reject") {
+TEST_CASE("experimental gfx device constructor entry point validates through stdlib helper") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Device] device{Device()?}
+  [Queue] queue{device.default_queue()}
+  return(plus(device.token, queue.token))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental gfx device constructor still rejects bare explicit struct binding") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -880,7 +901,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("experimental gfx entry point not implemented yet: Device()") != std::string::npos);
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("experimental gfx pipeline entry point keeps deterministic reject") {

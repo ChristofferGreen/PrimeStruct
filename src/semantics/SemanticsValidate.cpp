@@ -1474,17 +1474,7 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return true;
     }
-    if (!expr.templateArgs.empty() || expr.args.size() != 3) {
-      return true;
-    }
-    bool sawTitleArg = false;
-    for (const auto &argName : expr.argNames) {
-      if (argName.has_value() && *argName == "title") {
-        sawTitleArg = true;
-        break;
-      }
-    }
-    if (!sawTitleArg) {
+    if (!expr.templateArgs.empty()) {
       return true;
     }
     std::string resolved = semantics::resolveStructTypePath(expr.name, expr.namespacePrefix, structNames);
@@ -1494,11 +1484,28 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         resolved = it->second;
       }
     }
-    if (resolved != "/std/gfx/experimental/Window") {
+    if (resolved.empty()) {
       return true;
     }
-    expr.name = "/std/gfx/experimental/windowCreate";
-    expr.namespacePrefix.clear();
+    if (resolved == "/std/gfx/experimental/Window" && expr.args.size() == 3) {
+      bool sawTitleArg = false;
+      for (const auto &argName : expr.argNames) {
+        if (argName.has_value() && *argName == "title") {
+          sawTitleArg = true;
+          break;
+        }
+      }
+      if (sawTitleArg) {
+        expr.name = "/std/gfx/experimental/windowCreate";
+        expr.namespacePrefix.clear();
+      }
+      return true;
+    }
+    if (resolved == "/std/gfx/experimental/Device" && expr.args.empty() && !expr.hasBodyArguments &&
+        expr.bodyArguments.empty() && !semantics::hasNamedArguments(expr.argNames)) {
+      expr.name = "/std/gfx/experimental/deviceCreate";
+      expr.namespacePrefix.clear();
+    }
     return true;
   };
 

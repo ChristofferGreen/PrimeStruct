@@ -16,18 +16,18 @@ end-to-end. Current repo coverage therefore consists of contract checks,
 experimental import/type-surface coverage, an explicit `.prime`
 `GraphicsSubstrate` token/config boundary for create/acquire/submit/present
 operations, method-form `.prime` wrappers for the currently expressible
-window/frame lifecycle surface, a constructor-shaped `Window(...)` entry point
-that now rewrites through a dedicated substrate-backed stdlib helper, and
-browser/native/Metal host samples around shared `.prime` simulation/data
-paths. Bare `Device()` and the type-valued `Device.create_pipeline(...)`
-signature are still pending canonical entry-point work, so the current
+window/frame lifecycle surface, constructor-shaped `Window(...)` and `Device()`
+entry points that now rewrite through dedicated substrate-backed stdlib
+helpers, and browser/native/Metal host samples around shared `.prime`
+simulation/data paths. The type-valued `Device.create_pipeline(...)`
+signature is still pending canonical entry-point work, so the current
 experimental package intentionally keeps deterministic rejects for source-level
-profile literals, bare `Device()` entry-point spelling, and the type-valued
-`create_pipeline(...)` shape instead of inventing more compiler-owned routing,
-and Result-carrying method wrappers now also reject bare explicit non-`Result`
-struct bindings during semantics rather than deferring those failures to
-lowering; follow-up work should keep the public graphics API primarily in
-`.prime` files while leaving only minimal backend substrate in C++/host code.
+profile literals and the type-valued `create_pipeline(...)` shape instead of
+inventing more compiler-owned routing, and Result-carrying method wrappers now
+also reject bare explicit non-`Result` struct bindings during semantics rather
+than deferring those failures to lowering; follow-up work should keep the
+public graphics API primarily in `.prime` files while leaving only minimal
+backend substrate in C++/host code.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.

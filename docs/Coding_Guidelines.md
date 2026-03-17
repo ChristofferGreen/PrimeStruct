@@ -48,9 +48,11 @@ semantics after canonicalization.
 - Prefer compile-target profile deduction over source-level profile literals.
   Canonical `/std/gfx/*` contract example: `device{Device()?}` is preferred
   over `device{Device([profile] "...")?}`.
-  Current `/std/gfx/experimental/*` status: the constructor-shaped `Device()`
-  entry point is still intentionally rejected until the canonical entry points
-  land, so use the explicit experimental wrappers/substrate-backed forms there.
+  Current `/std/gfx/experimental/*` status: the constructor-shaped
+  `Window(...)` and `Device()` entry points now rewrite through
+  substrate-backed helpers there, but source-level profile literals and
+  `create_pipeline(...)` are still intentionally rejected until the remaining
+  canonical entry points land.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
   Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with
