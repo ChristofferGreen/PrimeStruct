@@ -277,6 +277,8 @@
   out << "  return static_cast<int>(value.size());\n";
   out << "}\n";
   out << "template <typename T>\n";
+  out << "static inline int ps_missing_vector_count_call_helper(const T &) = delete;\n";
+  out << "template <typename T>\n";
   out << "static inline int ps_missing_vector_count_method_helper(const T &) = delete;\n";
   out << "template <typename T>\n";
   out << "static inline std::vector<T> ps_args_concat(std::vector<T> prefix, const std::vector<T> &suffix) {\n";
