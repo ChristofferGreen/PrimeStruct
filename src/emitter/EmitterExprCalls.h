@@ -431,7 +431,7 @@
     }
     return defMap.count("/" + normalized) == 0;
   };
-  auto explicitVectorAccessResolvedStructTypePath = [&](const Expr &candidate) -> std::string {
+  auto explicitVectorAccessResolvedTypePath = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
@@ -452,7 +452,12 @@
           return normalizedStruct;
         }
       }
-      if (returnKinds.find(resolvedCandidate) != returnKinds.end()) {
+      auto kindIt = returnKinds.find(resolvedCandidate);
+      if (kindIt != returnKinds.end()) {
+        const std::string normalizedKindType = normalizedTypePath(typeNameForReturnKind(kindIt->second));
+        if (!normalizedKindType.empty()) {
+          return normalizedKindType;
+        }
         return "";
       }
     }
@@ -708,10 +713,10 @@
       }
     }
     if (!targetExpr.isMethodCall) {
-      const std::string resolvedExplicitVectorAccessStructType =
-          explicitVectorAccessResolvedStructTypePath(targetExpr);
-      if (!resolvedExplicitVectorAccessStructType.empty()) {
-        return resolvedExplicitVectorAccessStructType;
+      const std::string resolvedExplicitVectorAccessType =
+          explicitVectorAccessResolvedTypePath(targetExpr);
+      if (!resolvedExplicitVectorAccessType.empty()) {
+        return resolvedExplicitVectorAccessType;
       }
       const bool shouldProbeBuiltinVectorAccessType =
           isExplicitVectorAccessCompatibilityCall(targetExpr) ||

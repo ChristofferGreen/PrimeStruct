@@ -3934,6 +3934,51 @@ TEST_CASE("C++ emitter helper prefers vector alias access struct-return metadata
   CHECK(resolved == "/Marker/tag");
 }
 
+TEST_CASE("C++ emitter helper prefers vector access return-kind metadata") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/vector/at";
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  receiverCall.args.push_back(receiverName);
+  receiverCall.args.push_back(indexLiteral);
+  receiverCall.argNames.push_back(std::nullopt);
+  receiverCall.argNames.push_back(std::nullopt);
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "count";
+  methodCall.args.push_back(receiverCall);
+  methodCall.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  receiverInfo.typeTemplateArg = "i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  returnKinds.emplace("/std/collections/vector/at", primec::emitter::ReturnKind::String);
+
+  std::string resolved;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/string/count");
+}
+
 TEST_CASE("C++ emitter helper keeps vector element method unresolved without canonical metadata") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
@@ -9094,7 +9139,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("C++ emitter keeps canonical vector access builtin string count shadow") {
+TEST_CASE("rejects canonical vector access direct-call string count fallback in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -9113,15 +9158,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_canonical_vector_access_builtin_string_count_shadow.prime", source);
-  const std::string exePath =
+      writeTemp("compile_cpp_canonical_vector_access_direct_count_fallback_reject.prime", source);
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_vector_access_builtin_string_count_shadow_exe")
+       "primec_cpp_canonical_vector_access_direct_count_fallback_reject.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps wrapper-returned vector string access count fallback") {
@@ -9167,7 +9213,7 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
-TEST_CASE("C++ emitter keeps primitive diagnostics on canonical vector unsafe access count shadow") {
+TEST_CASE("C++ emitter keeps canonical vector unsafe direct-call string count forwarding") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -9186,16 +9232,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_canonical_vector_access_unsafe_count_shadow_reject.prime", source);
-  const std::string errPath =
+      writeTemp("compile_cpp_canonical_vector_access_unsafe_direct_count_forwarding.prime", source);
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_vector_access_unsafe_count_shadow_reject.err")
+       "primec_cpp_canonical_vector_access_unsafe_direct_count_forwarding_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("C++ emitter keeps canonical vector method helper return precedence over string count shadow") {
@@ -9332,7 +9377,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps wrapper-returned vector access string count fallback") {
+TEST_CASE("rejects wrapper-returned vector alias direct-call string count fallback in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -9361,15 +9406,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_vector_access_string_count_fallback.prime", source);
-  const std::string exePath =
+      writeTemp("compile_cpp_wrapper_vector_access_direct_count_fallback_reject.prime", source);
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_wrapper_vector_access_string_count_fallback_exe")
+       "primec_cpp_wrapper_vector_access_direct_count_fallback_reject.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 182);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
 TEST_CASE("rejects bare vector method access receiver fallback without helper in C++ emitter") {
@@ -9432,7 +9478,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps wrapper-returned vector access primitive count diagnostics") {
+TEST_CASE("C++ emitter keeps wrapper-returned vector direct-call string count forwarding") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -9461,19 +9507,18 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_vector_access_primitive_count_diag.prime", source);
-  const std::string errPath =
+      writeTemp("compile_cpp_wrapper_vector_access_direct_count_forwarding.prime", source);
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_wrapper_vector_access_primitive_count_diag.err")
+       "primec_cpp_wrapper_vector_access_direct_count_forwarding_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 182);
 }
 
-TEST_CASE("C++ emitter keeps primitive diagnostics on vector alias access count canonical wrapper return forwarding") {
+TEST_CASE("C++ emitter keeps vector alias direct-call count canonical wrapper return forwarding") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapValues() {
@@ -9491,15 +9536,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_vector_alias_access_count_canonical_wrapper_return_forwarding_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_vector_alias_access_count_canonical_wrapper_return_forwarding_reject.err")
-                                  .string();
+      writeTemp("compile_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding_exe")
+          .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("C++ emitter keeps primitive diagnostics on vector alias access count with canonical non-string wrapper return") {
