@@ -919,6 +919,17 @@
         << ")";
     return out.str();
   };
+  auto isNoHelperExplicitVectorAccessCountReceiver = [&](const Expr &candidate) {
+    if (isExplicitVectorAccessDirectCall(candidate)) {
+      return explicitVectorAccessResolvedTypePath(candidate).empty();
+    }
+    if ((isExplicitVectorAccessSlashMethod(candidate, "at") ||
+         isExplicitVectorAccessSlashMethod(candidate, "at_unsafe")) &&
+        candidate.isMethodCall) {
+      return probedTypePathForTarget(candidate).empty();
+    }
+    return false;
+  };
   auto pickAccessReceiverIndex = [&]() -> size_t {
     if (expr.args.size() != 2) {
       return 0;
@@ -1025,8 +1036,7 @@
       return emitMissingExplicitVectorAccessCall(expr);
     }
     if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-        isExplicitVectorAccessDirectCall(expr.args.front()) &&
-        explicitVectorAccessResolvedTypePath(expr.args.front()).empty()) {
+        isNoHelperExplicitVectorAccessCountReceiver(expr.args.front())) {
       std::ostringstream out;
       out << "ps_missing_vector_access_count_receiver_helper("
           << (isNoHelperExplicitVectorAccessCallFallback(expr.args.front())
