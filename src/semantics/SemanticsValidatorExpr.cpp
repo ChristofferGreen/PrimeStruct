@@ -5141,6 +5141,21 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         resolvedMethod = false;
       }
+    } else if (hasNamedArguments(expr.argNames) &&
+               expr.args.size() == 1 &&
+               defMap_.find(resolved) == defMap_.end() &&
+               isNamespacedVectorHelperCall &&
+               (namespacedHelper == "count" || namespacedHelper == "capacity")) {
+      bool isBuiltinMethod = false;
+      std::string methodResolved;
+      if (resolveMethodTarget(expr.args.front(), namespacedHelper, methodResolved, isBuiltinMethod) &&
+          !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
+        usedMethodTarget = true;
+        hasMethodReceiverIndex = true;
+        methodReceiverIndex = 0;
+        resolved = methodResolved;
+        resolvedMethod = false;
+      }
     } else if (isDirectStdNamespacedVectorCountWrapperMapTarget) {
       error_ = "template arguments required for /std/collections/vector/count";
       return false;

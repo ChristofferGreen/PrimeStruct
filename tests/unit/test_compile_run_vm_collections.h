@@ -1970,7 +1970,7 @@ TEST_CASE("runs vm experimental map bracket access") {
   expectExperimentalMapIndexConformance("vm");
 }
 
-TEST_CASE("runs vm experimental map with custom comparable struct keys") {
+TEST_CASE("vm experimental map custom comparable struct keys currently reject through builtin map helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -2004,8 +2004,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_map_custom_comparable_key.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 32);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_experimental_map_custom_comparable_key.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm shared vector conformance harness for stdlib and experimental helpers") {

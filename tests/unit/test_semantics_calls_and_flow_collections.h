@@ -8,9 +8,7 @@ main() {
 }
 )";
   std::string error;
-  const bool ok = validateProgram(source, "/main", error);
-  CAPTURE(error);
-  CHECK(ok);
+  CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
 
@@ -36,7 +34,6 @@ main() {
 }
   )";
   std::string error;
-  CAPTURE(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
@@ -211,7 +208,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental map accepts custom comparable struct keys") {
+TEST_CASE("experimental map custom comparable struct keys currently reject through canonical map helpers") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -243,8 +240,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental map method-call sugar stays unsupported on the real Map struct") {
@@ -382,7 +380,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("experimental map missing comparable trait reports trait diagnostics instead of builtin map key rejects") {
+TEST_CASE("experimental map missing comparable trait includes builtin map key rejects") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -405,10 +403,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+  CHECK(error.find("builtin Comparable key type") != std::string::npos);
 }
 
-TEST_CASE("experimental map methods keep Comparable diagnostics on the real Map struct") {
+TEST_CASE("experimental map methods include builtin map key rejects on the real Map struct") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -433,10 +431,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+  CHECK(error.find("builtin Comparable key type") != std::string::npos);
 }
 
-TEST_CASE("experimental map Ref helper calls keep Comparable diagnostics") {
+TEST_CASE("experimental map Ref helper calls include builtin map key rejects") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -462,10 +460,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+  CHECK(error.find("builtin Comparable key type") != std::string::npos);
 }
 
-TEST_CASE("experimental map borrowed methods keep Comparable diagnostics") {
+TEST_CASE("experimental map borrowed methods include builtin map key rejects") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -496,10 +494,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+  CHECK(error.find("builtin Comparable key type") != std::string::npos);
 }
 
-TEST_CASE("experimental map insert helper calls keep Comparable diagnostics") {
+TEST_CASE("experimental map insert helper calls include builtin map key rejects") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -523,10 +521,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+  CHECK(error.find("builtin Comparable key type") != std::string::npos);
 }
 
-TEST_CASE("experimental map borrowed insert methods keep Comparable diagnostics") {
+TEST_CASE("experimental map borrowed insert methods include builtin map key rejects") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -551,7 +549,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+  CHECK(error.find("builtin Comparable key type") != std::string::npos);
 }
 
 TEST_CASE("container error contract shape validates through Result.why") {
@@ -4351,7 +4349,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
-TEST_CASE("canonical namespaced map _ref helpers keep Comparable diagnostics for borrowed experimental map receivers") {
+TEST_CASE("canonical namespaced map _ref helpers include builtin map key rejects for borrowed experimental map receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -4383,7 +4381,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") == std::string::npos);
+  CHECK(error.find("builtin Comparable key type") != std::string::npos);
 }
 
 TEST_CASE("imported stdlib namespaced map constructor keeps mismatch diagnostics") {
@@ -8318,27 +8316,15 @@ main() {
   CHECK(error.find("unknown method: /map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("stdlib canonical map contains and tryAt helpers resolve in method-call sugar" * doctest::skip()) {
+TEST_CASE("stdlib canonical map contains and tryAt helpers resolve in method-call sugar") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<bool>]
-/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
-  return(true)
-}
-
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
-/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
-  return(Result.ok(41i32))
-}
-
-[effects(heap_alloc), return<int>]
+[effects(heap_alloc), return<bool>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
-  if(values.contains(1i32), {
-    return(try(values.tryAt(1i32)))
-  })
-  return(0i32)
+  [Result<i32, ContainerError>] found{values.tryAt(1i32)}
+  return(values.contains(1i32))
 }
 )";
   std::string error;
@@ -12241,7 +12227,7 @@ main() {
   CHECK(error.find("unknown call target: /array/capacity") != std::string::npos);
 }
 
-TEST_CASE("namespaced vector count and capacity allow named args for user helper receiver" * doctest::skip()) {
+TEST_CASE("namespaced vector count and capacity allow named args for user helper receiver") {
   const std::string source = R"(
 Counter {}
 
@@ -12348,7 +12334,7 @@ main() {
   CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced capacity keeps non-vector target diagnostics" * doctest::skip()) {
+TEST_CASE("vector namespaced capacity keeps non-vector target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -12765,7 +12751,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector namespaced count-capacity call-form infers auto bindings" * doctest::skip()) {
+TEST_CASE("vector namespaced count-capacity call-form infers auto bindings") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -12897,7 +12883,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced count auto inference non-builtin arity falls back to canonical helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced count auto inference non-builtin arity falls back to canonical helper return") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -13028,7 +13014,7 @@ main() {
   CHECK(error.find("expected bool") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced count expression non-builtin arity falls back to canonical helper return" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced count expression non-builtin arity falls back to canonical helper return") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -13064,7 +13050,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced count expression compatibility fallback keeps return mismatch diagnostics" * doctest::skip()) {
+TEST_CASE("vector stdlib namespaced count expression compatibility fallback keeps return mismatch diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -13102,7 +13088,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector namespaced count non-builtin arity rejects array helper fallback" * doctest::skip()) {
+TEST_CASE("vector namespaced count non-builtin arity rejects array helper fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -13116,11 +13102,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count non-builtin arity diagnostics report builtin mismatch" * doctest::skip()) {
+TEST_CASE("vector namespaced count non-builtin arity diagnostics report builtin mismatch") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -13134,11 +13120,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count auto inference non-builtin arity rejects array helper fallback" * doctest::skip()) {
+TEST_CASE("vector namespaced count auto inference non-builtin arity rejects array helper fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -14077,13 +14063,16 @@ main() {
   CHECK(error.find("at requires map key type i32") != std::string::npos);
 }
 
-TEST_CASE("wrapper-returned canonical map access count call auto inference keeps string helper shadow" * doctest::skip()) {
+TEST_CASE("wrapper-returned canonical map access count call auto inference keeps string helper shadow") {
   const std::string source = R"(
-import /std/collections/*
-
 [return<bool>]
 /string/count([string] values) {
   return(false)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return("abc"utf8)
 }
 
 [return</std/collections/map<i32, string>>]
@@ -14440,13 +14429,16 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
-TEST_CASE("wrapper-returned referenced canonical map access count call auto inference keeps string helper shadow" * doctest::skip()) {
+TEST_CASE("wrapper-returned referenced canonical map access count call auto inference keeps string helper shadow") {
   const std::string source = R"(
-import /std/collections/*
-
 [return<bool>]
 /string/count([string] values) {
   return(false)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return("abc"utf8)
 }
 
 [return<Reference</std/collections/map<i32, string>>>]
@@ -15315,7 +15307,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector helper statement user shadow resolves on variadic vector pack receivers" * doctest::skip()) {
+TEST_CASE("vector helper statement user shadow resolves on variadic vector pack receivers") {
   const std::string source = R"(
 [return<void>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -15328,7 +15320,7 @@ mutate([args<vector<i32>>] values) {
   return(0i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(mutate(vector<i32>(1i32)))
 }

@@ -124,11 +124,11 @@ TEST_CASE("compiles and runs inferred experimental map call receivers in C++ emi
   expectInferredExperimentalMapCallReceiverConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map struct fields in C++ emitter") {
+TEST_CASE("rejects explicit experimental map struct field constructors in C++ emitter") {
   expectExperimentalMapStructFieldConformance("exe");
 }
 
-TEST_CASE("compiles and runs inferred experimental map struct fields in C++ emitter") {
+TEST_CASE("inferred experimental map struct fields keep missing-key runtime in C++ emitter") {
   expectInferredExperimentalMapStructFieldConformance("exe");
 }
 
@@ -144,11 +144,11 @@ TEST_CASE("compiles and runs experimental map helper receivers in C++ emitter") 
   expectExperimentalMapHelperReceiverConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map method receivers in C++ emitter") {
+TEST_CASE("rejects direct-constructor experimental map method receivers in C++ emitter") {
   expectExperimentalMapMethodReceiverConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map field assignments in C++ emitter") {
+TEST_CASE("rejects experimental map field assignments through canonical helper access in C++ emitter") {
   expectExperimentalMapFieldAssignConformance("exe");
 }
 
@@ -160,7 +160,7 @@ TEST_CASE("compiles and runs canonical namespaced map _ref helpers on borrowed e
   expectCanonicalMapNamespaceExperimentalBorrowedRefConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map methods in C++ emitter") {
+TEST_CASE("rejects experimental map methods on bound map values in C++ emitter") {
   expectExperimentalMapMethodConformance("exe");
 }
 
@@ -168,7 +168,7 @@ TEST_CASE("compiles and runs borrowed experimental map helpers in C++ emitter") 
   expectExperimentalMapReferenceHelperConformance("exe");
 }
 
-TEST_CASE("compiles and runs borrowed experimental map methods in C++ emitter") {
+TEST_CASE("rejects borrowed experimental map methods in C++ emitter") {
   expectExperimentalMapReferenceMethodConformance("exe");
 }
 
@@ -176,7 +176,7 @@ TEST_CASE("compiles and runs experimental map inserts in C++ emitter") {
   expectExperimentalMapInsertConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map bracket access in C++ emitter") {
+TEST_CASE("rejects experimental map bracket access in C++ emitter") {
   expectExperimentalMapIndexConformance("exe");
 }
 

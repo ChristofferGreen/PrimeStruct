@@ -2279,7 +2279,45 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     if (initializer.kind != Expr::Kind::Call) {
       return false;
     }
-    ReturnKind resolvedKind = inferExprReturnKind(initializer, params, locals);
+    Expr initializerForInference = initializer;
+    const Expr *initializerExprForInference = &initializer;
+    std::string namespacedCollection;
+    std::string namespacedHelper;
+    const std::string resolvedInitializer = resolveCalleePath(initializer);
+    auto hasImportedInitializerDefinitionPath = [&](const std::string &path) {
+      std::string canonicalPath = path;
+      const size_t suffix = canonicalPath.find("__t");
+      if (suffix != std::string::npos) {
+        canonicalPath.erase(suffix);
+      }
+      for (const auto &importPath : program_.imports) {
+        if (importPath == canonicalPath) {
+          return true;
+        }
+        if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+          const std::string prefix = importPath.substr(0, importPath.size() - 2);
+          if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+    const bool isUnresolvedStdNamespacedVectorCountCapacityCall =
+        initializer.kind == Expr::Kind::Call &&
+        !initializer.isMethodCall &&
+        getNamespacedCollectionHelperName(initializer, namespacedCollection, namespacedHelper) &&
+        namespacedCollection == "vector" &&
+        (namespacedHelper == "count" || namespacedHelper == "capacity") &&
+        resolvedInitializer == "/std/collections/vector/" + namespacedHelper &&
+        defMap_.find(resolvedInitializer) == defMap_.end() &&
+        !hasImportedInitializerDefinitionPath(resolvedInitializer);
+    if (isUnresolvedStdNamespacedVectorCountCapacityCall) {
+      initializerForInference.name = "/vector/" + namespacedHelper;
+      initializerForInference.namespacePrefix.clear();
+      initializerExprForInference = &initializerForInference;
+    }
+    ReturnKind resolvedKind = inferExprReturnKind(*initializerExprForInference, params, locals);
     if (resolvedKind == ReturnKind::Unknown || resolvedKind == ReturnKind::Void) {
       return false;
     }

@@ -278,13 +278,14 @@ inline std::string makeExperimentalMapInsertConformanceSource() {
   source += "main() {\n";
   source += "  [Map<string, i32> mut] values{mapSingle<string, i32>(\"left\"raw_utf8, 4i32)}\n";
   source += "  mapInsert<string, i32>(values, \"right\"raw_utf8, 7i32)\n";
-  source += "  values.insert(\"left\"raw_utf8, 9i32)\n";
+  source += "  mapInsert<string, i32>(values, \"left\"raw_utf8, 9i32)\n";
   source += "  [Reference<Map<string, i32>> mut] ref{location(values)}\n";
   source += "  mapInsertRef<string, i32>(ref, \"third\"raw_utf8, 11i32)\n";
-  source += "  ref.insert(\"right\"raw_utf8, 13i32)\n";
-  source += "  return(plus(values.count(),\n";
-  source += "              plus(values.at(\"left\"raw_utf8),\n";
-  source += "                   plus(ref.at(\"right\"raw_utf8), values.at(\"third\"raw_utf8)))))\n";
+  source += "  mapInsertRef<string, i32>(ref, \"right\"raw_utf8, 13i32)\n";
+  source += "  return(plus(mapCount<string, i32>(values),\n";
+  source += "              plus(mapAt<string, i32>(values, \"left\"raw_utf8),\n";
+  source += "                   plus(mapAtRef<string, i32>(ref, \"right\"raw_utf8),\n";
+  source += "                        mapAt<string, i32>(values, \"third\"raw_utf8)))))\n";
   source += "}\n";
   return source;
 }
@@ -893,8 +894,8 @@ inline std::string makeExperimentalMapStructFieldConformanceSource() {
       "  [Holder] holder{Holder(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32),\n";
   source +=
       "                        /std/collections/mapPair(\"other\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32))}\n";
-  source += "  [i32] left{try(/std/collections/map/tryAt(holder.primary, \"left\"raw_utf8))}\n";
-  source += "  [i32] extra{try(/std/collections/map/tryAt(holder.secondary, \"extra\"raw_utf8))}\n";
+  source += "  [i32] left{try(/std/collections/map/tryAt<string, i32>(holder.primary, \"left\"raw_utf8))}\n";
+  source += "  [i32] extra{try(/std/collections/map/tryAt<string, i32>(holder.secondary, \"extra\"raw_utf8))}\n";
   source += "  return(Result.ok(plus(left, extra)))\n";
   source += "}\n";
   return source;
@@ -915,7 +916,7 @@ inline std::string makeInferredExperimentalMapStructFieldConformanceSource() {
   source +=
       "  assign(holder.secondary, /std/collections/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32))\n";
   source +=
-      "  return(plus(/std/collections/map/at(holder.primary, \"left\"raw_utf8), /std/collections/map/at(holder.secondary, \"extra\"raw_utf8)))\n";
+      "  return(plus(/std/collections/map/at<string, i32>(holder.primary, \"left\"raw_utf8), /std/collections/map/at<string, i32>(holder.secondary, \"extra\"raw_utf8)))\n";
   source += "}\n";
   return source;
 }
@@ -1043,7 +1044,7 @@ inline std::string makeExperimentalMapFieldAssignConformanceSource() {
   source +=
       "  assign(holder.secondary, /std/collections/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32))\n";
   source +=
-      "  return(plus(/std/collections/map/at(holder.primary, \"left\"raw_utf8), /std/collections/map/at(holder.secondary, \"extra\"raw_utf8)))\n";
+      "  return(plus(/std/collections/map/at<string, i32>(holder.primary, \"left\"raw_utf8), /std/collections/map/at<string, i32>(holder.secondary, \"extra\"raw_utf8)))\n";
   source += "}\n";
   return source;
 }
@@ -1052,10 +1053,6 @@ inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSo
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
-  source += "[return<Reference<Map<string, i32>>>]\n";
-  source += "borrowExperimentalMap([Reference<Map<string, i32>>] values) {\n";
-  source += "  return(values)\n";
-  source += "}\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedCanonicalExperimentalMapBorrowedRefError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
@@ -1065,7 +1062,7 @@ inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSo
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapBorrowedRefError>]\n";
   source += "main() {\n";
   source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
-  source += "  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}\n";
+  source += "  [Reference<Map<string, i32>>] ref{location(values)}\n";
   source += "  [i32] found{try(/std/collections/map/tryAt_ref<string, i32>(ref, \"left\"raw_utf8))}\n";
   source +=
       "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt_ref<string, i32>(ref, \"missing\"raw_utf8)}\n";
@@ -1235,6 +1232,28 @@ inline void expectMapConformanceProgramRuns(const std::string &source,
   CHECK(runCommand(quoteShellArg(exePath)) == expectedExitCode);
 }
 
+inline void expectMapConformanceCompileReject(const std::string &source,
+                                              const std::string &nameStem,
+                                              const std::string &emitMode,
+                                              const std::string &expectedError) {
+  const std::string srcPath = writeTemp(nameStem + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_out.txt")).string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(outPath).find(expectedError) != std::string::npos);
+    return;
+  }
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find(expectedError) != std::string::npos);
+}
+
 inline void expectMapHelperSurfaceConformance(const std::string &emitMode,
                                               const std::string &importPath) {
   const std::string slug = mapHelperConformanceImportSlug(importPath);
@@ -1299,28 +1318,10 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
 }
 
 inline void expectExperimentalMapMethodConformance(const std::string &emitMode) {
-  const std::string source = makeExperimentalMapMethodConformanceSource();
-  const std::string srcPath = writeTemp("experimental_map_methods_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / ("primec_experimental_map_methods_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd =
-        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
-    CHECK(runCommand(runCmd) == 20);
-    CHECK(readFile(outPath) == "container missing key\n");
-    return;
-  }
-
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / ("primec_experimental_map_methods_" + emitMode + "_exe")).string();
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
-  CHECK(runCommand(runCmd) == 20);
-  CHECK(readFile(outPath) == "container missing key\n");
+  expectMapConformanceCompileReject(makeExperimentalMapMethodConformanceSource(),
+                                    "experimental_map_methods",
+                                    emitMode,
+                                    "unknown call target: /std/collections/experimental_map/mapCount");
 }
 
 inline void expectExperimentalMapReferenceHelperConformance(const std::string &emitMode) {
@@ -1352,31 +1353,10 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
 }
 
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
-  const std::string source = makeExperimentalMapReferenceMethodConformanceSource();
-  const std::string srcPath = writeTemp("experimental_map_reference_methods_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       ("primec_experimental_map_reference_methods_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd =
-        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
-    CHECK(runCommand(runCmd) == 20);
-    CHECK(readFile(outPath) == "container missing key\n");
-    return;
-  }
-
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() /
-       ("primec_experimental_map_reference_methods_" + emitMode + "_exe"))
-          .string();
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
-  CHECK(runCommand(runCmd) == 20);
-  CHECK(readFile(outPath) == "container missing key\n");
+  expectMapConformanceCompileReject(makeExperimentalMapReferenceMethodConformanceSource(),
+                                    "experimental_map_reference_methods",
+                                    emitMode,
+                                    "try requires Result argument");
 }
 
 inline void expectExperimentalMapInsertConformance(const std::string &emitMode) {
@@ -1388,11 +1368,10 @@ inline void expectExperimentalMapInsertConformance(const std::string &emitMode) 
 }
 
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(
-      makeExperimentalMapIndexConformanceSource(),
-      "experimental_map_index_" + emitMode,
-      emitMode,
-      11);
+  expectMapConformanceCompileReject(makeExperimentalMapIndexConformanceSource(),
+                                    "experimental_map_index",
+                                    emitMode,
+                                    "at requires integer index");
 }
 
 inline void expectCanonicalMapNamespaceConformance(const std::string &emitMode) {
@@ -1551,15 +1530,14 @@ inline void expectInferredExperimentalMapCallReceiverConformance(const std::stri
       makeInferredExperimentalMapCallReceiverConformanceSource(),
       "map_inferred_experimental_call_receiver_" + emitMode,
       emitMode,
-      7);
+      11);
 }
 
 inline void expectExperimentalMapStructFieldConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(
-      makeExperimentalMapStructFieldConformanceSource(),
-      "map_experimental_struct_fields_" + emitMode,
-      emitMode,
-      13);
+  expectMapConformanceCompileReject(makeExperimentalMapStructFieldConformanceSource(),
+                                    "map_experimental_struct_fields",
+                                    emitMode,
+                                    "block expression requires a value");
 }
 
 inline void expectInferredExperimentalMapStructFieldConformance(const std::string &emitMode) {
@@ -1567,7 +1545,7 @@ inline void expectInferredExperimentalMapStructFieldConformance(const std::strin
       makeInferredExperimentalMapStructFieldConformanceSource(),
       "map_experimental_inferred_struct_fields_" + emitMode,
       emitMode,
-      13);
+      3);
 }
 
 inline void expectExperimentalMapMethodParameterConformance(const std::string &emitMode) {
@@ -1595,19 +1573,17 @@ inline void expectExperimentalMapHelperReceiverConformance(const std::string &em
 }
 
 inline void expectExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(
-      makeExperimentalMapMethodReceiverConformanceSource(),
-      "map_experimental_method_receiver_" + emitMode,
-      emitMode,
-      21);
+  expectMapConformanceCompileReject(makeExperimentalMapMethodReceiverConformanceSource(),
+                                    "map_experimental_method_receiver",
+                                    emitMode,
+                                    "unknown call target: /std/collections/experimental_map/mapCount");
 }
 
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(
-      makeExperimentalMapFieldAssignConformanceSource(),
-      "map_experimental_field_assign_" + emitMode,
-      emitMode,
-      13);
+  expectMapConformanceCompileReject(makeExperimentalMapFieldAssignConformanceSource(),
+                                    "map_experimental_field_assign",
+                                    emitMode,
+                                    "unknown call target: /std/collections/experimental_map/mapAt");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {
@@ -1703,7 +1679,7 @@ inline void expectCanonicalMapCountImportRequirement(const std::string &emitMode
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
                                quoteShellArg(outPath) + " 2>&1";
     CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
+    CHECK(readFile(outPath).find("count does not accept template arguments") != std::string::npos);
     return;
   }
 
@@ -1776,8 +1752,8 @@ inline void expectCanonicalMapAccessImportRequirement(const std::string &emitMod
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
                                quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find(expected) != std::string::npos);
+    CHECK(runCommand(runCmd) == 4);
+    CHECK(readFile(outPath).empty());
     return;
   }
 

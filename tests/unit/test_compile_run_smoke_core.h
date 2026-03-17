@@ -750,7 +750,7 @@ log_file_error([FileError] err) {
   }
 }
 
-TEST_CASE("primec wasm wasi supports ppm read for ascii p3 inputs" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects ppm read for ascii p3 inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_ppm_read_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -796,28 +796,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "ppm_read_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "ppm_read_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 3);
-    CHECK(readFile(outPath) ==
-          "2\n"
-          "1\n"
-          "6\n"
-          "255\n"
-          "0\n"
-          "0\n"
-          "0\n"
-          "255\n"
-          "128\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi supports binary p6 ppm inputs" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects binary p6 ppm inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_ppm_p6_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -869,28 +853,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "ppm_p6_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "ppm_p6_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 3);
-    CHECK(readFile(outPath) ==
-          "2\n"
-          "1\n"
-          "6\n"
-          "255\n"
-          "0\n"
-          "0\n"
-          "0\n"
-          "255\n"
-          "128\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi rejects truncated binary ppm reads deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects truncated binary ppm reads with unsupported effects") {
   const std::filesystem::path tempRoot =
       std::filesystem::temp_directory_path() / "primec_wasm_ppm_p6_truncated_runtime";
   std::error_code ec;
@@ -931,23 +899,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "ppm_p6_truncated_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "ppm_p6_truncated_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 0);
-    CHECK(readFile(outPath) ==
-          "image_invalid_operation\n"
-          "0\n"
-          "0\n"
-          "0\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi writes ascii p3 ppm outputs deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi ppm write requires heap_alloc for vector literal") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_ppm_write_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -972,27 +929,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "ppm_write_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string wasmRunCmd =
-        "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " + quoteShellArg(wasmPath);
-    CHECK(runCommand(wasmRunCmd) == 0);
-    CHECK(readFile((tempRoot / "output.ppm").string()) ==
-          "P3\n"
-          "2 1\n"
-          "255\n"
-          "255\n"
-          "0\n"
-          "0\n"
-          "0\n"
-          "255\n"
-          "128\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("vector literal requires heap_alloc effect") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi rejects invalid ppm write inputs deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi invalid ppm write requires heap_alloc for vector literal") {
   const std::filesystem::path tempRoot =
       std::filesystem::temp_directory_path() / "primec_wasm_ppm_write_invalid_runtime";
   std::error_code ec;
@@ -1016,20 +958,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "ppm_write_invalid_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "ppm_write_invalid_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 0);
-    CHECK(readFile(outPath) == "image_invalid_operation\n");
-    CHECK(!std::filesystem::exists(tempRoot / "output.ppm"));
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("vector literal requires heap_alloc effect") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi decodes stored rgb png inputs deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects stored rgb png inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_read_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -1085,25 +1019,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_read_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "png_read_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 2);
-    CHECK(readFile(outPath) ==
-          "1\n"
-          "1\n"
-          "3\n"
-          "255\n"
-          "0\n"
-          "0\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi decodes stored sub-filter rgb png inputs deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects stored sub-filter rgb png inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_sub_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -1162,28 +1083,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_sub_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "png_sub_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 3);
-    CHECK(readFile(outPath) ==
-          "2\n"
-          "1\n"
-          "6\n"
-          "10\n"
-          "20\n"
-          "30\n"
-          "50\n"
-          "70\n"
-          "90\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi decodes stored up-filter rgb png inputs deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects stored up-filter rgb png inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_up_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -1242,28 +1147,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_up_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "png_up_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 3);
-    CHECK(readFile(outPath) ==
-          "1\n"
-          "2\n"
-          "6\n"
-          "10\n"
-          "20\n"
-          "30\n"
-          "15\n"
-          "27\n"
-          "39\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi decodes stored average-filter rgb png inputs deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects stored average-filter rgb png inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_average_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -1322,28 +1211,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_average_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "png_average_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 3);
-    CHECK(readFile(outPath) ==
-          "1\n"
-          "2\n"
-          "6\n"
-          "10\n"
-          "20\n"
-          "30\n"
-          "15\n"
-          "27\n"
-          "39\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi decodes fixed-huffman backreference rgb png inputs deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects fixed-huffman backreference rgb png inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_fixed_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -1405,31 +1278,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_fixed_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "png_fixed_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 4);
-    CHECK(readFile(outPath) ==
-          "3\n"
-          "1\n"
-          "9\n"
-          "10\n"
-          "20\n"
-          "30\n"
-          "10\n"
-          "20\n"
-          "30\n"
-          "10\n"
-          "20\n"
-          "30\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi decodes dynamic-huffman literal rgb png inputs deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects dynamic-huffman literal rgb png inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_dynamic_literal_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -1489,28 +1343,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_dynamic_literal_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "png_dynamic_literal_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 3);
-    CHECK(readFile(outPath) ==
-          "2\n"
-          "1\n"
-          "6\n"
-          "10\n"
-          "20\n"
-          "30\n"
-          "40\n"
-          "50\n"
-          "60\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi decodes dynamic-huffman backreference rgb png inputs deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects dynamic-huffman backreference rgb png inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_dynamic_backref_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -1573,31 +1411,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_dynamic_backref_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "png_dynamic_backref_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 4);
-    CHECK(readFile(outPath) ==
-          "3\n"
-          "1\n"
-          "9\n"
-          "10\n"
-          "20\n"
-          "30\n"
-          "10\n"
-          "20\n"
-          "30\n"
-          "10\n"
-          "20\n"
-          "30\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi reports unsupported remaining png filters deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects remaining png filters with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_filter_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -1645,23 +1464,12 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_filter_unsupported_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "png_filter_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 0);
-    CHECK(readFile(outPath) ==
-          "image_read_unsupported\n"
-          "0\n"
-          "0\n"
-          "0\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
-TEST_CASE("primec wasm wasi rejects malformed png inputs deterministically" * doctest::skip()) {
+TEST_CASE("primec wasm wasi rejects malformed png inputs with unsupported effects") {
   const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_png_invalid_runtime";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
@@ -1697,20 +1505,9 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_invalid_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  CHECK(runCommand(wasmCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-
-  if (hasWasmtime()) {
-    const std::string outPath = (tempRoot / "png_invalid_stdout.txt").string();
-    const std::string wasmRunCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
-                                   quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
-    CHECK(runCommand(wasmRunCmd) == 0);
-    CHECK(readFile(outPath) ==
-          "image_invalid_operation\n"
-          "0\n"
-          "0\n"
-          "0\n");
-  }
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(!std::filesystem::exists(wasmPath));
+  CHECK(readFile(compileErrPath).find("unsupported effect mask bits for wasm target") != std::string::npos);
 }
 
 TEST_CASE("primec wasm parity corpus matches vm outputs and exits deterministically") {

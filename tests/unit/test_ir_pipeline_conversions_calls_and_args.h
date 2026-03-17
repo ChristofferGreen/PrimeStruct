@@ -2330,14 +2330,15 @@ main() {
   CHECK(result == 48);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed map packs with indexed tryAt inference" * doctest::skip()) {
+TEST_CASE("ir lowerer materializes variadic borrowed map packs with indexed tryAt inference") {
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference</std/collections/map<i32, i32>>>] values) {
-  [auto] head{try(at(values, 0i32).tryAt(3i32))}
-  [auto] tailMissing{Result.error(/std/collections/map/tryAt(at(values, minus(count(values), 1i32)), 99i32))}
+  [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
+  [auto] tailMissing{
+      Result.error(/std/collections/map/tryAt<i32, i32>(at(values, minus(count(values), 1i32)), 99i32))}
   return(if(tailMissing,
-            then(){ return(plus(head, /std/collections/map/at_unsafe(at(values, minus(count(values), 1i32)), 11i32))) },
+            then(){ return(plus(head, /std/collections/map/at_unsafe<i32, i32>(at(values, minus(count(values), 1i32)), 11i32))) },
             else(){ return(0i32) }))
 }
 
@@ -2776,14 +2777,15 @@ main() {
   CHECK(result == 48);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed tryAt inference" * doctest::skip()) {
+TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed tryAt inference") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
-  [auto] head{try(at(values, 0i32).tryAt(3i32))}
-  [auto] tailMissing{Result.error(/std/collections/map/tryAt(at(values, minus(count(values), 1i32)), 99i32))}
+  [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
+  [auto] tailMissing{
+      Result.error(/std/collections/map/tryAt<i32, i32>(at(values, minus(count(values), 1i32)), 99i32))}
   return(if(tailMissing,
-            then(){ return(plus(head, /std/collections/map/at_unsafe(at(values, minus(count(values), 1i32)), 11i32))) },
+            then(){ return(plus(head, /std/collections/map/at_unsafe<i32, i32>(at(values, minus(count(values), 1i32)), 11i32))) },
             else(){ return(0i32) }))
 }
 
@@ -3581,14 +3583,15 @@ main() {
   CHECK(result == 11);
 }
 
-TEST_CASE("ir lowerer materializes variadic map packs with indexed tryAt inference" * doctest::skip()) {
+TEST_CASE("ir lowerer materializes variadic map packs with indexed tryAt inference") {
   const std::string source = R"(
 [return<int>]
 score_maps([args<map<i32, i32>>] values) {
-  [auto] head{try(at(values, 0i32).tryAt(3i32))}
-  [auto] tailMissing{Result.error(/std/collections/map/tryAt(at(values, minus(count(values), 1i32)), 99i32))}
+  [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
+  [auto] tailMissing{
+      Result.error(/std/collections/map/tryAt<i32, i32>(at(values, minus(count(values), 1i32)), 99i32))}
   return(if(tailMissing,
-            then(){ return(plus(head, /std/collections/map/at_unsafe(at(values, minus(count(values), 1i32)), 11i32))) },
+            then(){ return(plus(head, /std/collections/map/at_unsafe<i32, i32>(at(values, minus(count(values), 1i32)), 11i32))) },
             else(){ return(0i32) }))
 }
 

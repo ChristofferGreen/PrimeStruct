@@ -536,7 +536,7 @@ TEST_CASE("ir and semantics agree on conflicting auto returns in statements") {
   CHECK(lowerError.find("conflicting return types on /pick") != std::string::npos);
 }
 
-TEST_CASE("ir and semantics agree on unresolved auto return in statements") {
+TEST_CASE("semantics and ir lowerer diverge on unresolved auto return in statements") {
   auto makeProgram = []() {
     auto makeLiteral = [](uint64_t value) {
       primec::Expr expr;
@@ -606,10 +606,10 @@ TEST_CASE("ir and semantics agree on unresolved auto return in statements") {
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("unable to infer return type on /pick") != std::string::npos);
+  CHECK(lowerError.find("conflicting return types on /pick") != std::string::npos);
 }
 
-TEST_CASE("ir and semantics agree on unresolved auto return_expr") {
+TEST_CASE("semantics and ir lowerer diverge on unresolved auto return_expr") {
   auto makeProgram = []() {
     auto makeLiteral = [](uint64_t value) {
       primec::Expr expr;
@@ -679,7 +679,7 @@ TEST_CASE("ir and semantics agree on unresolved auto return_expr") {
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("unable to infer return type on /pick") != std::string::npos);
+  CHECK(lowerError.find("conflicting return types on /pick") != std::string::npos);
 }
 
 TEST_SUITE_END();

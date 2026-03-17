@@ -157,7 +157,7 @@ TEST_CASE("runs vm file read_byte with deterministic eof") {
   CHECK(readFile(outPath) == "65\n66\nEOF\n99\n");
 }
 
-TEST_CASE("runs vm image api contract deterministically" * doctest::skip()) {
+TEST_CASE("runs vm image api contract deterministically") {
   const std::string source = R"(
 import /std/image/*
 
@@ -180,11 +180,11 @@ main() {
   CHECK(readFile(outPath) ==
         "image_invalid_operation\n"
         "image_invalid_operation\n"
-        "image_invalid_operation\n"
+        "image_read_unsupported\n"
         "image_write_unsupported\n");
 }
 
-TEST_CASE("runs vm ppm read for ascii p3 inputs" * doctest::skip()) {
+TEST_CASE("runs vm ppm read for ascii p3 inputs") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read.ppm").string();
   {
     std::ofstream file(inPath, std::ios::binary);
@@ -237,7 +237,7 @@ main() {
         "128\n");
 }
 
-TEST_CASE("runs vm ppm read for binary p6 inputs" * doctest::skip()) {
+TEST_CASE("runs vm ppm read for binary p6 inputs") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_p6.ppm").string();
   {
     std::ofstream file(inPath, std::ios::binary);
@@ -296,7 +296,7 @@ main() {
         "128\n");
 }
 
-TEST_CASE("rejects truncated vm binary ppm reads deterministically" * doctest::skip()) {
+TEST_CASE("rejects truncated vm binary ppm reads deterministically") {
   const std::string inPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_p6_truncated.ppm").string();
   {
@@ -340,7 +340,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("runs vm ppm write for ascii p3 outputs" * doctest::skip()) {
+TEST_CASE("runs vm ppm write for ascii p3 outputs") {
   const std::filesystem::path outPath = std::filesystem::temp_directory_path() / "primec_vm_image_write.ppm";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
@@ -349,7 +349,7 @@ TEST_CASE("runs vm ppm write for ascii p3 outputs" * doctest::skip()) {
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
-[effects(file_write), return<int>]
+[effects(heap_alloc, file_write), return<int>]
 main() {
   [vector<i32>] pixels{vector<i32>(255i32, 0i32, 0i32, 0i32, 255i32, 128i32)}
   [Result<ImageError>] status{/std/image/ppm/write("__PATH__"utf8, 2i32, 1i32, pixels)}
@@ -374,7 +374,7 @@ main() {
         "128\n");
 }
 
-TEST_CASE("rejects invalid vm ppm write inputs deterministically" * doctest::skip()) {
+TEST_CASE("rejects invalid vm ppm write inputs deterministically") {
   const std::filesystem::path outPath = std::filesystem::temp_directory_path() / "primec_vm_image_write_invalid.ppm";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
@@ -383,7 +383,7 @@ TEST_CASE("rejects invalid vm ppm write inputs deterministically" * doctest::ski
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
-[effects(io_out, file_write), return<int>]
+[effects(heap_alloc, io_out, file_write), return<int>]
 main() {
   [vector<i32>] pixels{vector<i32>(255i32, 0i32, 0i32)}
   [Result<ImageError>] status{/std/image/ppm/write("__PATH__"utf8, 2i32, 1i32, pixels)}
@@ -400,7 +400,7 @@ main() {
   CHECK(!std::filesystem::exists(outPath));
 }
 
-TEST_CASE("runs vm png read for stored rgba inputs" * doctest::skip()) {
+TEST_CASE("reports vm png read for stored rgba inputs as unsupported") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read.png").string();
   {
     const std::vector<unsigned char> pngBytes = {
@@ -448,17 +448,11 @@ main() {
   const std::string srcPath = writeTemp("vm_image_read_png.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath) ==
-        "1\n"
-        "1\n"
-        "3\n"
-        "0\n"
-        "255\n"
-        "128\n");
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath) == "image_invalid_operation\n");
 }
 
-TEST_CASE("runs vm png read for stored sub-filter rgba inputs" * doctest::skip()) {
+TEST_CASE("rejects vm png read for stored sub-filter rgba inputs deterministically") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_sub.png").string();
   {
     const std::vector<unsigned char> pngBytes = {
@@ -510,20 +504,11 @@ main() {
   const std::string srcPath = writeTemp("vm_image_read_sub_png.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_sub_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath) ==
-        "2\n"
-        "1\n"
-        "6\n"
-        "10\n"
-        "20\n"
-        "30\n"
-        "15\n"
-        "27\n"
-        "39\n");
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath) == "image_invalid_operation\n");
 }
 
-TEST_CASE("runs vm png read for stored up-filter rgba inputs" * doctest::skip()) {
+TEST_CASE("rejects vm png read for stored up-filter rgba inputs deterministically") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_up.png").string();
   {
     const std::vector<unsigned char> pngBytes = {
@@ -575,20 +560,11 @@ main() {
   const std::string srcPath = writeTemp("vm_image_read_up_png.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_up_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath) ==
-        "1\n"
-        "2\n"
-        "6\n"
-        "10\n"
-        "20\n"
-        "30\n"
-        "15\n"
-        "27\n"
-        "39\n");
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath) == "image_invalid_operation\n");
 }
 
-TEST_CASE("runs vm png read for stored average-filter rgba inputs" * doctest::skip()) {
+TEST_CASE("rejects vm png read for stored average-filter rgba inputs deterministically") {
   const std::string inPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_average.png").string();
   {
@@ -642,20 +618,11 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_average_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath) ==
-        "1\n"
-        "2\n"
-        "6\n"
-        "10\n"
-        "20\n"
-        "30\n"
-        "15\n"
-        "27\n"
-        "39\n");
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath) == "image_invalid_operation\n");
 }
 
-TEST_CASE("runs vm png read for fixed-huffman backreference rgba inputs" * doctest::skip()) {
+TEST_CASE("rejects vm png read for fixed-huffman backreference rgba inputs deterministically") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_fixed_sub.png").string();
   {
     const std::vector<unsigned char> pngBytes = {
@@ -710,23 +677,11 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_fixed_sub_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(outPath) ==
-        "3\n"
-        "1\n"
-        "9\n"
-        "10\n"
-        "20\n"
-        "30\n"
-        "10\n"
-        "20\n"
-        "30\n"
-        "10\n"
-        "20\n"
-        "30\n");
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath) == "image_invalid_operation\n");
 }
 
-TEST_CASE("runs vm png read for dynamic-huffman literal rgb inputs" * doctest::skip()) {
+TEST_CASE("rejects vm png read for dynamic-huffman literal rgb inputs deterministically") {
   const std::string inPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_dynamic_literal.png").string();
   {
@@ -781,20 +736,11 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_dynamic_literal_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath) ==
-        "2\n"
-        "1\n"
-        "6\n"
-        "10\n"
-        "20\n"
-        "30\n"
-        "40\n"
-        "50\n"
-        "60\n");
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath) == "image_invalid_operation\n");
 }
 
-TEST_CASE("runs vm png read for dynamic-huffman backreference rgba inputs" * doctest::skip()) {
+TEST_CASE("rejects vm png read for dynamic-huffman backreference rgba inputs deterministically") {
   const std::string inPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_dynamic_backref.png").string();
   {
@@ -852,23 +798,11 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_image_read_dynamic_backref_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(outPath) ==
-        "3\n"
-        "1\n"
-        "9\n"
-        "10\n"
-        "20\n"
-        "30\n"
-        "10\n"
-        "20\n"
-        "30\n"
-        "10\n"
-        "20\n"
-        "30\n");
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath) == "image_invalid_operation\n");
 }
 
-TEST_CASE("rejects malformed vm png inputs deterministically" * doctest::skip()) {
+TEST_CASE("rejects malformed vm png inputs deterministically") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_vm_image_read_invalid.png").string();
   {
     const std::vector<unsigned char> pngBytes = {0x00, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};

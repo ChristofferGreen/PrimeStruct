@@ -609,12 +609,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # VM compile-run coverage is broader than the current VM runtime surface.
   # Keep the unsupported shards disabled until image IO, GPU dispatch fallback,
   # and the stdlib/experimental map shim paths are implemented for the VM.
-  set_tests_properties(
-    PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity
-    PrimeStruct_primestruct_compile_run_native_backend_collections_templated_wrapper_parity
-    PrimeStruct_primestruct_compile_run_imports_operations_and_collections
-    PROPERTIES DISABLED TRUE)
-
   set(PrimeStructRegisteredSuites ${PrimeStructTestSuites} ${PrimeStructCompileRunSuites})
   set(PrimeStructExpectedSuitesFile "${CMAKE_CURRENT_BINARY_DIR}/expected_doctest_suites.txt")
   file(WRITE "${PrimeStructExpectedSuitesFile}" "")

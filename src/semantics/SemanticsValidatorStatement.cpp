@@ -1092,7 +1092,47 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (entryArgInit || entryArgStringInit) {
       entryArgScope.emplace(*this, true);
     }
-    if (!validateExpr(params, locals, initializer)) {
+    Expr initializerForValidation = initializer;
+    const Expr *initializerExprForValidation = &initializer;
+    if (!hasExplicitType || explicitAutoType) {
+      std::string namespacedCollection;
+      std::string namespacedHelper;
+      const std::string resolvedInitializer = resolveCalleePath(initializer);
+      auto hasImportedInitializerDefinitionPath = [&](const std::string &path) {
+        std::string canonicalPath = path;
+        const size_t suffix = canonicalPath.find("__t");
+        if (suffix != std::string::npos) {
+          canonicalPath.erase(suffix);
+        }
+        for (const auto &importPath : program_.imports) {
+          if (importPath == canonicalPath) {
+            return true;
+          }
+          if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+            const std::string prefix = importPath.substr(0, importPath.size() - 2);
+            if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+      const bool isUnresolvedStdNamespacedVectorCountCapacityCall =
+          initializer.kind == Expr::Kind::Call &&
+          !initializer.isMethodCall &&
+          getNamespacedCollectionHelperName(initializer, namespacedCollection, namespacedHelper) &&
+          namespacedCollection == "vector" &&
+          (namespacedHelper == "count" || namespacedHelper == "capacity") &&
+          resolvedInitializer == "/std/collections/vector/" + namespacedHelper &&
+          defMap_.find(resolvedInitializer) == defMap_.end() &&
+          !hasImportedInitializerDefinitionPath(resolvedInitializer);
+      if (isUnresolvedStdNamespacedVectorCountCapacityCall) {
+        initializerForValidation.name = "/vector/" + namespacedHelper;
+        initializerForValidation.namespacePrefix.clear();
+        initializerExprForValidation = &initializerForValidation;
+      }
+    }
+    if (!validateExpr(params, locals, *initializerExprForValidation)) {
       return false;
     }
     auto isStructConstructor = [&](const Expr &expr) -> bool {

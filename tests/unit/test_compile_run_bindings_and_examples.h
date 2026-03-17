@@ -160,10 +160,26 @@ static bool spinningCubeBackendsSupportArrayReturns() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_spinning_cube_backend_probe.err.txt").string();
   const std::string cmd =
-      "./primec --emit=ir " + quoteShellArg(cubePath.string()) + " --entry /main 2> " + quoteShellArg(errPath);
+      "./primec --emit=ir " + quoteShellArg(cubePath.string()) + " --entry /main > " + quoteShellArg(errPath) +
+      " 2>&1";
   const int code = runCommand(cmd);
   const std::string errorText = readFile(errPath);
   if (code != 0 && errorText.find("only supports returning array values") != std::string::npos) {
+    cached = 0;
+    return false;
+  }
+
+  const std::string wasmProbePath =
+      (std::filesystem::temp_directory_path() / "primec_spinning_cube_backend_probe.wasm").string();
+  const std::string wasmErrPath =
+      (std::filesystem::temp_directory_path() / "primec_spinning_cube_backend_probe.wasm.err.txt").string();
+  const std::string wasmCmd =
+      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(wasmProbePath) + " --entry /main > " + quoteShellArg(wasmErrPath) + " 2>&1";
+  const int wasmCode = runCommand(wasmCmd);
+  const std::string wasmErrorText = readFile(wasmErrPath);
+  if (wasmCode != 0 && wasmErrorText.find("unsupported effect mask bits for wasm-browser target") !=
+                          std::string::npos) {
     cached = 0;
     return false;
   }
