@@ -1326,6 +1326,52 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return "";
   };
+  auto inferExplicitVectorAccessResolvedTypeName = [&](const Expr &candidate) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return "";
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "vector/at" && normalized != "vector/at_unsafe" &&
+        normalized != "std/collections/vector/at" &&
+        normalized != "std/collections/vector/at_unsafe") {
+      return "";
+    }
+
+    const std::string resolvedExprPath = resolveExprPath(candidate);
+    std::vector<std::string> resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
+    for (const auto &resolvedCandidate : resolvedCandidates) {
+      if (const std::string *structPath = findReturnStructMetadata(resolvedCandidate)) {
+        return normalizeCollectionReceiverType(*structPath);
+      }
+    }
+    for (const auto &resolvedCandidate : resolvedCandidates) {
+      const ReturnKind *kind = findReturnKindMetadata(resolvedCandidate);
+      if (kind == nullptr) {
+        continue;
+      }
+      if (*kind == ReturnKind::Array) {
+        return "array";
+      }
+      const std::string inferredType = typeNameForReturnKind(*kind);
+      if (!inferredType.empty()) {
+        return inferredType;
+      }
+      return "";
+    }
+    return "";
+  };
+  auto isExplicitVectorAccessDirectCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
+      return false;
+    }
+    const std::string resolvedExprPath = resolveExprPath(candidate);
+    return resolvedExprPath == "/vector/at" || resolvedExprPath == "/vector/at_unsafe" ||
+           resolvedExprPath == "/std/collections/vector/at" ||
+           resolvedExprPath == "/std/collections/vector/at_unsafe";
+  };
   auto inferCanonicalMapAccessTypeName = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
@@ -1390,6 +1436,13 @@ bool resolveMethodCallPath(const Expr &call,
           }
         }
         if (!expr.isMethodCall) {
+          if (const std::string explicitVectorAccessType = inferExplicitVectorAccessResolvedTypeName(expr);
+              !explicitVectorAccessType.empty()) {
+            return explicitVectorAccessType;
+          }
+          if (isExplicitVectorAccessDirectCall(expr)) {
+            return "";
+          }
           if (const std::string explicitVectorAccessType = inferExplicitVectorAccessCompatibilityTypeName(expr);
               !explicitVectorAccessType.empty()) {
             return explicitVectorAccessType;

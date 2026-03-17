@@ -3979,7 +3979,7 @@ TEST_CASE("C++ emitter helper prefers vector access return-kind metadata") {
   CHECK(resolved == "/string/count");
 }
 
-TEST_CASE("C++ emitter helper keeps vector element method unresolved without canonical metadata") {
+TEST_CASE("C++ emitter helper rejects vector alias direct-call method receiver without metadata") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.name = "/vector/at";
@@ -4017,10 +4017,100 @@ TEST_CASE("C++ emitter helper keeps vector element method unresolved without can
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs;
 
+  std::string resolved = "/stale/path";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved.empty());
+}
+
+TEST_CASE("C++ emitter helper rejects canonical direct-call method receiver without metadata") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/std/collections/vector/at";
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  receiverCall.args.push_back(receiverName);
+  receiverCall.args.push_back(indexLiteral);
+  receiverCall.argNames.push_back(std::nullopt);
+  receiverCall.argNames.push_back(std::nullopt);
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "tag";
+  methodCall.args.push_back(receiverCall);
+  methodCall.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  receiverInfo.typeTemplateArg = "i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+
+  std::string resolved = "/stale/path";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved.empty());
+}
+
+TEST_CASE("C++ emitter helper resolves canonical direct-call method receiver through same-path metadata") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/std/collections/vector/at";
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  receiverCall.args.push_back(receiverName);
+  receiverCall.args.push_back(indexLiteral);
+  receiverCall.argNames.push_back(std::nullopt);
+  receiverCall.argNames.push_back(std::nullopt);
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "tag";
+  methodCall.args.push_back(receiverCall);
+  methodCall.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  receiverInfo.typeTemplateArg = "i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs = {
+      {"/std/collections/vector/at", "/CanonicalMarker"},
+  };
+
   std::string resolved;
   CHECK(primec::emitter::resolveMethodCallPath(
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/i32/tag");
+  CHECK(resolved == "/CanonicalMarker/tag");
 }
 
 TEST_CASE("rejects stdlib canonical vector helper method-precedence forwarding in C++ emitter") {
