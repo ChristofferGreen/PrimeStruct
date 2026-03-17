@@ -1503,10 +1503,12 @@ bool resolveMethodCallPath(const Expr &call,
       resolvedType = normalizeMapImportAliasPath(importIt->second);
     }
   }
-  if ((resolvedType == "/vector" || resolvedType == "vector") && normalizedMethodName == "capacity") {
-    const bool hasCapacityHelper =
-        hasDefinitionOrMetadata("/vector/capacity") || hasDefinitionOrMetadata("/std/collections/vector/capacity");
-    if (!hasCapacityHelper) {
+  if (resolvedType == "/vector" || resolvedType == "vector") {
+    const bool isCountLikeMethod = normalizedMethodName == "count";
+    const bool isCapacityLikeMethod = normalizedMethodName == "capacity";
+    if ((isCountLikeMethod || isCapacityLikeMethod) &&
+        !hasDefinitionOrMetadata("/vector/" + normalizedMethodName) &&
+        !hasDefinitionOrMetadata("/std/collections/vector/" + normalizedMethodName)) {
       resolvedOut.clear();
       return false;
     }

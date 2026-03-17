@@ -2619,7 +2619,7 @@ TEST_CASE("C++ emitter helper rejects array namespaced vector constructor alias 
   CHECK_FALSE(primec::emitter::getBuiltinCollectionName(call, builtin));
 }
 
-TEST_CASE("C++ emitter helper resolves bare vector count methods") {
+TEST_CASE("C++ emitter helper rejects bare vector count methods without helper metadata") {
   primec::Expr call;
   call.kind = primec::Expr::Kind::Call;
   call.isMethodCall = true;
@@ -2640,15 +2640,51 @@ TEST_CASE("C++ emitter helper resolves bare vector count methods") {
   std::unordered_map<std::string, std::string> structTypeMap;
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs;
+  std::string resolved = "/stale/path";
+
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved.empty());
+
+  localTypes.clear();
+  resolved = "/stale/path";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved.empty());
+}
+
+TEST_CASE("C++ emitter helper resolves bare vector count methods when helper metadata exists") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+  call.name = "count";
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+  call.args.push_back(receiver);
+  call.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  localTypes.emplace("values", receiverInfo);
+
+  primec::Definition canonicalCountDef;
+  canonicalCountDef.fullPath = "/std/collections/vector/count";
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalCountDef.fullPath, &canonicalCountDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
   std::string resolved;
 
   CHECK(primec::emitter::resolveMethodCallPath(
       call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
   CHECK(resolved == "/vector/count");
-
-  localTypes.clear();
-  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
-      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
 }
 
 TEST_CASE("C++ emitter helper rejects bare vector capacity methods without helper metadata") {
