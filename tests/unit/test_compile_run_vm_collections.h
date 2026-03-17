@@ -9180,6 +9180,27 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("rejects vm alias count map target without helper") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/vector/count(wrapMap()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_alias_count_map_target_import_requirement.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_alias_count_map_target_import_requirement_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("rejects vm std namespaced capacity map target without helper") {
   const std::string source = R"(
 [return<map<i32, i32>>]

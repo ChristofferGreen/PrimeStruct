@@ -12503,6 +12503,41 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced count accepts same-path helper on map target") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([map<i32, i32>] values) {
+  return(43i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/vector/count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced count map target without helper reports unknown target") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/vector/count(wrapMap()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count rejects named arguments as builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -13178,6 +13213,20 @@ main() {
   [auto] inferredCount{/vector/count(values)}
   [auto] inferredCapacity{/std/collections/vector/capacity(values)}
   return(plus(inferredCount, inferredCapacity))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count auto inference rejects map target without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [auto] inferred{/vector/count(values)}
+  return(inferred)
 }
 )";
   std::string error;

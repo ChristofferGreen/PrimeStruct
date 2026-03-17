@@ -8996,8 +8996,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return true;
         }
       }
-      if (!expr.isMethodCall && resolved == "/std/collections/vector/count" && expr.args.size() == 1 &&
-          defMap_.find(resolved) == defMap_.end()) {
+      if (!expr.isMethodCall &&
+          (resolved == "/std/collections/vector/count" || resolved == "/vector/count") &&
+          expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
+        const bool isAliasCount = resolved == "/vector/count";
         std::string elemType;
         if (!resolveVectorTarget(expr.args.front(), elemType) &&
             !resolveArrayTarget(expr.args.front(), elemType) &&
@@ -9008,7 +9010,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           std::string mapKeyType;
           std::string mapValueType;
           if (resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {
-            error_ = "unknown call target: /std/collections/vector/count";
+            error_ = isAliasCount ? "unknown call target: /vector/count"
+                                  : "unknown call target: /std/collections/vector/count";
             return false;
           }
           error_ = "count requires vector target";
