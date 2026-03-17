@@ -4327,7 +4327,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (expr.args.size() != 2) {
         return ReturnKind::Unknown;
       }
-      if (builtinName == "plus" && !inferStructReturnPath(expr, params, locals).empty()) {
+      if ((builtinName == "plus" || builtinName == "minus") &&
+          !inferStructReturnPath(expr, params, locals).empty()) {
         return ReturnKind::Array;
       }
       ReturnKind left = inferExprReturnKind(expr.args[0], params, locals);
@@ -5821,7 +5822,8 @@ std::string SemanticsValidator::inferStructReturnPath(
 
   if (expr.kind == Expr::Kind::Call) {
     std::string builtinName;
-    if (getBuiltinOperatorName(expr, builtinName) && builtinName == "plus" && expr.args.size() == 2) {
+    if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
+        expr.args.size() == 2) {
       const std::string leftType = inferStructReturnPath(expr.args[0], params, locals);
       const std::string rightType = inferStructReturnPath(expr.args[1], params, locals);
       if (isMatrixQuaternionTypePath(leftType) && leftType == rightType) {

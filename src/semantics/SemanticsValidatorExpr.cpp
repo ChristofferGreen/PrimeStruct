@@ -7490,19 +7490,19 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         } else {
           if (!leftPointer && !rightPointer) {
-            bool useMatrixQuaternionPlusRules = false;
-            if (builtinName == "plus") {
+            bool useMatrixQuaternionShapeRules = false;
+            if (builtinName == "plus" || builtinName == "minus") {
               const std::string leftMathType = inferMatrixQuaternionTypePath(expr.args[0]);
               const std::string rightMathType = inferMatrixQuaternionTypePath(expr.args[1]);
               if (!leftMathType.empty() || !rightMathType.empty()) {
                 if (leftMathType.empty() || rightMathType.empty() || leftMathType != rightMathType) {
-                  error_ = "plus requires matching matrix/quaternion operand types";
+                  error_ = builtinName + " requires matching matrix/quaternion operand types";
                   return false;
                 }
-                useMatrixQuaternionPlusRules = true;
+                useMatrixQuaternionShapeRules = true;
               }
             }
-            if (useMatrixQuaternionPlusRules) {
+            if (useMatrixQuaternionShapeRules) {
               for (const auto &arg : expr.args) {
                 if (!validateExpr(params, locals, arg)) {
                   return false;

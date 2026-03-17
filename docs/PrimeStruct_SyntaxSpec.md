@@ -752,7 +752,7 @@ Current quaternion surface:
 Draft constraints:
 - No implicit scalar/vector/matrix/quaternion conversion; use explicit constructors/helpers.
 - `plus`/`minus` require matching envelopes and dimensions.
-- Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` rule with a deterministic mismatch diagnostic; `minus`, `multiply`, and `divide` validation remain follow-up work.
+- Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` and `minus` rules with deterministic mismatch diagnostics; `multiply` and `divide` validation remain follow-up work.
 - `multiply` supports:
   - Scalar scaling (`S * VecN`, `VecN * S`, `S * Mat`, `Mat * S`, `S * Quat`, `Quat * S`)
   - Matrix-vector (`Mat * VecN`) when inner dimensions match

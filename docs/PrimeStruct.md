@@ -535,7 +535,7 @@ The lists above reflect the built-in transforms recognized by the compiler today
   - **Matrix/quaternion interaction contract (draft):**
     - No implicit conversion between scalar/vector/matrix/quaternion families; use explicit constructor/helper calls.
     - `plus`/`minus` require identical operand envelopes (`VecN` with same `N`, `MatRxC` with same shape, or `Quat` with `Quat`).
-    - Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` rule with a deterministic mismatch diagnostic; `minus`/`multiply`/`divide` validation remains follow-up work.
+    - Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` and `minus` rules with deterministic mismatch diagnostics; `multiply`/`divide` validation remains follow-up work.
     - `multiply` is allowed for: scalar scaling (`S * VecN`, `VecN * S`, `S * Mat`, `Mat * S`, `S * Quat`, `Quat * S`), matrix-vector (`Mat * VecN` with compatible inner dimension), matrix-matrix (`MatRxC * MatCxK`), quaternion-quaternion (Hamilton product), and quaternion-vector rotation (`Quat * Vec3`).
     - `divide` is allowed only as composite-by-scalar (`VecN / S`, `Mat / S`, `Quat / S`); scalar/composite and composite/composite division are diagnostics unless explicitly documented.
     - Matrix/vector multiplication uses a column-vector convention (`result = Mat * Vec`), and transform composition order follows canonical call nesting (`MatA * (MatB * Vec)`).
