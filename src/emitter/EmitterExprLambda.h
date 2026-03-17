@@ -561,9 +561,16 @@ std::string Emitter::emitExpr(const Expr &expr,
           if (stmt.isMethodCall) {
             if (resolveMethodCallPath(
                     stmt, defMap, activeTypes, importAliases, structTypeMap, returnKinds, returnStructs, helperPath)) {
-              helperPath = preferVectorStdlibHelperPath(helperPath, nameMap);
-              rememberMissingVectorHelperCall(stmt, helperPath);
-              hasUserVectorHelper = nameMap.find(helperPath) != nameMap.end();
+              if (!stmt.name.empty() && stmt.name.front() == '/' && !explicitRequestedVectorHelperPath.empty() &&
+                  helperPath != explicitRequestedVectorHelperPath) {
+                missingHelperCall = stmt;
+                hasMissingVectorHelper = true;
+                helperPath.clear();
+              } else {
+                helperPath = preferVectorStdlibHelperPath(helperPath, nameMap);
+                rememberMissingVectorHelperCall(stmt, helperPath);
+                hasUserVectorHelper = nameMap.find(helperPath) != nameMap.end();
+              }
             }
             if (hasUserVectorHelper) {
               helperCall.isMethodCall = true;
