@@ -705,15 +705,6 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       isStringCountCall,
       isEntryArgsName,
       [&](const Expr &targetExpr, const LocalMap &targetLocals) {
-        if (targetExpr.kind == Expr::Kind::Call) {
-          std::string builtinCollection;
-          std::string accessName;
-          if (!getBuiltinCollectionName(targetExpr, builtinCollection) &&
-              !targetExpr.isFieldAccess &&
-              !getBuiltinArrayAccessName(targetExpr, accessName)) {
-            return false;
-          }
-        }
         if (resolveMapAccessTargetInfo(targetExpr, targetLocals, resolveCallMapAccessTargetInfo).isMapTarget) {
           return true;
         }
@@ -722,15 +713,6 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
             .isArrayOrVectorTarget;
       },
       [&](const Expr &targetExpr, const LocalMap &targetLocals) {
-        if (targetExpr.kind == Expr::Kind::Call) {
-          std::string builtinCollection;
-          std::string accessName;
-          if (!getBuiltinCollectionName(targetExpr, builtinCollection) &&
-              !targetExpr.isFieldAccess &&
-              !getBuiltinArrayAccessName(targetExpr, accessName)) {
-            return false;
-          }
-        }
         const auto targetInfo = resolveArrayVectorAccessTargetInfo(
             targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo);
         return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
