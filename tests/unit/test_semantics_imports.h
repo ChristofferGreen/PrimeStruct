@@ -665,6 +665,38 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("import resolves std gfx canonical type surface") {
+  const std::string source = R"(
+import /std/gfx/*
+[return<int>]
+main() {
+  [Window] window{Window([token] 1i32, [width] 1280i32, [height] 720i32)}
+  [ColorFormat] colorFormat{ColorFormat.Bgra8Unorm}
+  [PresentMode] presentMode{PresentMode.Fifo}
+  [Buffer<i32>] buffer{Buffer<i32>([token] 2i32, [elementCount] 4i32)}
+  [Texture2D<i32>] texture{Texture2D<i32>([token] 3i32, [width] 64i32, [height] 32i32)}
+  [VertexColored] vertex{
+    VertexColored(
+      [px] 1.0f32,
+      [py] 2.0f32,
+      [pz] 3.0f32,
+      [pw] 1.0f32,
+      [r] 0.25f32,
+      [g] 0.50f32,
+      [b] 0.75f32,
+      [a] 1.0f32
+    )
+  }
+  [GfxError] err{deviceCreateFailed()}
+  [string] whyText{GfxError.why(err)}
+  return(plus(plus(plus(window.width, colorFormat.value), presentMode.value), count(whyText)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import resolves std collections experimental map wildcard surface") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
@@ -767,6 +799,68 @@ log_gfx_error([GfxError] err) {
 main() {
   [Window] window{Window([token] 11i32, [width] 1280i32, [height] 720i32)}
   [Device] device{Device([token] 13i32)}
+  [Queue] queue{device.default_queue()}
+  [Swapchain] swapchain{
+    device.create_swapchain(
+      window,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F,
+      [present_mode] PresentMode.Fifo
+    )?
+  }
+  [array<VertexColored>] vertices{
+    array<VertexColored>(
+      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
+      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
+      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+    )
+  }
+  [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
+  [Mesh] mesh{device.create_mesh([vertices] vertices, [indices] indices)?}
+  [Pipeline] pipeline{
+    device.create_pipeline(
+      [shader] ShaderLibrary.CubeBasic,
+      [vertex_type] VertexColored,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F
+    )?
+  }
+  [Material] material{pipeline.material()?}
+  if(window.is_open(), then() { window.poll_events() }, else() { })
+  [f32] aspect{window.aspect_ratio()}
+  [Frame] frame{swapchain.frame()?}
+  [RenderPass] pass{
+    frame.render_pass(
+      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_depth] 1.0f32
+    )
+  }
+  pass.draw_mesh(mesh, material)
+  pass.end()
+  frame.submit(queue)?
+  frame.present()?
+  return(plus(plus(queue.token, frame.token), convert<i32>(aspect)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("import resolves std gfx canonical method wrapper surface") {
+  const std::string source = R"(
+import /std/math/*
+import /std/gfx/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Window] window{Window([title] "PrimeStruct"utf8, [width] 1280i32, [height] 720i32)?}
+  [Device] device{Device()?}
   [Queue] queue{device.default_queue()}
   [Swapchain] swapchain{
     device.create_swapchain(
@@ -962,6 +1056,39 @@ main() {
 TEST_CASE("experimental gfx pipeline entry point rejects unsupported vertex_type") {
   const std::string source = R"(
 import /std/gfx/experimental/*
+
+[struct]
+VertexPlain() {
+  [i32] x{0i32}
+}
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Device] device{Device()?}
+  [Pipeline] pipeline{
+    device.create_pipeline(
+      [shader] ShaderLibrary.CubeBasic,
+      [vertex_type] VertexPlain,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F
+    )?
+  }
+  return(pipeline.token)
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("experimental gfx create_pipeline currently supports only VertexColored") != std::string::npos);
+}
+
+TEST_CASE("canonical gfx pipeline entry point rejects unsupported vertex_type") {
+  const std::string source = R"(
+import /std/gfx/*
 
 [struct]
 VertexPlain() {

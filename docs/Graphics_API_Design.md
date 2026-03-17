@@ -9,40 +9,36 @@ apply profile-gated validation at compile time, and avoid backend-specific
 language namespaces in v1.
 
 Implementation status note (2026-03-17): this document locks the source-level
-contract, and the repo now ships an initial experimental `.prime` type surface
-at `/std/gfx/experimental/*`, but the canonical `/std/gfx/*` stdlib plus full
-helper semantics and lowering/runtime support are not yet implemented
-end-to-end. Current repo coverage therefore consists of contract checks,
-experimental import/type-surface coverage, an explicit `.prime`
+contract, and the repo now ships both an experimental `.prime` graphics surface
+at `/std/gfx/experimental/*` and a first canonical `/std/gfx/*` stdlib surface
+that mirrors the proven wrapper slice in `.prime`. Current repo coverage
+therefore consists of contract checks, canonical + experimental
+import/type-surface coverage, the explicit experimental `.prime`
 `GraphicsSubstrate` token/config boundary for create/acquire/submit/present
 operations, constructor-shaped `Window(...)` and `Device()` entry points that
-now rewrite through dedicated substrate-backed stdlib helpers, fallible
-`Device.create_swapchain(...)`, `Device.create_mesh(...)`, and
-`Swapchain.frame()` wrapper paths that now route through substrate-backed
-configs/helpers, and a type-valued
-`Device.create_pipeline([vertex_type] VertexColored, ...)` entry point that now
-rewrites onto a dedicated substrate-backed stdlib helper for the locked v1
-vertex wire type. The non-Result `Frame.render_pass(...)` plus
-`RenderPass.draw_mesh(...)` / `RenderPass.end()` path now routes through
-minimal pass-encoding substrate helpers while preserving deterministic
-zero-token / no-op fallback on invalid handles, and the first real
-native-desktop host/runtime path now consumes a deterministic experimental gfx
-stream emitted by the shared spinning-cube `.prime` sample so submit/present
-can drive one real macOS window host end-to-end. Browser/native/Metal host
-samples still otherwise sit around shared `.prime` simulation/data paths. The
-repo now also ships a real compile-run conformance program that imports
-`/std/gfx/experimental/*` and exercises `Window(...)`, `Device()`,
-`create_swapchain(...)`, `create_mesh(...)`, `create_pipeline(...)`, `frame()`,
-`render_pass(...)`, `draw_mesh(...)`, `submit(...)`, and `present()` across
-exe/vm/native instead of relying only on doc-lock coverage for that API
-surface. The current experimental package intentionally keeps deterministic
-rejects for source-level profile literals and for unsupported
-`create_pipeline` vertex types instead of inventing more compiler-owned
-routing, and Result-carrying method wrappers now also reject bare explicit
-non-`Result` struct bindings during semantics rather than deferring those
-failures to lowering; follow-up work should keep the public graphics API
-primarily in `.prime` files while leaving only minimal backend substrate in
-C++/host code.
+now rewrite through dedicated stdlib helpers on both the experimental and
+canonical paths, fallible `Device.create_swapchain(...)`,
+`Device.create_mesh(...)`, and `Swapchain.frame()` wrapper paths, and a
+type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)` entry
+point for the locked v1 vertex wire type. The non-Result
+`Frame.render_pass(...)` plus `RenderPass.draw_mesh(...)` / `RenderPass.end()`
+path preserves deterministic zero-token / no-op fallback on invalid handles,
+and the first real native-desktop host/runtime path now consumes a
+deterministic experimental gfx stream emitted by the shared spinning-cube
+`.prime` sample so submit/present can drive one real macOS window host
+end-to-end. Browser/native/Metal host samples still otherwise sit around shared
+`.prime` simulation/data paths. The repo now also ships real compile-run
+conformance programs that import both `/std/gfx/experimental/*` and
+`/std/gfx/*` and exercise `Window(...)`, `Device()`, `create_swapchain(...)`,
+`create_mesh(...)`, `create_pipeline(...)`, `frame()`, `render_pass(...)`,
+`draw_mesh(...)`, `submit(...)`, and `present()` across exe/vm/native instead
+of relying only on doc-lock coverage for that API surface. Source-level profile
+literals and unsupported `create_pipeline` vertex types are still
+intentionally rejected, Result-carrying method wrappers still reject bare
+explicit non-`Result` struct bindings during semantics, and follow-up work
+still needs to migrate samples, add unsupported-backend diagnostics, and keep
+the remaining public graphics API primarily in `.prime` files while leaving
+only minimal backend substrate in C++/host code.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.

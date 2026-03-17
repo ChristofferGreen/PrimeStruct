@@ -60,9 +60,12 @@ semantics after canonicalization.
   sample, real compile-run conformance now imports `/std/gfx/experimental/*`
   and exercises that wrapper path across exe/vm/native, and
   `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites
-  through the matching pipeline helper, but source-level profile literals and
-  unsupported pipeline vertex types are still intentionally rejected while the
-  broader canonical entry points and backend conformance slices remain staged.
+  through the matching pipeline helper. The canonical `/std/gfx/*` entry
+  points now mirror that same helper-backed slice in `.prime` and also have
+  real compile-run conformance across exe/vm/native, but source-level profile
+  literals and unsupported pipeline vertex types are still intentionally
+  rejected while sample migration and broader backend conformance slices remain
+  staged.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
   Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with
@@ -88,8 +91,9 @@ main() {
 Note: this example locks a proposed API shape for graphics/math naming. Current
 stdlib in this repo ships vector/color math only; matrix/quaternion contracts
 are now documented but still pending backend/runtime support. The `/std/gfx/*`
-rendering surface shown below (including `VertexColored`) is a contract-level
-proposal that still needs full implementation/lowering coverage.
+rendering surface shown below (including `VertexColored`) now has an initial
+helper-backed `.prime` implementation, but still needs full sample migration
+and broader backend/runtime coverage.
 
 ```prime
 import /std/math/*

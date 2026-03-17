@@ -1527,7 +1527,9 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
           receiverPath = resolveImportedStructPath(receiverExpr.name, receiverExpr.namespacePrefix);
         }
       }
-      if (receiverPath != "/std/gfx/experimental/Device") {
+      const bool isExperimentalDevice = receiverPath == "/std/gfx/experimental/Device";
+      const bool isCanonicalDevice = receiverPath == "/std/gfx/Device";
+      if (!isExperimentalDevice && !isCanonicalDevice) {
         return true;
       }
       size_t vertexTypeIndex = expr.args.size();
@@ -1546,7 +1548,9 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         return false;
       }
       const std::string vertexTypePath = resolveImportedStructPath(vertexTypeExpr.name, vertexTypeExpr.namespacePrefix);
-      if (vertexTypePath != "/std/gfx/experimental/VertexColored") {
+      const bool isExperimentalVertexType = vertexTypePath == "/std/gfx/experimental/VertexColored";
+      const bool isCanonicalVertexType = vertexTypePath == "/std/gfx/VertexColored";
+      if (!isExperimentalVertexType && !isCanonicalVertexType) {
         error = "experimental gfx create_pipeline currently supports only VertexColored";
         return false;
       }
@@ -1559,7 +1563,7 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     if (resolved.empty()) {
       return true;
     }
-    if (resolved == "/std/gfx/experimental/Window" && expr.args.size() == 3) {
+    if ((resolved == "/std/gfx/experimental/Window" || resolved == "/std/gfx/Window") && expr.args.size() == 3) {
       bool sawTitleArg = false;
       for (const auto &argName : expr.argNames) {
         if (argName.has_value() && *argName == "title") {
@@ -1568,14 +1572,15 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         }
       }
       if (sawTitleArg) {
-        expr.name = "/std/gfx/experimental/windowCreate";
+        expr.name = resolved == "/std/gfx/Window" ? "/std/gfx/windowCreate" : "/std/gfx/experimental/windowCreate";
         expr.namespacePrefix.clear();
       }
       return true;
     }
-    if (resolved == "/std/gfx/experimental/Device" && expr.args.empty() && !expr.hasBodyArguments &&
+    if ((resolved == "/std/gfx/experimental/Device" || resolved == "/std/gfx/Device") && expr.args.empty() &&
+        !expr.hasBodyArguments &&
         expr.bodyArguments.empty() && !semantics::hasNamedArguments(expr.argNames)) {
-      expr.name = "/std/gfx/experimental/deviceCreate";
+      expr.name = resolved == "/std/gfx/Device" ? "/std/gfx/deviceCreate" : "/std/gfx/experimental/deviceCreate";
       expr.namespacePrefix.clear();
       return true;
     }

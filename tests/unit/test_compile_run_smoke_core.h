@@ -202,6 +202,106 @@ main() {
   CHECK(runCommand(nativePath) == 10);
 }
 
+TEST_CASE("canonical gfx type surface imports across backends") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int>]
+main() {
+  [Window] window{Window([token] 7i32, [width] 1280i32, [height] 720i32)}
+  [ColorFormat] colorFormat{ColorFormat([value] 0i32)}
+  [DepthFormat] depthFormat{DepthFormat([value] 0i32)}
+  [PresentMode] presentMode{PresentMode([value] 0i32)}
+  [ShaderLibrary] shader{ShaderLibrary([value] 0i32)}
+  [Buffer<i32>] buffer{Buffer<i32>([token] 3i32, [elementCount] 4i32)}
+  [Texture2D<i32>] texture{Texture2D<i32>([token] 5i32, [width] 64i32, [height] 32i32)}
+  [Swapchain] swapchain{Swapchain([token] 11i32)}
+  [Mesh] mesh{Mesh([token] 13i32, [vertexCount] 8i32, [indexCount] 36i32)}
+  [VertexColored] vertex{
+    VertexColored(
+      [px] 1.0f32,
+      [py] 2.0f32,
+      [pz] 3.0f32,
+      [pw] 1.0f32,
+      [r] 0.25f32,
+      [g] 0.50f32,
+      [b] 0.75f32,
+      [a] 1.0f32
+    )
+  }
+  [GfxError] err{queueSubmitFailed()}
+  [i32 mut] score{0i32}
+
+  if(equal(colorFormat.value, 0i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(90i32)
+  }
+  if(equal(depthFormat.value, 0i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(91i32)
+  }
+  if(equal(presentMode.value, 0i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(92i32)
+  }
+  if(equal(shader.value, 0i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(93i32)
+  }
+  if(equal(window.width, 1280i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(94i32)
+  }
+  if(equal(mesh.vertexCount, 8i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(95i32)
+  }
+  if(equal(mesh.indexCount, 36i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(96i32)
+  }
+  if(less_than(vertex.g, 0.60f32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(97i32)
+  }
+  if(equal(swapchain.token, 11i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(98i32)
+  }
+  if(equal(err.code, 8i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(99i32)
+  }
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_gfx_canonical_type_surface.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_gfx_canonical_type_surface_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_canonical_type_surface_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 10);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 10);
+}
+
 TEST_CASE("experimental gfx error helper imports across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -844,6 +944,135 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_gfx_experimental_end_to_end_conformance_exe").string();
   const std::string nativePath =
       (std::filesystem::temp_directory_path() / "primec_gfx_experimental_end_to_end_conformance_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 10);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 10);
+}
+
+TEST_CASE("canonical gfx end-to-end conformance runs across backends") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Window] window{Window([title] "PrimeStruct"utf8, [width] 1280i32, [height] 720i32)?}
+  [Device] device{Device()?}
+  [Queue] queue{device.default_queue()}
+  if(window.is_open()) {
+    window.poll_events()
+  } else {
+    return(90i32)
+  }
+  [Swapchain] swapchain{
+    device.create_swapchain(
+      window,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F,
+      [present_mode] PresentMode.Fifo
+    )?
+  }
+  [array<VertexColored>] vertices{
+    array<VertexColored>(
+      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
+      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
+      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+    )
+  }
+  [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
+  [Mesh] mesh{device.create_mesh([vertices] vertices, [indices] indices)?}
+  [Pipeline] pipeline{
+    device.create_pipeline(
+      [shader] ShaderLibrary.CubeBasic,
+      [vertex_type] VertexColored,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F
+    )?
+  }
+  [Material] material{pipeline.material()?}
+  [Frame] frame{swapchain.frame()?}
+  [RenderPass] pass{
+    frame.render_pass(
+      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_depth] 1.0f32
+    )
+  }
+  pass.draw_mesh(mesh, material)
+  pass.end()
+  frame.submit(queue)?
+  frame.present()?
+  [i32 mut] score{0i32}
+
+  if(equal(window.token, 1i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(91i32)
+  }
+  if(equal(device.token, 2i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(92i32)
+  }
+  if(equal(queue.token, 3i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(93i32)
+  }
+  if(equal(swapchain.token, 4i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(94i32)
+  }
+  if(equal(mesh.token, 8i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(95i32)
+  }
+  if(equal(pipeline.token, 7i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(96i32)
+  }
+  if(equal(material.token, 8i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(97i32)
+  }
+  if(equal(frame.token, 5i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(98i32)
+  }
+  if(equal(pass.token, 6i32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(99i32)
+  }
+  if(greater_than(window.aspect_ratio(), 1.7f32)) {
+    score = plus(score, 1i32)
+  } else {
+    return(100i32)
+  }
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_gfx_canonical_end_to_end_conformance.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_canonical_end_to_end_conformance_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_gfx_canonical_end_to_end_conformance_native").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -3349,17 +3578,23 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
 
   {
     CAPTURE("GFX-V1-WINDOW-CONSTRUCTOR-STATUS");
-    CHECK(graphicsDoc.find("constructor-shaped `Window(...)` entry point") != std::string::npos);
-    CHECK(graphicsDoc.find("rewrites through a dedicated substrate-backed stdlib helper") != std::string::npos);
-    CHECK(primeStructDoc.find("constructor-shaped experimental `Window(...)` entry point now rewrites") !=
+    CHECK(graphicsDoc.find("constructor-shaped `Window(...)` and `Device()` entry points") != std::string::npos);
+    CHECK(graphicsDoc.find("dedicated stdlib helpers on both the experimental and") !=
+          std::string::npos);
+    CHECK(graphicsDoc.find("canonical paths") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)` and `Device()` entry points") !=
           std::string::npos);
   }
 
   {
     CAPTURE("GFX-V1-DEVICE-CONSTRUCTOR-STATUS");
-    CHECK(graphicsDoc.find("constructor-shaped `Device()` entry point now rewrites") != std::string::npos);
-    CHECK(graphicsDoc.find("dedicated substrate-backed stdlib helper") != std::string::npos);
-    CHECK(primeStructDoc.find("constructor-shaped experimental `Device()` entry point now rewrites") !=
+    CHECK(graphicsDoc.find("constructor-shaped `Window(...)` and `Device()` entry points") != std::string::npos);
+    CHECK(graphicsDoc.find("dedicated stdlib helpers on both the experimental and") !=
+          std::string::npos);
+    CHECK(graphicsDoc.find("canonical paths") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)` and `Device()` entry points") !=
           std::string::npos);
   }
 
@@ -3367,19 +3602,19 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
     CAPTURE("GFX-V1-PIPELINE-CONSTRUCTOR-STATUS");
     CHECK(graphicsDoc.find("type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)`") !=
           std::string::npos);
-    CHECK(graphicsDoc.find("rewrites onto a dedicated substrate-backed stdlib helper") != std::string::npos);
-    CHECK(primeStructDoc.find("experimental `Device.create_pipeline([vertex_type] VertexColored, ...)` entry point") !=
+    CHECK(graphicsDoc.find("VertexColored, ...)` entry") != std::string::npos);
+    CHECK(graphicsDoc.find("locked v1 vertex wire type") != std::string::npos);
+    CHECK(primeStructDoc.find("`Device.create_pipeline([vertex_type] VertexColored, ...)` wrapper paths now run through") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("`Device.create_pipeline([vertex_type] VertexColored, ...)`") != std::string::npos);
   }
 
   {
     CAPTURE("GFX-V1-RESOURCE-WRAPPER-STATUS");
-    CHECK(graphicsDoc.find("`Device.create_swapchain(...)`, `Device.create_mesh(...)`, and") != std::string::npos);
-    CHECK(graphicsDoc.find("`Swapchain.frame()` wrapper paths that now route through substrate-backed") !=
+    CHECK(graphicsDoc.find("fallible `Device.create_swapchain(...)`,") != std::string::npos);
+    CHECK(graphicsDoc.find("`Device.create_mesh(...)`, and `Swapchain.frame()` wrapper paths") !=
           std::string::npos);
-    CHECK(graphicsDoc.find("route through substrate-backed configs/helpers") != std::string::npos);
-    CHECK(primeStructDoc.find("experimental `create_swapchain(...)`, `create_mesh(...)`, and `frame()` wrapper paths now") !=
+    CHECK(primeStructDoc.find("experimental and canonical `create_swapchain(...)`, `create_mesh(...)`, `frame()`, and") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("the fallible `create_swapchain(...)`,") != std::string::npos);
     CHECK(guidelinesDoc.find("`create_mesh(...)`, and `frame()` wrapper paths now route through") !=
@@ -3415,13 +3650,24 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
 
   {
     CAPTURE("GFX-V1-CONFORMANCE-STATUS");
-    CHECK(graphicsDoc.find("real compile-run conformance program that imports") != std::string::npos);
-    CHECK(graphicsDoc.find("`/std/gfx/experimental/*` and exercises") != std::string::npos);
+    CHECK(graphicsDoc.find("real compile-run") != std::string::npos);
+    CHECK(graphicsDoc.find("conformance programs that import both") != std::string::npos);
+    CHECK(graphicsDoc.find("`/std/gfx/experimental/*` and") != std::string::npos);
+    CHECK(graphicsDoc.find("`/std/gfx/*` and exercise") != std::string::npos);
     CHECK(graphicsDoc.find("across exe/vm/native") != std::string::npos);
-    CHECK(primeStructDoc.find("real compile-run conformance now imports `/std/gfx/experimental/*`") !=
+    CHECK(primeStructDoc.find("real compile-run conformance now imports both `/std/gfx/experimental/*` and `/std/gfx/*`") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("real compile-run conformance now imports `/std/gfx/experimental/*`") !=
           std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-V1-CANONICAL-STDLIB-STATUS");
+    CHECK(graphicsDoc.find("first canonical `/std/gfx/*` stdlib surface") != std::string::npos);
+    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)` and `Device()` entry points") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("The canonical `/std/gfx/*` entry") != std::string::npos);
+    CHECK(guidelinesDoc.find("real compile-run conformance across exe/vm/native") != std::string::npos);
   }
 
   {
