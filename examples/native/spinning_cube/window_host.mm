@@ -2,6 +2,7 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
+#include "../../shared/gfx_contract_shared.h"
 #include "../../shared/software_surface_bridge.h"
 
 #include <algorithm>
@@ -62,18 +63,8 @@ constexpr int GfxStreamMagic = 17001;
 constexpr int GfxStreamVersion = 1;
 constexpr size_t GfxHeaderFieldCount = 26;
 
-enum class GfxErrorCode {
-  None,
-  WindowCreateFailed,
-  DeviceCreateFailed,
-  SwapchainCreateFailed,
-  MeshCreateFailed,
-  PipelineCreateFailed,
-  MaterialCreateFailed,
-  FrameAcquireFailed,
-  QueueSubmitFailed,
-  FramePresentFailed,
-};
+using GfxErrorCode = primestruct::gfx_contract::GfxErrorCode;
+using WindowVertex = primestruct::gfx_contract::VertexColoredHost;
 
 enum class StartupFailureStage {
   SimulationStreamLoad,
@@ -124,32 +115,6 @@ const char *deducedGfxProfileName() {
   return "native-desktop";
 }
 
-const char *gfxErrorCodeName(GfxErrorCode code) {
-  switch (code) {
-    case GfxErrorCode::None:
-      return "";
-    case GfxErrorCode::WindowCreateFailed:
-      return "window_create_failed";
-    case GfxErrorCode::DeviceCreateFailed:
-      return "device_create_failed";
-    case GfxErrorCode::SwapchainCreateFailed:
-      return "swapchain_create_failed";
-    case GfxErrorCode::MeshCreateFailed:
-      return "mesh_create_failed";
-    case GfxErrorCode::PipelineCreateFailed:
-      return "pipeline_create_failed";
-    case GfxErrorCode::MaterialCreateFailed:
-      return "material_create_failed";
-    case GfxErrorCode::FrameAcquireFailed:
-      return "frame_acquire_failed";
-    case GfxErrorCode::QueueSubmitFailed:
-      return "queue_submit_failed";
-    case GfxErrorCode::FramePresentFailed:
-      return "frame_present_failed";
-  }
-  return "";
-}
-
 int gExitCode = 0;
 
 struct SimulationFrameState {
@@ -188,23 +153,6 @@ struct GfxStreamHeader {
 
 std::string shellQuote(const std::string &value);
 int decodeExitCode(int rawCode);
-
-struct WindowVertex {
-  float px;
-  float py;
-  float pz;
-  float pw;
-  float r;
-  float g;
-  float b;
-  float a;
-};
-
-static_assert(offsetof(WindowVertex, px) == 0);
-static_assert(offsetof(WindowVertex, pw) == 12);
-static_assert(offsetof(WindowVertex, r) == 16);
-static_assert(sizeof(WindowVertex) == 32);
-static_assert(alignof(WindowVertex) == 4);
 
 struct WindowUniforms {
   simd_float4x4 modelViewProjection;
@@ -611,7 +559,7 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
   std::cerr << "startup_failure_reason=" << reason << "\n";
   std::cerr << "startup_failure_exit_code=" << exitCode << "\n";
   if (gfxErrorCode != GfxErrorCode::None) {
-    std::cerr << "gfx_error_code=" << gfxErrorCodeName(gfxErrorCode) << "\n";
+    std::cerr << "gfx_error_code=" << primestruct::gfx_contract::gfxErrorCodeName(gfxErrorCode) << "\n";
   }
   if (details != nullptr && details[0] != '\0') {
     std::cerr << "startup_failure_detail=" << details << "\n";
@@ -632,7 +580,7 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
   std::cerr << "runtime_failure_reason=" << reason << "\n";
   std::cerr << "runtime_failure_exit_code=" << code << "\n";
   if (gfxErrorCode != GfxErrorCode::None) {
-    std::cerr << "gfx_error_code=" << gfxErrorCodeName(gfxErrorCode) << "\n";
+    std::cerr << "gfx_error_code=" << primestruct::gfx_contract::gfxErrorCodeName(gfxErrorCode) << "\n";
   }
   if (details != nullptr && details[0] != '\0') {
     std::cerr << "runtime_failure_detail=" << details << "\n";

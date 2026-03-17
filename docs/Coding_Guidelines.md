@@ -67,9 +67,10 @@ semantics after canonicalization.
   experimental gfx imports now reject deterministically on wasm
   (`wasm-browser`, `wasm-wasi`) and shader-only (`glsl`, `spirv`) emits until
   those targets gain runtime substrate, while source-level profile literals
-  and unsupported pipeline vertex types are still intentionally rejected and
-  remaining sample-owned contract cleanup plus broader backend conformance
-  slices remain staged.
+  and unsupported pipeline vertex types are still intentionally rejected, the
+  native/Metal sample hosts now share one canonical host-side `GfxError` +
+  `VertexColored` contract header, and broader backend conformance plus
+  launcher-thinning slices remain staged.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
   Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with
@@ -97,8 +98,8 @@ stdlib in this repo ships vector/color math only; matrix/quaternion contracts
 are now documented but still pending backend/runtime support. The `/std/gfx/*`
 rendering surface shown below (including `VertexColored`) now has an initial
 helper-backed `.prime` implementation, but still needs broader
-backend/runtime coverage plus the remaining sample-owned contract cleanup on
-top of the current unsupported-backend diagnostics.
+backend/runtime coverage plus the remaining launcher-thinning work on top of
+the current unsupported-backend diagnostics.
 
 ```prime
 import /std/math/*

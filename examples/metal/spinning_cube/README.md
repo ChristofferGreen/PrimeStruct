@@ -7,6 +7,9 @@ spinning-cube sample.
 - `cube.metal`: minimal Metal vertex/fragment shaders for the cube sample.
 - `metal_host.mm`: minimal macOS Metal host glue that loads the compiled
   shader library and submits a one-frame draw pass.
+- `../../shared/gfx_contract_shared.h`: shared host-side `GfxError` mapping and
+  locked `/std/gfx/VertexColored` upload-layout definition used by the native
+  and Metal sample hosts.
 
 ## Local Shader Build (macOS)
 1. Compile Metal source to AIR:

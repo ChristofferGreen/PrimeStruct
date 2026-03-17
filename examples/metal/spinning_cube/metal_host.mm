@@ -2,6 +2,7 @@
 #import <Metal/Metal.h>
 #include <simd/simd.h>
 
+#include "../../shared/gfx_contract_shared.h"
 #include "../../shared/software_surface_bridge.h"
 
 #include <cstddef>
@@ -12,30 +13,8 @@
 
 namespace {
 
-struct Vertex {
-  float px;
-  float py;
-  float pz;
-  float pw;
-  float r;
-  float g;
-  float b;
-  float a;
-};
-
-static_assert(offsetof(Vertex, px) == 0);
-static_assert(offsetof(Vertex, pw) == 12);
-static_assert(offsetof(Vertex, r) == 16);
-static_assert(sizeof(Vertex) == 32);
-static_assert(alignof(Vertex) == 4);
-
-enum class GfxErrorCode {
-  DeviceCreateFailed,
-  MeshCreateFailed,
-  PipelineCreateFailed,
-  FrameAcquireFailed,
-  QueueSubmitFailed,
-};
+using GfxErrorCode = primestruct::gfx_contract::GfxErrorCode;
+using Vertex = primestruct::gfx_contract::VertexColoredHost;
 
 constexpr Vertex TriangleVertices[3] = {
     {-0.6f, -0.5f, 0.0f, 1.0f, 0.95f, 0.20f, 0.20f, 1.0f},
@@ -56,25 +35,9 @@ const char *deducedGfxProfileName() {
   return "metal-osx";
 }
 
-const char *gfxErrorCodeName(GfxErrorCode code) {
-  switch (code) {
-    case GfxErrorCode::DeviceCreateFailed:
-      return "device_create_failed";
-    case GfxErrorCode::MeshCreateFailed:
-      return "mesh_create_failed";
-    case GfxErrorCode::PipelineCreateFailed:
-      return "pipeline_create_failed";
-    case GfxErrorCode::FrameAcquireFailed:
-      return "frame_acquire_failed";
-    case GfxErrorCode::QueueSubmitFailed:
-      return "queue_submit_failed";
-  }
-  return "device_create_failed";
-}
-
 void emitGfxError(std::ostream &out, GfxErrorCode code, const std::string &why) {
   out << "gfx_profile=" << deducedGfxProfileName() << "\n";
-  out << "gfx_error_code=" << gfxErrorCodeName(code) << "\n";
+  out << "gfx_error_code=" << primestruct::gfx_contract::gfxErrorCodeName(code) << "\n";
   out << "gfx_error_why=" << why << "\n";
 }
 

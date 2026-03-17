@@ -8,6 +8,9 @@ This sample hosts the shared spinning-cube simulation source from
   and validates the expected deterministic exit code.
 - `window_host.mm`: native macOS window host sample (`AppKit` + `CAMetalLayer`)
   that opens a real desktop window and runs a Metal render loop.
+- `../../shared/gfx_contract_shared.h`: shared host-side `GfxError` mapping and
+  locked `/std/gfx/VertexColored` upload-layout definition used by the native
+  and Metal sample hosts.
 
 ## Local Build Steps
 1. Build the shared cube sample to a native binary:

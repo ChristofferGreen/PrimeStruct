@@ -3736,6 +3736,18 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   }
 
   {
+    CAPTURE("GFX-V1-SHARED-HOST-CONTRACT-STATUS");
+    CHECK(graphicsDoc.find("shared host definition rather than duplicate ad-hoc structs per sample") !=
+          std::string::npos);
+    CHECK(graphicsDoc.find("one shared mapping of these identifiers rather than re-declare them in") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("host-side sample `GfxError` mapping plus locked `VertexColored` upload layout definitions now live in one shared example header") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("native/Metal sample hosts now share one canonical host-side `GfxError` +") !=
+          std::string::npos);
+  }
+
+  {
     CAPTURE("GFX-V1-CANONICAL-STDLIB-STATUS");
     CHECK(graphicsDoc.find("first canonical `/std/gfx/*` stdlib surface") != std::string::npos);
     CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)` and `Device()` entry points") !=

@@ -182,6 +182,8 @@ Locked layout properties:
 - No implicit backend-added padding.
 - Upload of `array<VertexColored>` must preserve this byte layout across
 native/VM/Wasm host-side upload paths that claim v1 graphics support.
+- Sample-owned native/Metal glue that needs to upload this data should consume
+  a shared host definition rather than duplicate ad-hoc structs per sample.
 
 ### Locked Error Surface: `GfxError`
 `GfxError` must expose deterministic machine-stable codes and human-readable
@@ -196,6 +198,10 @@ native/VM/Wasm host-side upload paths that claim v1 graphics support.
 - `frame_acquire_failed`
 - `queue_submit_failed`
 - `frame_present_failed`
+
+Sample-owned native/Metal hosts should route any host-side diagnostic emission
+through one shared mapping of these identifiers rather than re-declare them in
+each sample host.
 
 ### Locked Fallible Usage Rule
 Examples and conformance for this mini-spec must use `Result` propagation (`?`)
