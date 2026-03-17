@@ -25,6 +25,58 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("math matrix stdlib constructor requires import") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [auto] value{Mat2()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: Mat2") != std::string::npos);
+}
+
+TEST_CASE("math matrix stdlib constructor resolves with import") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat3] m3{Mat3(
+    5.0f32, 6.0f32, 7.0f32,
+    8.0f32, 9.0f32, 10.0f32,
+    11.0f32, 12.0f32, 13.0f32
+  )}
+  [Mat4] m4{Mat4(
+    14.0f32, 15.0f32, 16.0f32, 17.0f32,
+    18.0f32, 19.0f32, 20.0f32, 21.0f32,
+    22.0f32, 23.0f32, 24.0f32, 25.0f32,
+    26.0f32, 27.0f32, 28.0f32, 29.0f32
+  )}
+  return(convert<int>(m2.m00 + m2.m11 + m3.m12 + m4.m33))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("math matrix stdlib constructor keeps mismatch diagnostics") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+}
+
 TEST_CASE("math trig builtin requires import") {
   const std::string source = R"(
 [return<f32>]

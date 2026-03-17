@@ -738,8 +738,12 @@ Draft example source: `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 
-`Mat2`, `Mat3`, `Mat4`, and `Quat` are planned nominal math types with explicit interaction rules.
+`Mat2`, `Mat3`, and `Mat4` now ship as nominal stdlib math types, and `Quat` remains planned.
 They are not aliases of `array`, `vector`, or `Vec4`.
+
+Current matrix surface:
+- `Mat2`, `Mat3`, and `Mat4` use ordinary struct construction and public scalar `mRC` fields (`m00`, `m01`, ...).
+- The first component index is the row and the second component index is the column.
 
 Draft constraints:
 - No implicit scalar/vector/matrix/quaternion conversion; use explicit constructors/helpers.

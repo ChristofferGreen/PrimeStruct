@@ -106,7 +106,7 @@ Minimal vector substrate note: the remaining items below are only worth keeping 
 - ○ Extend experimental stdlib `/std/collections/experimental_soa_vector/*` to field-view indexing (`value.field()[i]`) once the experimental `.prime` implementation reaches that boundary and the next minimal substrate slice is clear.
 - ○ Route canonical `/std/collections/soa_vector/*` names through the real experimental `.prime` implementation once parity is proven.
 - ○ Delete compiler-owned `soa_vector` helper routing and backend special cases from semantics, IR lowering, emitters, and runtime code until no C++ source mentions `soa_vector`.
-- ○ Add stdlib matrix types (`Mat2`, `Mat3`, `Mat4`) with constructors and component accessors.
+- ✓ Add stdlib matrix types (`Mat2`, `Mat3`, `Mat4`) with constructors and component accessors. Progress: stdlib now ships `Mat2`, `Mat3`, and `Mat4` as nominal math structs with public scalar `mRC` fields, so positional/named struct constructors and direct component access work under `import /std/math/*`.
 - ○ Add stdlib `Quat` with constructors, component accessors, and normalization helpers.
 - ○ Implement matrix/quaternion `plus` shape validation with deterministic diagnostics.
 - ○ Implement matrix/quaternion `minus` shape validation with deterministic diagnostics.

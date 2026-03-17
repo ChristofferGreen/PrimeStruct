@@ -527,10 +527,11 @@ The lists above reflect the built-in transforms recognized by the compiler today
   - **Float utils:** `/std/math/fma`, `/std/math/hypot`, `/std/math/copysign`.
   - **Predicates:** `/std/math/is_nan`, `/std/math/is_inf`, `/std/math/is_finite`.
   - **Backend limits (current):** VM/native math uses fast approximations and is validated against the C++/exe baseline within tolerances. Large-magnitude trig/log/exp inputs are only required to stay finite and within basic range bounds (e.g., `|sin(x)| <= 1`), and may diverge from the C++/exe baseline. Conformance tests use tolerance or range checks for these cases.
-  - **Vector, color, matrix, quaternion types (draft):** stdlib ships `.prime` definitions for `Vec2`, `Vec3`, `Vec4`, `ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`, plus planned `Mat2`, `Mat3`, `Mat4`, and `Quat`. These are distinct nominal types; colors are not aliases of vectors, and quaternions are not aliases of `Vec4`.
+  - **Vector, color, matrix, quaternion types (draft):** stdlib ships `.prime` definitions for `Vec2`, `Vec3`, `Vec4`, `ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`, `Mat2`, `Mat3`, and `Mat4`, while `Quat` remains planned. These are distinct nominal types; colors are not aliases of vectors, matrices are not aliases of arrays/vectors, and quaternions are not aliases of `Vec4`.
     - **Vectors:** constructors, component accessors, and member methods like `length()`, `normalize()` (in-place), and `toNormalized()` (returns a new value).
     - **Colors:** constructors plus color-space helpers (e.g., sRGB/linear conversions) and per-channel ops. sRGB types remain distinct from linear `ColorRGB`/`ColorRGBA`.
-    - **Matrices/quaternions:** float-domain rotation/transform helpers with explicit conversion helpers (`Quat <-> Mat3/Mat4`) only.
+    - **Matrices:** constructors plus direct public scalar component access via `mRC` field names (`m00`, `m01`, ...), where the first index is the row and the second index is the column.
+    - **Quaternions:** planned float-domain rotation helpers plus explicit conversion helpers (`Quat <-> Mat3/Mat4`).
   - **Matrix/quaternion interaction contract (draft):**
     - No implicit conversion between scalar/vector/matrix/quaternion families; use explicit constructor/helper calls.
     - `plus`/`minus` require identical operand envelopes (`VecN` with same `N`, `MatRxC` with same shape, or `Quat` with `Quat`).

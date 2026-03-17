@@ -8907,6 +8907,37 @@ main() {
   CHECK(runCommand(exePath) == 36);
 }
 
+TEST_CASE("compiles and runs std math matrix types") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat3] m3{Mat3(
+    5.0f32, 6.0f32, 7.0f32,
+    8.0f32, 9.0f32, 10.0f32,
+    11.0f32, 12.0f32, 13.0f32
+  )}
+  [Mat4] m4{Mat4(
+    14.0f32, 15.0f32, 16.0f32, 17.0f32,
+    18.0f32, 19.0f32, 20.0f32, 21.0f32,
+    22.0f32, 23.0f32, 24.0f32, 25.0f32,
+    26.0f32, 27.0f32, 28.0f32, 29.0f32
+  )}
+
+  [f32] total{m2.m00 + m2.m11 + m3.m12 + m4.m33}
+  return(convert<int>(total))
+}
+)";
+  const std::string srcPath = writeTemp("compile_std_math_matrix.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_std_math_matrix_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 44);
+}
+
 TEST_CASE("compiles and runs string-keyed map literal in C++ emitter") {
   const std::string source = R"(
 [return<int>]
