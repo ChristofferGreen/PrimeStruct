@@ -825,6 +825,16 @@
     return normalized == "vector/count" || normalized == "std/collections/vector/count" ||
            normalized == "vector/capacity" || normalized == "std/collections/vector/capacity";
   };
+  auto isExplicitStdlibVectorCountCapacitySlashMethod = [&](const Expr &candidate, const char *helper) {
+    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    return normalized == std::string("std/collections/vector/") + helper;
+  };
   auto pickExplicitVectorCountCapacityReceiverIndex = [&](const Expr &candidate) -> size_t {
     if (candidate.args.size() != 1) {
       return 0;
@@ -1023,7 +1033,10 @@
           << ")";
       return out.str();
     }
-    if (expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
+    if (expr.isMethodCall &&
+        (isSimpleCallName(expr, "count") ||
+         isExplicitStdlibVectorCountCapacitySlashMethod(expr, "count")) &&
+        expr.args.size() == 1 &&
         isResolvedVectorTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_missing_vector_count_method_helper("
@@ -1110,7 +1123,10 @@
           << ")";
       return out.str();
     }
-    if (expr.isMethodCall && isSimpleCallName(expr, "capacity") && expr.args.size() == 1 &&
+    if (expr.isMethodCall &&
+        (isSimpleCallName(expr, "capacity") ||
+         isExplicitStdlibVectorCountCapacitySlashMethod(expr, "capacity")) &&
+        expr.args.size() == 1 &&
         isResolvedVectorTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_missing_vector_capacity_method_helper("
