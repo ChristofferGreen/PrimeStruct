@@ -509,6 +509,372 @@ namespace std {
                    equal(pngModU64(crc, 256u64), convert<u64>(crcD)))))
   }
 
+  [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+  pngWriteByte([File<Write>] file, [i32] value) {
+    if(or(less_than(value, 0i32), greater_than(value, 255i32)),
+       then() { return(1i32) },
+       else() { })
+    file.write_byte(value)?
+    return(0i32)
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteU32Be([File<Write>] file, [i32] value) {
+    if(less_than(value, 0i32),
+       then() { return(1i32) },
+       else() { })
+    [i32] byteA{divide(value, 16777216i32)}
+    [i32] byteB{pngMod(divide(value, 65536i32), 256i32)}
+    [i32] byteC{pngMod(divide(value, 256i32), 256i32)}
+    [i32] byteD{pngMod(value, 256i32)}
+    [i32] statusA{pngWriteByte(file, byteA)}
+    if(not_equal(statusA, 0i32),
+       then() { return(statusA) },
+       else() { })
+    [i32] statusB{pngWriteByte(file, byteB)}
+    if(not_equal(statusB, 0i32),
+       then() { return(statusB) },
+       else() { })
+    [i32] statusC{pngWriteByte(file, byteC)}
+    if(not_equal(statusC, 0i32),
+       then() { return(statusC) },
+       else() { })
+    return(pngWriteByte(file, byteD))
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteU32BeU64([File<Write>] file, [u64] value) {
+    [i32] byteA{convert<i32>(divide(value, 16777216u64))}
+    [i32] byteB{convert<i32>(pngModU64(divide(value, 65536u64), 256u64))}
+    [i32] byteC{convert<i32>(pngModU64(divide(value, 256u64), 256u64))}
+    [i32] byteD{convert<i32>(pngModU64(value, 256u64))}
+    [i32] statusA{pngWriteByte(file, byteA)}
+    if(not_equal(statusA, 0i32),
+       then() { return(statusA) },
+       else() { })
+    [i32] statusB{pngWriteByte(file, byteB)}
+    if(not_equal(statusB, 0i32),
+       then() { return(statusB) },
+       else() { })
+    [i32] statusC{pngWriteByte(file, byteC)}
+    if(not_equal(statusC, 0i32),
+       then() { return(statusC) },
+       else() { })
+    return(pngWriteByte(file, byteD))
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteChunkOpen([File<Write>] file, [i32] length, [i32] typeA, [i32] typeB, [i32] typeC, [i32] typeD,
+                    [u64 mut] crc) {
+    assign(crc, 4294967295u64)
+    [i32] lengthStatus{pngWriteU32Be(file, length)}
+    if(not_equal(lengthStatus, 0i32),
+       then() { return(lengthStatus) },
+       else() { })
+    [i32] statusA{pngWriteByte(file, typeA)}
+    if(not_equal(statusA, 0i32),
+       then() { return(statusA) },
+       else() { })
+    assign(crc, pngCrc32UpdateByte(crc, typeA))
+    [i32] statusB{pngWriteByte(file, typeB)}
+    if(not_equal(statusB, 0i32),
+       then() { return(statusB) },
+       else() { })
+    assign(crc, pngCrc32UpdateByte(crc, typeB))
+    [i32] statusC{pngWriteByte(file, typeC)}
+    if(not_equal(statusC, 0i32),
+       then() { return(statusC) },
+       else() { })
+    assign(crc, pngCrc32UpdateByte(crc, typeC))
+    [i32] statusD{pngWriteByte(file, typeD)}
+    if(not_equal(statusD, 0i32),
+       then() { return(statusD) },
+       else() { })
+    assign(crc, pngCrc32UpdateByte(crc, typeD))
+    return(0i32)
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteChunkPayloadByte([File<Write>] file, [i32] byte, [u64 mut] crc) {
+    [i32] status{pngWriteByte(file, byte)}
+    if(not_equal(status, 0i32),
+       then() { return(status) },
+       else() { })
+    assign(crc, pngCrc32UpdateByte(crc, byte))
+    return(0i32)
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteChunkClose([File<Write>] file, [u64] crc) {
+    return(pngWriteU32BeU64(file, pngXorU64(crc, 4294967295u64)))
+  }
+
+  [return<i32>]
+  pngStoredBlockCount([i32] rawByteCount) {
+    if(less_equal(rawByteCount, 0i32),
+       then() { return(0i32) },
+       else() { })
+    return(divide(plus(rawByteCount, 65534i32), 65535i32))
+  }
+
+  [return<i32>]
+  pngZlibStoredPayloadLength([i32] rawByteCount) {
+    return(plus(plus(rawByteCount, multiply(pngStoredBlockCount(rawByteCount), 5i32)), 6i32))
+  }
+
+  [return<void>]
+  pngAdlerUpdateByte([i32] byte, [i32 mut] a, [i32 mut] b) {
+    assign(a, pngMod(plus(a, byte), 65521i32))
+    assign(b, pngMod(plus(b, a), 65521i32))
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteSignature([File<Write>] file) {
+    [i32] status0{pngWriteByte(file, 137i32)}
+    if(not_equal(status0, 0i32),
+       then() { return(status0) },
+       else() { })
+    [i32] status1{pngWriteByte(file, 80i32)}
+    if(not_equal(status1, 0i32),
+       then() { return(status1) },
+       else() { })
+    [i32] status2{pngWriteByte(file, 78i32)}
+    if(not_equal(status2, 0i32),
+       then() { return(status2) },
+       else() { })
+    [i32] status3{pngWriteByte(file, 71i32)}
+    if(not_equal(status3, 0i32),
+       then() { return(status3) },
+       else() { })
+    [i32] status4{pngWriteByte(file, 13i32)}
+    if(not_equal(status4, 0i32),
+       then() { return(status4) },
+       else() { })
+    [i32] status5{pngWriteByte(file, 10i32)}
+    if(not_equal(status5, 0i32),
+       then() { return(status5) },
+       else() { })
+    [i32] status6{pngWriteByte(file, 26i32)}
+    if(not_equal(status6, 0i32),
+       then() { return(status6) },
+       else() { })
+    return(pngWriteByte(file, 10i32))
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteIhdrChunk([File<Write>] file, [i32] width, [i32] height) {
+    [u64 mut] crc{0u64}
+    [i32] openStatus{pngWriteChunkOpen(file, 13i32, 73i32, 72i32, 68i32, 82i32, crc)}
+    if(not_equal(openStatus, 0i32),
+       then() { return(openStatus) },
+       else() { })
+    [i32] widthA{divide(width, 16777216i32)}
+    [i32] widthB{pngMod(divide(width, 65536i32), 256i32)}
+    [i32] widthC{pngMod(divide(width, 256i32), 256i32)}
+    [i32] widthD{pngMod(width, 256i32)}
+    [i32] heightA{divide(height, 16777216i32)}
+    [i32] heightB{pngMod(divide(height, 65536i32), 256i32)}
+    [i32] heightC{pngMod(divide(height, 256i32), 256i32)}
+    [i32] heightD{pngMod(height, 256i32)}
+    [i32] status0{pngWriteChunkPayloadByte(file, widthA, crc)}
+    if(not_equal(status0, 0i32),
+       then() { return(status0) },
+       else() { })
+    [i32] status1{pngWriteChunkPayloadByte(file, widthB, crc)}
+    if(not_equal(status1, 0i32),
+       then() { return(status1) },
+       else() { })
+    [i32] status2{pngWriteChunkPayloadByte(file, widthC, crc)}
+    if(not_equal(status2, 0i32),
+       then() { return(status2) },
+       else() { })
+    [i32] status3{pngWriteChunkPayloadByte(file, widthD, crc)}
+    if(not_equal(status3, 0i32),
+       then() { return(status3) },
+       else() { })
+    [i32] status4{pngWriteChunkPayloadByte(file, heightA, crc)}
+    if(not_equal(status4, 0i32),
+       then() { return(status4) },
+       else() { })
+    [i32] status5{pngWriteChunkPayloadByte(file, heightB, crc)}
+    if(not_equal(status5, 0i32),
+       then() { return(status5) },
+       else() { })
+    [i32] status6{pngWriteChunkPayloadByte(file, heightC, crc)}
+    if(not_equal(status6, 0i32),
+       then() { return(status6) },
+       else() { })
+    [i32] status7{pngWriteChunkPayloadByte(file, heightD, crc)}
+    if(not_equal(status7, 0i32),
+       then() { return(status7) },
+       else() { })
+    [i32] status8{pngWriteChunkPayloadByte(file, 8i32, crc)}
+    if(not_equal(status8, 0i32),
+       then() { return(status8) },
+       else() { })
+    [i32] status9{pngWriteChunkPayloadByte(file, 2i32, crc)}
+    if(not_equal(status9, 0i32),
+       then() { return(status9) },
+       else() { })
+    [i32] status10{pngWriteChunkPayloadByte(file, 0i32, crc)}
+    if(not_equal(status10, 0i32),
+       then() { return(status10) },
+       else() { })
+    [i32] status11{pngWriteChunkPayloadByte(file, 0i32, crc)}
+    if(not_equal(status11, 0i32),
+       then() { return(status11) },
+       else() { })
+    [i32] status12{pngWriteChunkPayloadByte(file, 0i32, crc)}
+    if(not_equal(status12, 0i32),
+       then() { return(status12) },
+       else() { })
+    return(pngWriteChunkClose(file, crc))
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteStoredBlockHeader([File<Write>] file, [i32] blockByteCount, [i32] isFinal, [u64 mut] crc) {
+    if(or(less_equal(blockByteCount, 0i32), greater_than(blockByteCount, 65535i32)),
+       then() { return(1i32) },
+       else() { })
+    [i32] lenLow{pngMod(blockByteCount, 256i32)}
+    [i32] lenHigh{divide(blockByteCount, 256i32)}
+    [i32] nlen{minus(65535i32, blockByteCount)}
+    [i32] nlenLow{pngMod(nlen, 256i32)}
+    [i32] nlenHigh{divide(nlen, 256i32)}
+    [i32] status0{pngWriteChunkPayloadByte(file, isFinal, crc)}
+    if(not_equal(status0, 0i32),
+       then() { return(status0) },
+       else() { })
+    [i32] status1{pngWriteChunkPayloadByte(file, lenLow, crc)}
+    if(not_equal(status1, 0i32),
+       then() { return(status1) },
+       else() { })
+    [i32] status2{pngWriteChunkPayloadByte(file, lenHigh, crc)}
+    if(not_equal(status2, 0i32),
+       then() { return(status2) },
+       else() { })
+    [i32] status3{pngWriteChunkPayloadByte(file, nlenLow, crc)}
+    if(not_equal(status3, 0i32),
+       then() { return(status3) },
+       else() { })
+    return(pngWriteChunkPayloadByte(file, nlenHigh, crc))
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteStoredDataByte([File<Write>] file, [i32] byte, [i32 mut] rawRemaining, [i32 mut] blockRemaining,
+                         [u64 mut] crc, [i32 mut] adlerA, [i32 mut] adlerB) {
+    if(less_equal(rawRemaining, 0i32),
+       then() { return(1i32) },
+       else() { })
+    if(equal(blockRemaining, 0i32),
+       then() {
+         [i32 mut] nextBlockCount{65535i32}
+         if(less_equal(rawRemaining, 65535i32),
+            then() { assign(nextBlockCount, rawRemaining) },
+            else() { })
+         [i32] isFinalBlock{if(equal(nextBlockCount, rawRemaining), then() { 1i32 }, else() { 0i32 })}
+         [i32] headerStatus{
+             pngWriteStoredBlockHeader(file,
+                                       nextBlockCount,
+                                       isFinalBlock,
+                                       crc)}
+         if(not_equal(headerStatus, 0i32),
+            then() { return(headerStatus) },
+            else() { })
+         assign(blockRemaining, nextBlockCount)
+       },
+       else() { })
+    [i32] byteStatus{pngWriteChunkPayloadByte(file, byte, crc)}
+    if(not_equal(byteStatus, 0i32),
+       then() { return(byteStatus) },
+       else() { })
+    pngAdlerUpdateByte(byte, adlerA, adlerB)
+    assign(rawRemaining, minus(rawRemaining, 1i32))
+    assign(blockRemaining, minus(blockRemaining, 1i32))
+    return(0i32)
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteIdatChunk([File<Write>] file, [i32] width, [i32] height, [vector<i32>] pixels) {
+    [i32] rawByteCount{multiply(height, plus(multiply(width, 3i32), 1i32))}
+    [i32] payloadLength{pngZlibStoredPayloadLength(rawByteCount)}
+    [u64 mut] crc{0u64}
+    [i32] openStatus{pngWriteChunkOpen(file, payloadLength, 73i32, 68i32, 65i32, 84i32, crc)}
+    if(not_equal(openStatus, 0i32),
+       then() { return(openStatus) },
+       else() { })
+    [i32] zlibStatus0{pngWriteChunkPayloadByte(file, 120i32, crc)}
+    if(not_equal(zlibStatus0, 0i32),
+       then() { return(zlibStatus0) },
+       else() { })
+    [i32] zlibStatus1{pngWriteChunkPayloadByte(file, 1i32, crc)}
+    if(not_equal(zlibStatus1, 0i32),
+       then() { return(zlibStatus1) },
+       else() { })
+    [i32 mut] rawRemaining{rawByteCount}
+    [i32 mut] blockRemaining{0i32}
+    [i32 mut] adlerA{1i32}
+    [i32 mut] adlerB{0i32}
+    [i32 mut] row{0i32}
+    while(less_than(row, height), do() {
+      [i32] filterStatus{pngWriteStoredDataByte(file, 0i32, rawRemaining, blockRemaining, crc, adlerA, adlerB)}
+      if(not_equal(filterStatus, 0i32),
+         then() { return(filterStatus) },
+         else() { })
+      [i32 mut] pixelOffset{multiply(multiply(row, width), 3i32)}
+      [i32 mut] column{0i32}
+      while(less_than(column, width), do() {
+        [i32] redStatus{pngWriteStoredDataByte(file, pixels[pixelOffset], rawRemaining, blockRemaining, crc, adlerA, adlerB)}
+        if(not_equal(redStatus, 0i32),
+           then() { return(redStatus) },
+           else() { })
+        [i32] greenStatus{
+            pngWriteStoredDataByte(file, pixels[plus(pixelOffset, 1i32)], rawRemaining, blockRemaining, crc, adlerA, adlerB)}
+        if(not_equal(greenStatus, 0i32),
+           then() { return(greenStatus) },
+           else() { })
+        [i32] blueStatus{
+            pngWriteStoredDataByte(file, pixels[plus(pixelOffset, 2i32)], rawRemaining, blockRemaining, crc, adlerA, adlerB)}
+        if(not_equal(blueStatus, 0i32),
+           then() { return(blueStatus) },
+           else() { })
+        assign(pixelOffset, plus(pixelOffset, 3i32))
+        increment(column)
+      })
+      increment(row)
+    })
+    if(or(not_equal(rawRemaining, 0i32), not_equal(blockRemaining, 0i32)),
+       then() { return(1i32) },
+       else() { })
+    [i32] adlerStatus0{pngWriteChunkPayloadByte(file, divide(adlerB, 256i32), crc)}
+    if(not_equal(adlerStatus0, 0i32),
+       then() { return(adlerStatus0) },
+       else() { })
+    [i32] adlerStatus1{pngWriteChunkPayloadByte(file, pngMod(adlerB, 256i32), crc)}
+    if(not_equal(adlerStatus1, 0i32),
+       then() { return(adlerStatus1) },
+       else() { })
+    [i32] adlerStatus2{pngWriteChunkPayloadByte(file, divide(adlerA, 256i32), crc)}
+    if(not_equal(adlerStatus2, 0i32),
+       then() { return(adlerStatus2) },
+       else() { })
+    [i32] adlerStatus3{pngWriteChunkPayloadByte(file, pngMod(adlerA, 256i32), crc)}
+    if(not_equal(adlerStatus3, 0i32),
+       then() { return(adlerStatus3) },
+       else() { })
+    return(pngWriteChunkClose(file, crc))
+  }
+
+  [effects(file_write), return<int>]
+  pngWriteIendChunk([File<Write>] file) {
+    [u64 mut] crc{0u64}
+    [i32] openStatus{pngWriteChunkOpen(file, 0i32, 73i32, 69i32, 78i32, 68i32, crc)}
+    if(not_equal(openStatus, 0i32),
+       then() { return(openStatus) },
+       else() { })
+    return(pngWriteChunkClose(file, crc))
+  }
+
   [return<i32>]
   pngPaethPredictor([i32] left, [i32] up, [i32] upLeft) {
     [i32] predictor{minus(plus(left, up), upLeft)}
@@ -2079,10 +2445,10 @@ namespace std {
       return(0i32)
     }
 
-    [public return<Result<ImageError>> effects(file_write, heap_alloc)]
-    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
-      resetReadOutputs(width, height, pixels)
-      [i32] status{readImpl(width, height, pixels, path)}
+	    [public return<Result<ImageError>> effects(file_write, heap_alloc)]
+	    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
+	      resetReadOutputs(width, height, pixels)
+	      [i32] status{readImpl(width, height, pixels, path)}
       if(not_equal(status, 0i32),
          then() {
            resetReadOutputs(width, height, pixels)
@@ -2311,10 +2677,36 @@ namespace std {
       return(Result.ok())
     }
 
+    [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+    writeImpl([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
+      if(not(ppmWriteInputValid(width, height, pixels)),
+         then() { return(1i32) },
+         else() { })
+
+      [File<Write>] file{File<Write>(path)?}
+      [i32] signatureStatus{pngWriteSignature(file)}
+      if(not_equal(signatureStatus, 0i32),
+         then() { return(signatureStatus) },
+         else() { })
+      [i32] ihdrStatus{pngWriteIhdrChunk(file, width, height)}
+      if(not_equal(ihdrStatus, 0i32),
+         then() { return(ihdrStatus) },
+         else() { })
+      [i32] idatStatus{pngWriteIdatChunk(file, width, height, pixels)}
+      if(not_equal(idatStatus, 0i32),
+         then() { return(idatStatus) },
+         else() { })
+      return(pngWriteIendChunk(file))
+    }
+
     [public return<Result<ImageError>> effects(file_write)]
     write([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
-      return(unsupported_write())
+      [i32] status{writeImpl(path, width, height, pixels)}
+      if(not_equal(status, 0i32),
+         then() { return(invalidOperation()) },
+         else() { })
+      return(Result.ok())
     }
   }
-  }
+}
 }

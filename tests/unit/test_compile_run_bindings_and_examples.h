@@ -4342,7 +4342,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("Malformed or missing PNGs, including critical-chunk CRC mismatches, invalid `PLTE`/`IDAT` ordering, malformed Adam7 scanline payloads, and indexed palette overruns, deterministically return `image_invalid_operation`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`png.write` still deterministically returns unsupported `ImageError` values") !=
+  CHECK(primeStructDoc.find("`png.write(...)` now emits non-interlaced 8-bit RGB PNG files in VM/native/Wasm (and C++ emitter flows via the shared stdlib implementation) using a single `IHDR`/`IDAT`/`IEND` layout, stored/no-compression deflate blocks, and filter-`0` scanlines for the current write subset; invalid dimensions, payload mismatches, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`ImageError.why()` currently returns `image_read_unsupported`, `image_write_unsupported`, or `image_invalid_operation`") !=
         std::string::npos);
@@ -4403,13 +4403,15 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngBody.find("pngScanlineChannelByte") != std::string::npos);
   CHECK(pngBody.find("pngAdam7PassStartX") != std::string::npos);
   CHECK(pngBody.find("pngDecodeRows") != std::string::npos);
+  CHECK(pngBody.find("pngWriteSignature") != std::string::npos);
+  CHECK(pngBody.find("pngWriteIdatChunk") != std::string::npos);
   CHECK(pngBody.find("equal(colorType, 0i32)") != std::string::npos);
   CHECK(pngBody.find("equal(colorType, 3i32)") != std::string::npos);
   CHECK(pngBody.find("equal(colorType, 4i32)") != std::string::npos);
   CHECK(pngBody.find("equal(colorType, 6i32)") != std::string::npos);
   CHECK(pngBody.find("pngAppendBytes") != std::string::npos);
   CHECK(pngBody.find("return(invalidOperation())") != std::string::npos);
-  CHECK(pngBody.find("return(unsupported_write())") != std::string::npos);
+  CHECK(pngBody.find("return(unsupported_write())") == std::string::npos);
   CHECK(pngBody.find("return(1i32)") == std::string::npos);
   CHECK(pngBody.find("return(2i32)") == std::string::npos);
 }
