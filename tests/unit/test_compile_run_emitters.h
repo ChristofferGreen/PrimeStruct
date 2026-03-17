@@ -7148,7 +7148,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects user wrapper temporary count capacity shadow precedence in C++ emitter") {
@@ -9190,7 +9190,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper map capacity target in C++ emitter") {
@@ -9246,7 +9246,7 @@ main() {
   CHECK(runCommand(exePath) == 93);
 }
 
-TEST_CASE("C++ emitter lowers canonical direct-call vector capacity on map receiver to deleted stub") {
+TEST_CASE("rejects canonical direct-call vector capacity on map receiver without helper in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -9259,18 +9259,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_canonical_direct_vector_capacity_map_deleted_stub.prime", source);
-  const std::string outPath =
+      writeTemp("compile_cpp_canonical_direct_vector_capacity_map_unknown_target.prime", source);
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_direct_vector_capacity_map_deleted_stub.cpp")
+       "primec_cpp_canonical_direct_vector_capacity_map_unknown_target.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_capacity_call_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_capacity_call_helper(wrapMap())") != std::string::npos);
-  CHECK(output.find("ps_vector_capacity(") == std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects canonical direct-call vector capacity builtin fallback on map receiver in C++ emitter") {
@@ -9295,7 +9293,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_capacity_call_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical slash-method vector capacity same-path helper on map receiver") {

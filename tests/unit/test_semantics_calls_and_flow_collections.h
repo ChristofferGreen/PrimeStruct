@@ -12570,6 +12570,24 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector capacity accepts same-path helper on map target") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/capacity([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/vector/capacity(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced capacity rejects named arguments as builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -12713,7 +12731,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity requires vector target") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity keeps non-vector target diagnostics") {
@@ -15302,7 +15320,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity requires vector target") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("access helper call-form expression infers auto binding from labeled receiver helper") {

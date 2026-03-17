@@ -9022,6 +9022,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (!validateExpr(params, locals, expr.args.front())) {
             return false;
           }
+          std::string mapKeyType;
+          std::string mapValueType;
+          if (resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {
+            error_ = "unknown call target: /std/collections/vector/capacity";
+            return false;
+          }
           error_ = "capacity requires vector target";
           return false;
         }
