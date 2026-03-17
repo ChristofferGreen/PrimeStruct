@@ -22312,7 +22312,45 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
   indexArg.kind = primec::Expr::Kind::Literal;
   indexArg.intWidth = 32;
   indexArg.literalValue = 1;
-  methodCall.args.push_back(indexArg);
+  methodCall.args = {vectorReceiverExpr, indexArg};
+  error = "stale";
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            vectorLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return std::string(); },
+            {},
+            error) == nullptr);
+  CHECK(error == "unknown method: /vector/at");
+
+  methodCall.name = "at_unsafe";
+  methodCall.args = {vectorReceiverExpr, indexArg};
+  error = "stale";
+  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            methodCall,
+            vectorLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return std::string(); },
+            {},
+            error) == nullptr);
+  CHECK(error == "unknown method: /vector/at_unsafe");
+
+  methodCall.name = "at";
+  methodCall.args = {receiverExpr, indexArg};
   error = "stale";
   CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
             methodCall,
@@ -23922,6 +23960,50 @@ TEST_CASE("ir lowerer setup type helper rejects explicit slash-method vector acc
   expectUnknownKind("/vector/at_unsafe");
   expectUnknownKind("/std/collections/vector/at");
   expectUnknownKind("/std/collections/vector/at_unsafe");
+}
+
+TEST_CASE("ir lowerer setup type helper rejects bare vector access method return kinds") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo itemsLocal;
+  itemsLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  itemsLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("items", itemsLocal);
+
+  auto expectUnknownKind = [&](const char *methodName) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiverExpr, indexExpr};
+
+    primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    bool methodResolved = false;
+    CHECK_FALSE(primec::ir_lowerer::resolveMethodCallReturnKind(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+          return nullptr;
+        },
+        {},
+        {},
+        false,
+        kindOut,
+        &methodResolved));
+    CHECK_FALSE(methodResolved);
+    CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  };
+
+  expectUnknownKind("at");
+  expectUnknownKind("at_unsafe");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects canonical map access fallback to compatibility defs") {

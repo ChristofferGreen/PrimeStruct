@@ -2127,6 +2127,49 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
+TEST_CASE("rejects native bare vector at method without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(values.at(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bare_vector_at_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_bare_vector_at_method_import_requirement_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+}
+
+TEST_CASE("rejects native wrapper temporary vector at method without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().at(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_wrapper_vector_at_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_wrapper_vector_at_method_import_requirement_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native bare vector at_unsafe through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -2162,6 +2205,50 @@ main() {
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("rejects native bare vector at_unsafe method without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(values.at_unsafe(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_bare_vector_at_unsafe_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_bare_vector_at_unsafe_method_import_requirement_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("rejects native wrapper temporary vector at_unsafe method without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().at_unsafe(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_wrapper_vector_at_unsafe_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_wrapper_vector_at_unsafe_method_import_requirement_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native bare vector count through imported stdlib helper") {

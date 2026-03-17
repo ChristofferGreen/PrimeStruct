@@ -1702,6 +1702,44 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
+TEST_CASE("rejects vm bare vector at method without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(values.at(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_bare_vector_at_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_bare_vector_at_method_import_requirement_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+}
+
+TEST_CASE("rejects vm wrapper temporary vector at method without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().at(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_wrapper_vector_at_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_wrapper_vector_at_method_import_requirement_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+}
+
 TEST_CASE("runs vm bare vector at_unsafe through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -1732,6 +1770,46 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("rejects vm bare vector at_unsafe method without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(values.at_unsafe(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_bare_vector_at_unsafe_method_import_requirement.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_vm_bare_vector_at_unsafe_method_import_requirement_err.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("rejects vm wrapper temporary vector at_unsafe method without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().at_unsafe(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_wrapper_vector_at_unsafe_method_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_vector_at_unsafe_method_import_requirement_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("runs vm with map at helper") {

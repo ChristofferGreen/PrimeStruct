@@ -1345,6 +1345,43 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
     auto isBuiltinTryAtMethodName = [](const std::string &name) {
       return name == "tryAt";
     };
+    auto isBareVectorAccessMethodExpr = [&](const Expr &expr) {
+      if (!expr.isMethodCall || expr.args.size() != 2 ||
+          !(isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe"))) {
+        return false;
+      }
+
+      const Expr &receiverExpr = expr.args.front();
+      if (receiverExpr.kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(receiverExpr.name);
+        if (localIt == localsIn.end()) {
+          return false;
+        }
+        const LocalInfo &receiverInfo = localIt->second;
+        return receiverInfo.kind == LocalInfo::Kind::Vector ||
+               (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToVector) ||
+               (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToVector);
+      }
+
+      if (receiverExpr.kind == Expr::Kind::Call) {
+        std::string collectionName;
+        if (getBuiltinCollectionName(receiverExpr, collectionName)) {
+          return collectionName == "vector" && receiverExpr.templateArgs.size() == 1;
+        }
+
+        const Definition *receiverDef = receiverExpr.isMethodCall
+                                            ? resolveMethodCallDefinition(receiverExpr, localsIn)
+                                            : (resolveDefinitionCall ? resolveDefinitionCall(receiverExpr) : nullptr);
+        if (receiverDef == nullptr) {
+          return false;
+        }
+        std::string receiverTypeName;
+        return inferReceiverTypeFromDeclaredReturn(*receiverDef, receiverTypeName) &&
+               receiverTypeName == "vector";
+      }
+
+      return false;
+    };
     auto resolveBuiltinMethodReceiverKind = [&](const Expr &receiverExpr,
                                                 const std::string &normalizedName,
                                                 LocalInfo::ValueKind &builtinKindOut) {
@@ -1558,7 +1595,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       }
       return true;
     }
-    if (!methodCallExpr.args.empty() &&
+    if (!isBareVectorAccessMethodExpr(methodCallExpr) && !methodCallExpr.args.empty() &&
         resolveBuiltinMethodReceiverKind(
             methodCallExpr.args.front(), normalizeMethodName(methodCallExpr.name), kindOut)) {
       if (methodResolvedOut != nullptr) {
@@ -1968,6 +2005,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const bool isBuiltinBareVectorCapacityMethod =
       isSimpleCallName(callExpr, "capacity") &&
       isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn);
+  const bool isBuiltinBareVectorAccessMethod =
+      callExpr.isMethodCall && callExpr.args.size() == 2 &&
+      (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) &&
+      resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn).isVectorTarget;
   const bool isBuiltinVectorMutatorCall =
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
@@ -1978,7 +2019,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt");
   const bool allowBuiltinFallback =
       !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
-      !isBuiltinBareVectorCapacityMethod &&
+      !isBuiltinBareVectorCapacityMethod && !isBuiltinBareVectorAccessMethod &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
        isBuiltinMapContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
@@ -2253,7 +2294,11 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   if (resolvedDef == nullptr) {
     const bool blocksBuiltinBareVectorCountMethod =
         isSimpleCallName(callExpr, "count") && typeName == "vector";
-    if (allowBuiltinFallback && !blocksBuiltinBareVectorCountMethod) {
+    const bool blocksBuiltinBareVectorAccessMethod =
+        (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) &&
+        typeName == "vector";
+    if (allowBuiltinFallback && !blocksBuiltinBareVectorCountMethod &&
+        !blocksBuiltinBareVectorAccessMethod) {
       errorOut = priorError;
       return nullptr;
     }
