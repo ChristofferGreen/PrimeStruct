@@ -50,6 +50,20 @@ static bool isVectorBuiltinName(const Expr &expr, const char *name) {
   return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
+static bool isExplicitVectorMutatorHelperCall(const Expr &expr) {
+  std::string aliasName;
+  if (!resolveVectorHelperAliasName(expr, aliasName)) {
+    return false;
+  }
+  const bool isExplicitHelperPath =
+      expr.name.rfind("/vector/", 0) == 0 || expr.name.rfind("/std/collections/vector/", 0) == 0;
+  if (!isExplicitHelperPath) {
+    return false;
+  }
+  return aliasName == "push" || aliasName == "pop" || aliasName == "reserve" || aliasName == "clear" ||
+         aliasName == "remove_at" || aliasName == "remove_swap";
+}
+
 static bool isSoaVectorTargetExpr(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
@@ -458,7 +472,10 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return DirectCallStatementEmitResult::NotMatched;
   }
 
-  if (!stmt.isMethodCall &&
+  const bool explicitVectorMutatorHelperCall = isExplicitVectorMutatorHelperCall(stmt);
+
+  if (!explicitVectorMutatorHelperCall &&
+      !stmt.isMethodCall &&
       stmt.args.size() == 1 &&
       isSoaVectorTargetExpr(stmt.args.front(), localsIn)) {
     Expr methodStmt = stmt;
@@ -498,13 +515,15 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     error.clear();
   }
 
-  const auto vectorHelperCallFormResult = tryEmitVectorHelperCallFormStatement(
-      stmt, localsIn, resolveMethodCallDefinition, emitInlineDefinitionCall, error);
-  if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Error) {
-    return DirectCallStatementEmitResult::Error;
-  }
-  if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Emitted) {
-    return DirectCallStatementEmitResult::Emitted;
+  if (!explicitVectorMutatorHelperCall) {
+    const auto vectorHelperCallFormResult = tryEmitVectorHelperCallFormStatement(
+        stmt, localsIn, resolveMethodCallDefinition, emitInlineDefinitionCall, error);
+    if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Error) {
+      return DirectCallStatementEmitResult::Error;
+    }
+    if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Emitted) {
+      return DirectCallStatementEmitResult::Emitted;
+    }
   }
 
   const Definition *callee = resolveDefinitionCall(stmt);
