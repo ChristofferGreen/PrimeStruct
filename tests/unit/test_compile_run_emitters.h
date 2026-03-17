@@ -9576,6 +9576,77 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps wrapper canonical direct-call struct method chain forwarding") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapValues() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/at(wrapValues(), 2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_canonical_direct_struct_method_chain_forwarding.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_canonical_direct_struct_method_chain_forwarding_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("rejects wrapper canonical direct-call method receiver fallback without helper in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 40i32))
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapValues() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/at(wrapValues(), 1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_canonical_direct_method_receiver_fallback_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_canonical_direct_method_receiver_fallback_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
+}
+
 TEST_CASE("C++ emitter keeps wrapper-returned vector direct-call string count forwarding") {
   const std::string source = R"(
 [return<int>]

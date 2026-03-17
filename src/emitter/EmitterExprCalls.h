@@ -731,7 +731,7 @@
         return resolvedExplicitVectorAccessType;
       }
       const bool shouldProbeBuiltinVectorAccessType =
-          !isExplicitVectorAccessCompatibilityCall(targetExpr) &&
+          !isExplicitVectorAccessDirectCall(targetExpr) &&
           !builtinCanonicalVectorAccessReceiverTypePath(targetExpr).empty();
       const bool shouldProbeBuiltinMapAccessType =
           !builtinCanonicalMapAccessReceiverTypePath(targetExpr).empty();
