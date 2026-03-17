@@ -49241,15 +49241,15 @@ TEST_CASE("ir validator wasm target accepts wasi file opcodes and file_write eff
   CHECK(error.empty());
 }
 
-TEST_CASE("ir validator wasm target accepts wasi file read opcode and file_write effect") {
+TEST_CASE("ir validator wasm target accepts wasi file read opcode and file_read effect") {
   primec::IrModule module;
   module.entryIndex = 0;
   module.stringTable.push_back("in.txt");
 
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.metadata.effectMask = primec::EffectFileWrite;
-  fn.metadata.capabilityMask = primec::EffectFileWrite;
+  fn.metadata.effectMask = primec::EffectFileRead;
+  fn.metadata.capabilityMask = primec::EffectFileRead;
   fn.instructions.push_back({primec::IrOpcode::FileOpenRead, 0});
   fn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
   fn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});

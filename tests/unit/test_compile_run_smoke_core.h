@@ -712,7 +712,7 @@ TEST_CASE("primec wasm wasi supports File<Read>.read_byte with deterministic eof
   }
 
   const std::string source = R"(
-[return<Result<FileError>> effects(file_write, io_out) on_error<FileError, /log_file_error>]
+[return<Result<FileError>> effects(file_read, io_out) on_error<FileError, /log_file_error>]
 main() {
   [File<Read>] file{ File<Read>("input.bin"utf8)? }
   [i32 mut] first{0i32}
@@ -836,7 +836,7 @@ TEST_CASE("primec wasm wasi runs binary p6 ppm inputs") {
   const std::string source = R"(
 import /std/image/*
 
-[effects(heap_alloc, io_out, file_write), return<int>]
+[effects(heap_alloc, io_out, file_read), return<int>]
 main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}

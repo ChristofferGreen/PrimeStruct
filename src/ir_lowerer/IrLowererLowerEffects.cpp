@@ -37,6 +37,12 @@ bool isRuntimeReflectionPath(const std::string &path) {
          path.rfind("/meta/table/", 0) == 0;
 }
 
+void expandEffectImplications(std::unordered_set<std::string> &effects) {
+  if (effects.count("file_write") != 0) {
+    effects.insert("file_read");
+  }
+}
+
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
   out.clear();
   int depth = 0;
@@ -342,6 +348,10 @@ bool effectBitForName(const std::string &name, uint64_t &outBit) {
     outBit = EffectFileWrite;
     return true;
   }
+  if (name == "file_read") {
+    outBit = EffectFileRead;
+    return true;
+  }
   if (name == "gpu_dispatch") {
     outBit = EffectGpuDispatch;
     return true;
@@ -352,7 +362,8 @@ bool effectBitForName(const std::string &name, uint64_t &outBit) {
 bool isSupportedEffect(const std::string &name) {
   return name == "io_out" || name == "io_err" || name == "heap_alloc" || name == "pathspace_notify" ||
          name == "pathspace_insert" || name == "pathspace_take" || name == "pathspace_bind" ||
-         name == "pathspace_schedule" || name == "file_write" || name == "gpu_dispatch";
+         name == "pathspace_schedule" || name == "file_write" || name == "file_read" ||
+         name == "gpu_dispatch";
 }
 
 std::unordered_set<std::string> resolveActiveEffects(const std::vector<Transform> &transforms,
@@ -377,6 +388,7 @@ std::unordered_set<std::string> resolveActiveEffects(const std::vector<Transform
       effects.insert(effect);
     }
   }
+  expandEffectImplications(effects);
   return effects;
 }
 

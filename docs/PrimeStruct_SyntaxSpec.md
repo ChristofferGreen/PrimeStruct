@@ -760,11 +760,11 @@ Draft constraints:
 - Defaults can be supplied by `primec --default-effects` (the compiler enables `io_out` by default unless set to `none`).
 - Backends reject unsupported effects.
   - Execution effects must be a subset of the enclosing definition’s active effects; otherwise the compiler emits a diagnostic.
-  - Recognized v1 capabilities: `io_out`, `io_err`, `file_write`, `heap_alloc`, `global_write`, `asset_read`, `asset_write`,
+  - Recognized v1 capabilities: `io_out`, `io_err`, `file_read`, `file_write`, `heap_alloc`, `global_write`, `asset_read`, `asset_write`,
     `gpu_dispatch`.
-  - VM/native backends allow `io_out`, `io_err`, `heap_alloc`, `file_write`, `gpu_dispatch`, and
+  - VM/native backends allow `io_out`, `io_err`, `heap_alloc`, `file_read`, `file_write`, `gpu_dispatch`, and
     `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`,
-    `pathspace_schedule`). GLSL allows `io_out`, `io_err`, and `pathspace_*` effects/capabilities.
+    `pathspace_schedule`); `file_write` also implies `file_read`. GLSL allows `io_out`, `io_err`, and `pathspace_*` effects/capabilities.
 
 ### 9.1 Backend Type Support (v1)
 

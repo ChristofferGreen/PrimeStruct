@@ -6094,8 +6094,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = "File does not accept block arguments";
           return false;
         }
-        if (activeEffects_.count("file_write") == 0) {
-          error_ = "File requires file_write effect";
+        const bool requiresWrite = mode == "Write" || mode == "Append";
+        const char *requiredEffect = requiresWrite ? "file_write" : "file_read";
+        if (activeEffects_.count(requiredEffect) == 0) {
+          error_ = std::string("File requires ") + requiredEffect + " effect";
           return false;
         }
         if (!validateExpr(params, locals, expr.args.front())) {
@@ -6314,8 +6316,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = "file method missing receiver";
           return false;
         }
-        if (activeEffects_.count("file_write") == 0) {
-          error_ = "file operations require file_write effect";
+        const bool requiresRead = expr.name == "read_byte" || expr.name == "close";
+        const char *requiredEffect = requiresRead ? "file_read" : "file_write";
+        if (activeEffects_.count(requiredEffect) == 0) {
+          error_ = std::string("file operations require ") + requiredEffect + " effect";
           return false;
         }
         if (!validateExpr(params, locals, expr.args.front())) {

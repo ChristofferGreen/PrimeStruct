@@ -4320,11 +4320,13 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(primeStructDoc.find("`png.write(path, width, height, pixels) -> Result<ImageError>`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`pixels` is a flat `vector<i32>` in RGB byte order") != std::string::npos);
-  CHECK(primeStructDoc.find("requires `effects(file_write)`; `ppm.read(...)` and `png.read(...)` also require `heap_alloc`") !=
+  CHECK(primeStructDoc.find("read-only file operations require `effects(file_read)` and write/append operations require `effects(file_write)`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`file_write` also implies `file_read` for compatibility") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`ppm.read(...)` currently parses ASCII `P3` and binary `P6` PPM files in VM/native/Wasm") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("On Wasm-wasi, the current `effects(file_write, heap_alloc)` read contract now compiles through target validation") !=
+  CHECK(primeStructDoc.find("On Wasm-wasi, the current `effects(file_read, heap_alloc)` read contract now compiles through target validation") !=
         std::string::npos);
   CHECK(primeStructDoc.find("overflowed read-side size arithmetic, unsupported max values, non-positive dimensions, missing binary-raster separators, truncated payloads, and out-of-range ASCII component values deterministically return `image_invalid_operation`") !=
         std::string::npos);
@@ -4364,7 +4366,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(imageStdlib.find("namespace png") != std::string::npos);
   CHECK(imageStdlib.find("pngChunkIsPlte(") != std::string::npos);
   CHECK(imageStdlib.find("pngChunkCrcMatches(") != std::string::npos);
-  CHECK(imageStdlib.find("[public return<Result<ImageError>> effects(file_write, heap_alloc)]\n    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path)") !=
+  CHECK(imageStdlib.find("[public return<Result<ImageError>> effects(file_read, heap_alloc)]\n    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path)") !=
         std::string::npos);
   CHECK(imageStdlib.find("[public return<Result<ImageError>> effects(file_write)]\n    write([string] path, [i32] width, [i32] height, [vector<i32>] pixels)") !=
         std::string::npos);
@@ -4444,6 +4446,7 @@ TEST_CASE("file read_byte docs and helpers stay source locked") {
 
   CHECK(primeStructDoc.find("`read_byte([i32 mut] value)`") != std::string::npos);
   CHECK(primeStructDoc.find("`read_byte(...)` reports deterministic end-of-file as `EOF`") != std::string::npos);
+  CHECK(primeStructDoc.find("read-only file operations require `effects(file_read)`") != std::string::npos);
 
   CHECK(prelude.find("static inline uint32_t ps_file_read_byte") != std::string::npos);
   CHECK(prelude.find("return 65536u;") != std::string::npos);

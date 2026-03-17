@@ -53,13 +53,13 @@ namespace std {
     return(minus(value, 48i32))
   }
 
-  [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+  [effects(file_read), return<int> on_error<FileError, /std/image/ignoreFileError>]
   ppmReadByteStatus([File<Read>] file, [i32 mut] value) {
     file.read_byte(value)?
     return(0i32)
   }
 
-  [effects(file_write), return<int>]
+  [effects(file_read), return<int>]
   ppmSkipComment([File<Read>] file) {
     [i32 mut] byte{0i32}
     while(true, do() {
@@ -78,7 +78,7 @@ namespace std {
     return(0i32)
   }
 
-  [effects(file_write), return<int>]
+  [effects(file_read), return<int>]
   ppmNextByte([File<Read>] file, [i32 mut] hasPending, [i32 mut] pendingByte, [i32 mut] value) {
     if(equal(hasPending, 1i32),
        then() {
@@ -90,7 +90,7 @@ namespace std {
     return(ppmReadByteStatus(file, value))
   }
 
-  [effects(file_write), return<int>]
+  [effects(file_read), return<int>]
   ppmReadAsciiInt([File<Read>] file, [i32 mut] hasPending, [i32 mut] pendingByte, [i32 mut] value) {
     assign(value, 0i32)
     [i32 mut] started{0i32}
@@ -143,7 +143,7 @@ namespace std {
     return(0i32)
   }
 
-  [effects(file_write), return<int>]
+  [effects(file_read), return<int>]
   ppmReadBinaryRasterLead([File<Read>] file, [i32 mut] hasPending, [i32 mut] pendingByte, [i32 mut] value) {
     [i32 mut] sawWhitespace{0i32}
     while(true, do() {
@@ -218,7 +218,7 @@ namespace std {
     return(0i32)
   }
 
-  [effects(file_write), return<int>]
+  [effects(file_read), return<int>]
   pngReadU32Be([File<Read>] file, [i32 mut] value) {
     assign(value, 0i32)
     [i32 mut] index{0i32}
@@ -237,7 +237,7 @@ namespace std {
     return(0i32)
   }
 
-  [effects(file_write), return<int>]
+  [effects(file_read), return<int>]
   pngSkipBytes([File<Read>] file, [i32] count) {
     if(less_than(count, 0i32),
        then() { return(1i32) },
@@ -254,7 +254,7 @@ namespace std {
     return(0i32)
   }
 
-  [effects(file_write), return<int>]
+  [effects(file_read), return<int>]
   pngReadChunkType([File<Read>] file, [i32 mut] a, [i32 mut] b, [i32 mut] c, [i32 mut] d) {
     [i32] statusA{ppmReadByteStatus(file, a)}
     if(not_equal(statusA, 0i32),
@@ -324,7 +324,7 @@ namespace std {
     return(false)
   }
 
-  [effects(file_write), return<int>]
+  [effects(file_read), return<int>]
   pngValidateSignature([File<Read>] file) {
     [i32 mut] byte{0i32}
     [i32] status0{ppmReadByteStatus(file, byte)}
@@ -386,7 +386,7 @@ namespace std {
     return(0i32)
   }
 
-  [effects(file_write), return<int>]
+  [effects(file_read), return<int>]
   pngReadIhdr([File<Read>] file, [i32 mut] width, [i32 mut] height, [i32 mut] bitDepthOut,
               [i32 mut] colorTypeOut, [i32 mut] interlaceOut) {
     [i32 mut] parsedWidth{0i32}
@@ -1301,7 +1301,7 @@ namespace std {
     return(equal(pngMod(plus(multiply(cmf, 256i32), flg), 31i32), 0i32))
   }
 
-  [effects(file_write, heap_alloc), return<int>]
+  [effects(file_read, heap_alloc), return<int>]
   pngAppendBytes([File<Read>] file, [i32] count, [vector<i32> mut] bytes) {
     if(less_than(count, 0i32),
        then() { return(1i32) },
@@ -2452,7 +2452,7 @@ namespace std {
   }
 
   namespace ppm {
-    [effects(file_write, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
+    [effects(file_read, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
     readImpl([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
       [File<Read>] file{File<Read>(path)?}
       [i32 mut] hasPending{0i32}
@@ -2541,7 +2541,7 @@ namespace std {
       return(0i32)
     }
 
-	    [public return<Result<ImageError>> effects(file_write, heap_alloc)]
+	    [public return<Result<ImageError>> effects(file_read, heap_alloc)]
 	    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
 	      resetReadOutputs(width, height, pixels)
 	      [i32] status{readImpl(width, height, pixels, path)}
@@ -2589,7 +2589,7 @@ namespace std {
   }
 
   namespace png {
-    [effects(file_write, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
+    [effects(file_read, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
     readImpl([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
       [File<Read>] file{File<Read>(path)?}
       [i32] signatureStatus{pngValidateSignature(file)}
@@ -2754,7 +2754,7 @@ namespace std {
       return(1i32)
     }
 
-    [public return<Result<ImageError>> effects(file_write, heap_alloc)]
+    [public return<Result<ImageError>> effects(file_read, heap_alloc)]
     read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
       resetReadOutputs(width, height, pixels)
       [i32] status{readImpl(width, height, pixels, path)}

@@ -117,6 +117,12 @@ bool isLifecycleHelperName(const std::string &fullPath) {
   return false;
 }
 
+void expandEffectImplications(std::unordered_set<std::string> &effects) {
+  if (effects.count("file_write") != 0) {
+    effects.insert("file_read");
+  }
+}
+
 } // namespace
 
 std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::vector<Transform> &transforms,
@@ -135,6 +141,7 @@ std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::ve
   if (!sawEffects) {
     effects = isEntry ? entryDefaultEffectSet_ : defaultEffectSet_;
   }
+  expandEffectImplications(effects);
   return effects;
 }
 
@@ -187,6 +194,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
       for (const auto &arg : transform.arguments) {
         effectsOut.insert(arg);
       }
+      expandEffectImplications(effectsOut);
     } else if (transform.name == "capabilities") {
       if (sawCapabilities) {
         error_ = "duplicate capabilities transform on " + context;

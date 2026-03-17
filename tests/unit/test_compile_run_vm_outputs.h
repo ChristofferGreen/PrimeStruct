@@ -131,7 +131,7 @@ TEST_CASE("runs vm file read_byte with deterministic eof") {
   };
   const std::string escapedPath = escape(inPath);
   const std::string source =
-      "[return<Result<FileError>> effects(file_write, io_out) on_error<FileError, /log_file_error>]\n"
+      "[return<Result<FileError>> effects(file_read, io_out) on_error<FileError, /log_file_error>]\n"
       "main() {\n"
       "  [File<Read>] file{ File<Read>(\"" + escapedPath + "\"utf8)? }\n"
       "  [i32 mut] first{0i32}\n"
@@ -197,7 +197,7 @@ TEST_CASE("runs vm ppm read for ascii p3 inputs") {
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
 
-[effects(heap_alloc, io_out, file_write), return<int>]
+[effects(heap_alloc, io_out, file_read), return<int>]
 main() {
   [i32 mut] width{0i32}
   [i32 mut] height{0i32}

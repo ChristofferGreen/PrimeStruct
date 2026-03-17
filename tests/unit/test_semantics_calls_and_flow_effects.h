@@ -1401,11 +1401,11 @@ log_file_error([FileError] err) {
   CHECK(error.find("missing on_error for ? usage") != std::string::npos);
 }
 
-TEST_CASE("File constructor requires file_write effect") {
+TEST_CASE("File constructor requires file_read effect for read mode") {
   const std::string source = R"(
 [return<Result<FileError>> on_error<FileError, /log_file_error>]
 main() {
-  [File<Write>] file{ File<Write>("file.txt"utf8)? }
+  [File<Read>] file{ File<Read>("file.txt"utf8)? }
   return(Result.ok())
 }
 
@@ -1416,12 +1416,29 @@ log_file_error([FileError] err) {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("File requires file_write effect") != std::string::npos);
+  CHECK(error.find("File requires file_read effect") != std::string::npos);
 }
 
-TEST_CASE("file methods require file_write effect") {
+TEST_CASE("file read methods require file_read effect") {
   const std::string source = R"(
 [return<void>]
+read_in([File<Read>] file, [i32 mut] value) {
+  file.read_byte(value)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("file operations require file_read effect") != std::string::npos);
+}
+
+TEST_CASE("file write methods still require file_write effect") {
+  const std::string source = R"(
+[effects(file_read), return<void>]
 write_out([File<Write>] file) {
   file.write_line("hello"utf8)
 }
@@ -1455,9 +1472,30 @@ log_file_error([FileError] err) {
   CHECK(error.empty());
 }
 
-TEST_CASE("file read_byte accepts mutable integer binding") {
+TEST_CASE("file_write effect still allows read operations") {
   const std::string source = R"(
 [return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+main() {
+  [File<Read>] file{ File<Read>("file.txt"utf8)? }
+  [i32 mut] value{0i32}
+  file.read_byte(value)?
+  file.close()?
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("file read_byte accepts mutable integer binding") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(file_read) on_error<FileError, /log_file_error>]
 main() {
   [File<Read>] file{ File<Read>("file.txt"utf8)? }
   [i32 mut] value{0i32}
@@ -1477,7 +1515,7 @@ log_file_error([FileError] err) {
 
 TEST_CASE("file read_byte rejects immutable binding") {
   const std::string source = R"(
-[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+[return<Result<FileError>> effects(file_read) on_error<FileError, /log_file_error>]
 main() {
   [File<Read>] file{ File<Read>("file.txt"utf8)? }
   [i32] value{0i32}
