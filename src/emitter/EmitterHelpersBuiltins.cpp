@@ -1137,6 +1137,10 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return path;
   };
+  auto hasDefinitionOrMetadata = [&](const std::string &path) {
+    return defMap.count(path) > 0 || findStructTypeMetadata(path) != nullptr ||
+           findReturnStructMetadata(path) != nullptr || findReturnKindMetadata(path) != nullptr;
+  };
   std::function<std::string(const Expr &)> inferPrimitiveTypeName;
   auto resolveCollectionElementTypeFromCall = [&](const Expr &candidate, std::string &typeOut) -> bool {
     typeOut.clear();
@@ -1497,6 +1501,14 @@ bool resolveMethodCallPath(const Expr &call,
     auto importIt = importAliases.find(typeName);
     if (importIt != importAliases.end()) {
       resolvedType = normalizeMapImportAliasPath(importIt->second);
+    }
+  }
+  if ((resolvedType == "/vector" || resolvedType == "vector") && normalizedMethodName == "capacity") {
+    const bool hasCapacityHelper =
+        hasDefinitionOrMetadata("/vector/capacity") || hasDefinitionOrMetadata("/std/collections/vector/capacity");
+    if (!hasCapacityHelper) {
+      resolvedOut.clear();
+      return false;
     }
   }
   resolvedOut = preferCanonicalMapMethodHelperPath(resolvedType + "/" + normalizedMethodName);
