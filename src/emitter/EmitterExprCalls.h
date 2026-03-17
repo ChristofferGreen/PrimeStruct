@@ -884,6 +884,24 @@
           << ")";
       return out.str();
     }
+    if (expr.isMethodCall && isSimpleCallName(expr, "capacity") && expr.args.size() == 1 &&
+        isResolvedVectorTarget(expr.args.front())) {
+      std::ostringstream out;
+      out << "ps_missing_vector_capacity_method_helper("
+          << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
     if (isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 && isResolvedVectorTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_vector_capacity("
