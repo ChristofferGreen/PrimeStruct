@@ -41,6 +41,73 @@ main() {
   CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
 }
 
+TEST_CASE("arithmetic plus accepts matching matrix operands") {
+  const std::string source = R"(
+import /std/math/*
+[return<Mat2>]
+main() {
+  [Mat2] a{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat2] b{Mat2(5.0f32, 6.0f32, 7.0f32, 8.0f32)}
+  return(plus(plus(a, b), a))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("arithmetic plus accepts matching quaternion operands") {
+  const std::string source = R"(
+import /std/math/*
+[return<Quat>]
+main() {
+  [Quat] a{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
+  [Quat] b{Quat(1.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Quat] sum{plus(a, b)}
+  return(sum)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("arithmetic plus rejects mismatched matrix shapes") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Mat2] lhs{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat3] rhs{Mat3(
+    5.0f32, 6.0f32, 7.0f32,
+    8.0f32, 9.0f32, 10.0f32,
+    11.0f32, 12.0f32, 13.0f32
+  )}
+  [Mat2] sum{plus(lhs, rhs)}
+  return(convert<int>(sum.m00))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("plus requires matching matrix/quaternion operand types") != std::string::npos);
+}
+
+TEST_CASE("arithmetic plus rejects mixed matrix quaternion operands") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  [Mat2] lhs{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Quat] rhs{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Mat2] sum{plus(lhs, rhs)}
+  return(convert<int>(sum.m00))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("plus requires matching matrix/quaternion operand types") != std::string::npos);
+}
+
 TEST_CASE("arithmetic negate rejects bool operands") {
   const std::string source = R"(
 [return<int>]

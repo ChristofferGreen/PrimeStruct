@@ -108,7 +108,7 @@ Minimal vector substrate note: the remaining items below are only worth keeping 
 - ○ Delete compiler-owned `soa_vector` helper routing and backend special cases from semantics, IR lowering, emitters, and runtime code until no C++ source mentions `soa_vector`.
 - ✓ Add stdlib matrix types (`Mat2`, `Mat3`, `Mat4`) with constructors and component accessors. Progress: stdlib now ships `Mat2`, `Mat3`, and `Mat4` as nominal math structs with public scalar `mRC` fields, so positional/named struct constructors and direct component access work under `import /std/math/*`.
 - ✓ Add stdlib `Quat` with constructors, component accessors, and normalization helpers. Progress: stdlib now ships `Quat` as a nominal math struct with public scalar `x/y/z/w` fields plus `toNormalized()` and `normalize()` helpers, so constructor, field-access, and normalization flows work under `import /std/math/*`.
-- ○ Implement matrix/quaternion `plus` shape validation with deterministic diagnostics.
+- ✓ Implement matrix/quaternion `plus` shape validation with deterministic diagnostics. Progress: semantics now accepts `plus` only when both operands resolve to the same stdlib matrix/quaternion type (`Mat2`, `Mat3`, `Mat4`, or `Quat`) and emits a stable mismatch diagnostic otherwise.
 - ○ Implement matrix/quaternion `minus` shape validation with deterministic diagnostics.
 - ○ Implement matrix/quaternion `multiply` allowlist validation with deterministic diagnostics.
 - ○ Implement matrix/quaternion `divide` composite-by-scalar-only validation with deterministic diagnostics.

@@ -359,6 +359,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     return false;
   };
+  auto isMatrixQuaternionTypePath = [](const std::string &typePath) {
+    return typePath == "/std/math/Mat2" || typePath == "/std/math/Mat3" || typePath == "/std/math/Mat4" ||
+           typePath == "/std/math/Quat";
+  };
+  auto inferMatrixQuaternionTypePath = [&](const Expr &arg) -> std::string {
+    std::string typePath = inferStructReturnPath(arg, params, locals);
+    if (!isMatrixQuaternionTypePath(typePath)) {
+      return "";
+    }
+    return typePath;
+  };
   auto isFloatExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
     if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Decimal) {
@@ -7479,6 +7490,26 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         } else {
           if (!leftPointer && !rightPointer) {
+            bool useMatrixQuaternionPlusRules = false;
+            if (builtinName == "plus") {
+              const std::string leftMathType = inferMatrixQuaternionTypePath(expr.args[0]);
+              const std::string rightMathType = inferMatrixQuaternionTypePath(expr.args[1]);
+              if (!leftMathType.empty() || !rightMathType.empty()) {
+                if (leftMathType.empty() || rightMathType.empty() || leftMathType != rightMathType) {
+                  error_ = "plus requires matching matrix/quaternion operand types";
+                  return false;
+                }
+                useMatrixQuaternionPlusRules = true;
+              }
+            }
+            if (useMatrixQuaternionPlusRules) {
+              for (const auto &arg : expr.args) {
+                if (!validateExpr(params, locals, arg)) {
+                  return false;
+                }
+              }
+              return true;
+            }
             if (!isNumericExpr(expr.args[0]) || !isNumericExpr(expr.args[1])) {
               error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;
               return false;

@@ -4327,6 +4327,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (expr.args.size() != 2) {
         return ReturnKind::Unknown;
       }
+      if (builtinName == "plus" && !inferStructReturnPath(expr, params, locals).empty()) {
+        return ReturnKind::Array;
+      }
       ReturnKind left = inferExprReturnKind(expr.args[0], params, locals);
       ReturnKind right = inferExprReturnKind(expr.args[1], params, locals);
       return combineNumeric(left, right);
@@ -4482,6 +4485,10 @@ std::string SemanticsValidator::inferStructReturnPath(
       return importIt->second;
     }
     return "";
+  };
+  auto isMatrixQuaternionTypePath = [](const std::string &typePath) {
+    return typePath == "/std/math/Mat2" || typePath == "/std/math/Mat3" || typePath == "/std/math/Mat4" ||
+           typePath == "/std/math/Quat";
   };
   auto normalizeCollectionTypePath = [&](const std::string &typePath) {
     std::string normalizedTypePath = normalizeBindingTypeName(typePath);
@@ -5813,6 +5820,14 @@ std::string SemanticsValidator::inferStructReturnPath(
   }
 
   if (expr.kind == Expr::Kind::Call) {
+    std::string builtinName;
+    if (getBuiltinOperatorName(expr, builtinName) && builtinName == "plus" && expr.args.size() == 2) {
+      const std::string leftType = inferStructReturnPath(expr.args[0], params, locals);
+      const std::string rightType = inferStructReturnPath(expr.args[1], params, locals);
+      if (isMatrixQuaternionTypePath(leftType) && leftType == rightType) {
+        return leftType;
+      }
+    }
     if (expr.isFieldAccess && expr.args.size() == 1) {
       auto isStaticField = [](const Expr &stmt) -> bool {
         for (const auto &transform : stmt.transforms) {
