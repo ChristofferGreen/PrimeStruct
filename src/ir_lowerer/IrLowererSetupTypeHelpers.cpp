@@ -796,11 +796,12 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
+  const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(callExpr.name);
   const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
   const bool isBuiltinMapContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt");
   const bool allowBuiltinFallback =
-      !isExplicitMapMethodAlias &&
+      !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
        isBuiltinMapContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
@@ -1443,7 +1444,10 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       if (!normalizedName.empty() && normalizedName.front() == '/') {
         normalizedName.erase(normalizedName.begin());
       }
-      if (normalizedName == "map/at" || normalizedName == "map/at_unsafe" ||
+      if (normalizedName == "vector/at" || normalizedName == "vector/at_unsafe" ||
+          normalizedName == "std/collections/vector/at" ||
+          normalizedName == "std/collections/vector/at_unsafe" ||
+          normalizedName == "map/at" || normalizedName == "map/at_unsafe" ||
           normalizedName == "std/collections/map/at" ||
           normalizedName == "std/collections/map/at_unsafe") {
         return false;
@@ -1623,6 +1627,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   }
 
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+    return false;
+  }
+  if (isExplicitRemovedVectorMethodAliasPath(callExpr.name)) {
     return false;
   }
   if (isExplicitMapHelperFallbackPath(callExpr)) {
@@ -1875,6 +1882,9 @@ bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
+  if (isExplicitRemovedVectorMethodAliasPath(callExpr.name)) {
+    return false;
+  }
   if (!isVectorBuiltinName(callExpr, "capacity") || callExpr.args.size() != 1) {
     return false;
   }
@@ -1955,11 +1965,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
+  const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(callExpr.name);
   const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
   const bool isBuiltinMapContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt");
   const bool allowBuiltinFallback =
-      !isExplicitMapMethodAlias &&
+      !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
        isBuiltinMapContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
