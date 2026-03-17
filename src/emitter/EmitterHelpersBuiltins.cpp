@@ -1327,7 +1327,7 @@ bool resolveMethodCallPath(const Expr &call,
     return "";
   };
   auto inferExplicitVectorAccessResolvedTypeName = [&](const Expr &candidate) -> std::string {
-    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+    if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
       return "";
     }
     std::string normalized = candidate.name;
@@ -1416,6 +1416,10 @@ bool resolveMethodCallPath(const Expr &call,
       }
       case Expr::Kind::Call: {
         if (expr.isMethodCall) {
+          if (const std::string explicitVectorAccessType = inferExplicitVectorAccessResolvedTypeName(expr);
+              !explicitVectorAccessType.empty()) {
+            return explicitVectorAccessType;
+          }
           if (const std::string vectorAccessMethodPath = resolveBareVectorAccessMethodHelperPath(expr);
               !vectorAccessMethodPath.empty()) {
             if (const std::string *structPath = findReturnStructMetadata(vectorAccessMethodPath)) {

@@ -4113,6 +4113,103 @@ TEST_CASE("C++ emitter helper resolves canonical direct-call method receiver thr
   CHECK(resolved == "/CanonicalMarker/tag");
 }
 
+TEST_CASE("C++ emitter helper resolves explicit vector slash-method receivers through helper metadata") {
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  receiverInfo.typeTemplateArg = "i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs = {
+      {"/vector/at", "/AliasMarker"},
+      {"/std/collections/vector/at", "/CanonicalMarker"},
+  };
+
+  auto expectResolved = [&](const char *receiverMethodName, const char *expectedPath) {
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.isMethodCall = true;
+    receiverCall.name = receiverMethodName;
+    receiverCall.args = {receiverName, indexLiteral};
+    receiverCall.argNames = {std::nullopt, std::nullopt};
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.isMethodCall = true;
+    methodCall.name = "tag";
+    methodCall.args = {receiverCall};
+    methodCall.argNames = {std::nullopt};
+
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == expectedPath);
+  };
+
+  expectResolved("/vector/at", "/AliasMarker/tag");
+  expectResolved("/std/collections/vector/at", "/CanonicalMarker/tag");
+}
+
+TEST_CASE("C++ emitter helper prefers vector slash-method access return-kind metadata") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.isMethodCall = true;
+  receiverCall.name = "/vector/at";
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  receiverCall.args.push_back(receiverName);
+  receiverCall.args.push_back(indexLiteral);
+  receiverCall.argNames.push_back(std::nullopt);
+  receiverCall.argNames.push_back(std::nullopt);
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "count";
+  methodCall.args.push_back(receiverCall);
+  methodCall.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  receiverInfo.typeTemplateArg = "i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds = {
+      {"/std/collections/vector/at", primec::emitter::ReturnKind::String},
+  };
+  std::unordered_map<std::string, std::string> returnStructs;
+
+  std::string resolved;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/string/count");
+}
+
 TEST_CASE("rejects stdlib canonical vector helper method-precedence forwarding in C++ emitter") {
   const std::string source = R"(
 [return<int>]
@@ -7478,7 +7575,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("rejects vector method alias access struct method chain with primitive receiver diagnostics in C++ emitter") {
+TEST_CASE("C++ emitter keeps vector method alias access struct method forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -7506,20 +7603,19 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_vector_method_alias_access_struct_method_chain_canonical_forwarding_reject.prime",
+      writeTemp("compile_cpp_vector_method_alias_access_struct_method_chain_canonical_forwarding.prime",
                 source);
-  const std::string errPath =
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_vector_method_alias_access_struct_method_chain_canonical_forwarding_reject.err")
+       "primec_cpp_vector_method_alias_access_struct_method_chain_canonical_forwarding_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects vector method alias access struct method chain with primitive argument diagnostics in C++ emitter") {
+TEST_CASE("rejects vector method alias access struct method chain with helper receiver diagnostics in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -7556,7 +7652,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access field expression with struct receiver diagnostics in C++ emitter") {
@@ -7594,7 +7690,7 @@ main() {
   CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
-TEST_CASE("rejects vector unsafe method alias access struct method chain with primitive receiver diagnostics in C++ emitter") {
+TEST_CASE("C++ emitter keeps vector unsafe method alias access struct method forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -7622,17 +7718,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_vector_method_alias_access_unsafe_struct_method_chain_canonical_forwarding_reject.prime",
+      writeTemp("compile_cpp_vector_method_alias_access_unsafe_struct_method_chain_canonical_forwarding.prime",
                 source);
-  const std::string errPath =
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_vector_method_alias_access_unsafe_struct_method_chain_canonical_forwarding_reject.err")
+       "primec_cpp_vector_method_alias_access_unsafe_struct_method_chain_canonical_forwarding_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects vector unsafe method alias access field expression with struct receiver diagnostics in C++ emitter") {
@@ -7956,7 +8051,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("rejects std-namespaced vector method alias access struct method chain with primitive receiver diagnostics in C++ emitter") {
+TEST_CASE("C++ emitter keeps std-namespaced vector method alias access struct method forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -7984,19 +8079,19 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_reject.prime", source);
-  const std::string errPath =
+      writeTemp("compile_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_forwarding.prime",
+                source);
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_reject.err")
+       "primec_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_forwarding_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects std-namespaced vector method alias access struct method chain with primitive argument diagnostics in C++ emitter") {
+TEST_CASE("rejects std-namespaced vector method alias access struct method chain with helper receiver diagnostics in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -8033,7 +8128,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter forwards explicit-template vector count wrappers through canonical return kinds") {
@@ -9422,7 +9517,7 @@ main() {
   CHECK(runCommand(exePath) == 91);
 }
 
-TEST_CASE("C++ emitter keeps slash-method vector access string count fallback") {
+TEST_CASE("rejects slash-method vector access element-type count fallback in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -9447,18 +9542,19 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_slash_method_vector_access_string_count_fallback.prime", source);
-  const std::string exePath =
+      writeTemp("compile_cpp_slash_method_vector_access_element_type_count_fallback_reject.prime", source);
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_slash_method_vector_access_string_count_fallback_exe")
+       "primec_cpp_slash_method_vector_access_element_type_count_fallback_reject.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 182);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps slash-method vector access primitive count diagnostics") {
+TEST_CASE("C++ emitter keeps slash-method vector access helper return-kind count forwarding") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -9483,16 +9579,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_slash_method_vector_access_primitive_count_diag.prime", source);
-  const std::string errPath =
+      writeTemp("compile_cpp_slash_method_vector_access_helper_return_kind_count_forwarding.prime", source);
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_slash_method_vector_access_primitive_count_diag.err")
+       "primec_cpp_slash_method_vector_access_helper_return_kind_count_forwarding_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 182);
 }
 
 TEST_CASE("rejects wrapper-returned vector alias direct-call string count fallback in C++ emitter") {
