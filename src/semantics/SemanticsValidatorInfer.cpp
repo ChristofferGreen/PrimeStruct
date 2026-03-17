@@ -4018,6 +4018,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Int;
       }
     }
+    if (!expr.isMethodCall) {
+      Expr rewrittenVectorHelperCall;
+      if (tryRewriteBareVectorHelperCall(expr, "at", rewrittenVectorHelperCall) ||
+          tryRewriteBareVectorHelperCall(expr, "at_unsafe", rewrittenVectorHelperCall)) {
+        return inferExprReturnKind(rewrittenVectorHelperCall, params, locals);
+      }
+    }
     if (!expr.isMethodCall && (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
         expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
       std::string elemType;

@@ -1650,8 +1650,10 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm with vector literal unsafe access") {
+TEST_CASE("runs vm with bare vector literal unsafe access through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   return(at_unsafe(vector<i32>(4i32, 7i32, 9i32), 1i32))
@@ -1662,6 +1664,94 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
+TEST_CASE("runs vm bare vector at through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(at(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_bare_vector_at_imported.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
+TEST_CASE("rejects vm bare vector at without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(at(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_bare_vector_at_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_bare_vector_at_import_requirement_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+}
+
+TEST_CASE("runs vm bare vector at_unsafe through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_bare_vector_at_unsafe_imported.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
+TEST_CASE("rejects vm bare vector at_unsafe without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_bare_vector_at_unsafe_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_bare_vector_at_unsafe_import_requirement_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("runs vm with map at helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  return(at(values, 3i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_at.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
+TEST_CASE("runs vm with map at_unsafe helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_at_unsafe.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
 TEST_CASE("runs vm with array count helper") {
   const std::string source = R"(
 [return<int>]

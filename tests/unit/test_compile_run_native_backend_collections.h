@@ -2072,8 +2072,10 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native vector literal unsafe access") {
+TEST_CASE("compiles and runs native bare vector literal unsafe access through imported stdlib helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   return(at_unsafe(vector<i32>(4i32, 7i32, 9i32), 1i32))
@@ -2086,6 +2088,80 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs native bare vector at through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(at(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bare_vector_at_imported.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_bare_vector_at_imported_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
+TEST_CASE("rejects native bare vector at without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(at(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bare_vector_at_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_bare_vector_at_import_requirement_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+}
+
+TEST_CASE("compiles and runs native bare vector at_unsafe through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bare_vector_at_unsafe_imported.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_bare_vector_at_unsafe_imported_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
+TEST_CASE("rejects native bare vector at_unsafe without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 4i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bare_vector_at_unsafe_import_requirement.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_bare_vector_at_unsafe_import_requirement_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native bare vector count through imported stdlib helper") {

@@ -5452,6 +5452,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
+    } else if (tryRewriteBareVectorHelperCall(expr, "at", rewrittenVectorHelperCall) ||
+               tryRewriteBareVectorHelperCall(expr, "at_unsafe", rewrittenVectorHelperCall)) {
+      return validateExpr(params, locals, rewrittenVectorHelperCall);
     } else if (isBuiltinAccessName &&
                !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames)) &&
                (defMap_.find(resolved) == defMap_.end() ||
