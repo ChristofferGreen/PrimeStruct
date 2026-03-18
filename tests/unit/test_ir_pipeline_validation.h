@@ -9410,6 +9410,10 @@ TEST_CASE("semantics validate source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpers.cpp";
   const std::filesystem::path semanticsValidateReflectionGeneratedHelpersHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpers.h";
+  const std::filesystem::path semanticsValidateReflectionGeneratedHelpersSerializationPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpersSerialization.cpp";
+  const std::filesystem::path semanticsValidateReflectionGeneratedHelpersSerializationHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpersSerialization.h";
   const std::filesystem::path semanticsValidateReflectionMetadataPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateReflectionMetadata.cpp";
   const std::filesystem::path semanticsValidateReflectionMetadataHeaderPath =
@@ -9427,6 +9431,8 @@ TEST_CASE("semantics validate source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsValidateMaybeConstructorsHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersHeaderPath));
+  REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersSerializationPath));
+  REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersSerializationHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionMetadataPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionMetadataHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateTransformsPath));
@@ -9446,6 +9452,10 @@ TEST_CASE("semantics validate source delegation stays stable") {
       readText(semanticsValidateReflectionGeneratedHelpersPath);
   const std::string semanticsValidateReflectionGeneratedHelpersHeaderSource =
       readText(semanticsValidateReflectionGeneratedHelpersHeaderPath);
+  const std::string semanticsValidateReflectionGeneratedHelpersSerializationSource =
+      readText(semanticsValidateReflectionGeneratedHelpersSerializationPath);
+  const std::string semanticsValidateReflectionGeneratedHelpersSerializationHeaderSource =
+      readText(semanticsValidateReflectionGeneratedHelpersSerializationHeaderPath);
   const std::string semanticsValidateReflectionMetadataSource = readText(semanticsValidateReflectionMetadataPath);
   const std::string semanticsValidateReflectionMetadataHeaderSource =
       readText(semanticsValidateReflectionMetadataHeaderPath);
@@ -9512,9 +9522,32 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("generated reflection helper already exists: ") !=
         std::string::npos);
-  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("DeserializePayloadSizeErrorCode") !=
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("#include \"SemanticsValidateReflectionGeneratedHelpersSerialization.h\"") !=
         std::string::npos);
-  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitDeserializeHelper") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionSerializeHelper(serializationContext)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionDeserializeHelper(serializationContext)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitSerializeHelper = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitDeserializeHelper = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationHeaderSource.find("struct ReflectionGeneratedHelperContext") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationHeaderSource.find("bool emitReflectionSerializeHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationHeaderSource.find("bool emitReflectionDeserializeHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationSource.find("bool emitReflectionSerializeHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationSource.find("bool emitReflectionDeserializeHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationSource.find("DeserializePayloadSizeErrorCode") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationSource.find("SerializationFormatVersionTag") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationSource.find("helper.parameters.push_back(makeTypeBinding(\"payload\", \"array<u64>\", helper.namespacePrefix));") !=
+        std::string::npos);
   CHECK(semanticsValidateReflectionMetadataHeaderSource.find("bool rewriteReflectionMetadataQueries(Program &program, std::string &error)") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionMetadataSource.find("bool rewriteReflectionMetadataQueries(Program &program, std::string &error)") !=

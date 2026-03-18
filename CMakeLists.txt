@@ -49,6 +49,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
   src/semantics/SemanticsValidateMaybeConstructors.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp
+  src/semantics/SemanticsValidateReflectionGeneratedHelpersSerialization.cpp
   src/semantics/SemanticsValidateReflectionMetadata.cpp
   src/semantics/SemanticsValidateTransforms.cpp
   src/semantics/SemanticsValidator.cpp

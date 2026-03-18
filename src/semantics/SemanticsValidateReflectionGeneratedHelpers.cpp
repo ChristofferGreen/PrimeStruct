@@ -1,6 +1,7 @@
 #include "SemanticsValidateReflectionGeneratedHelpers.h"
 
 #include "SemanticsHelpers.h"
+#include "SemanticsValidateReflectionGeneratedHelpersSerialization.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -284,10 +285,6 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     return normalized == "int" || normalized == "i32" || normalized == "i64" || normalized == "u64" ||
            normalized == "bool" || normalized == "float" || normalized == "f32" || normalized == "f64";
   };
-  constexpr uint64_t SerializationFormatVersionTag = 1ULL;
-  constexpr uint64_t DeserializePayloadSizeErrorCode = 1ULL;
-  constexpr uint64_t DeserializeFormatVersionErrorCode = 2ULL;
-
   std::vector<Definition> rewrittenDefinitions;
   rewrittenDefinitions.reserve(program.definitions.size());
   for (auto &def : program.definitions) {
@@ -729,156 +726,6 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       definitionPaths.insert(helperPath);
       return true;
     };
-    auto emitSerializeHelper = [&]() -> bool {
-      const std::string helperPath = def.fullPath + "/Serialize";
-      if (definitionPaths.count(helperPath) > 0) {
-        error = "generated reflection helper already exists: " + helperPath;
-        return false;
-      }
-
-      Definition helper;
-      helper.name = "Serialize";
-      helper.fullPath = helperPath;
-      helper.namespacePrefix = def.fullPath;
-      helper.sourceLine = def.sourceLine;
-      helper.sourceColumn = def.sourceColumn;
-
-      appendPublicVisibility(helper);
-      Transform returnTransform;
-      returnTransform.name = "return";
-      returnTransform.templateArgs.push_back("array<u64>");
-      helper.transforms.push_back(std::move(returnTransform));
-      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix));
-
-      Expr payloadCall;
-      payloadCall.kind = Expr::Kind::Call;
-      payloadCall.name = "array";
-      payloadCall.templateArgs.push_back("u64");
-      payloadCall.args.push_back(makeU64LiteralExpr(SerializationFormatVersionTag));
-      payloadCall.argNames.push_back(std::nullopt);
-      for (const auto &fieldName : fieldNames) {
-        Expr convertFieldExpr;
-        convertFieldExpr.kind = Expr::Kind::Call;
-        convertFieldExpr.name = "convert";
-        convertFieldExpr.templateArgs.push_back("u64");
-        convertFieldExpr.args.push_back(makeFieldAccessExpr("value", fieldName));
-        convertFieldExpr.argNames.push_back(std::nullopt);
-        payloadCall.args.push_back(std::move(convertFieldExpr));
-        payloadCall.argNames.push_back(std::nullopt);
-      }
-      helper.returnExpr = std::move(payloadCall);
-      helper.hasReturnStatement = true;
-
-      rewrittenDefinitions.push_back(std::move(helper));
-      definitionPaths.insert(helperPath);
-      return true;
-    };
-    auto emitDeserializeHelper = [&]() -> bool {
-      const std::string helperPath = def.fullPath + "/Deserialize";
-      if (definitionPaths.count(helperPath) > 0) {
-        error = "generated reflection helper already exists: " + helperPath;
-        return false;
-      }
-
-      Definition helper;
-      helper.name = "Deserialize";
-      helper.fullPath = helperPath;
-      helper.namespacePrefix = def.fullPath;
-      helper.sourceLine = def.sourceLine;
-      helper.sourceColumn = def.sourceColumn;
-
-      appendPublicVisibility(helper);
-      Transform returnTransform;
-      returnTransform.name = "return";
-      returnTransform.templateArgs.push_back("Result<FileError>");
-      helper.transforms.push_back(std::move(returnTransform));
-      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix, true));
-      helper.parameters.push_back(makeTypeBinding("payload", "array<u64>", helper.namespacePrefix));
-
-      Expr payloadCountExpr;
-      payloadCountExpr.kind = Expr::Kind::Call;
-      payloadCountExpr.name = "count";
-      payloadCountExpr.args.push_back(makeNameExpr("payload"));
-      payloadCountExpr.argNames.push_back(std::nullopt);
-      Expr sizeCheckExpr = makeBinaryCallExpr(
-          "not_equal",
-          std::move(payloadCountExpr),
-          makeI32LiteralExpr(static_cast<uint64_t>(fieldNames.size() + 1)));
-      std::vector<Expr> sizeCheckBody;
-      sizeCheckBody.push_back(makeReturnStatementExpr(makeI32LiteralExpr(DeserializePayloadSizeErrorCode)));
-      helper.statements.push_back(makeIfStatementExpr(
-          std::move(sizeCheckExpr),
-          makeEnvelopeExpr("then", std::move(sizeCheckBody)),
-          makeEnvelopeExpr("else", {})));
-
-      Expr payloadVersionExpr;
-      payloadVersionExpr.kind = Expr::Kind::Call;
-      payloadVersionExpr.name = "at";
-      payloadVersionExpr.args.push_back(makeNameExpr("payload"));
-      payloadVersionExpr.argNames.push_back(std::nullopt);
-      payloadVersionExpr.args.push_back(makeI32LiteralExpr(0));
-      payloadVersionExpr.argNames.push_back(std::nullopt);
-      Expr formatCheckExpr = makeBinaryCallExpr(
-          "not_equal",
-          std::move(payloadVersionExpr),
-          makeU64LiteralExpr(SerializationFormatVersionTag));
-      std::vector<Expr> formatCheckBody;
-      formatCheckBody.push_back(makeReturnStatementExpr(makeI32LiteralExpr(DeserializeFormatVersionErrorCode)));
-      helper.statements.push_back(makeIfStatementExpr(
-          std::move(formatCheckExpr),
-          makeEnvelopeExpr("then", std::move(formatCheckBody)),
-          makeEnvelopeExpr("else", {})));
-
-      for (size_t fieldIndex = 0; fieldIndex < fieldNames.size(); ++fieldIndex) {
-        const std::string &fieldName = fieldNames[fieldIndex];
-        std::string fieldTypeName = "int";
-        const auto fieldTypeIt = fieldTypeNames.find(fieldName);
-        if (fieldTypeIt != fieldTypeNames.end()) {
-          fieldTypeName = fieldTypeIt->second;
-        }
-
-        Expr payloadFieldExpr;
-        payloadFieldExpr.kind = Expr::Kind::Call;
-        payloadFieldExpr.name = "at";
-        payloadFieldExpr.args.push_back(makeNameExpr("payload"));
-        payloadFieldExpr.argNames.push_back(std::nullopt);
-        payloadFieldExpr.args.push_back(makeI32LiteralExpr(static_cast<uint64_t>(fieldIndex + 1)));
-        payloadFieldExpr.argNames.push_back(std::nullopt);
-
-        Expr convertFieldExpr;
-        convertFieldExpr.kind = Expr::Kind::Call;
-        convertFieldExpr.name = "convert";
-        convertFieldExpr.templateArgs.push_back(fieldTypeName);
-        convertFieldExpr.args.push_back(std::move(payloadFieldExpr));
-        convertFieldExpr.argNames.push_back(std::nullopt);
-
-        Expr assignExpr;
-        assignExpr.kind = Expr::Kind::Call;
-        assignExpr.name = "assign";
-        assignExpr.args.push_back(makeFieldAccessExpr("value", fieldName));
-        assignExpr.argNames.push_back(std::nullopt);
-        assignExpr.args.push_back(std::move(convertFieldExpr));
-        assignExpr.argNames.push_back(std::nullopt);
-        helper.statements.push_back(std::move(assignExpr));
-      }
-
-      Expr okResultTypeExpr;
-      okResultTypeExpr.kind = Expr::Kind::Name;
-      okResultTypeExpr.name = "Result";
-
-      Expr okResultCall;
-      okResultCall.kind = Expr::Kind::Call;
-      okResultCall.isMethodCall = true;
-      okResultCall.name = "ok";
-      okResultCall.args.push_back(std::move(okResultTypeExpr));
-      okResultCall.argNames.push_back(std::nullopt);
-      helper.returnExpr = std::move(okResultCall);
-      helper.hasReturnStatement = true;
-
-      rewrittenDefinitions.push_back(std::move(helper));
-      definitionPaths.insert(helperPath);
-      return true;
-    };
     auto emitCloneHelper = [&]() -> bool {
       const std::string helperPath = def.fullPath + "/Clone";
       if (definitionPaths.count(helperPath) > 0) {
@@ -1030,12 +877,16 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       }
     }
     if (shouldGenerateSerialize) {
-      if (!emitSerializeHelper()) {
+      ReflectionGeneratedHelperContext serializationContext{
+          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+      if (!emitReflectionSerializeHelper(serializationContext)) {
         return false;
       }
     }
     if (shouldGenerateDeserialize) {
-      if (!emitDeserializeHelper()) {
+      ReflectionGeneratedHelperContext serializationContext{
+          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+      if (!emitReflectionDeserializeHelper(serializationContext)) {
         return false;
       }
     }
