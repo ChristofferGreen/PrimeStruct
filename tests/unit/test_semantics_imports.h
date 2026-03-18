@@ -1054,6 +1054,38 @@ main() {
   CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
+TEST_CASE("experimental gfx Buffer constructor entry point validates through stdlib helper") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{Buffer<i32>(2i32)}
+  [array<i32>] out{data.readback()}
+  return(plus(data.count(), out.count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical gfx Buffer constructor entry point validates through stdlib helper") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{Buffer<i32>(2i32)}
+  [array<i32>] out{data.readback()}
+  return(plus(data.count(), out.count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental gfx pipeline entry point validates through stdlib helper") {
   const std::string source = R"(
 import /std/gfx/experimental/*

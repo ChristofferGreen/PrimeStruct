@@ -228,6 +228,12 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
       expr.namespacePrefix.clear();
       return true;
     }
+    if ((resolved == "/std/gfx/experimental/Buffer" || resolved == "/std/gfx/Buffer") && expr.args.size() == 1 &&
+        !expr.hasBodyArguments && expr.bodyArguments.empty() && !hasNamedArguments(expr.argNames)) {
+      expr.name = resolved == "/std/gfx/Buffer" ? "/std/gfx/Buffer/allocate" : "/std/gfx/experimental/Buffer/allocate";
+      expr.namespacePrefix.clear();
+      return true;
+    }
     return true;
   };
 

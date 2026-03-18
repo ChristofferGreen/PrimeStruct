@@ -15,9 +15,9 @@ that mirrors the proven wrapper slice in `.prime`. Current repo coverage
 therefore consists of contract checks, canonical + experimental
 import/type-surface coverage, the explicit experimental `.prime`
 `GraphicsSubstrate` token/config boundary for create/acquire/submit/present
-operations, constructor-shaped `Window(...)` and `Device()` entry points that
-now rewrite through dedicated stdlib helpers on both the experimental and
-canonical paths, fallible `Device.create_swapchain(...)`,
+operations, constructor-shaped `Window(...)`, `Device()`, and `Buffer<T>(count)`
+entry points that now rewrite through dedicated stdlib helpers on both the
+experimental and canonical paths, fallible `Device.create_swapchain(...)`,
 `Device.create_mesh(...)`, and `Swapchain.frame()` wrapper paths, and a
 type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)` entry
 point for the locked v1 vertex wire type. The non-Result
@@ -178,6 +178,7 @@ RenderPass.end(self) -> void
 Frame.submit(self, [queue] Queue) -> Result<void, GfxError>
 Frame.present(self) -> Result<void, GfxError>
 
+Buffer<T>(count) -> Buffer<T>
 Buffer.count(self) -> i32
 Buffer.empty(self) -> bool
 Buffer.is_valid(self) -> bool

@@ -1640,6 +1640,38 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("vm uses stdlib experimental Buffer constructor entry point") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{Buffer<i32>(3i32)}
+  [array<i32>] out{data.readback()}
+  return(plus(data.count(), out.count()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_constructor.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
+TEST_CASE("vm uses canonical stdlib Buffer constructor entry point") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{Buffer<i32>(3i32)}
+  [array<i32>] out{data.readback()}
+  return(plus(data.count(), out.count()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_constructor.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
 TEST_CASE("vm uses stdlib experimental Buffer upload helpers") {
   const std::string source = R"(
 import /std/gfx/experimental/*

@@ -4127,6 +4127,7 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   const std::vector<std::string> lockedV1SignatureSnippets = {
       "Window([title] string, [width] i32, [height] i32)",
       "Device()",
+      "Buffer<T>(count) -> Buffer<T>",
       "Device.default_queue(self)",
       "Device.create_swapchain(",
       "Device.create_mesh(",
@@ -4188,23 +4189,36 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
 
   {
     CAPTURE("GFX-V1-WINDOW-CONSTRUCTOR-STATUS");
-    CHECK(graphicsDoc.find("constructor-shaped `Window(...)` and `Device()` entry points") != std::string::npos);
+    CHECK(graphicsDoc.find("constructor-shaped `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+          std::string::npos);
     CHECK(graphicsDoc.find("dedicated stdlib helpers on both the experimental and") !=
           std::string::npos);
     CHECK(graphicsDoc.find("canonical paths") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)` and `Device()` entry points") !=
+    CHECK(primeStructDoc.find(
+              "constructor-shaped experimental and canonical `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
           std::string::npos);
   }
 
   {
     CAPTURE("GFX-V1-DEVICE-CONSTRUCTOR-STATUS");
-    CHECK(graphicsDoc.find("constructor-shaped `Window(...)` and `Device()` entry points") != std::string::npos);
+    CHECK(graphicsDoc.find("constructor-shaped `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+          std::string::npos);
     CHECK(graphicsDoc.find("dedicated stdlib helpers on both the experimental and") !=
           std::string::npos);
     CHECK(graphicsDoc.find("canonical paths") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)` and `Device()` entry points") !=
+    CHECK(primeStructDoc.find(
+              "constructor-shaped experimental and canonical `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+          std::string::npos);
+  }
+
+  {
+    CAPTURE("GFX-V1-BUFFER-CONSTRUCTOR-STATUS");
+    CHECK(graphicsDoc.find("constructor-shaped `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find(
+              "constructor-shaped experimental and canonical `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
           std::string::npos);
   }
 
@@ -4332,7 +4346,8 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   {
     CAPTURE("GFX-V1-CANONICAL-STDLIB-STATUS");
     CHECK(graphicsDoc.find("first canonical `/std/gfx/*` stdlib surface") != std::string::npos);
-    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)` and `Device()` entry points") !=
+    CHECK(primeStructDoc.find(
+              "constructor-shaped experimental and canonical `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("The canonical `/std/gfx/*` entry") != std::string::npos);
     CHECK(guidelinesDoc.find("real compile-run conformance across exe/vm/native") != std::string::npos);
