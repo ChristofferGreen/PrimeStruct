@@ -301,11 +301,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_text_filter_tests PRIVATE primec_frontend_lib)
   primestructEnableWarnings(PrimeStruct_text_filter_tests)
 
+  add_executable(PrimeStruct_parser_tests
+    tests/unit/test_main.cpp
+    tests/unit/test_parser_basic.cpp
+    tests/unit/test_parser_errors.cpp
+    tests/unit/test_parser_errors_more.cpp
+    tests/unit/test_execution_parsing.cpp
+    tests/unit/test_execution_whitespace.cpp
+    tests/unit/test_template_parsing.cpp
+  )
+  target_include_directories(PrimeStruct_parser_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_parser_tests PRIVATE primec_frontend_lib)
+  primestructEnableWarnings(PrimeStruct_parser_tests)
+
   set(PrimeStructTestSuites
     primestruct.dumps.ast_ir
     primestruct.dumps.namespace
-    primestruct.parser.executions
-    primestruct.parser.execution.whitespace
     primestruct.imports.errors
     primestruct.imports.multiple
     primestruct.imports.resolver
@@ -320,16 +331,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.pipeline.validation
     primestruct.vm.debug.session
     primestruct.lexer
-    primestruct.parser.basic
-    primestruct.parser.errors
-    primestruct.parser.errors.identifiers
-    primestruct.parser.errors.punctuation
-    primestruct.parser.errors.literals
-    primestruct.parser.errors.named_args
-    primestruct.parser.errors.transforms
     primestruct.printers.manual
     primestruct.semantics.manual
-    primestruct.parser.templates
     primestruct.diagnostics.codes
   )
 
@@ -380,6 +383,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.text_filters.helpers
   )
 
+  set(PrimeStructParserTestSuites
+    primestruct.parser.executions
+    primestruct.parser.execution.whitespace
+    primestruct.parser.basic
+    primestruct.parser.errors
+    primestruct.parser.errors.identifiers
+    primestruct.parser.errors.punctuation
+    primestruct.parser.errors.literals
+    primestruct.parser.errors.named_args
+    primestruct.parser.errors.transforms
+    primestruct.parser.templates
+  )
+
   foreach(suite IN LISTS PrimeStructTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
@@ -400,6 +416,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_text_filter_tests> "--test-suite=${suite}")
+    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+  endforeach()
+
+  foreach(suite IN LISTS PrimeStructParserTestSuites)
+    string(REPLACE "." "_" suiteId "${suite}")
+    set(testName "PrimeStruct_${suiteId}")
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_parser_tests> "--test-suite=${suite}")
     set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()

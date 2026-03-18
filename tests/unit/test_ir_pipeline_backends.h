@@ -318,6 +318,12 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("set(PrimeStructTextFilterTestSuites") != std::string::npos);
   CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_text_filter_tests> \"--test-suite=${suite}\"") !=
         std::string::npos);
+  CHECK(cmake.find("add_executable(PrimeStruct_parser_tests") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_parser_tests PRIVATE primec_frontend_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("set(PrimeStructParserTestSuites") != std::string::npos);
+  CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_parser_tests> \"--test-suite=${suite}\"") !=
+        std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)") != std::string::npos);
 }
 

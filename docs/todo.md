@@ -215,9 +215,9 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ◐ Continue shrinking backend-registry dependencies so compile-pipeline callers can depend on registry interfaces without pulling unrelated emitter/runtime implementation libraries. Progress: shared VM backend diagnostics now live on the IR side, `primevm` links `primec_ir_lib` + `primec_runtime_lib` directly instead of depending on the backend registry/codegen path, and compile-pipeline-driven semantics suites now run from a dedicated `primec_ir_lib`-linked doctest binary.
 - ✓ Move shared VM backend diagnostics/normalization into IR-side helpers, and relink `primevm` to `primec_ir_lib` + `primec_runtime_lib` instead of the broader `primec_lib` umbrella.
 - ✓ Move compile-pipeline-driven semantics suites onto a dedicated `PrimeStruct_semantics_tests` target linked to `primec_ir_lib` instead of `primec_lib`.
-- ◐ Carve additional frontend/IR-only doctest suites out of `PrimeStruct_tests` so parser/text-filter coverage can link frontend/IR targets without the backend registry umbrella. Progress: text-filter coverage now runs from a dedicated `primec_frontend_lib`-linked doctest binary instead of the broad compatibility umbrella target.
+- ✓ Carve additional frontend/IR-only doctest suites out of `PrimeStruct_tests` so parser/text-filter coverage can link frontend/IR targets without the backend registry umbrella.
 - ✓ Move text-filter doctest suites onto a dedicated `PrimeStruct_text_filter_tests` target linked to `primec_frontend_lib` instead of `primec_lib`.
-- ○ Move parser/template doctest suites onto narrower frontend-linked test targets where they do not need the backend/IR runtime umbrella.
+- ✓ Move parser/template doctest suites onto a dedicated `PrimeStruct_parser_tests` target linked to `primec_frontend_lib` instead of `primec_lib`.
 - ○ Add CI checks for include-layer violations and direct `tests -> src/` internal header dependencies.
 - ○ Define a stable internal testing API so unit tests stop including `src/` headers directly.
 - ○ Refactor `src/semantics/SemanticsValidatorExpr.cpp` (`9060` lines) below the `700`-line target.
