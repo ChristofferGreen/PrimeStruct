@@ -130,6 +130,12 @@ private:
                                   const std::unordered_map<std::string, BindingInfo> &locals,
                                   const Expr &expr,
                                   bool &handled);
+  bool isIfBlockEnvelope(const Expr &expr) const;
+  const Expr *getIfBlockEnvelopeValueExpr(const Expr &expr) const;
+  bool isStructConstructorValueExpr(const Expr &expr);
+  bool validateIfExpr(const std::vector<ParameterInfo> &params,
+                      const std::unordered_map<std::string, BindingInfo> &locals,
+                      const Expr &expr);
   bool validateLambdaExpr(const std::vector<ParameterInfo> &params,
                           const std::unordered_map<std::string, BindingInfo> &locals,
                           const Expr &expr,

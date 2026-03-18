@@ -284,6 +284,7 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("set(PRIMESTRUCT_RUNTIME_SOURCES") != std::string::npos);
   CHECK(cmake.find("set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES") != std::string::npos);
   CHECK(cmake.find("src/IrBackendProfiles.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprControlFlow.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprLambda.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprNumeric.cpp") != std::string::npos);
   CHECK(cmake.find("add_library(primec_support_lib") != std::string::npos);
