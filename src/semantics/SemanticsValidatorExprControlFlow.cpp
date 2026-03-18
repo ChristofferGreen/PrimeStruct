@@ -134,7 +134,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
             return false;
           }
           if (!hasExplicitBindingTypeTransform(bodyExpr)) {
-            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, info);
+            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, info, &bodyExpr);
           }
         }
         if (restrictType.has_value()) {

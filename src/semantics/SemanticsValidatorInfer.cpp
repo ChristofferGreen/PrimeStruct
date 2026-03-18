@@ -46,6 +46,26 @@ std::string formatReturnInferenceCycleDiagnostic(const std::vector<const Definit
   return message.str();
 }
 
+using GraphLocalAutoBindingExprMap = std::unordered_map<std::string, const Expr *>;
+
+std::string makeGraphLocalAutoBindingKey(const std::string &scopePath, int sourceLine, int sourceColumn) {
+  return scopePath + "@" + std::to_string(sourceLine) + ":" + std::to_string(sourceColumn);
+}
+
+void collectGraphLocalAutoBindingExprs(const Expr &expr,
+                                       const std::string &scopePath,
+                                       GraphLocalAutoBindingExprMap &out) {
+  if (expr.isBinding) {
+    out.try_emplace(makeGraphLocalAutoBindingKey(scopePath, expr.sourceLine, expr.sourceColumn), &expr);
+  }
+  for (const auto &arg : expr.args) {
+    collectGraphLocalAutoBindingExprs(arg, scopePath, out);
+  }
+  for (const auto &bodyExpr : expr.bodyArguments) {
+    collectGraphLocalAutoBindingExprs(bodyExpr, scopePath, out);
+  }
+}
+
 } // namespace
 
 bool SemanticsValidator::inferUnknownReturnKinds() {
@@ -56,6 +76,7 @@ bool SemanticsValidator::inferUnknownReturnKinds() {
 }
 
 bool SemanticsValidator::inferUnknownReturnKindsLegacy() {
+  graphLocalAutoBindings_.clear();
   for (const auto &def : program_.definitions) {
     if (returnKinds_[def.fullPath] == ReturnKind::Unknown) {
       if (!inferDefinitionReturnKind(def)) {
@@ -67,6 +88,7 @@ bool SemanticsValidator::inferUnknownReturnKindsLegacy() {
 }
 
 bool SemanticsValidator::inferUnknownReturnKindsGraph() {
+  graphLocalAutoBindings_.clear();
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
 
   std::vector<DirectedGraphEdge> dependencyEdges;
@@ -172,7 +194,76 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
     }
   }
 
+  collectGraphLocalAutoBindings(graph);
   return true;
+}
+
+void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph &graph) {
+  GraphLocalAutoBindingExprMap bindingExprs;
+  for (const auto &def : program_.definitions) {
+    for (const auto &param : def.parameters) {
+      for (const auto &arg : param.args) {
+        collectGraphLocalAutoBindingExprs(arg, def.fullPath, bindingExprs);
+      }
+      for (const auto &bodyExpr : param.bodyArguments) {
+        collectGraphLocalAutoBindingExprs(bodyExpr, def.fullPath, bindingExprs);
+      }
+    }
+    for (const auto &stmt : def.statements) {
+      collectGraphLocalAutoBindingExprs(stmt, def.fullPath, bindingExprs);
+    }
+    if (def.returnExpr.has_value()) {
+      collectGraphLocalAutoBindingExprs(*def.returnExpr, def.fullPath, bindingExprs);
+    }
+  }
+
+  std::unordered_map<uint32_t, std::vector<uint32_t>> dependencyTargetsByLocalNodeId;
+  for (const TypeResolutionGraphEdge &edge : graph.edges) {
+    if (edge.kind != TypeResolutionEdgeKind::Dependency) {
+      continue;
+    }
+    dependencyTargetsByLocalNodeId[edge.sourceId].push_back(edge.targetId);
+  }
+
+  for (const TypeResolutionGraphNode &node : graph.nodes) {
+    if (node.kind != TypeResolutionNodeKind::LocalAuto) {
+      continue;
+    }
+
+    const auto edgeIt = dependencyTargetsByLocalNodeId.find(node.id);
+    if (edgeIt == dependencyTargetsByLocalNodeId.end() || edgeIt->second.size() != 1) {
+      continue;
+    }
+    const uint32_t targetNodeId = edgeIt->second.front();
+    if (targetNodeId >= graph.nodes.size()) {
+      continue;
+    }
+    const TypeResolutionGraphNode &callNode = graph.nodes[targetNodeId];
+    if (callNode.kind != TypeResolutionNodeKind::CallConstraint) {
+      continue;
+    }
+
+    const std::string bindingKey = graphLocalAutoBindingKey(node.scopePath, node.sourceLine, node.sourceColumn);
+    const auto bindingIt = bindingExprs.find(bindingKey);
+    if (bindingIt == bindingExprs.end() || bindingIt->second == nullptr) {
+      continue;
+    }
+
+    const Expr &bindingExpr = *bindingIt->second;
+    if (bindingExpr.args.size() != 1) {
+      continue;
+    }
+    const Expr &initializer = bindingExpr.args.front();
+    if (initializer.kind != Expr::Kind::Call || initializer.isBinding || initializer.isMethodCall) {
+      continue;
+    }
+
+    BindingInfo binding;
+    if (!inferResolvedDirectCallBindingType(callNode.resolvedPath, binding)) {
+      continue;
+    }
+    graphLocalAutoBindings_.try_emplace(bindingKey, std::move(binding));
+  }
 }
 
 bool SemanticsValidator::ensureDefinitionReturnKindReady(const Definition &def) {

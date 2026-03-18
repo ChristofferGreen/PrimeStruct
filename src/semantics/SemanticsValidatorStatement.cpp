@@ -499,7 +499,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                 return false;
               }
               if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
-                (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), paramsIn, branchLocals, info);
+                (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), paramsIn, branchLocals, info, &bodyExpr);
               }
               branchLocals.emplace(bodyExpr.name, std::move(info));
               continue;

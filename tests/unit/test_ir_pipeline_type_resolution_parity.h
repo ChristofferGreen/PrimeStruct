@@ -46,6 +46,41 @@ main() {
 }
 )",
       },
+      {
+          "direct_call_local_auto_struct",
+          R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<Pair>]
+makePair() {
+  return(Pair())
+}
+
+[return<i32>]
+main() {
+  [auto] pair{makePair()}
+  return(pair.value)
+}
+)",
+      },
+      {
+          "direct_call_local_auto_collection",
+          R"(
+[return<array<i32>>]
+makeValues() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<i32>]
+main() {
+  [auto] values{makeValues()}
+  return(count(values))
+}
+)",
+      },
   };
 
   for (const ParityCase &testCase : cases) {

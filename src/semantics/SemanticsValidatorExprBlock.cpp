@@ -54,7 +54,7 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
           return false;
         }
         if (!hasExplicitBindingTypeTransform(bodyExpr)) {
-          (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
+          (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info, &bodyExpr);
         }
       }
       if (restrictType.has_value()) {

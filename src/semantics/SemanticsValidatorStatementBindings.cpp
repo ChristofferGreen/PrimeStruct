@@ -241,7 +241,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   };
 
   if (!hasExplicitType || explicitAutoType) {
-    (void)inferBindingTypeFromInitializer(initializer, params, locals, info);
+    (void)inferBindingTypeFromInitializer(initializer, params, locals, info, &stmt);
   } else {
     const std::string expectedType = normalizeBindingTypeName(info.typeName);
     ResultTypeInfo resultInfo;

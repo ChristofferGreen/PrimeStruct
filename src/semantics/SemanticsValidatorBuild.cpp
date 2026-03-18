@@ -1880,11 +1880,107 @@ std::string SemanticsValidator::typeNameForReturnKind(ReturnKind kind) const {
   }
 }
 
+bool SemanticsValidator::lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const {
+  if (!graphTypeResolverEnabled_ || currentValidationContext_.definitionPath.empty()) {
+    return false;
+  }
+  const auto it = graphLocalAutoBindings_.find(graphLocalAutoBindingKey(
+      currentValidationContext_.definitionPath, bindingExpr.sourceLine, bindingExpr.sourceColumn));
+  if (it == graphLocalAutoBindings_.end()) {
+    return false;
+  }
+  bindingOut = it->second;
+  return true;
+}
+
+bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const {
+  auto inferDeclaredCollectionBinding = [&](const Definition &definition) -> bool {
+    auto isSupportedCollectionType = [&](const std::string &typeName) -> bool {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(normalizeBindingTypeName(typeName), base, argText)) {
+        return false;
+      }
+      base = normalizeBindingTypeName(base);
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args)) {
+        return false;
+      }
+      return ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) ||
+             (isMapCollectionTypeName(base) && args.size() == 2);
+    };
+
+    for (const auto &transform : definition.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string normalizedReturnType = normalizeBindingTypeName(transform.templateArgs.front());
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(normalizedReturnType, base, argText)) {
+        return false;
+      }
+      base = normalizeBindingTypeName(base);
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args)) {
+        return false;
+      }
+      if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+        bindingOut.typeName = base;
+        bindingOut.typeTemplateArg = argText;
+        return true;
+      }
+      if (isMapCollectionTypeName(base) && args.size() == 2) {
+        bindingOut.typeName = base;
+        bindingOut.typeTemplateArg = argText;
+        return true;
+      }
+      if ((base == "Reference" || base == "Pointer") && args.size() == 1 && isSupportedCollectionType(args.front())) {
+        bindingOut.typeName = base;
+        bindingOut.typeTemplateArg = args.front();
+        return true;
+      }
+      return false;
+    }
+    return false;
+  };
+
+  const auto kindIt = returnKinds_.find(resolvedPath);
+  if (kindIt == returnKinds_.end()) {
+    return false;
+  }
+  if (kindIt->second == ReturnKind::Unknown || kindIt->second == ReturnKind::Void) {
+    return false;
+  }
+  if (kindIt->second == ReturnKind::Array) {
+    const auto defIt = defMap_.find(resolvedPath);
+    if (defIt != defMap_.end() && defIt->second != nullptr && inferDeclaredCollectionBinding(*defIt->second)) {
+      return true;
+    }
+    const auto structIt = returnStructs_.find(resolvedPath);
+    if (structIt == returnStructs_.end() || structIt->second.empty()) {
+      return false;
+    }
+    bindingOut.typeName = structIt->second;
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  }
+
+  const std::string inferredType = typeNameForReturnKind(kindIt->second);
+  if (inferredType.empty()) {
+    return false;
+  }
+  bindingOut.typeName = inferredType;
+  bindingOut.typeTemplateArg.clear();
+  return true;
+}
+
 bool SemanticsValidator::inferBindingTypeFromInitializer(
     const Expr &initializer,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
-    BindingInfo &bindingOut) {
+    BindingInfo &bindingOut,
+    const Expr *bindingExpr) {
   auto bindingTypeText = [](const BindingInfo &binding) {
     if (binding.typeTemplateArg.empty()) {
       return binding.typeName;
@@ -1922,6 +2018,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     bindingOut.typeTemplateArg = resultInfo.valueType + ", " + resultInfo.errorType;
     return true;
   };
+  if (bindingExpr != nullptr && lookupGraphLocalAutoBinding(*bindingExpr, bindingOut)) {
+    return true;
+  }
   auto inferTryInitializerBinding = [&]() -> bool {
     if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall || !isSimpleCallName(initializer, "try") ||
         initializer.args.size() != 1 || !initializer.templateArgs.empty() || initializer.hasBodyArguments ||
@@ -2245,55 +2344,6 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     bindingOut.typeTemplateArg = targetType;
     return true;
   };
-  auto inferDeclaredCollectionBinding = [&](const Definition &definition) -> bool {
-    auto isSupportedCollectionType = [&](const std::string &typeName) -> bool {
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(normalizeBindingTypeName(typeName), base, argText)) {
-        return false;
-      }
-      base = normalizeBindingTypeName(base);
-      std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(argText, args)) {
-        return false;
-      }
-      return ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) ||
-             (isMapCollectionTypeName(base) && args.size() == 2);
-    };
-    for (const auto &transform : definition.transforms) {
-      if (transform.name != "return" || transform.templateArgs.size() != 1) {
-        continue;
-      }
-      const std::string normalizedReturnType = normalizeBindingTypeName(transform.templateArgs.front());
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(normalizedReturnType, base, argText)) {
-        return false;
-      }
-      base = normalizeBindingTypeName(base);
-      std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(argText, args)) {
-        return false;
-      }
-      if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
-        bindingOut.typeName = base;
-        bindingOut.typeTemplateArg = argText;
-        return true;
-      }
-      if (isMapCollectionTypeName(base) && args.size() == 2) {
-        bindingOut.typeName = base;
-        bindingOut.typeTemplateArg = argText;
-        return true;
-      }
-      if ((base == "Reference" || base == "Pointer") && args.size() == 1 && isSupportedCollectionType(args.front())) {
-        bindingOut.typeName = base;
-        bindingOut.typeTemplateArg = args.front();
-        return true;
-      }
-      return false;
-    }
-    return false;
-  };
   auto inferCallInitializerBinding = [&]() -> bool {
     if (initializer.kind != Expr::Kind::Call) {
       return false;
@@ -2341,11 +2391,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       return false;
     }
     if (resolvedKind == ReturnKind::Array) {
-      auto defIt = defMap_.find(resolveCalleePath(initializer));
-      if (defIt == defMap_.end()) {
-        return false;
-      }
-      if (inferDeclaredCollectionBinding(*defIt->second)) {
+      if (inferResolvedDirectCallBindingType(resolveCalleePath(initializer), bindingOut)) {
         return true;
       }
       std::string inferredStruct = inferStructReturnPath(initializer, params, locals);
