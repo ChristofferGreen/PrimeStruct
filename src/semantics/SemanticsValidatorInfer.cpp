@@ -2992,60 +2992,25 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
                resolveDereferencedIndexedArgsPackElementType(receiverExpr, elemType)) &&
               extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
     };
-    auto resolveBuiltinCollectionCountCapacityReturnKind = [&](const Expr &callExpr, ReturnKind &kindOut) -> bool {
-      kindOut = ReturnKind::Unknown;
-      if (callExpr.isMethodCall || callExpr.args.empty()) {
-        return false;
-      }
-      const bool isCountLike =
-          (isVectorBuiltinName(callExpr, "count") || isStdNamespacedMapCountCall ||
-           isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
-          callExpr.args.size() == 1 && !isArrayNamespacedVectorCountCompatibilityCall(callExpr) &&
-          (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-          !prefersCanonicalVectorCountAliasDefinition;
-      const bool isCapacityLike =
-          isVectorBuiltinName(callExpr, "capacity") && callExpr.args.size() == 1 &&
-          (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall);
-      if (!isCountLike && !isCapacityLike) {
-        return false;
-      }
-      std::string mapKeyType;
-      std::string mapValueType;
-      if (isUnnamespacedMapCountFallbackCall &&
-          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-          !hasDeclaredDefinitionPath("/map/count") &&
-          !hasImportedDefinitionPath("/std/collections/map/count") &&
-          resolveMapTarget(callExpr.args.front(), mapKeyType, mapValueType)) {
-        kindOut = ReturnKind::Int;
-        return true;
-      }
-      std::string methodResolved;
-      if (!resolveMethodCallPath(isCountLike ? "count" : "capacity", methodResolved)) {
-        return false;
-      }
-      methodResolved = preferVectorStdlibHelperPath(methodResolved);
-      if (isCountLike && methodResolved == "/std/collections/map/count" &&
-          !hasDeclaredDefinitionPath("/map/count") &&
-          !hasImportedDefinitionPath("/std/collections/map/count") &&
-          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-          !shouldInferBuiltinBareMapCountCall) {
-        error_ = "unknown call target: /std/collections/map/count";
-        return false;
-      }
-      auto methodIt = defMap_.find(methodResolved);
-      if (methodIt != defMap_.end()) {
-        if (!inferDefinitionReturnKind(*methodIt->second)) {
-          return false;
-        }
-        auto kindIt = returnKinds_.find(methodResolved);
-        if (kindIt != returnKinds_.end() && kindIt->second != ReturnKind::Unknown) {
-          kindOut = kindIt->second;
-          return true;
-        }
-      }
-      return resolveBuiltinCollectionMethodReturnKind(
-          methodResolved, callExpr.args.front(), builtinCollectionDispatchResolvers, kindOut);
-    };
+    BuiltinCollectionCountCapacityDispatchContext builtinCollectionCountCapacityDispatchContext;
+    builtinCollectionCountCapacityDispatchContext.isCountLike =
+        (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
+         isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
+        expr.args.size() == 1 && !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
+        (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
+        !prefersCanonicalVectorCountAliasDefinition;
+    builtinCollectionCountCapacityDispatchContext.isCapacityLike =
+        isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+        (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall);
+    builtinCollectionCountCapacityDispatchContext.isUnnamespacedMapCountFallbackCall =
+        isUnnamespacedMapCountFallbackCall;
+    builtinCollectionCountCapacityDispatchContext.shouldInferBuiltinBareMapCountCall =
+        shouldInferBuiltinBareMapCountCall;
+    builtinCollectionCountCapacityDispatchContext.resolveMethodCallPath = resolveMethodCallPath;
+    builtinCollectionCountCapacityDispatchContext.preferVectorStdlibHelperPath = preferVectorStdlibHelperPath;
+    builtinCollectionCountCapacityDispatchContext.hasDeclaredDefinitionPath = hasDeclaredDefinitionPath;
+    builtinCollectionCountCapacityDispatchContext.resolveMapTarget = resolveMapTarget;
+    builtinCollectionCountCapacityDispatchContext.dispatchResolvers = &builtinCollectionDispatchResolvers;
     auto defIt = hasResolvedPath ? defMap_.find(resolved) : defMap_.end();
     const bool hasResolvedDefinition = defIt != defMap_.end();
     std::string normalizedCallName = expr.name;
@@ -3159,7 +3124,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return builtinAccessKind;
         }
         ReturnKind builtinCollectionKind = ReturnKind::Unknown;
-        if (resolveBuiltinCollectionCountCapacityReturnKind(expr, builtinCollectionKind)) {
+        if (resolveBuiltinCollectionCountCapacityReturnKind(
+                expr, builtinCollectionCountCapacityDispatchContext, builtinCollectionKind)) {
           return builtinCollectionKind;
         }
         return ReturnKind::Unknown;
@@ -3173,7 +3139,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return builtinAccessKind;
       }
       ReturnKind builtinCollectionKind = ReturnKind::Unknown;
-      if (resolveBuiltinCollectionCountCapacityReturnKind(expr, builtinCollectionKind)) {
+      if (resolveBuiltinCollectionCountCapacityReturnKind(
+              expr, builtinCollectionCountCapacityDispatchContext, builtinCollectionKind)) {
         return builtinCollectionKind;
       }
       return ReturnKind::Unknown;
@@ -3497,7 +3464,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return builtinAccessKind;
         }
         ReturnKind builtinCollectionKind = ReturnKind::Unknown;
-        if (resolveBuiltinCollectionCountCapacityReturnKind(expr, builtinCollectionKind)) {
+        if (resolveBuiltinCollectionCountCapacityReturnKind(
+                expr, builtinCollectionCountCapacityDispatchContext, builtinCollectionKind)) {
           return builtinCollectionKind;
         }
         return ReturnKind::Unknown;
@@ -3507,7 +3475,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return builtinAccessKind;
       }
       ReturnKind builtinCollectionKind = ReturnKind::Unknown;
-      if (resolveBuiltinCollectionCountCapacityReturnKind(expr, builtinCollectionKind)) {
+      if (resolveBuiltinCollectionCountCapacityReturnKind(
+              expr, builtinCollectionCountCapacityDispatchContext, builtinCollectionKind)) {
         return builtinCollectionKind;
       }
       auto kindIt = returnKinds_.find(resolved);

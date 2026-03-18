@@ -168,6 +168,17 @@ private:
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
   };
+  struct BuiltinCollectionCountCapacityDispatchContext {
+    bool isCountLike = false;
+    bool isCapacityLike = false;
+    bool isUnnamespacedMapCountFallbackCall = false;
+    bool shouldInferBuiltinBareMapCountCall = false;
+    std::function<bool(const std::string &, std::string &)> resolveMethodCallPath;
+    std::function<std::string(const std::string &)> preferVectorStdlibHelperPath;
+    std::function<bool(const std::string &)> hasDeclaredDefinitionPath;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+  };
   bool resolveBuiltinCollectionMethodReturnKind(const std::string &resolvedPath,
                                                 const Expr &receiverExpr,
                                                 const BuiltinCollectionDispatchResolvers &resolvers,
@@ -175,6 +186,9 @@ private:
   bool resolveBuiltinCollectionAccessCallReturnKind(const Expr &callExpr,
                                                     const BuiltinCollectionDispatchResolvers &resolvers,
                                                     ReturnKind &kindOut) const;
+  bool resolveBuiltinCollectionCountCapacityReturnKind(const Expr &callExpr,
+                                                       const BuiltinCollectionCountCapacityDispatchContext &context,
+                                                       ReturnKind &kindOut);
   bool validateStatement(const std::vector<ParameterInfo> &params,
                          std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &stmt,
