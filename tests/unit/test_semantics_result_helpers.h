@@ -475,6 +475,38 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib gfx Buffer allocation helpers cover experimental slash-call wrappers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gfx/experimental/Buffer/allocate<i32>(2i32)}
+  [array<i32>] out{data.readback()}
+  return(plus(data.count(), out.count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical stdlib gfx Buffer allocation helpers cover slash-call wrappers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(2i32)}
+  [array<i32>] out{data.readback()}
+  return(plus(data.count(), out.count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib gfx Buffer upload helpers cover experimental slash-call wrappers") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -548,6 +580,49 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/gfx/Buffer/readback") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx Buffer allocate slash-call helpers require stdlib import") {
+  const std::string source = R"(
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(2i32)}
+  return(data.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/gfx/Buffer/allocate") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx Buffer allocate helper rejects non-integer size") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(1.5f32)}
+  return(data.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer size requires integer expression") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx Buffer allocate helper rejects unsupported element type") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<string>] data{/std/gfx/Buffer/allocate<string>(1i32)}
+  return(data.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer requires numeric/bool element type") != std::string::npos);
 }
 
 TEST_CASE("canonical stdlib gfx Buffer readback helper rejects unsupported element type") {

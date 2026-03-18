@@ -250,6 +250,11 @@ namespace std {
   }
 
   [public effects(gpu_dispatch), return<Buffer<T>>]
+  /Buffer/allocate<T>([auto] count) {
+    return(/std/gpu/buffer<T>(count))
+  }
+
+  [public effects(gpu_dispatch), return<Buffer<T>>]
   /Buffer/upload<T>([array<T>] values) {
     return(/std/gpu/upload(values))
   }

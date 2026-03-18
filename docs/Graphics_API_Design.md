@@ -1,7 +1,7 @@
 # PrimeStruct Graphics API Design
 
 Status: Locked (v1 Core Contract + Spinning-Cube Mini-Spec)
-Last updated: 2026-03-17
+Last updated: 2026-03-18
 
 This document defines the locked cross-backend graphics API contract for the
 spinning-cube program family. The goal is to keep one portable language surface,
@@ -182,6 +182,7 @@ Buffer.count(self) -> i32
 Buffer.empty(self) -> bool
 Buffer.is_valid(self) -> bool
 Buffer.readback(self) -> array<T>
+/std/gfx/Buffer/allocate<T>(count) -> Buffer<T>
 /std/gfx/Buffer/upload(values) -> Buffer<T>
 ```
 

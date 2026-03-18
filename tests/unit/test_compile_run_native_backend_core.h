@@ -3130,6 +3130,46 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("native uses stdlib experimental Buffer allocation helpers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gfx/experimental/Buffer/allocate<i32>(3i32)}
+  [array<i32>] out{data.readback()}
+  return(plus(data.count(), out.count()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_experimental_gfx_buffer_allocate_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_experimental_gfx_buffer_allocate_helpers").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("native uses canonical stdlib Buffer allocation helpers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(3i32)}
+  [array<i32>] out{data.readback()}
+  return(plus(data.count(), out.count()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_canonical_gfx_buffer_allocate_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_canonical_gfx_buffer_allocate_helpers").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("native uses stdlib experimental Buffer upload helpers") {
   const std::string source = R"(
 import /std/gfx/experimental/*
