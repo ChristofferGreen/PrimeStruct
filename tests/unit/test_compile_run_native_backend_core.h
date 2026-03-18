@@ -3024,6 +3024,70 @@ main() {
         "frame_present_failed\n");
 }
 
+TEST_CASE("native uses stdlib experimental Buffer helper methods") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int>]
+main() {
+  [Buffer<i32>] emptyBuffer{Buffer<i32>([token] 0i32, [elementCount] 0i32)}
+  [Buffer<i32>] fullBuffer{Buffer<i32>([token] 7i32, [elementCount] 4i32)}
+  if(not(emptyBuffer.empty())) {
+    return(90i32)
+  }
+  if(emptyBuffer.is_valid()) {
+    return(91i32)
+  }
+  if(fullBuffer.empty()) {
+    return(92i32)
+  }
+  if(not(fullBuffer.is_valid())) {
+    return(93i32)
+  }
+  return(plus(fullBuffer.count(), /std/gfx/experimental/Buffer/count(emptyBuffer)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_experimental_gfx_buffer_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_experimental_gfx_buffer_helpers").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
+TEST_CASE("native uses canonical stdlib Buffer helper methods") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int>]
+main() {
+  [Buffer<i32>] emptyBuffer{Buffer<i32>([token] 0i32, [elementCount] 0i32)}
+  [Buffer<i32>] fullBuffer{Buffer<i32>([token] 7i32, [elementCount] 5i32)}
+  if(not(emptyBuffer.empty())) {
+    return(90i32)
+  }
+  if(emptyBuffer.is_valid()) {
+    return(91i32)
+  }
+  if(fullBuffer.empty()) {
+    return(92i32)
+  }
+  if(not(fullBuffer.is_valid())) {
+    return(93i32)
+  }
+  return(plus(fullBuffer.count(), /std/gfx/Buffer/count(emptyBuffer)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_canonical_gfx_buffer_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_canonical_gfx_buffer_helpers").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("compiles and runs native ppm read for ascii p3 inputs") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_native_image_read.ppm").string();
   {

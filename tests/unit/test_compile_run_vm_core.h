@@ -1518,6 +1518,62 @@ main() {
         "frame_present_failed\n");
 }
 
+TEST_CASE("vm uses stdlib experimental Buffer helper methods") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int>]
+main() {
+  [Buffer<i32>] emptyBuffer{Buffer<i32>([token] 0i32, [elementCount] 0i32)}
+  [Buffer<i32>] fullBuffer{Buffer<i32>([token] 7i32, [elementCount] 4i32)}
+  if(not(emptyBuffer.empty())) {
+    return(90i32)
+  }
+  if(emptyBuffer.is_valid()) {
+    return(91i32)
+  }
+  if(fullBuffer.empty()) {
+    return(92i32)
+  }
+  if(not(fullBuffer.is_valid())) {
+    return(93i32)
+  }
+  return(plus(fullBuffer.count(), /std/gfx/experimental/Buffer/count(emptyBuffer)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
+TEST_CASE("vm uses canonical stdlib Buffer helper methods") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int>]
+main() {
+  [Buffer<i32>] emptyBuffer{Buffer<i32>([token] 0i32, [elementCount] 0i32)}
+  [Buffer<i32>] fullBuffer{Buffer<i32>([token] 7i32, [elementCount] 5i32)}
+  if(not(emptyBuffer.empty())) {
+    return(90i32)
+  }
+  if(emptyBuffer.is_valid()) {
+    return(91i32)
+  }
+  if(fullBuffer.empty()) {
+    return(92i32)
+  }
+  if(not(fullBuffer.is_valid())) {
+    return(93i32)
+  }
+  return(plus(fullBuffer.count(), /std/gfx/Buffer/count(emptyBuffer)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
+}
+
 TEST_CASE("vm uses stdlib FileError why wrapper") {
   const std::string source = R"(
 import /std/file/*

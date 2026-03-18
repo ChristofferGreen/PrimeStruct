@@ -177,6 +177,10 @@ RenderPass.end(self) -> void
 
 Frame.submit(self, [queue] Queue) -> Result<void, GfxError>
 Frame.present(self) -> Result<void, GfxError>
+
+Buffer.count(self) -> i32
+Buffer.empty(self) -> bool
+Buffer.is_valid(self) -> bool
 ```
 
 ### Locked Profile-Deduction Rule

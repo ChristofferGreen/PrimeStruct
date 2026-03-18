@@ -397,6 +397,63 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("stdlib gfx Buffer helpers cover experimental method and slash-call wrappers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<void>]
+main() {
+  [Buffer<i32>] emptyBuffer{Buffer<i32>([token] 0i32, [elementCount] 0i32)}
+  [Buffer<i32>] fullBuffer{Buffer<i32>([token] 7i32, [elementCount] 3i32)}
+  [i32] methodCount{fullBuffer.count()}
+  [i32] directCount{/std/gfx/experimental/Buffer/count(emptyBuffer)}
+  [bool] methodEmpty{emptyBuffer.empty()}
+  [bool] directEmpty{/std/gfx/experimental/Buffer/empty(fullBuffer)}
+  [bool] methodValid{fullBuffer.is_valid()}
+  [bool] directValid{/std/gfx/experimental/Buffer/is_valid(emptyBuffer)}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical stdlib gfx Buffer helpers cover method and slash-call wrappers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<void>]
+main() {
+  [Buffer<i32>] emptyBuffer{Buffer<i32>([token] 0i32, [elementCount] 0i32)}
+  [Buffer<i32>] fullBuffer{Buffer<i32>([token] 7i32, [elementCount] 3i32)}
+  [i32] methodCount{fullBuffer.count()}
+  [i32] directCount{/std/gfx/Buffer/count(emptyBuffer)}
+  [bool] methodEmpty{emptyBuffer.empty()}
+  [bool] directEmpty{/std/gfx/Buffer/empty(fullBuffer)}
+  [bool] methodValid{fullBuffer.is_valid()}
+  [bool] directValid{/std/gfx/Buffer/is_valid(emptyBuffer)}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical stdlib gfx Buffer slash-call helpers require stdlib import") {
+  const std::string source = R"(
+[effects(gpu_dispatch) return<int>]
+main() {
+  [Buffer<i32>] data{/std/gpu/buffer<i32>(2i32)}
+  return(/std/gfx/Buffer/count(data))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/gfx/Buffer/count") != std::string::npos);
+}
+
 TEST_CASE("Result.map inline lambda syntax parses with explicit diagnostics") {
   const std::string source = R"(
 [return<void>]

@@ -227,6 +227,21 @@ namespace std {
   Buffer<T>() {
     [public i32] token{0i32}
     [public i32] elementCount{0i32}
+
+    [public return<i32>]
+    count() {
+      return(this.elementCount)
+    }
+
+    [public return<bool>]
+    empty() {
+      return(less_than(this.elementCount, 1i32))
+    }
+
+    [public return<bool>]
+    is_valid() {
+      return(less_than(0i32, this.token))
+    }
   }
 
   [public struct]
