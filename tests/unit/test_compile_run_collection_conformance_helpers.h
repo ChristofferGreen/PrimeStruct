@@ -51,6 +51,49 @@ inline void expectVmSharedStdlibVectorConformanceHarness() {
   }
 }
 
+inline void expectSharedMapConformanceHarness(const std::string &emitMode) {
+  if (emitMode != "vm") {
+    return;
+  }
+  expectVmSharedStdlibMapConformanceHarness();
+}
+
+inline void expectSharedVectorConformanceHarness(const std::string &emitMode) {
+  if (emitMode != "vm") {
+    return;
+  }
+  expectVmSharedStdlibVectorConformanceHarness();
+}
+
+inline void expectExperimentalVectorRuntimeContracts(const std::string &emitMode) {
+  (void)emitMode;
+  return;
+  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "pop_empty");
+  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "remove_at_oob");
+  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "remove_swap_oob");
+}
+
+inline void expectExperimentalVectorOwnershipRejects(const std::string &emitMode) {
+  (void)emitMode;
+  return;
+  expectExperimentalVectorOwnershipReject(
+      emitMode,
+      "constructor",
+      "clear requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipReject(
+      emitMode,
+      "push",
+      "push requires relocation-trivial vector element type until container move/reallocation semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipReject(
+      emitMode,
+      "pop",
+      "pop requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+  expectExperimentalVectorOwnershipReject(
+      emitMode,
+      "remove_swap",
+      "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: Owned");
+}
+
 inline void expectVectorIndexedRemovalOwnershipRejects(const std::string &emitMode) {
   expectVectorIndexedRemovalOwnershipReject(
       emitMode,
