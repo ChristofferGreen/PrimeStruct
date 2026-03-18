@@ -2,6 +2,7 @@
 
 #include "SemanticsHelpers.h"
 #include "SemanticsValidateReflectionGeneratedHelpersSerialization.h"
+#include "SemanticsValidateReflectionGeneratedHelpersValidate.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -635,97 +636,6 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       definitionPaths.insert(helperPath);
       return true;
     };
-    auto emitValidateHelper = [&]() -> bool {
-      const std::string helperPath = def.fullPath + "/Validate";
-      if (definitionPaths.count(helperPath) > 0) {
-        error = "generated reflection helper already exists: " + helperPath;
-        return false;
-      }
-
-      std::vector<std::string> fieldHookPaths;
-      fieldHookPaths.reserve(fieldNames.size());
-      for (const auto &fieldName : fieldNames) {
-        const std::string hookPath = def.fullPath + "/ValidateField_" + fieldName;
-        if (definitionPaths.count(hookPath) > 0) {
-          error = "generated reflection helper already exists: " + hookPath;
-          return false;
-        }
-        fieldHookPaths.push_back(hookPath);
-      }
-
-      for (size_t fieldIndex = 0; fieldIndex < fieldNames.size(); ++fieldIndex) {
-        Definition hook;
-        hook.name = "ValidateField_" + fieldNames[fieldIndex];
-        hook.fullPath = fieldHookPaths[fieldIndex];
-        hook.namespacePrefix = def.fullPath;
-        hook.sourceLine = def.sourceLine;
-        hook.sourceColumn = def.sourceColumn;
-
-        appendPublicVisibility(hook);
-        Transform returnTransform;
-        returnTransform.name = "return";
-        returnTransform.templateArgs.push_back("bool");
-        hook.transforms.push_back(std::move(returnTransform));
-        hook.parameters.push_back(makeTypeBinding("value", def.fullPath, hook.namespacePrefix));
-        hook.returnExpr = makeBoolLiteralExpr(true);
-        hook.hasReturnStatement = true;
-
-        rewrittenDefinitions.push_back(std::move(hook));
-        definitionPaths.insert(fieldHookPaths[fieldIndex]);
-      }
-
-      Definition helper;
-      helper.name = "Validate";
-      helper.fullPath = helperPath;
-      helper.namespacePrefix = def.fullPath;
-      helper.sourceLine = def.sourceLine;
-      helper.sourceColumn = def.sourceColumn;
-
-      appendPublicVisibility(helper);
-      Transform returnTransform;
-      returnTransform.name = "return";
-      returnTransform.templateArgs.push_back("Result<FileError>");
-      helper.transforms.push_back(std::move(returnTransform));
-      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix));
-
-      for (size_t fieldIndex = 0; fieldIndex < fieldHookPaths.size(); ++fieldIndex) {
-        Expr checkCall;
-        checkCall.kind = Expr::Kind::Call;
-        checkCall.name = fieldHookPaths[fieldIndex];
-        checkCall.args.push_back(makeNameExpr("value"));
-        checkCall.argNames.push_back(std::nullopt);
-
-        Expr conditionExpr;
-        conditionExpr.kind = Expr::Kind::Call;
-        conditionExpr.name = "not";
-        conditionExpr.args.push_back(std::move(checkCall));
-        conditionExpr.argNames.push_back(std::nullopt);
-
-        std::vector<Expr> thenBody;
-        thenBody.push_back(makeReturnStatementExpr(makeI32LiteralExpr(fieldIndex + 1)));
-        helper.statements.push_back(makeIfStatementExpr(
-            std::move(conditionExpr),
-            makeEnvelopeExpr("then", std::move(thenBody)),
-            makeEnvelopeExpr("else", {})));
-      }
-
-      Expr okResultTypeExpr;
-      okResultTypeExpr.kind = Expr::Kind::Name;
-      okResultTypeExpr.name = "Result";
-
-      Expr okResultCall;
-      okResultCall.kind = Expr::Kind::Call;
-      okResultCall.isMethodCall = true;
-      okResultCall.name = "ok";
-      okResultCall.args.push_back(std::move(okResultTypeExpr));
-      okResultCall.argNames.push_back(std::nullopt);
-      helper.returnExpr = std::move(okResultCall);
-      helper.hasReturnStatement = true;
-
-      rewrittenDefinitions.push_back(std::move(helper));
-      definitionPaths.insert(helperPath);
-      return true;
-    };
     auto emitCloneHelper = [&]() -> bool {
       const std::string helperPath = def.fullPath + "/Clone";
       if (definitionPaths.count(helperPath) > 0) {
@@ -872,7 +782,9 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       }
     }
     if (shouldGenerateValidate) {
-      if (!emitValidateHelper()) {
+      ReflectionGeneratedHelperContext validationContext{
+          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+      if (!emitReflectionValidateHelper(validationContext)) {
         return false;
       }
     }

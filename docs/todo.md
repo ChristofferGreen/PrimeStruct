@@ -259,9 +259,9 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Extract reflection metadata/generated-helper rewrites from `SemanticsValidate.cpp` into dedicated helper unit(s).
 - ✓ Extract reflection metadata query rewriting from `SemanticsValidate.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionMetadata.cpp`.
 - ✓ Extract reflection generated-helper rewriting from `SemanticsValidate.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp`.
-- ◐ Refactor `src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp` (`921` lines) below the `700`-line target. Progress: extracted serialize/deserialize helper emission into `src/semantics/SemanticsValidateReflectionGeneratedHelpersSerialization.cpp`.
+- ◐ Refactor `src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp` (`833` lines) below the `700`-line target. Progress: extracted serialize/deserialize helper emission into `src/semantics/SemanticsValidateReflectionGeneratedHelpersSerialization.cpp` and validate/result helper emission into `src/semantics/SemanticsValidateReflectionGeneratedHelpersValidate.cpp`.
 - ✓ Extract reflection serialize/deserialize helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpersSerialization.cpp`.
-- ○ Extract reflection validate/result helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit(s).
+- ✓ Extract reflection validate/result helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpersValidate.cpp`.
 - ○ Extract remaining comparison/hash/state/default/debug helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit(s).
 - ○ Refactor `src/semantics/SemanticsValidatorStatement.cpp` (`3351` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererCallHelpers.cpp` (`3053` lines) below the `700`-line target.

@@ -290,6 +290,8 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidateReflectionGeneratedHelpersSerialization.cpp") !=
         std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateReflectionGeneratedHelpersValidate.cpp") !=
+        std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidateReflectionMetadata.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidateTransforms.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprBlock.cpp") != std::string::npos);
