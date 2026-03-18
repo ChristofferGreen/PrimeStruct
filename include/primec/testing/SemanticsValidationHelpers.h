@@ -23,6 +23,25 @@ struct StronglyConnectedComponentsSnapshot {
   std::vector<uint32_t> componentIdByNodeId;
 };
 
+struct CondensationDagNodeSnapshot {
+  uint32_t componentId = 0;
+  std::vector<uint32_t> memberNodeIds;
+  std::vector<uint32_t> incomingComponentIds;
+  std::vector<uint32_t> outgoingComponentIds;
+};
+
+struct CondensationDagEdgeSnapshot {
+  uint32_t sourceComponentId = 0;
+  uint32_t targetComponentId = 0;
+};
+
+struct CondensationDagSnapshot {
+  std::vector<CondensationDagNodeSnapshot> nodes;
+  std::vector<CondensationDagEdgeSnapshot> edges;
+  std::vector<uint32_t> topologicalComponentIds;
+  std::vector<uint32_t> componentIdByNodeId;
+};
+
 struct TypeResolutionGraphSnapshotNode {
   uint32_t id = 0;
   std::string kind;
@@ -51,6 +70,9 @@ std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(co
 bool runSemanticsValidatorStatementCanIterateMoreThanOnceStep(const Expr &countExpr, bool allowBoolCount);
 bool runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(const Expr &expr);
 StronglyConnectedComponentsSnapshot computeStronglyConnectedComponentsForTesting(
+    uint32_t nodeCount,
+    const std::vector<StronglyConnectedComponentsTestEdge> &edges);
+CondensationDagSnapshot computeCondensationDagForTesting(
     uint32_t nodeCount,
     const std::vector<StronglyConnectedComponentsTestEdge> &edges);
 bool buildTypeResolutionGraphForTesting(Program program,

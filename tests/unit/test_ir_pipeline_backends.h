@@ -358,6 +358,45 @@ TEST_CASE("strongly connected component utility is wired through semantics testi
   CHECK(sccSource.find("computeStronglyConnectedComponentsForTesting") != std::string::npos);
 }
 
+TEST_CASE("condensation dag utility is wired through semantics testing api") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
+  std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+  std::filesystem::path dagHeaderPath = cwd / "src" / "semantics" / "CondensationDag.h";
+  std::filesystem::path dagSourcePath = cwd / "src" / "semantics" / "CondensationDag.cpp";
+  if (!std::filesystem::exists(cmakePath)) {
+    cmakePath = cwd.parent_path() / "CMakeLists.txt";
+    testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+    dagHeaderPath = cwd.parent_path() / "src" / "semantics" / "CondensationDag.h";
+    dagSourcePath = cwd.parent_path() / "src" / "semantics" / "CondensationDag.cpp";
+  }
+  REQUIRE(std::filesystem::exists(cmakePath));
+  REQUIRE(std::filesystem::exists(testApiPath));
+  REQUIRE(std::filesystem::exists(dagHeaderPath));
+  REQUIRE(std::filesystem::exists(dagSourcePath));
+
+  const std::string cmake = readTextFile(cmakePath);
+  const std::string testApi = readTextFile(testApiPath);
+  const std::string dagHeader = readTextFile(dagHeaderPath);
+  const std::string dagSource = readTextFile(dagSourcePath);
+  CHECK(cmake.find("src/semantics/CondensationDag.cpp") != std::string::npos);
+  CHECK(cmake.find("primestruct.semantics.condensation_dag") != std::string::npos);
+  CHECK(testApi.find("struct CondensationDagNodeSnapshot") != std::string::npos);
+  CHECK(testApi.find("struct CondensationDagEdgeSnapshot") != std::string::npos);
+  CHECK(testApi.find("struct CondensationDagSnapshot") != std::string::npos);
+  CHECK(testApi.find("computeCondensationDagForTesting") != std::string::npos);
+  CHECK(dagHeader.find("struct CondensationDagNode") != std::string::npos);
+  CHECK(dagHeader.find("struct CondensationDagEdge") != std::string::npos);
+  CHECK(dagHeader.find("struct CondensationDag") != std::string::npos);
+  CHECK(dagHeader.find("buildCondensationDag") != std::string::npos);
+  CHECK(dagHeader.find("computeCondensationDag") != std::string::npos);
+  CHECK(dagSource.find("computeStronglyConnectedComponents(nodeCount, edges)") != std::string::npos);
+  CHECK(dagSource.find("collectCondensationEdgePairs") != std::string::npos);
+  CHECK(dagSource.find("buildTopologicalComponentOrder") != std::string::npos);
+  CHECK(dagSource.find("std::priority_queue<uint32_t, std::vector<uint32_t>, std::greater<uint32_t>>") !=
+        std::string::npos);
+}
+
 TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";
