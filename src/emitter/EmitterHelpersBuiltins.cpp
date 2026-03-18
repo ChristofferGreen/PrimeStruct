@@ -1458,6 +1458,38 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return "";
   };
+  auto inferExplicitMapAccessResolvedTypeName = [&](const Expr &candidate) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
+      return "";
+    }
+    const std::string resolvedExprPath = resolveExprPath(candidate);
+    if (resolvedExprPath != "/map/at" && resolvedExprPath != "/map/at_unsafe" &&
+        resolvedExprPath != "/std/collections/map/at" &&
+        resolvedExprPath != "/std/collections/map/at_unsafe") {
+      return "";
+    }
+    const std::vector<std::string> resolvedCandidates = {resolvedExprPath};
+    for (const auto &resolvedCandidate : resolvedCandidates) {
+      if (const std::string *structPath = findReturnStructMetadata(resolvedCandidate)) {
+        return normalizeCollectionReceiverType(*structPath);
+      }
+    }
+    for (const auto &resolvedCandidate : resolvedCandidates) {
+      const ReturnKind *kind = findReturnKindMetadata(resolvedCandidate);
+      if (kind == nullptr) {
+        continue;
+      }
+      if (*kind == ReturnKind::Array) {
+        return "array";
+      }
+      const std::string inferredType = typeNameForReturnKind(*kind);
+      if (!inferredType.empty()) {
+        return inferredType;
+      }
+      return "";
+    }
+    return "";
+  };
   auto inferExplicitVectorCountCapacityResolvedTypeName = [&](const Expr &candidate) -> std::string {
     if (!isExplicitVectorCountCapacityDirectCall(candidate)) {
       return "";
@@ -1581,6 +1613,10 @@ bool resolveMethodCallPath(const Expr &call,
           if (const std::string explicitVectorAccessType = inferExplicitVectorAccessResolvedTypeName(expr);
               !explicitVectorAccessType.empty()) {
             return explicitVectorAccessType;
+          }
+          if (const std::string explicitMapAccessType = inferExplicitMapAccessResolvedTypeName(expr);
+              !explicitMapAccessType.empty()) {
+            return explicitMapAccessType;
           }
           if (isExplicitVectorAccessDirectCall(expr)) {
             return "";
