@@ -62,6 +62,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprBodyArguments.cpp
   src/semantics/SemanticsValidatorExprControlFlow.cpp
   src/semantics/SemanticsValidatorExprCollectionAccess.cpp
+  src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp
   src/semantics/SemanticsValidatorExprFieldResolution.cpp
   src/semantics/SemanticsValidatorExprLambda.cpp
   src/semantics/SemanticsValidatorExprMethodResolution.cpp

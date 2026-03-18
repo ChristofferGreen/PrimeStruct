@@ -254,6 +254,39 @@ private:
                                          bool &usedMethodTarget,
                                          bool &hasMethodReceiverIndex,
                                          size_t &methodReceiverIndex);
+  struct ExprCollectionCountCapacityDispatchContext {
+    bool isNamespacedVectorHelperCall = false;
+    std::string namespacedHelper;
+    bool isStdNamespacedVectorCountCall = false;
+    bool shouldBuiltinValidateStdNamespacedVectorCountCall = false;
+    bool isStdNamespacedMapCountCall = false;
+    bool isNamespacedVectorCountCall = false;
+    bool isNamespacedMapCountCall = false;
+    bool isUnnamespacedMapCountFallbackCall = false;
+    bool isResolvedMapCountCall = false;
+    bool prefersCanonicalVectorCountAliasDefinition = false;
+    bool isStdNamespacedVectorCapacityCall = false;
+    bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;
+    bool isNamespacedVectorCapacityCall = false;
+    bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;
+    bool hasStdNamespacedVectorCountAliasDefinition = false;
+    bool shouldBuiltinValidateBareMapCountCall = false;
+    std::function<bool(const Expr &)> resolveMapTarget;
+    std::function<bool(const Expr &)> isArrayNamespacedVectorCountCompatibilityCall;
+    std::function<bool(const std::string &, Expr &)> tryRewriteBareVectorHelperCall;
+    std::function<void(const Expr &, std::string &, bool &, bool)> promoteCapacityToBuiltinValidation;
+    std::function<bool(const std::string &)> isNonCollectionStructCapacityTarget;
+  };
+  bool resolveExprCollectionCountCapacityTarget(const std::vector<ParameterInfo> &params,
+                                                const std::unordered_map<std::string, BindingInfo> &locals,
+                                                const Expr &expr,
+                                                const ExprCollectionCountCapacityDispatchContext &context,
+                                                bool &handledOut,
+                                                std::string &resolved,
+                                                bool &resolvedMethod,
+                                                bool &usedMethodTarget,
+                                                bool &hasMethodReceiverIndex,
+                                                size_t &methodReceiverIndex);
   bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);
   bool resolveCallCollectionTypePath(const Expr &target,
                                      const std::vector<ParameterInfo> &params,
