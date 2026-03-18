@@ -1459,7 +1459,7 @@ bool resolveMethodCallPath(const Expr &call,
     return "";
   };
   auto inferExplicitMapAccessResolvedTypeName = [&](const Expr &candidate) -> std::string {
-    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
+    if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
       return "";
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
@@ -1575,6 +1575,10 @@ bool resolveMethodCallPath(const Expr &call,
       }
       case Expr::Kind::Call: {
         if (expr.isMethodCall) {
+          if (const std::string explicitMapAccessType = inferExplicitMapAccessResolvedTypeName(expr);
+              !explicitMapAccessType.empty()) {
+            return explicitMapAccessType;
+          }
           if (const std::string explicitVectorAccessType = inferExplicitVectorAccessResolvedTypeName(expr);
               !explicitVectorAccessType.empty()) {
             return explicitVectorAccessType;
