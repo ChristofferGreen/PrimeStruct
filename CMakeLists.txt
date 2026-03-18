@@ -62,67 +62,13 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/text_filter/TextFilterPipeline.cpp
 )
 
-set(PRIMESTRUCT_BACKEND_SOURCES
+set(PRIMESTRUCT_IR_SOURCES
   src/CliDriver.cpp
   src/CompilePipeline.cpp
-  src/ExternalTooling.cpp
-  src/emitter/EmitterEmit.cpp
-  src/emitter/EmitterEmitSetupLifecycleHelperStep.cpp
-  src/emitter/EmitterEmitSetupMathImport.cpp
-  src/emitter/EmitterExpr.cpp
-  src/emitter/EmitterExprControlBuiltinBlockEarlyReturnStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockBindingAutoStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockBindingExplicitStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockBindingFallbackStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockBindingPreludeStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockBindingQualifiersStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockStatementStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockFinalValueStep.cpp
-  src/emitter/EmitterExprControlBoolLiteralStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockPreludeStep.cpp
-  src/emitter/EmitterExprControlBodyWrapperStep.cpp
-  src/emitter/EmitterExprControlCallPathStep.cpp
-  src/emitter/EmitterExprControlCountRewriteStep.cpp
-  src/emitter/EmitterExprControlFieldAccessStep.cpp
-  src/emitter/EmitterExprControlFloatLiteralStep.cpp
-  src/emitter/EmitterExprControlIfBlockBindingAutoStep.cpp
-  src/emitter/EmitterExprControlIfBlockBindingExplicitStep.cpp
-  src/emitter/EmitterExprControlIfBlockBindingFallbackStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyBindingStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyDispatchStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyHandlersStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyReturnStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyStatementStep.cpp
-  src/emitter/EmitterExprControlIfBranchEmitStep.cpp
-  src/emitter/EmitterExprControlIfBranchValueStep.cpp
-  src/emitter/EmitterExprControlIfBranchPreludeStep.cpp
-  src/emitter/EmitterExprControlIfBranchWrapperStep.cpp
-  src/emitter/EmitterExprControlIfBlockBindingPreludeStep.cpp
-  src/emitter/EmitterExprControlIfBlockBindingQualifiersStep.cpp
-  src/emitter/EmitterExprControlIfBlockStatementStep.cpp
-  src/emitter/EmitterExprControlIfBlockFinalValueStep.cpp
-  src/emitter/EmitterExprControlIfBlockEarlyReturnStep.cpp
-  src/emitter/EmitterExprControlIfTernaryFallbackStep.cpp
-  src/emitter/EmitterExprControlIfTernaryStep.cpp
-  src/emitter/EmitterExprControlIfEnvelopeStep.cpp
-  src/emitter/EmitterExprControlIntegerLiteralStep.cpp
-  src/emitter/EmitterExprControlMethodPathStep.cpp
-  src/emitter/EmitterExprControlStringLiteralStep.cpp
-  src/emitter/EmitterExprControlNameStep.cpp
-  src/emitter/EmitterHelpersBuiltins.cpp
-  src/emitter/EmitterHelpersTypes.cpp
-  src/glsl_emitter/GlslEmitter.cpp
-  src/glsl_emitter/GlslEmitterExpr.cpp
-  src/glsl_emitter/GlslEmitterHelpers.cpp
-  src/glsl_emitter/GlslEmitterStatements.cpp
-  src/IrBackends.cpp
   src/IrInliner.cpp
   src/IrPreparation.cpp
   src/IrPrinter.cpp
   src/IrSerializer.cpp
-  src/IrToCppEmitter.cpp
-  src/IrToGlslEmitter.cpp
   src/IrValidation.cpp
   src/IrVirtualRegisterAllocator.cpp
   src/IrVirtualRegisterLiveness.cpp
@@ -185,12 +131,72 @@ set(PRIMESTRUCT_BACKEND_SOURCES
   src/ir_lowerer/IrLowererStructTypeHelpers.cpp
   src/ir_lowerer/IrLowererTemplateTypeParseHelpers.cpp
   src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp
+)
+
+set(PRIMESTRUCT_CODEGEN_SOURCES
+  src/ExternalTooling.cpp
+  src/emitter/EmitterEmit.cpp
+  src/emitter/EmitterEmitSetupLifecycleHelperStep.cpp
+  src/emitter/EmitterEmitSetupMathImport.cpp
+  src/emitter/EmitterExpr.cpp
+  src/emitter/EmitterExprControlBuiltinBlockEarlyReturnStep.cpp
+  src/emitter/EmitterExprControlBuiltinBlockBindingAutoStep.cpp
+  src/emitter/EmitterExprControlBuiltinBlockBindingExplicitStep.cpp
+  src/emitter/EmitterExprControlBuiltinBlockBindingFallbackStep.cpp
+  src/emitter/EmitterExprControlBuiltinBlockBindingPreludeStep.cpp
+  src/emitter/EmitterExprControlBuiltinBlockBindingQualifiersStep.cpp
+  src/emitter/EmitterExprControlBuiltinBlockStatementStep.cpp
+  src/emitter/EmitterExprControlBuiltinBlockFinalValueStep.cpp
+  src/emitter/EmitterExprControlBoolLiteralStep.cpp
+  src/emitter/EmitterExprControlBuiltinBlockPreludeStep.cpp
+  src/emitter/EmitterExprControlBodyWrapperStep.cpp
+  src/emitter/EmitterExprControlCallPathStep.cpp
+  src/emitter/EmitterExprControlCountRewriteStep.cpp
+  src/emitter/EmitterExprControlFieldAccessStep.cpp
+  src/emitter/EmitterExprControlFloatLiteralStep.cpp
+  src/emitter/EmitterExprControlIfBlockBindingAutoStep.cpp
+  src/emitter/EmitterExprControlIfBlockBindingExplicitStep.cpp
+  src/emitter/EmitterExprControlIfBlockBindingFallbackStep.cpp
+  src/emitter/EmitterExprControlIfBranchBodyBindingStep.cpp
+  src/emitter/EmitterExprControlIfBranchBodyDispatchStep.cpp
+  src/emitter/EmitterExprControlIfBranchBodyHandlersStep.cpp
+  src/emitter/EmitterExprControlIfBranchBodyStep.cpp
+  src/emitter/EmitterExprControlIfBranchBodyReturnStep.cpp
+  src/emitter/EmitterExprControlIfBranchBodyStatementStep.cpp
+  src/emitter/EmitterExprControlIfBranchEmitStep.cpp
+  src/emitter/EmitterExprControlIfBranchValueStep.cpp
+  src/emitter/EmitterExprControlIfBranchPreludeStep.cpp
+  src/emitter/EmitterExprControlIfBranchWrapperStep.cpp
+  src/emitter/EmitterExprControlIfBlockBindingPreludeStep.cpp
+  src/emitter/EmitterExprControlIfBlockBindingQualifiersStep.cpp
+  src/emitter/EmitterExprControlIfBlockStatementStep.cpp
+  src/emitter/EmitterExprControlIfBlockFinalValueStep.cpp
+  src/emitter/EmitterExprControlIfBlockEarlyReturnStep.cpp
+  src/emitter/EmitterExprControlIfTernaryFallbackStep.cpp
+  src/emitter/EmitterExprControlIfTernaryStep.cpp
+  src/emitter/EmitterExprControlIfEnvelopeStep.cpp
+  src/emitter/EmitterExprControlIntegerLiteralStep.cpp
+  src/emitter/EmitterExprControlMethodPathStep.cpp
+  src/emitter/EmitterExprControlStringLiteralStep.cpp
+  src/emitter/EmitterExprControlNameStep.cpp
+  src/emitter/EmitterHelpersBuiltins.cpp
+  src/emitter/EmitterHelpersTypes.cpp
+  src/glsl_emitter/GlslEmitter.cpp
+  src/glsl_emitter/GlslEmitterExpr.cpp
+  src/glsl_emitter/GlslEmitterHelpers.cpp
+  src/glsl_emitter/GlslEmitterStatements.cpp
+  src/IrBackends.cpp
+  src/IrToCppEmitter.cpp
+  src/IrToGlslEmitter.cpp
   src/native_emitter/NativeEmitterHelpers.cpp
   src/native_emitter/NativeEmitterEmit.cpp
+  src/wasm_emitter/WasmEmitter.cpp
+)
+
+set(PRIMESTRUCT_RUNTIME_SOURCES
   src/Vm.cpp
   src/VmDebugAdapter.cpp
   src/VmDebugDap.cpp
-  src/wasm_emitter/WasmEmitter.cpp
 )
 
 add_library(primec_support_lib ${PRIMESTRUCT_SUPPORT_SOURCES})
@@ -202,10 +208,24 @@ target_include_directories(primec_frontend_lib PUBLIC include)
 target_link_libraries(primec_frontend_lib PUBLIC primec_support_lib)
 primestructEnableWarnings(primec_frontend_lib)
 
-add_library(primec_backend_lib ${PRIMESTRUCT_BACKEND_SOURCES})
-target_include_directories(primec_backend_lib PUBLIC include)
-target_link_libraries(primec_backend_lib PUBLIC primec_frontend_lib primec_support_lib)
-primestructEnableWarnings(primec_backend_lib)
+add_library(primec_runtime_lib ${PRIMESTRUCT_RUNTIME_SOURCES})
+target_include_directories(primec_runtime_lib PUBLIC include)
+target_link_libraries(primec_runtime_lib PUBLIC primec_frontend_lib primec_support_lib)
+primestructEnableWarnings(primec_runtime_lib)
+
+add_library(primec_codegen_lib ${PRIMESTRUCT_CODEGEN_SOURCES})
+target_include_directories(primec_codegen_lib PUBLIC include)
+target_link_libraries(primec_codegen_lib PUBLIC primec_runtime_lib primec_frontend_lib primec_support_lib)
+primestructEnableWarnings(primec_codegen_lib)
+
+add_library(primec_ir_lib ${PRIMESTRUCT_IR_SOURCES})
+target_include_directories(primec_ir_lib PUBLIC include)
+target_link_libraries(primec_ir_lib PUBLIC primec_frontend_lib primec_support_lib)
+primestructEnableWarnings(primec_ir_lib)
+
+add_library(primec_backend_lib INTERFACE)
+target_include_directories(primec_backend_lib INTERFACE include)
+target_link_libraries(primec_backend_lib INTERFACE primec_ir_lib primec_codegen_lib primec_runtime_lib)
 
 add_library(primec_lib INTERFACE)
 target_include_directories(primec_lib INTERFACE include)

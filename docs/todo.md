@@ -208,7 +208,9 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Move duplicated compile-pipeline and IR-preparation error handling out of `main.cpp` and `primevm_main.cpp` into a shared driver layer. Progress: shared CLI driver helpers now own transform-list output plus compile-pipeline / IR-preparation diagnostic mapping and emission, and both entrypoints route those failures through `primec::CliDriver` instead of duplicating local switch trees.
 - ◐ Split `primec_lib` into smaller subsystem libraries once the semantics and lowering interfaces are explicit. Progress: the first build-graph slice now separates shared utilities, frontend passes, and backend/runtime code into explicit subsystem targets while keeping `primec_lib` as a compatibility umbrella for existing links.
 - ✓ Introduce `primec_support_lib`, `primec_frontend_lib`, and `primec_backend_lib`, keeping `primec_lib` as the compatibility umbrella target for executables and tests.
-- ○ Split `primec_backend_lib` further into narrower IR/emitter/runtime subsystem libraries once the remaining transitive dependencies are reduced.
+- ◐ Split `primec_backend_lib` further into narrower IR/emitter/runtime subsystem libraries once the remaining transitive dependencies are reduced. Progress: the first backend-focused split now separates IR/core pipeline code, codegen/backends, and VM runtime/debug code into explicit subsystem targets while keeping `primec_backend_lib` as the backend compatibility umbrella.
+- ✓ Introduce `primec_ir_lib`, `primec_codegen_lib`, and `primec_runtime_lib`, keeping `primec_backend_lib` as the compatibility umbrella target for backend-facing links.
+- ○ Reduce the remaining transitive coupling between `primec_ir_lib` and `primec_codegen_lib` so backend registry/pipeline glue depends on narrower interfaces instead of broad codegen targets.
 - ○ Add CI checks for include-layer violations and direct `tests -> src/` internal header dependencies.
 - ○ Define a stable internal testing API so unit tests stop including `src/` headers directly.
 - ○ Refactor `src/semantics/SemanticsValidatorExpr.cpp` (`9060` lines) below the `700`-line target.
