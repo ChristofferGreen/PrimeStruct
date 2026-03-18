@@ -191,6 +191,16 @@ private:
                                  bool &resolvedMethod,
                                  const std::vector<Expr> *enclosingStatements,
                                  size_t statementIndex);
+  std::string normalizeCollectionMethodName(const std::string &methodName) const;
+  std::string inferPointerLikeCallReturnType(
+      const Expr &receiverExpr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals) const;
+  bool resolvePointerLikeMethodTarget(const std::vector<ParameterInfo> &params,
+                                      const std::unordered_map<std::string, BindingInfo> &locals,
+                                      const Expr &receiverExpr,
+                                      const std::string &methodName,
+                                      std::string &resolvedOut);
   ReturnKind inferControlFlowExprReturnKind(const Expr &expr,
                                             const std::vector<ParameterInfo> &params,
                                             const std::unordered_map<std::string, BindingInfo> &locals,
