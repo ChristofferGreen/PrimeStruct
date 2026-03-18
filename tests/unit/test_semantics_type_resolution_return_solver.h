@@ -390,6 +390,30 @@ main() {
   CHECK(legacyError.empty());
 }
 
+TEST_CASE("graph type resolver answers map receiver queries through shared type-text helper") {
+  const std::string source = R"(
+[return<auto> effects(heap_alloc)]
+selectValues() {
+  if(true,
+    then(){ return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) },
+    else(){ return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
+}
+
+[return<Result<int, ContainerError>> effects(heap_alloc)]
+main() {
+  [i32] total{plus(selectValues().count(), try(selectValues().tryAt("left"raw_utf8)))}
+  return(Result.ok(total))
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
 TEST_CASE("default semantics path uses graph resolver while legacy remains available for rollback") {
   const std::string source = R"(
 [return<auto>]

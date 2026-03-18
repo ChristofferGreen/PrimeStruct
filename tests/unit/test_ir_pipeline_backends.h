@@ -399,19 +399,31 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("bool graphTypeResolverEnabled_ = false;") != std::string::npos);
   CHECK(validatorHeader.find("bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);") !=
         std::string::npos);
+  CHECK(validatorHeader.find("bool inferQueryExprTypeText(const Expr &expr,") != std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(currentValidationContext_.definitionPath, bindingExpr, bindingOut)") !=
         std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)") !=
         std::string::npos);
   CHECK(validatorCollections.find("ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));") !=
         std::string::npos);
+  CHECK(validatorCollections.find("bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("if (inferQueryExprTypeText(target, params, locals, targetTypeText))") !=
+        std::string::npos);
   CHECK(validatorBuild.find("inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const") !=
         std::string::npos);
-  CHECK(validatorCore.find("if (!inferDefinitionReturnBinding(*defIt->second, inferredReturn))") !=
+  CHECK(validatorCore.find("return inferQueryExprTypeText(receiverExpr, params, locals, typeTextOut);") !=
+        std::string::npos);
+  CHECK(validatorCore.find("auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {") ==
         std::string::npos);
   CHECK(validatorCore.find("inferExprTypeText(stmt.args.front(), defParams, defLocals, inferredLocalType)") ==
         std::string::npos);
-  CHECK(validatorExpr.find("return SemanticsValidator::inferDefinitionReturnBinding(def, bindingOut);") !=
+  CHECK(validatorExpr.find("auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto resolveCallCollectionTemplateArgs =") == std::string::npos);
+  CHECK(validatorExpr.find("resolveCallCollectionTypePath(target, params, locals, collectionTypePath)") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("resolveCallCollectionTemplateArgs(target, \"map\", params, locals, args)") !=
         std::string::npos);
   CHECK(validatorInfer.find("buildTypeResolutionGraph(program_)") != std::string::npos);
   CHECK(validatorInfer.find("collectGraphLocalAutoBindings(graph);") != std::string::npos);
@@ -460,6 +472,7 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("ambiguous_omitted_field_envelope") != std::string::npos);
   CHECK(parityHeader.find("query_collection_return_binding") != std::string::npos);
   CHECK(parityHeader.find("query_result_return_binding") != std::string::npos);
+  CHECK(parityHeader.find("query_map_receiver_type_text") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally corrects grounded mutual recursion") !=

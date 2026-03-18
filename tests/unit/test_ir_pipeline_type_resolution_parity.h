@@ -289,6 +289,23 @@ main() {
 }
 )",
       },
+      {
+          "query_map_receiver_type_text",
+          R"(
+[return<auto> effects(heap_alloc)]
+selectValues() {
+  if(true,
+    then(){ return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) },
+    else(){ return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
+}
+
+[return<Result<int, ContainerError>> effects(heap_alloc)]
+main() {
+  [i32] total{plus(selectValues().count(), try(selectValues().tryAt("left"raw_utf8)))}
+  return(Result.ok(total))
+}
+)",
+      },
   };
 
   for (const ParityCase &testCase : cases) {
