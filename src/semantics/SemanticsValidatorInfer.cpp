@@ -1868,105 +1868,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       resolvedOut = resolvedType + "/" + normalizedMethodName;
       return true;
     };
-    auto resolveBuiltinCollectionMethodReturnKind = [&](const std::string &resolvedPath,
-                                                        const Expr &receiverExpr,
-                                                        ReturnKind &kindOut) -> bool {
-      if (resolvedPath == "/array/count" || resolvedPath == "/vector/count" || resolvedPath == "/string/count" ||
-          resolvedPath == "/map/count" || resolvedPath == "/std/collections/map/count" ||
-          resolvedPath == "/vector/capacity") {
-        kindOut = ReturnKind::Int;
-        return true;
-      }
-      if (resolvedPath == "/map/contains" || resolvedPath == "/std/collections/map/contains") {
-        kindOut = ReturnKind::Bool;
-        return true;
-      }
-      if (resolvedPath == "/string/at" || resolvedPath == "/string/at_unsafe") {
-        kindOut = ReturnKind::Int;
-        return true;
-      }
-      if (resolvedPath == "/array/at" || resolvedPath == "/array/at_unsafe") {
-        std::string elemType;
-        if (resolveArgsPackAccessTarget(receiverExpr, elemType) || resolveArrayTarget(receiverExpr, elemType)) {
-          ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
-          if (kind != ReturnKind::Unknown) {
-            kindOut = kind;
-            return true;
-          }
-        }
-        return false;
-      }
-      if (resolvedPath == "/vector/at" || resolvedPath == "/vector/at_unsafe") {
-        std::string elemType;
-        if (resolveVectorTarget(receiverExpr, elemType)) {
-          ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
-          if (kind != ReturnKind::Unknown) {
-            kindOut = kind;
-            return true;
-          }
-        }
-        if (resolveStringTarget(receiverExpr)) {
-          kindOut = ReturnKind::Int;
-          return true;
-        }
-        return false;
-      }
-      if (resolvedPath == "/map/at" || resolvedPath == "/map/at_unsafe" ||
-          resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe") {
-        std::string keyType;
-        std::string valueType;
-        if (resolveMapTarget(receiverExpr, keyType, valueType)) {
-          ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
-          if (kind != ReturnKind::Unknown) {
-            kindOut = kind;
-            return true;
-          }
-        }
-        return false;
-      }
-      return false;
-    };
-    auto resolveBuiltinCollectionAccessCallReturnKind = [&](const Expr &callExpr, ReturnKind &kindOut) -> bool {
-      kindOut = ReturnKind::Unknown;
-      if (callExpr.isMethodCall || callExpr.args.size() != 2) {
-        return false;
-      }
-      std::string builtinName;
-      if (!getBuiltinArrayAccessName(callExpr, builtinName)) {
-        return false;
-      }
-      const std::string resolvedPath = resolveCalleePath(callExpr);
-      std::string elemType;
-      if (resolveStringTarget(callExpr.args.front())) {
-        kindOut = ReturnKind::Int;
-        return true;
-      }
-      std::string keyType;
-      std::string valueType;
-      if (resolveMapTarget(callExpr.args.front(), keyType, valueType)) {
-        ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
-        if (kind != ReturnKind::Unknown) {
-          kindOut = kind;
-          return true;
-        }
-      }
-      if (resolveVectorTarget(callExpr.args.front(), elemType)) {
-        ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
-        if (kind != ReturnKind::Unknown) {
-          kindOut = kind;
-          return true;
-        }
-      }
-      if (resolveArgsPackAccessTarget(callExpr.args.front(), elemType) ||
-          resolveArrayTarget(callExpr.args.front(), elemType)) {
-        ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
-        if (kind != ReturnKind::Unknown) {
-          kindOut = kind;
-          return true;
-        }
-      }
-      return false;
-    };
+    const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers{
+        resolveArgsPackAccessTarget, resolveArrayTarget, resolveVectorTarget, resolveStringTarget, resolveMapTarget};
     auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
       if (isSimpleCallName(candidate, helper)) {
         return true;
@@ -2633,7 +2536,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           removedCollectionMethodCompatibilityPath == "/vector/at_unsafe") {
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionMethodReturnKind(
-                removedCollectionMethodCompatibilityPath, expr.args.front(), builtinMethodKind)) {
+                removedCollectionMethodCompatibilityPath,
+                expr.args.front(),
+                builtinCollectionDispatchResolvers,
+                builtinMethodKind)) {
           return builtinMethodKind;
         }
       }
@@ -2770,7 +2676,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             (methodResolved == "/std/collections/map/at_unsafe" &&
              hasImportedDefinitionPath("/std/collections/map/at_unsafe"))) {
           ReturnKind builtinMethodKind = ReturnKind::Unknown;
-          if (resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
+          if (resolveBuiltinCollectionMethodReturnKind(
+                  methodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
             return builtinMethodKind;
           }
         }
@@ -2798,7 +2705,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
-            resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
+            resolveBuiltinCollectionMethodReturnKind(
+                methodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
           return builtinMethodKind;
         }
         if (defMap_.find(methodResolved) == defMap_.end() && !hasImportedDefinitionPath(methodResolved)) {
@@ -3135,7 +3043,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return true;
         }
       }
-      return resolveBuiltinCollectionMethodReturnKind(methodResolved, callExpr.args.front(), kindOut);
+      return resolveBuiltinCollectionMethodReturnKind(
+          methodResolved, callExpr.args.front(), builtinCollectionDispatchResolvers, kindOut);
     };
     auto defIt = hasResolvedPath ? defMap_.find(resolved) : defMap_.end();
     const bool hasResolvedDefinition = defIt != defMap_.end();
@@ -3246,7 +3155,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (!inferDefinitionReturnKind(*defIt->second)) {
         ReturnKind builtinAccessKind = ReturnKind::Unknown;
-        if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinAccessKind)) {
+        if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)) {
           return builtinAccessKind;
         }
         ReturnKind builtinCollectionKind = ReturnKind::Unknown;
@@ -3260,7 +3169,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return kindIt->second;
       }
       ReturnKind builtinAccessKind = ReturnKind::Unknown;
-      if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinAccessKind)) {
+      if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)) {
         return builtinAccessKind;
       }
       ReturnKind builtinCollectionKind = ReturnKind::Unknown;
@@ -3302,7 +3211,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
-            resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
+            resolveBuiltinCollectionMethodReturnKind(
+                methodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
           return builtinMethodKind;
         }
         auto methodIt = defMap_.find(methodResolved);
@@ -3420,7 +3330,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
-            resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
+            resolveBuiltinCollectionMethodReturnKind(
+                methodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
           return builtinMethodKind;
         }
         auto methodIt = defMap_.find(methodResolved);
@@ -3556,7 +3467,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (defMap_.find(methodResolved) == defMap_.end() &&
-            resolveBuiltinCollectionMethodReturnKind(methodResolved, receiverCandidate, builtinMethodKind)) {
+            resolveBuiltinCollectionMethodReturnKind(
+                methodResolved, receiverCandidate, builtinCollectionDispatchResolvers, builtinMethodKind)) {
           if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
             continue;
           }
@@ -3581,7 +3493,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (defIt != defMap_.end() && shouldDeferResolvedNamespacedCollectionHelperReturn) {
       if (!inferDefinitionReturnKind(*defIt->second)) {
         ReturnKind builtinAccessKind = ReturnKind::Unknown;
-        if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinAccessKind)) {
+        if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)) {
           return builtinAccessKind;
         }
         ReturnKind builtinCollectionKind = ReturnKind::Unknown;
@@ -3591,7 +3503,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Unknown;
       }
       ReturnKind builtinAccessKind = ReturnKind::Unknown;
-      if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinAccessKind)) {
+      if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)) {
         return builtinAccessKind;
       }
       ReturnKind builtinCollectionKind = ReturnKind::Unknown;
@@ -3695,7 +3607,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             }
           }
           ReturnKind builtinMethodKind = ReturnKind::Unknown;
-          if (resolveBuiltinCollectionMethodReturnKind(methodResolved, expr.args.front(), builtinMethodKind)) {
+          if (resolveBuiltinCollectionMethodReturnKind(
+                  methodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
             return builtinMethodKind;
           }
         }

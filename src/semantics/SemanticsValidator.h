@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -160,6 +161,20 @@ private:
                                          const std::vector<ParameterInfo> &params,
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          std::vector<std::string> &argsOut);
+  struct BuiltinCollectionDispatchResolvers {
+    std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
+    std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
+    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &)> resolveStringTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
+  };
+  bool resolveBuiltinCollectionMethodReturnKind(const std::string &resolvedPath,
+                                                const Expr &receiverExpr,
+                                                const BuiltinCollectionDispatchResolvers &resolvers,
+                                                ReturnKind &kindOut) const;
+  bool resolveBuiltinCollectionAccessCallReturnKind(const Expr &callExpr,
+                                                    const BuiltinCollectionDispatchResolvers &resolvers,
+                                                    ReturnKind &kindOut) const;
   bool validateStatement(const std::vector<ParameterInfo> &params,
                          std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &stmt,

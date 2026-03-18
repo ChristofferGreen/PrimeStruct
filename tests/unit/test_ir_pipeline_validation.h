@@ -9300,22 +9300,37 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
                                                              : std::filesystem::path("..");
 
   const std::filesystem::path semanticsInferPath = repoRoot / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
+  const std::filesystem::path semanticsInferCollectionDispatchPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionDispatch.cpp";
   const std::filesystem::path semanticsInferCollectionsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
   const std::filesystem::path semanticsInferControlFlowPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferControlFlow.cpp";
   REQUIRE(std::filesystem::exists(semanticsInferPath));
+  REQUIRE(std::filesystem::exists(semanticsInferCollectionDispatchPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
   const std::string semanticsInferSource = readText(semanticsInferPath);
+  const std::string semanticsInferCollectionDispatchSource = readText(semanticsInferCollectionDispatchPath);
   const std::string semanticsInferCollectionsSource = readText(semanticsInferCollectionsPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   CHECK(semanticsInferSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
   CHECK(semanticsInferSource.find("inferControlFlowExprReturnKind(expr, params, locals, handledControlFlow);") !=
         std::string::npos);
+  CHECK(semanticsInferSource.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers") !=
+        std::string::npos);
   CHECK(semanticsInferSource.find("resolveCallCollectionTypePath(target, params, locals, collectionTypePath)") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args)") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("resolveBuiltinCollectionMethodReturnKind(") != std::string::npos);
+  CHECK(semanticsInferSource.find("resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionMethodReturnKind = [&]") == std::string::npos);
+  CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionAccessCallReturnKind = [&]") == std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find("bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find("bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::normalizeCollectionTypePath") !=
         std::string::npos);
