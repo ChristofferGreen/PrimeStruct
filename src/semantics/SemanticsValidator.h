@@ -391,6 +391,10 @@ private:
                                                 bool &hasMethodReceiverIndex,
                                                 size_t &methodReceiverIndex);
   bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);
+  bool inferQueryExprTypeText(const Expr &expr,
+                              const std::vector<ParameterInfo> &params,
+                              const std::unordered_map<std::string, BindingInfo> &locals,
+                              std::string &typeTextOut);
   bool resolveCallCollectionTypePath(const Expr &target,
                                      const std::vector<ParameterInfo> &params,
                                      const std::unordered_map<std::string, BindingInfo> &locals,
@@ -533,7 +537,7 @@ private:
   bool resolveResultTypeForExpr(const Expr &expr,
                                 const std::vector<ParameterInfo> &params,
                                 const std::unordered_map<std::string, BindingInfo> &locals,
-                                ResultTypeInfo &out) const;
+                                ResultTypeInfo &out);
   bool parseOnErrorTransform(const std::vector<Transform> &transforms,
                              const std::string &namespacePrefix,
                              const std::string &context,

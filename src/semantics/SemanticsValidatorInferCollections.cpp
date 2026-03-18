@@ -1,7 +1,9 @@
 #include "SemanticsValidator.h"
 
+#include <functional>
 #include <optional>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 
 namespace primec::semantics {
@@ -12,6 +14,33 @@ std::string bindingTypeText(const BindingInfo &binding) {
     return binding.typeName;
   }
   return binding.typeName + "<" + binding.typeTemplateArg + ">";
+}
+
+bool isDirectMapConstructorPath(std::string_view resolvedCandidate) {
+  auto matchesDirectMapConstructorPath = [&](std::string_view basePath) {
+    return resolvedCandidate == basePath || resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
+  };
+  return matchesDirectMapConstructorPath("/std/collections/map/map") ||
+         matchesDirectMapConstructorPath("/std/collections/mapNew") ||
+         matchesDirectMapConstructorPath("/std/collections/mapSingle") ||
+         matchesDirectMapConstructorPath("/std/collections/mapDouble") ||
+         matchesDirectMapConstructorPath("/std/collections/mapPair") ||
+         matchesDirectMapConstructorPath("/std/collections/mapTriple") ||
+         matchesDirectMapConstructorPath("/std/collections/mapQuad") ||
+         matchesDirectMapConstructorPath("/std/collections/mapQuint") ||
+         matchesDirectMapConstructorPath("/std/collections/mapSext") ||
+         matchesDirectMapConstructorPath("/std/collections/mapSept") ||
+         matchesDirectMapConstructorPath("/std/collections/mapOct") ||
+         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapNew") ||
+         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSingle") ||
+         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapDouble") ||
+         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapPair") ||
+         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapTriple") ||
+         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapQuad") ||
+         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapQuint") ||
+         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSext") ||
+         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSept") ||
+         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapOct");
 }
 
 } // namespace
@@ -162,6 +191,192 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
   return inferBindingTypeFromInitializer(*valueExpr, defParams, defLocals, bindingOut);
 }
 
+bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
+                                                const std::vector<ParameterInfo> &params,
+                                                const std::unordered_map<std::string, BindingInfo> &locals,
+                                                std::string &typeTextOut) {
+  auto resolveBindingTypeText = [&](const std::string &name, std::string &resolvedTypeTextOut) -> bool {
+    resolvedTypeTextOut.clear();
+    if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+      resolvedTypeTextOut = bindingTypeText(*paramBinding);
+      return !resolvedTypeTextOut.empty();
+    }
+    auto localIt = locals.find(name);
+    if (localIt == locals.end()) {
+      return false;
+    }
+    resolvedTypeTextOut = bindingTypeText(localIt->second);
+    return !resolvedTypeTextOut.empty();
+  };
+  auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+      return false;
+    }
+    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+      return false;
+    }
+    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+      return false;
+    }
+    return allowAnyName || isBuiltinBlockCall(candidate);
+  };
+  auto getEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> const Expr * {
+    if (!isEnvelopeValueExpr(candidate, allowAnyName)) {
+      return nullptr;
+    }
+    const Expr *valueExpr = nullptr;
+    for (const auto &bodyExpr : candidate.bodyArguments) {
+      if (bodyExpr.isBinding) {
+        continue;
+      }
+      valueExpr = &bodyExpr;
+    }
+    return valueExpr;
+  };
+
+  std::unordered_set<std::string> inferredDefinitionTypeStack;
+  std::function<bool(const Expr &, std::string &)> inferExprTypeText;
+  inferExprTypeText = [&](const Expr &candidate, std::string &currentTypeTextOut) -> bool {
+    currentTypeTextOut.clear();
+    if (candidate.kind == Expr::Kind::Name) {
+      return resolveBindingTypeText(candidate.name, currentTypeTextOut);
+    }
+    if (candidate.kind == Expr::Kind::Literal) {
+      currentTypeTextOut = candidate.isUnsigned ? "u64" : (candidate.intWidth == 64 ? "i64" : "i32");
+      return true;
+    }
+    if (candidate.kind == Expr::Kind::BoolLiteral) {
+      currentTypeTextOut = "bool";
+      return true;
+    }
+    if (candidate.kind == Expr::Kind::FloatLiteral) {
+      currentTypeTextOut = candidate.floatWidth == 64 ? "f64" : "f32";
+      return true;
+    }
+    if (candidate.kind == Expr::Kind::StringLiteral) {
+      currentTypeTextOut = "string";
+      return true;
+    }
+    if (isIfCall(candidate) && candidate.args.size() == 3) {
+      const Expr &thenArg = candidate.args[1];
+      const Expr &elseArg = candidate.args[2];
+      const Expr *thenValue = getEnvelopeValueExpr(thenArg, true);
+      const Expr *elseValue = getEnvelopeValueExpr(elseArg, true);
+      std::string thenTypeText;
+      std::string elseTypeText;
+      if (!inferExprTypeText(thenValue ? *thenValue : thenArg, thenTypeText) ||
+          !inferExprTypeText(elseValue ? *elseValue : elseArg, elseTypeText)) {
+        return false;
+      }
+      if (normalizeBindingTypeName(thenTypeText) != normalizeBindingTypeName(elseTypeText)) {
+        return false;
+      }
+      currentTypeTextOut = thenTypeText;
+      return true;
+    }
+    if (const Expr *valueExpr = getEnvelopeValueExpr(candidate, false)) {
+      if (isReturnCall(*valueExpr) && !valueExpr->args.empty()) {
+        return inferExprTypeText(valueExpr->args.front(), currentTypeTextOut);
+      }
+      return inferExprTypeText(*valueExpr, currentTypeTextOut);
+    }
+    if (candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (isSimpleCallName(candidate, "dereference") && candidate.args.size() == 1) {
+      std::string wrappedTypeText;
+      if (!inferExprTypeText(candidate.args.front(), wrappedTypeText)) {
+        return false;
+      }
+      currentTypeTextOut = unwrapReferencePointerTypeText(wrappedTypeText);
+      return !currentTypeTextOut.empty();
+    }
+
+    std::string collection;
+    if (getBuiltinCollectionName(candidate, collection)) {
+      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+          candidate.templateArgs.size() == 1) {
+        currentTypeTextOut = collection + "<" + candidate.templateArgs.front() + ">";
+        return true;
+      }
+      if (collection == "map" && candidate.templateArgs.size() == 2) {
+        currentTypeTextOut = "map<" + candidate.templateArgs[0] + ", " + candidate.templateArgs[1] + ">";
+        return true;
+      }
+    }
+
+    const std::string resolvedCandidate = resolveCalleePath(candidate);
+    if (isDirectMapConstructorPath(resolvedCandidate)) {
+      if (candidate.templateArgs.size() == 2) {
+        currentTypeTextOut = "map<" + candidate.templateArgs[0] + ", " + candidate.templateArgs[1] + ">";
+        return true;
+      }
+      if (candidate.args.empty() || candidate.args.size() % 2 != 0) {
+        return false;
+      }
+      std::string keyTypeText;
+      std::string valueTypeText;
+      for (size_t i = 0; i < candidate.args.size(); i += 2) {
+        std::string currentKeyTypeText;
+        std::string currentValueTypeText;
+        if (!inferExprTypeText(candidate.args[i], currentKeyTypeText) ||
+            !inferExprTypeText(candidate.args[i + 1], currentValueTypeText)) {
+          return false;
+        }
+        if (keyTypeText.empty()) {
+          keyTypeText = currentKeyTypeText;
+        } else if (normalizeBindingTypeName(keyTypeText) != normalizeBindingTypeName(currentKeyTypeText)) {
+          return false;
+        }
+        if (valueTypeText.empty()) {
+          valueTypeText = currentValueTypeText;
+        } else if (normalizeBindingTypeName(valueTypeText) != normalizeBindingTypeName(currentValueTypeText)) {
+          return false;
+        }
+      }
+      if (keyTypeText.empty() || valueTypeText.empty()) {
+        return false;
+      }
+      currentTypeTextOut = "map<" + keyTypeText + ", " + valueTypeText + ">";
+      return true;
+    }
+
+    auto defIt = defMap_.find(resolvedCandidate);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      if (transform.templateArgs.front() == "auto") {
+        break;
+      }
+      currentTypeTextOut = transform.templateArgs.front();
+      return !currentTypeTextOut.empty();
+    }
+    if (!inferredDefinitionTypeStack.insert(resolvedCandidate).second) {
+      return false;
+    }
+    const auto stackIt = inferredDefinitionTypeStack.find(resolvedCandidate);
+    struct ScopeGuard {
+      std::unordered_set<std::string> &stack;
+      std::unordered_set<std::string>::const_iterator it;
+      ~ScopeGuard() {
+        stack.erase(it);
+      }
+    } guard{inferredDefinitionTypeStack, stackIt};
+    BindingInfo inferredReturn;
+    if (!inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+      return false;
+    }
+    currentTypeTextOut = bindingTypeText(inferredReturn);
+    return !currentTypeTextOut.empty();
+  };
+
+  return inferExprTypeText(expr, typeTextOut);
+}
+
 bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
                                                        const std::vector<ParameterInfo> &params,
                                                        const std::unordered_map<std::string, BindingInfo> &locals,
@@ -199,171 +414,21 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
     }
     return {};
   };
-  auto inferTargetTypeText = [&](const Expr &candidate, std::string &typeTextOut) -> bool {
-    typeTextOut.clear();
-    if (candidate.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
-        typeTextOut = bindingTypeText(*paramBinding);
-        return !typeTextOut.empty();
-      }
-      auto it = locals.find(candidate.name);
-      if (it != locals.end()) {
-        typeTextOut = bindingTypeText(it->second);
-        return !typeTextOut.empty();
-      }
-      return false;
-    }
-    if (candidate.kind == Expr::Kind::Literal) {
-      typeTextOut = candidate.isUnsigned ? "u64" : (candidate.intWidth == 64 ? "i64" : "i32");
-      return true;
-    }
-    if (candidate.kind == Expr::Kind::BoolLiteral) {
-      typeTextOut = "bool";
-      return true;
-    }
-    if (candidate.kind == Expr::Kind::FloatLiteral) {
-      typeTextOut = candidate.floatWidth == 64 ? "f64" : "f32";
-      return true;
-    }
-    if (candidate.kind == Expr::Kind::StringLiteral) {
-      typeTextOut = "string";
-      return true;
-    }
-    if (candidate.kind != Expr::Kind::Call) {
-      return false;
-    }
-    const std::string resolvedCandidate = resolveCalleePath(candidate);
-    auto defIt = defMap_.find(resolvedCandidate);
-    if (defIt == defMap_.end() || defIt->second == nullptr) {
-      return false;
-    }
-    for (const auto &transform : defIt->second->transforms) {
-      if (transform.name == "return" && transform.templateArgs.size() == 1) {
-        typeTextOut = transform.templateArgs.front();
-        return true;
-      }
-    }
-    BindingInfo inferredReturn;
-    if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-      typeTextOut = bindingTypeText(inferredReturn);
-      return !typeTextOut.empty();
-    }
-    return false;
-  };
-  auto inferDirectMapConstructorTemplateArgs = [&](const Expr &candidate,
-                                                   std::vector<std::string> &argsOut) -> bool {
-    argsOut.clear();
-    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-      return false;
-    }
-    const std::string resolvedCandidate = resolveCalleePath(candidate);
-    auto matchesDirectMapConstructorPath = [&](std::string_view basePath) {
-      return resolvedCandidate == basePath || resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
-    };
-    const bool isDirectMapConstructor =
-        matchesDirectMapConstructorPath("/std/collections/map/map") ||
-        matchesDirectMapConstructorPath("/std/collections/mapNew") ||
-        matchesDirectMapConstructorPath("/std/collections/mapSingle") ||
-        matchesDirectMapConstructorPath("/std/collections/mapDouble") ||
-        matchesDirectMapConstructorPath("/std/collections/mapPair") ||
-        matchesDirectMapConstructorPath("/std/collections/mapTriple") ||
-        matchesDirectMapConstructorPath("/std/collections/mapQuad") ||
-        matchesDirectMapConstructorPath("/std/collections/mapQuint") ||
-        matchesDirectMapConstructorPath("/std/collections/mapSext") ||
-        matchesDirectMapConstructorPath("/std/collections/mapSept") ||
-        matchesDirectMapConstructorPath("/std/collections/mapOct") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapNew") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSingle") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapDouble") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapPair") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapTriple") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapQuad") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapQuint") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSext") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSept") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapOct");
-    if (!isDirectMapConstructor) {
-      return false;
-    }
-    if (candidate.templateArgs.size() == 2) {
-      argsOut = candidate.templateArgs;
-      return true;
-    }
-    if (candidate.args.empty() || candidate.args.size() % 2 != 0) {
-      return false;
-    }
-    std::string keyType;
-    std::string valueType;
-    for (size_t i = 0; i < candidate.args.size(); i += 2) {
-      std::string currentKeyType;
-      std::string currentValueType;
-      if (!inferTargetTypeText(candidate.args[i], currentKeyType) ||
-          !inferTargetTypeText(candidate.args[i + 1], currentValueType)) {
-        return false;
-      }
-      if (keyType.empty()) {
-        keyType = currentKeyType;
-      } else if (normalizeBindingTypeName(keyType) != normalizeBindingTypeName(currentKeyType)) {
-        return false;
-      }
-      if (valueType.empty()) {
-        valueType = currentValueType;
-      } else if (normalizeBindingTypeName(valueType) != normalizeBindingTypeName(currentValueType)) {
-        return false;
-      }
-    }
-    if (keyType.empty() || valueType.empty()) {
-      return false;
-    }
-    argsOut = {keyType, valueType};
-    return true;
-  };
 
   if (target.kind != Expr::Kind::Call) {
     return false;
   }
-  std::vector<std::string> directMapArgs;
-  if (inferDirectMapConstructorTemplateArgs(target, directMapArgs)) {
-    typePathOut = "/map";
-    return true;
+
+  std::string targetTypeText;
+  if (inferQueryExprTypeText(target, params, locals, targetTypeText)) {
+    const std::string inferred = inferCollectionTypePathFromType(targetTypeText, inferCollectionTypePathFromType);
+    if (!inferred.empty()) {
+      typePathOut = inferred;
+      return true;
+    }
   }
+
   const std::string resolvedTarget = resolveCalleePath(target);
-  std::string collection;
-  if (defMap_.find(resolvedTarget) == defMap_.end() && getBuiltinCollectionName(target, collection)) {
-    if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
-        target.templateArgs.size() == 1) {
-      typePathOut = "/" + collection;
-      return true;
-    }
-    if (collection == "map" && target.templateArgs.size() == 2) {
-      typePathOut = "/map";
-      return true;
-    }
-  }
-  auto defIt = defMap_.find(resolvedTarget);
-  if (defIt != defMap_.end() && defIt->second != nullptr) {
-    for (const auto &transform : defIt->second->transforms) {
-      if (transform.name != "return" || transform.templateArgs.size() != 1) {
-        continue;
-      }
-      const std::string inferred =
-          inferCollectionTypePathFromType(transform.templateArgs.front(), inferCollectionTypePathFromType);
-      if (!inferred.empty()) {
-        typePathOut = inferred;
-        return true;
-      }
-      break;
-    }
-    BindingInfo inferredReturn;
-    if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-      const std::string inferred =
-          inferCollectionTypePathFromType(bindingTypeText(inferredReturn), inferCollectionTypePathFromType);
-      if (!inferred.empty()) {
-        typePathOut = inferred;
-        return true;
-      }
-    }
-  }
   auto structIt = returnStructs_.find(resolvedTarget);
   if (structIt != returnStructs_.end()) {
     std::string normalized = normalizeCollectionTypePath(structIt->second);
@@ -410,152 +475,14 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     }
     return false;
   };
-  auto inferTargetTypeText = [&](const Expr &candidate, std::string &typeTextOut) -> bool {
-    typeTextOut.clear();
-    if (candidate.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
-        typeTextOut = bindingTypeText(*paramBinding);
-        return !typeTextOut.empty();
-      }
-      auto it = locals.find(candidate.name);
-      if (it != locals.end()) {
-        typeTextOut = bindingTypeText(it->second);
-        return !typeTextOut.empty();
-      }
-      return false;
-    }
-    if (candidate.kind == Expr::Kind::Literal) {
-      typeTextOut = candidate.isUnsigned ? "u64" : (candidate.intWidth == 64 ? "i64" : "i32");
-      return true;
-    }
-    if (candidate.kind == Expr::Kind::BoolLiteral) {
-      typeTextOut = "bool";
-      return true;
-    }
-    if (candidate.kind == Expr::Kind::FloatLiteral) {
-      typeTextOut = candidate.floatWidth == 64 ? "f64" : "f32";
-      return true;
-    }
-    if (candidate.kind == Expr::Kind::StringLiteral) {
-      typeTextOut = "string";
-      return true;
-    }
-    if (candidate.kind != Expr::Kind::Call) {
-      return false;
-    }
-    const std::string resolvedCandidate = resolveCalleePath(candidate);
-    auto defIt = defMap_.find(resolvedCandidate);
-    if (defIt == defMap_.end() || defIt->second == nullptr) {
-      return false;
-    }
-    for (const auto &transform : defIt->second->transforms) {
-      if (transform.name == "return" && transform.templateArgs.size() == 1) {
-        typeTextOut = transform.templateArgs.front();
-        return true;
-      }
-    }
-    BindingInfo inferredReturn;
-    if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-      typeTextOut = bindingTypeText(inferredReturn);
-      return !typeTextOut.empty();
-    }
-    return false;
-  };
-  auto inferDirectMapConstructorTemplateArgs = [&](const Expr &candidate) -> bool {
-    if (expectedBase != "map" || candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-      return false;
-    }
-    const std::string resolvedCandidate = resolveCalleePath(candidate);
-    auto matchesDirectMapConstructorPath = [&](std::string_view basePath) {
-      return resolvedCandidate == basePath || resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
-    };
-    const bool isDirectMapConstructor =
-        matchesDirectMapConstructorPath("/std/collections/map/map") ||
-        matchesDirectMapConstructorPath("/std/collections/mapNew") ||
-        matchesDirectMapConstructorPath("/std/collections/mapSingle") ||
-        matchesDirectMapConstructorPath("/std/collections/mapDouble") ||
-        matchesDirectMapConstructorPath("/std/collections/mapPair") ||
-        matchesDirectMapConstructorPath("/std/collections/mapTriple") ||
-        matchesDirectMapConstructorPath("/std/collections/mapQuad") ||
-        matchesDirectMapConstructorPath("/std/collections/mapQuint") ||
-        matchesDirectMapConstructorPath("/std/collections/mapSext") ||
-        matchesDirectMapConstructorPath("/std/collections/mapSept") ||
-        matchesDirectMapConstructorPath("/std/collections/mapOct") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapNew") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSingle") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapDouble") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapPair") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapTriple") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapQuad") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapQuint") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSext") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSept") ||
-        matchesDirectMapConstructorPath("/std/collections/experimental_map/mapOct");
-    if (!isDirectMapConstructor) {
-      return false;
-    }
-    if (candidate.templateArgs.size() == 2) {
-      argsOut = candidate.templateArgs;
-      return true;
-    }
-    if (candidate.args.empty() || candidate.args.size() % 2 != 0) {
-      return false;
-    }
-    std::string keyType;
-    std::string valueType;
-    for (size_t i = 0; i < candidate.args.size(); i += 2) {
-      std::string currentKeyType;
-      std::string currentValueType;
-      if (!inferTargetTypeText(candidate.args[i], currentKeyType) ||
-          !inferTargetTypeText(candidate.args[i + 1], currentValueType)) {
-        return false;
-      }
-      if (keyType.empty()) {
-        keyType = currentKeyType;
-      } else if (normalizeBindingTypeName(keyType) != normalizeBindingTypeName(currentKeyType)) {
-        return false;
-      }
-      if (valueType.empty()) {
-        valueType = currentValueType;
-      } else if (normalizeBindingTypeName(valueType) != normalizeBindingTypeName(currentValueType)) {
-        return false;
-      }
-    }
-    if (keyType.empty() || valueType.empty()) {
-      return false;
-    }
-    argsOut = {keyType, valueType};
-    return true;
-  };
 
   if (target.kind != Expr::Kind::Call) {
     return false;
   }
-  if (inferDirectMapConstructorTemplateArgs(target)) {
-    return true;
-  }
-  const std::string resolvedTarget = resolveCalleePath(target);
-  std::string collection;
-  if (defMap_.find(resolvedTarget) == defMap_.end() && getBuiltinCollectionName(target, collection) &&
-      collection == expectedBase) {
-    argsOut = target.templateArgs;
-    return true;
-  }
-  auto defIt = defMap_.find(resolvedTarget);
-  if (defIt == defMap_.end() || defIt->second == nullptr) {
-    return false;
-  }
-  for (const auto &transform : defIt->second->transforms) {
-    if (transform.name != "return" || transform.templateArgs.size() != 1) {
-      continue;
-    }
-    return extractCollectionArgsFromType(transform.templateArgs.front(), extractCollectionArgsFromType);
-  }
-  BindingInfo inferredReturn;
-  if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-    return extractCollectionArgsFromType(bindingTypeText(inferredReturn), extractCollectionArgsFromType);
-  }
-  return false;
+
+  std::string targetTypeText;
+  return inferQueryExprTypeText(target, params, locals, targetTypeText) &&
+         extractCollectionArgsFromType(targetTypeText, extractCollectionArgsFromType);
 }
 
 } // namespace primec::semantics
