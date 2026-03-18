@@ -219,11 +219,11 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Move text-filter doctest suites onto a dedicated `PrimeStruct_text_filter_tests` target linked to `primec_frontend_lib` instead of `primec_lib`.
 - ✓ Move parser/template doctest suites onto a dedicated `PrimeStruct_parser_tests` target linked to `primec_frontend_lib` instead of `primec_lib`.
 - ✓ Add CI checks for include-layer violations and direct `tests -> src/` internal header dependencies.
-- ◐ Define a stable internal testing API so unit tests stop including `src/` headers directly. Progress: parser, text-filter, and semantics helper tests now use headers under `include/primec/testing/`, and `test_compile_run.cpp` no longer depends on a private emitter helper header.
+- ◐ Define a stable internal testing API so unit tests stop including `src/` headers directly. Progress: parser, text-filter, semantics, and emitter helper tests now use headers under `include/primec/testing/`, and `test_compile_run.cpp` no longer depends on a private emitter helper header.
 - ✓ Expose parser and text-filter helper declarations via `include/primec/testing/` headers and switch the related unit tests away from direct `src/` includes.
 - ✓ Remove the unused private `src/emitter/EmitterHelpers.h` dependency from `test_compile_run.cpp`.
 - ✓ Expose semantics validation helper declarations via `include/primec/testing/SemanticsValidationHelpers.h` and switch `test_ir_pipeline.cpp` away from direct `src/semantics` includes.
-- ○ Add stable testing facades for `test_ir_pipeline.cpp` emitter helper access so it can drop its remaining `src/emitter` header dependencies.
+- ✓ Add stable testing facades for `test_ir_pipeline.cpp` emitter helper access so it can drop its remaining `src/emitter` header dependencies.
 - ○ Add stable testing facades for `test_ir_pipeline.cpp` IR-lowerer helper access so it can drop its remaining `src/ir_lowerer` header dependencies.
 - ○ Refactor `src/semantics/SemanticsValidatorExpr.cpp` (`9060` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorInfer.cpp` (`6261` lines) below the `700`-line target.
