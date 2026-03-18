@@ -10041,6 +10041,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererCallHelpers.cpp";
   const std::filesystem::path accessTargetResolutionPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererAccessTargetResolution.cpp";
+  const std::filesystem::path accessLoadHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererAccessLoadHelpers.cpp";
   const std::filesystem::path indexedAccessEmitPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererIndexedAccessEmit.cpp";
   const std::filesystem::path callResolutionPath =
@@ -10051,12 +10053,14 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
   REQUIRE(std::filesystem::exists(callHelpersPath));
   REQUIRE(std::filesystem::exists(accessTargetResolutionPath));
+  REQUIRE(std::filesystem::exists(accessLoadHelpersPath));
   REQUIRE(std::filesystem::exists(indexedAccessEmitPath));
   REQUIRE(std::filesystem::exists(callResolutionPath));
   REQUIRE(std::filesystem::exists(inlineDispatchPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
   const std::string callHelpersSource = readText(callHelpersPath);
   const std::string accessTargetResolutionSource = readText(accessTargetResolutionPath);
+  const std::string accessLoadHelpersSource = readText(accessLoadHelpersPath);
   const std::string indexedAccessEmitSource = readText(indexedAccessEmitPath);
   const std::string callResolutionSource = readText(callResolutionPath);
   const std::string inlineDispatchSource = readText(inlineDispatchPath);
@@ -10125,7 +10129,35 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(") !=
         std::string::npos);
-  CHECK(callHelpersSource.find("bool emitMapLookupAccess(") !=
+  CHECK(callHelpersSource.find("IrOpcode mapKeyCompareOpcode(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("MapLookupStringKeyResult tryResolveMapLookupStringKey(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool emitMapLookupNonStringKeyLocal(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool emitMapLookupKeyLocal(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool emitMapLookupTargetPointerLocal(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("MapLookupLoopLocals emitMapLookupLoopSearchScaffold(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("void emitMapLookupAccessEpilogue(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("void emitMapLookupContainsResult(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool emitMapLookupAccess(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool emitMapLookupContains(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool emitMapLookupTryAt(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("void emitStringAccessLoad(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("void emitArrayVectorAccessLoad(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool validateMapLookupKeyKind(") ==
         std::string::npos);
 
   CHECK(accessTargetResolutionSource.find("MapAccessTargetInfo resolveMapAccessTargetInfo(") !=
@@ -10143,6 +10175,39 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(accessTargetResolutionSource.find("MapAccessLookupEmitResult tryEmitMapAccessLookup(") ==
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("bool emitBuiltinArrayAccess(") ==
+        std::string::npos);
+
+  CHECK(accessLoadHelpersSource.find("IrOpcode mapKeyCompareOpcode(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("MapLookupStringKeyResult tryResolveMapLookupStringKey(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("bool emitMapLookupNonStringKeyLocal(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("bool emitMapLookupKeyLocal(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("bool emitMapLookupTargetPointerLocal(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("MapLookupLoopLocals emitMapLookupLoopSearchScaffold(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("void emitMapLookupAccessEpilogue(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("void emitMapLookupContainsResult(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("bool emitMapLookupAccess(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("bool emitMapLookupContains(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("bool emitMapLookupTryAt(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("void emitStringAccessLoad(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("void emitArrayVectorAccessLoad(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("bool validateMapLookupKeyKind(") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("CountMethodFallbackResult tryEmitNonMethodCountFallback(") ==
         std::string::npos);
 
   CHECK(indexedAccessEmitSource.find("MapAccessLookupEmitResult tryEmitMapAccessLookup(") !=
