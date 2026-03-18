@@ -24,12 +24,47 @@ function(primestructEnableWarnings targetName)
   endif()
 endfunction()
 
-add_library(primec_lib
-  src/AstPrinter.cpp
-  src/CliDriver.cpp
-  src/CompilePipeline.cpp
+set(PRIMESTRUCT_SUPPORT_SOURCES
   src/Diagnostics.cpp
   src/EmitKind.cpp
+  src/OptionsParser.cpp
+  src/ProcessRunner.cpp
+  src/TransformRules.cpp
+  src/TransformRegistry.cpp
+)
+
+set(PRIMESTRUCT_FRONTEND_SOURCES
+  src/AstPrinter.cpp
+  src/ImportResolver.cpp
+  src/Lexer.cpp
+  src/parser/ParserCore.cpp
+  src/parser/ParserExpr.cpp
+  src/parser/ParserHelpers.cpp
+  src/parser/ParserLists.cpp
+  src/semantics/SemanticsHelpersCore.cpp
+  src/semantics/SemanticsHelpersValidation.cpp
+  src/semantics/TemplateMonomorph.cpp
+  src/semantics/SemanticsValidate.cpp
+  src/semantics/SemanticsValidator.cpp
+  src/semantics/SemanticsValidatorBuild.cpp
+  src/semantics/SemanticsValidatorExprCaptureSplitStep.cpp
+  src/semantics/SemanticsValidatorExpr.cpp
+  src/semantics/SemanticsValidatorInfer.cpp
+  src/semantics/SemanticsValidatorPasses.cpp
+  src/semantics/SemanticsValidatorStatementLoopCountStep.cpp
+  src/semantics/SemanticsValidatorStatementReturns.cpp
+  src/semantics/SemanticsValidatorStatement.cpp
+  src/semantics/SemanticsValidatorTraits.cpp
+  src/text_filter/TextFilterHelpers.cpp
+  src/text_filter/TextFilterPipelineEnvelope.cpp
+  src/text_filter/TextFilterPipelinePass.cpp
+  src/text_filter/TextFilterPipelineScan.cpp
+  src/text_filter/TextFilterPipeline.cpp
+)
+
+set(PRIMESTRUCT_BACKEND_SOURCES
+  src/CliDriver.cpp
+  src/CompilePipeline.cpp
   src/ExternalTooling.cpp
   src/emitter/EmitterEmit.cpp
   src/emitter/EmitterEmitSetupLifecycleHelperStep.cpp
@@ -81,33 +116,24 @@ add_library(primec_lib
   src/glsl_emitter/GlslEmitterExpr.cpp
   src/glsl_emitter/GlslEmitterHelpers.cpp
   src/glsl_emitter/GlslEmitterStatements.cpp
-  src/ImportResolver.cpp
   src/IrBackends.cpp
   src/IrInliner.cpp
   src/IrPreparation.cpp
+  src/IrPrinter.cpp
+  src/IrSerializer.cpp
   src/IrToCppEmitter.cpp
   src/IrToGlslEmitter.cpp
+  src/IrValidation.cpp
+  src/IrVirtualRegisterAllocator.cpp
+  src/IrVirtualRegisterLiveness.cpp
+  src/IrVirtualRegisterLowering.cpp
+  src/IrVirtualRegisterScheduler.cpp
+  src/IrVirtualRegisterSpillInsertion.cpp
+  src/IrVirtualRegisterVerifier.cpp
   src/ir_lowerer/IrLowererCallHelpers.cpp
   src/ir_lowerer/IrLowererBindingTransformHelpers.cpp
   src/ir_lowerer/IrLowererBindingTypeHelpers.cpp
   src/ir_lowerer/IrLowererCountAccessHelpers.cpp
-  src/ir_lowerer/IrLowererLowerEntrySetup.cpp
-  src/ir_lowerer/IrLowererLowerInlineCallActiveContextStep.cpp
-  src/ir_lowerer/IrLowererLowerInlineCallCleanupStep.cpp
-  src/ir_lowerer/IrLowererLowerInlineCallContextSetupStep.cpp
-  src/ir_lowerer/IrLowererLowerInlineCallGpuLocalsStep.cpp
-  src/ir_lowerer/IrLowererLowerInlineCallReturnValueStep.cpp
-  src/ir_lowerer/IrLowererLowerImportsStructsSetup.cpp
-  src/ir_lowerer/IrLowererLowerInlineCallStatementStep.cpp
-  src/ir_lowerer/IrLowererLowerLocalsSetup.cpp
-  src/ir_lowerer/IrLowererLowerInferenceSetup.cpp
-  src/ir_lowerer/IrLowererLowerExprEmitSetup.cpp
-  src/ir_lowerer/IrLowererLowerReturnCallsSetup.cpp
-  src/ir_lowerer/IrLowererLowerStatementsCallsStep.cpp
-  src/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.cpp
-  src/ir_lowerer/IrLowererLowerStatementsEntryStatementStep.cpp
-  src/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.cpp
-  src/ir_lowerer/IrLowererLowerStatementsSourceMapStep.cpp
   src/ir_lowerer/IrLowererFileWriteHelpers.cpp
   src/ir_lowerer/IrLowererFlowHelpers.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
@@ -115,7 +141,25 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp
   src/ir_lowerer/IrLowererInlineParamHelpers.cpp
   src/ir_lowerer/IrLowererInlineStructArgHelpers.cpp
+  src/ir_lowerer/IrLowererLower.cpp
   src/ir_lowerer/IrLowererLowerEffects.cpp
+  src/ir_lowerer/IrLowererLowerEntrySetup.cpp
+  src/ir_lowerer/IrLowererLowerExprEmitSetup.cpp
+  src/ir_lowerer/IrLowererLowerImportsStructsSetup.cpp
+  src/ir_lowerer/IrLowererLowerInferenceSetup.cpp
+  src/ir_lowerer/IrLowererLowerInlineCallActiveContextStep.cpp
+  src/ir_lowerer/IrLowererLowerInlineCallCleanupStep.cpp
+  src/ir_lowerer/IrLowererLowerInlineCallContextSetupStep.cpp
+  src/ir_lowerer/IrLowererLowerInlineCallGpuLocalsStep.cpp
+  src/ir_lowerer/IrLowererLowerInlineCallReturnValueStep.cpp
+  src/ir_lowerer/IrLowererLowerInlineCallStatementStep.cpp
+  src/ir_lowerer/IrLowererLowerLocalsSetup.cpp
+  src/ir_lowerer/IrLowererLowerReturnCallsSetup.cpp
+  src/ir_lowerer/IrLowererLowerStatementsCallsStep.cpp
+  src/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.cpp
+  src/ir_lowerer/IrLowererLowerStatementsEntryStatementStep.cpp
+  src/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.cpp
+  src/ir_lowerer/IrLowererLowerStatementsSourceMapStep.cpp
   src/ir_lowerer/IrLowererOnErrorHelpers.cpp
   src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp
   src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.cpp
@@ -130,65 +174,42 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp
   src/ir_lowerer/IrLowererSetupLocalsHelpers.cpp
   src/ir_lowerer/IrLowererSetupMathHelpers.cpp
+  src/ir_lowerer/IrLowererSetupTypeHelpers.cpp
   src/ir_lowerer/IrLowererStatementBindingHelpers.cpp
   src/ir_lowerer/IrLowererStatementCallHelpers.cpp
+  src/ir_lowerer/IrLowererStringCallHelpers.cpp
+  src/ir_lowerer/IrLowererStringLiteralHelpers.cpp
   src/ir_lowerer/IrLowererStructFieldBindingHelpers.cpp
   src/ir_lowerer/IrLowererStructLayoutHelpers.cpp
   src/ir_lowerer/IrLowererStructReturnPathHelpers.cpp
   src/ir_lowerer/IrLowererStructTypeHelpers.cpp
-  src/ir_lowerer/IrLowererSetupTypeHelpers.cpp
-  src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp
-  src/ir_lowerer/IrLowererStringLiteralHelpers.cpp
-  src/ir_lowerer/IrLowererStringCallHelpers.cpp
   src/ir_lowerer/IrLowererTemplateTypeParseHelpers.cpp
-  src/ir_lowerer/IrLowererLower.cpp
-  src/IrPrinter.cpp
-  src/IrSerializer.cpp
-  src/IrValidation.cpp
-  src/IrVirtualRegisterAllocator.cpp
-  src/IrVirtualRegisterLiveness.cpp
-  src/IrVirtualRegisterLowering.cpp
-  src/IrVirtualRegisterScheduler.cpp
-  src/IrVirtualRegisterSpillInsertion.cpp
-  src/IrVirtualRegisterVerifier.cpp
-  src/Lexer.cpp
-  src/TransformRules.cpp
-  src/TransformRegistry.cpp
+  src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp
   src/native_emitter/NativeEmitterHelpers.cpp
   src/native_emitter/NativeEmitterEmit.cpp
-  src/OptionsParser.cpp
-  src/ProcessRunner.cpp
+  src/Vm.cpp
   src/VmDebugAdapter.cpp
   src/VmDebugDap.cpp
-  src/parser/ParserCore.cpp
-  src/parser/ParserExpr.cpp
-  src/parser/ParserHelpers.cpp
-  src/parser/ParserLists.cpp
-  src/semantics/SemanticsHelpersCore.cpp
-  src/semantics/SemanticsHelpersValidation.cpp
-  src/semantics/TemplateMonomorph.cpp
-  src/semantics/SemanticsValidate.cpp
-  src/semantics/SemanticsValidator.cpp
-  src/semantics/SemanticsValidatorBuild.cpp
-  src/semantics/SemanticsValidatorExprCaptureSplitStep.cpp
-  src/semantics/SemanticsValidatorExpr.cpp
-  src/semantics/SemanticsValidatorInfer.cpp
-  src/semantics/SemanticsValidatorPasses.cpp
-  src/semantics/SemanticsValidatorStatementLoopCountStep.cpp
-  src/semantics/SemanticsValidatorStatementReturns.cpp
-  src/semantics/SemanticsValidatorStatement.cpp
-  src/semantics/SemanticsValidatorTraits.cpp
-  src/text_filter/TextFilterHelpers.cpp
-  src/text_filter/TextFilterPipelineEnvelope.cpp
-  src/text_filter/TextFilterPipelinePass.cpp
-  src/text_filter/TextFilterPipelineScan.cpp
-  src/text_filter/TextFilterPipeline.cpp
   src/wasm_emitter/WasmEmitter.cpp
-  src/Vm.cpp
 )
 
-target_include_directories(primec_lib PUBLIC include)
-primestructEnableWarnings(primec_lib)
+add_library(primec_support_lib ${PRIMESTRUCT_SUPPORT_SOURCES})
+target_include_directories(primec_support_lib PUBLIC include)
+primestructEnableWarnings(primec_support_lib)
+
+add_library(primec_frontend_lib ${PRIMESTRUCT_FRONTEND_SOURCES})
+target_include_directories(primec_frontend_lib PUBLIC include)
+target_link_libraries(primec_frontend_lib PUBLIC primec_support_lib)
+primestructEnableWarnings(primec_frontend_lib)
+
+add_library(primec_backend_lib ${PRIMESTRUCT_BACKEND_SOURCES})
+target_include_directories(primec_backend_lib PUBLIC include)
+target_link_libraries(primec_backend_lib PUBLIC primec_frontend_lib primec_support_lib)
+primestructEnableWarnings(primec_backend_lib)
+
+add_library(primec_lib INTERFACE)
+target_include_directories(primec_lib INTERFACE include)
+target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_lib primec_support_lib)
 
 add_executable(primec src/main.cpp)
 target_link_libraries(primec PRIVATE primec_lib)

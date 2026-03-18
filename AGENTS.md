@@ -99,6 +99,10 @@ build and layout solidify.
   single `.cpp`; IR lowerer is being migrated toward compileable units under `src/ir_lowerer/`
   (for example `IrLowererLowerEffects.{h,cpp}`). Prefer adding new reusable lowering logic as
   explicit `.h/.cpp` units with clear interfaces instead of adding new include-only fragments.
+- **CMake subsystem layout:** place new build sources in the narrowest library that fits:
+  `primec_support_lib` (shared utilities), `primec_frontend_lib` (import/parser/semantics/text
+  filtering), and `primec_backend_lib` (compile pipeline, IR, emitters, VM). Keep `primec_lib`
+  as a compatibility umbrella instead of adding new source files to it directly.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **VM/native strings:** string values are represented as string-table indices; dynamic

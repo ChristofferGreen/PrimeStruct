@@ -243,6 +243,32 @@ TEST_CASE("backend boundary ADR is present and referenced from design doc") {
   CHECK(design.find("including production aliases (`cpp`, `exe`, `glsl`, `spirv`)") != std::string::npos);
 }
 
+TEST_CASE("cmake splits primec library into subsystem targets") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
+  if (!std::filesystem::exists(cmakePath)) {
+    cmakePath = cwd.parent_path() / "CMakeLists.txt";
+  }
+  REQUIRE(std::filesystem::exists(cmakePath));
+
+  const std::string cmake = readTextFile(cmakePath);
+  CHECK(cmake.find("set(PRIMESTRUCT_SUPPORT_SOURCES") != std::string::npos);
+  CHECK(cmake.find("set(PRIMESTRUCT_FRONTEND_SOURCES") != std::string::npos);
+  CHECK(cmake.find("set(PRIMESTRUCT_BACKEND_SOURCES") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_support_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_frontend_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_backend_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_lib INTERFACE)") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_frontend_lib PUBLIC primec_support_lib)") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_backend_lib PUBLIC primec_frontend_lib primec_support_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_lib primec_support_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec PRIVATE primec_lib)") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primevm PRIVATE primec_lib)") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)") != std::string::npos);
+}
+
 TEST_CASE("glsl and spirv ir backends use glsl ir validation target") {
   primec::Options options;
 
