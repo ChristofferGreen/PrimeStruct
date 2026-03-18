@@ -156,6 +156,53 @@ main() {
   CHECK(error.find("argument type mismatch for /FileError/why parameter err") != std::string::npos);
 }
 
+TEST_CASE("stdlib File helpers cover imported method and slash-call wrappers") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(file_write), return<void>]
+write_out([File<Write>] file, [array<i32>] bytes) {
+  [Result<FileError>] methodByte{file.write_byte(65i32)}
+  [Result<FileError>] directBytes{/File/write_bytes(file, bytes)}
+  [Result<FileError>] methodFlush{file.flush()}
+  [Result<FileError>] directFlush{/File/flush(file)}
+  return()
+}
+
+[effects(file_read), return<void>]
+read_in([File<Read>] file, [i32 mut] value) {
+  [Result<FileError>] methodRead{file.read_byte(value)}
+  [Result<FileError>] directRead{/File/read_byte(file, value)}
+  return()
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib File slash-call helpers require stdlib import") {
+  const std::string source = R"(
+[effects(file_write), return<void>]
+write_out([File<Write>] file, [array<i32>] bytes) {
+  /File/write_bytes(file, bytes)
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /File/write_bytes") != std::string::npos);
+}
+
 TEST_CASE("stdlib image error result helpers construct status and value results") {
   const std::string source = R"(
 import /std/image/*

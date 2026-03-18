@@ -10,6 +10,15 @@ using ReturnKind = Emitter::ReturnKind;
 
 namespace {
 
+std::string preferredFileMethodTargetLocal(const std::string &methodName,
+                                           const std::unordered_map<std::string, const Definition *> &defMap) {
+  const std::string stdlibPath = "/File/" + methodName;
+  if (defMap.find(stdlibPath) != defMap.end()) {
+    return stdlibPath;
+  }
+  return "/file/" + methodName;
+}
+
 bool isMapCollectionTypeNameLocal(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
   return normalized == "map" || normalized == "std/collections/map" || normalized == "Map" ||
@@ -1687,7 +1696,7 @@ bool resolveMethodCallPath(const Expr &call,
     return false;
   }
   if (typeName == "File") {
-    resolvedOut = "/file/" + normalizedMethodName;
+    resolvedOut = preferredFileMethodTargetLocal(normalizedMethodName, defMap);
     return true;
   }
   if (typeName == "FileError" && normalizedMethodName == "why") {

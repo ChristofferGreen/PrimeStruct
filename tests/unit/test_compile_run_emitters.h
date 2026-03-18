@@ -2933,6 +2933,44 @@ TEST_CASE("C++ emitter helper resolves bare vector capacity methods when helper 
   CHECK(resolved == "/vector/capacity");
 }
 
+TEST_CASE("C++ emitter helper prefers stdlib File flush helper when present") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+  call.name = "flush";
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "file";
+  call.args.push_back(receiver);
+  call.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "File";
+  receiverInfo.typeTemplateArg = "Write";
+  localTypes.emplace("file", receiverInfo);
+
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  std::string resolved;
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/file/flush");
+
+  primec::Definition fileFlushDef;
+  fileFlushDef.fullPath = "/File/flush";
+  defMap.emplace(fileFlushDef.fullPath, &fileFlushDef);
+
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/File/flush");
+}
+
 TEST_CASE("C++ emitter helper rejects bare vector access methods without helper metadata") {
   auto expectRejected = [&](const char *receiverMethodName) {
     primec::Expr receiverCall;

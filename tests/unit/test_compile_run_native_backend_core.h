@@ -93,6 +93,47 @@ TEST_CASE("compiles and runs native file read_byte with deterministic eof") {
   CHECK(readFile(outPath) == "65\n66\nEOF\n99\n");
 }
 
+TEST_CASE("native uses stdlib File helper wrappers") {
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_helpers.txt").string();
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(outPath);
+  const std::string source =
+      "import /std/file/*\n"
+      "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] file{ File<Write>(\"" + escapedPath + "\"utf8)? }\n"
+      "  [array<i32>] bytes{ array<i32>(66i32, 67i32) }\n"
+      "  file.write_byte(65i32)?\n"
+      "  /File/write_bytes(file, bytes)?\n"
+      "  /File/flush(file)?\n"
+      "  file.close()?\n"
+      "  return(Result.ok())\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(Result.why(fileErrorStatus(err)))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("native_stdlib_file_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_helpers_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+  CHECK(readFile(outPath) == "ABC");
+}
+
 TEST_CASE("compiles and runs native mutable scalar helper copy-back") {
   const std::string source = R"(
 [return<void>]

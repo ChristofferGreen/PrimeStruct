@@ -1,0 +1,19 @@
+[public effects(file_read), return<Result<FileError>>]
+/File/read_byte<Mode, T>([File<Mode>] self, [T mut] value) {
+  return(/file/read_byte(self, value))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write_byte<Mode, T>([File<Mode>] self, [T] value) {
+  return(/file/write_byte(self, value))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write_bytes<Mode, T>([File<Mode>] self, [array<T>] bytes) {
+  return(/file/write_bytes(self, bytes))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/flush<Mode>([File<Mode>] self) {
+  return(/file/flush(self))
+}
