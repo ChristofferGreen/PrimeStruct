@@ -56,6 +56,12 @@ SemanticsValidator::SemanticsValidator(const Program &program,
   }
 }
 
+std::string SemanticsValidator::graphLocalAutoBindingKey(const std::string &scopePath,
+                                                         int sourceLine,
+                                                         int sourceColumn) {
+  return scopePath + "@" + std::to_string(sourceLine) + ":" + std::to_string(sourceColumn);
+}
+
 std::string SemanticsValidator::formatUnknownCallTarget(const Expr &expr) const {
   if (!isSlashlessMapHelperName(expr.name)) {
     return expr.name;

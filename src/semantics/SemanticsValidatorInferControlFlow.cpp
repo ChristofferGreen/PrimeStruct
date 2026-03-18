@@ -87,7 +87,7 @@ ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
             return false;
           }
           if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
-            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, localsOut, binding);
+            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, localsOut, binding, &bodyExpr);
           }
           localsOut.emplace(bodyExpr.name, std::move(binding));
           continue;
@@ -144,7 +144,7 @@ ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
             return ReturnKind::Unknown;
           }
           if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
-            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
+            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info, &bodyExpr);
           }
           if (restrictType.has_value()) {
             const bool hasTemplate = !info.typeTemplateArg.empty();

@@ -13,6 +13,8 @@
 
 namespace primec::semantics {
 
+struct TypeResolutionGraph;
+
 class SemanticsValidator {
 public:
   SemanticsValidator(const Program &program,
@@ -32,6 +34,7 @@ private:
   bool inferUnknownReturnKinds();
   bool inferUnknownReturnKindsLegacy();
   bool inferUnknownReturnKindsGraph();
+  void collectGraphLocalAutoBindings(const TypeResolutionGraph &graph);
   bool validateTraitConstraints();
   bool validateStructLayouts();
   bool validateDefinitions();
@@ -62,7 +65,11 @@ private:
   bool inferBindingTypeFromInitializer(const Expr &initializer,
                                        const std::vector<ParameterInfo> &params,
                                        const std::unordered_map<std::string, BindingInfo> &locals,
-                                       BindingInfo &bindingOut);
+                                       BindingInfo &bindingOut,
+                                       const Expr *bindingExpr = nullptr);
+  static std::string graphLocalAutoBindingKey(const std::string &scopePath, int sourceLine, int sourceColumn);
+  bool lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const;
+  bool inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const;
   bool resolveStructFieldBinding(const Definition &structDef,
                                  const Expr &fieldStmt,
                                  BindingInfo &bindingOut);
@@ -475,6 +482,7 @@ private:
   std::unordered_map<std::string, const Definition *> defMap_;
   std::unordered_map<std::string, ReturnKind> returnKinds_;
   std::unordered_map<std::string, std::string> returnStructs_;
+  std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;

@@ -120,7 +120,7 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
       if (parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, parseError)) {
         defLocals[stmt.name] = binding;
       } else if (stmt.args.size() == 1 &&
-                 inferBindingTypeFromInitializer(stmt.args.front(), defParams, defLocals, binding)) {
+                 inferBindingTypeFromInitializer(stmt.args.front(), defParams, defLocals, binding, &stmt)) {
         defLocals[stmt.name] = binding;
       }
       continue;

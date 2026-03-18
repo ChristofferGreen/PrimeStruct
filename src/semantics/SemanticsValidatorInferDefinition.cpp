@@ -76,7 +76,7 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
       return false;
     }
     if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
-      (void)inferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info);
+      (void)inferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info, &stmt);
     }
     if (restrictType.has_value()) {
       const bool hasTemplate = !info.typeTemplateArg.empty();

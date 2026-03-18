@@ -82,6 +82,55 @@ main() {
   CHECK(error.find("conflicting return types on /main") != std::string::npos);
 }
 
+TEST_CASE("graph type resolver infers direct-call auto binding from struct-return helper") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<Pair>]
+makePair() {
+  return(Pair())
+}
+
+[return<i32>]
+main() {
+  [auto] pair{makePair()}
+  return(pair.value)
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
+TEST_CASE("graph type resolver infers direct-call auto binding from collection-return helper") {
+  const std::string source = R"(
+[return<array<i32>>]
+makeValues() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<i32>]
+main() {
+  [auto] values{makeValues()}
+  return(count(values))
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
 TEST_CASE("default semantics path uses graph resolver while legacy remains available for rollback") {
   const std::string source = R"(
 [return<auto>]
