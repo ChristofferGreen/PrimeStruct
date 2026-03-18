@@ -227,6 +227,40 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   CHECK(source.find("validateIrModule(ir, primec::IrValidationTarget::Vm, error)") == std::string::npos);
 }
 
+TEST_CASE("semantics validator caches base validation contexts behind a single current context") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path headerPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
+  std::filesystem::path sourcePath = cwd / "src" / "semantics" / "SemanticsValidator.cpp";
+  std::filesystem::path buildPath = cwd / "src" / "semantics" / "SemanticsValidatorBuild.cpp";
+  if (!std::filesystem::exists(headerPath)) {
+    headerPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.h";
+    sourcePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.cpp";
+    buildPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorBuild.cpp";
+  }
+  REQUIRE(std::filesystem::exists(headerPath));
+  REQUIRE(std::filesystem::exists(sourcePath));
+  REQUIRE(std::filesystem::exists(buildPath));
+
+  const std::string header = readTextFile(headerPath);
+  const std::string source = readTextFile(sourcePath);
+  const std::string build = readTextFile(buildPath);
+  CHECK(header.find("std::unordered_map<std::string, ValidationContext> definitionValidationContexts_") !=
+        std::string::npos);
+  CHECK(header.find("std::unordered_map<std::string, ValidationContext> executionValidationContexts_") !=
+        std::string::npos);
+  CHECK(header.find("ValidationContext currentValidationContext_") != std::string::npos);
+  CHECK(header.find("std::unordered_set<std::string> activeEffects_;") == std::string::npos);
+  CHECK(header.find("std::unordered_set<std::string> movedBindings_;") == std::string::npos);
+  CHECK(header.find("std::unordered_set<std::string> endedReferenceBorrows_;") == std::string::npos);
+  CHECK(header.find("std::string currentDefinitionPath_;") == std::string::npos);
+  CHECK(build.find("definitionValidationContexts_.try_emplace(def.fullPath, makeDefinitionValidationContext(def));") !=
+        std::string::npos);
+  CHECK(build.find("executionValidationContexts_.try_emplace(exec.fullPath, makeExecutionValidationContext(exec));") !=
+        std::string::npos);
+  CHECK(source.find("snapshotValidationContext()") == std::string::npos);
+  CHECK(source.find("restoreValidationContext(") == std::string::npos);
+}
+
 TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";

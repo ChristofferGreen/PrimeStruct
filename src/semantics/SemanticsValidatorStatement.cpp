@@ -318,7 +318,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                            size_t statementIndex) {
   ExprContextScope statementScope(*this, stmt);
   const std::vector<std::string> *definitionTemplateArgs = nullptr;
-  auto currentDefIt = defMap_.find(currentDefinitionPath_);
+  auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
   if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
     definitionTemplateArgs = &currentDefIt->second->templateArgs;
   }
@@ -851,7 +851,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         return false;
       }
       auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {
-        auto defIt = defMap_.find(currentDefinitionPath_);
+        auto defIt = defMap_.find(currentValidationContext_.definitionPath);
         if (defIt == defMap_.end() || defIt->second == nullptr) {
           return std::nullopt;
         }
@@ -906,7 +906,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (returnKind != ReturnKind::Unknown) {
         ReturnKind exprKind = inferExprReturnKind(stmt.args.front(), params, locals);
         if (returnKind == ReturnKind::Array) {
-          auto structIt = returnStructs_.find(currentDefinitionPath_);
+          auto structIt = returnStructs_.find(currentValidationContext_.definitionPath);
           if (structIt != returnStructs_.end()) {
             auto normalizeCollectionStructPath = [&](const std::string &typePath) -> std::string {
               std::string normalizedTypePath = normalizeBindingTypeName(typePath);
@@ -1003,7 +1003,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = locals;
     OnErrorScope onErrorScope(*this, blockOnError);
-    BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
+    BorrowEndScope borrowScope(*this, currentValidationContext_.endedReferenceBorrows);
     for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
       const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
       if (!validateStatement(params,
@@ -1037,7 +1037,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return false;
     }
     const std::string effectName = (printBuiltin.target == PrintTarget::Err) ? "io_err" : "io_out";
-    if (activeEffects_.count(effectName) == 0) {
+    if (currentValidationContext_.activeEffects.count(effectName) == 0) {
       error_ = printBuiltin.name + " requires " + effectName + " effect";
       return false;
     }
@@ -1459,7 +1459,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         livenessStatements.push_back((*enclosingStatements)[idx]);
       }
     }
-    BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
+    BorrowEndScope borrowScope(*this, currentValidationContext_.endedReferenceBorrows);
     for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
       const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
       if (!validateStatement(params,

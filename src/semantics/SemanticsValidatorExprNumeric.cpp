@@ -603,12 +603,12 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
         return false;
       }
     } else if (leftPointer || rightPointer) {
-      error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;
+      error_ = "arithmetic operators require numeric operands in " + currentValidationContext_.definitionPath;
       return false;
     }
     if (builtinName == "negate") {
       if (!isNumericExpr(params, locals, expr.args.front())) {
-        error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;
+        error_ = "arithmetic operators require numeric operands in " + currentValidationContext_.definitionPath;
         return false;
       }
       if (isUnsignedExpr(expr.args.front())) {
@@ -655,7 +655,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
         }
       }
       if (!isNumericExpr(params, locals, expr.args[0]) || !isNumericExpr(params, locals, expr.args[1])) {
-        error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;
+        error_ = "arithmetic operators require numeric operands in " + currentValidationContext_.definitionPath;
         return false;
       }
       if (hasMixedNumericDomain(expr.args)) {
@@ -675,7 +675,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
         return false;
       }
     } else if (leftPointer && !isNumericExpr(params, locals, expr.args[1])) {
-      error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;
+      error_ = "arithmetic operators require numeric operands in " + currentValidationContext_.definitionPath;
       return false;
     }
     return validateArgs();

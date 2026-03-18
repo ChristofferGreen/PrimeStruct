@@ -31,7 +31,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
 
   handled = true;
   const std::vector<std::string> *definitionTemplateArgs = nullptr;
-  auto currentDefIt = defMap_.find(currentDefinitionPath_);
+  auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
   if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
     definitionTemplateArgs = &currentDefIt->second->templateArgs;
   }
@@ -75,7 +75,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   }
 
   if (stmt.args.empty()) {
-    if (structNames_.count(currentDefinitionPath_) > 0) {
+    if (structNames_.count(currentValidationContext_.definitionPath) > 0) {
       if (restrictType.has_value()) {
         const bool hasTemplate = !info.typeTemplateArg.empty();
         if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
@@ -466,24 +466,24 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         init.args.size() == 1 && init.args.front().kind == Expr::Kind::Name;
     std::string safeTargetType;
     const bool initIsPointerLike = resolvePointerTargetType(init, safeTargetType);
-    if (!initIsLocation && !initIsPointerLike && !currentDefinitionIsUnsafe_) {
+    if (!initIsLocation && !initIsPointerLike && !currentValidationContext_.definitionIsUnsafe) {
       error_ = "Reference bindings require location(...)";
       return false;
     }
-    if (initIsLocation || (!currentDefinitionIsUnsafe_ && initIsPointerLike)) {
+    if (initIsLocation || (!currentValidationContext_.definitionIsUnsafe && initIsPointerLike)) {
       if (!initIsPointerLike || !errorTypesMatch(safeTargetType, info.typeTemplateArg, namespacePrefix)) {
         error_ = "Reference binding type mismatch";
         return false;
       }
     }
-    if (!initIsLocation && !currentDefinitionIsUnsafe_) {
+    if (!initIsLocation && !currentValidationContext_.definitionIsUnsafe) {
       if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
         return false;
       }
       locals.emplace(stmt.name, info);
       return true;
     }
-    if (!initIsLocation && currentDefinitionIsUnsafe_) {
+    if (!initIsLocation && currentValidationContext_.definitionIsUnsafe) {
       std::string pointerTargetType;
       if (!resolvePointerTargetType(init, pointerTargetType)) {
         error_ = "unsafe Reference bindings require pointer-like initializer";
@@ -535,7 +535,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     bool sawMutableBorrow = false;
     bool sawImmutableBorrow = false;
     auto observeBorrow = [&](const std::string &bindingName, const BindingInfo &binding) {
-      if (endedReferenceBorrows_.count(bindingName) > 0) {
+      if (currentValidationContext_.endedReferenceBorrows.count(bindingName) > 0) {
         return;
       }
       const std::string root = referenceRootForBorrowBinding(bindingName, binding);
@@ -555,12 +555,12 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       observeBorrow(entry.first, entry.second);
     }
     const bool conflict = info.isMutable ? (sawMutableBorrow || sawImmutableBorrow) : sawMutableBorrow;
-    if (conflict && !currentDefinitionIsUnsafe_) {
+    if (conflict && !currentValidationContext_.definitionIsUnsafe) {
       error_ = "borrow conflict: " + borrowRoot + " (root: " + borrowRoot + ", sink: " + stmt.name + ")";
       return false;
     }
     info.referenceRoot = std::move(borrowRoot);
-    info.isUnsafeReference = currentDefinitionIsUnsafe_;
+    info.isUnsafeReference = currentValidationContext_.definitionIsUnsafe;
   }
 
   if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {

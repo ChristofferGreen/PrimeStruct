@@ -17,7 +17,7 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
       error_ = "duplicate lambda capture: " + name;
       return false;
     }
-    if (movedBindings_.count(name) > 0) {
+    if (currentValidationContext_.movedBindings.count(name) > 0) {
       error_ = "use-after-move: " + name;
       return false;
     }

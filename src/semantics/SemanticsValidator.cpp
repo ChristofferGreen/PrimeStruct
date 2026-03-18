@@ -87,7 +87,7 @@ std::string SemanticsValidator::diagnosticCallTargetPath(const std::string &path
 }
 
 SemanticsValidator::ValidationContext
-SemanticsValidator::buildDefinitionValidationContext(const Definition &def) const {
+SemanticsValidator::makeDefinitionValidationContext(const Definition &def) const {
   ValidationContext context;
   context.definitionPath = def.fullPath;
   for (const auto &transform : def.transforms) {
@@ -102,7 +102,7 @@ SemanticsValidator::buildDefinitionValidationContext(const Definition &def) cons
 }
 
 SemanticsValidator::ValidationContext
-SemanticsValidator::buildExecutionValidationContext(const Execution &exec) const {
+SemanticsValidator::makeExecutionValidationContext(const Execution &exec) const {
   ValidationContext context;
   context.definitionPath.clear();
   context.definitionIsCompute = false;
@@ -111,28 +111,24 @@ SemanticsValidator::buildExecutionValidationContext(const Execution &exec) const
   return context;
 }
 
-SemanticsValidator::ValidationContext SemanticsValidator::snapshotValidationContext() const {
-  ValidationContext snapshot;
-  snapshot.activeEffects = activeEffects_;
-  snapshot.movedBindings = movedBindings_;
-  snapshot.endedReferenceBorrows = endedReferenceBorrows_;
-  snapshot.definitionPath = currentDefinitionPath_;
-  snapshot.definitionIsCompute = currentDefinitionIsCompute_;
-  snapshot.definitionIsUnsafe = currentDefinitionIsUnsafe_;
-  snapshot.resultType = currentResultType_;
-  snapshot.onError = currentOnError_;
-  return snapshot;
+const SemanticsValidator::ValidationContext &
+SemanticsValidator::buildDefinitionValidationContext(const Definition &def) const {
+  auto it = definitionValidationContexts_.find(def.fullPath);
+  if (it != definitionValidationContexts_.end()) {
+    return it->second;
+  }
+  static const ValidationContext EmptyContext;
+  return EmptyContext;
 }
 
-void SemanticsValidator::restoreValidationContext(ValidationContext context) {
-  activeEffects_ = std::move(context.activeEffects);
-  movedBindings_ = std::move(context.movedBindings);
-  endedReferenceBorrows_ = std::move(context.endedReferenceBorrows);
-  currentDefinitionPath_ = std::move(context.definitionPath);
-  currentDefinitionIsCompute_ = context.definitionIsCompute;
-  currentDefinitionIsUnsafe_ = context.definitionIsUnsafe;
-  currentResultType_ = std::move(context.resultType);
-  currentOnError_ = std::move(context.onError);
+const SemanticsValidator::ValidationContext &
+SemanticsValidator::buildExecutionValidationContext(const Execution &exec) const {
+  auto it = executionValidationContexts_.find(exec.fullPath);
+  if (it != executionValidationContexts_.end()) {
+    return it->second;
+  }
+  static const ValidationContext EmptyContext;
+  return EmptyContext;
 }
 
 void SemanticsValidator::capturePrimarySpanIfUnset(int line, int column) {
@@ -297,8 +293,9 @@ bool SemanticsValidator::allowMathBareName(const std::string &name) const {
   if (name.empty() || name.find('/') != std::string::npos) {
     return false;
   }
-  if (!currentDefinitionPath_.empty()) {
-    if (currentDefinitionPath_ == "/std/math" || currentDefinitionPath_.rfind("/std/math/", 0) == 0) {
+  if (!currentValidationContext_.definitionPath.empty()) {
+    if (currentValidationContext_.definitionPath == "/std/math" ||
+        currentValidationContext_.definitionPath.rfind("/std/math/", 0) == 0) {
       return true;
     }
   }
@@ -310,7 +307,7 @@ bool SemanticsValidator::hasAnyMathImport() const {
 }
 
 bool SemanticsValidator::isEntryArgsName(const std::string &name) const {
-  if (currentDefinitionPath_ != entryPath_) {
+  if (currentValidationContext_.definitionPath != entryPath_) {
     return false;
   }
   if (entryArgsName_.empty()) {
@@ -320,7 +317,7 @@ bool SemanticsValidator::isEntryArgsName(const std::string &name) const {
 }
 
 bool SemanticsValidator::isEntryArgsAccess(const Expr &expr) const {
-  if (currentDefinitionPath_ != entryPath_ || entryArgsName_.empty()) {
+  if (currentValidationContext_.definitionPath != entryPath_ || entryArgsName_.empty()) {
     return false;
   }
   if (expr.kind != Expr::Kind::Call) {
@@ -338,7 +335,7 @@ bool SemanticsValidator::isEntryArgsAccess(const Expr &expr) const {
 
 bool SemanticsValidator::isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals,
                                                  const Expr &expr) const {
-  if (currentDefinitionPath_ != entryPath_) {
+  if (currentValidationContext_.definitionPath != entryPath_) {
     return false;
   }
   if (expr.kind != Expr::Kind::Name) {
@@ -1255,10 +1252,10 @@ void SemanticsValidator::expireReferenceBorrowsForRemainder(const std::vector<Pa
     const std::string referenceRoot = referenceRootForBinding(bindingName, binding);
     if (statementsUseNameFrom(statements, nextIndex, bindingName) ||
         pointerAliasUsesReferenceRoot(referenceRoot)) {
-      endedReferenceBorrows_.erase(bindingName);
+      currentValidationContext_.endedReferenceBorrows.erase(bindingName);
       return;
     }
-    endedReferenceBorrows_.insert(bindingName);
+    currentValidationContext_.endedReferenceBorrows.insert(bindingName);
   };
   for (const auto &param : params) {
     updateName(param.name, param.binding);

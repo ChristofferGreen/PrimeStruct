@@ -159,6 +159,52 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("definition validation context isolates compute flag between definitions") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop() {
+  return()
+}
+
+[effects(gpu_dispatch) return<int>]
+/host() {
+  /std/gpu/dispatch(/noop, 1i32, 1i32, 1i32)
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  return(/host())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("definition validation context isolates effects between definitions") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop() {
+  return()
+}
+
+[return<int>]
+/host() {
+  /std/gpu/dispatch(/noop, 1i32, 1i32, 1i32)
+  return(0i32)
+}
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  return(/host())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("dispatch requires gpu_dispatch effect") != std::string::npos);
+}
+
 TEST_CASE("std gpu buffer requires gpu_dispatch effect") {
   const std::string source = R"(
 [return<int>]

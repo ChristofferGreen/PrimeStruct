@@ -165,12 +165,12 @@ bool SemanticsValidator::validateDefinitions() {
       error_ = "lifecycle helpers must return void: " + def.fullPath;
       return false;
     }
-    currentResultType_.reset();
+    currentValidationContext_.resultType.reset();
     for (const auto &transform : def.transforms) {
       if (transform.name == "return" && transform.templateArgs.size() == 1) {
         ResultTypeInfo resultInfo;
         if (resolveResultTypeFromTypeName(transform.templateArgs.front(), resultInfo)) {
-          currentResultType_ = resultInfo;
+          currentValidationContext_.resultType = resultInfo;
           break;
         }
       }
@@ -179,13 +179,13 @@ bool SemanticsValidator::validateDefinitions() {
     if (!parseOnErrorTransform(def.transforms, def.namespacePrefix, def.fullPath, onErrorHandler)) {
       return false;
     }
-    if (onErrorHandler.has_value() && (!currentResultType_.has_value() || !currentResultType_->isResult) &&
+    if (onErrorHandler.has_value() && (!currentValidationContext_.resultType.has_value() || !currentValidationContext_.resultType->isResult) &&
         kind != ReturnKind::Int) {
       error_ = "on_error requires Result or int return type on " + def.fullPath;
       return false;
     }
-    if (onErrorHandler.has_value() && currentResultType_.has_value() && currentResultType_->isResult &&
-        !errorTypesMatch(onErrorHandler->errorType, currentResultType_->errorType, def.namespacePrefix)) {
+    if (onErrorHandler.has_value() && currentValidationContext_.resultType.has_value() && currentValidationContext_.resultType->isResult &&
+        !errorTypesMatch(onErrorHandler->errorType, currentValidationContext_.resultType->errorType, def.namespacePrefix)) {
       error_ = "on_error error type mismatch on " + def.fullPath;
       return false;
     }
@@ -1028,7 +1028,7 @@ bool SemanticsValidator::validateExecutions() {
     }
     const std::unordered_set<std::string> targetEffects =
         resolveEffects(it->second->transforms, it->second->fullPath == entryPath_);
-    for (const auto &effect : activeEffects_) {
+    for (const auto &effect : currentValidationContext_.activeEffects) {
       if (targetEffects.count(effect) == 0) {
         error_ = "execution effects must be a subset of enclosing effects on " + resolvedPath + ": " + effect;
         return false;

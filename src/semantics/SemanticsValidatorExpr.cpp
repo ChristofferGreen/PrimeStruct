@@ -112,7 +112,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
   }
   if (expr.kind == Expr::Kind::Name) {
     if (isParam(params, expr.name) || locals.count(expr.name) > 0) {
-      if (movedBindings_.count(expr.name) > 0) {
+      if (currentValidationContext_.movedBindings.count(expr.name) > 0) {
         error_ = "use-after-move: " + expr.name;
         return false;
       }
@@ -2282,7 +2282,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     };
     auto definitionPathContains = [&](std::string_view needle) {
-      return currentDefinitionPath_.find(std::string(needle)) != std::string::npos;
+      return currentValidationContext_.definitionPath.find(std::string(needle)) != std::string::npos;
     };
     auto mapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {
       size_t receiverIndex = 0;
@@ -3287,10 +3287,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (resolveSoaVectorTarget(receiver, elemType)) {
         const std::string normalizedElemType = normalizeBindingTypeName(elemType);
         std::string currentNamespace;
-        if (!currentDefinitionPath_.empty()) {
-          const size_t slash = currentDefinitionPath_.find_last_of('/');
+        if (!currentValidationContext_.definitionPath.empty()) {
+          const size_t slash = currentValidationContext_.definitionPath.find_last_of('/');
           if (slash != std::string::npos && slash > 0) {
-            currentNamespace = currentDefinitionPath_.substr(0, slash);
+            currentNamespace = currentValidationContext_.definitionPath.substr(0, slash);
           }
         }
         const std::string lookupNamespace =
@@ -4955,7 +4955,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         }
         OnErrorScope onErrorScope(*this, std::nullopt);
-        BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
+        BorrowEndScope borrowScope(*this, currentValidationContext_.endedReferenceBorrows);
         for (size_t bodyIndex = 0; bodyIndex < expr.bodyArguments.size(); ++bodyIndex) {
           const Expr &bodyExpr = expr.bodyArguments[bodyIndex];
           if (!validateStatement(params, blockLocals, bodyExpr, ReturnKind::Unknown, false, true, nullptr,
@@ -4983,7 +4983,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = "gpu builtins do not accept arguments";
         return false;
       }
-      if (!currentDefinitionIsCompute_) {
+      if (!currentValidationContext_.definitionIsCompute) {
         error_ = "gpu builtins require a compute definition";
         return false;
       }
@@ -5203,7 +5203,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         sourceRoot = "<unknown>";
       }
       const std::string sink = sinkName.empty() ? "<unknown>" : sinkName;
-      if (currentDefinitionIsUnsafe_ && isUnsafeReferenceExpr(rhsExpr)) {
+      if (currentValidationContext_.definitionIsUnsafe && isUnsafeReferenceExpr(rhsExpr)) {
         error_ = "unsafe reference escapes via assignment to " + sink +
                  " (root: " + sourceRoot + ", sink: " + sink + ")";
       } else {
@@ -5246,14 +5246,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         }
         ReturnKind enclosingReturnKind = ReturnKind::Unknown;
-        if (!currentDefinitionPath_.empty()) {
-          auto enclosingReturnIt = returnKinds_.find(currentDefinitionPath_);
+        if (!currentValidationContext_.definitionPath.empty()) {
+          auto enclosingReturnIt = returnKinds_.find(currentValidationContext_.definitionPath);
           if (enclosingReturnIt != returnKinds_.end()) {
             enclosingReturnKind = enclosingReturnIt->second;
           }
         }
-        const bool returnsResult = currentResultType_.has_value() && currentResultType_->isResult;
-        if (!currentOnError_.has_value()) {
+        const bool returnsResult = currentValidationContext_.resultType.has_value() && currentValidationContext_.resultType->isResult;
+        if (!currentValidationContext_.onError.has_value()) {
           error_ = "missing on_error for ? usage";
           return false;
         }
@@ -5262,7 +5262,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
         if (returnsResult &&
-            !errorTypesMatch(currentResultType_->errorType, currentOnError_->errorType, expr.namespacePrefix)) {
+            !errorTypesMatch(currentValidationContext_.resultType->errorType, currentValidationContext_.onError->errorType, expr.namespacePrefix)) {
           error_ = "on_error error type mismatch";
           return false;
         }
@@ -5274,8 +5274,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = "try requires Result argument";
           return false;
         }
-        if (currentOnError_.has_value() &&
-            !errorTypesMatch(argResult.errorType, currentOnError_->errorType, expr.namespacePrefix)) {
+        if (currentValidationContext_.onError.has_value() &&
+            !errorTypesMatch(argResult.errorType, currentValidationContext_.onError->errorType, expr.namespacePrefix)) {
           error_ = "try error type mismatch";
           return false;
         }
@@ -5305,7 +5305,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         const bool requiresWrite = mode == "Write" || mode == "Append";
         const char *requiredEffect = requiresWrite ? "file_write" : "file_read";
-        if (activeEffects_.count(requiredEffect) == 0) {
+        if (currentValidationContext_.activeEffects.count(requiredEffect) == 0) {
           error_ = std::string("File requires ") + requiredEffect + " effect";
           return false;
         }
@@ -5527,7 +5527,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         const bool requiresRead = expr.name == "read_byte" || expr.name == "close";
         const char *requiredEffect = requiresRead ? "file_read" : "file_write";
-        if (activeEffects_.count(requiredEffect) == 0) {
+        if (currentValidationContext_.activeEffects.count(requiredEffect) == 0) {
           error_ = std::string("file operations require ") + requiredEffect + " effect";
           return false;
         }
@@ -6096,11 +6096,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     };
     if (isSimpleCallName(expr, "dispatch")) {
-      if (currentDefinitionIsCompute_) {
+      if (currentValidationContext_.definitionIsCompute) {
         error_ = "dispatch is not allowed in compute definitions";
         return false;
       }
-      if (activeEffects_.count("gpu_dispatch") == 0) {
+      if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
         error_ = "dispatch requires gpu_dispatch effect";
         return false;
       }
@@ -6166,11 +6166,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     if (isSimpleCallName(expr, "buffer")) {
-      if (currentDefinitionIsCompute_) {
+      if (currentValidationContext_.definitionIsCompute) {
         error_ = "buffer is not allowed in compute definitions";
         return false;
       }
-      if (activeEffects_.count("gpu_dispatch") == 0) {
+      if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
         error_ = "buffer requires gpu_dispatch effect";
         return false;
       }
@@ -6202,11 +6202,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     if (isSimpleCallName(expr, "upload")) {
-      if (currentDefinitionIsCompute_) {
+      if (currentValidationContext_.definitionIsCompute) {
         error_ = "upload is not allowed in compute definitions";
         return false;
       }
-      if (activeEffects_.count("gpu_dispatch") == 0) {
+      if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
         error_ = "upload requires gpu_dispatch effect";
         return false;
       }
@@ -6238,11 +6238,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     if (isSimpleCallName(expr, "readback")) {
-      if (currentDefinitionIsCompute_) {
+      if (currentValidationContext_.definitionIsCompute) {
         error_ = "readback is not allowed in compute definitions";
         return false;
       }
-      if (activeEffects_.count("gpu_dispatch") == 0) {
+      if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
         error_ = "readback requires gpu_dispatch effect";
         return false;
       }
@@ -6274,7 +6274,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     if (isSimpleCallName(expr, "buffer_load")) {
-      if (!currentDefinitionIsCompute_) {
+      if (!currentValidationContext_.definitionIsCompute) {
         error_ = "buffer_load requires a compute definition";
         return false;
       }
@@ -6311,7 +6311,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     if (isSimpleCallName(expr, "buffer_store")) {
-      if (!currentDefinitionIsCompute_) {
+      if (!currentValidationContext_.definitionIsCompute) {
         error_ = "buffer_store requires a compute definition";
         return false;
       }
@@ -6938,7 +6938,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (!validateMemoryTargetType(expr.templateArgs.front())) {
             return false;
           }
-          if (activeEffects_.count("heap_alloc") == 0) {
+          if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
             error_ = "alloc requires heap_alloc effect";
             return false;
           }
@@ -7031,7 +7031,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = builtinName + " requires pointer target";
           return false;
         }
-        if (activeEffects_.count("heap_alloc") == 0) {
+        if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
           error_ = builtinName + " requires heap_alloc effect";
           return false;
         }
@@ -7064,13 +7064,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (!validateSoaVectorElementFieldEnvelopes(expr.templateArgs.front(), expr.namespacePrefix)) {
             return false;
           }
-          if (!expr.args.empty() && activeEffects_.count("heap_alloc") == 0) {
+          if (!expr.args.empty() && currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
             error_ = "soa_vector literal requires heap_alloc effect";
             return false;
           }
         }
         if (builtinName == "vector" && !expr.args.empty()) {
-          if (activeEffects_.count("heap_alloc") == 0) {
+          if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
             error_ = "vector literal requires heap_alloc effect";
             return false;
           }
@@ -7124,7 +7124,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       auto hasActiveBorrowForBinding = [&](const std::string &name,
                                            const std::string &ignoreBorrowName = std::string()) -> bool {
-        if (currentDefinitionIsUnsafe_) {
+        if (currentValidationContext_.definitionIsUnsafe) {
           return false;
         }
         auto referenceRootForBinding = [](const std::string &bindingName, const BindingInfo &binding) -> std::string {
@@ -7143,7 +7143,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (!ignoreBorrowName.empty() && borrowName == ignoreBorrowName) {
             return false;
           }
-          if (endedReferenceBorrows_.count(borrowName) > 0) {
+          if (currentValidationContext_.endedReferenceBorrows.count(borrowName) > 0) {
             return false;
           }
           const std::string root = referenceRootForBinding(borrowName, binding);
@@ -7319,11 +7319,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           formatBorrowedBindingError(target.name, target.name);
           return false;
         }
-        if (movedBindings_.count(target.name) > 0) {
+        if (currentValidationContext_.movedBindings.count(target.name) > 0) {
           error_ = "use-after-move: " + target.name;
           return false;
         }
-        movedBindings_.insert(target.name);
+        currentValidationContext_.movedBindings.insert(target.name);
         return true;
       }
       if (isAssignCall(expr)) {
@@ -7392,7 +7392,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               isMutableBinding(params, locals, fieldTargetRootName);
           const bool allowLifecycleFieldWrite =
               !fieldBinding.isMutable && isNamedFieldTarget(fieldTarget, "this") &&
-              isLifecycleHelperPath(currentDefinitionPath_);
+              isLifecycleHelperPath(currentValidationContext_.definitionPath);
           if (!fieldBinding.isMutable && !allowLifecycleFieldWrite && !allowMutableReceiverFieldWrite) {
             error_ = "assign target must be a mutable binding";
             return false;
@@ -7474,7 +7474,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             formatBorrowedBindingError(pointerBorrowRoot, borrowSink);
             return false;
           }
-          if (currentDefinitionIsUnsafe_ && isUnsafeReferenceExpr(expr.args[1])) {
+          if (currentValidationContext_.definitionIsUnsafe && isUnsafeReferenceExpr(expr.args[1])) {
             std::string escapeSink;
             bool hasEscapeSink = false;
             if (pointerExpr.kind == Expr::Kind::Name) {
@@ -7499,7 +7499,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               }
             }
           }
-          if (!currentDefinitionIsUnsafe_) {
+          if (!currentValidationContext_.definitionIsUnsafe) {
             std::string escapeSink;
             bool hasEscapeSink = false;
             if (pointerExpr.kind == Expr::Kind::Name) {
@@ -7530,7 +7530,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = "assign target must be a mutable binding";
           return false;
         }
-        if (currentDefinitionIsUnsafe_ && targetIsName && isUnsafeReferenceExpr(expr.args[1])) {
+        if (currentValidationContext_.definitionIsUnsafe && targetIsName && isUnsafeReferenceExpr(expr.args[1])) {
           std::string escapeSink;
           if (resolveReferenceEscapeSink(target.name, escapeSink)) {
             if (reportReferenceAssignmentEscape(escapeSink, expr.args[1])) {
@@ -7538,7 +7538,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             }
           }
         }
-        if (!currentDefinitionIsUnsafe_ && targetIsName) {
+        if (!currentValidationContext_.definitionIsUnsafe && targetIsName) {
           std::string escapeSink;
           if (resolveReferenceEscapeSink(target.name, escapeSink) &&
               reportReferenceAssignmentEscape(escapeSink, expr.args[1])) {
@@ -7549,7 +7549,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
         if (targetIsName) {
-          movedBindings_.erase(target.name);
+          currentValidationContext_.movedBindings.erase(target.name);
         }
         return true;
       }
@@ -8315,7 +8315,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         break;
       }
     }
-    if (currentDefinitionIsUnsafe_ && !calleeIsUnsafe) {
+    if (currentValidationContext_.definitionIsUnsafe && !calleeIsUnsafe) {
       for (size_t i = 0; i < calleeParams.size(); ++i) {
         const ParameterInfo &param = calleeParams[i];
         if (i == packedParamIndex) {

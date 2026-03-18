@@ -91,10 +91,10 @@ private:
   bool isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr) const;
   bool isBuiltinBlockCall(const Expr &expr) const;
   struct ValidationContext;
-  ValidationContext buildDefinitionValidationContext(const Definition &def) const;
-  ValidationContext buildExecutionValidationContext(const Execution &exec) const;
-  ValidationContext snapshotValidationContext() const;
-  void restoreValidationContext(ValidationContext context);
+  ValidationContext makeDefinitionValidationContext(const Definition &def) const;
+  ValidationContext makeExecutionValidationContext(const Execution &exec) const;
+  const ValidationContext &buildDefinitionValidationContext(const Definition &def) const;
+  const ValidationContext &buildExecutionValidationContext(const Execution &exec) const;
   void capturePrimarySpanIfUnset(int line, int column);
   void captureRelatedSpan(int line, int column, const std::string &label);
   void captureExprContext(const Expr &expr);
@@ -343,23 +343,23 @@ private:
   struct EffectScope {
     SemanticsValidator &validator;
     std::unordered_set<std::string> previous;
-    EffectScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> next)
-        : validator(validatorIn), previous(std::move(validatorIn.activeEffects_)) {
-      validator.activeEffects_ = std::move(next);
+    EffectScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> nextIn)
+        : validator(validatorIn), previous(std::move(validatorIn.currentValidationContext_.activeEffects)) {
+      validator.currentValidationContext_.activeEffects = std::move(nextIn);
     }
     ~EffectScope() {
-      validator.activeEffects_ = std::move(previous);
+      validator.currentValidationContext_.activeEffects = std::move(previous);
     }
   };
   struct ValidationContextScope {
     SemanticsValidator &validator;
     ValidationContext previous;
     ValidationContextScope(SemanticsValidator &validatorIn, ValidationContext context)
-        : validator(validatorIn), previous(validatorIn.snapshotValidationContext()) {
-      validator.restoreValidationContext(std::move(context));
+        : validator(validatorIn), previous(validatorIn.currentValidationContext_) {
+      validator.currentValidationContext_ = std::move(context);
     }
     ~ValidationContextScope() {
-      validator.restoreValidationContext(std::move(previous));
+      validator.currentValidationContext_ = std::move(previous);
     }
   };
   struct EntryArgStringScope {
@@ -376,34 +376,34 @@ private:
   struct OnErrorScope {
     SemanticsValidator &validator;
     std::optional<OnErrorHandler> previous;
-    OnErrorScope(SemanticsValidator &validatorIn, std::optional<OnErrorHandler> next)
-        : validator(validatorIn), previous(std::move(validatorIn.currentOnError_)) {
-      validator.currentOnError_ = std::move(next);
+    OnErrorScope(SemanticsValidator &validatorIn, std::optional<OnErrorHandler> nextIn)
+        : validator(validatorIn), previous(std::move(validatorIn.currentValidationContext_.onError)) {
+      validator.currentValidationContext_.onError = std::move(nextIn);
     }
     ~OnErrorScope() {
-      validator.currentOnError_ = std::move(previous);
+      validator.currentValidationContext_.onError = std::move(previous);
     }
   };
   struct MovedScope {
     SemanticsValidator &validator;
     std::unordered_set<std::string> previous;
-    MovedScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> next)
-        : validator(validatorIn), previous(std::move(validatorIn.movedBindings_)) {
-      validator.movedBindings_ = std::move(next);
+    MovedScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> nextIn)
+        : validator(validatorIn), previous(std::move(validatorIn.currentValidationContext_.movedBindings)) {
+      validator.currentValidationContext_.movedBindings = std::move(nextIn);
     }
     ~MovedScope() {
-      validator.movedBindings_ = std::move(previous);
+      validator.currentValidationContext_.movedBindings = std::move(previous);
     }
   };
   struct BorrowEndScope {
     SemanticsValidator &validator;
     std::unordered_set<std::string> previous;
-    BorrowEndScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> next)
-        : validator(validatorIn), previous(std::move(validatorIn.endedReferenceBorrows_)) {
-      validator.endedReferenceBorrows_ = std::move(next);
+    BorrowEndScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> nextIn)
+        : validator(validatorIn), previous(std::move(validatorIn.currentValidationContext_.endedReferenceBorrows)) {
+      validator.currentValidationContext_.endedReferenceBorrows = std::move(nextIn);
     }
     ~BorrowEndScope() {
-      validator.endedReferenceBorrows_ = std::move(previous);
+      validator.currentValidationContext_.endedReferenceBorrows = std::move(previous);
     }
   };
   struct ExprContextScope {
@@ -469,9 +469,9 @@ private:
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
-  std::unordered_set<std::string> activeEffects_;
-  std::unordered_set<std::string> movedBindings_;
-  std::unordered_set<std::string> endedReferenceBorrows_;
+  std::unordered_map<std::string, ValidationContext> definitionValidationContexts_;
+  std::unordered_map<std::string, ValidationContext> executionValidationContexts_;
+  ValidationContext currentValidationContext_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_map<std::string, std::string> importAliases_;
   std::unordered_map<std::string, EffectFreeSummary> effectFreeDefCache_;
@@ -481,12 +481,7 @@ private:
   bool mathImportAll_ = false;
   std::unordered_set<std::string> mathImports_;
   std::string entryArgsName_;
-  std::string currentDefinitionPath_;
-  bool currentDefinitionIsCompute_ = false;
-  bool currentDefinitionIsUnsafe_ = false;
   bool allowEntryArgStringUse_ = false;
-  std::optional<ResultTypeInfo> currentResultType_;
-  std::optional<OnErrorHandler> currentOnError_;
   const Expr *currentExprContext_ = nullptr;
   const Definition *currentDefinitionContext_ = nullptr;
   const Execution *currentExecutionContext_ = nullptr;
