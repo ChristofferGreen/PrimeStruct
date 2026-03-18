@@ -70,6 +70,7 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
        componentIt != dag.topologicalComponentIds.rend();
        ++componentIt) {
     const CondensationDagNode &componentNode = dag.nodes[*componentIt];
+    const bool componentHasCycle = componentNode.memberNodeIds.size() > 1;
     std::vector<const Definition *> definitions = collectUnknownDefinitions(componentNode);
     if (definitions.empty()) {
       continue;
@@ -81,21 +82,21 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
       for (const Definition *definition : definitions) {
         bool definitionChanged = false;
         if (!inferDefinitionReturnKindGraphStep(
-                *definition, false, componentNode.memberNodeIds.size() > 1, definitionChanged)) {
+                *definition, false, componentHasCycle, definitionChanged)) {
           return false;
         }
         changed = changed || definitionChanged;
       }
     } while (changed);
 
-    if (componentNode.memberNodeIds.size() > 1) {
-      error_ = "return type inference requires explicit annotation on " + definitions.front()->fullPath;
-      return false;
+    std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);
+    if (unresolvedDefinitions.empty()) {
+      continue;
     }
 
-    for (const Definition *definition : definitions) {
+    for (const Definition *definition : unresolvedDefinitions) {
       bool definitionChanged = false;
-      if (!inferDefinitionReturnKindGraphStep(*definition, true, false, definitionChanged)) {
+      if (!inferDefinitionReturnKindGraphStep(*definition, true, componentHasCycle, definitionChanged)) {
         return false;
       }
     }
