@@ -10024,6 +10024,78 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer call helpers source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path callHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererCallHelpers.cpp";
+  const std::filesystem::path callResolutionPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
+  REQUIRE(std::filesystem::exists(callHelpersPath));
+  REQUIRE(std::filesystem::exists(callResolutionPath));
+  const std::string callHelpersSource = readText(callHelpersPath);
+  const std::string callResolutionSource = readText(callResolutionPath);
+
+  CHECK(callHelpersSource.find("ResolvedInlineCallResult emitResolvedInlineDefinitionCall(") !=
+        std::string::npos);
+  CHECK(callHelpersSource.find("InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(") !=
+        std::string::npos);
+  CHECK(callHelpersSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("ResolveDefinitionCallFn makeResolveDefinitionCall(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("CallResolutionAdapters makeCallResolutionAdapters(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("EntryCallResolutionSetup buildEntryCallResolutionSetup(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("ResolveExprPathFn makeResolveCallPathFromScope(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("IsTailCallCandidateFn makeIsTailCallCandidate(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("DefinitionExistsFn makeDefinitionExistsByPath(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("std::string resolveCallPathFromScope(") == std::string::npos);
+  CHECK(callHelpersSource.find("bool isTailCallCandidate(const Expr &expr,") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool hasTailExecutionCandidate(const std::vector<Expr> &statements,") ==
+        std::string::npos);
+
+  CHECK(callResolutionSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("ResolveDefinitionCallFn makeResolveDefinitionCall(") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("CallResolutionAdapters makeCallResolutionAdapters(") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("EntryCallResolutionSetup buildEntryCallResolutionSetup(") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("ResolveExprPathFn makeResolveCallPathFromScope(") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("IsTailCallCandidateFn makeIsTailCallCandidate(") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("DefinitionExistsFn makeDefinitionExistsByPath(") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("std::string resolveCallPathFromScope(") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("bool isTailCallCandidate(const Expr &expr,") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("bool hasTailExecutionCandidate(const std::vector<Expr> &statements,") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("std::string normalizeMapImportAliasPath(const std::string &path)") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";

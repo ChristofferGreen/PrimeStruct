@@ -270,7 +270,9 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Extract loop/conditional statement validation from `SemanticsValidatorStatement.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorStatementControlFlow.cpp`.
 - ✓ Extract binding initialization and borrow-validation statement checks from `SemanticsValidatorStatement.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorStatementBindings.cpp`.
 - ✓ Extract path-space/compute/buffer builtin statement validation from `SemanticsValidatorStatement.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorStatementBuiltins.cpp`.
-- ○ Refactor `src/ir_lowerer/IrLowererCallHelpers.cpp` (`3053` lines) below the `700`-line target.
+- ◐ Refactor `src/ir_lowerer/IrLowererCallHelpers.cpp` (`3231` lines) below the `700`-line target. Progress: extracted call-resolution and tail-call detection helpers into `src/ir_lowerer/IrLowererCallResolution.cpp`.
+- ✓ Extract call-resolution and tail-call detection helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit `src/ir_lowerer/IrLowererCallResolution.cpp`.
+- ○ Extract inline native call-dispatch helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit(s).
 - ○ Refactor `src/Vm.cpp` (`3050` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorBuild.cpp` (`2353` lines) below the `700`-line target.
 - ○ Refactor `src/wasm_emitter/WasmEmitter.cpp` (`2306` lines) below the `700`-line target.
