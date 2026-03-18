@@ -64,6 +64,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprCollectionAccess.cpp
   src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp
   src/semantics/SemanticsValidatorExprFieldResolution.cpp
+  src/semantics/SemanticsValidatorExprGpuBuffer.cpp
   src/semantics/SemanticsValidatorExprLambda.cpp
   src/semantics/SemanticsValidatorExprMethodResolution.cpp
   src/semantics/SemanticsValidatorExprNumeric.cpp

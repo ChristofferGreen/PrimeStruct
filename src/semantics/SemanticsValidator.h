@@ -222,6 +222,11 @@ private:
       const std::string &resolved,
       bool resolvedMethod,
       const ExprNamedArgumentBuiltinContext &context);
+  bool validateExprGpuBufferBuiltins(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      bool &handledOut);
   std::string normalizeCollectionMethodName(const std::string &methodName) const;
   std::string inferPointerLikeCallReturnType(
       const Expr &receiverExpr,
