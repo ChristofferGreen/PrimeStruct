@@ -148,6 +148,18 @@ private:
                                             const std::vector<ParameterInfo> &params,
                                             const std::unordered_map<std::string, BindingInfo> &locals,
                                             bool &handled);
+  std::string normalizeCollectionTypePath(const std::string &typePath) const;
+  bool hasImportedDefinitionPath(const std::string &path) const;
+  bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);
+  bool resolveCallCollectionTypePath(const Expr &target,
+                                     const std::vector<ParameterInfo> &params,
+                                     const std::unordered_map<std::string, BindingInfo> &locals,
+                                     std::string &typePathOut);
+  bool resolveCallCollectionTemplateArgs(const Expr &target,
+                                         const std::string &expectedBase,
+                                         const std::vector<ParameterInfo> &params,
+                                         const std::unordered_map<std::string, BindingInfo> &locals,
+                                         std::vector<std::string> &argsOut);
   bool validateStatement(const std::vector<ParameterInfo> &params,
                          std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &stmt,

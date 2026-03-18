@@ -9300,14 +9300,32 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
                                                              : std::filesystem::path("..");
 
   const std::filesystem::path semanticsInferPath = repoRoot / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
+  const std::filesystem::path semanticsInferCollectionsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
   const std::filesystem::path semanticsInferControlFlowPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferControlFlow.cpp";
   REQUIRE(std::filesystem::exists(semanticsInferPath));
+  REQUIRE(std::filesystem::exists(semanticsInferCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
   const std::string semanticsInferSource = readText(semanticsInferPath);
+  const std::string semanticsInferCollectionsSource = readText(semanticsInferCollectionsPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   CHECK(semanticsInferSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
   CHECK(semanticsInferSource.find("inferControlFlowExprReturnKind(expr, params, locals, handledControlFlow);") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("resolveCallCollectionTypePath(target, params, locals, collectionTypePath)") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args)") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::normalizeCollectionTypePath") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::hasImportedDefinitionPath") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::inferDefinitionReturnBinding") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTypePath") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTemplateArgs") !=
         std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("ReturnKind combineNumericReturnKinds") != std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("ReturnKind SemanticsValidator::inferControlFlowExprReturnKind") !=
