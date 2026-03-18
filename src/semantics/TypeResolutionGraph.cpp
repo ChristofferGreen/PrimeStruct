@@ -1,0 +1,495 @@
+#include "TypeResolutionGraph.h"
+
+#include "SemanticsHelpers.h"
+#include "SemanticsValidateConvertConstructors.h"
+#include "SemanticsValidateExperimentalGfxConstructors.h"
+#include "SemanticsValidateReflectionGeneratedHelpers.h"
+#include "SemanticsValidateReflectionMetadata.h"
+#include "SemanticsValidateTransforms.h"
+#include "primec/testing/SemanticsValidationHelpers.h"
+
+#include <optional>
+#include <string_view>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+namespace primec::semantics {
+
+bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error);
+
+namespace {
+
+bool hasTransformNamed(const std::vector<Transform> &transforms, std::string_view name) {
+  for (const auto &transform : transforms) {
+    if (transform.name == name) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::optional<std::string> explicitBindingTypeName(const Expr &expr) {
+  for (const auto &transform : expr.transforms) {
+    if (isBindingAuxTransformName(transform.name)) {
+      continue;
+    }
+    return transform.name;
+  }
+  return std::nullopt;
+}
+
+class TypeResolutionGraphBuilder {
+public:
+  explicit TypeResolutionGraphBuilder(const Program &program)
+      : program_(program) {
+    initializeMetadata();
+  }
+
+  TypeResolutionGraph build() {
+    createDefinitionReturnNodes();
+    for (const auto &def : program_.definitions) {
+      traverseDefinition(def);
+    }
+    for (const auto &exec : program_.executions) {
+      traverseExecution(exec);
+    }
+    return std::move(graph_);
+  }
+
+private:
+  struct TraversalContext {
+    std::string scopePath;
+    uint32_t definitionReturnNodeId = 0;
+    bool hasDefinitionReturnNode = false;
+    bool definitionReturnIsInferred = false;
+    size_t callOrdinal = 0;
+    size_t localAutoOrdinal = 0;
+  };
+
+  const Program &program_;
+  TypeResolutionGraph graph_;
+  std::unordered_set<std::string> definedPaths_;
+  std::unordered_set<std::string> callableDefinitionPaths_;
+  std::unordered_set<std::string> publicDefinitions_;
+  std::unordered_map<std::string, std::string> importAliases_;
+  std::unordered_map<std::string, uint32_t> definitionReturnNodeIds_;
+
+  void initializeMetadata() {
+    definedPaths_.reserve(program_.definitions.size());
+    callableDefinitionPaths_.reserve(program_.definitions.size());
+    publicDefinitions_.reserve(program_.definitions.size());
+    importAliases_.reserve(program_.definitions.size());
+
+    for (const auto &def : program_.definitions) {
+      definedPaths_.insert(def.fullPath);
+      if (isCallableDefinition(def)) {
+        callableDefinitionPaths_.insert(def.fullPath);
+      }
+      const bool sawPublic = hasTransformNamed(def.transforms, "public");
+      const bool sawPrivate = hasTransformNamed(def.transforms, "private");
+      if (sawPublic && !sawPrivate) {
+        publicDefinitions_.insert(def.fullPath);
+      }
+    }
+
+    auto importWildcardPrefix = [](const std::string &path, std::string &prefixOut) -> bool {
+      if (path.size() >= 2 && path.compare(path.size() - 2, 2, "/*") == 0) {
+        prefixOut = path.substr(0, path.size() - 2);
+        return true;
+      }
+      if (path.find('/', 1) == std::string::npos) {
+        prefixOut = path;
+        return true;
+      }
+      return false;
+    };
+
+    for (const auto &importPath : program_.imports) {
+      std::string prefix;
+      if (importWildcardPrefix(importPath, prefix)) {
+        std::string scopedPrefix = prefix;
+        if (!scopedPrefix.empty() && scopedPrefix.back() != '/') {
+          scopedPrefix += "/";
+        }
+        for (const auto &def : program_.definitions) {
+          if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
+            continue;
+          }
+          const std::string remainder = def.fullPath.substr(scopedPrefix.size());
+          if (remainder.empty() || remainder.find('/') != std::string::npos) {
+            continue;
+          }
+          if (publicDefinitions_.count(def.fullPath) == 0) {
+            continue;
+          }
+          importAliases_.emplace(remainder, def.fullPath);
+        }
+        continue;
+      }
+
+      const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
+      if (remainder.empty() || publicDefinitions_.count(importPath) == 0) {
+        continue;
+      }
+      importAliases_.emplace(remainder, importPath);
+    }
+  }
+
+  bool isStructDefinition(const Definition &def) const {
+    for (const auto &transform : def.transforms) {
+      if (isStructTransformName(transform.name)) {
+        return true;
+      }
+    }
+    if (hasTransformNamed(def.transforms, "return")) {
+      return false;
+    }
+    if (!def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
+      return false;
+    }
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        return false;
+      }
+    }
+    return !def.statements.empty();
+  }
+
+  bool isCallableDefinition(const Definition &def) const {
+    return !isStructDefinition(def);
+  }
+
+  bool definitionReturnIsInferred(const Definition &def) const {
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return") {
+        continue;
+      }
+      if (transform.templateArgs.size() != 1) {
+        return true;
+      }
+      return transform.templateArgs.front() == "auto";
+    }
+    return true;
+  }
+
+  bool isLocalAutoConstraint(const Expr &expr) const {
+    if (!expr.isBinding) {
+      return false;
+    }
+    const std::optional<std::string> typeName = explicitBindingTypeName(expr);
+    return !typeName.has_value() || *typeName == "auto";
+  }
+
+  uint32_t addNode(TypeResolutionNodeKind kind,
+                   std::string label,
+                   std::string scopePath,
+                   std::string resolvedPath,
+                   int sourceLine,
+                   int sourceColumn) {
+    const uint32_t id = static_cast<uint32_t>(graph_.nodes.size());
+    graph_.nodes.push_back(TypeResolutionGraphNode{
+        id,
+        kind,
+        std::move(label),
+        std::move(scopePath),
+        std::move(resolvedPath),
+        sourceLine,
+        sourceColumn,
+    });
+    return id;
+  }
+
+  void addEdge(uint32_t sourceId, uint32_t targetId, TypeResolutionEdgeKind kind) {
+    graph_.edges.push_back(TypeResolutionGraphEdge{sourceId, targetId, kind});
+  }
+
+  void createDefinitionReturnNodes() {
+    definitionReturnNodeIds_.reserve(callableDefinitionPaths_.size());
+    for (const auto &def : program_.definitions) {
+      if (!isCallableDefinition(def)) {
+        continue;
+      }
+      const uint32_t nodeId = addNode(
+          TypeResolutionNodeKind::DefinitionReturn, def.fullPath, def.fullPath, def.fullPath, def.sourceLine, def.sourceColumn);
+      definitionReturnNodeIds_.emplace(def.fullPath, nodeId);
+    }
+  }
+
+  std::string resolveCallTargetPath(const Expr &expr) const {
+    if (expr.name.empty()) {
+      return {};
+    }
+    if (expr.name.front() == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      std::string normalizedPrefix = expr.namespacePrefix;
+      if (normalizedPrefix.front() != '/') {
+        normalizedPrefix.insert(normalizedPrefix.begin(), '/');
+      }
+      const size_t lastSlash = normalizedPrefix.find_last_of('/');
+      const std::string_view suffix =
+          lastSlash == std::string::npos ? std::string_view(normalizedPrefix)
+                                         : std::string_view(normalizedPrefix).substr(lastSlash + 1);
+      if (suffix == expr.name && definedPaths_.count(normalizedPrefix) > 0) {
+        return normalizedPrefix;
+      }
+      std::string prefix = normalizedPrefix;
+      while (!prefix.empty()) {
+        const std::string candidate = prefix + "/" + expr.name;
+        if (definedPaths_.count(candidate) > 0) {
+          return candidate;
+        }
+        const size_t slash = prefix.find_last_of('/');
+        if (slash == std::string::npos) {
+          break;
+        }
+        prefix = prefix.substr(0, slash);
+      }
+      auto importIt = importAliases_.find(expr.name);
+      if (importIt != importAliases_.end()) {
+        return importIt->second;
+      }
+      return normalizedPrefix + "/" + expr.name;
+    }
+    auto importIt = importAliases_.find(expr.name);
+    if (importIt != importAliases_.end()) {
+      return importIt->second;
+    }
+    return "/" + expr.name;
+  }
+
+  bool isGraphCallSite(const Expr &expr, std::string &resolvedPathOut) const {
+    if (expr.kind != Expr::Kind::Call || expr.isBinding) {
+      return false;
+    }
+    resolvedPathOut = resolveCallTargetPath(expr);
+    return callableDefinitionPaths_.count(resolvedPathOut) > 0;
+  }
+
+  void appendCollectedCalls(std::vector<uint32_t> *callIdsOut, const std::vector<uint32_t> &callIds) {
+    if (callIdsOut == nullptr) {
+      return;
+    }
+    callIdsOut->insert(callIdsOut->end(), callIds.begin(), callIds.end());
+  }
+
+  void visitExpr(const Expr &expr, TraversalContext &context, std::vector<uint32_t> *callIdsOut) {
+    if (expr.isBinding) {
+      std::vector<uint32_t> initializerCallIds;
+      for (const auto &arg : expr.args) {
+        visitExpr(arg, context, &initializerCallIds);
+      }
+      for (const auto &bodyExpr : expr.bodyArguments) {
+        visitExpr(bodyExpr, context, &initializerCallIds);
+      }
+      if (isLocalAutoConstraint(expr)) {
+        const std::string label =
+            context.scopePath + "::auto:" + expr.name + "#" + std::to_string(context.localAutoOrdinal++);
+        const uint32_t localNodeId = addNode(
+            TypeResolutionNodeKind::LocalAuto, label, context.scopePath, {}, expr.sourceLine, expr.sourceColumn);
+        for (uint32_t callNodeId : initializerCallIds) {
+          addEdge(localNodeId, callNodeId, TypeResolutionEdgeKind::Dependency);
+        }
+      }
+      appendCollectedCalls(callIdsOut, initializerCallIds);
+      return;
+    }
+
+    if (isReturnCall(expr)) {
+      std::vector<uint32_t> returnCallIds;
+      for (const auto &arg : expr.args) {
+        visitExpr(arg, context, &returnCallIds);
+      }
+      for (const auto &bodyExpr : expr.bodyArguments) {
+        visitExpr(bodyExpr, context, &returnCallIds);
+      }
+      if (context.hasDefinitionReturnNode) {
+        const TypeResolutionEdgeKind edgeKind = context.definitionReturnIsInferred
+                                                    ? TypeResolutionEdgeKind::Dependency
+                                                    : TypeResolutionEdgeKind::Requirement;
+        for (uint32_t callNodeId : returnCallIds) {
+          addEdge(context.definitionReturnNodeId, callNodeId, edgeKind);
+        }
+      }
+      appendCollectedCalls(callIdsOut, returnCallIds);
+      return;
+    }
+
+    std::string resolvedPath;
+    if (isGraphCallSite(expr, resolvedPath)) {
+      const std::string label =
+          context.scopePath + "::call#" + std::to_string(context.callOrdinal++);
+      const uint32_t callNodeId = addNode(
+          TypeResolutionNodeKind::CallConstraint,
+          label,
+          context.scopePath,
+          resolvedPath,
+          expr.sourceLine,
+          expr.sourceColumn);
+      auto definitionNodeIt = definitionReturnNodeIds_.find(resolvedPath);
+      if (definitionNodeIt != definitionReturnNodeIds_.end()) {
+        addEdge(callNodeId, definitionNodeIt->second, TypeResolutionEdgeKind::Dependency);
+      }
+      if (callIdsOut != nullptr) {
+        callIdsOut->push_back(callNodeId);
+      }
+    }
+
+    for (const auto &arg : expr.args) {
+      visitExpr(arg, context, callIdsOut);
+    }
+    for (const auto &bodyExpr : expr.bodyArguments) {
+      visitExpr(bodyExpr, context, callIdsOut);
+    }
+  }
+
+  void traverseDefinition(const Definition &def) {
+    TraversalContext context;
+    context.scopePath = def.fullPath;
+    auto definitionNodeIt = definitionReturnNodeIds_.find(def.fullPath);
+    if (definitionNodeIt != definitionReturnNodeIds_.end()) {
+      context.definitionReturnNodeId = definitionNodeIt->second;
+      context.hasDefinitionReturnNode = true;
+      context.definitionReturnIsInferred = definitionReturnIsInferred(def);
+    }
+
+    for (const auto &param : def.parameters) {
+      for (const auto &arg : param.args) {
+        visitExpr(arg, context, nullptr);
+      }
+      for (const auto &bodyExpr : param.bodyArguments) {
+        visitExpr(bodyExpr, context, nullptr);
+      }
+    }
+
+    for (const auto &stmt : def.statements) {
+      visitExpr(stmt, context, nullptr);
+    }
+
+    if (def.returnExpr.has_value() && context.hasDefinitionReturnNode) {
+      std::vector<uint32_t> returnExprCallIds;
+      visitExpr(*def.returnExpr, context, &returnExprCallIds);
+      const TypeResolutionEdgeKind edgeKind = context.definitionReturnIsInferred
+                                                  ? TypeResolutionEdgeKind::Dependency
+                                                  : TypeResolutionEdgeKind::Requirement;
+      for (uint32_t callNodeId : returnExprCallIds) {
+        addEdge(context.definitionReturnNodeId, callNodeId, edgeKind);
+      }
+    }
+  }
+
+  void traverseExecution(const Execution &exec) {
+    TraversalContext context;
+    context.scopePath = exec.fullPath;
+
+    Expr executionCall;
+    executionCall.kind = Expr::Kind::Call;
+    executionCall.name = exec.name.empty() ? exec.fullPath : exec.name;
+    executionCall.namespacePrefix = exec.namespacePrefix;
+    executionCall.args = exec.arguments;
+    executionCall.argNames = exec.argumentNames;
+    executionCall.bodyArguments = exec.bodyArguments;
+    executionCall.hasBodyArguments = exec.hasBodyArguments;
+    executionCall.templateArgs = exec.templateArgs;
+    executionCall.sourceLine = exec.sourceLine;
+    executionCall.sourceColumn = exec.sourceColumn;
+    visitExpr(executionCall, context, nullptr);
+  }
+};
+
+bool prepareProgramForTypeResolutionGraph(Program &program,
+                                          const std::string &entryPath,
+                                          const std::vector<std::string> &semanticTransforms,
+                                          std::string &error) {
+  if (!applySemanticTransforms(program, semanticTransforms, error)) {
+    return false;
+  }
+  if (!rewriteExperimentalGfxConstructors(program, error)) {
+    return false;
+  }
+  if (!rewriteReflectionGeneratedHelpers(program, error)) {
+    return false;
+  }
+  if (!monomorphizeTemplates(program, entryPath, error)) {
+    return false;
+  }
+  if (!rewriteReflectionMetadataQueries(program, error)) {
+    return false;
+  }
+  if (!rewriteConvertConstructors(program, error)) {
+    return false;
+  }
+  return true;
+}
+
+} // namespace
+
+std::string_view typeResolutionNodeKindName(TypeResolutionNodeKind kind) {
+  switch (kind) {
+  case TypeResolutionNodeKind::DefinitionReturn:
+    return "definition_return";
+  case TypeResolutionNodeKind::CallConstraint:
+    return "call_constraint";
+  case TypeResolutionNodeKind::LocalAuto:
+    return "local_auto";
+  }
+  return "definition_return";
+}
+
+std::string_view typeResolutionEdgeKindName(TypeResolutionEdgeKind kind) {
+  switch (kind) {
+  case TypeResolutionEdgeKind::Dependency:
+    return "dependency";
+  case TypeResolutionEdgeKind::Requirement:
+    return "requirement";
+  }
+  return "dependency";
+}
+
+TypeResolutionGraph buildTypeResolutionGraph(const Program &program) {
+  TypeResolutionGraphBuilder builder(program);
+  return builder.build();
+}
+
+bool buildTypeResolutionGraphForTesting(Program program,
+                                        const std::string &entryPath,
+                                        std::string &error,
+                                        TypeResolutionGraphSnapshot &out,
+                                        const std::vector<std::string> &semanticTransforms) {
+  error.clear();
+  out = {};
+  if (!prepareProgramForTypeResolutionGraph(program, entryPath, semanticTransforms, error)) {
+    return false;
+  }
+
+  const TypeResolutionGraph graph = buildTypeResolutionGraph(program);
+  out.nodes.reserve(graph.nodes.size());
+  for (const auto &node : graph.nodes) {
+    out.nodes.push_back(TypeResolutionGraphSnapshotNode{
+        node.id,
+        std::string(typeResolutionNodeKindName(node.kind)),
+        node.label,
+        node.scopePath,
+        node.resolvedPath,
+        node.sourceLine,
+        node.sourceColumn,
+    });
+  }
+  out.edges.reserve(graph.edges.size());
+  for (const auto &edge : graph.edges) {
+    out.edges.push_back(TypeResolutionGraphSnapshotEdge{
+        edge.sourceId,
+        edge.targetId,
+        std::string(typeResolutionEdgeKindName(edge.kind)),
+    });
+  }
+  return true;
+}
+
+} // namespace primec::semantics

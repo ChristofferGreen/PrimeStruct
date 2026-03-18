@@ -261,6 +261,44 @@ TEST_CASE("semantics validator caches base validation contexts behind a single c
   CHECK(source.find("restoreValidationContext(") == std::string::npos);
 }
 
+TEST_CASE("type resolution graph builder is wired through semantics testing api") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
+  std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+  std::filesystem::path graphHeaderPath = cwd / "src" / "semantics" / "TypeResolutionGraph.h";
+  std::filesystem::path graphSourcePath = cwd / "src" / "semantics" / "TypeResolutionGraph.cpp";
+  if (!std::filesystem::exists(cmakePath)) {
+    cmakePath = cwd.parent_path() / "CMakeLists.txt";
+    testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+    graphHeaderPath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraph.h";
+    graphSourcePath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraph.cpp";
+  }
+  REQUIRE(std::filesystem::exists(cmakePath));
+  REQUIRE(std::filesystem::exists(testApiPath));
+  REQUIRE(std::filesystem::exists(graphHeaderPath));
+  REQUIRE(std::filesystem::exists(graphSourcePath));
+
+  const std::string cmake = readTextFile(cmakePath);
+  const std::string testApi = readTextFile(testApiPath);
+  const std::string graphHeader = readTextFile(graphHeaderPath);
+  const std::string graphSource = readTextFile(graphSourcePath);
+  CHECK(cmake.find("src/semantics/TypeResolutionGraph.cpp") != std::string::npos);
+  CHECK(cmake.find("primestruct.semantics.type_resolution_graph") != std::string::npos);
+  CHECK(testApi.find("struct TypeResolutionGraphSnapshotNode") != std::string::npos);
+  CHECK(testApi.find("struct TypeResolutionGraphSnapshotEdge") != std::string::npos);
+  CHECK(testApi.find("struct TypeResolutionGraphSnapshot") != std::string::npos);
+  CHECK(testApi.find("buildTypeResolutionGraphForTesting") != std::string::npos);
+  CHECK(graphHeader.find("enum class TypeResolutionNodeKind") != std::string::npos);
+  CHECK(graphHeader.find("enum class TypeResolutionEdgeKind") != std::string::npos);
+  CHECK(graphHeader.find("struct TypeResolutionGraphNode") != std::string::npos);
+  CHECK(graphHeader.find("struct TypeResolutionGraphEdge") != std::string::npos);
+  CHECK(graphHeader.find("struct TypeResolutionGraph") != std::string::npos);
+  CHECK(graphSource.find("TypeResolutionGraphBuilder") != std::string::npos);
+  CHECK(graphSource.find("monomorphizeTemplates(program, entryPath, error)") != std::string::npos);
+  CHECK(graphSource.find("rewriteConvertConstructors(program, error)") != std::string::npos);
+  CHECK(graphSource.find("buildTypeResolutionGraph(program)") != std::string::npos);
+}
+
 TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";
