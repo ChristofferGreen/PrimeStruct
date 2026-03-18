@@ -105,6 +105,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/IrVirtualRegisterSpillInsertion.cpp
   src/IrVirtualRegisterVerifier.cpp
   src/ir_lowerer/IrLowererCallHelpers.cpp
+  src/ir_lowerer/IrLowererAccessTargetResolution.cpp
   src/ir_lowerer/IrLowererCallResolution.cpp
   src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp
   src/ir_lowerer/IrLowererNativeTailDispatch.cpp

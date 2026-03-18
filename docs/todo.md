@@ -270,11 +270,12 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Extract loop/conditional statement validation from `SemanticsValidatorStatement.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorStatementControlFlow.cpp`.
 - ✓ Extract binding initialization and borrow-validation statement checks from `SemanticsValidatorStatement.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorStatementBindings.cpp`.
 - ✓ Extract path-space/compute/buffer builtin statement validation from `SemanticsValidatorStatement.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorStatementBuiltins.cpp`.
-- ◐ Refactor `src/ir_lowerer/IrLowererCallHelpers.cpp` (`2194` lines) below the `700`-line target. Progress: extracted call-resolution and tail-call detection helpers into `src/ir_lowerer/IrLowererCallResolution.cpp`, extracted inline native call-dispatch helpers into `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`, and extracted unsupported/native tail builtin dispatch helpers into `src/ir_lowerer/IrLowererNativeTailDispatch.cpp`.
+- ◐ Refactor `src/ir_lowerer/IrLowererCallHelpers.cpp` (`1853` lines) below the `700`-line target. Progress: extracted call-resolution and tail-call detection helpers into `src/ir_lowerer/IrLowererCallResolution.cpp`, extracted inline native call-dispatch helpers into `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`, extracted unsupported/native tail builtin dispatch helpers into `src/ir_lowerer/IrLowererNativeTailDispatch.cpp`, and extracted map/array-vector access target resolution helpers into `src/ir_lowerer/IrLowererAccessTargetResolution.cpp`.
 - ✓ Extract call-resolution and tail-call detection helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit `src/ir_lowerer/IrLowererCallResolution.cpp`.
 - ✓ Extract inline native call-dispatch helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`.
 - ✓ Extract unsupported/native tail builtin dispatch helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit `src/ir_lowerer/IrLowererNativeTailDispatch.cpp`.
-- ○ Extract map/array-vector access target resolution helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit(s).
+- ✓ Extract map/array-vector access target resolution helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit `src/ir_lowerer/IrLowererAccessTargetResolution.cpp`.
+- ○ Extract map/string/array indexed access emission helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit(s).
 - ○ Refactor `src/Vm.cpp` (`3050` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorBuild.cpp` (`2353` lines) below the `700`-line target.
 - ○ Refactor `src/wasm_emitter/WasmEmitter.cpp` (`2306` lines) below the `700`-line target.
