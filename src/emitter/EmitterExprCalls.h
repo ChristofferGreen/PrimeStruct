@@ -689,6 +689,18 @@
            normalized == "std/collections/map/at" ||
            normalized == "std/collections/map/at_unsafe";
   };
+  auto isExplicitMapAccessDirectCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    return normalized == "map/at" || normalized == "map/at_unsafe" ||
+           normalized == "std/collections/map/at" ||
+           normalized == "std/collections/map/at_unsafe";
+  };
   auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
     if (isStringValue(targetExpr, localTypes)) {
       return "/string";
@@ -916,6 +928,64 @@
         << ")";
     return out.str();
   };
+  auto pickExplicitMapAccessReceiverIndex = [&](const Expr &candidate) -> size_t {
+    if (candidate.args.size() != 2) {
+      return 0;
+    }
+    if (hasNamedArguments(candidate.argNames)) {
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          return i;
+        }
+      }
+    }
+    return 0;
+  };
+  auto isNoHelperExplicitMapAccessCallFallback = [&](const Expr &candidate) {
+    if (!isExplicitMapAccessDirectCall(candidate) || candidate.args.size() != 2) {
+      return false;
+    }
+    const size_t receiverIndex = pickExplicitMapAccessReceiverIndex(candidate);
+    if (receiverIndex >= candidate.args.size() || !isResolvedMapTarget(candidate.args[receiverIndex])) {
+      return false;
+    }
+    return nameMap.count(resolveExprPath(candidate)) == 0;
+  };
+  auto emitMissingExplicitMapAccessCall = [&](const Expr &candidate) {
+    const size_t receiverIndex = pickExplicitMapAccessReceiverIndex(candidate);
+    const size_t indexIndex = receiverIndex == 0 ? 1 : 0;
+    const std::string resolvedPath = resolveExprPath(candidate);
+    const bool isUnsafe =
+        resolvedPath == "/map/at_unsafe" || resolvedPath == "/std/collections/map/at_unsafe";
+    std::ostringstream out;
+    out << "ps_missing_map_" << (isUnsafe ? "at_unsafe" : "at") << "_call_helper("
+        << emitExpr(candidate.args[receiverIndex],
+                    nameMap,
+                    paramMap,
+                    defMap,
+                    structTypeMap,
+                    importAliases,
+                    localTypes,
+                    returnKinds,
+                    resultInfos,
+                    returnStructs,
+                    allowMathBare)
+        << ", "
+        << emitExpr(candidate.args[indexIndex],
+                    nameMap,
+                    paramMap,
+                    defMap,
+                    structTypeMap,
+                    importAliases,
+                    localTypes,
+                    returnKinds,
+                    resultInfos,
+                    returnStructs,
+                    allowMathBare)
+        << ")";
+    return out.str();
+  };
   auto isNoHelperExplicitVectorAccessCountReceiver = [&](const Expr &candidate) {
     if (isExplicitVectorAccessDirectCall(candidate)) {
       return explicitVectorAccessResolvedTypePath(candidate).empty();
@@ -1031,6 +1101,9 @@
     }
     if (isNoHelperExplicitVectorAccessCallFallback(expr)) {
       return emitMissingExplicitVectorAccessCall(expr);
+    }
+    if (isNoHelperExplicitMapAccessCallFallback(expr)) {
+      return emitMissingExplicitMapAccessCall(expr);
     }
     if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         isNoHelperExplicitVectorAccessCountReceiver(expr.args.front())) {
