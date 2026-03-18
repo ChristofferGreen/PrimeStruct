@@ -21,6 +21,10 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     }
   }
   if (exprKind == ReturnKind::Unknown) {
+    if (deferUnknownReturnInferenceErrors_) {
+      state.sawUnresolvedReturnDependency = true;
+      return true;
+    }
     if (error_.empty()) {
       error_ = "unable to infer return type on " + def.fullPath;
     }

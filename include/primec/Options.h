@@ -28,6 +28,7 @@ struct Options {
   std::string entryPath = "/main";
   bool inlineIrCalls = false;
   std::string dumpStage;
+  std::string typeResolver = "legacy";
   std::vector<std::string> textFilters = {"collections", "operators", "implicit-utf8", "implicit-i32"};
   std::vector<TextTransformRule> textTransformRules;
   std::vector<TextTransformRule> semanticTransformRules;

@@ -1,5 +1,8 @@
 #include "SemanticsValidator.h"
 
+#include "CondensationDag.h"
+#include "TypeResolutionGraph.h"
+
 #include <algorithm>
 #include <functional>
 #include <sstream>
@@ -7,6 +10,13 @@
 namespace primec::semantics {
 
 bool SemanticsValidator::inferUnknownReturnKinds() {
+  if (graphTypeResolverEnabled_) {
+    return inferUnknownReturnKindsGraph();
+  }
+  return inferUnknownReturnKindsLegacy();
+}
+
+bool SemanticsValidator::inferUnknownReturnKindsLegacy() {
   for (const auto &def : program_.definitions) {
     if (returnKinds_[def.fullPath] == ReturnKind::Unknown) {
       if (!inferDefinitionReturnKind(def)) {
@@ -14,6 +24,208 @@ bool SemanticsValidator::inferUnknownReturnKinds() {
       }
     }
   }
+  return true;
+}
+
+bool SemanticsValidator::inferUnknownReturnKindsGraph() {
+  const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
+
+  std::vector<DirectedGraphEdge> dependencyEdges;
+  dependencyEdges.reserve(graph.edges.size());
+  for (const TypeResolutionGraphEdge &edge : graph.edges) {
+    if (edge.kind != TypeResolutionEdgeKind::Dependency) {
+      continue;
+    }
+    dependencyEdges.push_back(DirectedGraphEdge{edge.sourceId, edge.targetId});
+  }
+
+  const CondensationDag dag =
+      computeCondensationDag(static_cast<uint32_t>(graph.nodes.size()), dependencyEdges);
+
+  auto collectUnknownDefinitions = [&](const CondensationDagNode &componentNode) {
+    std::vector<const Definition *> definitions;
+    definitions.reserve(componentNode.memberNodeIds.size());
+    for (uint32_t nodeId : componentNode.memberNodeIds) {
+      if (nodeId >= graph.nodes.size()) {
+        continue;
+      }
+      const TypeResolutionGraphNode &node = graph.nodes[nodeId];
+      if (node.kind != TypeResolutionNodeKind::DefinitionReturn) {
+        continue;
+      }
+      auto kindIt = returnKinds_.find(node.resolvedPath);
+      if (kindIt == returnKinds_.end() || kindIt->second != ReturnKind::Unknown) {
+        continue;
+      }
+      auto defIt = defMap_.find(node.resolvedPath);
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        continue;
+      }
+      definitions.push_back(defIt->second);
+    }
+    return definitions;
+  };
+
+  for (auto componentIt = dag.topologicalComponentIds.rbegin();
+       componentIt != dag.topologicalComponentIds.rend();
+       ++componentIt) {
+    const CondensationDagNode &componentNode = dag.nodes[*componentIt];
+    std::vector<const Definition *> definitions = collectUnknownDefinitions(componentNode);
+    if (definitions.empty()) {
+      continue;
+    }
+
+    bool changed = false;
+    do {
+      changed = false;
+      for (const Definition *definition : definitions) {
+        bool definitionChanged = false;
+        if (!inferDefinitionReturnKindGraphStep(
+                *definition, false, componentNode.memberNodeIds.size() > 1, definitionChanged)) {
+          return false;
+        }
+        changed = changed || definitionChanged;
+      }
+    } while (changed);
+
+    if (componentNode.memberNodeIds.size() > 1) {
+      error_ = "return type inference requires explicit annotation on " + definitions.front()->fullPath;
+      return false;
+    }
+
+    for (const Definition *definition : definitions) {
+      bool definitionChanged = false;
+      if (!inferDefinitionReturnKindGraphStep(*definition, true, false, definitionChanged)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool SemanticsValidator::ensureDefinitionReturnKindReady(const Definition &def) {
+  if (!allowRecursiveReturnInference_) {
+    return true;
+  }
+  return inferDefinitionReturnKind(def);
+}
+
+bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &def,
+                                                           bool finalize,
+                                                           bool componentHasCycle,
+                                                           bool &changed) {
+  changed = false;
+  auto kindIt = returnKinds_.find(def.fullPath);
+  if (kindIt == returnKinds_.end()) {
+    return false;
+  }
+
+  bool hasReturnTransform = false;
+  bool hasReturnAuto = false;
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    hasReturnTransform = true;
+    if (transform.templateArgs.front() == "auto") {
+      hasReturnAuto = true;
+    }
+  }
+
+  const bool previousAllowRecursive = allowRecursiveReturnInference_;
+  const bool previousDeferUnknown = deferUnknownReturnInferenceErrors_;
+  allowRecursiveReturnInference_ = false;
+  deferUnknownReturnInferenceErrors_ = true;
+
+  DefinitionReturnInferenceState inferenceState;
+  bool sawExplicitReturnStmt = false;
+  size_t implicitReturnStmtIndex = def.statements.size();
+  const auto &defParams = paramsByDef_[def.fullPath];
+  std::unordered_map<std::string, BindingInfo> locals;
+  for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
+    if (isReturnCall(def.statements[stmtIndex])) {
+      sawExplicitReturnStmt = true;
+      break;
+    }
+    if (!def.statements[stmtIndex].isBinding) {
+      implicitReturnStmtIndex = stmtIndex;
+    }
+  }
+
+  for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
+    const Expr &stmt = def.statements[stmtIndex];
+    if (!inferDefinitionStatementReturns(def, defParams, stmt, locals, inferenceState)) {
+      allowRecursiveReturnInference_ = previousAllowRecursive;
+      deferUnknownReturnInferenceErrors_ = previousDeferUnknown;
+      return false;
+    }
+    if (hasReturnTransform && hasReturnAuto && !sawExplicitReturnStmt &&
+        stmtIndex == implicitReturnStmtIndex && !inferenceState.sawReturn) {
+      if (!recordDefinitionInferredReturn(def, &stmt, defParams, locals, inferenceState)) {
+        allowRecursiveReturnInference_ = previousAllowRecursive;
+        deferUnknownReturnInferenceErrors_ = previousDeferUnknown;
+        return false;
+      }
+    }
+  }
+  if (def.returnExpr.has_value()) {
+    if (!recordDefinitionInferredReturn(def, &*def.returnExpr, defParams, locals, inferenceState)) {
+      allowRecursiveReturnInference_ = previousAllowRecursive;
+      deferUnknownReturnInferenceErrors_ = previousDeferUnknown;
+      return false;
+    }
+  }
+
+  allowRecursiveReturnInference_ = previousAllowRecursive;
+  deferUnknownReturnInferenceErrors_ = previousDeferUnknown;
+
+  const auto applyKnownReturn = [&](ReturnKind kind, const std::string &structPath) {
+    if (kindIt->second != kind) {
+      kindIt->second = kind;
+      changed = true;
+    }
+
+    auto structIt = returnStructs_.find(def.fullPath);
+    const std::string previousStructPath = structIt == returnStructs_.end() ? std::string() : structIt->second;
+    if (kind == ReturnKind::Array && !structPath.empty()) {
+      if (previousStructPath != structPath) {
+        returnStructs_[def.fullPath] = structPath;
+        changed = true;
+      }
+      return;
+    }
+    if (structIt != returnStructs_.end() && !previousStructPath.empty()) {
+      returnStructs_.erase(structIt);
+      changed = true;
+    }
+  };
+
+  if (!inferenceState.sawReturn) {
+    if (hasReturnTransform && hasReturnAuto) {
+      if (!finalize) {
+        return true;
+      }
+      error_ = "unable to infer return type on " + def.fullPath;
+      return false;
+    }
+    applyKnownReturn(ReturnKind::Void, {});
+    return true;
+  }
+
+  if (inferenceState.inferred == ReturnKind::Unknown || inferenceState.sawUnresolvedReturnDependency) {
+    if (!finalize) {
+      if (inferenceState.inferred != ReturnKind::Unknown) {
+        applyKnownReturn(inferenceState.inferred, inferenceState.inferredStructPath);
+      }
+      return true;
+    }
+    error_ = componentHasCycle ? "return type inference requires explicit annotation on " + def.fullPath
+                               : "unable to infer return type on " + def.fullPath;
+    return false;
+  }
+
+  applyKnownReturn(inferenceState.inferred, inferenceState.inferredStructPath);
   return true;
 }
 
@@ -1038,7 +1250,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           const std::string resolvedTarget = resolveCalleePath(target);
           auto defIt = defMap_.find(resolvedTarget);
           if (defIt != defMap_.end() && defIt->second != nullptr) {
-            if (!inferDefinitionReturnKind(*defIt->second)) {
+            if (!ensureDefinitionReturnKindReady(*defIt->second)) {
               return false;
             }
             auto kindIt = returnKinds_.find(resolvedTarget);
@@ -2367,7 +2579,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (methodIt == defMap_.end()) {
         return false;
       }
-      if (!inferDefinitionReturnKind(*methodIt->second)) {
+      if (!ensureDefinitionReturnKindReady(*methodIt->second)) {
         return false;
       }
       auto kindIt = returnKinds_.find(resolvedPath);
@@ -2698,7 +2910,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (firstTemplateCompatibleCandidate.empty()) {
           firstTemplateCompatibleCandidate = candidate;
         }
-        if (!inferDefinitionReturnKind(*candidateIt->second)) {
+        if (!ensureDefinitionReturnKindReady(*candidateIt->second)) {
           return ReturnKind::Unknown;
         }
         auto candidateKindIt = returnKinds_.find(candidate);
@@ -3260,7 +3472,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           }
         }
       }
-      if (!inferDefinitionReturnKind(*defIt->second)) {
+      if (!ensureDefinitionReturnKindReady(*defIt->second)) {
         ReturnKind builtinAccessKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)) {
           return builtinAccessKind;
@@ -3416,7 +3628,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
             continue;
           }
-          if (!inferDefinitionReturnKind(*methodIt->second)) {
+          if (!ensureDefinitionReturnKindReady(*methodIt->second)) {
             return ReturnKind::Unknown;
           }
           auto kindIt = returnKinds_.find(methodResolved);
@@ -3428,7 +3640,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
     }
     if (defIt != defMap_.end() && shouldDeferResolvedNamespacedCollectionHelperReturn) {
-      if (!inferDefinitionReturnKind(*defIt->second)) {
+      if (!ensureDefinitionReturnKindReady(*defIt->second)) {
         ReturnKind builtinAccessKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)) {
           return builtinAccessKind;
@@ -3537,7 +3749,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           }
           auto methodIt = defMap_.find(methodResolved);
           if (methodIt != defMap_.end()) {
-            if (!inferDefinitionReturnKind(*methodIt->second)) {
+            if (!ensureDefinitionReturnKindReady(*methodIt->second)) {
               return ReturnKind::Unknown;
             }
             auto kindIt = returnKinds_.find(methodResolved);
@@ -4748,7 +4960,7 @@ std::string SemanticsValidator::inferStructReturnPath(
         const std::string resolvedTarget = resolveCalleePath(target);
         auto defIt = defMap_.find(resolvedTarget);
         if (defIt != defMap_.end() && defIt->second != nullptr) {
-          if (!inferDefinitionReturnKind(*defIt->second)) {
+          if (!ensureDefinitionReturnKindReady(*defIt->second)) {
             return false;
           }
           auto kindIt = returnKinds_.find(resolvedTarget);
@@ -5368,7 +5580,7 @@ std::string SemanticsValidator::inferStructReturnPath(
         if (defIt == defMap_.end()) {
           continue;
         }
-        if (!inferDefinitionReturnKind(*defIt->second)) {
+        if (!ensureDefinitionReturnKindReady(*defIt->second)) {
           return "";
         }
         auto structIt = returnStructs_.find(candidate);
@@ -5515,7 +5727,7 @@ std::string SemanticsValidator::inferStructReturnPath(
         continue;
       }
       hasDefinitionCandidate = true;
-      if (!inferDefinitionReturnKind(*defIt->second)) {
+      if (!ensureDefinitionReturnKindReady(*defIt->second)) {
         return "";
       }
       auto structIt = returnStructs_.find(candidate);

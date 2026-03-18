@@ -322,6 +322,66 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(primevmMain.find("[--dump-stage pre_ast|ast|ast-semantic|type-graph|ir]") != std::string::npos);
 }
 
+TEST_CASE("graph type resolver pilot is wired through options and semantics inference") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path optionsHeaderPath = cwd / "include" / "primec" / "Options.h";
+  std::filesystem::path optionsParserPath = cwd / "src" / "OptionsParser.cpp";
+  std::filesystem::path semanticsHeaderPath = cwd / "include" / "primec" / "Semantics.h";
+  std::filesystem::path semanticsValidatePath = cwd / "src" / "semantics" / "SemanticsValidate.cpp";
+  std::filesystem::path validatorHeaderPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
+  std::filesystem::path validatorInferPath = cwd / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
+  std::filesystem::path pipelinePath = cwd / "src" / "CompilePipeline.cpp";
+  std::filesystem::path primecMainPath = cwd / "src" / "main.cpp";
+  std::filesystem::path primevmMainPath = cwd / "src" / "primevm_main.cpp";
+  if (!std::filesystem::exists(optionsHeaderPath)) {
+    optionsHeaderPath = cwd.parent_path() / "include" / "primec" / "Options.h";
+    optionsParserPath = cwd.parent_path() / "src" / "OptionsParser.cpp";
+    semanticsHeaderPath = cwd.parent_path() / "include" / "primec" / "Semantics.h";
+    semanticsValidatePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidate.cpp";
+    validatorHeaderPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.h";
+    validatorInferPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
+    pipelinePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
+    primecMainPath = cwd.parent_path() / "src" / "main.cpp";
+    primevmMainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
+  }
+  REQUIRE(std::filesystem::exists(optionsHeaderPath));
+  REQUIRE(std::filesystem::exists(optionsParserPath));
+  REQUIRE(std::filesystem::exists(semanticsHeaderPath));
+  REQUIRE(std::filesystem::exists(semanticsValidatePath));
+  REQUIRE(std::filesystem::exists(validatorHeaderPath));
+  REQUIRE(std::filesystem::exists(validatorInferPath));
+  REQUIRE(std::filesystem::exists(pipelinePath));
+  REQUIRE(std::filesystem::exists(primecMainPath));
+  REQUIRE(std::filesystem::exists(primevmMainPath));
+
+  const std::string optionsHeader = readTextFile(optionsHeaderPath);
+  const std::string optionsParser = readTextFile(optionsParserPath);
+  const std::string semanticsHeader = readTextFile(semanticsHeaderPath);
+  const std::string semanticsValidate = readTextFile(semanticsValidatePath);
+  const std::string validatorHeader = readTextFile(validatorHeaderPath);
+  const std::string validatorInfer = readTextFile(validatorInferPath);
+  const std::string pipeline = readTextFile(pipelinePath);
+  const std::string primecMain = readTextFile(primecMainPath);
+  const std::string primevmMain = readTextFile(primevmMainPath);
+
+  CHECK(optionsHeader.find("std::string typeResolver = \"legacy\";") != std::string::npos);
+  CHECK(optionsParser.find("unsupported --type-resolver value: ") != std::string::npos);
+  CHECK(optionsParser.find("--type-resolver requires a value") != std::string::npos);
+  CHECK(semanticsHeader.find("const std::string &typeResolver = \"legacy\"") != std::string::npos);
+  CHECK(semanticsValidate.find("collectDiagnostics, typeResolver") != std::string::npos);
+  CHECK(validatorHeader.find("bool inferUnknownReturnKindsGraph();") != std::string::npos);
+  CHECK(validatorHeader.find("bool ensureDefinitionReturnKindReady(const Definition &def);") != std::string::npos);
+  CHECK(validatorHeader.find("bool inferDefinitionReturnKindGraphStep") != std::string::npos);
+  CHECK(validatorHeader.find("bool graphTypeResolverEnabled_ = false;") != std::string::npos);
+  CHECK(validatorInfer.find("buildTypeResolutionGraph(program_)") != std::string::npos);
+  CHECK(validatorInfer.find("computeCondensationDag(") != std::string::npos);
+  CHECK(validatorInfer.find("allowRecursiveReturnInference_ = false;") != std::string::npos);
+  CHECK(validatorInfer.find("ensureDefinitionReturnKindReady(*defIt->second)") != std::string::npos);
+  CHECK(pipeline.find("options.typeResolver") != std::string::npos);
+  CHECK(primecMain.find("[--type-resolver legacy|graph]") != std::string::npos);
+  CHECK(primevmMain.find("[--type-resolver legacy|graph]") != std::string::npos);
+}
+
 TEST_CASE("strongly connected component utility is wired through semantics testing api") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";

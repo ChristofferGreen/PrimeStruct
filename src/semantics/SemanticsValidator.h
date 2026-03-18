@@ -21,7 +21,8 @@ public:
                      const std::vector<std::string> &defaultEffects,
                      const std::vector<std::string> &entryDefaultEffects,
                      SemanticDiagnosticInfo *diagnosticInfo,
-                     bool collectDiagnostics);
+                     bool collectDiagnostics,
+                     const std::string &typeResolver);
 
   bool run();
 
@@ -29,6 +30,8 @@ private:
   bool buildDefinitionMaps();
   bool buildParameters();
   bool inferUnknownReturnKinds();
+  bool inferUnknownReturnKindsLegacy();
+  bool inferUnknownReturnKindsGraph();
   bool validateTraitConstraints();
   bool validateStructLayouts();
   bool validateDefinitions();
@@ -125,12 +128,15 @@ private:
   ReturnKind inferExprReturnKind(const Expr &expr,
                                 const std::vector<ParameterInfo> &params,
                                 const std::unordered_map<std::string, BindingInfo> &locals);
+  bool ensureDefinitionReturnKindReady(const Definition &def);
   bool inferDefinitionReturnKind(const Definition &def);
   struct DefinitionReturnInferenceState {
     ReturnKind inferred = ReturnKind::Unknown;
     std::string inferredStructPath;
     bool sawReturn = false;
+    bool sawUnresolvedReturnDependency = false;
   };
+  bool inferDefinitionReturnKindGraphStep(const Definition &def, bool finalize, bool componentHasCycle, bool &changed);
   bool recordDefinitionInferredReturn(const Definition &def,
                                       const Expr *valueExpr,
                                       const std::vector<ParameterInfo> &defParams,
@@ -664,6 +670,9 @@ private:
   SemanticDiagnosticInfo *diagnosticInfo_ = nullptr;
   DiagnosticSink diagnosticSink_;
   bool collectDiagnostics_ = false;
+  bool graphTypeResolverEnabled_ = false;
+  bool allowRecursiveReturnInference_ = true;
+  bool deferUnknownReturnInferenceErrors_ = false;
 
   std::unordered_set<std::string> defaultEffectSet_;
   std::unordered_set<std::string> entryDefaultEffectSet_;

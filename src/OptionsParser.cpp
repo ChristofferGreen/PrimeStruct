@@ -53,6 +53,14 @@ bool normalizeWasmProfile(const std::string &value, std::string &normalized) {
   return false;
 }
 
+bool normalizeTypeResolver(std::string_view value, std::string &normalized) {
+  if (value == "legacy" || value == "graph") {
+    normalized = std::string(value);
+    return true;
+  }
+  return false;
+}
+
 std::string trimWhitespace(const std::string &text) {
   size_t start = 0;
   while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
@@ -528,6 +536,25 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.dumpStage = argv[++i];
     } else if (arg.rfind("--dump-stage=", 0) == 0) {
       out.dumpStage = arg.substr(std::string("--dump-stage=").size());
+    } else if (arg == "--type-resolver" && i + 1 < argc) {
+      const std::string value = argv[++i];
+      if (!normalizeTypeResolver(value, out.typeResolver)) {
+        error = "unsupported --type-resolver value: " + value + " (expected legacy|graph)";
+        return false;
+      }
+    } else if (arg == "--type-resolver") {
+      error = "--type-resolver requires a value";
+      return false;
+    } else if (arg.rfind("--type-resolver=", 0) == 0) {
+      const std::string value = arg.substr(std::string("--type-resolver=").size());
+      if (value.empty()) {
+        error = "--type-resolver requires a value";
+        return false;
+      }
+      if (!normalizeTypeResolver(value, out.typeResolver)) {
+        error = "unsupported --type-resolver value: " + value + " (expected legacy|graph)";
+        return false;
+      }
     } else if (arg == "--import-path" && i + 1 < argc) {
       out.importPaths.push_back(argv[++i]);
     } else if (arg.rfind("--import-path=", 0) == 0) {

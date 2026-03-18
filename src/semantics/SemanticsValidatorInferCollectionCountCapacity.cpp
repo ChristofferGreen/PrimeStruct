@@ -48,7 +48,7 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
 
   auto methodIt = defMap_.find(methodResolved);
   if (methodIt != defMap_.end()) {
-    if (!inferDefinitionReturnKind(*methodIt->second)) {
+    if (!ensureDefinitionReturnKindReady(*methodIt->second)) {
       return false;
     }
     auto kindIt = returnKinds_.find(methodResolved);
