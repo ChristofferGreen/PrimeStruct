@@ -114,6 +114,9 @@ build and layout solidify.
   must not include `src/` or `tests/` files, production sources must not include `tests/`, and any
   remaining direct `tests -> src/` includes must be listed narrowly in
   `scripts/include_layer_allowlist.txt` until a stable testing API replaces them.
+- **Testing helper APIs:** when a test needs stable access to parser/text-filter helper logic, add
+  declarations under `include/primec/testing/` and move tests to that header before allowlisting a
+  new `tests -> src/` include.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **VM/native strings:** string values are represented as string-table indices; dynamic

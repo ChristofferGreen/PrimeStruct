@@ -1,4 +1,4 @@
-#include "src/text_filter/TextFilterHelpers.h"
+#include "primec/testing/TextFilterHelpers.h"
 
 #include "primec/Ast.h"
 #include "primec/TextFilterPipeline.h"

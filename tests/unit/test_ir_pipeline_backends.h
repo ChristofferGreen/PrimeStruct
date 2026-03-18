@@ -335,12 +335,24 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path scriptPath = cwd / "scripts" / "check_include_layers.py";
   std::filesystem::path allowlistPath = cwd / "scripts" / "include_layer_allowlist.txt";
+  std::filesystem::path parserTestApiPath = cwd / "include" / "primec" / "testing" / "ParserHelpers.h";
+  std::filesystem::path textFilterTestApiPath = cwd / "include" / "primec" / "testing" / "TextFilterHelpers.h";
+  std::filesystem::path parserHelperTestPath = cwd / "tests" / "unit" / "test_parser_basic_parser_helpers.h";
+  std::filesystem::path textFilterHelperTestPath = cwd / "tests" / "unit" / "test_text_filter_helpers.cpp";
   if (!std::filesystem::exists(scriptPath)) {
     scriptPath = cwd.parent_path() / "scripts" / "check_include_layers.py";
     allowlistPath = cwd.parent_path() / "scripts" / "include_layer_allowlist.txt";
+    parserTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "ParserHelpers.h";
+    textFilterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "TextFilterHelpers.h";
+    parserHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_parser_basic_parser_helpers.h";
+    textFilterHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_text_filter_helpers.cpp";
   }
   REQUIRE(std::filesystem::exists(scriptPath));
   REQUIRE(std::filesystem::exists(allowlistPath));
+  REQUIRE(std::filesystem::exists(parserTestApiPath));
+  REQUIRE(std::filesystem::exists(textFilterTestApiPath));
+  REQUIRE(std::filesystem::exists(parserHelperTestPath));
+  REQUIRE(std::filesystem::exists(textFilterHelperTestPath));
 
   const std::string script = readTextFile(scriptPath);
   CHECK(script.find("public headers must not include private src headers") != std::string::npos);
@@ -351,10 +363,28 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   const std::string allowlist = readTextFile(allowlistPath);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/emitter/") != std::string::npos);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/ir_lowerer/") != std::string::npos);
-  CHECK(allowlist.find("tests/unit/test_parser_basic_parser_helpers.h -> src/parser/ParserHelpers.h") !=
+  CHECK(allowlist.find("tests/unit/test_parser_basic_parser_helpers.h -> src/parser/ParserHelpers.h") ==
         std::string::npos);
-  CHECK(allowlist.find("tests/unit/test_text_filter_helpers.cpp -> src/text_filter/TextFilterHelpers.h") !=
+  CHECK(allowlist.find("tests/unit/test_text_filter_helpers.cpp -> src/text_filter/TextFilterHelpers.h") ==
         std::string::npos);
+
+  const std::string parserTestApi = readTextFile(parserTestApiPath);
+  CHECK(parserTestApi.find("namespace primec::parser") != std::string::npos);
+  CHECK(parserTestApi.find("bool isBuiltinName(const std::string &name, bool allowMathBare);") !=
+        std::string::npos);
+
+  const std::string textFilterTestApi = readTextFile(textFilterTestApiPath);
+  CHECK(textFilterTestApi.find("namespace primec::text_filter") != std::string::npos);
+  CHECK(textFilterTestApi.find("bool isSeparator(char c);") != std::string::npos);
+  CHECK(textFilterTestApi.find("std::string maybeAppendUtf8(const std::string &token);") != std::string::npos);
+
+  const std::string parserHelperTest = readTextFile(parserHelperTestPath);
+  CHECK(parserHelperTest.find("#include \"primec/testing/ParserHelpers.h\"") != std::string::npos);
+  CHECK(parserHelperTest.find("#include \"src/parser/ParserHelpers.h\"") == std::string::npos);
+
+  const std::string textFilterHelperTest = readTextFile(textFilterHelperTestPath);
+  CHECK(textFilterHelperTest.find("#include \"primec/testing/TextFilterHelpers.h\"") != std::string::npos);
+  CHECK(textFilterHelperTest.find("#include \"src/text_filter/TextFilterHelpers.h\"") == std::string::npos);
 }
 
 TEST_CASE("glsl and spirv ir backends use glsl ir validation target") {

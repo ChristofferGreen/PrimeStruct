@@ -2,7 +2,7 @@
 
 #include "test_parser_basic_helpers.h"
 
-#include "src/parser/ParserHelpers.h"
+#include "primec/testing/ParserHelpers.h"
 
 TEST_CASE("parser helper recognizes core builtin names") {
   CHECK(primec::parser::isBuiltinName("assign", false));
