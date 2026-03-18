@@ -1,6 +1,7 @@
 #include "SemanticsValidateReflectionGeneratedHelpers.h"
 
 #include "SemanticsHelpers.h"
+#include "SemanticsValidateReflectionGeneratedHelpersCompare.h"
 #include "SemanticsValidateReflectionGeneratedHelpersSerialization.h"
 #include "SemanticsValidateReflectionGeneratedHelpersValidate.h"
 
@@ -159,65 +160,11 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     call.argNames.push_back(std::nullopt);
     return call;
   };
-  auto makeI32LiteralExpr = [](uint64_t value) {
-    Expr expr;
-    expr.kind = Expr::Kind::Literal;
-    expr.literalValue = value;
-    expr.intWidth = 32;
-    expr.isUnsigned = false;
-    return expr;
-  };
-  auto makeU64LiteralExpr = [](uint64_t value) {
-    Expr expr;
-    expr.kind = Expr::Kind::Literal;
-    expr.literalValue = value;
-    expr.intWidth = 64;
-    expr.isUnsigned = true;
-    return expr;
-  };
   auto makeBoolLiteralExpr = [](bool value) {
     Expr expr;
     expr.kind = Expr::Kind::BoolLiteral;
     expr.boolValue = value;
     return expr;
-  };
-  auto makeBinaryCallExpr = [](const std::string &name, Expr left, Expr right) {
-    Expr call;
-    call.kind = Expr::Kind::Call;
-    call.name = name;
-    call.args.push_back(std::move(left));
-    call.argNames.push_back(std::nullopt);
-    call.args.push_back(std::move(right));
-    call.argNames.push_back(std::nullopt);
-    return call;
-  };
-  auto makeReturnStatementExpr = [](Expr valueExpr) {
-    Expr returnCall;
-    returnCall.kind = Expr::Kind::Call;
-    returnCall.name = "return";
-    returnCall.args.push_back(std::move(valueExpr));
-    returnCall.argNames.push_back(std::nullopt);
-    return returnCall;
-  };
-  auto makeEnvelopeExpr = [](const std::string &name, std::vector<Expr> bodyArguments) {
-    Expr envelope;
-    envelope.kind = Expr::Kind::Call;
-    envelope.name = name;
-    envelope.hasBodyArguments = true;
-    envelope.bodyArguments = std::move(bodyArguments);
-    return envelope;
-  };
-  auto makeIfStatementExpr = [](Expr conditionExpr, Expr thenEnvelopeExpr, Expr elseEnvelopeExpr) {
-    Expr ifCall;
-    ifCall.kind = Expr::Kind::Call;
-    ifCall.name = "if";
-    ifCall.args.push_back(std::move(conditionExpr));
-    ifCall.argNames.push_back(std::nullopt);
-    ifCall.args.push_back(std::move(thenEnvelopeExpr));
-    ifCall.argNames.push_back(std::nullopt);
-    ifCall.args.push_back(std::move(elseEnvelopeExpr));
-    ifCall.argNames.push_back(std::nullopt);
-    return ifCall;
   };
   auto appendPublicVisibility = [](Definition &helper) {
     Transform visibilityTransform;
@@ -232,19 +179,6 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     fieldAccess.args.push_back(makeNameExpr(receiverName));
     fieldAccess.argNames.push_back(std::nullopt);
     return fieldAccess;
-  };
-  auto makeFieldComparisonExpr = [&](const std::string &comparisonName,
-                                     const std::string &leftReceiverName,
-                                     const std::string &rightReceiverName,
-                                     const std::string &fieldName) {
-    Expr compare;
-    compare.kind = Expr::Kind::Call;
-    compare.name = comparisonName;
-    compare.args.push_back(makeFieldAccessExpr(leftReceiverName, fieldName));
-    compare.argNames.push_back(std::nullopt);
-    compare.args.push_back(makeFieldAccessExpr(rightReceiverName, fieldName));
-    compare.argNames.push_back(std::nullopt);
-    return compare;
   };
   auto makeBinaryBoolExpr = [](const std::string &operatorName, Expr left, Expr right) {
     Expr call;
@@ -379,52 +313,6 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       return false;
     }
 
-    auto emitComparisonHelper = [&](const std::string &helperName,
-                                    const std::string &comparisonName,
-                                    const std::string &foldOperatorName,
-                                    bool emptyValue) -> bool {
-      const std::string helperPath = def.fullPath + "/" + helperName;
-      if (definitionPaths.count(helperPath) > 0) {
-        error = "generated reflection helper already exists: " + helperPath;
-        return false;
-      }
-
-      Definition helper;
-      helper.name = helperName;
-      helper.fullPath = helperPath;
-      helper.namespacePrefix = def.fullPath;
-      helper.sourceLine = def.sourceLine;
-      helper.sourceColumn = def.sourceColumn;
-
-      appendPublicVisibility(helper);
-      Transform returnTransform;
-      returnTransform.name = "return";
-      returnTransform.templateArgs.push_back("bool");
-      helper.transforms.push_back(std::move(returnTransform));
-
-      helper.parameters.push_back(makeTypeBinding("left", def.fullPath, helper.namespacePrefix));
-      helper.parameters.push_back(makeTypeBinding("right", def.fullPath, helper.namespacePrefix));
-
-      if (fieldNames.empty()) {
-        Expr emptyLiteral;
-        emptyLiteral.kind = Expr::Kind::BoolLiteral;
-        emptyLiteral.boolValue = emptyValue;
-        helper.returnExpr = std::move(emptyLiteral);
-      } else {
-        Expr combined = makeFieldComparisonExpr(comparisonName, "left", "right", fieldNames.front());
-        for (size_t index = 1; index < fieldNames.size(); ++index) {
-          combined = makeBinaryBoolExpr(foldOperatorName,
-                                        std::move(combined),
-                                        makeFieldComparisonExpr(comparisonName, "left", "right", fieldNames[index]));
-        }
-        helper.returnExpr = std::move(combined);
-      }
-      helper.hasReturnStatement = true;
-
-      rewrittenDefinitions.push_back(std::move(helper));
-      definitionPaths.insert(helperPath);
-      return true;
-    };
     auto emitDebugPrintHelper = [&]() -> bool {
       const std::string helperPath = def.fullPath + "/DebugPrint";
       if (definitionPaths.count(helperPath) > 0) {
@@ -455,98 +343,6 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         }
         helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr("}")));
       }
-
-      rewrittenDefinitions.push_back(std::move(helper));
-      definitionPaths.insert(helperPath);
-      return true;
-    };
-    auto emitCompareHelper = [&]() -> bool {
-      const std::string helperPath = def.fullPath + "/Compare";
-      if (definitionPaths.count(helperPath) > 0) {
-        error = "generated reflection helper already exists: " + helperPath;
-        return false;
-      }
-
-      Definition helper;
-      helper.name = "Compare";
-      helper.fullPath = helperPath;
-      helper.namespacePrefix = def.fullPath;
-      helper.sourceLine = def.sourceLine;
-      helper.sourceColumn = def.sourceColumn;
-
-      appendPublicVisibility(helper);
-      Transform returnTransform;
-      returnTransform.name = "return";
-      returnTransform.templateArgs.push_back("i32");
-      helper.transforms.push_back(std::move(returnTransform));
-
-      helper.parameters.push_back(makeTypeBinding("left", def.fullPath, helper.namespacePrefix));
-      helper.parameters.push_back(makeTypeBinding("right", def.fullPath, helper.namespacePrefix));
-
-      for (const auto &fieldName : fieldNames) {
-        Expr lessThanExpr = makeFieldComparisonExpr("less_than", "left", "right", fieldName);
-        Expr lessThanResultExpr =
-            makeBinaryCallExpr("minus", makeI32LiteralExpr(0), makeI32LiteralExpr(1));
-        std::vector<Expr> lessThenBody;
-        lessThenBody.push_back(makeReturnStatementExpr(std::move(lessThanResultExpr)));
-        helper.statements.push_back(makeIfStatementExpr(
-            std::move(lessThanExpr),
-            makeEnvelopeExpr("then", std::move(lessThenBody)),
-            makeEnvelopeExpr("else", {})));
-
-        Expr greaterThanExpr = makeFieldComparisonExpr("greater_than", "left", "right", fieldName);
-        std::vector<Expr> greaterThenBody;
-        greaterThenBody.push_back(makeReturnStatementExpr(makeI32LiteralExpr(1)));
-        helper.statements.push_back(makeIfStatementExpr(
-            std::move(greaterThanExpr),
-            makeEnvelopeExpr("then", std::move(greaterThenBody)),
-            makeEnvelopeExpr("else", {})));
-      }
-
-      helper.returnExpr = makeI32LiteralExpr(0);
-      helper.hasReturnStatement = true;
-
-      rewrittenDefinitions.push_back(std::move(helper));
-      definitionPaths.insert(helperPath);
-      return true;
-    };
-    auto emitHash64Helper = [&]() -> bool {
-      const std::string helperPath = def.fullPath + "/Hash64";
-      if (definitionPaths.count(helperPath) > 0) {
-        error = "generated reflection helper already exists: " + helperPath;
-        return false;
-      }
-
-      Definition helper;
-      helper.name = "Hash64";
-      helper.fullPath = helperPath;
-      helper.namespacePrefix = def.fullPath;
-      helper.sourceLine = def.sourceLine;
-      helper.sourceColumn = def.sourceColumn;
-
-      appendPublicVisibility(helper);
-      Transform returnTransform;
-      returnTransform.name = "return";
-      returnTransform.templateArgs.push_back("u64");
-      helper.transforms.push_back(std::move(returnTransform));
-      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix));
-
-      Expr combined = makeU64LiteralExpr(1469598103934665603ULL);
-      for (const auto &fieldName : fieldNames) {
-        Expr convertFieldExpr;
-        convertFieldExpr.kind = Expr::Kind::Call;
-        convertFieldExpr.name = "convert";
-        convertFieldExpr.templateArgs.push_back("u64");
-        convertFieldExpr.args.push_back(makeFieldAccessExpr("value", fieldName));
-        convertFieldExpr.argNames.push_back(std::nullopt);
-
-        combined = makeBinaryCallExpr(
-            "plus",
-            makeBinaryCallExpr("multiply", std::move(combined), makeU64LiteralExpr(1099511628211ULL)),
-            std::move(convertFieldExpr));
-      }
-      helper.returnExpr = std::move(combined);
-      helper.hasReturnStatement = true;
 
       rewrittenDefinitions.push_back(std::move(helper));
       definitionPaths.insert(helperPath);
@@ -752,22 +548,30 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     };
 
     if (shouldGenerateEqual) {
-      if (!emitComparisonHelper("Equal", "equal", "and", true)) {
+      ReflectionGeneratedHelperContext compareContext{
+          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+      if (!emitReflectionComparisonHelper(compareContext, "Equal", "equal", "and", true)) {
         return false;
       }
     }
     if (shouldGenerateNotEqual) {
-      if (!emitComparisonHelper("NotEqual", "not_equal", "or", false)) {
+      ReflectionGeneratedHelperContext compareContext{
+          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+      if (!emitReflectionComparisonHelper(compareContext, "NotEqual", "not_equal", "or", false)) {
         return false;
       }
     }
     if (shouldGenerateCompare) {
-      if (!emitCompareHelper()) {
+      ReflectionGeneratedHelperContext compareContext{
+          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+      if (!emitReflectionCompareHelper(compareContext)) {
         return false;
       }
     }
     if (shouldGenerateHash64) {
-      if (!emitHash64Helper()) {
+      ReflectionGeneratedHelperContext compareContext{
+          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+      if (!emitReflectionHash64Helper(compareContext)) {
         return false;
       }
     }
