@@ -2814,7 +2814,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     }
-    std::string accessHelperName;
     std::string namespacedCollection;
     std::string namespacedHelper;
     const bool isNamespacedCollectionHelperCall =
@@ -2859,48 +2858,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =
         isStdNamespacedVectorCapacityCall && hasStdNamespacedVectorCapacityDefinition;
     const bool shouldSkipStdCapacityMethodFallback = false;
-    const bool hasBuiltinAccessSpelling =
-        !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
-    const bool isStdNamespacedVectorAccessCall =
-        hasBuiltinAccessSpelling && !expr.isMethodCall &&
-        resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
-    const bool hasStdNamespacedVectorAccessDefinition =
-        isStdNamespacedVectorAccessCall &&
-        hasImportedDefinitionPath(resolveCalleePath(expr));
-    const bool isStdNamespacedMapAccessCall =
-        hasBuiltinAccessSpelling && !expr.isMethodCall &&
-        (resolveCalleePath(expr) == "/std/collections/map/at" ||
-         resolveCalleePath(expr) == "/std/collections/map/at_unsafe");
-    const bool hasStdNamespacedMapAccessDefinition =
-        isStdNamespacedMapAccessCall &&
-        hasImportedDefinitionPath(resolveCalleePath(expr));
-    const bool isResolvedMapAccessCall =
-        !expr.isMethodCall && (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
-        !isMapNamespacedAccessCompatibilityCall(expr);
-    const bool prefersExplicitDirectMapAccessAliasDefinition =
-        !expr.isMethodCall &&
-        (((isNamespacedMapHelperCall && (namespacedHelper == "at" || namespacedHelper == "at_unsafe")) ||
-          (((expr.namespacePrefix == "map") || (expr.namespacePrefix == "/map")) &&
-           (expr.name == "at" || expr.name == "at_unsafe")))) &&
-        defMap_.find("/map/" +
-                     ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : namespacedHelper)) !=
-            defMap_.end();
-    const bool shouldAllowStdAccessCompatibilityFallback = false;
-    const bool isBuiltinAccessName =
-        hasBuiltinAccessSpelling &&
-        (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback ||
-         hasStdNamespacedVectorAccessDefinition) &&
-        !isStdNamespacedMapAccessCall && !isResolvedMapAccessCall;
-    const bool isNamespacedVectorAccessCall =
-        !isStdNamespacedVectorAccessCall && isBuiltinAccessName && isNamespacedVectorHelperCall &&
-        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
-        defMap_.find(resolved) == defMap_.end();
-    const bool shouldSkipStdAccessMethodFallback = false;
-    const bool isNamespacedMapAccessCall =
-        isBuiltinAccessName && isNamespacedMapHelperCall &&
-        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
-        !prefersExplicitDirectMapAccessAliasDefinition &&
-        defMap_.find(resolved) == defMap_.end();
     const bool isDirectStdNamespacedVectorCountWrapperMapTarget =
         !expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Call && resolveMapTarget(expr.args.front());
@@ -2912,9 +2869,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         defMap_.find("/std/collections/vector/count") != defMap_.end();
     if (prefersCanonicalVectorCountAliasDefinition) {
       resolved = "/std/collections/vector/count";
-    }
-    if (prefersExplicitDirectMapAccessAliasDefinition) {
-      resolved = "/map/" + ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : namespacedHelper);
     }
     if (expr.isMethodCall) {
       const std::string removedMapMethodPath = getMapNamespacedMethodCompatibilityPath(expr);
@@ -3167,288 +3121,35 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (tryRewriteBareVectorHelperCall(expr, "at", rewrittenVectorHelperCall) ||
-               tryRewriteBareVectorHelperCall(expr, "at_unsafe", rewrittenVectorHelperCall)) {
-      return validateExpr(params, locals, rewrittenVectorHelperCall);
-    } else if (isBuiltinAccessName &&
-               !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames)) &&
-               (defMap_.find(resolved) == defMap_.end() ||
-                (isNamespacedVectorAccessCall && !shouldSkipStdAccessMethodFallback) ||
-                isNamespacedMapAccessCall)) {
-      std::vector<size_t> receiverIndices;
-      auto appendReceiverIndex = [&](size_t index) {
-        if (index >= expr.args.size()) {
-          return;
-        }
-        for (size_t existing : receiverIndices) {
-          if (existing == index) {
-            return;
-          }
-        }
-        receiverIndices.push_back(index);
-      };
-      const bool hasNamedArgs = hasNamedArguments(expr.argNames);
-      if (hasNamedArgs) {
-        bool hasValuesNamedReceiver = false;
-        for (size_t i = 0; i < expr.args.size(); ++i) {
-          if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
-            appendReceiverIndex(i);
-            hasValuesNamedReceiver = true;
-          }
-        }
-        if (!hasValuesNamedReceiver) {
-          appendReceiverIndex(0);
-          for (size_t i = 1; i < expr.args.size(); ++i) {
-            appendReceiverIndex(i);
-          }
-        }
-      } else {
-        appendReceiverIndex(0);
-      }
-      auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
-        std::string elemType;
-        return resolveVectorTarget(candidate, elemType) || resolveArrayTarget(candidate, elemType) ||
-               resolveStringTarget(candidate) || resolveMapTarget(candidate);
-      };
-      const bool probePositionalReorderedReceiver =
-          !hasNamedArgs && expr.args.size() > 1 &&
-          (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
-           expr.args.front().kind == Expr::Kind::FloatLiteral || expr.args.front().kind == Expr::Kind::StringLiteral ||
-           (expr.args.front().kind == Expr::Kind::Name &&
-            !isCollectionAccessReceiverExpr(expr.args.front())));
-      if (probePositionalReorderedReceiver) {
-        for (size_t i = 1; i < expr.args.size(); ++i) {
-          appendReceiverIndex(i);
-        }
-      }
-      const bool hasAlternativeCollectionReceiver = probePositionalReorderedReceiver &&
-                                                    std::any_of(receiverIndices.begin(), receiverIndices.end(), [&](size_t index) {
-                                                      if (index == 0 || index >= expr.args.size()) {
-                                                        return false;
-                                                      }
-                                                      const Expr &candidate = expr.args[index];
-                                                      std::string elemType;
-                                                      return resolveVectorTarget(candidate, elemType) ||
-                                                             resolveArrayTarget(candidate, elemType) ||
-                                                             resolveStringTarget(candidate) || resolveMapTarget(candidate);
-                                                    });
-      for (size_t receiverIndex : receiverIndices) {
-        const Expr &receiverCandidate = expr.args[receiverIndex];
-        std::string elemType;
-        if (!(resolveVectorTarget(receiverCandidate, elemType) || resolveArrayTarget(receiverCandidate, elemType) ||
-              resolveStringTarget(receiverCandidate) || resolveMapTarget(receiverCandidate))) {
-          continue;
-        }
-        usedMethodTarget = true;
-        bool isBuiltinMethod = false;
-        std::string methodResolved;
-        if (!resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate, accessHelperName,
-                                 methodResolved, isBuiltinMethod)) {
-          // Preserve receiver diagnostics (for example unknown call target)
-          // when collection-target resolution fails.
-          (void)validateExpr(params, locals, receiverCandidate);
-          return false;
-        }
-        if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
-          error_ = "unknown method: " + methodResolved;
-          return false;
-        }
-        if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
-          continue;
-        }
-        resolved = methodResolved;
-        resolvedMethod = isBuiltinMethod;
-        hasMethodReceiverIndex = true;
-        methodReceiverIndex = receiverIndex;
-        break;
-      }
-      if (!hasMethodReceiverIndex && !expr.args.empty() &&
-          (expr.args.front().kind == Expr::Kind::Name || expr.args.front().kind == Expr::Kind::Call)) {
-        bool isBuiltinMethod = false;
-        std::string methodResolved;
-        if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), accessHelperName,
-                                methodResolved, isBuiltinMethod)) {
-          if (isBuiltinMethod) {
-            usedMethodTarget = true;
-            hasMethodReceiverIndex = true;
-            methodReceiverIndex = 0;
-            resolved = methodResolved;
-            resolvedMethod = true;
-          } else {
-            const size_t methodSlash = methodResolved.find_last_of('/');
-            const bool hasStructReceiver = methodSlash != std::string::npos && methodSlash > 0 &&
-                                           structNames_.count(methodResolved.substr(0, methodSlash)) > 0;
-            if (hasStructReceiver) {
-              usedMethodTarget = true;
-              hasMethodReceiverIndex = true;
-              methodReceiverIndex = 0;
-              if (defMap_.find(methodResolved) == defMap_.end()) {
-                error_ = "unknown method: " + methodResolved;
-                return false;
-              }
-              resolved = methodResolved;
-              resolvedMethod = false;
-            }
-          }
-        }
-      }
-    } else if ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref")) && expr.args.size() == 2 &&
-               defMap_.find(resolved) == defMap_.end()) {
-      std::vector<size_t> receiverIndices;
-      auto appendReceiverIndex = [&](size_t index) {
-        if (index >= expr.args.size()) {
-          return;
-        }
-        for (size_t existing : receiverIndices) {
-          if (existing == index) {
-            return;
-          }
-        }
-        receiverIndices.push_back(index);
-      };
-      const bool hasNamedArgs = hasNamedArguments(expr.argNames);
-      if (hasNamedArgs) {
-        bool hasValuesNamedReceiver = false;
-        for (size_t i = 0; i < expr.args.size(); ++i) {
-          if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
-            appendReceiverIndex(i);
-            hasValuesNamedReceiver = true;
-          }
-        }
-        if (!hasValuesNamedReceiver) {
-          appendReceiverIndex(0);
-          for (size_t i = 1; i < expr.args.size(); ++i) {
-            appendReceiverIndex(i);
-          }
-        }
-      } else {
-        appendReceiverIndex(0);
-      }
-      for (size_t receiverIndex : receiverIndices) {
-        const Expr &receiverCandidate = expr.args[receiverIndex];
-        std::string methodTarget;
-        if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, expr.name, methodTarget)) {
-          methodTarget = preferVectorStdlibHelperPath(methodTarget);
-          if (defMap_.count(methodTarget) > 0) {
-            usedMethodTarget = true;
-            resolved = methodTarget;
-            resolvedMethod = false;
-            hasMethodReceiverIndex = true;
-            methodReceiverIndex = receiverIndex;
-            break;
-          }
-        }
-        std::string elemType;
-        if (!resolveSoaVectorTarget(receiverCandidate, elemType)) {
-          continue;
-        }
-        usedMethodTarget = true;
-        bool isBuiltinMethod = false;
-        std::string methodResolved;
-        if (!resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate, expr.name,
-                                 methodResolved, isBuiltinMethod)) {
-          (void)validateExpr(params, locals, receiverCandidate);
-          return false;
-        }
-        if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
-          error_ = "unknown method: " + methodResolved;
-          return false;
-        }
-        resolved = methodResolved;
-        resolvedMethod = isBuiltinMethod;
-        hasMethodReceiverIndex = true;
-        methodReceiverIndex = receiverIndex;
-        break;
-      }
-    } else if (expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end() &&
-               !isSimpleCallName(expr, "to_soa") && !isSimpleCallName(expr, "to_aos")) {
-      const Expr &receiverCandidate = expr.args.front();
-      std::string elemType;
-      if (resolveSoaVectorTarget(receiverCandidate, elemType)) {
-        usedMethodTarget = true;
-        bool isBuiltinMethod = false;
-        std::string methodResolved;
-        if (!resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate, expr.name,
-                                 methodResolved, isBuiltinMethod)) {
-          (void)validateExpr(params, locals, receiverCandidate);
-          return false;
-        }
-        if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
-          error_ = "unknown method: " + methodResolved;
-          return false;
-        }
-        resolved = methodResolved;
-        resolvedMethod = isBuiltinMethod;
-        hasMethodReceiverIndex = true;
-        methodReceiverIndex = 0;
-      }
-    } else if (!expr.isMethodCall && expr.args.size() == 2 && defMap_.find(resolved) == defMap_.end() &&
-               (isSimpleCallName(expr, "contains") || getBuiltinArrayAccessName(expr, accessHelperName))) {
-      const Expr &receiverCandidate = expr.args.front();
-      if (resolveMapTarget(receiverCandidate)) {
-        usedMethodTarget = true;
-        bool isBuiltinMethod = false;
-        std::string methodResolved;
-        if (!resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate, expr.name,
-                                 methodResolved, isBuiltinMethod)) {
-          (void)validateExpr(params, locals, receiverCandidate);
-          return false;
-        }
-        if (isBuiltinMethod) {
-          if (((methodResolved == "/std/collections/map/contains" &&
-                (hasDeclaredDefinitionPath("/map/contains") ||
-                 hasDeclaredDefinitionPath("/std/collections/map/contains"))) ||
-               (methodResolved == "/std/collections/map/at" &&
-                (hasDeclaredDefinitionPath("/map/at") ||
-                 hasDeclaredDefinitionPath("/std/collections/map/at"))) ||
-               (methodResolved == "/std/collections/map/at_unsafe" &&
-                (hasDeclaredDefinitionPath("/map/at_unsafe") ||
-                 hasDeclaredDefinitionPath("/std/collections/map/at_unsafe")))) &&
-              !(methodResolved == "/std/collections/map/contains" && shouldBuiltinValidateBareMapContainsCall) &&
-              !((methodResolved == "/std/collections/map/at" ||
-                 methodResolved == "/std/collections/map/at_unsafe") &&
-                shouldBuiltinValidateBareMapAccessCall) &&
-              !isIndexedArgsPackMapReceiverTarget(receiverCandidate)) {
-            isBuiltinMethod = false;
-          }
-        }
-        if (isBuiltinMethod) {
-          if (methodResolved == "/std/collections/map/contains" &&
-              !shouldBuiltinValidateBareMapContainsCall &&
-              !isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
-              !hasDeclaredDefinitionPath("/map/contains") &&
-              !hasImportedDefinitionPath("/std/collections/map/contains") &&
-              !hasDeclaredDefinitionPath("/std/collections/map/contains")) {
-            error_ = "unknown call target: /std/collections/map/contains";
-            return false;
-          }
-          if ((methodResolved == "/map/at" || methodResolved == "/map/at_unsafe" ||
-               methodResolved == "/std/collections/map/at" || methodResolved == "/std/collections/map/at_unsafe") &&
-              !shouldBuiltinValidateBareMapAccessCall &&
-              !isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
-              !hasDeclaredDefinitionPath("/map/" +
-                                         std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe"
-                                                                                                         : "at")) &&
-              !hasImportedDefinitionPath("/std/collections/map/" +
-                                         std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe"
-                                                                                                         : "at")) &&
-              !hasDeclaredDefinitionPath("/std/collections/map/" +
-                                         std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe"
-                                                                                                         : "at"))) {
-            error_ = "unknown call target: /std/collections/map/" +
-                     std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe" : "at");
-            return false;
-          }
-        } else if (defMap_.find(methodResolved) == defMap_.end() && !hasResolvableMapHelperPath(methodResolved)) {
-          error_ = "unknown method: " + methodResolved;
-          return false;
-        }
-        resolved = methodResolved;
-        resolvedMethod = isBuiltinMethod;
-        hasMethodReceiverIndex = true;
-        methodReceiverIndex = 0;
-      }
     }
+    if (tryRewriteBareVectorHelperCall(expr, "at", rewrittenVectorHelperCall) ||
+        tryRewriteBareVectorHelperCall(expr, "at_unsafe", rewrittenVectorHelperCall)) {
+      return validateExpr(params, locals, rewrittenVectorHelperCall);
+    }
+    ExprCollectionAccessDispatchContext collectionAccessContext;
+    collectionAccessContext.isNamespacedVectorHelperCall = isNamespacedVectorHelperCall;
+    collectionAccessContext.isNamespacedMapHelperCall = isNamespacedMapHelperCall;
+    collectionAccessContext.namespacedHelper = namespacedHelper;
+    collectionAccessContext.shouldBuiltinValidateBareMapContainsCall =
+        shouldBuiltinValidateBareMapContainsCall;
+    collectionAccessContext.shouldBuiltinValidateBareMapAccessCall =
+        shouldBuiltinValidateBareMapAccessCall;
+    collectionAccessContext.resolveArrayTarget = resolveArrayTarget;
+    collectionAccessContext.resolveVectorTarget = resolveVectorTarget;
+    collectionAccessContext.resolveSoaVectorTarget = resolveSoaVectorTarget;
+    collectionAccessContext.resolveStringTarget = resolveStringTarget;
+    collectionAccessContext.resolveMapTarget = resolveMapTarget;
+    collectionAccessContext.hasResolvableMapHelperPath = hasResolvableMapHelperPath;
+    collectionAccessContext.isIndexedArgsPackMapReceiverTarget =
+        isIndexedArgsPackMapReceiverTarget;
+    bool handledCollectionAccess = false;
+    if (!resolveExprCollectionAccessTarget(params, locals, expr, collectionAccessContext,
+                                           handledCollectionAccess, resolved, resolvedMethod,
+                                           usedMethodTarget, hasMethodReceiverIndex,
+                                           methodReceiverIndex)) {
+      return false;
+    }
+    (void)handledCollectionAccess;
     if (usedMethodTarget && !resolvedMethod) {
       auto defIt = defMap_.find(resolved);
       if (defIt != defMap_.end() && isStaticHelperDefinition(*defIt->second)) {

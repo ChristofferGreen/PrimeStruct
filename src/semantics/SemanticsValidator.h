@@ -230,6 +230,30 @@ private:
                                    bool &hasResolutionOut,
                                    std::string &resolvedPathOut,
                                    size_t &receiverIndexOut);
+  struct ExprCollectionAccessDispatchContext {
+    bool isNamespacedVectorHelperCall = false;
+    bool isNamespacedMapHelperCall = false;
+    std::string namespacedHelper;
+    bool shouldBuiltinValidateBareMapContainsCall = false;
+    bool shouldBuiltinValidateBareMapAccessCall = false;
+    std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
+    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
+    std::function<bool(const Expr &)> resolveStringTarget;
+    std::function<bool(const Expr &)> resolveMapTarget;
+    std::function<bool(const std::string &)> hasResolvableMapHelperPath;
+    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
+  };
+  bool resolveExprCollectionAccessTarget(const std::vector<ParameterInfo> &params,
+                                         const std::unordered_map<std::string, BindingInfo> &locals,
+                                         const Expr &expr,
+                                         const ExprCollectionAccessDispatchContext &context,
+                                         bool &handledOut,
+                                         std::string &resolved,
+                                         bool &resolvedMethod,
+                                         bool &usedMethodTarget,
+                                         bool &hasMethodReceiverIndex,
+                                         size_t &methodReceiverIndex);
   bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);
   bool resolveCallCollectionTypePath(const Expr &target,
                                      const std::vector<ParameterInfo> &params,
