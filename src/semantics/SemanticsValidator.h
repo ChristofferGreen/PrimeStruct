@@ -179,6 +179,25 @@ private:
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
   };
+  struct BuiltinCollectionDirectCountCapacityContext {
+    bool isDirectCountCall = false;
+    bool isDirectCountSingleArg = false;
+    bool isDirectCapacityCall = false;
+    bool isDirectCapacitySingleArg = false;
+    bool shouldInferBuiltinBareMapCountCall = false;
+    std::function<bool(const std::string &, std::string &)> resolveMethodCallPath;
+    std::function<std::string(const std::string &)> preferVectorStdlibHelperPath;
+    std::function<bool(const std::string &)> hasDeclaredDefinitionPath;
+    std::function<bool(const std::string &, ReturnKind &)> inferResolvedPathReturnKind;
+    std::function<bool(const std::string &, Expr &)> tryRewriteBareMapHelperCall;
+    std::function<ReturnKind(const Expr &)> inferRewrittenExprReturnKind;
+    std::function<bool(const Expr &, std::string &)> resolveArgsPackCountTarget;
+    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
+    std::function<bool(const Expr &)> resolveStringTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+  };
   bool resolveBuiltinCollectionMethodReturnKind(const std::string &resolvedPath,
                                                 const Expr &receiverExpr,
                                                 const BuiltinCollectionDispatchResolvers &resolvers,
@@ -189,6 +208,11 @@ private:
   bool resolveBuiltinCollectionCountCapacityReturnKind(const Expr &callExpr,
                                                        const BuiltinCollectionCountCapacityDispatchContext &context,
                                                        ReturnKind &kindOut);
+  ReturnKind inferBuiltinCollectionDirectCountCapacityReturnKind(
+      const Expr &expr,
+      const std::string &resolved,
+      const BuiltinCollectionDirectCountCapacityContext &context,
+      bool &handled);
   bool validateStatement(const std::vector<ParameterInfo> &params,
                          std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &stmt,

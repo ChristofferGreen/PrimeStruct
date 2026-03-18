@@ -2010,37 +2010,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return defMap_.find("/" + normalized) == defMap_.end();
     };
-    auto getDirectVectorHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-        return "";
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      std::string normalizedPrefix = candidate.namespacePrefix;
-      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-        normalizedPrefix.erase(normalizedPrefix.begin());
-      }
-      std::string helperName;
-      if (normalized.rfind("vector/", 0) == 0) {
-        helperName = normalized.substr(std::string("vector/").size());
-      } else if (normalizedPrefix == "vector") {
-        helperName = normalized;
-      } else if (resolveCalleePath(candidate).rfind("/vector/", 0) == 0) {
-        helperName = resolveCalleePath(candidate).substr(std::string("/vector/").size());
-      } else {
-        return "";
-      }
-      if (helperName != "count" && helperName != "capacity" && helperName != "at" &&
-          helperName != "at_unsafe" && helperName != "push" && helperName != "pop" &&
-          helperName != "reserve" && helperName != "clear" && helperName != "remove_at" &&
-          helperName != "remove_swap") {
-        return "";
-      }
-      const std::string removedPath = "/vector/" + helperName;
-      return defMap_.find(removedPath) == defMap_.end() ? removedPath : "";
-    };
     auto hasDeclaredDefinitionPath = [&](const std::string &path) {
       for (const auto &def : program_.definitions) {
         if (def.fullPath == path) {
@@ -2516,13 +2485,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall && isArrayNamespacedVectorCountCompatibilityCall(expr)) {
       return ReturnKind::Unknown;
     }
-    if (!expr.isMethodCall) {
-      const std::string removedVectorCompatibilityPath = getDirectVectorHelperCompatibilityPath(expr);
-      if (!removedVectorCompatibilityPath.empty()) {
-        error_ = "unknown call target: " + removedVectorCompatibilityPath;
-        return ReturnKind::Unknown;
-      }
-    }
     if (!expr.isMethodCall && isMapNamespacedCountCompatibilityCall(expr)) {
       return ReturnKind::Unknown;
     }
@@ -2722,13 +2684,21 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {
         std::string namespacedCollection;
         std::string namespacedHelper;
-        getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
+        const bool isNamespacedCollectionHelperCall =
+            getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
+        const bool isNamespacedVectorHelperCall =
+            isNamespacedCollectionHelperCall && namespacedCollection == "vector";
         const bool isStdNamespacedVectorCanonicalHelperCall =
             !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/", 0) == 0 &&
             (namespacedHelper == "push" || namespacedHelper == "pop" || namespacedHelper == "reserve" ||
              namespacedHelper == "clear" || namespacedHelper == "remove_at" ||
              namespacedHelper == "remove_swap");
-        if (!isStdNamespacedVectorCanonicalHelperCall && defMap_.find(resolved) == defMap_.end()) {
+        const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback =
+            isStdNamespacedVectorCanonicalHelperCall && !namespacedHelper.empty() &&
+            defMap_.find("/vector/" + namespacedHelper) != defMap_.end();
+        if ((defMap_.find(resolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
+            !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(resolved) == defMap_.end() &&
+              !shouldAllowStdNamespacedVectorHelperCompatibilityFallback)) {
           auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
             if (candidate.kind != Expr::Kind::Name) {
               return false;
@@ -2823,10 +2793,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isStdNamespacedMapCountCall =
         !expr.isMethodCall && resolveCalleePath(expr) == "/std/collections/map/count";
     const bool isNamespacedVectorCountCall =
-        !expr.isMethodCall && !isStdNamespacedVectorCountCall &&
-        isNamespacedVectorHelperCall && namespacedHelper == "count" &&
-        isVectorBuiltinName(expr, "count") && !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
-        defMap_.find(resolved) == defMap_.end();
+        !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
+        isVectorBuiltinName(expr, "count") && !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
         !isMapNamespacedCountCompatibilityCall(expr) && !isStdNamespacedMapCountCall &&
@@ -2849,14 +2817,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         !expr.isMethodCall && resolved == "/map/count" &&
         !isMapNamespacedCountCompatibilityCall(expr) &&
         !isUnnamespacedMapCountFallbackCall;
+    const bool isNamespacedVectorCapacityCall =
+        !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
+        isVectorBuiltinName(expr, "capacity");
     const bool isStdNamespacedVectorCapacityCall =
         !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
     const bool hasStdNamespacedVectorCapacityDefinition =
         hasImportedDefinitionPath("/std/collections/vector/capacity");
-    const bool isNamespacedVectorCapacityCall =
-        !expr.isMethodCall && !isStdNamespacedVectorCapacityCall &&
-        isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
-        isVectorBuiltinName(expr, "capacity") && defMap_.find(resolved) == defMap_.end();
     const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =
         isStdNamespacedVectorCapacityCall && hasStdNamespacedVectorCapacityDefinition;
     std::string builtinAccessName;
@@ -2877,17 +2844,17 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isResolvedMapAccessCall =
         !expr.isMethodCall && (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
         !isMapNamespacedAccessCompatibilityCall(expr);
-    const bool shouldAllowStdAccessCompatibilityFallback = false;
+    const bool shouldAllowStdAccessCompatibilityFallback =
+        isStdNamespacedVectorAccessSpelling && !builtinAccessName.empty() &&
+        defMap_.find("/vector/" + builtinAccessName) != defMap_.end();
     const bool isBuiltinAccess =
         hasBuiltinAccessSpelling &&
         (!isStdNamespacedVectorAccessSpelling || shouldAllowStdAccessCompatibilityFallback ||
          hasStdNamespacedVectorAccessDefinition) &&
         !isStdNamespacedMapAccessSpelling && !isResolvedMapAccessCall;
     const bool isNamespacedVectorAccessCall =
-        !expr.isMethodCall && !isStdNamespacedVectorAccessSpelling &&
-        isBuiltinAccess && isNamespacedVectorHelperCall &&
-        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
-        defMap_.find(resolved) == defMap_.end();
+        !expr.isMethodCall && isBuiltinAccess && isNamespacedVectorHelperCall &&
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
     const bool isNamespacedMapAccessCall =
         !expr.isMethodCall && isBuiltinAccess && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
@@ -2911,17 +2878,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return canonical;
       }
       const std::string alias = "/map/" + std::string(helperName);
-      if (defMap_.find(alias) != defMap_.end()) {
-        return alias;
-      }
-      return canonical;
-    };
-    auto preferredBareVectorHelperTarget = [&](std::string_view helperName) {
-      const std::string canonical = "/std/collections/vector/" + std::string(helperName);
-      if (defMap_.find(canonical) != defMap_.end() || hasImportedDefinitionPath(canonical)) {
-        return canonical;
-      }
-      const std::string alias = "/vector/" + std::string(helperName);
       if (defMap_.find(alias) != defMap_.end()) {
         return alias;
       }
@@ -2951,32 +2907,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       } else {
         rewrittenOut.name = preferredBareMapHelperTarget(helperName);
       }
-      rewrittenOut.namespacePrefix.clear();
-      return true;
-    };
-    auto tryRewriteBareVectorHelperCall = [&](const Expr &candidate,
-                                              std::string_view helperName,
-                                              Expr &rewrittenOut) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
-        return false;
-      }
-      if (candidate.name != helperName || candidate.name.find('/') != std::string::npos ||
-          !candidate.namespacePrefix.empty()) {
-        return false;
-      }
-      if (defMap_.find("/" + std::string(helperName)) != defMap_.end()) {
-        return false;
-      }
-      const size_t receiverIndex = mapHelperReceiverIndex(candidate);
-      if (receiverIndex >= candidate.args.size()) {
-        return false;
-      }
-      std::string elemType;
-      if (!resolveVectorTarget(candidate.args[receiverIndex], elemType)) {
-        return false;
-      }
-      rewrittenOut = candidate;
-      rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
       rewrittenOut.namespacePrefix.clear();
       return true;
     };
@@ -3035,6 +2965,50 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (shouldUseResolvedStdNamespacedVectorCountDefinition) {
       shouldDeferResolvedNamespacedCollectionHelperReturn = false;
     }
+    const bool isDirectBuiltinCountCapacityCountCall =
+        !expr.isMethodCall &&
+        (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
+         isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
+        !expr.args.empty() &&
+        !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
+        (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
+        !prefersCanonicalVectorCountAliasDefinition &&
+        ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
+         isNamespacedVectorCountCall || isStdNamespacedMapCountCall || isNamespacedMapCountCall ||
+         isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall);
+    const bool isDirectBuiltinCountCapacityCapacityCall =
+        !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
+        (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall) &&
+        !expr.args.empty() &&
+        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall);
+    BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;
+    builtinCollectionDirectCountCapacityContext.isDirectCountCall = isDirectBuiltinCountCapacityCountCall;
+    builtinCollectionDirectCountCapacityContext.isDirectCountSingleArg =
+        isDirectBuiltinCountCapacityCountCall && expr.args.size() == 1;
+    builtinCollectionDirectCountCapacityContext.isDirectCapacityCall = isDirectBuiltinCountCapacityCapacityCall;
+    builtinCollectionDirectCountCapacityContext.isDirectCapacitySingleArg =
+        isDirectBuiltinCountCapacityCapacityCall && expr.args.size() == 1;
+    builtinCollectionDirectCountCapacityContext.shouldInferBuiltinBareMapCountCall =
+        shouldInferBuiltinBareMapCountCall;
+    builtinCollectionDirectCountCapacityContext.resolveMethodCallPath = resolveMethodCallPath;
+    builtinCollectionDirectCountCapacityContext.preferVectorStdlibHelperPath =
+        preferVectorStdlibHelperPath;
+    builtinCollectionDirectCountCapacityContext.hasDeclaredDefinitionPath = hasDeclaredDefinitionPath;
+    builtinCollectionDirectCountCapacityContext.inferResolvedPathReturnKind =
+        inferResolvedPathReturnKind;
+    builtinCollectionDirectCountCapacityContext.tryRewriteBareMapHelperCall =
+        [&](const Expr &candidate, Expr &rewrittenOut) {
+          return tryRewriteBareMapHelperCall(candidate, "count", rewrittenOut);
+        };
+    builtinCollectionDirectCountCapacityContext.inferRewrittenExprReturnKind =
+        [&](const Expr &rewrittenExpr) { return inferExprReturnKind(rewrittenExpr, params, locals); };
+    builtinCollectionDirectCountCapacityContext.resolveArgsPackCountTarget = resolveArgsPackCountTarget;
+    builtinCollectionDirectCountCapacityContext.resolveVectorTarget = resolveVectorTarget;
+    builtinCollectionDirectCountCapacityContext.resolveArrayTarget = resolveArrayTarget;
+    builtinCollectionDirectCountCapacityContext.resolveStringTarget = resolveStringTarget;
+    builtinCollectionDirectCountCapacityContext.resolveMapTarget = resolveMapTarget;
+    builtinCollectionDirectCountCapacityContext.dispatchResolvers =
+        &builtinCollectionDispatchResolvers;
     auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {
       if (!callExpr.isMethodCall || callExpr.args.empty() || resolvedPath.empty()) {
         return false;
@@ -3145,184 +3119,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return ReturnKind::Unknown;
     }
-    if (!expr.isMethodCall &&
-        (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
-         isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
-        expr.args.size() == 1 &&
-        !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
-        (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-        !prefersCanonicalVectorCountAliasDefinition &&
-        ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
-         isNamespacedVectorCountCall || isStdNamespacedMapCountCall || isNamespacedMapCountCall ||
-         isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
-      Expr rewrittenVectorHelperCall;
-      if (tryRewriteBareVectorHelperCall(expr, "count", rewrittenVectorHelperCall)) {
-        return inferExprReturnKind(rewrittenVectorHelperCall, params, locals);
-      }
-      if (!shouldInferBuiltinBareMapCountCall) {
-        Expr rewrittenMapHelperCall;
-        if (tryRewriteBareMapHelperCall(expr, "count", rewrittenMapHelperCall)) {
-          return inferExprReturnKind(rewrittenMapHelperCall, params, locals);
-        }
-      }
-      std::string methodResolved;
-      if (resolveMethodCallPath("count", methodResolved)) {
-        methodResolved = preferVectorStdlibHelperPath(methodResolved);
-        if (methodResolved == "/std/collections/map/count" &&
-            !hasDeclaredDefinitionPath("/map/count") &&
-            !hasImportedDefinitionPath("/std/collections/map/count") &&
-            !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-            !shouldInferBuiltinBareMapCountCall) {
-          error_ = "unknown call target: /std/collections/map/count";
-          return ReturnKind::Unknown;
-        }
-        ReturnKind builtinMethodKind = ReturnKind::Unknown;
-        if (defMap_.find(methodResolved) == defMap_.end() &&
-            resolveBuiltinCollectionMethodReturnKind(
-                methodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
-          return builtinMethodKind;
-        }
-        auto methodIt = defMap_.find(methodResolved);
-        if (methodIt != defMap_.end()) {
-          if (!inferDefinitionReturnKind(*methodIt->second)) {
-            return ReturnKind::Unknown;
-          }
-          auto kindIt = returnKinds_.find(methodResolved);
-          if (kindIt != returnKinds_.end()) {
-            return kindIt->second;
-          }
-        }
-      }
-      std::string elemType;
-      std::string keyType;
-      std::string valueType;
-      if (!resolveArgsPackCountTarget(expr.args.front(), elemType) &&
-          !resolveVectorTarget(expr.args.front(), elemType) && !resolveArrayTarget(expr.args.front(), elemType) &&
-          !resolveStringTarget(expr.args.front()) &&
-          !resolveMapTarget(expr.args.front(), keyType, valueType)) {
-        return ReturnKind::Unknown;
-      }
-      return ReturnKind::Int;
-    }
-    if (!expr.isMethodCall &&
-        (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
-         isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
-        !expr.args.empty() && expr.args.size() != 1 &&
-        !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
-        (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-        !prefersCanonicalVectorCountAliasDefinition &&
-        ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
-         isNamespacedVectorCountCall || isStdNamespacedMapCountCall || isNamespacedMapCountCall ||
-         isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
-      Expr rewrittenVectorHelperCall;
-      if (tryRewriteBareVectorHelperCall(expr, "count", rewrittenVectorHelperCall)) {
-        return inferExprReturnKind(rewrittenVectorHelperCall, params, locals);
-      }
-      if (!shouldInferBuiltinBareMapCountCall) {
-        Expr rewrittenMapHelperCall;
-        if (tryRewriteBareMapHelperCall(expr, "count", rewrittenMapHelperCall)) {
-          return inferExprReturnKind(rewrittenMapHelperCall, params, locals);
-        }
-      }
-      std::string methodResolved;
-      if (resolveMethodCallPath("count", methodResolved)) {
-        methodResolved = preferVectorStdlibHelperPath(methodResolved);
-        if (methodResolved == "/std/collections/map/count" &&
-            !hasDeclaredDefinitionPath("/map/count") &&
-            !hasImportedDefinitionPath("/std/collections/map/count") &&
-            !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-            !shouldInferBuiltinBareMapCountCall) {
-          error_ = "unknown call target: /std/collections/map/count";
-          return ReturnKind::Unknown;
-        }
-        ReturnKind helperReturnKind = ReturnKind::Unknown;
-        if (inferResolvedPathReturnKind(methodResolved, helperReturnKind)) {
-          return helperReturnKind;
-        }
-      }
-    }
-    if (!expr.isMethodCall && resolved == "/vector/count" && expr.args.size() == 1 &&
-        defMap_.find(resolved) == defMap_.end()) {
-      std::string elemType;
-      if (!resolveVectorTarget(expr.args.front(), elemType) &&
-          !resolveArrayTarget(expr.args.front(), elemType) &&
-          !resolveStringTarget(expr.args.front())) {
-        std::string mapKeyType;
-        std::string mapValueType;
-        if (resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {
-          error_ = "unknown call target: /vector/count";
-          return ReturnKind::Unknown;
-        }
-      }
-    }
-    if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
-        (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall) &&
-        !expr.args.empty() && expr.args.size() != 1 &&
-        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
-      Expr rewrittenVectorHelperCall;
-      if (tryRewriteBareVectorHelperCall(expr, "capacity", rewrittenVectorHelperCall)) {
-        return inferExprReturnKind(rewrittenVectorHelperCall, params, locals);
-      }
-      std::string methodResolved;
-      if (resolveMethodCallPath("capacity", methodResolved)) {
-        methodResolved = preferVectorStdlibHelperPath(methodResolved);
-        ReturnKind helperReturnKind = ReturnKind::Unknown;
-        if (inferResolvedPathReturnKind(methodResolved, helperReturnKind)) {
-          return helperReturnKind;
-        }
-      }
-    }
-    if (!expr.isMethodCall && resolved == "/vector/capacity" && expr.args.size() == 1 &&
-        defMap_.find(resolved) == defMap_.end()) {
-      std::string elemType;
-      if (!resolveVectorTarget(expr.args.front(), elemType)) {
-        std::string mapKeyType;
-        std::string mapValueType;
-        if (resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {
-          error_ = "unknown call target: /vector/capacity";
-          return ReturnKind::Unknown;
-        }
-      }
-    }
-    if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
-        (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall) &&
-        expr.args.size() == 1 &&
-        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
-      Expr rewrittenVectorHelperCall;
-      if (tryRewriteBareVectorHelperCall(expr, "capacity", rewrittenVectorHelperCall)) {
-        return inferExprReturnKind(rewrittenVectorHelperCall, params, locals);
-      }
-      std::string methodResolved;
-      if (resolveMethodCallPath("capacity", methodResolved)) {
-        methodResolved = preferVectorStdlibHelperPath(methodResolved);
-        ReturnKind builtinMethodKind = ReturnKind::Unknown;
-        if (defMap_.find(methodResolved) == defMap_.end() &&
-            resolveBuiltinCollectionMethodReturnKind(
-                methodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
-          return builtinMethodKind;
-        }
-        auto methodIt = defMap_.find(methodResolved);
-        if (methodIt != defMap_.end()) {
-          if (!inferDefinitionReturnKind(*methodIt->second)) {
-            return ReturnKind::Unknown;
-          }
-          auto kindIt = returnKinds_.find(methodResolved);
-          if (kindIt != returnKinds_.end()) {
-            return kindIt->second;
-          }
-        }
-      }
-      std::string elemType;
-      if (resolveVectorTarget(expr.args.front(), elemType)) {
-        return ReturnKind::Int;
-      }
-    }
-    if (!expr.isMethodCall) {
-      Expr rewrittenVectorHelperCall;
-      if (tryRewriteBareVectorHelperCall(expr, "at", rewrittenVectorHelperCall) ||
-          tryRewriteBareVectorHelperCall(expr, "at_unsafe", rewrittenVectorHelperCall)) {
-        return inferExprReturnKind(rewrittenVectorHelperCall, params, locals);
-      }
+    bool handledDirectBuiltinCountCapacity = false;
+    ReturnKind directBuiltinCountCapacityKind =
+        inferBuiltinCollectionDirectCountCapacityReturnKind(
+            expr, resolved, builtinCollectionDirectCountCapacityContext, handledDirectBuiltinCountCapacity);
+    if (handledDirectBuiltinCountCapacity) {
+      return directBuiltinCountCapacityKind;
     }
     if (!expr.isMethodCall && (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
         expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {

@@ -9326,6 +9326,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("BuiltinCollectionCountCapacityDispatchContext builtinCollectionCountCapacityDispatchContext;") !=
         std::string::npos);
+  CHECK(semanticsInferSource.find("BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;") !=
+        std::string::npos);
   CHECK(semanticsInferSource.find("resolveCallCollectionTypePath(target, params, locals, collectionTypePath)") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args)") !=
@@ -9335,10 +9337,21 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("builtinCollectionCountCapacityDispatchContext, builtinCollectionKind))") !=
         std::string::npos);
+  CHECK(semanticsInferSource.find("inferBuiltinCollectionDirectCountCapacityReturnKind(") != std::string::npos);
+  CHECK(semanticsInferSource.find("handledDirectBuiltinCountCapacity") != std::string::npos);
+  CHECK(semanticsInferSource.find("resolveMethodCallPath(\"count\"") == std::string::npos);
+  CHECK(semanticsInferSource.find("resolveMethodCallPath(\"capacity\"") == std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionMethodReturnKind = [&]") == std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionAccessCallReturnKind = [&]") == std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionCountCapacityReturnKind = [&]") == std::string::npos);
   CHECK(semanticsInferCollectionCountCapacitySource.find("bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionCountCapacitySource.find("ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKind") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionCountCapacitySource.find("const auto inferHelperReturnKind = [&](const std::string &helperName,") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionCountCapacitySource.find("if (context.isDirectCountCall)") != std::string::npos);
+  CHECK(semanticsInferCollectionCountCapacitySource.find("if (context.isDirectCapacitySingleArg && context.resolveVectorTarget != nullptr)") !=
         std::string::npos);
   CHECK(semanticsInferCollectionCountCapacitySource.find("context.isCountLike && methodResolved == \"/std/collections/map/count\"") !=
         std::string::npos);
