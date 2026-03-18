@@ -136,6 +136,9 @@ private:
   bool validateIfExpr(const std::vector<ParameterInfo> &params,
                       const std::unordered_map<std::string, BindingInfo> &locals,
                       const Expr &expr);
+  bool validateBlockExpr(const std::vector<ParameterInfo> &params,
+                         const std::unordered_map<std::string, BindingInfo> &locals,
+                         const Expr &expr);
   bool validateLambdaExpr(const std::vector<ParameterInfo> &params,
                           const std::unordered_map<std::string, BindingInfo> &locals,
                           const Expr &expr,
