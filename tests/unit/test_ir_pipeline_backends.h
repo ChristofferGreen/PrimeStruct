@@ -375,11 +375,35 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("bool graphTypeResolverEnabled_ = false;") != std::string::npos);
   CHECK(validatorInfer.find("buildTypeResolutionGraph(program_)") != std::string::npos);
   CHECK(validatorInfer.find("computeCondensationDag(") != std::string::npos);
+  CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
+        std::string::npos);
   CHECK(validatorInfer.find("allowRecursiveReturnInference_ = false;") != std::string::npos);
   CHECK(validatorInfer.find("ensureDefinitionReturnKindReady(*defIt->second)") != std::string::npos);
   CHECK(pipeline.find("options.typeResolver") != std::string::npos);
   CHECK(primecMain.find("[--type-resolver legacy|graph]") != std::string::npos);
   CHECK(primevmMain.find("[--type-resolver legacy|graph]") != std::string::npos);
+}
+
+TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path irPipelinePath = cwd / "tests" / "unit" / "test_ir_pipeline.cpp";
+  std::filesystem::path parityHeaderPath = cwd / "tests" / "unit" / "test_ir_pipeline_type_resolution_parity.h";
+  if (!std::filesystem::exists(irPipelinePath)) {
+    irPipelinePath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline.cpp";
+    parityHeaderPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_type_resolution_parity.h";
+  }
+  REQUIRE(std::filesystem::exists(irPipelinePath));
+  REQUIRE(std::filesystem::exists(parityHeaderPath));
+
+  const std::string irPipeline = readTextFile(irPipelinePath);
+  const std::string parityHeader = readTextFile(parityHeaderPath);
+  CHECK(irPipeline.find("TypeResolverPipelineSnapshot") != std::string::npos);
+  CHECK(irPipeline.find("runTypeResolverPipelineSnapshot") != std::string::npos);
+  CHECK(irPipeline.find("#include \"test_ir_pipeline_type_resolution_parity.h\"") != std::string::npos);
+  CHECK(parityHeader.find("legacy and graph type resolvers keep diagnostics and vm ir aligned on parity corpus") !=
+        std::string::npos);
+  CHECK(parityHeader.find("graph type resolver intentionally corrects grounded mutual recursion") !=
+        std::string::npos);
 }
 
 TEST_CASE("strongly connected component utility is wired through semantics testing api") {
