@@ -9380,6 +9380,52 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("semantics validate source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path semanticsValidatePath = repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
+  const std::filesystem::path semanticsValidateTransformsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateTransforms.cpp";
+  const std::filesystem::path semanticsValidateTransformsHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateTransforms.h";
+  REQUIRE(std::filesystem::exists(semanticsValidatePath));
+  REQUIRE(std::filesystem::exists(semanticsValidateTransformsPath));
+  REQUIRE(std::filesystem::exists(semanticsValidateTransformsHeaderPath));
+  const std::string semanticsValidateSource = readText(semanticsValidatePath);
+  const std::string semanticsValidateTransformsSource = readText(semanticsValidateTransformsPath);
+  const std::string semanticsValidateTransformsHeaderSource = readText(semanticsValidateTransformsHeaderPath);
+
+  CHECK(semanticsValidateSource.find("#include \"SemanticsValidateTransforms.h\"") != std::string::npos);
+  CHECK(semanticsValidateSource.find("semantics::applySemanticTransforms(program, semanticTransforms, error)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find("bool applySemanticTransforms(Program &program,") == std::string::npos);
+  CHECK(semanticsValidateSource.find("bool validateExprTransforms(const Expr &expr,") == std::string::npos);
+  CHECK(semanticsValidateSource.find("bool rewriteEnumDefinitions(Program &program, std::string &error)") ==
+        std::string::npos);
+  CHECK(semanticsValidateTransformsHeaderSource.find("bool applySemanticTransforms(Program &program,") !=
+        std::string::npos);
+  CHECK(semanticsValidateTransformsSource.find("bool applySemanticTransforms(Program &program,") !=
+        std::string::npos);
+  CHECK(semanticsValidateTransformsSource.find("bool validateExprTransforms(const Expr &expr,") !=
+        std::string::npos);
+  CHECK(semanticsValidateTransformsSource.find("bool rewriteEnumDefinitions(Program &program, std::string &error)") !=
+        std::string::npos);
+  CHECK(semanticsValidateTransformsSource.find("bool rewriteSharedScopeStatements(std::vector<Expr> &statements, std::string &error)") !=
+        std::string::npos);
+  CHECK(semanticsValidateTransformsSource.find("bool applySingleTypeToReturn(std::vector<Transform> &transforms,") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantics validator infer source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

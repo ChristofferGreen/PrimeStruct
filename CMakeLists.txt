@@ -45,6 +45,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsHelpersValidation.cpp
   src/semantics/TemplateMonomorph.cpp
   src/semantics/SemanticsValidate.cpp
+  src/semantics/SemanticsValidateTransforms.cpp
   src/semantics/SemanticsValidator.cpp
   src/semantics/SemanticsValidatorBuild.cpp
   src/semantics/SemanticsValidatorExprBlock.cpp
