@@ -1400,6 +1400,27 @@ main() {
         "image_invalid_operation\n");
 }
 
+TEST_CASE("vm uses stdlib GfxError result helpers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.why(gfxErrorStatus(queueSubmitFailed())))
+  print_line(Result.why(gfxErrorResult<i32>(framePresentFailed())))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_gfx_error_result_helpers.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_gfx_error_result_helpers.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) ==
+        "queue_submit_failed\n"
+        "frame_present_failed\n");
+}
+
 TEST_CASE("vm uses stdlib FileError why wrapper") {
   const std::string source = R"(
 import /std/file/*

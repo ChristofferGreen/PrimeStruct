@@ -379,6 +379,11 @@ namespace std {
     return(GfxError(code))
   }
 
+  [public return<Result<GfxError>>]
+  gfxErrorStatus([GfxError] err) {
+    return(err.code)
+  }
+
   [public return<Result<T, GfxError>>]
   gfxErrorResult<T>([GfxError] err) {
     return(multiply(convert<i64>(err.code), 4294967296i64))
@@ -486,7 +491,7 @@ namespace std {
     [public return<Result<GfxError>>]
     submitFrame([i32] frameToken, [i32] queueToken) {
       if(or(less_than(frameToken, 1i32), less_than(queueToken, 1i32))) {
-        return(queueSubmitFailed().code)
+        return(gfxErrorStatus(queueSubmitFailed()))
       }
       return(Result.ok())
     }
@@ -494,7 +499,7 @@ namespace std {
     [public return<Result<GfxError>>]
     presentFrame([i32] frameToken) {
       if(less_than(frameToken, 1i32)) {
-        return(framePresentFailed().code)
+        return(gfxErrorStatus(framePresentFailed()))
       }
       return(Result.ok())
     }
