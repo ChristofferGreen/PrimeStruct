@@ -44,6 +44,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsHelpersCore.cpp
   src/semantics/SemanticsHelpersValidation.cpp
   src/semantics/TemplateMonomorph.cpp
+  src/semantics/StronglyConnectedComponents.cpp
   src/semantics/TypeResolutionGraph.cpp
   src/semantics/SemanticsValidate.cpp
   src/semantics/SemanticsValidateConvertConstructors.cpp
@@ -406,6 +407,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.traits
     primestruct.semantics.move
     primestruct.semantics.software_numeric
+    primestruct.semantics.scc
     primestruct.semantics.type_resolution_graph
     primestruct.semantics.uninitialized_fields
   )

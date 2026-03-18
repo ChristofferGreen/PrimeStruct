@@ -322,6 +322,42 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(primevmMain.find("[--dump-stage pre_ast|ast|ast-semantic|type-graph|ir]") != std::string::npos);
 }
 
+TEST_CASE("strongly connected component utility is wired through semantics testing api") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
+  std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+  std::filesystem::path sccHeaderPath = cwd / "src" / "semantics" / "StronglyConnectedComponents.h";
+  std::filesystem::path sccSourcePath = cwd / "src" / "semantics" / "StronglyConnectedComponents.cpp";
+  if (!std::filesystem::exists(cmakePath)) {
+    cmakePath = cwd.parent_path() / "CMakeLists.txt";
+    testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+    sccHeaderPath = cwd.parent_path() / "src" / "semantics" / "StronglyConnectedComponents.h";
+    sccSourcePath = cwd.parent_path() / "src" / "semantics" / "StronglyConnectedComponents.cpp";
+  }
+  REQUIRE(std::filesystem::exists(cmakePath));
+  REQUIRE(std::filesystem::exists(testApiPath));
+  REQUIRE(std::filesystem::exists(sccHeaderPath));
+  REQUIRE(std::filesystem::exists(sccSourcePath));
+
+  const std::string cmake = readTextFile(cmakePath);
+  const std::string testApi = readTextFile(testApiPath);
+  const std::string sccHeader = readTextFile(sccHeaderPath);
+  const std::string sccSource = readTextFile(sccSourcePath);
+  CHECK(cmake.find("src/semantics/StronglyConnectedComponents.cpp") != std::string::npos);
+  CHECK(cmake.find("primestruct.semantics.scc") != std::string::npos);
+  CHECK(testApi.find("struct StronglyConnectedComponentsTestEdge") != std::string::npos);
+  CHECK(testApi.find("struct StronglyConnectedComponentSnapshot") != std::string::npos);
+  CHECK(testApi.find("struct StronglyConnectedComponentsSnapshot") != std::string::npos);
+  CHECK(testApi.find("computeStronglyConnectedComponentsForTesting") != std::string::npos);
+  CHECK(sccHeader.find("struct DirectedGraphEdge") != std::string::npos);
+  CHECK(sccHeader.find("struct StronglyConnectedComponent") != std::string::npos);
+  CHECK(sccHeader.find("struct StronglyConnectedComponents") != std::string::npos);
+  CHECK(sccHeader.find("computeStronglyConnectedComponents") != std::string::npos);
+  CHECK(sccSource.find("class TarjanSccBuilder") != std::string::npos);
+  CHECK(sccSource.find("normalizeComponentOrder") != std::string::npos);
+  CHECK(sccSource.find("computeStronglyConnectedComponentsForTesting") != std::string::npos);
+}
+
 TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";
