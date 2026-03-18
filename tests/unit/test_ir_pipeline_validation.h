@@ -9400,10 +9400,6 @@ TEST_CASE("semantics validate source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidateExperimentalGfxConstructors.cpp";
   const std::filesystem::path semanticsValidateExperimentalGfxConstructorsHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateExperimentalGfxConstructors.h";
-  const std::filesystem::path semanticsValidateMaybeConstructorsPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidateMaybeConstructors.cpp";
-  const std::filesystem::path semanticsValidateMaybeConstructorsHeaderPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidateMaybeConstructors.h";
   const std::filesystem::path semanticsValidateReflectionGeneratedHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpers.cpp";
   const std::filesystem::path semanticsValidateReflectionGeneratedHelpersHeaderPath =
@@ -9441,8 +9437,6 @@ TEST_CASE("semantics validate source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsValidateConvertConstructorsHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateExperimentalGfxConstructorsPath));
   REQUIRE(std::filesystem::exists(semanticsValidateExperimentalGfxConstructorsHeaderPath));
-  REQUIRE(std::filesystem::exists(semanticsValidateMaybeConstructorsPath));
-  REQUIRE(std::filesystem::exists(semanticsValidateMaybeConstructorsHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersCloneDebugPath));
@@ -9467,9 +9461,6 @@ TEST_CASE("semantics validate source delegation stays stable") {
       readText(semanticsValidateExperimentalGfxConstructorsPath);
   const std::string semanticsValidateExperimentalGfxConstructorsHeaderSource =
       readText(semanticsValidateExperimentalGfxConstructorsHeaderPath);
-  const std::string semanticsValidateMaybeConstructorsSource = readText(semanticsValidateMaybeConstructorsPath);
-  const std::string semanticsValidateMaybeConstructorsHeaderSource =
-      readText(semanticsValidateMaybeConstructorsHeaderPath);
   const std::string semanticsValidateReflectionGeneratedHelpersSource =
       readText(semanticsValidateReflectionGeneratedHelpersPath);
   const std::string semanticsValidateReflectionGeneratedHelpersHeaderSource =
@@ -9503,14 +9494,12 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateConvertConstructors.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateExperimentalGfxConstructors.h\"") !=
         std::string::npos);
-  CHECK(semanticsValidateSource.find("#include \"SemanticsValidateMaybeConstructors.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateReflectionGeneratedHelpers.h\"") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateReflectionMetadata.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateTransforms.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("semantics::applySemanticTransforms(program, semanticTransforms, error)") !=
         std::string::npos);
-  CHECK(semanticsValidateSource.find("semantics::rewriteMaybeConstructors(program, error)") != std::string::npos);
   CHECK(semanticsValidateSource.find("semantics::rewriteConvertConstructors(program, error)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find("semantics::rewriteExperimentalGfxConstructors(program, error)") !=
@@ -9523,8 +9512,6 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateSource.find("bool rewriteConvertConstructors(Program &program, std::string &error)") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteExperimentalGfxConstructors(Program &program, std::string &error)") ==
-        std::string::npos);
-  CHECK(semanticsValidateSource.find("bool rewriteMaybeConstructors(Program &program, std::string &error)") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error)") ==
         std::string::npos);
@@ -9546,13 +9533,6 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateExperimentalGfxConstructorsSource.find("expr.name = \"create_pipeline_VertexColored\";") !=
         std::string::npos);
   CHECK(semanticsValidateExperimentalGfxConstructorsSource.find("rememberBinding(arg, namespacePrefix, bodyLocals);") !=
-        std::string::npos);
-  CHECK(semanticsValidateMaybeConstructorsHeaderSource.find("bool rewriteMaybeConstructors(Program &program, std::string &error)") !=
-        std::string::npos);
-  CHECK(semanticsValidateMaybeConstructorsSource.find("bool rewriteMaybeConstructors(Program &program, std::string &error)") !=
-        std::string::npos);
-  CHECK(semanticsValidateMaybeConstructorsSource.find("const std::string_view base =") != std::string::npos);
-  CHECK(semanticsValidateMaybeConstructorsSource.find("call.name = prefix.empty() ? \"/some\" : (prefix + \"/some\");") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersHeaderSource.find("bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error)") !=
         std::string::npos);

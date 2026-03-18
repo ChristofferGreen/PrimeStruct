@@ -2,7 +2,6 @@
 
 #include "SemanticsValidateConvertConstructors.h"
 #include "SemanticsValidateExperimentalGfxConstructors.h"
-#include "SemanticsValidateMaybeConstructors.h"
 #include "SemanticsValidateReflectionGeneratedHelpers.h"
 #include "SemanticsValidateReflectionMetadata.h"
 #include "SemanticsValidateTransforms.h"
@@ -223,9 +222,6 @@ bool Semantics::validate(Program &program,
                          bool collectDiagnostics) const {
   error.clear();
   if (!semantics::applySemanticTransforms(program, semanticTransforms, error)) {
-    return false;
-  }
-  if (!semantics::rewriteMaybeConstructors(program, error)) {
     return false;
   }
   if (!semantics::rewriteExperimentalGfxConstructors(program, error)) {

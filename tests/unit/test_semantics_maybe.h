@@ -215,7 +215,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("maybe constructor sugar infers template") {
+TEST_CASE("maybe direct constructor rejects payload shorthand without some") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
@@ -224,11 +224,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /Maybe parameter empty") != std::string::npos);
+  CHECK(error.find("expected bool got i32") != std::string::npos);
 }
 
-TEST_CASE("maybe constructor sugar keeps explicit template") {
+TEST_CASE("maybe direct constructor rejects payload shorthand with explicit template") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
@@ -237,8 +238,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /Maybe parameter empty") != std::string::npos);
+  CHECK(error.find("expected bool got i32") != std::string::npos);
 }
 
 TEST_SUITE_END();

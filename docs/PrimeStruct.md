@@ -1071,7 +1071,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)` to destroy.
 - **Ergonomic constructor surface:** `Maybe()` yields empty. Use `some<T>(value)` for a present value and `none<T>()` for empty.
   - `Maybe<T>` is intended to be a stdlib-owned optional type, not a permanently compiler-owned special case.
-  - `Maybe(value)` is sugar for `some<T>(value)` when `T` can be inferred; this is transitional convenience, not an architectural reason to keep `Maybe` semantics in C++ long-term.
+  - Present-value construction is explicit: `Maybe(value)` / `Maybe<T>(value)` are intentionally unsupported; use `some<T>(value)` instead.
 - **Helper surface (stdlib):** `is_empty()` / `is_some()`, `set(value)`, `clear()`, `take()` (consumes the stored value and marks empty).
 - **Example shape:**
   ```
