@@ -442,22 +442,6 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     return binding.typeName + "<" + binding.typeTemplateArg + ">";
   };
-  auto parseTypeText = [](const std::string &typeText, BindingInfo &parsedOut) -> bool {
-    const std::string normalized = normalizeBindingTypeName(typeText);
-    if (normalized.empty()) {
-      return false;
-    }
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(normalized, base, argText) && !base.empty()) {
-      parsedOut.typeName = base;
-      parsedOut.typeTemplateArg = argText;
-      return true;
-    }
-    parsedOut.typeName = normalized;
-    parsedOut.typeTemplateArg.clear();
-    return true;
-  };
   auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
       return false;
@@ -660,63 +644,12 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
         stack.erase(it);
       }
     } guard{inferredDefinitionTypeStack, stackIt};
-
-    std::vector<ParameterInfo> defParams;
-    defParams.reserve(defIt->second->parameters.size());
-    for (const auto &paramExpr : defIt->second->parameters) {
-      ParameterInfo paramInfo;
-      paramInfo.name = paramExpr.name;
-      std::optional<std::string> restrictType;
-      std::string parseError;
-      (void)parseBindingInfo(paramExpr,
-                             defIt->second->namespacePrefix,
-                             structNames_,
-                             importAliases_,
-                             paramInfo.binding,
-                             restrictType,
-                             parseError);
-      if (paramExpr.args.size() == 1) {
-        paramInfo.defaultExpr = &paramExpr.args.front();
-      }
-      defParams.push_back(std::move(paramInfo));
+    BindingInfo inferredReturn;
+    if (!inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+      return false;
     }
-
-    std::unordered_map<std::string, BindingInfo> defLocals;
-    const Expr *valueExpr = nullptr;
-    bool sawReturn = false;
-    for (const auto &stmt : defIt->second->statements) {
-      if (stmt.isBinding) {
-        BindingInfo binding;
-        std::optional<std::string> restrictType;
-        std::string parseError;
-        if (parseBindingInfo(
-                stmt, defIt->second->namespacePrefix, structNames_, importAliases_, binding, restrictType, parseError)) {
-          defLocals[stmt.name] = binding;
-        } else if (stmt.args.size() == 1) {
-          std::string inferredLocalType;
-          if (inferExprTypeText(stmt.args.front(), defParams, defLocals, inferredLocalType) &&
-              parseTypeText(inferredLocalType, binding)) {
-            defLocals[stmt.name] = binding;
-          }
-        }
-        continue;
-      }
-      if (isReturnCall(stmt)) {
-        if (stmt.args.size() != 1) {
-          return false;
-        }
-        valueExpr = &stmt.args.front();
-        sawReturn = true;
-        continue;
-      }
-      if (!sawReturn) {
-        valueExpr = &stmt;
-      }
-    }
-    if (defIt->second->returnExpr.has_value()) {
-      valueExpr = &*defIt->second->returnExpr;
-    }
-    return valueExpr != nullptr && inferExprTypeText(*valueExpr, defParams, defLocals, typeTextOut);
+    typeTextOut = describeBindingType(inferredReturn);
+    return !typeTextOut.empty();
   };
   auto resolveBuiltinMapResultType = [&](const std::string &typeText) -> bool {
     std::string base;

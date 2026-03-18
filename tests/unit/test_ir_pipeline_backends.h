@@ -329,7 +329,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   std::filesystem::path semanticsHeaderPath = cwd / "include" / "primec" / "Semantics.h";
   std::filesystem::path semanticsValidatePath = cwd / "src" / "semantics" / "SemanticsValidate.cpp";
   std::filesystem::path validatorHeaderPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
+  std::filesystem::path validatorCorePath = cwd / "src" / "semantics" / "SemanticsValidator.cpp";
   std::filesystem::path validatorBuildPath = cwd / "src" / "semantics" / "SemanticsValidatorBuild.cpp";
+  std::filesystem::path validatorCollectionsPath = cwd / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
+  std::filesystem::path validatorExprPath = cwd / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
   std::filesystem::path validatorInferPath = cwd / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
   std::filesystem::path pipelinePath = cwd / "src" / "CompilePipeline.cpp";
   std::filesystem::path primecMainPath = cwd / "src" / "main.cpp";
@@ -340,7 +343,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
     semanticsHeaderPath = cwd.parent_path() / "include" / "primec" / "Semantics.h";
     semanticsValidatePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidate.cpp";
     validatorHeaderPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.h";
+    validatorCorePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.cpp";
     validatorBuildPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorBuild.cpp";
+    validatorCollectionsPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
+    validatorExprPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
     validatorInferPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
     pipelinePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
     primecMainPath = cwd.parent_path() / "src" / "main.cpp";
@@ -351,7 +357,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(semanticsHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
   REQUIRE(std::filesystem::exists(validatorHeaderPath));
+  REQUIRE(std::filesystem::exists(validatorCorePath));
   REQUIRE(std::filesystem::exists(validatorBuildPath));
+  REQUIRE(std::filesystem::exists(validatorCollectionsPath));
+  REQUIRE(std::filesystem::exists(validatorExprPath));
   REQUIRE(std::filesystem::exists(validatorInferPath));
   REQUIRE(std::filesystem::exists(pipelinePath));
   REQUIRE(std::filesystem::exists(primecMainPath));
@@ -362,7 +371,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   const std::string semanticsHeader = readTextFile(semanticsHeaderPath);
   const std::string semanticsValidate = readTextFile(semanticsValidatePath);
   const std::string validatorHeader = readTextFile(validatorHeaderPath);
+  const std::string validatorCore = readTextFile(validatorCorePath);
   const std::string validatorBuild = readTextFile(validatorBuildPath);
+  const std::string validatorCollections = readTextFile(validatorCollectionsPath);
+  const std::string validatorExpr = readTextFile(validatorExprPath);
   const std::string validatorInfer = readTextFile(validatorInferPath);
   const std::string pipeline = readTextFile(pipelinePath);
   const std::string primecMain = readTextFile(primecMainPath);
@@ -385,11 +397,21 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("bool ensureDefinitionReturnKindReady(const Definition &def);") != std::string::npos);
   CHECK(validatorHeader.find("bool inferDefinitionReturnKindGraphStep") != std::string::npos);
   CHECK(validatorHeader.find("bool graphTypeResolverEnabled_ = false;") != std::string::npos);
+  CHECK(validatorHeader.find("bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);") !=
+        std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(currentValidationContext_.definitionPath, bindingExpr, bindingOut)") !=
         std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)") !=
         std::string::npos);
+  CHECK(validatorCollections.find("ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));") !=
+        std::string::npos);
   CHECK(validatorBuild.find("inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const") !=
+        std::string::npos);
+  CHECK(validatorCore.find("if (!inferDefinitionReturnBinding(*defIt->second, inferredReturn))") !=
+        std::string::npos);
+  CHECK(validatorCore.find("inferExprTypeText(stmt.args.front(), defParams, defLocals, inferredLocalType)") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("return SemanticsValidator::inferDefinitionReturnBinding(def, bindingOut);") !=
         std::string::npos);
   CHECK(validatorInfer.find("buildTypeResolutionGraph(program_)") != std::string::npos);
   CHECK(validatorInfer.find("collectGraphLocalAutoBindings(graph);") != std::string::npos);
@@ -436,6 +458,8 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("block_omitted_field_envelope_struct") != std::string::npos);
   CHECK(parityHeader.find("if_omitted_field_envelope_struct") != std::string::npos);
   CHECK(parityHeader.find("ambiguous_omitted_field_envelope") != std::string::npos);
+  CHECK(parityHeader.find("query_collection_return_binding") != std::string::npos);
+  CHECK(parityHeader.find("query_result_return_binding") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally corrects grounded mutual recursion") !=

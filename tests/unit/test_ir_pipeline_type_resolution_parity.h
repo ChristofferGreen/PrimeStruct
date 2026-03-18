@@ -230,6 +230,65 @@ main() {
 }
 )",
       },
+      {
+          "query_collection_return_binding",
+          R"(
+[return<array<i32>>]
+valuesA() {
+  return(array<i32>(1i32, 2i32))
+}
+
+[return<array<i32>>]
+valuesB() {
+  return(array<i32>(3i32, 4i32))
+}
+
+[return<auto>]
+wrapValues() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(values)
+}
+
+[return<i32>]
+main() {
+  return(count(wrapValues()))
+}
+)",
+      },
+      {
+          "query_result_return_binding",
+          R"(
+[return<Result<array<i32>, ContainerError>>]
+valuesOkA() {
+  return(Result.ok(array<i32>(1i32, 2i32)))
+}
+
+[return<Result<array<i32>, ContainerError>>]
+valuesOkB() {
+  return(Result.ok(array<i32>(3i32, 4i32)))
+}
+
+[return<auto>]
+wrapStatus() {
+  [auto] status{
+    if(true,
+      then(){ return(valuesOkA()) },
+      else(){ return(valuesOkB()) })
+  }
+  return(status)
+}
+
+[return<i32>]
+main() {
+  [auto] values{try(wrapStatus())}
+  return(count(values))
+}
+)",
+      },
   };
 
   for (const ParityCase &testCase : cases) {

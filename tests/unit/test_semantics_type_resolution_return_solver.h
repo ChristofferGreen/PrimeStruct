@@ -317,6 +317,79 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("graph type resolver answers collection receiver queries through shared return-binding inference") {
+  const std::string source = R"(
+[return<array<i32>>]
+valuesA() {
+  return(array<i32>(1i32, 2i32))
+}
+
+[return<array<i32>>]
+valuesB() {
+  return(array<i32>(3i32, 4i32))
+}
+
+[return<auto>]
+wrapValues() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(values)
+}
+
+[return<i32>]
+main() {
+  return(count(wrapValues()))
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
+TEST_CASE("graph type resolver answers result queries through shared return-binding inference") {
+  const std::string source = R"(
+[return<Result<array<i32>, ContainerError>>]
+valuesOkA() {
+  return(Result.ok(array<i32>(1i32, 2i32)))
+}
+
+[return<Result<array<i32>, ContainerError>>]
+valuesOkB() {
+  return(Result.ok(array<i32>(3i32, 4i32)))
+}
+
+[return<auto>]
+wrapStatus() {
+  [auto] status{
+    if(true,
+      then(){ return(valuesOkA()) },
+      else(){ return(valuesOkB()) })
+  }
+  return(status)
+}
+
+[return<i32>]
+main() {
+  [auto] values{try(wrapStatus())}
+  return(count(values))
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
 TEST_CASE("default semantics path uses graph resolver while legacy remains available for rollback") {
   const std::string source = R"(
 [return<auto>]

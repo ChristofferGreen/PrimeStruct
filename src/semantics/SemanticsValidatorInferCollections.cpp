@@ -97,6 +97,8 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
     return parseTypeText(returnType, bindingOut);
   }
 
+  ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
+
   std::vector<ParameterInfo> defParams;
   defParams.reserve(def.parameters.size());
   for (const auto &paramExpr : def.parameters) {
