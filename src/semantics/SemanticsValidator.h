@@ -201,6 +201,15 @@ private:
                                       bool resolvedMethod,
                                       const ExprResultFileBuiltinContext &context,
                                       bool &handledOut);
+  struct ExprTryBuiltinContext {
+    std::function<std::string(const Expr &)> getDirectMapHelperCompatibilityPath;
+    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
+  };
+  bool validateExprTryBuiltin(const std::vector<ParameterInfo> &params,
+                              const std::unordered_map<std::string, BindingInfo> &locals,
+                              const Expr &expr,
+                              const ExprTryBuiltinContext &context,
+                              bool &handledOut);
   std::string normalizeCollectionMethodName(const std::string &methodName) const;
   std::string inferPointerLikeCallReturnType(
       const Expr &receiverExpr,

@@ -3289,71 +3289,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     };
     auto it = defMap_.find(resolved);
     if (it == defMap_.end() || resolvedMethod) {
-      if (!expr.isMethodCall && isSimpleCallName(expr, "try")) {
-        if (hasNamedArguments(expr.argNames)) {
-          error_ = "named arguments not supported for builtin calls";
-          return false;
-        }
-        if (!expr.templateArgs.empty()) {
-          error_ = "try does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = "try does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 1) {
-          error_ = "try requires exactly one argument";
-          return false;
-        }
-        if (expr.args.front().kind == Expr::Kind::Call) {
-          const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(expr.args.front());
-          if (!removedMapCompatibilityPath.empty()) {
-            error_ = "unknown call target: " + removedMapCompatibilityPath;
-            return false;
-          }
-          const std::string tryTargetPath = resolveCalleePath(expr.args.front());
-          if (tryTargetPath == "/std/collections/map/tryAt" && defMap_.find(tryTargetPath) == defMap_.end() &&
-              !isIndexedArgsPackMapReceiverTarget(expr.args.front().isMethodCall ? expr.args.front().args.front()
-                                                                                 : expr.args.front().args.front())) {
-            error_ = "unknown call target: /std/collections/map/tryAt";
-            return false;
-          }
-        }
-        ReturnKind enclosingReturnKind = ReturnKind::Unknown;
-        if (!currentDefinitionPath_.empty()) {
-          auto enclosingReturnIt = returnKinds_.find(currentDefinitionPath_);
-          if (enclosingReturnIt != returnKinds_.end()) {
-            enclosingReturnKind = enclosingReturnIt->second;
-          }
-        }
-        const bool returnsResult = currentResultType_.has_value() && currentResultType_->isResult;
-        if (!currentOnError_.has_value()) {
-          error_ = "missing on_error for ? usage";
-          return false;
-        }
-        if (!returnsResult && enclosingReturnKind != ReturnKind::Int) {
-          error_ = "try requires Result or int return type";
-          return false;
-        }
-        if (returnsResult &&
-            !errorTypesMatch(currentResultType_->errorType, currentOnError_->errorType, expr.namespacePrefix)) {
-          error_ = "on_error error type mismatch";
-          return false;
-        }
-        if (!validateExpr(params, locals, expr.args.front())) {
-          return false;
-        }
-        ResultTypeInfo argResult;
-        if (!resolveResultTypeForExpr(expr.args.front(), params, locals, argResult) || !argResult.isResult) {
-          error_ = "try requires Result argument";
-          return false;
-        }
-        if (currentOnError_.has_value() &&
-            !errorTypesMatch(argResult.errorType, currentOnError_->errorType, expr.namespacePrefix)) {
-          error_ = "try error type mismatch";
-          return false;
-        }
+      ExprTryBuiltinContext tryContext;
+      tryContext.getDirectMapHelperCompatibilityPath =
+          getDirectMapHelperCompatibilityPath;
+      tryContext.isIndexedArgsPackMapReceiverTarget =
+          isIndexedArgsPackMapReceiverTarget;
+      bool handledTryBuiltin = false;
+      if (!validateExprTryBuiltin(params, locals, expr, tryContext,
+                                  handledTryBuiltin)) {
+        return false;
+      }
+      if (handledTryBuiltin) {
         return true;
       }
       ExprResultFileBuiltinContext resultFileContext;
