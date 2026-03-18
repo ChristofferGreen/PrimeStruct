@@ -256,7 +256,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_import_resolver.cpp
     tests/unit/test_import_errors.cpp
     tests/unit/test_import_multiple.cpp
-    tests/unit/test_semantics.cpp
     tests/unit/test_ast_ir_dump.cpp
     tests/unit/test_ast_ir_dump_namespace.cpp
     tests/unit/test_parser_errors.cpp
@@ -280,6 +279,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)
   primestructEnableWarnings(PrimeStruct_tests)
+
+  add_executable(PrimeStruct_semantics_tests
+    tests/unit/test_main.cpp
+    tests/unit/test_semantics.cpp
+  )
+  target_include_directories(PrimeStruct_semantics_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_semantics_tests PRIVATE primec_ir_lib)
+  primestructEnableWarnings(PrimeStruct_semantics_tests)
 
   set(PrimeStructTestSuites
     primestruct.dumps.ast_ir
@@ -308,6 +315,18 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.parser.errors.named_args
     primestruct.parser.errors.transforms
     primestruct.printers.manual
+    primestruct.semantics.manual
+    primestruct.parser.templates
+    primestruct.text_filters.pipeline.basics
+    primestruct.text_filters.pipeline.rewrites
+    primestruct.text_filters.pipeline.implicit_utf8
+    primestruct.text_filters.pipeline.implicit_i32
+    primestruct.text_filters.pipeline.collections
+    primestruct.text_filters.helpers
+    primestruct.diagnostics.codes
+  )
+
+  set(PrimeStructSemanticsTestSuites
     primestruct.semantics.entry
     primestruct.semantics.resolution
     primestruct.semantics.parameters
@@ -340,24 +359,23 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.lambdas
     primestruct.semantics.maybe
     primestruct.semantics.traits
-    primestruct.semantics.manual
     primestruct.semantics.move
     primestruct.semantics.software_numeric
     primestruct.semantics.uninitialized_fields
-    primestruct.parser.templates
-    primestruct.text_filters.pipeline.basics
-    primestruct.text_filters.pipeline.rewrites
-    primestruct.text_filters.pipeline.implicit_utf8
-    primestruct.text_filters.pipeline.implicit_i32
-    primestruct.text_filters.pipeline.collections
-    primestruct.text_filters.helpers
-    primestruct.diagnostics.codes
   )
 
   foreach(suite IN LISTS PrimeStructTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_tests> "--test-suite=${suite}")
+    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+  endforeach()
+
+  foreach(suite IN LISTS PrimeStructSemanticsTestSuites)
+    string(REPLACE "." "_" suiteId "${suite}")
+    set(testName "PrimeStruct_${suiteId}")
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests> "--test-suite=${suite}")
     set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()

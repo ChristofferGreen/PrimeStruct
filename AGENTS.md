@@ -107,6 +107,9 @@ build and layout solidify.
   `primec_backend_lib` and `primec_lib` as compatibility umbrellas instead of adding new source
   files to them directly. When a target only needs IR preparation plus VM execution, prefer
   linking `primec_ir_lib` + `primec_runtime_lib` over the broader backend umbrellas.
+- **Doctest target layout:** when a test source only exercises compile-pipeline/frontend/IR APIs,
+  prefer a dedicated doctest binary linked to `primec_ir_lib` or `primec_frontend_lib` instead of
+  folding it into the broad `PrimeStruct_tests -> primec_lib` target.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **VM/native strings:** string values are represented as string-table indices; dynamic
