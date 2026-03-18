@@ -1,3 +1,8 @@
+[public return<string>]
+/FileError/why([FileError] err) {
+  return(/file_error/why(err))
+}
+
 namespace std {
   namespace file {
   [public return<FileError>]

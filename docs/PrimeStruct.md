@@ -689,7 +689,8 @@ sum_two_files([string] a, [string] b) {
   - **Graphics entry flow:** `?` is also valid inside `return<int>` definitions with a matching
     `on_error<ErrorType, Handler>(...)`; on error, the handler runs and the definition returns the raw error code.
   - **Current stdlib progress:** import `/std/file/*` to use `.prime`-authored `fileReadEof()`,
-    `fileErrorStatus(err)`, and `fileErrorResult<T>(err)` helpers instead of hand-packing `FileError` results.
+    `fileErrorStatus(err)`, and `fileErrorResult<T>(err)` helpers instead of hand-packing `FileError` results, and
+    load the public `/FileError/why([FileError] err)` wrapper that `Result.why(...)` now prefers when available.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.
@@ -718,6 +719,9 @@ sum_two_files([string] a, [string] b) {
   - `read_byte(...)` reports deterministic end-of-file as `EOF`.
   - Import `/std/file/*` for the current stdlib-authored FileError helper layer:
     `fileReadEof()`, `fileErrorStatus(err)`, and `fileErrorResult<T>(err)`.
+  - The stdlib file layer also defines `/FileError/why([FileError] err)` as the public wrapper over the
+    intrinsic file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned
+    helper surface while platform-specific code-to-string translation stays builtin substrate.
 - **Effect requirement:** read-only file operations require `effects(file_read)` and write/append operations require `effects(file_write)`. `file_write` also implies `file_read` for compatibility.
 - **Example:**
   ```

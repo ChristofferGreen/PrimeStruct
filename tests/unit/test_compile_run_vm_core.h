@@ -1377,6 +1377,27 @@ TEST_CASE("vm maps FileError.why codes") {
 }
 #endif
 
+TEST_CASE("vm uses stdlib FileError why wrapper") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<int> effects(io_out)]
+main() {
+  [FileError] err{fileReadEof()}
+  print_line(/FileError/why(err))
+  print_line(err.why())
+  print_line(Result.why(fileErrorStatus(err)))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_file_error_why.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_error_why_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "EOF\nEOF\nEOF\n");
+}
+
 TEST_CASE("vm rejects recursive calls") {
   const std::string source = R"(
 [return<int>]

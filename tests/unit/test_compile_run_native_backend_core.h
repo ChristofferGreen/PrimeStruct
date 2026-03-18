@@ -5791,6 +5791,32 @@ TEST_CASE("compiles and runs native FileError.why mapping") {
 }
 #endif
 
+TEST_CASE("native uses stdlib FileError why wrapper") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<int> effects(io_out)]
+main() {
+  [FileError] err{fileReadEof()}
+  print_line(/FileError/why(err))
+  print_line(err.why())
+  print_line(Result.why(fileErrorStatus(err)))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_file_error_why.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_error_why_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_error_why_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "EOF\nEOF\nEOF\n");
+}
+
 #if defined(EACCES) && defined(ENOENT) && defined(EEXIST)
 TEST_CASE("native materializes variadic FileError packs with indexed why methods") {
   const std::string source =

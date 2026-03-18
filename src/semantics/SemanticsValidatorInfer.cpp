@@ -1850,6 +1850,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (typeName.empty()) {
         return false;
       }
+      if (typeName == "FileError" && normalizedMethodName == "why") {
+        resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
+        return true;
+      }
       if (typeName == "Pointer" || typeName == "Reference") {
         if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
           resolvedOut = "/" + typeName + "/" + normalizedMethodName;
@@ -2624,7 +2628,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string methodResolved;
       if (resolveMethodCallPath(expr.name, methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
-        if (methodResolved == "/file_error/why") {
+        if (methodResolved == "/file_error/why" || methodResolved == "/FileError/why") {
           return ReturnKind::String;
         }
         if ((methodResolved == "/std/collections/map/count" &&

@@ -1691,7 +1691,7 @@ bool resolveMethodCallPath(const Expr &call,
     return true;
   }
   if (typeName == "FileError" && normalizedMethodName == "why") {
-    resolvedOut = "/file_error/why";
+    resolvedOut = defMap.find("/FileError/why") != defMap.end() ? "/FileError/why" : "/file_error/why";
     return true;
   }
   if (typeName == "Pointer" || typeName == "Reference") {

@@ -3130,8 +3130,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return setCollectionMethodTarget("/string/" + normalizedMethodName);
         }
         if (collectionElemType == "FileError" && normalizedMethodName == "why") {
-          resolvedOut = "/file_error/why";
-          isBuiltinOut = true;
+          resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
+          isBuiltinOut = resolvedOut == "/file_error/why";
           return true;
         }
         std::string elemBase;
@@ -3371,8 +3371,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 }
               }
               if (normalizedElemType == "FileError" && normalizedMethodName == "why") {
-                resolvedOut = "/file_error/why";
-                isBuiltinOut = true;
+                resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
+                isBuiltinOut = resolvedOut == "/file_error/why";
                 return true;
               }
               if (isPrimitiveBindingTypeName(normalizedElemType)) {
@@ -3480,8 +3480,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
       if (typeName == "FileError" && normalizedMethodName == "why") {
-        resolvedOut = "/file_error/why";
-        isBuiltinOut = true;
+        resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
+        isBuiltinOut = resolvedOut == "/file_error/why";
         return true;
       }
       if (typeName == "string" &&

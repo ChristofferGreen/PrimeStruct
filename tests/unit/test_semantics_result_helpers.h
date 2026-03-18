@@ -121,6 +121,39 @@ main() {
   CHECK(error.find("argument type mismatch for /std/file/fileErrorResult parameter err") != std::string::npos);
 }
 
+TEST_CASE("stdlib FileError why wrapper covers direct and Result-based access") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [FileError] err{fileReadEof()}
+  [string] direct{/FileError/why(err)}
+  [string] method{err.why()}
+  [string] viaResult{Result.why(fileErrorStatus(err))}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib FileError why wrapper rejects non file errors") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [string] why{/FileError/why(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /FileError/why parameter err") != std::string::npos);
+}
+
 TEST_CASE("Result.map inline lambda syntax parses with explicit diagnostics") {
   const std::string source = R"(
 [return<void>]
