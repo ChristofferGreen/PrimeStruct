@@ -2047,6 +2047,7 @@ TEST_CASE("primec wasm wasi runs ppm read for ascii p3 inputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2062,7 +2063,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2118,6 +2119,7 @@ TEST_CASE("primec wasm wasi runs binary p6 ppm inputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_read), return<int>]
 main() {
@@ -2133,7 +2135,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2189,6 +2191,7 @@ TEST_CASE("primec wasm wasi rejects truncated binary ppm reads deterministically
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2199,7 +2202,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   return(0i32)
 }
 )";
@@ -2231,6 +2234,7 @@ TEST_CASE("primec wasm wasi ppm write requires heap_alloc for vector literal") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(file_write), return<int>]
 main() {
@@ -2262,6 +2266,7 @@ TEST_CASE("primec wasm wasi invalid ppm write requires heap_alloc for vector lit
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(io_out, file_write), return<int>]
 main() {
@@ -2509,6 +2514,7 @@ TEST_CASE("primec wasm wasi runs stored rgb png inputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2524,7 +2530,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2572,6 +2578,7 @@ TEST_CASE("primec wasm wasi runs stored sub-filter rgb png inputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2587,7 +2594,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2650,6 +2657,7 @@ TEST_CASE("primec wasm wasi runs stored up-filter rgb png inputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2665,7 +2673,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2728,6 +2736,7 @@ TEST_CASE("primec wasm wasi runs stored average-filter rgb png inputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2743,7 +2752,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2897,6 +2906,7 @@ TEST_CASE("primec wasm wasi runs fixed-huffman backreference rgb png inputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2912,7 +2922,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2982,6 +2992,7 @@ TEST_CASE("primec wasm wasi runs dynamic-huffman literal rgb png inputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2997,7 +3008,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3061,6 +3072,7 @@ TEST_CASE("primec wasm wasi runs dynamic-huffman backreference rgb png inputs") 
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -3076,7 +3088,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3155,6 +3167,7 @@ TEST_CASE("primec wasm wasi runs broader interlaced png decode programs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -3170,7 +3183,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3269,6 +3282,7 @@ TEST_CASE("primec wasm wasi rejects malformed png inputs deterministically") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -3279,7 +3293,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   return(0i32)
 }
 )";

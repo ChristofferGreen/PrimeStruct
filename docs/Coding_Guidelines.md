@@ -99,6 +99,8 @@ semantics after canonicalization.
 ## Collection Surface Example (Compilable)
 
 ```prime
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>{1, 2}}

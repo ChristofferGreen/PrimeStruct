@@ -632,6 +632,13 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
   const auto resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath;
   const auto isArrayCountCall = input.isArrayCountCall;
   const auto isStringCountCall = input.isStringCountCall;
+  const auto resolveMethodCallDefinitionNoProbeError =
+      [&stateInOut, &errorOut](const Expr &candidate, const LocalMap &candidateLocals) -> const Definition * {
+    const std::string priorError = errorOut;
+    const Definition *resolved = stateInOut.resolveMethodCallDefinition(candidate, candidateLocals);
+    errorOut = priorError;
+    return resolved;
+  };
   auto isZeroFieldStructDef = [](const Definition &def) -> bool {
     if (!isStructDefinition(def)) {
       return false;
@@ -670,6 +677,7 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
                                       isArrayCountCall,
                                       isStringCountCall,
                                       isZeroFieldStructDef,
+                                      resolveMethodCallDefinitionNoProbeError,
                                       &stateInOut](const Expr &expr,
                                                    const LocalMap &localsIn) -> LocalInfo::ValueKind {
     return inferArrayElementValueKind(
@@ -701,7 +709,7 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
                                                   candidateLocals,
                                                   isArrayCountCall,
                                                   isStringCountCall,
-                                                  stateInOut.resolveMethodCallDefinition,
+                                                  resolveMethodCallDefinitionNoProbeError,
                                                   stateInOut.getReturnInfo,
                                                   true,
                                                   kindOut,
@@ -712,7 +720,7 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
           return resolveMethodCallReturnKind(
               candidate,
               candidateLocals,
-              stateInOut.resolveMethodCallDefinition,
+              resolveMethodCallDefinitionNoProbeError,
               [&](const Expr &callExpr) {
                 return ir_lowerer::resolveDefinitionCall(callExpr, *defMap, resolveExprPath);
               },
@@ -796,6 +804,13 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
   const auto resolveExprPath = input.resolveExprPath;
   const auto isArrayCountCall = input.isArrayCountCall;
   const auto isStringCountCall = input.isStringCountCall;
+  const auto resolveMethodCallDefinitionNoProbeError =
+      [&stateInOut, &errorOut](const Expr &candidate, const LocalMap &candidateLocals) -> const Definition * {
+    const std::string priorError = errorOut;
+    const Definition *resolved = stateInOut.resolveMethodCallDefinition(candidate, candidateLocals);
+    errorOut = priorError;
+    return resolved;
+  };
   auto isNamespacedCollectionReceiverProbeCall = [](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
@@ -844,6 +859,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
        resolveExprPath,
        &stateInOut,
        isNamespacedCollectionReceiverProbeCall,
+       resolveMethodCallDefinitionNoProbeError,
        resolveDefinitionCallReturnKindForCandidate](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         return resolveCallExpressionReturnKind(
@@ -865,7 +881,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
                                                    candidateLocals,
                                                    isArrayCountCall,
                                                    isStringCountCall,
-                                                   stateInOut.resolveMethodCallDefinition,
+                                                   resolveMethodCallDefinitionNoProbeError,
                                                    stateInOut.getReturnInfo,
                                                    false,
                                                    candidateKindOut,
@@ -881,7 +897,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
               bool capacityMethodResolved = false;
               const bool capacityResolved = resolveCapacityMethodCallReturnKind(candidate,
                                                                                 candidateLocals,
-                                                                                stateInOut.resolveMethodCallDefinition,
+                                                                                resolveMethodCallDefinitionNoProbeError,
                                                                                 stateInOut.getReturnInfo,
                                                                                 false,
                                                                                 candidateKindOut,
@@ -907,7 +923,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
               bool methodResolved = false;
               const bool resolved = resolveMethodCallReturnKind(candidate,
                                                                 candidateLocals,
-                                                                stateInOut.resolveMethodCallDefinition,
+                                                                resolveMethodCallDefinitionNoProbeError,
                                                                 [&](const Expr &callExpr) {
                                                                   return ir_lowerer::resolveDefinitionCall(
                                                                       callExpr, *defMap, resolveExprPath);

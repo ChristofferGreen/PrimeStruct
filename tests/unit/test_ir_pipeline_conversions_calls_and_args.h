@@ -56,6 +56,8 @@ main() {
 
 TEST_CASE("ir lowerer supports vector count helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -105,6 +107,8 @@ main() {
 
 TEST_CASE("ir lowerer supports vector literal count helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   return(count(vector<i32>(1i32, 2i32)))
@@ -1564,6 +1568,8 @@ TEST_CASE("ir lowerer materializes variadic pointer File handle packs with index
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_vectors([args<vector<i32>>] values) {
   return(plus(values[0i32].count(), values[2i32].count()))
@@ -1605,6 +1611,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed capacity methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_vectors([args<vector<i32>>] values) {
   [auto] head{capacity(at(values, 0i32))}
@@ -1647,6 +1655,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed statement mutators") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 mutate_vectors([args<vector<i32>>] values) {
   push(at(values, 0i32), 9i32)
@@ -2846,6 +2856,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
   return(plus(values[0i32].count(), values[2i32].count()))
@@ -2908,6 +2920,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference capacity methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
   [auto] head{capacity(dereference(at(values, 0i32)))}
@@ -2971,6 +2985,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference access helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
   [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
@@ -3034,6 +3050,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference statement mutators") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 mutate_ptrs([args<Pointer<vector<i32>>>] values) {
   push(dereference(at(values, 0i32)), 9i32)
@@ -3104,6 +3122,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference<vector<i32>>>] values) {
   return(plus(values[0i32].count(), values[2i32].count()))
@@ -3166,6 +3186,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed dereference capacity methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference<vector<i32>>>] values) {
   [auto] head{capacity(dereference(at(values, 0i32)))}
@@ -3229,6 +3251,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed dereference access helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference<vector<i32>>>] values) {
   [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
@@ -3292,6 +3316,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed dereference statement mutators") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 mutate_refs([args<Reference<vector<i32>>>] values) {
   push(dereference(at(values, 0i32)), 9i32)
@@ -3362,6 +3388,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic borrowed soa_vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 Particle() {
   [i32] x{1i32}
 }
@@ -3428,6 +3456,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic pointer soa_vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 Particle() {
   [i32] x{1i32}
 }
@@ -3494,6 +3524,8 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 Particle() {
   [i32] x{1i32}
 }
@@ -3695,6 +3727,8 @@ main() {
 
 TEST_CASE("ir lowerer supports vector method calls") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 /vector/first([vector<i32>] items) {
   return(items[0i32])

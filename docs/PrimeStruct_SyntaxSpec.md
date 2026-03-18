@@ -672,6 +672,7 @@ Helpers:
 
 Mutation helpers (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) are statement-only
 (not valid in expression contexts).
+Vector helper surface syntax currently requires `import /std/collections/*` so the canonical stdlib wrappers are available during semantic validation.
 
 Current ownership contract:
 - `pop` / `clear` require drop-trivial element types.

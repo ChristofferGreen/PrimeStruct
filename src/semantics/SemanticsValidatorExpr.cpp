@@ -1532,10 +1532,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string resolved = resolveCalleePath(expr);
       std::string namespacedCollection;
       std::string namespacedHelper;
-      const bool isNamespacedCollectionHelperCall =
-          getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
-      const bool isNamespacedVectorHelperCall =
-          isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+      getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
       const bool isStdNamespacedVectorCanonicalHelperCall =
           !expr.isMethodCall && resolved.rfind("/std/collections/vector/", 0) == 0 &&
           (namespacedHelper == "count" || namespacedHelper == "capacity" || namespacedHelper == "at" ||
@@ -9007,9 +9004,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (!validateExpr(params, locals, expr.args.front())) {
             return false;
           }
-          std::string mapKeyType;
-          std::string mapValueType;
-          if (resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {
+          if (resolveMapTarget(expr.args.front())) {
             error_ = isAliasCount ? "unknown call target: /vector/count"
                                   : "unknown call target: /std/collections/vector/count";
             return false;
@@ -9031,9 +9026,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             error_ = "unknown call target: /vector/capacity";
             return false;
           }
-          std::string mapKeyType;
-          std::string mapValueType;
-          if (resolveMapTarget(expr.args.front(), mapKeyType, mapValueType)) {
+          if (resolveMapTarget(expr.args.front())) {
             error_ = isAliasCapacity ? "unknown call target: /vector/capacity"
                                      : "unknown call target: /std/collections/vector/capacity";
             return false;

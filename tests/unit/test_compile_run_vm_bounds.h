@@ -45,6 +45,8 @@ main() {
 
 TEST_CASE("vm vector access checks bounds") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32)}
@@ -60,6 +62,8 @@ main() {
 
 TEST_CASE("vm vector access rejects negative index") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32)}

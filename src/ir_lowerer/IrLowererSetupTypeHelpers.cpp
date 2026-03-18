@@ -2080,6 +2080,13 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     if (resolved != nullptr) {
       return resolved;
     }
+    if (receiverTypeName == "vector") {
+      resolved = resolveMethodDefinitionFromReceiverTarget(
+          callExpr.name, "", "/std/collections/vector", defMap, errorOutRef);
+      if (resolved != nullptr) {
+        return resolved;
+      }
+    }
     auto aliasIt = importAliases.find(receiverTypeName);
     if (aliasIt == importAliases.end()) {
       return nullptr;

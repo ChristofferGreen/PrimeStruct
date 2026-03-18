@@ -1326,13 +1326,6 @@ bool SemanticsValidator::buildParameters() {
 
 std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   auto rewriteCanonicalCollectionHelperPath = [&](const std::string &resolvedPath) -> std::string {
-    auto canonicalVectorHelperAliasPath = [&](std::string_view helperName) -> std::string {
-      if (helperName == "count" || helperName == "capacity" || helperName == "at" ||
-          helperName == "at_unsafe") {
-        return "/vector/" + std::string(helperName);
-      }
-      return {};
-    };
     auto canonicalMapHelperAliasPath = [&](std::string_view helperName) -> std::string {
       if (helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
           helperName == "at" || helperName == "at_unsafe") {
@@ -1360,11 +1353,6 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       }
       return resolvedPath;
     };
-    std::string rewritten =
-        rewriteCanonicalHelper("/std/collections/vector/", canonicalVectorHelperAliasPath, true);
-    if (rewritten != resolvedPath) {
-      return rewritten;
-    }
     return rewriteCanonicalHelper("/std/collections/map/", canonicalMapHelperAliasPath, false);
   };
   auto rewriteCanonicalCollectionConstructorPath = [&](const std::string &resolvedPath) -> std::string {

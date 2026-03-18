@@ -3452,10 +3452,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {
         std::string namespacedCollection;
         std::string namespacedHelper;
-        const bool isNamespacedCollectionHelperCall =
-            getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
-        const bool isNamespacedVectorHelperCall =
-            isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+        getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
         const bool isStdNamespacedVectorCanonicalHelperCall =
             !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/", 0) == 0 &&
             (namespacedHelper == "push" || namespacedHelper == "pop" || namespacedHelper == "reserve" ||

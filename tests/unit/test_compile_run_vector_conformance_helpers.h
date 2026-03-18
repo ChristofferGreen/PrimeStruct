@@ -786,7 +786,9 @@ inline void expectBareVectorMutatorMethodImportRequirement(const std::string &em
       (std::filesystem::temp_directory_path() /
        ("primec_vector_bare_" + helperName + "_method_import_requirement_" + emitMode + "_out.txt"))
           .string();
-  const std::string expected = "unknown method: /vector/" + helperName;
+  const std::string expected = emitMode == "native"
+                                   ? "unknown call target: /std/collections/vector/" + helperName
+                                   : "unknown method: /vector/" + helperName;
 
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
@@ -942,6 +944,7 @@ inline void expectVectorIndexedRemovalOwnershipReject(const std::string &emitMod
 
 inline std::string makeVectorPopEmptyRuntimeContractSource(bool methodForm) {
   std::string source;
+  source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [vector<i32> mut] values{vector<i32>()}\n";
@@ -983,6 +986,7 @@ inline void expectVectorPopEmptyRuntimeContract(const std::string &emitMode,
 
 inline std::string makeVectorIndexRuntimeContractSource(const std::string &mode) {
   std::string source;
+  source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   const bool mutating = mode == "remove_at_call" || mode == "remove_at_method" ||

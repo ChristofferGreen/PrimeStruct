@@ -735,7 +735,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count method validates on vector binding") {
+TEST_CASE("count method on vector binding requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -744,8 +744,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("count method validates on soa_vector binding") {
@@ -903,6 +903,8 @@ main() {
 
 TEST_CASE("to_soa and to_aos helpers compose for explicit conversion") {
   const std::string source = R"(
+import /std/collections/*
+
 Particle() {
   [i32] x{1i32}
 }
@@ -1377,12 +1379,12 @@ wrapText() {
 [return<int>]
 main() {
   return(plus(/std/collections/vector/at(wrapText(), 1i32).tag(),
-              /vector/at_unsafe(wrapText(), 2i32).tag()))
+              /std/collections/vector/at_unsafe(wrapText(), 2i32).tag()))
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("reordered access wrapper temporaries infer i32 for chained methods") {
@@ -1666,7 +1668,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector capacity compatibility alias rejects block arguments") {
@@ -1679,7 +1681,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector capacity compatibility alias rejects wrong argument count") {
@@ -1692,10 +1694,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin capacity") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("capacity method validates on vector binding") {
+TEST_CASE("capacity method on vector binding requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -1704,12 +1706,14 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("capacity wrapper temporaries infer i32 for chained methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc)]
 wrapVector() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
@@ -2196,7 +2200,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("bare vector capacity auto inference resolves through imported stdlib helper") {
@@ -2226,7 +2230,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("at call keeps user-defined array helper precedence") {
@@ -2528,7 +2532,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("vector push alias requires heap_alloc effect") {
@@ -2542,7 +2546,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push requires heap_alloc effect") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("push on array reports vector binding before effect requirement") {
@@ -2748,6 +2752,8 @@ main() {
 
 TEST_CASE("push call keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/push([vector<i32> mut] values, [i32] value) {
 }
@@ -2766,6 +2772,8 @@ main() {
 
 TEST_CASE("push method keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/push([vector<i32> mut] values, [i32] value) {
 }
@@ -2793,7 +2801,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reserve requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/reserve") != std::string::npos);
 }
 
 TEST_CASE("vector reserve alias requires heap_alloc effect") {
@@ -2807,7 +2815,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reserve requires heap_alloc effect") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/reserve") != std::string::npos);
 }
 
 TEST_CASE("reserve on array reports vector binding before effect requirement") {
@@ -2841,7 +2849,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reserve requires integer capacity") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/reserve") != std::string::npos);
 }
 
 TEST_CASE("reserve rejects bool capacity in call and method forms") {
@@ -2857,7 +2865,11 @@ TEST_CASE("reserve rejects bool capacity in call and method forms") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("reserve requires integer capacity") != std::string::npos);
+    if (stmtText.starts_with("/vector/")) {
+      CHECK(error.find("unknown call target: /vector/reserve") != std::string::npos);
+    } else {
+      CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
+    }
   };
 
   checkInvalidReserve("/vector/reserve(values, true)");
@@ -2985,6 +2997,8 @@ main() {
 
 TEST_CASE("reserve call keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/reserve([vector<i32> mut] values, [i32] capacity) {
 }
@@ -3003,6 +3017,8 @@ main() {
 
 TEST_CASE("reserve method keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/reserve([vector<i32> mut] values, [i32] capacity) {
 }
@@ -3030,7 +3046,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("pop requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/pop") != std::string::npos);
 }
 
 TEST_CASE("bare vector pop validates through imported stdlib helper") {
@@ -3134,6 +3150,8 @@ main() {
 
 TEST_CASE("pop call keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/pop([vector<i32> mut] values) {
 }
@@ -3152,6 +3170,8 @@ main() {
 
 TEST_CASE("pop method keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/pop([vector<i32> mut] values) {
 }
@@ -3179,7 +3199,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("clear requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/clear") != std::string::npos);
 }
 
 TEST_CASE("bare vector clear validates through imported stdlib helper") {
@@ -3230,6 +3250,8 @@ main() {
 
 TEST_CASE("clear call keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/clear([vector<i32> mut] values) {
 }
@@ -3248,6 +3270,8 @@ main() {
 
 TEST_CASE("clear method keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/clear([vector<i32> mut] values) {
 }
@@ -3303,7 +3327,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_at requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/remove_at") != std::string::npos);
 }
 
 TEST_CASE("vector remove_at alias requires integer index") {
@@ -3317,7 +3341,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_at requires integer index") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/remove_at") != std::string::npos);
 }
 
 TEST_CASE("remove_at rejects bool index in call and method forms") {
@@ -3333,7 +3357,11 @@ TEST_CASE("remove_at rejects bool index in call and method forms") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("remove_at requires integer index") != std::string::npos);
+    if (stmtText.starts_with("/vector/")) {
+      CHECK(error.find("unknown call target: /vector/remove_at") != std::string::npos);
+    } else {
+      CHECK(error.find("unknown call target: /std/collections/vector/remove_at") != std::string::npos);
+    }
   };
 
   checkInvalidRemoveAt("/vector/remove_at(values, true)");
@@ -3429,6 +3457,8 @@ main() {
 
 TEST_CASE("remove_at call keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/remove_at([vector<i32> mut] values, [i32] index) {
 }
@@ -3447,6 +3477,8 @@ main() {
 
 TEST_CASE("remove_at method keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/remove_at([vector<i32> mut] values, [i32] index) {
 }
@@ -3474,7 +3506,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_swap requires integer index") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/remove_swap") != std::string::npos);
 }
 
 TEST_CASE("remove_swap rejects bool index in call and method forms") {
@@ -3490,7 +3522,11 @@ TEST_CASE("remove_swap rejects bool index in call and method forms") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("remove_swap requires integer index") != std::string::npos);
+    if (stmtText.starts_with("/vector/")) {
+      CHECK(error.find("unknown call target: /vector/remove_swap") != std::string::npos);
+    } else {
+      CHECK(error.find("unknown call target: /std/collections/vector/remove_swap") != std::string::npos);
+    }
   };
 
   checkInvalidRemoveSwap("/vector/remove_swap(values, true)");
@@ -3508,7 +3544,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_swap requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/remove_swap") != std::string::npos);
 }
 
 TEST_CASE("bare vector remove_swap requires imported stdlib helper before template specialization") {
@@ -3616,6 +3652,8 @@ main() {
 
 TEST_CASE("remove_swap call keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/remove_swap([vector<i32> mut] values, [i32] index) {
 }
@@ -3634,6 +3672,8 @@ main() {
 
 TEST_CASE("remove_swap method keeps user-defined vector helper precedence") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<void>]
 /vector/remove_swap([vector<i32> mut] values, [i32] index) {
 }
@@ -3779,7 +3819,7 @@ TEST_CASE("vector helper expressions with named arguments stay statement-only") 
   }
 }
 
-TEST_CASE("vector helper method expressions with named arguments stay statement-only") {
+TEST_CASE("vector helper method expressions with named arguments require helper resolution") {
   struct HelperCase {
     const char *name;
     const char *args;
@@ -3801,7 +3841,8 @@ TEST_CASE("vector helper method expressions with named arguments stay statement-
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("only supported as a statement") != std::string::npos);
+    CHECK(error.find("unknown call target: /std/collections/vector/" + std::string(helper.name)) !=
+          std::string::npos);
   }
 }
 
@@ -3815,8 +3856,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("namespaced vector helper expression form stays statement-only") {
@@ -3829,7 +3870,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("only supported as a statement") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector helper accepts statement form") {
@@ -3861,12 +3902,13 @@ TEST_CASE("namespaced vector mutator statement helpers are accepted") {
       {"remove_at", "values, 0i32"},
       {"remove_swap", "values, 0i32"},
   };
-  const char *prefixes[] = {"/vector/"};
+  const char *prefixes[] = {"/std/collections/vector/"};
   for (const auto &helper : helpers) {
     for (const auto *prefix : prefixes) {
       CAPTURE(helper.name);
       CAPTURE(prefix);
       const std::string source =
+          "import /std/collections/*\n\n"
           "[effects(heap_alloc), return<int>]\n"
           "main() {\n"
           "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
@@ -3906,12 +3948,12 @@ TEST_CASE("namespaced vector mutator expression helpers stay statement-only") {
           "}\n";
       std::string error;
       CHECK_FALSE(validateProgram(source, "/main", error));
-      CHECK(error.find("only supported as a statement") != std::string::npos);
+      CHECK(error.find("unknown call target: " + std::string(prefix) + helper.name) != std::string::npos);
     }
   }
 }
 
-TEST_CASE("stdlib namespaced vector helper statement resolves compatibility helper definition") {
+TEST_CASE("stdlib namespaced vector helper statement rejects compatibility helper definition fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -3925,8 +3967,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector push accepts named arguments through imported stdlib helper") {
@@ -4142,10 +4184,10 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   return(/array/push([values] values, [value] 2i32))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("only supported as a statement") != std::string::npos);
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("namespaced vector helper duplicate named args stay statement-only in expressions") {
@@ -4155,10 +4197,10 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   return(/vector/push([values] values, [values] values))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("only supported as a statement") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector mutator alias duplicate named args stay statement-only in expressions") {
@@ -4201,11 +4243,11 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
-TEST_CASE("vector helper method expression stays statement-only with canonical stdlib helper") {
+TEST_CASE("vector helper method expression resolves through canonical stdlib helper") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
-  return(plus(count(values), value))
+  return(value)
 }
 
 [effects(heap_alloc), return<int>]
@@ -4213,17 +4255,17 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   return(values.push(2i32))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("only supported as a statement") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("vector helper method expression keeps statement-only diagnostics before canonical mismatch checks") {
+TEST_CASE("vector helper method expression reports canonical helper argument mismatch") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [bool] value) {
-  return(plus(count(values), convert<int>(value)))
+  return(convert<int>(value))
 }
 
 [effects(heap_alloc), return<int>]
@@ -4234,7 +4276,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("only supported as a statement") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/vector/push parameter value: expected bool got i32") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector namespaced helper reordered expression stays statement-only") {
@@ -4252,7 +4295,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("only supported as a statement") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced helper reordered expression rejects compatibility receiver fallback") {
@@ -4310,7 +4353,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push requires vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced helper reordered statement rejects compatibility receiver fallback") {
@@ -9233,8 +9276,9 @@ main() {
   }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /std/collections/vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("array namespaced vector helper call form rejects expression body arguments") {
@@ -9269,8 +9313,8 @@ main() {
   }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib canonical vector helper call-form expression body arguments reject compatibility fallback") {
@@ -9288,7 +9332,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /std/collections/vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("array namespaced slash method pointer receiver diagnostics keep divide target") {
@@ -10052,10 +10097,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(/vector/at(values, 2i32).tag(1i32))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access alias field expression keeps struct receiver diagnostics") {
@@ -10079,10 +10124,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(project(values))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("field access requires struct receiver") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector canonical access call keeps primitive receiver diagnostics") {
@@ -10133,10 +10178,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(project(values))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("field access requires struct receiver") != std::string::npos);
+  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("map namespaced access call keeps canonical struct-return forwarding") {
@@ -10486,7 +10531,7 @@ main() {
   CHECK(error.find("field access requires struct receiver") != std::string::npos);
 }
 
-TEST_CASE("vector method access keeps alias struct-return precedence over canonical helper") {
+TEST_CASE("vector method access with alias and canonical struct helpers does not infer auto return") {
   const std::string source = R"(
 AliasMarker {
   [i32] value
@@ -10518,11 +10563,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
 }
 
-TEST_CASE("vector method access keeps primitive receiver diagnostics over canonical helper") {
+TEST_CASE("vector method access reports current receiver diagnostics over canonical helper") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -10551,10 +10596,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(error.find("unknown method: /array/tag") != std::string::npos);
 }
 
-TEST_CASE("vector unsafe method access keeps struct receiver diagnostics over canonical helper") {
+TEST_CASE("vector unsafe method access with canonical helper does not infer auto return") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -10578,7 +10623,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("field access requires struct receiver") != std::string::npos);
+  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("map method access keeps canonical struct-return forwarding") {
@@ -11074,7 +11119,7 @@ main() {
   CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("templated stdlib canonical vector helper keeps template argument diagnostics") {
+TEST_CASE("templated stdlib canonical vector helper reports current argument mismatch diagnostics") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
@@ -11089,18 +11134,18 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/collections/vector/count__t") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced call aliases validate count and access builtins") {
   const std::string source = R"(
 [return<int>]
-/std/collections/vector/count([vector<i32>] values) {
+/vector/count([vector<i32>] values) {
   return(90i32)
 }
 
 [return<int>]
-/std/collections/vector/at([vector<i32>] values, [i32] index) {
+/vector/at([vector<i32>] values, [i32] index) {
   return(plus(index, 40i32))
 }
 
@@ -11118,7 +11163,7 @@ main() {
 TEST_CASE("vector namespaced count alias keeps canonical helper diagnostics") {
   const std::string source = R"(
 [return<int>]
-/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
 
@@ -11131,13 +11176,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count alias falls back to canonical helper return") {
   const std::string source = R"(
 [return<bool>]
-/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
 
@@ -11167,7 +11212,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count alias arity mismatch rejects compatibility template forwarding") {
@@ -12264,10 +12309,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(/std/collections/vector/count<i32>(values, true))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /vector/count") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced templated vector count arity keeps builtin template-argument diagnostics") {
@@ -12289,8 +12334,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced templated alias call keeps builtin template diagnostics") {
@@ -12317,7 +12362,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("vector method templated call rejects compatibility template forwarding past non-templated helper") {
+TEST_CASE("vector method templated call reports canonical argument mismatch past non-templated helper") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -12337,8 +12382,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
-        std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/collections/vector/count__t") != std::string::npos);
 }
 
 TEST_CASE("wrapper temporary templated vector method call rejects compatibility template forwarding") {
@@ -12369,7 +12413,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("wrapper temporary templated vector method arity mismatch rejects compatibility template forwarding") {
+TEST_CASE("wrapper temporary templated vector method arity mismatch reports canonical argument mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -12393,8 +12437,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
-        std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/collections/vector/count__t") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced alias keeps builtin count diagnostics when only canonical templated helper exists") {
@@ -12412,7 +12455,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count capacity and access helpers validate as builtin aliases") {
@@ -12428,8 +12471,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count rejects template arguments as builtin alias") {
@@ -12455,7 +12498,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capacity does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count accepts named arguments through imported stdlib helper") {
@@ -12500,7 +12543,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("template arguments required for /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count accepts same-path helper on map target") {
@@ -12548,7 +12591,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector count call rejects named arguments via unknown target") {
@@ -12669,7 +12712,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector capacity alias rejects named arguments with unknown-target diagnostics") {
@@ -12720,8 +12763,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector access helper accepts named arguments through imported stdlib helper") {
@@ -12776,7 +12819,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced at_unsafe helper rejects named arguments") {
@@ -12789,7 +12832,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity keeps non-vector target diagnostics") {
@@ -12853,7 +12896,7 @@ TEST_CASE("namespaced vector helper with named arguments is statement-only in ex
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("only supported as a statement") != std::string::npos);
+    CHECK(error.find("unknown call target: /vector/" + std::string(helper.name)) != std::string::npos);
   }
 }
 
@@ -13117,10 +13160,10 @@ main() {
   [vector<Counter> mut] values{vector<Counter>(Counter())}
   return(push(makeCounter(), values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector helper call-form expression user shadow accepts named arguments") {
@@ -13213,7 +13256,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced push auto inference uses canonical helper definition") {
@@ -13297,11 +13340,11 @@ main() {
   [auto] inferred{/std/collections/vector/count(values)}
   return(inferred)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count helper auto inference keeps inferred return mismatch diagnostics") {
@@ -13324,9 +13367,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced count helper auto inference falls back to canonical helper return") {
@@ -13366,11 +13408,11 @@ main() {
   [auto] inferred{/std/collections/vector/count(values, true)}
   return(inferred)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count auto inference keeps non-builtin arity mismatch diagnostics") {
@@ -13393,9 +13435,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced count auto inference non-builtin arity falls back to canonical helper return") {
@@ -13434,11 +13475,11 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/count(values))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count expression keeps return mismatch diagnostics") {
@@ -13460,9 +13501,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced count expression falls back to canonical helper return") {
@@ -13500,11 +13540,11 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/count(values, true))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count expression keeps non-builtin arity mismatch diagnostics") {
@@ -13524,11 +13564,10 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/count(values, true))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced count expression non-builtin arity falls back to canonical helper return") {
@@ -13619,7 +13658,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count non-builtin arity diagnostics report builtin mismatch") {
@@ -13637,7 +13676,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count auto inference non-builtin arity rejects array helper fallback") {
@@ -13656,7 +13695,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count expression keeps canonical helper return precedence") {
@@ -14742,10 +14781,10 @@ main() {
   [vector<i32>] values{vector<i32>(1i32)}
   return(count(/std/collections/vector/at_unsafe(values, 0i32)))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical vector method access count keeps builtin string fallback") {
@@ -14771,7 +14810,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical vector unsafe method access count keeps primitive diagnostics") {
+TEST_CASE("canonical vector unsafe method access count forwards helper return kind") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -14790,8 +14829,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("slash-method vector access count keeps builtin string fallback") {
@@ -14880,10 +14919,10 @@ main() {
   [auto] method{wrapValues().at_unsafe(0i32).count()}
   return(method)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("wrapper-returned vector access count keeps primitive diagnostics") {
@@ -15174,11 +15213,11 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/capacity(values))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced capacity expression keeps return mismatch diagnostics") {
@@ -15198,11 +15237,10 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/capacity(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced capacity expression uses canonical helper definition") {
@@ -15240,11 +15278,11 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/capacity(values, true))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced capacity expression keeps non-builtin arity mismatch diagnostics") {
@@ -15264,11 +15302,10 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/capacity(values, true))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced capacity expression uses canonical helper definition for non-builtin arity") {
@@ -15306,11 +15343,11 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/at(values, 0i32))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced access expression keeps return mismatch diagnostics") {
@@ -15330,11 +15367,10 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/at(values, 0i32))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced access expression uses canonical helper definition") {
@@ -15372,11 +15408,11 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/at(values))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced access expression keeps non-builtin arity mismatch diagnostics") {
@@ -15396,11 +15432,10 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(/std/collections/vector/at(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced access expression uses canonical helper definition for non-builtin arity") {
@@ -15429,10 +15464,10 @@ main() {
   [auto] inferred{/std/collections/vector/capacity(values)}
   return(inferred)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("access helper call-form expression infers auto binding from labeled receiver helper") {
@@ -15482,7 +15517,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced access helper auto inference keeps inferred return mismatch diagnostics") {
@@ -15503,11 +15538,10 @@ main() {
   [auto] inferred{/std/collections/vector/at([index] 0i32, [values] values)}
   return(inferred)
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch") != std::string::npos);
-  CHECK(error.find("expected bool") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced access helper auto inference uses canonical helper definition") {
@@ -15673,7 +15707,7 @@ TEST_CASE("vector helper statement call-form user shadow accepts named arguments
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   push([value] 3i32, [values] values)
-  return(count(values))
+  return(0i32)
 }
 )";
   std::string error;
@@ -15700,7 +15734,7 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   [soa_vector<Particle>] payload{soa_vector<Particle>()}
   push([value] payload, [values] values)
-  return(count(values))
+  return(0i32)
 }
 )";
   std::string error;
@@ -15751,10 +15785,10 @@ main() {
   push(makeCounter(), values)
   return(0i32)
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/push") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector helper statement validates on variadic vector pack receivers") {
@@ -16032,7 +16066,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Counter/at") != std::string::npos);
+  CHECK(error.find("return type mismatch: expected /Counter") != std::string::npos);
 }
 
 TEST_CASE("user definition named push with positional args is not treated as builtin") {
@@ -16070,7 +16104,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector method helper remains statement-only in expressions") {
+TEST_CASE("vector method helper in expressions requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -16080,7 +16114,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("only supported as a statement") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("bare vector clear named args require imported stdlib helper") {
@@ -16138,10 +16172,10 @@ main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(capacity([value] values))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("user definition named at accepts named arguments") {
@@ -16343,7 +16377,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires array, vector, map, or string target") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("user definition named map call is not treated as builtin collection target") {

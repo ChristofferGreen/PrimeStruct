@@ -135,12 +135,17 @@
     return false;
   }
 
-  return ir_lowerer::runLowerStatementsSourceMapStep(
-      {
-          .defMap = &defMap,
-          .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
-          .stringTable = &stringTable,
-          .outModule = &out,
-      },
-      error);
+  if (!ir_lowerer::runLowerStatementsSourceMapStep(
+          {
+              .defMap = &defMap,
+              .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
+              .stringTable = &stringTable,
+              .outModule = &out,
+          },
+          error)) {
+    return false;
+  }
+
+  error.clear();
+  return true;
 }

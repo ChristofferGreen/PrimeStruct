@@ -241,11 +241,7 @@ bool isExplicitVectorHelperFallbackPath(const Expr &expr) {
   }
   const std::string normalizedPath = normalizeVectorImportAliasPath(expr.name);
   return normalizedPath == "/vector/count" || normalizedPath == "/vector/capacity" ||
-         normalizedPath == "/vector/at" || normalizedPath == "/vector/at_unsafe" ||
-         normalizedPath == "/std/collections/vector/count" ||
-         normalizedPath == "/std/collections/vector/capacity" ||
-         normalizedPath == "/std/collections/vector/at" ||
-         normalizedPath == "/std/collections/vector/at_unsafe";
+         normalizedPath == "/vector/at" || normalizedPath == "/vector/at_unsafe";
 }
 
 bool isExplicitVectorNonTailHelperFallbackPath(const Expr &expr) {
@@ -256,6 +252,12 @@ bool isExplicitVectorNonTailHelperFallbackPath(const Expr &expr) {
     return false;
   }
   const std::string normalizedPath = normalizeVectorImportAliasPath(expr.name);
+  if (normalizedPath == "/std/collections/vector/count" ||
+      normalizedPath == "/std/collections/vector/capacity" ||
+      normalizedPath == "/std/collections/vector/at" ||
+      normalizedPath == "/std/collections/vector/at_unsafe") {
+    return true;
+  }
   return normalizedPath == "/std/collections/vector/push" ||
          normalizedPath == "/std/collections/vector/pop" ||
          normalizedPath == "/std/collections/vector/reserve" ||
@@ -597,6 +599,35 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error) {
+  auto tryEmitBareVectorHelperDirectCall = [&]() -> InlineCallDispatchResult {
+    if (expr.isMethodCall || !expr.namespacePrefix.empty() || expr.name.find('/') != std::string::npos ||
+        expr.args.size() != 1) {
+      return InlineCallDispatchResult::NotHandled;
+    }
+    if (expr.name != "count" && expr.name != "capacity") {
+      return InlineCallDispatchResult::NotHandled;
+    }
+    if ((expr.name == "count" && (isArrayCountCall(expr) || isStringCountCall(expr))) ||
+        (expr.name == "capacity" && !isVectorCapacityCall(expr))) {
+      return InlineCallDispatchResult::NotHandled;
+    }
+
+    Expr rewrittenExpr = expr;
+    rewrittenExpr.namespacePrefix.clear();
+    for (const std::string &candidatePath :
+         {"/std/collections/vector/" + expr.name, "/vector/" + expr.name}) {
+      rewrittenExpr.name = candidatePath;
+      if (const Definition *callee = resolveDefinitionCall(rewrittenExpr)) {
+        const auto emitResult = emitResolvedInlineDefinitionCall(
+            rewrittenExpr, callee, emitInlineDefinitionCall, error);
+        return emitResult == ResolvedInlineCallResult::Emitted
+                   ? InlineCallDispatchResult::Emitted
+                   : InlineCallDispatchResult::Error;
+      }
+    }
+    return InlineCallDispatchResult::NotHandled;
+  };
+
   const auto firstCountFallbackResult = tryEmitNonMethodCountFallback(
       expr,
       isArrayCountCall,
@@ -655,6 +686,11 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
                : InlineCallDispatchResult::Error;
   }
 
+  const auto bareVectorHelperResult = tryEmitBareVectorHelperDirectCall();
+  if (bareVectorHelperResult != InlineCallDispatchResult::NotHandled) {
+    return bareVectorHelperResult;
+  }
+
   const auto secondCountFallbackResult = tryEmitNonMethodCountFallback(
       expr,
       isArrayCountCall,
@@ -703,6 +739,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       if (!emitCanonicalInlineDefinitionCall(methodExpr, *callee)) {
         return InlineCallDispatchResult::Error;
       }
+      error = priorError;
       return InlineCallDispatchResult::Emitted;
     }
     error = priorError;
@@ -894,6 +931,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::NotHandled;
   }
 
+  const std::string priorError = error;
+  error.clear();
   const auto countAccessResult = tryEmitCountAccessCall(
       expr,
       localsIn,
@@ -912,12 +951,12 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       [&](const Expr &targetExpr, const LocalMap &targetLocals) {
         const auto targetInfo = resolveArrayVectorAccessTargetInfo(
             targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo);
-        return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
+        return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget && !targetInfo.isSoaVector;
       },
       [&](const Expr &targetExpr, const LocalMap &targetLocals) {
         const auto targetInfo = resolveArrayVectorAccessTargetInfo(
             targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo);
-        return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
+        return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget && !targetInfo.isSoaVector;
       },
       inferExprKind,
       resolveStringTableTarget,
@@ -930,6 +969,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   if (countAccessResult == CountAccessCallEmitResult::Error) {
     return NativeCallTailDispatchResult::Error;
   }
+  error = priorError;
 
   if (expr.isMethodCall && expr.name == "contains") {
     if (expr.args.size() != 2) {

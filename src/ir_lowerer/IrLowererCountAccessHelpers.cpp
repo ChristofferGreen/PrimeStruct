@@ -321,6 +321,22 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     if (it == localsIn.end()) {
       return false;
     }
+    if (it->second.isArgsPack) {
+      const LocalInfo &info = it->second;
+      if (info.isSoaVector && isExplicitVectorCompatibilityName(expr, "count")) {
+        return false;
+      }
+      if (info.argsPackElementKind == LocalInfo::Kind::Array ||
+          info.argsPackElementKind == LocalInfo::Kind::Vector ||
+          info.argsPackElementKind == LocalInfo::Kind::Map ||
+          (info.argsPackElementKind == LocalInfo::Kind::Reference &&
+           (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
+          (info.argsPackElementKind == LocalInfo::Kind::Pointer &&
+           (info.pointerToArray || info.pointerToVector || info.pointerToMap)) ||
+          info.isSoaVector) {
+        return true;
+      }
+    }
     if (it->second.kind == LocalInfo::Kind::Reference) {
       return it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap;
     }
@@ -484,16 +500,62 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error) {
+  auto isExplicitStdVectorHelperCall = [&](std::string_view helperName) {
+    if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name != helperName) {
+      return false;
+    }
+    return expr.namespacePrefix == "/std/collections/vector" ||
+           expr.namespacePrefix == "std/collections/vector";
+  };
+  const bool isExplicitStdVectorCountCall =
+      isExplicitStdVectorHelperCall("count") &&
+      expr.args.size() == 1 && isVectorCountTarget(expr.args.front(), localsIn);
+  const bool isExplicitStdVectorCapacityCall =
+      isExplicitStdVectorHelperCall("capacity") &&
+      expr.args.size() == 1 &&
+      ((expr.args.front().kind == Expr::Kind::Name &&
+        [&]() {
+          auto it = localsIn.find(expr.args.front().name);
+          return it != localsIn.end() &&
+                 (it->second.kind == LocalInfo::Kind::Vector ||
+                  (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
+                  (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToVector));
+        }()) ||
+       (expr.args.front().kind == Expr::Kind::Call &&
+        [&]() {
+          std::string collection;
+          return getBuiltinCollectionName(expr.args.front(), collection) &&
+                 collection == "vector" && expr.args.front().templateArgs.size() == 1;
+        }()));
+
   const bool blocksBareVectorCountCall =
-      isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
+      isSimpleCallName(expr, "count") && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
       (isPlainVectorCountTarget(expr.args.front(), localsIn) ||
        (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn)));
   const bool blocksBareVectorCapacityCall =
-      isSimpleCallName(expr, "capacity") && expr.args.size() == 1 &&
+      isSimpleCallName(expr, "capacity") && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
       ((isVectorCapacityCallFn && isVectorCapacityCallFn(expr, localsIn)) ||
        (isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)));
   if (blocksBareVectorCountCall || blocksBareVectorCapacityCall) {
     return CountAccessCallEmitResult::NotHandled;
+  }
+
+  if (isExplicitStdVectorCountCall) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
+
+  if (isExplicitStdVectorCapacityCall) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
   }
 
   if (isArrayCountCallFn(expr, localsIn)) {

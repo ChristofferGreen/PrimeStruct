@@ -1761,7 +1761,6 @@ bool getVectorMutatorName(const Expr &expr,
   if (nameMap.count(full) > 0) {
     return false;
   }
-  const bool isExplicitStdlibVectorHelper = full.rfind("/std/collections/vector/", 0) == 0;
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);

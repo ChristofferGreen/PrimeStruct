@@ -137,6 +137,8 @@ main() {
 
 TEST_CASE("native supports support-matrix binding types") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int> effects(heap_alloc)]
 main() {
   [i32] i{1i32}
@@ -851,6 +853,8 @@ main() {
 
 TEST_CASE("native materializes variadic vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_vectors([args<vector<i32>>] values) {
   return(plus(values[0i32].count(), values[2i32].count()))
@@ -884,6 +888,8 @@ main() {
 
 TEST_CASE("native materializes variadic vector packs with indexed capacity methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_vectors([args<vector<i32>>] values) {
   [auto] head{capacity(at(values, 0i32))}
@@ -918,6 +924,8 @@ main() {
 
 TEST_CASE("native materializes variadic vector packs with indexed statement mutators") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 mutate_vectors([args<vector<i32>>] values) {
   push(at(values, 0i32), 9i32)
@@ -1965,6 +1973,8 @@ main() {
 
 TEST_CASE("native materializes variadic pointer vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
   return(plus(values[0i32].count(), values[2i32].count()))
@@ -2019,6 +2029,8 @@ main() {
 
 TEST_CASE("native materializes variadic pointer vector packs with indexed dereference capacity methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
   [auto] head{capacity(dereference(at(values, 0i32)))}
@@ -2074,6 +2086,8 @@ main() {
 
 TEST_CASE("native materializes variadic pointer vector packs with indexed dereference access helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
   [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
@@ -2129,6 +2143,8 @@ main() {
 
 TEST_CASE("native materializes variadic pointer vector packs with indexed dereference statement mutators") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 mutate_ptrs([args<Pointer<vector<i32>>>] values) {
   push(dereference(at(values, 0i32)), 9i32)
@@ -2191,6 +2207,8 @@ main() {
 
 TEST_CASE("native materializes variadic borrowed vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference<vector<i32>>>] values) {
   return(plus(values[0i32].count(), values[2i32].count()))
@@ -2245,6 +2263,8 @@ main() {
 
 TEST_CASE("native materializes variadic borrowed vector packs with indexed dereference capacity methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference<vector<i32>>>] values) {
   [auto] head{capacity(dereference(at(values, 0i32)))}
@@ -2300,6 +2320,8 @@ main() {
 
 TEST_CASE("native materializes variadic borrowed vector packs with indexed dereference access helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference<vector<i32>>>] values) {
   [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
@@ -2355,6 +2377,8 @@ main() {
 
 TEST_CASE("native materializes variadic borrowed vector packs with indexed dereference statement mutators") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 mutate_refs([args<Reference<vector<i32>>>] values) {
   push(dereference(at(values, 0i32)), 9i32)
@@ -2688,6 +2712,7 @@ main() {
 TEST_CASE("compiles and runs native image api contract deterministically") {
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2729,6 +2754,7 @@ TEST_CASE("compiles and runs native ppm read for ascii p3 inputs") {
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_read), return<int>]
 main() {
@@ -2744,7 +2770,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2791,6 +2817,7 @@ TEST_CASE("compiles and runs native ppm read for binary p6 inputs") {
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2806,7 +2833,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2853,6 +2880,7 @@ TEST_CASE("compiles and rejects truncated native binary ppm reads deterministica
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2863,7 +2891,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   return(0i32)
 }
 )", escapedPath);
@@ -2974,6 +3002,7 @@ TEST_CASE("compiles and runs native ppm write for ascii p3 outputs") {
   const std::string escapedPath = escapeStringLiteral(outPath.string());
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, file_write), return<int>]
 main() {
@@ -3012,6 +3041,7 @@ TEST_CASE("compiles and rejects invalid native ppm write inputs deterministicall
   const std::string escapedPath = escapeStringLiteral(outPath.string());
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -3175,6 +3205,7 @@ TEST_CASE("compiles and runs native png read for stored rgb inputs") {
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -3190,7 +3221,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3587,6 +3618,7 @@ TEST_CASE("compiles and runs native png read for stored sub-filter rgb inputs") 
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -3602,7 +3634,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3657,6 +3689,7 @@ TEST_CASE("compiles and runs native png read for stored up-filter rgb inputs") {
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -3672,7 +3705,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3728,6 +3761,7 @@ TEST_CASE("compiles and runs native png read for stored average-filter rgb input
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -3743,7 +3777,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3968,6 +4002,7 @@ TEST_CASE("compiles and runs native png read for fixed-huffman backreference rgb
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -3983,7 +4018,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -4046,6 +4081,7 @@ TEST_CASE("compiles and runs native png read for dynamic-huffman literal rgb inp
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -4061,7 +4097,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -4119,6 +4155,7 @@ TEST_CASE("compiles and runs native png read for dynamic-huffman backreference r
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -4134,7 +4171,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -4185,6 +4222,7 @@ TEST_CASE("compiles and rejects malformed native png inputs deterministically") 
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -4195,7 +4233,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   return(0i32)
 }
 )", escapedPath);
@@ -6023,7 +6061,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6073,7 +6111,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6130,7 +6168,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6175,7 +6213,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6214,7 +6252,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6280,7 +6318,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6351,7 +6389,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6395,7 +6433,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6469,7 +6507,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6546,7 +6584,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6604,7 +6642,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -6659,7 +6697,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)

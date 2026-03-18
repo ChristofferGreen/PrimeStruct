@@ -1080,6 +1080,8 @@ main() {
 
 TEST_CASE("print accepts string vector literal access") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(io_out), effects(heap_alloc), return<int>]
 main() {
   print_line(at(vector<string>("hi"utf8), 0i32))

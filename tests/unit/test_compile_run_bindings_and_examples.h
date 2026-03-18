@@ -289,6 +289,8 @@ TEST_CASE("collection docs snippets stay c++ style and executable") {
   const std::vector<SnippetCase> snippetCases = {
       {"docs_collections_prime_struct_style.prime",
        R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [array<i32>] values{array<i32>{1i32, 2i32, 3i32}}
@@ -302,6 +304,8 @@ main() {
        21},
       {"docs_collections_syntax_spec_style.prime",
        R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [array<i32>] values{array<i32>[1i32, 2i32]}
@@ -314,6 +318,8 @@ main() {
        18},
       {"docs_collections_guidelines_style.prime",
        R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>{1, 2}}
@@ -334,12 +340,15 @@ main() {
   }
 }
 
-TEST_CASE("collection docs snippets keep statement-only mutator diagnostics") {
+TEST_CASE("collection docs snippets reject mutators in value position") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>{1i32}}
-  return(values.push(2i32))
+  [i32] bad{values.push(2i32)}
+  return(bad)
 }
 )";
   const std::string srcPath = writeTemp("docs_collections_statement_only_negative.prime", source);
@@ -348,7 +357,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("only supported as a statement") != std::string::npos);
+  CHECK(readFile(errPath).find("binding initializer requires a value") != std::string::npos);
 }
 
 TEST_CASE("spinning cube shared source compiles across profile targets") {

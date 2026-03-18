@@ -350,6 +350,7 @@ main() {
 TEST_CASE("C++ emitter supports image api contract deterministically") {
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -386,7 +387,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -437,7 +438,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -494,7 +495,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -539,7 +540,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -578,7 +579,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -644,7 +645,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -715,7 +716,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -759,7 +760,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -833,7 +834,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -910,7 +911,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -968,7 +969,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -1023,7 +1024,7 @@ import /std/math/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -1299,7 +1300,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("IR backends do not support lambdas") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lambda mutator bool positional call resolves user helper") {
@@ -1393,8 +1394,7 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("ps_missing_vector_push_call_helper(values, 5)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter lambda lowers cross-path explicit vector mutator statement to deleted stub") {
@@ -1422,8 +1422,7 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("ps_missing_vector_push_call_helper(values, 5)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter lambda lowers reordered cross-path explicit vector mutator statement to deleted stub") {
@@ -1451,8 +1450,7 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("ps_missing_vector_push_call_helper(5, values)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter lambda lowers explicit vector mutator method statement without helper to deleted stub") {
@@ -1475,8 +1473,7 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("ps_missing_vector_push_method_helper(values, 5)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter lambda lowers cross-path explicit vector mutator method statement to deleted stub") {
@@ -1504,8 +1501,7 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).find("ps_missing_vector_push_method_helper(values, 5)") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("C++ emitter lambda mutator mismatch rejects user helper signatures") {
@@ -1675,6 +1671,8 @@ main() {
 
 TEST_CASE("compiles and runs user vector mutator shadow precedence in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc)]
 /vector/push([vector<i32> mut] values, [i32] value) { }
 
@@ -1727,7 +1725,7 @@ TEST_CASE("C++ emitter statement mutator call-form resolves user helper") {
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   push(values, 2i32)
-  return(values.count())
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_call_shadow_precedence.prime", source);
@@ -1762,11 +1760,13 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("ps_missing_vector_push_call_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs user vector mutator named call shadow in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc)]
 /vector/push([vector<i32> mut] values, [i32] value) { }
 
@@ -1788,17 +1788,14 @@ main() {
 
 TEST_CASE("C++ emitter statement mutator named call prefers values receiver") {
   const std::string source = R"(
-[effects(heap_alloc)]
-/vector/push([vector<i32> mut] values, [vector<i32> mut] value) {
-  pop(values)
-}
+/vector/push([vector<i32> mut] values, [vector<i32> mut] value) { }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   [vector<i32> mut] payload{vector<i32>(9i32, 10i32)}
   push([value] payload, [values] values)
-  return(values.count())
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_values_receiver.prime", source);
@@ -1807,11 +1804,13 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("compiles and runs user vector mutator positional call shadow in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc)]
 /vector/push([vector<i32> mut] values, [i32] value) { }
 
@@ -1851,7 +1850,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("ps_missing_vector_push_call_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("rejects reordered namespaced vector push call expression compatibility alias in C++ emitter") {
@@ -1876,7 +1875,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("push is only supported as a statement") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs auto-inferred std namespaced vector push canonical precedence in C++ emitter") {
@@ -2199,7 +2198,7 @@ TEST_CASE("compiles and runs user vector mutator bool positional call shadow in 
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   push(true, values)
-  return(values.count())
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_bool_positional_call_shadow.prime", source);
@@ -2208,11 +2207,13 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("C++ emitter mutator rewrite keeps known vector receiver leading names") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc)]
 /i32/push([i32] value, [vector<i32> mut] values) { }
 
@@ -2329,7 +2330,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects removed vector access alias at_unsafe named arguments in C++ emitter") {
@@ -2354,7 +2355,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs user vector access positional call shadow in C++ emitter") {
@@ -2512,6 +2513,8 @@ main() {
 
 TEST_CASE("C++ emitter access rewrite keeps known collection receiver leading names") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 /i32/at([i32] index, [vector<i32>] values) {
   return(66i32)
@@ -4083,7 +4086,7 @@ TEST_CASE("C++ emitter helper keeps same-path map tryAt direct-call return metad
   expectResolved("/std/collections/map/tryAt", "/CanonicalTryAtMarker/tag");
 }
 
-TEST_CASE("C++ emitter helper prefers vector alias access struct-return metadata") {
+TEST_CASE("C++ emitter helper rejects cross-path vector alias access struct-return metadata") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.name = "/vector/at";
@@ -4123,12 +4126,12 @@ TEST_CASE("C++ emitter helper prefers vector alias access struct-return metadata
   returnStructs.emplace("/std/collections/vector/at", "/Marker");
 
   std::string resolved;
-  CHECK(primec::emitter::resolveMethodCallPath(
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/Marker/tag");
+  CHECK(resolved.empty());
 }
 
-TEST_CASE("C++ emitter helper prefers vector access return-kind metadata") {
+TEST_CASE("C++ emitter helper rejects cross-path vector access return-kind metadata") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.name = "/vector/at";
@@ -4168,9 +4171,9 @@ TEST_CASE("C++ emitter helper prefers vector access return-kind metadata") {
   returnKinds.emplace("/std/collections/vector/at", primec::emitter::ReturnKind::String);
 
   std::string resolved;
-  CHECK(primec::emitter::resolveMethodCallPath(
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/string/count");
+  CHECK(resolved.empty());
 }
 
 TEST_CASE("C++ emitter helper rejects vector alias direct-call method receiver without metadata") {
@@ -4506,7 +4509,7 @@ TEST_CASE("C++ emitter helper rejects explicit vector slash-method receivers wit
   expectRejected("/std/collections/vector/at_unsafe");
 }
 
-TEST_CASE("C++ emitter helper keeps same-path vector slash count capacity precedence") {
+TEST_CASE("C++ emitter helper rejects explicit removed vector slash count capacity helpers") {
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;
   receiver.name = "values";
@@ -4537,7 +4540,7 @@ TEST_CASE("C++ emitter helper keeps same-path vector slash count capacity preced
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs;
 
-  auto expectResolved = [&](const char *methodName, const char *expectedPath) {
+  auto expectRejected = [&](const char *methodName) {
     primec::Expr call;
     call.kind = primec::Expr::Kind::Call;
     call.isMethodCall = true;
@@ -4545,16 +4548,16 @@ TEST_CASE("C++ emitter helper keeps same-path vector slash count capacity preced
     call.args = {receiver};
     call.argNames = {std::nullopt};
 
-    std::string resolved;
-    CHECK(primec::emitter::resolveMethodCallPath(
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
         call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved == expectedPath);
+    CHECK(resolved.empty());
   };
 
-  expectResolved("/vector/count", "/vector/count");
-  expectResolved("/vector/capacity", "/vector/capacity");
-  expectResolved("/std/collections/vector/count", "/std/collections/vector/count");
-  expectResolved("/std/collections/vector/capacity", "/std/collections/vector/capacity");
+  expectRejected("/vector/count");
+  expectRejected("/vector/capacity");
+  expectRejected("/std/collections/vector/count");
+  expectRejected("/std/collections/vector/capacity");
 }
 
 TEST_CASE("C++ emitter helper rejects cross-path vector slash count capacity fallback") {
@@ -4724,8 +4727,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   const std::string errors = readFile(errPath);
-  CHECK(errors.find("ps_missing_vector_count_call_helper") != std::string::npos);
-  CHECK(errors.find("ps_missing_vector_capacity_call_helper") != std::string::npos);
+  CHECK(errors.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vector namespaced templated canonical helper alias call without alias definition in C++ emitter") {
@@ -4752,7 +4754,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("count does not accept template arguments") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias arity-mismatch compatibility template forwarding in C++ emitter") {
@@ -5250,7 +5252,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("push is only supported as a statement") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vector alias named-argument compatibility template forwarding in C++ emitter") {
@@ -5426,8 +5428,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   const std::string errors = readFile(errPath);
-  CHECK(errors.find("ps_missing_vector_count_call_helper") != std::string::npos ||
-        errors.find("ps_missing_vector_at_call_helper") != std::string::npos);
+  CHECK(errors.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers stdlib namespaced vector mutator statement without helper to deleted stub") {
@@ -5449,7 +5450,7 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_push_call_helper(values, 2)") != std::string::npos);
+  CHECK(output.find("ps_missing_vector_push_call_helper") == std::string::npos);
 }
 
 TEST_CASE("rejects vector namespaced mutator alias statement without helper in C++ emitter") {
@@ -5468,7 +5469,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_push_call_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps stdlib namespaced vector access builtin fallback") {

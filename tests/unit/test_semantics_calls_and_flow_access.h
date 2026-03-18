@@ -286,6 +286,8 @@ main() {
 
 TEST_CASE("vector method calls resolve to definitions") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 /vector/size([vector<i32>] items) {
   return(count(items))

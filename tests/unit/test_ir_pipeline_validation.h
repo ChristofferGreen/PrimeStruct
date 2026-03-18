@@ -1307,7 +1307,7 @@ TEST_CASE("ir lowerer inference expr-kind call-return setup supports deferred re
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers namespaced count definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup resolves namespaced count definition directly") {
   primec::Definition receiverCountDef;
   receiverCountDef.fullPath = "/vector/count";
   primec::Definition canonicalCountDef;
@@ -1367,8 +1367,8 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced count defini
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 0);
 
   resolveReceiverHelper = false;
   resolveMethodCalls = 0;
@@ -1376,7 +1376,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced count defini
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(resolveMethodCalls == 0);
 }
 
 TEST_CASE("ir lowerer inference call-return setup rejects vector alias count without compatibility definition") {
@@ -1713,7 +1713,7 @@ TEST_CASE("ir lowerer inference call-return setup keeps removed array capacity a
   CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers namespaced capacity definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup resolves namespaced capacity definition directly") {
   primec::Definition receiverCapacityDef;
   receiverCapacityDef.fullPath = "/vector/capacity";
   primec::Definition canonicalCapacityDef;
@@ -1773,8 +1773,8 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced capacity def
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 0);
 
   resolveReceiverHelper = false;
   resolveMethodCalls = 0;
@@ -1782,10 +1782,10 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced capacity def
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers namespaced access definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup resolves namespaced access definition directly") {
   primec::Definition receiverAtDef;
   receiverAtDef.fullPath = "/vector/at";
   primec::Definition canonicalAtDef;
@@ -1849,8 +1849,8 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced access defin
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 0);
 
   resolveReceiverHelper = false;
   resolveMethodCalls = 0;
@@ -1858,7 +1858,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced access defin
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(resolveMethodCalls == 0);
 }
 
 TEST_CASE("ir lowerer inference call-return setup rejects vector compatibility array access fallback") {
@@ -1937,7 +1937,7 @@ TEST_CASE("ir lowerer inference call-return setup rejects vector compatibility a
   CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers namespaced at unsafe definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup resolves namespaced at unsafe definition directly") {
   primec::Definition receiverAtUnsafeDef;
   receiverAtUnsafeDef.fullPath = "/vector/at_unsafe";
   primec::Definition canonicalAtUnsafeDef;
@@ -2002,8 +2002,8 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced at unsafe de
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 0);
 
   resolveReceiverHelper = false;
   resolveMethodCalls = 0;
@@ -2011,7 +2011,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced at unsafe de
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(resolveMethodCalls == 0);
 }
 
 TEST_CASE("ir lowerer inference call-return setup resolves canonical namespaced map count directly") {
@@ -2488,7 +2488,7 @@ TEST_CASE("ir lowerer inference call-return setup resolves canonical namespaced 
   CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers namespaced push definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup resolves namespaced push definition directly") {
   primec::Definition receiverPushDef;
   receiverPushDef.fullPath = "/vector/push";
   primec::Definition canonicalPushDef;
@@ -2552,8 +2552,8 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced push definit
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 0);
 
   resolveReceiverHelper = false;
   resolveMethodCalls = 0;
@@ -2561,10 +2561,10 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced push definit
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup defers namespaced pop definition lookup") {
+TEST_CASE("ir lowerer inference call-return setup resolves namespaced pop definition directly") {
   primec::Definition receiverPopDef;
   receiverPopDef.fullPath = "/vector/pop";
   primec::Definition canonicalPopDef;
@@ -2624,8 +2624,8 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced pop definiti
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK(resolveMethodCalls == 0);
 
   resolveReceiverHelper = false;
   resolveMethodCalls = 0;
@@ -2633,7 +2633,7 @@ TEST_CASE("ir lowerer inference call-return setup defers namespaced pop definiti
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
-  CHECK(resolveMethodCalls == 1);
+  CHECK(resolveMethodCalls == 0);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-return setup validates dependencies") {
@@ -13751,14 +13751,55 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
     CHECK(instructions.empty());
   };
 
+  auto expectError = [&](const char *helperName, const std::vector<primec::Expr> &args, const char *expectedError) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.name = helperName;
+    callExpr.args = args;
+
+    instructions.clear();
+    std::string error = "stale";
+    CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+              callExpr,
+              locals,
+              [](const primec::Expr &, std::string &) { return false; },
+              [](const std::string &) { return true; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+                return false;
+              },
+              emitExpr,
+              resolveMapAccessTargetInfo,
+              resolveArrayVectorAccessTargetInfo,
+              [](const primec::Expr &, std::string &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return LocalInfo::ValueKind::Unknown;
+              },
+              []() { return 0; },
+              []() {},
+              []() {},
+              []() {},
+              instructionCount,
+              emitInstruction,
+              patchInstructionImm,
+              error) == Result::Error);
+    CHECK(error == std::string(expectedError));
+    CHECK(instructions.empty());
+  };
+
   expectNotHandled("/vector/count", {valuesName});
-  expectNotHandled("/std/collections/vector/count", {valuesName});
+  expectError("/std/collections/vector/count", {valuesName}, "count requires array, vector, map, or string target");
   expectNotHandled("/vector/capacity", {valuesName});
-  expectNotHandled("/std/collections/vector/capacity", {valuesName});
+  expectError("/std/collections/vector/capacity", {valuesName}, "capacity requires vector target");
   expectNotHandled("/vector/at", {valuesName, indexName});
-  expectNotHandled("/std/collections/vector/at", {valuesName, indexName});
+  expectError("/std/collections/vector/at", {valuesName, indexName}, "native backend requires integer indices for at");
   expectNotHandled("/vector/at_unsafe", {valuesName, indexName});
-  expectNotHandled("/std/collections/vector/at_unsafe", {valuesName, indexName});
+  expectError("/std/collections/vector/at_unsafe",
+              {valuesName, indexName},
+              "native backend requires integer indices for at_unsafe");
 
   primec::Expr bareCountCall;
   bareCountCall.kind = primec::Expr::Kind::Call;
@@ -13794,8 +13835,8 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCountError) == Result::NotHandled);
-  CHECK(bareCountError == "stale");
+            bareCountError) == Result::Error);
+  CHECK(bareCountError == "count requires array, vector, map, or string target");
   CHECK(instructions.empty());
 
   primec::Expr bareCapacityCall;
@@ -13832,8 +13873,8 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCapacityError) == Result::NotHandled);
-  CHECK(bareCapacityError == "stale");
+            bareCapacityError) == Result::Error);
+  CHECK(bareCapacityError == "capacity requires vector target");
   CHECK(instructions.empty());
 }
 
@@ -13861,6 +13902,14 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   soaInfo.isSoaVector = true;
   locals.emplace("soa", soaInfo);
 
+  LocalInfo soaPackInfo;
+  soaPackInfo.kind = LocalInfo::Kind::Value;
+  soaPackInfo.index = 11;
+  soaPackInfo.isArgsPack = true;
+  soaPackInfo.argsPackElementKind = LocalInfo::Kind::Vector;
+  soaPackInfo.isSoaVector = true;
+  locals.emplace("soaPack", soaPackInfo);
+
   primec::Expr arrName;
   arrName.kind = primec::Expr::Kind::Name;
   arrName.name = "arr";
@@ -13872,6 +13921,10 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   primec::Expr soaName;
   soaName.kind = primec::Expr::Kind::Name;
   soaName.name = "soa";
+
+  primec::Expr soaPackName;
+  soaPackName.kind = primec::Expr::Kind::Name;
+  soaPackName.name = "soaPack";
 
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
@@ -13988,6 +14041,49 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   CHECK(error.empty());
   CHECK_FALSE(instructions.empty());
 
+  primec::Expr soaPackAccess;
+  soaPackAccess.kind = primec::Expr::Kind::Call;
+  soaPackAccess.name = "at";
+  soaPackAccess.args = {soaPackName, idxName};
+
+  primec::Expr soaPackIndexedCountCall;
+  soaPackIndexedCountCall.kind = primec::Expr::Kind::Call;
+  soaPackIndexedCountCall.name = "count";
+  soaPackIndexedCountCall.args = {soaPackAccess};
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+            soaPackIndexedCountCall,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+              return primec::ir_lowerer::isArrayCountCall(callExpr, callLocals, false, "argv");
+            },
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+              return primec::ir_lowerer::isVectorCapacityCall(callExpr, callLocals);
+            },
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+              return primec::ir_lowerer::isStringCountCall(callExpr, callLocals);
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
+
   primec::Expr soaVectorAliasCountCall = soaCountCall;
   soaVectorAliasCountCall.name = "/vector/count";
   instructions.clear();
@@ -14052,9 +14148,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::NotHandled);
-  CHECK(error == "stale");
-  CHECK(instructions.empty());
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
 
   primec::Expr soaGetCall;
   soaGetCall.kind = primec::Expr::Kind::Call;
@@ -19998,23 +20094,17 @@ TEST_CASE("ir lowerer setup type helper rejects explicit vector slash-path metho
 
   expectUnknownMethod("/array/count", {receiverExpr}, "unknown method: /vector/count");
   expectUnknownMethod("/vector/count", {receiverExpr}, "unknown method: /vector/count");
-  expectUnknownMethod(
-      "/std/collections/vector/count", {receiverExpr}, "unknown method: /std/collections/vector/count");
+  expectUnknownMethod("/std/collections/vector/count", {receiverExpr}, "unknown method: /vector/count");
   expectUnknownMethod("/vector/capacity", {receiverExpr}, "unknown method: /vector/capacity");
-  expectUnknownMethod("/std/collections/vector/capacity",
-                      {receiverExpr},
-                      "unknown method: /std/collections/vector/capacity");
+  expectUnknownMethod("/std/collections/vector/capacity", {receiverExpr}, "unknown method: /vector/capacity");
   expectUnknownMethod("/vector/at", {receiverExpr, indexExpr}, "unknown method: /vector/at");
-  expectUnknownMethod(
-      "/std/collections/vector/at", {receiverExpr, indexExpr}, "unknown method: /std/collections/vector/at");
-  expectUnknownMethod(
-      "/vector/at_unsafe", {receiverExpr, indexExpr}, "unknown method: /vector/at_unsafe");
+  expectUnknownMethod("/std/collections/vector/at", {receiverExpr, indexExpr}, "unknown method: /vector/at");
+  expectUnknownMethod("/vector/at_unsafe", {receiverExpr, indexExpr}, "unknown method: /vector/at_unsafe");
   expectUnknownMethod("/std/collections/vector/at_unsafe",
                       {receiverExpr, indexExpr},
-                      "unknown method: /std/collections/vector/at_unsafe");
+                      "unknown method: /vector/at_unsafe");
   expectUnknownMethod("/vector/push", {receiverExpr, indexExpr}, "unknown method: /vector/push");
-  expectUnknownMethod(
-      "/std/collections/vector/push", {receiverExpr, indexExpr}, "unknown method: /std/collections/vector/push");
+  expectUnknownMethod("/std/collections/vector/push", {receiverExpr, indexExpr}, "unknown method: /vector/push");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects slash-path map methods from expressions") {
@@ -22421,7 +22511,7 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
   CHECK(error == "stale");
 }
 
-TEST_CASE("ir lowerer setup type helper keeps builtin mutator fallback when no override definition exists") {
+TEST_CASE("ir lowerer setup type helper reports unknown vector mutators when no override definition exists") {
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;
   receiverExpr.name = "values";
@@ -22457,7 +22547,7 @@ TEST_CASE("ir lowerer setup type helper keeps builtin mutator fallback when no o
             [](const primec::Expr &) { return std::string(); },
             {},
             error) == nullptr);
-  CHECK(error == "stale");
+  CHECK(error == "unknown method: /vector/push");
 
   methodCall.name = "pop";
   methodCall.args = {receiverExpr};
@@ -22476,7 +22566,7 @@ TEST_CASE("ir lowerer setup type helper keeps builtin mutator fallback when no o
             [](const primec::Expr &) { return std::string(); },
             {},
             error) == nullptr);
-  CHECK(error == "stale");
+  CHECK(error == "unknown method: /vector/pop");
 }
 
 TEST_CASE("ir lowerer setup type helper reports method call definition diagnostics from expressions") {
@@ -42125,7 +42215,7 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
                 return true;
               },
               instructions,
-              error) == EmitResult::NotHandled);
+              error) == EmitResult::NotMatched);
     CHECK(error.empty());
     CHECK(aliasMethodResolutionCalls == 0);
     CHECK(aliasDefinitionResolutionCalls == 1);

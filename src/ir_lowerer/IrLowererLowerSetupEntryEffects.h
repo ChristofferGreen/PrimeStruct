@@ -5,6 +5,7 @@ bool IrLowerer::lower(const Program &program,
                       IrModule &out,
                       std::string &error) const {
   out = IrModule{};
+  error.clear();
 
   const Definition *entryDef = nullptr;
   uint64_t entryEffectMask = 0;

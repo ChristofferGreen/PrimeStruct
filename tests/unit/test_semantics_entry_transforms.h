@@ -26,10 +26,7 @@ main() {
 
 TEST_CASE("template vector and map returns are allowed") {
   const std::string source = R"(
-[return<int>]
-/std/collections/map/count<K, V>([map<K, V>] values) {
-  return(1i32)
-}
+import /std/collections/*
 
 [effects(heap_alloc), return<vector<T>>]
 wrapVector<T>([T] value) {
@@ -45,7 +42,7 @@ wrapMap<K, V>([K] key, [V] value) {
 main() {
   [vector<i32>] values{wrapVector<i32>(9i32)}
   [map<string, i32>] pairs{wrapMap<string, i32>("only"raw_utf8, 3i32)}
-  return(plus(count(values), /std/collections/map/count(pairs)))
+  return(plus(count(values), count(pairs)))
 }
 )";
   std::string error;

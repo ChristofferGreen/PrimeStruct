@@ -147,6 +147,8 @@ main() {
 
 TEST_CASE("binding inference keeps builtin vector literal type") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   value{vector<i32>(1i32)}
@@ -160,6 +162,8 @@ main() {
 
 TEST_CASE("vector binding accepts explicit mut type with constructor call") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Particle {
   [i32] id{0i32}
@@ -178,6 +182,8 @@ main() {
 
 TEST_CASE("vector binding infers mut type from constructor call") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Particle {
   [i32] id{0i32}
@@ -196,6 +202,8 @@ main() {
 
 TEST_CASE("vector binding accepts omitted explicit initializer") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Particle {
   [i32] id{0i32}

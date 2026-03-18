@@ -205,8 +205,10 @@ static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
       }
       std::swap(methodStmt.argNames[0], methodStmt.argNames[receiverIndex]);
     }
+    const std::string priorError = error;
     const Definition *callee = resolveMethodCallDefinition(methodStmt, localsIn);
     if (!callee) {
+      error = priorError;
       continue;
     }
     if (methodStmt.hasBodyArguments || !methodStmt.bodyArguments.empty()) {
@@ -216,6 +218,7 @@ static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
     if (!emitInlineDefinitionCall(methodStmt, *callee, localsIn, false)) {
       return DirectCallStatementEmitResult::Error;
     }
+    error = priorError;
     return DirectCallStatementEmitResult::Emitted;
   }
 
@@ -473,12 +476,43 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   }
 
   const bool explicitVectorMutatorHelperCall = isExplicitVectorMutatorHelperCall(stmt);
+  auto rewriteBareVectorMethodMutatorToDirectCall = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+    if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty() ||
+        !callExpr.namespacePrefix.empty() || callExpr.name.find('/') != std::string::npos) {
+      return false;
+    }
+    const std::string helperName = callExpr.name;
+    if (helperName != "push" && helperName != "pop" && helperName != "reserve" &&
+        helperName != "clear" && helperName != "remove_at" && helperName != "remove_swap") {
+      return false;
+    }
+    const size_t expectedArgCount =
+        (helperName == "pop" || helperName == "clear") ? 1u : 2u;
+    if (callExpr.args.size() != expectedArgCount) {
+      return false;
+    }
+    const auto targetInfo = resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn);
+    if (!targetInfo.isVectorTarget) {
+      return false;
+    }
+    rewrittenExpr = callExpr;
+    rewrittenExpr.isMethodCall = false;
+    rewrittenExpr.namespacePrefix.clear();
+    rewrittenExpr.name = helperName;
+    return true;
+  };
+  Expr directStmt = stmt;
+  Expr rewrittenBareVectorMethodStmt;
+  if (!explicitVectorMutatorHelperCall &&
+      rewriteBareVectorMethodMutatorToDirectCall(stmt, rewrittenBareVectorMethodStmt)) {
+    directStmt = rewrittenBareVectorMethodStmt;
+  }
 
   if (!explicitVectorMutatorHelperCall &&
-      !stmt.isMethodCall &&
-      stmt.args.size() == 1 &&
-      isSoaVectorTargetExpr(stmt.args.front(), localsIn)) {
-    Expr methodStmt = stmt;
+      !directStmt.isMethodCall &&
+      directStmt.args.size() == 1 &&
+      isSoaVectorTargetExpr(directStmt.args.front(), localsIn)) {
+    Expr methodStmt = directStmt;
     methodStmt.isMethodCall = true;
     const std::string priorError = error;
     if (const Definition *callee = resolveMethodCallDefinition(methodStmt, localsIn)) {
@@ -489,27 +523,30 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
       if (!emitInlineDefinitionCall(methodStmt, *callee, localsIn, false)) {
         return DirectCallStatementEmitResult::Error;
       }
+      error = priorError;
       return DirectCallStatementEmitResult::Emitted;
     }
     error = priorError;
   }
 
-  if (stmt.isMethodCall) {
+  if (directStmt.isMethodCall) {
     const bool isBuiltinCountLikeMethod =
-        isArrayCountCall(stmt, localsIn) || isStringCountCall(stmt, localsIn) ||
-        isVectorCapacityCall(stmt, localsIn);
-    const Definition *callee = resolveMethodCallDefinition(stmt, localsIn);
+        isArrayCountCall(directStmt, localsIn) || isStringCountCall(directStmt, localsIn) ||
+        isVectorCapacityCall(directStmt, localsIn);
+    const std::string priorError = error;
+    const Definition *callee = resolveMethodCallDefinition(directStmt, localsIn);
     if (!callee && !isBuiltinCountLikeMethod) {
       return DirectCallStatementEmitResult::Error;
     }
     if (callee) {
-      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      if (directStmt.hasBodyArguments || !directStmt.bodyArguments.empty()) {
         error = "native backend does not support block arguments on calls";
         return DirectCallStatementEmitResult::Error;
       }
-      if (!emitInlineDefinitionCall(stmt, *callee, localsIn, false)) {
+      if (!emitInlineDefinitionCall(directStmt, *callee, localsIn, false)) {
         return DirectCallStatementEmitResult::Error;
       }
+      error = priorError;
       return DirectCallStatementEmitResult::Emitted;
     }
     error.clear();
@@ -517,7 +554,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
 
   if (!explicitVectorMutatorHelperCall) {
     const auto vectorHelperCallFormResult = tryEmitVectorHelperCallFormStatement(
-        stmt, localsIn, resolveMethodCallDefinition, emitInlineDefinitionCall, error);
+        directStmt, localsIn, resolveMethodCallDefinition, emitInlineDefinitionCall, error);
     if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Error) {
       return DirectCallStatementEmitResult::Error;
     }
@@ -526,11 +563,12 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     }
   }
 
-  const Definition *callee = resolveDefinitionCall(stmt);
+  const std::string priorError = error;
+  const Definition *callee = resolveDefinitionCall(directStmt);
   if (!callee) {
     return DirectCallStatementEmitResult::NotMatched;
   }
-  if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+  if (directStmt.hasBodyArguments || !directStmt.bodyArguments.empty()) {
     error = "native backend does not support block arguments on calls";
     return DirectCallStatementEmitResult::Error;
   }
@@ -539,12 +577,13 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   if (!getReturnInfo(callee->fullPath, info)) {
     return DirectCallStatementEmitResult::Error;
   }
-  if (!emitInlineDefinitionCall(stmt, *callee, localsIn, false)) {
+  if (!emitInlineDefinitionCall(directStmt, *callee, localsIn, false)) {
     return DirectCallStatementEmitResult::Error;
   }
   if (!info.returnsVoid) {
     instructions.push_back({IrOpcode::Pop, 0});
   }
+  error = priorError;
   return DirectCallStatementEmitResult::Emitted;
 }
 

@@ -541,7 +541,9 @@ bool emitInlineDefinitionCallParameters(
       }
     }
 
-    if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown || paramInfo.valueKind == LocalInfo::ValueKind::String) {
+    if (paramInfo.kind == LocalInfo::Kind::Value &&
+        (paramInfo.valueKind == LocalInfo::ValueKind::Unknown ||
+         paramInfo.valueKind == LocalInfo::ValueKind::String)) {
       error = "native backend only supports numeric/bool, string, or struct parameters";
       return false;
     }

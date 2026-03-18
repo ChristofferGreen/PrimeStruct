@@ -2774,10 +2774,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     std::string vectorHelperResolved = resolveCalleePath(stmt);
     std::string namespacedCollection;
     std::string namespacedHelper;
-    const bool isNamespacedCollectionHelperCall =
-        getNamespacedCollectionHelperName(stmt, namespacedCollection, namespacedHelper);
-    const bool isNamespacedVectorHelperCall =
-        isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+    getNamespacedCollectionHelperName(stmt, namespacedCollection, namespacedHelper);
     const bool isStdNamespacedVectorCanonicalHelperCall =
         !stmt.isMethodCall && vectorHelperResolved.rfind("/std/collections/vector/", 0) == 0 &&
         (namespacedHelper == "count" || namespacedHelper == "capacity" || namespacedHelper == "at" ||
@@ -2904,18 +2901,36 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (defMap_.find(vectorHelperResolved) == defMap_.end() &&
         isBareVectorStatementHelperCall &&
         hasBareVectorReceiverIndex) {
-      Expr helperCall = stmt;
-      helperCall.name = preferredBareVectorHelperTarget(vectorHelper);
-      helperCall.namespacePrefix.clear();
-      helperCall.isMethodCall = false;
-      if (bareVectorReceiverIndex > 0 && bareVectorReceiverIndex < helperCall.args.size()) {
-        std::swap(helperCall.args[0], helperCall.args[bareVectorReceiverIndex]);
-        if (helperCall.argNames.size() < helperCall.args.size()) {
-          helperCall.argNames.resize(helperCall.args.size());
+      const std::string preferredPath = preferredBareVectorHelperTarget(vectorHelper);
+      const bool hasImportedCanonicalTarget =
+          preferredPath.rfind("/std/collections/vector/", 0) == 0 &&
+          hasImportedDefinitionPath(preferredPath);
+      if (defMap_.find(preferredPath) != defMap_.end()) {
+        Expr helperCall = stmt;
+        if (preferredPath.rfind("/std/collections/vector/", 0) == 0) {
+          helperCall.name = vectorHelper;
+          helperCall.namespacePrefix = "/std/collections/vector";
+        } else if (preferredPath.rfind("/vector/", 0) == 0) {
+          helperCall.name = vectorHelper;
+          helperCall.namespacePrefix = "/vector";
+        } else {
+          helperCall.name = preferredPath;
+          helperCall.namespacePrefix.clear();
         }
-        std::swap(helperCall.argNames[0], helperCall.argNames[bareVectorReceiverIndex]);
+        helperCall.isMethodCall = false;
+        if (bareVectorReceiverIndex > 0 && bareVectorReceiverIndex < helperCall.args.size()) {
+          std::swap(helperCall.args[0], helperCall.args[bareVectorReceiverIndex]);
+          if (helperCall.argNames.size() < helperCall.args.size()) {
+            helperCall.argNames.resize(helperCall.args.size());
+          }
+          std::swap(helperCall.argNames[0], helperCall.argNames[bareVectorReceiverIndex]);
+        }
+        return validateExpr(params, locals, helperCall, enclosingStatements, statementIndex);
       }
-      return validateExpr(params, locals, helperCall, enclosingStatements, statementIndex);
+      if (!hasImportedCanonicalTarget) {
+        error_ = "unknown call target: " + preferredPath;
+        return false;
+      }
     }
     if (defMap_.find(vectorHelperResolved) == defMap_.end()) {
       if (isStdNamespacedVectorCanonicalHelperCall) {

@@ -418,19 +418,6 @@
       eraseCandidate("/map/tryAt");
     }
   };
-  auto isExplicitVectorAccessCompatibilityCall = [&](const Expr &candidate) {
-    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-      return false;
-    }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    if (normalized != "vector/at" && normalized != "vector/at_unsafe") {
-      return false;
-    }
-    return defMap.count("/" + normalized) == 0;
-  };
   auto isExplicitVectorAccessDirectCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;

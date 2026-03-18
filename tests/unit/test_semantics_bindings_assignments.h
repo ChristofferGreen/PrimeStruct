@@ -96,6 +96,8 @@ main() {
 
 TEST_CASE("assign to indexed vector element succeeds") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
@@ -111,6 +113,8 @@ main() {
 
 TEST_CASE("assign to indexed vector field succeeds") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct]
 Box {
   [vector<i32> mut] values

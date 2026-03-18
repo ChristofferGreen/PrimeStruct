@@ -698,8 +698,43 @@
         if (rewriteTemporaryMapBuiltinAccessToMethodExpr(expr, rewrittenTemporaryMapBuiltinAccessExpr)) {
           return emitExpr(rewrittenTemporaryMapBuiltinAccessExpr, localsIn);
         }
+        auto rewriteBareVectorMethodHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty() ||
+              !callExpr.namespacePrefix.empty() || callExpr.name.find('/') != std::string::npos) {
+            return false;
+          }
+          const std::string helperName = callExpr.name;
+          if (helperName != "count" && helperName != "capacity" &&
+              helperName != "at" && helperName != "at_unsafe") {
+            return false;
+          }
+          const size_t expectedArgCount =
+              (helperName == "at" || helperName == "at_unsafe") ? 2u : 1u;
+          if (callExpr.args.size() != expectedArgCount) {
+            return false;
+          }
+          const auto targetInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn);
+          if (!targetInfo.isVectorTarget) {
+            return false;
+          }
+          rewrittenExpr = callExpr;
+          rewrittenExpr.isMethodCall = false;
+          rewrittenExpr.namespacePrefix.clear();
+          rewrittenExpr.name = helperName;
+          return true;
+        };
+        Expr rewrittenBareVectorMethodHelperExpr;
+        if (rewriteBareVectorMethodHelperExpr(expr, rewrittenBareVectorMethodHelperExpr)) {
+          const std::string priorError = error;
+          if (!emitExpr(rewrittenBareVectorMethodHelperExpr, localsIn)) {
+            return false;
+          }
+          error = priorError;
+          return true;
+        }
+        Expr inlineDispatchExpr = expr;
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
-            expr,
+            inlineDispatchExpr,
             localsIn,
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return isArrayCountCall(callExpr, localMap);
@@ -801,7 +836,7 @@
           rewrittenExpr.args.front() = derefExpr;
           return true;
         };
-        Expr nativeTailExpr = expr;
+        Expr nativeTailExpr = inlineDispatchExpr;
         Expr rewrittenExplicitMapHelperExpr;
         if (rewriteExplicitMapHelperBuiltinExpr(expr, rewrittenExplicitMapHelperExpr)) {
           nativeTailExpr = rewrittenExplicitMapHelperExpr;

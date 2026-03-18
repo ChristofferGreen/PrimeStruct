@@ -4,6 +4,8 @@
 
 TEST_CASE("ir lowerer supports string vector literals") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   return(count(vector<string>("a"raw_utf8)))
@@ -492,6 +494,8 @@ main() {
 
 TEST_CASE("ir lowerer supports numeric vector literals") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}

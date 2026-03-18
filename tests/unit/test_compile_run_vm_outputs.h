@@ -160,6 +160,7 @@ TEST_CASE("runs vm file read_byte with deterministic eof") {
 TEST_CASE("runs vm image api contract deterministically") {
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -196,6 +197,7 @@ TEST_CASE("runs vm ppm read for ascii p3 inputs") {
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_read), return<int>]
 main() {
@@ -211,7 +213,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -255,6 +257,7 @@ TEST_CASE("runs vm ppm read for binary p6 inputs") {
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -270,7 +273,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -314,6 +317,7 @@ TEST_CASE("rejects truncated vm binary ppm reads deterministically") {
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -324,7 +328,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   return(0i32)
 }
 )", escapedPath);
@@ -427,6 +431,7 @@ TEST_CASE("runs vm ppm write for ascii p3 outputs") {
   const std::string escapedPath = escapeStringLiteral(outPath.string());
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, file_write), return<int>]
 main() {
@@ -461,6 +466,7 @@ TEST_CASE("rejects invalid vm ppm write inputs deterministically") {
   const std::string escapedPath = escapeStringLiteral(outPath.string());
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -606,6 +612,7 @@ TEST_CASE("runs vm png read for stored rgba inputs deterministically") {
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -621,7 +628,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -665,6 +672,7 @@ TEST_CASE("runs vm png read for stored sub-filter rgba inputs deterministically"
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -680,7 +688,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -730,6 +738,7 @@ TEST_CASE("runs vm png read for stored up-filter rgba inputs deterministically")
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -745,7 +754,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -796,6 +805,7 @@ TEST_CASE("runs vm png read for stored average-filter rgba inputs deterministica
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -811,7 +821,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -861,6 +871,7 @@ TEST_CASE("runs vm png read for fixed-huffman backreference rgba inputs determin
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -876,7 +887,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -934,6 +945,7 @@ TEST_CASE("rejects vm png read for dynamic-huffman literal rgb inputs determinis
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -949,7 +961,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -993,6 +1005,7 @@ TEST_CASE("runs vm png read for dynamic-huffman backreference rgba inputs determ
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -1008,7 +1021,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -1054,6 +1067,7 @@ TEST_CASE("rejects malformed vm png inputs deterministically") {
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -1064,7 +1078,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(/std/collections/vector/count(pixels))
   return(0i32)
 }
 )", escapedPath);

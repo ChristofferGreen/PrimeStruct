@@ -102,10 +102,11 @@ TEST_CASE("runs vm software renderer command serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -148,10 +149,11 @@ TEST_CASE("runs vm software renderer clip stack serialization deterministically"
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -200,10 +202,11 @@ TEST_CASE("runs vm software renderer clip underflow stays deterministic") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -240,10 +243,11 @@ TEST_CASE("runs vm software renderer empty text serialization deterministically"
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -278,10 +282,11 @@ TEST_CASE("runs vm two-pass layout tree serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -318,10 +323,11 @@ TEST_CASE("runs vm two-pass layout empty root deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -352,10 +358,11 @@ TEST_CASE("runs vm basic widget controls through layout deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -413,10 +420,11 @@ TEST_CASE("runs vm panel container widget deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -479,10 +487,11 @@ TEST_CASE("runs vm empty panel container stays balanced deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -518,10 +527,11 @@ TEST_CASE("runs vm composite login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -587,10 +597,11 @@ TEST_CASE("runs vm html adapter login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -659,10 +670,11 @@ TEST_CASE("runs vm ui event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -712,10 +724,11 @@ TEST_CASE("runs vm ui ime event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
@@ -762,10 +775,11 @@ TEST_CASE("runs vm ui resize and focus event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{count(words)}
+  [i32] len{/std/collections/vector/count(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
