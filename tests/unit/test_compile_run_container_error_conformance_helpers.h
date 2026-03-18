@@ -6,7 +6,7 @@ import /std/collections/*
 
 [return<Result<ContainerError>>]
 makeMissing() {
-  return(containerMissingKey().code)
+  return(containerErrorStatus(containerMissingKey()))
 }
 
 [return<Result<ContainerError>>]

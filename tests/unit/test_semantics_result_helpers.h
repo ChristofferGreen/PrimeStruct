@@ -189,6 +189,41 @@ main() {
   CHECK(error.find("argument type mismatch for /std/image/imageErrorResult parameter err") != std::string::npos);
 }
 
+TEST_CASE("stdlib container error result helpers construct status and value results") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<void>]
+main() {
+  [Result<ContainerError>] status{containerErrorStatus(containerMissingKey())}
+  [Result<i32, ContainerError>] valueStatus{containerErrorResult<i32>(containerCapacityExceeded())}
+  [bool] statusError{Result.error(status)}
+  [bool] valueError{Result.error(valueStatus)}
+  [string] statusWhy{Result.why(status)}
+  [string] valueWhy{Result.why(valueStatus)}
+  if(and(statusError, valueError), then(){ return() }, else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib container error status helper rejects non container errors") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<void>]
+main() {
+  [Result<ContainerError>] status{containerErrorStatus(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/containerErrorStatus parameter err") != std::string::npos);
+}
+
 TEST_CASE("Result.map inline lambda syntax parses with explicit diagnostics") {
   const std::string source = R"(
 [return<void>]
