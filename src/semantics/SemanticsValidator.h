@@ -242,6 +242,12 @@ private:
                          const std::string &namespacePrefix,
                          const std::vector<Expr> *enclosingStatements = nullptr,
                          size_t statementIndex = 0);
+  bool validateBindingStatement(const std::vector<ParameterInfo> &params,
+                                std::unordered_map<std::string, BindingInfo> &locals,
+                                const Expr &stmt,
+                                bool allowBindings,
+                                const std::string &namespacePrefix,
+                                bool &handled);
   bool validateControlFlowStatement(const std::vector<ParameterInfo> &params,
                                     std::unordered_map<std::string, BindingInfo> &locals,
                                     const Expr &stmt,

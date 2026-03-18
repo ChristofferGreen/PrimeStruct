@@ -9913,19 +9913,24 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
 
   const std::filesystem::path semanticsStatementPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatement.cpp";
+  const std::filesystem::path semanticsStatementBindingsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorStatementBindings.cpp";
   const std::filesystem::path semanticsStatementControlFlowPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementControlFlow.cpp";
   const std::filesystem::path semanticsStatementVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementVectorHelpers.cpp";
   REQUIRE(std::filesystem::exists(semanticsStatementPath));
+  REQUIRE(std::filesystem::exists(semanticsStatementBindingsPath));
   REQUIRE(std::filesystem::exists(semanticsStatementControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsStatementVectorHelpersPath));
   const std::string semanticsStatementSource = readText(semanticsStatementPath);
+  const std::string semanticsStatementBindingsSource = readText(semanticsStatementBindingsPath);
   const std::string semanticsStatementControlFlowSource = readText(semanticsStatementControlFlowPath);
   const std::string semanticsStatementVectorHelpersSource = readText(semanticsStatementVectorHelpersPath);
   CHECK(semanticsStatementSource.find("bool SemanticsValidator::validateStatement") != std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementLoopCountStep.h\"") !=
         std::string::npos);
+  CHECK(semanticsStatementSource.find("validateBindingStatement(") != std::string::npos);
   CHECK(semanticsStatementSource.find("validateControlFlowStatement(") != std::string::npos);
   CHECK(semanticsStatementSource.find("validateVectorStatementHelper(") != std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementHelpers.h\"") == std::string::npos);
@@ -9941,6 +9946,11 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementSource.find("auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {") ==
         std::string::npos);
   CHECK(semanticsStatementSource.find("std::string vectorHelper;") == std::string::npos);
+  CHECK(semanticsStatementSource.find("duplicate binding name: ") == std::string::npos);
+  CHECK(semanticsStatementSource.find("std::function<bool(const Expr &, std::string &)> resolvePointerRoot;") ==
+        std::string::npos);
+  CHECK(semanticsStatementSource.find("entry argument strings require string bindings") == std::string::npos);
+  CHECK(semanticsStatementSource.find("borrow conflict: ") == std::string::npos);
 
   const std::filesystem::path semanticsStatementHelpersHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementHelpers.h";
@@ -9956,6 +9966,15 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementReturns.cpp";
   REQUIRE(std::filesystem::exists(semanticsStatementReturnsPath));
   const std::string semanticsStatementReturnsSource = readText(semanticsStatementReturnsPath);
+  CHECK(semanticsStatementBindingsSource.find("bool SemanticsValidator::validateBindingStatement(") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("duplicate binding name: ") != std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("binding initializer requires a value") != std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("entry argument strings require string bindings") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("std::function<bool(const Expr &, std::string &)> resolvePointerRoot;") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("borrow conflict: ") != std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find("bool SemanticsValidator::validateControlFlowStatement(") !=
         std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find("if (isMatchCall(stmt)) {") != std::string::npos);

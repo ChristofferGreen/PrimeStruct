@@ -74,6 +74,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorPassesEffects.cpp
   src/semantics/SemanticsValidatorPassesDiagnostics.cpp
   src/semantics/SemanticsValidatorPasses.cpp
+  src/semantics/SemanticsValidatorStatementBindings.cpp
   src/semantics/SemanticsValidatorStatementControlFlow.cpp
   src/semantics/SemanticsValidatorStatementLoopCountStep.cpp
   src/semantics/SemanticsValidatorStatementReturns.cpp
