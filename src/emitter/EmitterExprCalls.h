@@ -836,6 +836,16 @@
     return normalized == std::string("vector/") + helper ||
            normalized == std::string("std/collections/vector/") + helper;
   };
+  auto isExplicitStdlibVectorHelper = [&](const std::string &name, const char *helper) {
+    if (name.empty()) {
+      return false;
+    }
+    std::string normalized = name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    return normalized == std::string("std/collections/vector/") + helper;
+  };
   auto isExplicitVectorAccessSlashMethod = [&](const Expr &candidate, const char *helper) {
     if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty()) {
       return false;
@@ -1076,7 +1086,10 @@
           << ")";
       return out.str();
     }
-    if (expr.isMethodCall && isExplicitStdlibVectorHelper(expr.name, "count") && expr.args.size() == 1) {
+    if (expr.isMethodCall &&
+        (isExplicitStdlibVectorHelper(expr.name, "count") ||
+         resolveExprPath(expr) == "/std/collections/vector/count") &&
+        expr.args.size() == 1) {
       std::ostringstream out;
       out << "ps_missing_vector_count_method_helper("
           << emitExpr(expr.args.front(),
