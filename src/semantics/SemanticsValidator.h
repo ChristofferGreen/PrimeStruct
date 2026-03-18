@@ -248,6 +248,10 @@ private:
                                 bool allowBindings,
                                 const std::string &namespacePrefix,
                                 bool &handled);
+  bool validatePathSpaceComputeBuiltinStatement(const std::vector<ParameterInfo> &params,
+                                                const std::unordered_map<std::string, BindingInfo> &locals,
+                                                const Expr &stmt,
+                                                bool &handled);
   bool validateControlFlowStatement(const std::vector<ParameterInfo> &params,
                                     std::unordered_map<std::string, BindingInfo> &locals,
                                     const Expr &stmt,

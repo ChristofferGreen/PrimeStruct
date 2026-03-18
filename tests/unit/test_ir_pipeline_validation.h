@@ -9915,26 +9915,32 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatement.cpp";
   const std::filesystem::path semanticsStatementBindingsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementBindings.cpp";
+  const std::filesystem::path semanticsStatementBuiltinsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorStatementBuiltins.cpp";
   const std::filesystem::path semanticsStatementControlFlowPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementControlFlow.cpp";
   const std::filesystem::path semanticsStatementVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementVectorHelpers.cpp";
   REQUIRE(std::filesystem::exists(semanticsStatementPath));
   REQUIRE(std::filesystem::exists(semanticsStatementBindingsPath));
+  REQUIRE(std::filesystem::exists(semanticsStatementBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsStatementControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsStatementVectorHelpersPath));
   const std::string semanticsStatementSource = readText(semanticsStatementPath);
   const std::string semanticsStatementBindingsSource = readText(semanticsStatementBindingsPath);
+  const std::string semanticsStatementBuiltinsSource = readText(semanticsStatementBuiltinsPath);
   const std::string semanticsStatementControlFlowSource = readText(semanticsStatementControlFlowPath);
   const std::string semanticsStatementVectorHelpersSource = readText(semanticsStatementVectorHelpersPath);
   CHECK(semanticsStatementSource.find("bool SemanticsValidator::validateStatement") != std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementLoopCountStep.h\"") !=
         std::string::npos);
   CHECK(semanticsStatementSource.find("validateBindingStatement(") != std::string::npos);
+  CHECK(semanticsStatementSource.find("validatePathSpaceComputeBuiltinStatement(") != std::string::npos);
   CHECK(semanticsStatementSource.find("validateControlFlowStatement(") != std::string::npos);
   CHECK(semanticsStatementSource.find("validateVectorStatementHelper(") != std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementHelpers.h\"") == std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementBindings.h\"") == std::string::npos);
+  CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementBuiltins.h\"") == std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementControlFlow.h\"") == std::string::npos);
   CHECK(semanticsStatementSource.find("auto validateLoopBody = [&](const Expr &body,") == std::string::npos);
   CHECK(semanticsStatementSource.find("auto canIterateMoreThanOnce = [&](const Expr &countExpr, bool allowBoolCount) -> bool {") ==
@@ -9951,6 +9957,11 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementSource.find("entry argument strings require string bindings") == std::string::npos);
   CHECK(semanticsStatementSource.find("borrow conflict: ") == std::string::npos);
+  CHECK(semanticsStatementSource.find("if (isSimpleCallName(stmt, \"dispatch\")) {") == std::string::npos);
+  CHECK(semanticsStatementSource.find("if (isSimpleCallName(stmt, \"buffer_store\")) {") == std::string::npos);
+  CHECK(semanticsStatementSource.find("PathSpaceBuiltin pathSpaceBuiltin;") == std::string::npos);
+  CHECK(semanticsStatementSource.find("auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool {") ==
+        std::string::npos);
 
   const std::filesystem::path semanticsStatementHelpersHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementHelpers.h";
@@ -9958,6 +9969,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   const std::filesystem::path semanticsStatementBindingsHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementBindings.h";
   CHECK_FALSE(std::filesystem::exists(semanticsStatementBindingsHeaderPath));
+  const std::filesystem::path semanticsStatementBuiltinsHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorStatementBuiltins.h";
+  CHECK_FALSE(std::filesystem::exists(semanticsStatementBuiltinsHeaderPath));
   const std::filesystem::path semanticsStatementControlFlowHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementControlFlow.h";
   CHECK_FALSE(std::filesystem::exists(semanticsStatementControlFlowHeaderPath));
@@ -9975,6 +9989,15 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementBindingsSource.find("std::function<bool(const Expr &, std::string &)> resolvePointerRoot;") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("borrow conflict: ") != std::string::npos);
+  CHECK(semanticsStatementBuiltinsSource.find("bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(") !=
+        std::string::npos);
+  CHECK(semanticsStatementBuiltinsSource.find("if (isSimpleCallName(stmt, \"dispatch\")) {") !=
+        std::string::npos);
+  CHECK(semanticsStatementBuiltinsSource.find("if (isSimpleCallName(stmt, \"buffer_store\")) {") !=
+        std::string::npos);
+  CHECK(semanticsStatementBuiltinsSource.find("PathSpaceBuiltin pathSpaceBuiltin;") != std::string::npos);
+  CHECK(semanticsStatementBuiltinsSource.find("auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find("bool SemanticsValidator::validateControlFlowStatement(") !=
         std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find("if (isMatchCall(stmt)) {") != std::string::npos);
