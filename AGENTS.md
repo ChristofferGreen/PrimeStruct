@@ -55,7 +55,7 @@ build and layout solidify.
 - **Coverage helper:** `./scripts/code_coverage.sh` runs a clean debug coverage build, prints total function/line coverage, and prints artifact paths.
 - **Lines-of-code helper:** `./scripts/lines_of_code.sh` reports line totals for `src/` and `include/`.
 - **CTest:** from `build-debug/` run `ctest --output-on-failure`.
-- **Direct test binary runs:** execute `build-debug/PrimeStruct_tests` from `build-debug/` so compile-run suites can resolve `./primec`.
+- **Direct test binary runs:** execute `build-debug/PrimeStruct_backend_tests` from `build-debug/` so compile-run suites can resolve `./primec`; use `PrimeStruct_misc_tests`, `PrimeStruct_semantics_tests`, `PrimeStruct_text_filter_tests`, or `PrimeStruct_parser_tests` for narrower doctest runs.
 
 ## Generated artifacts
 - Debug builds go in `build-debug/`; release builds go in `build-release/`.
@@ -110,7 +110,7 @@ build and layout solidify.
   linking `primec_ir_lib` + `primec_runtime_lib` over the broader backend umbrellas.
 - **Doctest target layout:** when a test source only exercises compile-pipeline/frontend/IR APIs,
   prefer a dedicated doctest binary linked to `primec_ir_lib` or `primec_frontend_lib` instead of
-  folding it into the broad `PrimeStruct_tests -> primec_lib` target.
+  routing it through `PrimeStruct_backend_tests` or the `primec_lib` compatibility umbrella.
 - **Include-layer guardrails:** `ctest` now runs `scripts/check_include_layers.py`. Public headers
   must not include `src/` or `tests/` files, production sources must not include `tests/`, and any
   remaining direct `tests -> src/` includes must be listed narrowly in

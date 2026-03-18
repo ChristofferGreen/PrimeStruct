@@ -284,35 +284,31 @@ primestructEnableWarnings(primevm)
 if(PRIMESTRUCT_BUILD_TESTS)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   enable_testing()
-  add_executable(PrimeStruct_tests
+
+  add_executable(PrimeStruct_misc_tests
     tests/unit/test_main.cpp
-    tests/unit/test_parser_basic.cpp
     tests/unit/test_import_resolver.cpp
     tests/unit/test_import_errors.cpp
     tests/unit/test_import_multiple.cpp
     tests/unit/test_ast_ir_dump.cpp
     tests/unit/test_ast_ir_dump_namespace.cpp
-    tests/unit/test_parser_errors.cpp
-    tests/unit/test_parser_errors_more.cpp
-    tests/unit/test_execution_parsing.cpp
-    tests/unit/test_execution_whitespace.cpp
-    tests/unit/test_ir_pipeline.cpp
-    tests/unit/test_template_parsing.cpp
-    tests/unit/test_compile_run.cpp
-    tests/unit/test_text_filter_helpers.cpp
-    tests/unit/test_text_filter_pipeline_basics.cpp
-    tests/unit/test_text_filter_pipeline_rewrites.cpp
-    tests/unit/test_text_filter_pipeline_implicit_utf8.cpp
-    tests/unit/test_text_filter_pipeline_implicit_i32.cpp
-    tests/unit/test_text_filter_pipeline_collections.cpp
     tests/unit/test_printers_manual.cpp
     tests/unit/test_semantics_manual.cpp
     tests/unit/test_lexer.cpp
     tests/unit/test_diagnostics_codes.cpp
   )
-  target_include_directories(PrimeStruct_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
-  target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)
-  primestructEnableWarnings(PrimeStruct_tests)
+  target_include_directories(PrimeStruct_misc_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_misc_tests PRIVATE primec_ir_lib)
+  primestructEnableWarnings(PrimeStruct_misc_tests)
+
+  add_executable(PrimeStruct_backend_tests
+    tests/unit/test_main.cpp
+    tests/unit/test_ir_pipeline.cpp
+    tests/unit/test_compile_run.cpp
+  )
+  target_include_directories(PrimeStruct_backend_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_backend_lib)
+  primestructEnableWarnings(PrimeStruct_backend_tests)
 
   add_executable(PrimeStruct_semantics_tests
     tests/unit/test_main.cpp
@@ -348,12 +344,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_parser_tests PRIVATE primec_frontend_lib)
   primestructEnableWarnings(PrimeStruct_parser_tests)
 
-  set(PrimeStructTestSuites
+  set(PrimeStructMiscTestSuites
     primestruct.dumps.ast_ir
     primestruct.dumps.namespace
     primestruct.imports.errors
     primestruct.imports.multiple
     primestruct.imports.resolver
+    primestruct.lexer
+    primestruct.printers.manual
+    primestruct.semantics.manual
+    primestruct.diagnostics.codes
+  )
+
+  set(PrimeStructBackendTestSuites
     primestruct.ir.pipeline.serialization
     primestruct.ir.pipeline.pointers
     primestruct.ir.pipeline.conversions
@@ -364,10 +367,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.pipeline.gpu
     primestruct.ir.pipeline.validation
     primestruct.vm.debug.session
-    primestruct.lexer
-    primestruct.printers.manual
-    primestruct.semantics.manual
-    primestruct.diagnostics.codes
   )
 
   set(PrimeStructSemanticsTestSuites
@@ -430,10 +429,18 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.parser.templates
   )
 
-  foreach(suite IN LISTS PrimeStructTestSuites)
+  foreach(suite IN LISTS PrimeStructMiscTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_tests> "--test-suite=${suite}")
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_misc_tests> "--test-suite=${suite}")
+    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+  endforeach()
+
+  foreach(suite IN LISTS PrimeStructBackendTestSuites)
+    string(REPLACE "." "_" suiteId "${suite}")
+    set(testName "PrimeStruct_${suiteId}")
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_backend_tests> "--test-suite=${suite}")
     set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()
@@ -472,8 +479,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   function(addPrimeStructDoctestSuite suite)
     set(options)
-    set(oneValueArgs TIMEOUT LABEL SHARD_NAME FIRST LAST SOURCE_FILE TEST_CASE TEST_CASE_EXCLUDE)
+    set(oneValueArgs TARGET TIMEOUT LABEL SHARD_NAME FIRST LAST SOURCE_FILE TEST_CASE TEST_CASE_EXCLUDE)
     cmake_parse_arguments(PrimeStructSuite "${options}" "${oneValueArgs}" "" ${ARGN})
+    if (NOT PrimeStructSuite_TARGET)
+      set(PrimeStructSuite_TARGET PrimeStruct_backend_tests)
+    endif()
     if (NOT PrimeStructSuite_TIMEOUT)
       set(PrimeStructSuite_TIMEOUT 300)
     endif()
@@ -505,7 +515,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
                               "--last=${PrimeStructSuite_LAST}")
     endif()
 
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_tests> ${commandArgs})
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
     set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE TIMEOUT "${PrimeStructSuite_TIMEOUT}")
     if (PrimeStructSuite_LABEL)
       set_tests_properties("${testName}" PROPERTIES LABELS "${PrimeStructSuite_LABEL}")
@@ -768,23 +778,45 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # VM compile-run coverage is broader than the current VM runtime surface.
   # Keep the unsupported shards disabled until image IO, GPU dispatch fallback,
   # and the stdlib/experimental map shim paths are implemented for the VM.
-  set(PrimeStructRegisteredSuites
-    ${PrimeStructTestSuites}
-    ${PrimeStructParserTestSuites}
-    ${PrimeStructTextFilterTestSuites}
+  function(addPrimeStructSuiteRegistration testName target expectedSuitesFileName)
+    set(expectedSuitesFile "${CMAKE_CURRENT_BINARY_DIR}/${expectedSuitesFileName}")
+    file(WRITE "${expectedSuitesFile}" "")
+    foreach(suite IN LISTS ARGN)
+      file(APPEND "${expectedSuitesFile}" "${suite}\n")
+    endforeach()
+    add_test(
+      NAME "${testName}"
+      COMMAND ${CMAKE_COMMAND}
+              -DTEST_BINARY=$<TARGET_FILE:${target}>
+              -DEXPECTED_SUITES_FILE=${expectedSuitesFile}
+              -P ${CMAKE_SOURCE_DIR}/cmake/CheckDoctestSuites.cmake
+    )
+    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
+  endfunction()
+
+  addPrimeStructSuiteRegistration(
+    PrimeStruct_misc_suite_registration
+    PrimeStruct_misc_tests
+    expected_misc_doctest_suites.txt
+    ${PrimeStructMiscTestSuites}
+  )
+  addPrimeStructSuiteRegistration(
+    PrimeStruct_backend_suite_registration
+    PrimeStruct_backend_tests
+    expected_backend_doctest_suites.txt
+    ${PrimeStructBackendTestSuites}
     ${PrimeStructCompileRunSuites}
   )
-  set(PrimeStructExpectedSuitesFile "${CMAKE_CURRENT_BINARY_DIR}/expected_doctest_suites.txt")
-  file(WRITE "${PrimeStructExpectedSuitesFile}" "")
-  foreach(suite IN LISTS PrimeStructRegisteredSuites)
-    file(APPEND "${PrimeStructExpectedSuitesFile}" "${suite}\n")
-  endforeach()
-  add_test(
-    NAME PrimeStruct_suite_registration
-    COMMAND ${CMAKE_COMMAND}
-            -DTEST_BINARY=$<TARGET_FILE:PrimeStruct_tests>
-            -DEXPECTED_SUITES_FILE=${PrimeStructExpectedSuitesFile}
-            -P ${CMAKE_SOURCE_DIR}/cmake/CheckDoctestSuites.cmake
+  addPrimeStructSuiteRegistration(
+    PrimeStruct_parser_suite_registration
+    PrimeStruct_parser_tests
+    expected_parser_doctest_suites.txt
+    ${PrimeStructParserTestSuites}
   )
-  set_tests_properties(PrimeStruct_suite_registration PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
+  addPrimeStructSuiteRegistration(
+    PrimeStruct_text_filter_suite_registration
+    PrimeStruct_text_filter_tests
+    expected_text_filter_doctest_suites.txt
+    ${PrimeStructTextFilterTestSuites}
+  )
 endif()

@@ -133,7 +133,13 @@ if [[ $RUN_TESTS -eq 1 ]]; then
     profdata="$report_dir/PrimeStruct.profdata"
     "$LLVM_PROFDATA" merge -sparse "$profile_dir"/*.profraw -o "$profdata"
 
-    bins=("$BUILD_DIR/PrimeStruct_tests")
+    bins=(
+      "$BUILD_DIR/PrimeStruct_misc_tests"
+      "$BUILD_DIR/PrimeStruct_backend_tests"
+      "$BUILD_DIR/PrimeStruct_semantics_tests"
+      "$BUILD_DIR/PrimeStruct_text_filter_tests"
+      "$BUILD_DIR/PrimeStruct_parser_tests"
+    )
     for bin in "${bins[@]}"; do
       if [[ ! -x "$bin" ]]; then
         echo "[compile.sh] ERROR: coverage binary not found: $bin" >&2
