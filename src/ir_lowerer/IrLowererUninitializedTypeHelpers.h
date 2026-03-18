@@ -68,8 +68,10 @@ struct UninitializedFieldStorageAccessInfo {
 };
 
 struct UninitializedStorageAccessInfo {
-  enum class Location { Local, Field } location = Location::Local;
+  enum class Location { Local, Field, Indirect } location = Location::Local;
   const LocalInfo *local = nullptr;
+  const LocalInfo *pointer = nullptr;
+  const Expr *pointerExpr = nullptr;
   const LocalInfo *receiver = nullptr;
   StructSlotFieldInfo fieldSlot;
   UninitializedTypeInfo typeInfo;

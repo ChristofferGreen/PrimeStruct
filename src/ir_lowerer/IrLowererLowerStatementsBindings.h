@@ -220,6 +220,27 @@
       setReferenceArrayInfo(stmt, info);
       applyStructArrayInfo(stmt, info);
       applyStructValueInfo(stmt, info);
+      for (const auto &transform : stmt.transforms) {
+        if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
+          std::string targetType;
+          if (ir_lowerer::extractTopLevelUninitializedTypeText(transform.templateArgs.front(), targetType)) {
+            info.targetsUninitializedStorage = true;
+            break;
+          }
+        }
+      }
+      if (!info.targetsUninitializedStorage && init.kind == Expr::Kind::Name) {
+        auto existing = localsIn.find(init.name);
+        if (existing != localsIn.end() &&
+            (existing->second.kind == LocalInfo::Kind::Pointer ||
+             existing->second.kind == LocalInfo::Kind::Reference)) {
+          info.targetsUninitializedStorage = existing->second.targetsUninitializedStorage;
+        }
+      }
+      if (!info.targetsUninitializedStorage && isPointerMemoryIntrinsicCall(init)) {
+        info.targetsUninitializedStorage =
+            inferPointerMemoryIntrinsicTargetsUninitializedStorage(init, localsIn);
+      }
       if ((info.kind == LocalInfo::Kind::Pointer || info.kind == LocalInfo::Kind::Reference) &&
           info.structTypeName.empty()) {
         std::function<std::string(const Expr &)> inferPointerStructType = [&](const Expr &exprIn) -> std::string {
@@ -239,8 +260,10 @@
           std::string memoryBuiltin;
           if (getBuiltinMemoryName(exprIn, memoryBuiltin)) {
             if (memoryBuiltin == "alloc" && exprIn.templateArgs.size() == 1) {
+              const std::string targetType =
+                  ir_lowerer::unwrapTopLevelUninitializedTypeText(exprIn.templateArgs.front());
               std::string resolvedStruct;
-              if (resolveStructTypeName(exprIn.templateArgs.front(), exprIn.namespacePrefix, resolvedStruct)) {
+              if (resolveStructTypeName(targetType, exprIn.namespacePrefix, resolvedStruct)) {
                 return resolvedStruct;
               }
               return "";
@@ -292,9 +315,14 @@
             info.resultErrorType = transform.templateArgs.back();
           }
         } else if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
+          const std::string originalTargetType = trimTemplateTypeText(transform.templateArgs.front());
+          std::string targetType = originalTargetType;
+          if (ir_lowerer::extractTopLevelUninitializedTypeText(originalTargetType, targetType)) {
+            info.targetsUninitializedStorage = true;
+          }
           std::string wrappedBase;
           std::string wrappedArg;
-          if (splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          if (splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
               normalizeCollectionBindingTypeName(wrappedBase) == "File") {
             info.isFileHandle = true;
             info.valueKind = LocalInfo::ValueKind::Int64;
@@ -302,7 +330,7 @@
           bool resultHasValue = false;
           LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
           std::string resultErrorType;
-          if (parseResultTypeName(transform.templateArgs.front(), resultHasValue, resultValueKind, resultErrorType)) {
+          if (parseResultTypeName(targetType, resultHasValue, resultValueKind, resultErrorType)) {
             info.isResult = true;
             info.resultHasValue = resultHasValue;
             info.resultValueKind = resultValueKind;

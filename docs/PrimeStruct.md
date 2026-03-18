@@ -1047,9 +1047,11 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and optional values).
 - **Envelope:** `uninitialized<T>` allocates space for `T` but does not construct a `T` value.
 - **Allowed locations:** local bindings and struct fields only. `uninitialized<T>` is rejected for parameters, return types,
-  collection elements, pointer/reference targets, or template arguments to user-defined types.
+  collection elements, nested pointer/reference targets, or template arguments to user-defined types. Top-level
+  `Pointer<uninitialized<T>>` and `Reference<uninitialized<T>>` wrappers are allowed as storage handles.
 - **Initialization:** `init(storage, value)` constructs `T` in-place.
-  - `storage` must be `uninitialized<T>` and must be definitely uninitialized at the call site.
+  - `storage` must be `uninitialized<T>` or `dereference(ptr)` where `ptr` is `Pointer<uninitialized<T>>` or
+    `Reference<uninitialized<T>>`, and it must be definitely uninitialized at the call site.
   - `value` is consumed (move-by-default); use `clone(value)` to duplicate.
   - After `init`, the storage is definitely initialized.
 - **Destruction:** `drop(storage)` destroys the in-place value and marks the storage uninitialized.

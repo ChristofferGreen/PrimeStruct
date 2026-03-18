@@ -55,6 +55,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer targets allow top-level uninitialized storage") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<uninitialized<i32>>] ptr{/std/intrinsics/memory/alloc<uninitialized<i32>>(1i32)}
+  init(dereference(ptr), 7i32)
+  [i32] out{take(dereference(ptr))}
+  /std/intrinsics/memory/free(ptr)
+  return(out)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reference targets allow top-level uninitialized storage") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] ref{location(storage)}
+  init(dereference(ref), 7i32)
+  return(take(dereference(ref)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("memory at validates checked pointer access") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

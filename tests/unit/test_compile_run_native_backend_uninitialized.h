@@ -44,6 +44,71 @@ main() {
   CHECK(readFile(errPath).find("return requires uninitialized storage to be dropped") != std::string::npos);
 }
 
+TEST_CASE("compiles and runs native pointer-backed uninitialized storage") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<uninitialized<i32>>] ptr{/std/intrinsics/memory/alloc<uninitialized<i32>>(1i32)}
+  init(dereference(ptr), 7i32)
+  [i32] out{take(dereference(ptr))}
+  /std/intrinsics/memory/free(ptr)
+  return(out)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_uninitialized_pointer.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_uninitialized_pointer_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs native reference-backed uninitialized storage") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] ref{location(storage)}
+  init(dereference(ref), 7i32)
+  return(take(dereference(ref)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_uninitialized_reference.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_uninitialized_reference_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs native pointer-backed uninitialized struct storage") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<uninitialized<Pair>>] ptr{/std/intrinsics/memory/alloc<uninitialized<Pair>>(1i32)}
+  init(dereference(ptr), Pair(3i32, 9i32))
+  [Pair] value{take(dereference(ptr))}
+  /std/intrinsics/memory/free(ptr)
+  return(value.right)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_uninitialized_pointer_struct.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_uninitialized_pointer_struct_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles and runs native uninitialized struct field") {
   const std::string source = R"(
 [struct]

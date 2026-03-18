@@ -86,6 +86,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const BindingKindFn &bindingKind,
                                                        const BindingValueKindFn &bindingValueKind,
                                                        const InferBindingExprKindFn &inferExprKind);
+bool isPointerMemoryIntrinsicCall(const Expr &expr);
+bool inferPointerMemoryIntrinsicTargetsUninitializedStorage(const Expr &expr, const LocalMap &localsIn);
 
 bool selectUninitializedStorageZeroInstruction(LocalInfo::Kind kind,
                                                LocalInfo::ValueKind valueKind,

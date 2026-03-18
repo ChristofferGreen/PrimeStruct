@@ -1,6 +1,7 @@
 #include "IrLowererOperatorConversionsAndCallsHelpers.h"
 
 #include "IrLowererCallHelpers.h"
+#include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 
@@ -33,7 +34,8 @@ std::string inferPointerStructTypePath(
   if (getBuiltinMemoryName(expr, memoryBuiltin)) {
     if (memoryBuiltin == "alloc" && expr.templateArgs.size() == 1) {
       std::string resolvedStruct;
-      if (resolveStructTypeName(expr.templateArgs.front(), expr.namespacePrefix, resolvedStruct)) {
+      const std::string targetType = unwrapTopLevelUninitializedTypeText(expr.templateArgs.front());
+      if (resolveStructTypeName(targetType, expr.namespacePrefix, resolvedStruct)) {
         return resolvedStruct;
       }
       return "";
@@ -539,7 +541,7 @@ bool emitConversionsAndCallsOperatorExpr(
           }
 
           int32_t slotCountMultiplier = 1;
-          const std::string &targetTypeName = expr.templateArgs.front();
+          const std::string targetTypeName = unwrapTopLevelUninitializedTypeText(expr.templateArgs.front());
           LocalInfo::ValueKind targetKind = valueKindFromTypeName(targetTypeName);
           if (targetKind == LocalInfo::ValueKind::Unknown) {
             std::string resolvedStructType;

@@ -193,6 +193,22 @@
               }
               return true;
             };
+            auto emitIndirectPointer = [&](const Expr &pointerExpr, int32_t ptrLocal) -> bool {
+              if (pointerExpr.kind == Expr::Kind::Name) {
+                auto it = localsIn.find(pointerExpr.name);
+                if (it != localsIn.end() &&
+                    (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {
+                  function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+                  function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+                  return true;
+                }
+              }
+              if (!emitExpr(pointerExpr, localsIn)) {
+                return false;
+              }
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+              return true;
+            };
             if (access.location == UninitializedStorageAccess::Location::Local) {
               const LocalInfo &storageInfo = *access.local;
               if (isBorrow) {
@@ -245,6 +261,38 @@
                 function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
                 function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
                 if (!emitStructCopyFromPtrs(destPtrLocal, ptrLocal, field.slotCount)) {
+                  return false;
+                }
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+                return true;
+              }
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+              return true;
+            }
+            if (access.location == UninitializedStorageAccess::Location::Indirect) {
+              const int32_t ptrLocal = allocTempLocal();
+              if (access.pointerExpr == nullptr || !emitIndirectPointer(*access.pointerExpr, ptrLocal)) {
+                return false;
+              }
+              if (isBorrow) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+                return true;
+              }
+              if (!access.typeInfo.structPath.empty()) {
+                StructSlotLayout layout;
+                if (!resolveStructSlotLayout(access.typeInfo.structPath, layout)) {
+                  return false;
+                }
+                const int32_t baseLocal = nextLocal;
+                nextLocal += layout.totalSlots;
+                function.instructions.push_back(
+                    {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+                const int32_t destPtrLocal = allocTempLocal();
+                function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+                if (!emitStructCopyFromPtrs(destPtrLocal, ptrLocal, layout.totalSlots)) {
                   return false;
                 }
                 function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});

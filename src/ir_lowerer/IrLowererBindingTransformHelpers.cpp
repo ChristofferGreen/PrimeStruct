@@ -1,5 +1,9 @@
 #include "IrLowererBindingTransformHelpers.h"
 
+#include "IrLowererBindingTypeHelpers.h"
+#include "IrLowererHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
+
 namespace primec::ir_lowerer {
 
 bool isBindingMutable(const Expr &expr) {
@@ -76,6 +80,28 @@ bool extractUninitializedTemplateArg(const Expr &expr, std::string &typeTextOut)
     return true;
   }
   return false;
+}
+
+bool extractTopLevelUninitializedTypeText(const std::string &typeText, std::string &typeTextOut) {
+  const std::string trimmedType = trimTemplateTypeText(typeText);
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimmedType, base, argText)) {
+    return false;
+  }
+  if (normalizeCollectionBindingTypeName(base) != "uninitialized") {
+    return false;
+  }
+  typeTextOut = trimTemplateTypeText(argText);
+  return !typeTextOut.empty();
+}
+
+std::string unwrapTopLevelUninitializedTypeText(const std::string &typeText) {
+  std::string innerType;
+  if (extractTopLevelUninitializedTypeText(typeText, innerType)) {
+    return innerType;
+  }
+  return trimTemplateTypeText(typeText);
 }
 
 bool isArgsPackBinding(const Expr &expr) {

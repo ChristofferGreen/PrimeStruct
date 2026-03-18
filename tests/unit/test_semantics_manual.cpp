@@ -1650,12 +1650,12 @@ TEST_CASE("uninitialized struct fields are allowed") {
   CHECK(validateProgram(program, "/main", error));
 }
 
-TEST_CASE("uninitialized not allowed in pointer targets") {
+TEST_CASE("nested uninitialized remains disallowed in pointer targets") {
   primec::Program program;
   primec::Expr valueBinding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
   primec::Expr init = makeCall("location", {makeName("value")});
   primec::Expr binding =
-      makeBinding("ptr", {makeTransform("Pointer", std::string("uninitialized<i32>"))}, {init});
+      makeBinding("ptr", {makeTransform("Pointer", std::string("uninitialized<array<uninitialized<i32>>>"))}, {init});
   program.definitions.push_back(makeDefinition("/main",
                                                {makeTransform("return", std::string("void"))},
                                                {valueBinding, binding, makeCall("/return")}));
@@ -1664,12 +1664,12 @@ TEST_CASE("uninitialized not allowed in pointer targets") {
   CHECK(error.find("uninitialized storage is not allowed in pointer targets") != std::string::npos);
 }
 
-TEST_CASE("uninitialized not allowed in reference targets") {
+TEST_CASE("nested uninitialized remains disallowed in reference targets") {
   primec::Program program;
   primec::Expr valueBinding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
   primec::Expr init = makeCall("location", {makeName("value")});
   primec::Expr binding =
-      makeBinding("ref", {makeTransform("Reference", std::string("uninitialized<i32>"))}, {init});
+      makeBinding("ref", {makeTransform("Reference", std::string("uninitialized<array<uninitialized<i32>>>"))}, {init});
   program.definitions.push_back(makeDefinition("/main",
                                                {makeTransform("return", std::string("void"))},
                                                {valueBinding, binding, makeCall("/return")}));

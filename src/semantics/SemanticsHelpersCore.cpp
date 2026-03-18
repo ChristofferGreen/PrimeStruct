@@ -1829,21 +1829,21 @@ bool parseBindingInfo(const Expr &expr,
     }
     return false;
   };
+  auto trimTypeText = [](const std::string &value) -> std::string {
+    size_t start = 0;
+    while (start < value.size() && std::isspace(static_cast<unsigned char>(value[start])) != 0) {
+      ++start;
+    }
+    size_t end = value.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(value[end - 1])) != 0) {
+      --end;
+    }
+    return value.substr(start, end - start);
+  };
   auto containsUninitializedType = [&](const std::string &text) -> bool {
-    auto trim = [](const std::string &value) -> std::string {
-      size_t start = 0;
-      while (start < value.size() && std::isspace(static_cast<unsigned char>(value[start])) != 0) {
-        ++start;
-      }
-      size_t end = value.size();
-      while (end > start && std::isspace(static_cast<unsigned char>(value[end - 1])) != 0) {
-        --end;
-      }
-      return value.substr(start, end - start);
-    };
     std::function<bool(const std::string &)> contains;
     contains = [&](const std::string &value) -> bool {
-      std::string trimmed = trim(value);
+      std::string trimmed = trimTypeText(value);
       if (trimmed.empty()) {
         return false;
       }
@@ -1853,7 +1853,7 @@ bool parseBindingInfo(const Expr &expr,
       std::string base;
       std::string arg;
       if (splitTemplateTypeName(trimmed, base, arg)) {
-        base = trim(base);
+        base = trimTypeText(base);
         if (!base.empty() && base[0] == '/') {
           base.erase(0, 1);
         }
@@ -1873,6 +1873,18 @@ bool parseBindingInfo(const Expr &expr,
       return trimmed == "uninitialized";
     };
     return contains(text);
+  };
+  auto extractTopLevelUninitializedTarget = [&](const std::string &typeText, std::string &innerTypeOut) -> bool {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(trimTypeText(typeText), base, argText)) {
+      return false;
+    }
+    if (normalizeBindingTypeName(trimTypeText(base)) != "uninitialized") {
+      return false;
+    }
+    innerTypeOut = trimTypeText(argText);
+    return !innerTypeOut.empty();
   };
   auto isSupportedPointerReferenceTarget = [&](const std::string &targetType, std::string &unsupportedError) -> bool {
     const std::string normalizedTarget = normalizeBindingTypeName(targetType);
@@ -1942,12 +1954,18 @@ bool parseBindingInfo(const Expr &expr,
       error = "Pointer requires a template argument";
       return false;
     }
-    if (containsUninitializedType(info.typeTemplateArg)) {
+    std::string pointerTargetType = info.typeTemplateArg;
+    if (extractTopLevelUninitializedTarget(info.typeTemplateArg, pointerTargetType)) {
+      if (containsUninitializedType(pointerTargetType)) {
+        error = "uninitialized storage is not allowed in pointer targets";
+        return false;
+      }
+    } else if (containsUninitializedType(info.typeTemplateArg)) {
       error = "uninitialized storage is not allowed in pointer targets";
       return false;
     }
     std::string unsupportedTarget;
-    if (!isSupportedPointerReferenceTarget(info.typeTemplateArg, unsupportedTarget)) {
+    if (!isSupportedPointerReferenceTarget(pointerTargetType, unsupportedTarget)) {
       error = "unsupported pointer target type: " + unsupportedTarget;
       return false;
     }
@@ -1957,12 +1975,18 @@ bool parseBindingInfo(const Expr &expr,
       error = "Reference requires a template argument";
       return false;
     }
-    if (containsUninitializedType(info.typeTemplateArg)) {
+    std::string referenceTargetType = info.typeTemplateArg;
+    if (extractTopLevelUninitializedTarget(info.typeTemplateArg, referenceTargetType)) {
+      if (containsUninitializedType(referenceTargetType)) {
+        error = "uninitialized storage is not allowed in reference targets";
+        return false;
+      }
+    } else if (containsUninitializedType(info.typeTemplateArg)) {
       error = "uninitialized storage is not allowed in reference targets";
       return false;
     }
     std::string unsupportedTarget;
-    if (!isSupportedPointerReferenceTarget(info.typeTemplateArg, unsupportedTarget)) {
+    if (!isSupportedPointerReferenceTarget(referenceTargetType, unsupportedTarget)) {
       error = "unsupported reference target type: " + unsupportedTarget;
       return false;
     }

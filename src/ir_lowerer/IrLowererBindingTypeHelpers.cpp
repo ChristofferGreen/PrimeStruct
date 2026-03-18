@@ -111,7 +111,7 @@ bool isFileErrorBindingType(const Expr &expr) {
       return true;
     }
     if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1 &&
-        trimTemplateTypeText(transform.templateArgs.front()) == "FileError") {
+        unwrapTopLevelUninitializedTypeText(transform.templateArgs.front()) == "FileError") {
       return true;
     }
   }
@@ -126,7 +126,7 @@ LocalInfo::ValueKind bindingValueKindFromTransforms(const Expr &expr, LocalInfo:
     const std::string normalizedName = normalizeCollectionBindingTypeName(transform.name);
     if (normalizedName == "Pointer" || normalizedName == "Reference") {
       if (transform.templateArgs.size() == 1) {
-        return valueKindFromTypeName(transform.templateArgs.front());
+        return valueKindFromTypeName(unwrapTopLevelUninitializedTypeText(transform.templateArgs.front()));
       }
       return LocalInfo::ValueKind::Unknown;
     }
@@ -175,9 +175,10 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
         transform.templateArgs.size() != 1) {
       continue;
     }
+    const std::string targetType = unwrapTopLevelUninitializedTypeText(transform.templateArgs.front());
     std::string base;
     std::string arg;
-    if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg)) {
+    if (!splitTemplateTypeName(targetType, base, arg)) {
       return;
     }
     base = normalizeCollectionBindingTypeName(base);

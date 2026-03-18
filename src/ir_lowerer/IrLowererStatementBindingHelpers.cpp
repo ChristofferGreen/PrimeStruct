@@ -295,7 +295,7 @@ void applyArgsPackElementStructMetadata(const Expr &param,
   }
 }
 
-bool isPointerMemoryIntrinsicCall(const Expr &expr) {
+bool isPointerMemoryIntrinsicCallImpl(const Expr &expr) {
   std::string builtinName;
   if (expr.kind != Expr::Kind::Call || !getBuiltinMemoryName(expr, builtinName)) {
     return false;
@@ -312,7 +312,7 @@ LocalInfo::ValueKind inferPointerMemoryIntrinsicValueKind(const Expr &expr,
     return LocalInfo::ValueKind::Unknown;
   }
   if (builtinName == "alloc" && expr.templateArgs.size() == 1) {
-    return valueKindFromTypeName(expr.templateArgs.front());
+    return valueKindFromTypeName(unwrapTopLevelUninitializedTypeText(expr.templateArgs.front()));
   }
   if ((builtinName == "realloc" && expr.args.size() == 2) || (builtinName == "at" && expr.args.size() == 3) ||
       (builtinName == "at_unsafe" && expr.args.size() == 2)) {
@@ -351,6 +351,26 @@ std::string inferPointerMemoryIntrinsicStructType(const Expr &expr, const LocalM
   return "";
 }
 
+bool inferPointerMemoryIntrinsicTargetsUninitializedStorageImpl(const Expr &expr, const LocalMap &localsIn) {
+  std::string builtinName;
+  if (expr.kind != Expr::Kind::Call || !getBuiltinMemoryName(expr, builtinName)) {
+    return false;
+  }
+  if (builtinName == "alloc" && expr.templateArgs.size() == 1) {
+    std::string targetType;
+    return extractTopLevelUninitializedTypeText(expr.templateArgs.front(), targetType);
+  }
+  if ((builtinName == "realloc" && expr.args.size() == 2) || (builtinName == "at" && expr.args.size() == 3) ||
+      (builtinName == "at_unsafe" && expr.args.size() == 2)) {
+    if (expr.args.front().kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(expr.args.front().name);
+    return it != localsIn.end() && it->second.targetsUninitializedStorage;
+  }
+  return false;
+}
+
 LocalInfo::ValueKind inferSpecialCallValueKind(const Expr &expr) {
   if (!(expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
         expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result")) {
@@ -369,6 +389,14 @@ LocalInfo::ValueKind inferSpecialCallValueKind(const Expr &expr) {
 }
 
 } // namespace
+
+bool inferPointerMemoryIntrinsicTargetsUninitializedStorage(const Expr &expr, const LocalMap &localsIn) {
+  return inferPointerMemoryIntrinsicTargetsUninitializedStorageImpl(expr, localsIn);
+}
+
+bool isPointerMemoryIntrinsicCall(const Expr &expr) {
+  return isPointerMemoryIntrinsicCallImpl(expr);
+}
 
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const Expr &init,
@@ -506,6 +534,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
     infoOut.kind = LocalInfo::Kind::Pointer;
     infoOut.valueKind = inferPointerMemoryIntrinsicValueKind(param.args.front(), localsForKindInference, inferExprKind);
     infoOut.structTypeName = inferPointerMemoryIntrinsicStructType(param.args.front(), localsForKindInference);
+    infoOut.targetsUninitializedStorage =
+        inferPointerMemoryIntrinsicTargetsUninitializedStorage(param.args.front(), localsForKindInference);
   } else if (param.args.size() == 1 && infoOut.kind == LocalInfo::Kind::Value) {
     infoOut.valueKind = inferExprKind(param.args.front(), localsForKindInference);
     if (infoOut.valueKind == LocalInfo::ValueKind::Unknown) {
@@ -540,34 +570,39 @@ bool inferCallParameterLocalInfo(const Expr &param,
         infoOut.resultErrorType = transform.templateArgs.back();
       }
     } else if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
+      const std::string originalTargetType = trimTemplateTypeText(transform.templateArgs.front());
+      std::string targetType = originalTargetType;
+      if (extractTopLevelUninitializedTypeText(originalTargetType, targetType)) {
+        infoOut.targetsUninitializedStorage = true;
+      }
       std::string wrappedBase;
       std::string wrappedArg;
-      if (splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+      if (splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
           normalizeCollectionBindingTypeName(wrappedBase) == "File") {
         infoOut.isFileHandle = true;
         infoOut.valueKind = LocalInfo::ValueKind::Int64;
       }
       if (transform.name == "Pointer" &&
-          splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
           normalizeCollectionBindingTypeName(wrappedBase) == "array") {
         infoOut.pointerToArray = true;
         infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(wrappedArg));
       }
       if (transform.name == "Pointer" &&
-          splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
           normalizeCollectionBindingTypeName(wrappedBase) == "vector") {
         infoOut.pointerToVector = true;
         infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(wrappedArg));
       }
       if (transform.name == "Pointer" &&
-          splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
           normalizeCollectionBindingTypeName(wrappedBase) == "soa_vector") {
         infoOut.pointerToVector = true;
         infoOut.isSoaVector = true;
         infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(wrappedArg));
       }
       if (transform.name == "Pointer" &&
-          splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
           normalizeCollectionBindingTypeName(wrappedBase) == "map") {
         std::vector<std::string> args;
         if (splitTemplateArgs(wrappedArg, args) && args.size() == 2) {
@@ -578,7 +613,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
         }
       }
       if (transform.name == "Pointer" &&
-          splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase, wrappedArg) &&
+          splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
           normalizeCollectionBindingTypeName(wrappedBase) == "Buffer") {
         infoOut.pointerToBuffer = true;
         infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(wrappedArg));
@@ -586,7 +621,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
       bool resultHasValue = false;
       LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
       std::string resultErrorType;
-      if (parseResultTypeName(transform.templateArgs.front(), resultHasValue, resultValueKind, resultErrorType)) {
+      if (parseResultTypeName(targetType, resultHasValue, resultValueKind, resultErrorType)) {
         infoOut.isResult = true;
         infoOut.resultHasValue = resultHasValue;
         infoOut.resultValueKind = resultValueKind;
@@ -775,6 +810,22 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     }
     return true;
   };
+  auto emitIndirectPointer = [&](const Expr &pointerExpr, int32_t ptrLocal) -> bool {
+    if (pointerExpr.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(pointerExpr.name);
+      if (it != localsIn.end() &&
+          (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+        return true;
+      }
+    }
+    if (!emitExpr(pointerExpr, localsIn)) {
+      return false;
+    }
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+    return true;
+  };
 
   const Expr &valueExpr = stmt.args.back();
   if (access.location == UninitializedStorageAccessInfo::Location::Local) {
@@ -818,6 +869,42 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
       const int32_t srcPtrLocal = allocTempLocal();
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
       if (!emitStructCopyFromPtrs(ptrLocal, srcPtrLocal, field.slotCount)) {
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      return UninitializedStorageInitDropEmitResult::Emitted;
+    }
+    if (!emitExpr(valueExpr, localsIn)) {
+      return UninitializedStorageInitDropEmitResult::Error;
+    }
+    const int32_t valueLocal = allocTempLocal();
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    return UninitializedStorageInitDropEmitResult::Emitted;
+  }
+
+  if (access.location == UninitializedStorageAccessInfo::Location::Indirect) {
+    if (access.pointerExpr == nullptr) {
+      error = "native backend could not resolve uninitialized pointer target";
+      return UninitializedStorageInitDropEmitResult::Error;
+    }
+    const int32_t ptrLocal = allocTempLocal();
+    if (!emitIndirectPointer(*access.pointerExpr, ptrLocal)) {
+      return UninitializedStorageInitDropEmitResult::Error;
+    }
+    if (!access.typeInfo.structPath.empty()) {
+      StructSlotLayoutInfo layout;
+      if (!resolveStructSlotLayout(access.typeInfo.structPath, layout)) {
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      if (!emitExpr(valueExpr, localsIn)) {
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      const int32_t srcPtrLocal = allocTempLocal();
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+      if (!emitStructCopyFromPtrs(ptrLocal, srcPtrLocal, layout.totalSlots)) {
         return UninitializedStorageInitDropEmitResult::Error;
       }
       return UninitializedStorageInitDropEmitResult::Emitted;

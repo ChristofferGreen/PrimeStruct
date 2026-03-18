@@ -34359,6 +34359,96 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve unified storage access"
                                                                     error));
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers resolve indirect storage access") {
+  primec::ir_lowerer::LocalMap locals;
+
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerInfo.index = 7;
+  pointerInfo.targetsUninitializedStorage = true;
+  pointerInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("ptr", pointerInfo);
+  const auto pointerIt = locals.find("ptr");
+  REQUIRE(pointerIt != locals.end());
+
+  primec::ir_lowerer::LocalInfo structRefInfo;
+  structRefInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  structRefInfo.index = 8;
+  structRefInfo.targetsUninitializedStorage = true;
+  structRefInfo.structTypeName = "/pkg/Pair";
+  locals.emplace("ref", structRefInfo);
+  const auto refIt = locals.find("ref");
+  REQUIRE(refIt != locals.end());
+
+  primec::ir_lowerer::LocalInfo localStorage;
+  localStorage.index = 9;
+  localStorage.isUninitializedStorage = true;
+  localStorage.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("slot", localStorage);
+  const auto slotIt = locals.find("slot");
+  REQUIRE(slotIt != locals.end());
+
+  auto findField = [](const std::string &, const std::string &, std::string &) { return false; };
+  auto resolveNamespacePrefix = [](const std::string &) { return std::string(); };
+  auto resolveTypeInfo = [](const std::string &,
+                            const std::string &,
+                            primec::ir_lowerer::UninitializedTypeInfo &) { return false; };
+  auto resolveSlot = [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+
+  primec::Expr pointerName;
+  pointerName.kind = primec::Expr::Kind::Name;
+  pointerName.name = "ptr";
+  primec::Expr derefPointer;
+  derefPointer.kind = primec::Expr::Kind::Call;
+  derefPointer.name = "dereference";
+  derefPointer.args = {pointerName};
+
+  primec::ir_lowerer::UninitializedStorageAccessInfo out;
+  bool resolved = false;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccess(
+      derefPointer, locals, findField, resolveNamespacePrefix, resolveTypeInfo, resolveSlot, out, resolved, error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Indirect);
+  CHECK(out.pointer == &pointerIt->second);
+  REQUIRE(out.pointerExpr != nullptr);
+  CHECK(out.pointerExpr->kind == primec::Expr::Kind::Name);
+  CHECK(out.typeInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Expr refName;
+  refName.kind = primec::Expr::Kind::Name;
+  refName.name = "ref";
+  primec::Expr derefRef;
+  derefRef.kind = primec::Expr::Kind::Call;
+  derefRef.name = "dereference";
+  derefRef.args = {refName};
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccess(
+      derefRef, locals, findField, resolveNamespacePrefix, resolveTypeInfo, resolveSlot, out, resolved, error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Indirect);
+  CHECK(out.pointer == &refIt->second);
+  CHECK(out.typeInfo.structPath == "/pkg/Pair");
+
+  primec::Expr slotName;
+  slotName.kind = primec::Expr::Kind::Name;
+  slotName.name = "slot";
+  primec::Expr locationExpr;
+  locationExpr.kind = primec::Expr::Kind::Call;
+  locationExpr.name = "location";
+  locationExpr.args = {slotName};
+  primec::Expr derefLocation;
+  derefLocation.kind = primec::Expr::Kind::Call;
+  derefLocation.name = "dereference";
+  derefLocation.args = {locationExpr};
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccess(
+      derefLocation, locals, findField, resolveNamespacePrefix, resolveTypeInfo, resolveSlot, out, resolved, error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Local);
+  CHECK(out.local == &slotIt->second);
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers resolve unified storage with field bindings") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo localStorage;
@@ -40947,6 +41037,140 @@ TEST_CASE("ir lowerer statement binding helper emits struct-storage init via ptr
                 bool &resolved) {
               access.location = primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Local;
               access.local = &storageInfo;
+              resolved = true;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI64, 1234});
+              return true;
+            },
+            [](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layout) {
+              if (structPath != "/Pair") {
+                return false;
+              }
+              layout.totalSlots = 3;
+              return true;
+            },
+            [&]() { return nextTempLocal++; },
+            [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) {
+              copiedSlotCount = slotCount;
+              instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(destPtrLocal)});
+              instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(srcPtrLocal)});
+              return true;
+            },
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(copiedSlotCount == 3);
+  CHECK_FALSE(instructions.empty());
+}
+
+TEST_CASE("ir lowerer statement binding helper emits indirect uninitialized init") {
+  using EmitResult = primec::ir_lowerer::UninitializedStorageInitDropEmitResult;
+
+  primec::Expr pointerExpr;
+  pointerExpr.kind = primec::Expr::Kind::Name;
+  pointerExpr.name = "ptr";
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Call;
+  storageExpr.name = "dereference";
+  storageExpr.args = {pointerExpr};
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Literal;
+  valueExpr.intWidth = 32;
+  valueExpr.literalValue = 77;
+
+  primec::Expr initCall;
+  initCall.kind = primec::Expr::Kind::Call;
+  initCall.name = "init";
+  initCall.args = {storageExpr, valueExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerInfo.index = 9;
+  pointerInfo.targetsUninitializedStorage = true;
+  locals.emplace("ptr", pointerInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextTempLocal = 50;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
+            initCall,
+            locals,
+            instructions,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::UninitializedStorageAccessInfo &access,
+                bool &resolved) {
+              access.location = primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Indirect;
+              access.pointer = &locals.find("ptr")->second;
+              access.pointerExpr = &storageExpr.args.front();
+              access.typeInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+              resolved = true;
+              return true;
+            },
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(expr.literalValue)});
+              return true;
+            },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
+            [&]() { return nextTempLocal++; },
+            [](int32_t, int32_t, int32_t) { return true; },
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 8);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 9);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[2].imm == 77);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[5].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[6].op == primec::IrOpcode::StoreIndirect);
+  CHECK(instructions[7].op == primec::IrOpcode::Pop);
+}
+
+TEST_CASE("ir lowerer statement binding helper emits indirect struct init via ptr copy") {
+  using EmitResult = primec::ir_lowerer::UninitializedStorageInitDropEmitResult;
+
+  primec::Expr refExpr;
+  refExpr.kind = primec::Expr::Kind::Name;
+  refExpr.name = "ref";
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Call;
+  storageExpr.name = "dereference";
+  storageExpr.args = {refExpr};
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Name;
+  valueExpr.name = "srcPtr";
+
+  primec::Expr initCall;
+  initCall.kind = primec::Expr::Kind::Call;
+  initCall.name = "init";
+  initCall.args = {storageExpr, valueExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo refInfo;
+  refInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  refInfo.index = 11;
+  refInfo.targetsUninitializedStorage = true;
+  refInfo.structTypeName = "/Pair";
+  locals.emplace("ref", refInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextTempLocal = 30;
+  int copiedSlotCount = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
+            initCall,
+            locals,
+            instructions,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::UninitializedStorageAccessInfo &access,
+                bool &resolved) {
+              access.location = primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Indirect;
+              access.pointer = &locals.find("ref")->second;
+              access.pointerExpr = &storageExpr.args.front();
+              access.typeInfo.structPath = "/Pair";
               resolved = true;
               return true;
             },

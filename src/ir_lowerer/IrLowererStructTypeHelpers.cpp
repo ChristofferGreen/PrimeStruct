@@ -926,7 +926,9 @@ void applyStructValueInfoFromBinding(const Expr &expr,
   if (typeName == "Reference" || typeName == "Pointer") {
     if (!typeTemplateArg.empty()) {
       std::string resolved;
-      if (resolveStructTypeName(typeTemplateArg, expr.namespacePrefix, resolved)) {
+      if (resolveStructTypeName(unwrapTopLevelUninitializedTypeText(typeTemplateArg),
+                                expr.namespacePrefix,
+                                resolved)) {
         info.structTypeName = resolved;
       }
     }

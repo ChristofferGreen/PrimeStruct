@@ -348,6 +348,30 @@ bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, Uninit
   return true;
 }
 
+bool resolveUninitializedTypeInfoFromPointerTargetLocal(const LocalInfo &local, UninitializedTypeInfo &out) {
+  out = UninitializedTypeInfo{};
+  if (!local.targetsUninitializedStorage ||
+      (local.kind != LocalInfo::Kind::Pointer && local.kind != LocalInfo::Kind::Reference)) {
+    return false;
+  }
+
+  out.kind = LocalInfo::Kind::Value;
+  if (local.referenceToArray || local.pointerToArray) {
+    out.kind = LocalInfo::Kind::Array;
+  } else if (local.referenceToVector || local.pointerToVector) {
+    out.kind = LocalInfo::Kind::Vector;
+  } else if (local.referenceToMap || local.pointerToMap) {
+    out.kind = LocalInfo::Kind::Map;
+  } else if (local.referenceToBuffer || local.pointerToBuffer) {
+    out.kind = LocalInfo::Kind::Buffer;
+  }
+  out.valueKind = local.valueKind;
+  out.mapKeyKind = local.mapKeyKind;
+  out.mapValueKind = local.mapValueKind;
+  out.structPath = local.structTypeName;
+  return true;
+}
+
 bool resolveUninitializedLocalStorageCandidate(const Expr &storage,
                                                const LocalMap &localsIn,
                                                const LocalInfo *&localOut,
@@ -820,6 +844,36 @@ bool resolveUninitializedStorageAccess(const Expr &storage,
                                        std::string &error) {
   out = UninitializedStorageAccessInfo{};
   resolvedOut = false;
+
+  if (storage.kind == Expr::Kind::Call && isSimpleCallName(storage, "dereference") && storage.args.size() == 1) {
+    const Expr &pointerExpr = storage.args.front();
+    if (pointerExpr.kind == Expr::Kind::Call && isSimpleCallName(pointerExpr, "location") &&
+        pointerExpr.args.size() == 1) {
+      return resolveUninitializedStorageAccess(pointerExpr.args.front(),
+                                               localsIn,
+                                               findFieldTemplateArg,
+                                               resolveDefinitionNamespacePrefix,
+                                               resolveUninitializedTypeInfo,
+                                               resolveStructFieldSlot,
+                                               out,
+                                               resolvedOut,
+                                               error);
+    }
+    if (pointerExpr.kind == Expr::Kind::Name) {
+      auto pointerIt = localsIn.find(pointerExpr.name);
+      if (pointerIt != localsIn.end()) {
+        UninitializedTypeInfo pointerTypeInfo;
+        if (resolveUninitializedTypeInfoFromPointerTargetLocal(pointerIt->second, pointerTypeInfo)) {
+          out.location = UninitializedStorageAccessInfo::Location::Indirect;
+          out.pointer = &pointerIt->second;
+          out.pointerExpr = &pointerExpr;
+          out.typeInfo = pointerTypeInfo;
+          resolvedOut = true;
+          return true;
+        }
+      }
+    }
+  }
 
   UninitializedLocalStorageAccessInfo localStorage;
   if (resolveUninitializedLocalStorageAccess(storage, localsIn, localStorage, resolvedOut)) {
