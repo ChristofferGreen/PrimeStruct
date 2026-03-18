@@ -1377,6 +1377,29 @@ TEST_CASE("vm maps FileError.why codes") {
 }
 #endif
 
+TEST_CASE("vm uses stdlib ImageError result helpers") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.why(imageErrorStatus(imageReadUnsupported())))
+  print_line(Result.why(imageErrorResult<i32>(imageWriteUnsupported())))
+  print_line(Result.why(imageErrorResult<i32>(imageInvalidOperation())))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_image_error_result_helpers.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_image_error_result_helpers.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) ==
+        "image_read_unsupported\n"
+        "image_write_unsupported\n"
+        "image_invalid_operation\n");
+}
+
 TEST_CASE("vm uses stdlib FileError why wrapper") {
   const std::string source = R"(
 import /std/file/*

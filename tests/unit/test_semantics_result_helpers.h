@@ -154,6 +154,41 @@ main() {
   CHECK(error.find("argument type mismatch for /FileError/why parameter err") != std::string::npos);
 }
 
+TEST_CASE("stdlib image error result helpers construct status and value results") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<void>]
+main() {
+  [Result<ImageError>] status{imageErrorStatus(imageReadUnsupported())}
+  [Result<i32, ImageError>] valueStatus{imageErrorResult<i32>(imageInvalidOperation())}
+  [bool] statusError{Result.error(status)}
+  [bool] valueError{Result.error(valueStatus)}
+  [string] statusWhy{Result.why(status)}
+  [string] valueWhy{Result.why(valueStatus)}
+  if(and(statusError, valueError), then(){ return() }, else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib image error result helpers reject non image errors") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<void>]
+main() {
+  [Result<i32, ImageError>] status{imageErrorResult<i32>(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/image/imageErrorResult parameter err") != std::string::npos);
+}
+
 TEST_CASE("Result.map inline lambda syntax parses with explicit diagnostics") {
   const std::string source = R"(
 [return<void>]

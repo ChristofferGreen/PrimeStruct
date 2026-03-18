@@ -2878,6 +2878,33 @@ main() {
         "image_invalid_operation\n");
 }
 
+TEST_CASE("native uses stdlib ImageError result helpers") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.why(imageErrorStatus(imageReadUnsupported())))
+  print_line(Result.why(imageErrorResult<i32>(imageWriteUnsupported())))
+  print_line(Result.why(imageErrorResult<i32>(imageInvalidOperation())))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_image_error_result_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_error_result_helpers").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_error_result_helpers.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) ==
+        "image_read_unsupported\n"
+        "image_write_unsupported\n"
+        "image_invalid_operation\n");
+}
+
 TEST_CASE("compiles and runs native ppm read for ascii p3 inputs") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_native_image_read.ppm").string();
   {

@@ -21,19 +21,44 @@ namespace std {
     }
   }
 
+  [public return<ImageError>]
+  imageReadUnsupported() {
+    return(ImageError(1i32))
+  }
+
+  [public return<ImageError>]
+  imageWriteUnsupported() {
+    return(ImageError(2i32))
+  }
+
+  [public return<ImageError>]
+  imageInvalidOperation() {
+    return(ImageError(3i32))
+  }
+
+  [public return<Result<ImageError>>]
+  imageErrorStatus([ImageError] err) {
+    return(err.code)
+  }
+
+  [public return<Result<T, ImageError>>]
+  imageErrorResult<T>([ImageError] err) {
+    return(multiply(convert<i64>(err.code), 4294967296i64))
+  }
+
   [return<Result<ImageError>>]
   unsupported_read() {
-    return(1i32)
+    return(imageErrorStatus(imageReadUnsupported()))
   }
 
   [return<Result<ImageError>>]
   unsupported_write() {
-    return(2i32)
+    return(imageErrorStatus(imageWriteUnsupported()))
   }
 
   [return<Result<ImageError>>]
   invalidOperation() {
-    return(3i32)
+    return(imageErrorStatus(imageInvalidOperation()))
   }
 
   [return<void>]
