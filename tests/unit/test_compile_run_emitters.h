@@ -6073,6 +6073,67 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_map_access_contains_receiver_helper") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lowers wrapper-returned slash-method map access contains receivers to deleted stubs") {
+  const std::string source = R"(
+[return</std/collections/map<i32, map<i32, i32>>>]
+wrapMap() {
+  return(map<i32, map<i32, i32>>(1i32, map<i32, i32>(2i32, 7i32),
+                                 2i32, map<i32, i32>(3i32, 8i32)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(contains(wrapMap()./std/collections/map/at(1i32), 2i32),
+              contains(wrapMap()./std/collections/map/at_unsafe(2i32), 3i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_slash_method_map_access_contains_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_map_access_contains_receiver_helper") != std::string::npos);
+  CHECK(output.find(
+            "ps_missing_map_access_contains_receiver_helper(ps_missing_map_at_method_helper(wrapMap(), 1), 2)") !=
+        std::string::npos);
+  CHECK(output.find(
+            "ps_missing_map_access_contains_receiver_helper(ps_missing_map_at_unsafe_method_helper(wrapMap(), 2), 3)") !=
+        std::string::npos);
+  CHECK(output.find("ps_map_contains(") == std::string::npos);
+}
+
+TEST_CASE("rejects wrapper-returned slash-method map access contains without helper in C++ emitter") {
+  const std::string source = R"(
+[return</std/collections/map<i32, map<i32, i32>>>]
+wrapMap() {
+  return(map<i32, map<i32, i32>>(1i32, map<i32, i32>(2i32, 7i32),
+                                 2i32, map<i32, i32>(3i32, 8i32)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(contains(wrapMap()./std/collections/map/at(1i32), 2i32),
+              contains(wrapMap()./std/collections/map/at_unsafe(2i32), 3i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_slash_method_map_access_contains_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("ps_missing_map_access_contains_receiver_helper") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter lowers canonical slash-method map access without helper to deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

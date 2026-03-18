@@ -1030,6 +1030,12 @@
   auto isNoHelperExplicitMapAccessContainsReceiver = [&](const Expr &candidate) {
     return isNoHelperExplicitMapAccessCallFallback(candidate);
   };
+  auto isNoHelperExplicitMapAccessMethodContainsReceiver = [&](const Expr &candidate) {
+    if (!candidate.isMethodCall || !isExplicitMapAccessMethod(candidate) || candidate.args.size() != 2) {
+      return false;
+    }
+    return nameMap.count(resolveExprPath(candidate)) == 0;
+  };
   auto isNoHelperExplicitMapAccessMethodFallback = [&](const Expr &candidate) {
     if (!candidate.isMethodCall || !isExplicitMapAccessMethod(candidate) || candidate.args.size() != 2) {
       return false;
@@ -1521,6 +1527,26 @@
       std::ostringstream out;
       out << "ps_missing_map_access_contains_receiver_helper("
           << emitMissingExplicitMapAccessCall(expr.args.front())
+          << ", "
+          << emitExpr(expr.args[1],
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
+        isNoHelperExplicitMapAccessMethodContainsReceiver(expr.args.front())) {
+      std::ostringstream out;
+      out << "ps_missing_map_access_contains_receiver_helper("
+          << emitMissingExplicitMapAccessMethod(expr.args.front())
           << ", "
           << emitExpr(expr.args[1],
                       nameMap,
