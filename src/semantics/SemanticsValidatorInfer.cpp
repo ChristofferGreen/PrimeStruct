@@ -5398,9 +5398,7 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
     error_ = "return type inference requires explicit annotation on " + def.fullPath;
     return false;
   }
-  ReturnKind inferred = ReturnKind::Unknown;
-  std::string inferredStructPath;
-  bool sawReturn = false;
+  DefinitionReturnInferenceState inferenceState;
   bool sawExplicitReturnStmt = false;
   size_t implicitReturnStmtIndex = def.statements.size();
   const auto &defParams = paramsByDef_[def.fullPath];
@@ -5414,193 +5412,24 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
       implicitReturnStmtIndex = stmtIndex;
     }
   }
-  auto recordInferredReturn = [&](const Expr *valueExpr,
-                                  const std::unordered_map<std::string, BindingInfo> &activeLocals) -> bool {
-    ReturnKind exprKind = ReturnKind::Void;
-    std::string exprStructPath;
-    if (valueExpr != nullptr) {
-      exprKind = inferExprReturnKind(*valueExpr, defParams, activeLocals);
-      if (exprKind == ReturnKind::Array || exprKind == ReturnKind::Unknown) {
-        exprStructPath = inferStructReturnPath(*valueExpr, defParams, activeLocals);
-        if (exprKind == ReturnKind::Unknown && !exprStructPath.empty()) {
-          exprKind = ReturnKind::Array;
-        }
-      }
-    }
-    if (exprKind == ReturnKind::Unknown) {
-      if (error_.empty()) {
-        error_ = "unable to infer return type on " + def.fullPath;
-      }
-      return false;
-    }
-    if (inferred == ReturnKind::Unknown) {
-      inferred = exprKind;
-      if (!exprStructPath.empty()) {
-        inferredStructPath = exprStructPath;
-      }
-      return true;
-    }
-    if (inferred != exprKind) {
-      if (error_.empty()) {
-        error_ = "conflicting return types on " + def.fullPath;
-      }
-      return false;
-    }
-    if (inferred == ReturnKind::Array) {
-      if (!exprStructPath.empty()) {
-        if (inferredStructPath.empty()) {
-          inferredStructPath = exprStructPath;
-        } else if (inferredStructPath != exprStructPath) {
-          if (error_.empty()) {
-            error_ = "conflicting return types on " + def.fullPath;
-          }
-          return false;
-        }
-      } else if (!inferredStructPath.empty()) {
-        if (error_.empty()) {
-          error_ = "conflicting return types on " + def.fullPath;
-        }
-        return false;
-      }
-    }
-    return true;
-  };
-  std::function<bool(const Expr &, std::unordered_map<std::string, BindingInfo> &)> inferStatement;
-  inferStatement = [&](const Expr &stmt, std::unordered_map<std::string, BindingInfo> &activeLocals) -> bool {
-    if (stmt.isBinding) {
-      BindingInfo info;
-      std::optional<std::string> restrictType;
-      if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
-        return false;
-      }
-      if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
-        (void)inferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info);
-      }
-      if (restrictType.has_value()) {
-        const bool hasTemplate = !info.typeTemplateArg.empty();
-        if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, def.namespacePrefix)) {
-          error_ = "restrict type does not match binding type";
-          return false;
-        }
-      }
-      activeLocals.emplace(stmt.name, std::move(info));
-      return true;
-    }
-    if (isReturnCall(stmt)) {
-      sawReturn = true;
-      const Expr *returnValue = stmt.args.empty() ? nullptr : &stmt.args.front();
-      return recordInferredReturn(returnValue, activeLocals);
-    }
-    if (isMatchCall(stmt)) {
-      Expr expanded;
-      if (!lowerMatchToIf(stmt, expanded, error_)) {
-        return false;
-      }
-      return inferStatement(expanded, activeLocals);
-    }
-    if (isIfCall(stmt) && stmt.args.size() == 3) {
-      const Expr &thenBlock = stmt.args[1];
-      const Expr &elseBlock = stmt.args[2];
-      auto walkBlock = [&](const Expr &block) -> bool {
-        std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
-        for (const auto &bodyExpr : block.bodyArguments) {
-          if (!inferStatement(bodyExpr, blockLocals)) {
-            return false;
-          }
-        }
-        return true;
-      };
-      if (!walkBlock(thenBlock)) {
-        return false;
-      }
-      if (!walkBlock(elseBlock)) {
-        return false;
-      }
-      return true;
-    }
-    if (isLoopCall(stmt) && stmt.args.size() == 2) {
-      const Expr &body = stmt.args[1];
-      std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
-      for (const auto &bodyExpr : body.bodyArguments) {
-        if (!inferStatement(bodyExpr, blockLocals)) {
-          return false;
-        }
-      }
-      return true;
-    }
-    if (isWhileCall(stmt) && stmt.args.size() == 2) {
-      const Expr &body = stmt.args[1];
-      std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
-      for (const auto &bodyExpr : body.bodyArguments) {
-        if (!inferStatement(bodyExpr, blockLocals)) {
-          return false;
-        }
-      }
-      return true;
-    }
-    if (isForCall(stmt) && stmt.args.size() == 4) {
-      std::unordered_map<std::string, BindingInfo> loopLocals = activeLocals;
-      if (!inferStatement(stmt.args[0], loopLocals)) {
-        return false;
-      }
-      if (stmt.args[1].isBinding) {
-        if (!inferStatement(stmt.args[1], loopLocals)) {
-          return false;
-        }
-      }
-      if (!inferStatement(stmt.args[2], loopLocals)) {
-        return false;
-      }
-      const Expr &body = stmt.args[3];
-      std::unordered_map<std::string, BindingInfo> blockLocals = loopLocals;
-      for (const auto &bodyExpr : body.bodyArguments) {
-        if (!inferStatement(bodyExpr, blockLocals)) {
-          return false;
-        }
-      }
-      return true;
-    }
-    if (isRepeatCall(stmt)) {
-      std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
-      for (const auto &bodyExpr : stmt.bodyArguments) {
-        if (!inferStatement(bodyExpr, blockLocals)) {
-          return false;
-        }
-      }
-      return true;
-    }
-    if (isBlockCall(stmt) && stmt.hasBodyArguments) {
-      std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
-      for (const auto &bodyExpr : stmt.bodyArguments) {
-        if (!inferStatement(bodyExpr, blockLocals)) {
-          return false;
-        }
-      }
-      return true;
-    }
-    return true;
-  };
-
   for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
     const Expr &stmt = def.statements[stmtIndex];
-    if (!inferStatement(stmt, locals)) {
+    if (!inferDefinitionStatementReturns(def, defParams, stmt, locals, inferenceState)) {
       return false;
     }
-    if (hasReturnTransform && hasReturnAuto && !sawExplicitReturnStmt && stmtIndex == implicitReturnStmtIndex &&
-        !sawReturn) {
-      sawReturn = true;
-      if (!recordInferredReturn(&stmt, locals)) {
+    if (hasReturnTransform && hasReturnAuto && !sawExplicitReturnStmt &&
+        stmtIndex == implicitReturnStmtIndex && !inferenceState.sawReturn) {
+      if (!recordDefinitionInferredReturn(def, &stmt, defParams, locals, inferenceState)) {
         return false;
       }
     }
   }
   if (def.returnExpr.has_value()) {
-    sawReturn = true;
-    if (!recordInferredReturn(&*def.returnExpr, locals)) {
+    if (!recordDefinitionInferredReturn(def, &*def.returnExpr, defParams, locals, inferenceState)) {
       return false;
     }
   }
-  if (!sawReturn) {
+  if (!inferenceState.sawReturn) {
     if (hasReturnTransform && hasReturnAuto) {
       if (error_.empty()) {
         error_ = "unable to infer return type on " + def.fullPath;
@@ -5608,16 +5437,16 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
       return false;
     }
     kindIt->second = ReturnKind::Void;
-  } else if (inferred == ReturnKind::Unknown) {
+  } else if (inferenceState.inferred == ReturnKind::Unknown) {
     if (error_.empty()) {
       error_ = "unable to infer return type on " + def.fullPath;
     }
     return false;
   } else {
-    kindIt->second = inferred;
+    kindIt->second = inferenceState.inferred;
   }
-  if (!inferredStructPath.empty()) {
-    returnStructs_[def.fullPath] = inferredStructPath;
+  if (!inferenceState.inferredStructPath.empty()) {
+    returnStructs_[def.fullPath] = inferenceState.inferredStructPath;
   }
   inferenceStack_.erase(def.fullPath);
   return true;

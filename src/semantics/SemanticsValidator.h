@@ -102,6 +102,21 @@ private:
                                 const std::vector<ParameterInfo> &params,
                                 const std::unordered_map<std::string, BindingInfo> &locals);
   bool inferDefinitionReturnKind(const Definition &def);
+  struct DefinitionReturnInferenceState {
+    ReturnKind inferred = ReturnKind::Unknown;
+    std::string inferredStructPath;
+    bool sawReturn = false;
+  };
+  bool recordDefinitionInferredReturn(const Definition &def,
+                                      const Expr *valueExpr,
+                                      const std::vector<ParameterInfo> &defParams,
+                                      const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                                      DefinitionReturnInferenceState &state);
+  bool inferDefinitionStatementReturns(const Definition &def,
+                                       const std::vector<ParameterInfo> &defParams,
+                                       const Expr &stmt,
+                                       std::unordered_map<std::string, BindingInfo> &activeLocals,
+                                       DefinitionReturnInferenceState &state);
 
   bool validateExpr(const std::vector<ParameterInfo> &params,
                     const std::unordered_map<std::string, BindingInfo> &locals,

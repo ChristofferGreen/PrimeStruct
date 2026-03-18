@@ -9310,11 +9310,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
   const std::filesystem::path semanticsInferControlFlowPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferControlFlow.cpp";
+  const std::filesystem::path semanticsInferDefinitionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferDefinition.cpp";
   REQUIRE(std::filesystem::exists(semanticsInferPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionCountCapacityPath));
+  REQUIRE(std::filesystem::exists(semanticsInferCollectionDirectCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDispatchPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
+  REQUIRE(std::filesystem::exists(semanticsInferDefinitionPath));
   const std::string semanticsInferSource = readText(semanticsInferPath);
   const std::string semanticsInferCollectionCountCapacitySource =
       readText(semanticsInferCollectionCountCapacityPath);
@@ -9323,6 +9327,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   const std::string semanticsInferCollectionDispatchSource = readText(semanticsInferCollectionDispatchPath);
   const std::string semanticsInferCollectionsSource = readText(semanticsInferCollectionsPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
+  const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
   CHECK(semanticsInferSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
   CHECK(semanticsInferSource.find("inferControlFlowExprReturnKind(expr, params, locals, handledControlFlow);") !=
         std::string::npos);
@@ -9343,8 +9348,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("inferBuiltinCollectionDirectCountCapacityReturnKind(") != std::string::npos);
   CHECK(semanticsInferSource.find("handledDirectBuiltinCountCapacity") != std::string::npos);
+  CHECK(semanticsInferSource.find("DefinitionReturnInferenceState inferenceState;") != std::string::npos);
+  CHECK(semanticsInferSource.find("inferDefinitionStatementReturns(def, defParams, stmt, locals, inferenceState)") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("recordDefinitionInferredReturn(def, &stmt, defParams, locals, inferenceState)") !=
+        std::string::npos);
   CHECK(semanticsInferSource.find("resolveMethodCallPath(\"count\"") == std::string::npos);
   CHECK(semanticsInferSource.find("resolveMethodCallPath(\"capacity\"") == std::string::npos);
+  CHECK(semanticsInferSource.find("std::function<bool(const Expr &, std::unordered_map<std::string, BindingInfo> &)> inferStatement;") ==
+        std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionMethodReturnKind = [&]") == std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionAccessCallReturnKind = [&]") == std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionCountCapacityReturnKind = [&]") == std::string::npos);
@@ -9380,6 +9392,11 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferControlFlowSource.find("if (isIfCall(expr) && expr.args.size() == 3)") != std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("if (isBlockCall(expr) && expr.hasBodyArguments)") !=
         std::string::npos);
+  CHECK(semanticsInferDefinitionSource.find("bool SemanticsValidator::recordDefinitionInferredReturn") !=
+        std::string::npos);
+  CHECK(semanticsInferDefinitionSource.find("bool SemanticsValidator::inferDefinitionStatementReturns") !=
+        std::string::npos);
+  CHECK(semanticsInferDefinitionSource.find("if (isForCall(stmt) && stmt.args.size() == 4)") != std::string::npos);
 }
 
 TEST_CASE("semantics validator statement source delegation stays stable") {

@@ -58,6 +58,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorInferCollectionDispatch.cpp
   src/semantics/SemanticsValidatorInferCollections.cpp
   src/semantics/SemanticsValidatorInferControlFlow.cpp
+  src/semantics/SemanticsValidatorInferDefinition.cpp
   src/semantics/SemanticsValidatorInfer.cpp
   src/semantics/SemanticsValidatorPasses.cpp
   src/semantics/SemanticsValidatorStatementLoopCountStep.cpp
