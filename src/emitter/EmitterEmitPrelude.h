@@ -288,6 +288,8 @@
   out << "static inline int ps_missing_map_at_unsafe_call_helper(const T &, Index) = delete;\n";
   out << "template <typename T>\n";
   out << "static inline int ps_missing_map_access_count_receiver_helper(const T &) = delete;\n";
+  out << "template <typename T, typename Key>\n";
+  out << "static inline bool ps_missing_map_access_contains_receiver_helper(const T &, Key) = delete;\n";
   out << "template <typename T>\n";
   out << "static inline std::vector<T> ps_args_concat(std::vector<T> prefix, const std::vector<T> &suffix) {\n";
   out << "  prefix.insert(prefix.end(), suffix.begin(), suffix.end());\n";

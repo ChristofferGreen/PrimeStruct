@@ -989,6 +989,9 @@
   auto isNoHelperExplicitMapAccessCountReceiver = [&](const Expr &candidate) {
     return isNoHelperExplicitMapAccessCallFallback(candidate);
   };
+  auto isNoHelperExplicitMapAccessContainsReceiver = [&](const Expr &candidate) {
+    return isNoHelperExplicitMapAccessCallFallback(candidate);
+  };
   auto isNoHelperExplicitVectorAccessCountReceiver = [&](const Expr &candidate) {
     if (isExplicitVectorAccessDirectCall(candidate)) {
       return explicitVectorAccessResolvedTypePath(candidate).empty();
@@ -1448,6 +1451,26 @@
       std::ostringstream out;
       out << "ps_vector_capacity("
           << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
+        isNoHelperExplicitMapAccessContainsReceiver(expr.args.front())) {
+      std::ostringstream out;
+      out << "ps_missing_map_access_contains_receiver_helper("
+          << emitMissingExplicitMapAccessCall(expr.args.front())
+          << ", "
+          << emitExpr(expr.args[1],
                       nameMap,
                       paramMap,
                       defMap,
