@@ -1,5 +1,3 @@
 # Existing direct tests -> src/private-header dependencies.
 # Keep entries narrow and remove them when a stable testing API replaces them.
 # A target ending with "/" allows the source file to include any header under that prefix.
-
-tests/unit/test_ir_pipeline.cpp -> src/ir_lowerer/
