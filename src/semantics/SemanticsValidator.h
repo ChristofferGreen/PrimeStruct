@@ -170,6 +170,15 @@ private:
                                             bool &handled);
   std::string normalizeCollectionTypePath(const std::string &typePath) const;
   bool hasImportedDefinitionPath(const std::string &path) const;
+  bool isStaticHelperDefinition(const Definition &def) const;
+  bool hasDeclaredDefinitionPath(const std::string &path) const;
+  bool resolveMethodTarget(const std::vector<ParameterInfo> &params,
+                           const std::unordered_map<std::string, BindingInfo> &locals,
+                           const std::string &callNamespacePrefix,
+                           const Expr &receiver,
+                           const std::string &methodName,
+                           std::string &resolvedOut,
+                           bool &isBuiltinOut);
   bool isVectorBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorStatementHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,

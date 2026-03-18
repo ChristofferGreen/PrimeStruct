@@ -9240,6 +9240,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprControlFlow.cpp";
   const std::filesystem::path semanticsExprLambdaPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLambda.cpp";
+  const std::filesystem::path semanticsExprMethodResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
   const std::filesystem::path semanticsExprNumericPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
   const std::filesystem::path semanticsExprVectorHelpersPath =
@@ -9248,12 +9250,14 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprBlockPath));
   REQUIRE(std::filesystem::exists(semanticsExprControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
+  REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
   const std::string semanticsExprBlockSource = readText(semanticsExprBlockPath);
   const std::string semanticsExprControlFlowSource = readText(semanticsExprControlFlowPath);
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
+  const std::string semanticsExprMethodResolutionSource = readText(semanticsExprMethodResolutionPath);
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
   const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
@@ -9269,6 +9273,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("auto resolveVectorHelperMethodTarget = [&]") == std::string::npos);
   CHECK(semanticsExprSource.find("auto getDirectVectorHelperCompatibilityPath = [&]") == std::string::npos);
   CHECK(semanticsExprSource.find("auto preferVectorStdlibHelperPath = [&]") == std::string::npos);
+  CHECK(semanticsExprSource.find("auto isStaticHelperDefinition = [&]") == std::string::npos);
+  CHECK(semanticsExprSource.find("auto hasDeclaredDefinitionPath = [&]") == std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveMethodTarget =") == std::string::npos);
+  CHECK(semanticsExprSource.find("resolveMethodTarget(params, locals, expr.namespacePrefix,") != std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprValidation.h\"") == std::string::npos);
@@ -9283,6 +9291,13 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprLambdaSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") !=
         std::string::npos);
   CHECK(semanticsExprLambdaSource.find("duplicate lambda capture") != std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find("bool SemanticsValidator::isStaticHelperDefinition") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find("bool SemanticsValidator::hasDeclaredDefinitionPath") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find("bool SemanticsValidator::resolveMethodTarget") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find("unknown method target for ") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("bool SemanticsValidator::validateNumericBuiltinExpr") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("multiply requires scalar scaling") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("implicit matrix/quaternion family conversion requires explicit helper") !=
