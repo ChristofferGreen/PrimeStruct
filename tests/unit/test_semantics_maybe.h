@@ -225,8 +225,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Maybe parameter empty") != std::string::npos);
-  CHECK(error.find("expected bool got i32") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /Maybe") != std::string::npos);
 }
 
 TEST_CASE("maybe direct constructor rejects payload shorthand with explicit template") {
@@ -239,7 +238,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Maybe parameter empty") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /Maybe__t") != std::string::npos);
+  CHECK(error.find("parameter empty") != std::string::npos);
   CHECK(error.find("expected bool got i32") != std::string::npos);
 }
 

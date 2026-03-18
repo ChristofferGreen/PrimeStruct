@@ -4994,6 +4994,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = pathSpaceBuiltin.name + " is statement-only";
       return false;
     }
+    if (!resolvedMethod && resolved == "/file_error/why" && defMap_.find(resolved) == defMap_.end()) {
+      resolvedMethod = true;
+    }
 
     if (hasNamedArguments(expr.argNames)) {
       auto resolveVectorMutatorName = [&](const std::string &name, std::string &helperOut) -> bool {
@@ -7831,141 +7834,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return prefix + "expected " + expectedTypePath + " got " + actualTypePath;
     };
-    if (calleeParams.empty() && structNames_.count(resolved) > 0) {
-      if (expr.args.empty() && !hasNamedArguments(expr.argNames) && !expr.hasBodyArguments &&
-          expr.bodyArguments.empty()) {
-        if (const std::string diagnostic = experimentalGfxUnavailableConstructorDiagnostic(expr, resolved);
-            !diagnostic.empty()) {
-          error_ = diagnostic;
-          return false;
-        }
+    auto expectedBindingTypeText = [](const BindingInfo &binding) {
+      if (binding.typeName.empty()) {
+        return std::string();
       }
-      std::vector<ParameterInfo> fieldParams;
-      fieldParams.reserve(it->second->statements.size());
-      auto isStaticField = [](const Expr &stmt) -> bool {
-        for (const auto &transform : stmt.transforms) {
-          if (transform.name == "static") {
-            return true;
-          }
-        }
-        return false;
-      };
-      bool hasMissingDefaults = false;
-      for (const auto &stmt : it->second->statements) {
-        if (!stmt.isBinding) {
-          error_ = "struct definitions may only contain field bindings: " + resolved;
-          return false;
-        }
-        if (isStaticField(stmt)) {
-          continue;
-        }
-        ParameterInfo field;
-        field.name = stmt.name;
-        if (stmt.args.size() == 1) {
-          field.defaultExpr = &stmt.args.front();
-        } else {
-          hasMissingDefaults = true;
-        }
-        fieldParams.push_back(field);
+      if (binding.typeTemplateArg.empty()) {
+        return binding.typeName;
       }
-      if (hasMissingDefaults && expr.args.empty() && !hasNamedArguments(expr.argNames)) {
-        if (hasStructZeroArgConstructor(resolved)) {
-          return true;
-        }
-      }
-      if (!validateNamedArgumentsAgainstParams(fieldParams, expr.argNames, error_)) {
-        if (error_.find("argument count mismatch") != std::string::npos) {
-          error_ = "argument count mismatch for " + diagnosticResolved;
-        }
-        return false;
-      }
-      std::vector<const Expr *> orderedArgs;
-      std::string orderError;
-      if (!buildOrderedArguments(fieldParams, expr.args, expr.argNames, orderedArgs, orderError)) {
-        if (orderError.find("argument count mismatch") != std::string::npos) {
-          error_ = "argument count mismatch for " + diagnosticResolved;
-        } else {
-          error_ = orderError;
-        }
-        return false;
-      }
-      std::unordered_set<const Expr *> explicitArgs;
-      explicitArgs.reserve(expr.args.size());
-      for (const auto &arg : expr.args) {
-        explicitArgs.insert(&arg);
-      }
-      for (const auto *arg : orderedArgs) {
-        if (!arg || explicitArgs.count(arg) == 0) {
-          continue;
-        }
-        if (!validateExpr(params, locals, *arg)) {
-          return false;
-        }
-      }
-      return true;
-    }
-    Expr reorderedCallExpr;
-    Expr trimmedTypeNamespaceCallExpr;
-    const std::vector<Expr> *orderedCallArgs = &expr.args;
-    const std::vector<std::optional<std::string>> *orderedCallArgNames = &expr.argNames;
-    if (isTypeNamespaceMethodCall(expr, resolved)) {
-      trimmedTypeNamespaceCallExpr = expr;
-      trimmedTypeNamespaceCallExpr.args.erase(trimmedTypeNamespaceCallExpr.args.begin());
-      if (!trimmedTypeNamespaceCallExpr.argNames.empty()) {
-        trimmedTypeNamespaceCallExpr.argNames.erase(trimmedTypeNamespaceCallExpr.argNames.begin());
-      }
-      orderedCallArgs = &trimmedTypeNamespaceCallExpr.args;
-      orderedCallArgNames = &trimmedTypeNamespaceCallExpr.argNames;
-    } else if (hasMethodReceiverIndex && methodReceiverIndex > 0 && methodReceiverIndex < expr.args.size()) {
-      reorderedCallExpr = expr;
-      std::swap(reorderedCallExpr.args[0], reorderedCallExpr.args[methodReceiverIndex]);
-      if (reorderedCallExpr.argNames.size() < reorderedCallExpr.args.size()) {
-        reorderedCallExpr.argNames.resize(reorderedCallExpr.args.size());
-      }
-      std::swap(reorderedCallExpr.argNames[0], reorderedCallExpr.argNames[methodReceiverIndex]);
-      orderedCallArgs = &reorderedCallExpr.args;
-      orderedCallArgNames = &reorderedCallExpr.argNames;
-    }
-    if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, error_)) {
-      if (error_.find("argument count mismatch") != std::string::npos) {
-        error_ = "argument count mismatch for " + diagnosticResolved;
-      }
-      return false;
-    }
-    std::vector<const Expr *> orderedArgs;
-    std::vector<const Expr *> packedArgs;
-    size_t packedParamIndex = calleeParams.size();
-    std::string orderError;
-    if (!buildOrderedArguments(calleeParams,
-                               *orderedCallArgs,
-                               *orderedCallArgNames,
-                               orderedArgs,
-                               packedArgs,
-                               packedParamIndex,
-                               orderError)) {
-      if (orderError.find("argument count mismatch") != std::string::npos) {
-        error_ = "argument count mismatch for " + diagnosticResolved;
-      } else {
-        error_ = orderError;
-      }
-      return false;
-    }
-    for (const auto *arg : orderedArgs) {
-      if (!arg) {
-        continue;
-      }
-      if (!validateExpr(params, locals, *arg)) {
-        return false;
-      }
-    }
-    for (const auto *arg : packedArgs) {
-      if (!arg) {
-        continue;
-      }
-      if (!validateExpr(params, locals, *arg)) {
-        return false;
-      }
-    }
+      return binding.typeName + "<" + binding.typeTemplateArg + ">";
+    };
     auto isStringTypeName = [](const std::string &typeName) {
       return normalizeBindingTypeName(typeName) == "string";
     };
@@ -8127,8 +8004,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      const std::string expectedStructPath =
+      std::string expectedStructPath =
           resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
+      if (expectedStructPath.empty()) {
+        const size_t calleeSlash = resolved.find_last_of('/');
+        if (calleeSlash != std::string::npos && calleeSlash > 0) {
+          expectedStructPath =
+              resolveStructTypePath(expectedTypeName, resolved.substr(0, calleeSlash), structNames_);
+        }
+      }
       if (expectedStructPath.empty()) {
         return true;
       }
@@ -8137,8 +8021,193 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = argumentStructMismatchDiagnostic(param.name, expectedStructPath, actualStructPath);
         return false;
       }
+      if (actualStructPath.empty()) {
+        const BindingInfo *actualBinding = nullptr;
+        if (arg.kind == Expr::Kind::Name) {
+          actualBinding = findParamBinding(params, arg.name);
+          if (actualBinding == nullptr) {
+            auto it = locals.find(arg.name);
+            if (it != locals.end()) {
+              actualBinding = &it->second;
+            }
+          }
+        }
+        if (actualBinding != nullptr &&
+            (normalizeBindingTypeName(actualBinding->typeName) == "Reference" ||
+             normalizeBindingTypeName(actualBinding->typeName) == "Pointer") &&
+            !actualBinding->typeTemplateArg.empty()) {
+          std::string actualTargetStructPath =
+              resolveStructTypePath(actualBinding->typeTemplateArg, arg.namespacePrefix, structNames_);
+          if (actualTargetStructPath.empty()) {
+            const size_t calleeSlash = resolved.find_last_of('/');
+            if (calleeSlash != std::string::npos && calleeSlash > 0) {
+              actualTargetStructPath = resolveStructTypePath(
+                  actualBinding->typeTemplateArg, resolved.substr(0, calleeSlash), structNames_);
+            }
+          }
+          if (actualTargetStructPath == expectedStructPath) {
+            return true;
+          }
+        }
+        const ReturnKind actualKind = inferExprReturnKind(arg, params, locals);
+        if (actualKind != ReturnKind::Unknown) {
+          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name + ": expected " +
+                   expectedStructPath + " got " + typeNameForReturnKind(actualKind);
+          return false;
+        }
+      }
       return true;
     };
+    if (calleeParams.empty() && structNames_.count(resolved) > 0) {
+      if (expr.args.empty() && !hasNamedArguments(expr.argNames) && !expr.hasBodyArguments &&
+          expr.bodyArguments.empty()) {
+        if (const std::string diagnostic = experimentalGfxUnavailableConstructorDiagnostic(expr, resolved);
+            !diagnostic.empty()) {
+          error_ = diagnostic;
+          return false;
+        }
+      }
+      std::vector<ParameterInfo> fieldParams;
+      fieldParams.reserve(it->second->statements.size());
+      auto isStaticField = [](const Expr &stmt) -> bool {
+        for (const auto &transform : stmt.transforms) {
+          if (transform.name == "static") {
+            return true;
+          }
+        }
+        return false;
+      };
+      bool hasMissingDefaults = false;
+      for (const auto &stmt : it->second->statements) {
+        if (!stmt.isBinding) {
+          error_ = "struct definitions may only contain field bindings: " + resolved;
+          return false;
+        }
+        if (isStaticField(stmt)) {
+          continue;
+        }
+        ParameterInfo field;
+        field.name = stmt.name;
+        if (!SemanticsValidator::resolveStructFieldBinding(*it->second, stmt, field.binding)) {
+          return false;
+        }
+        if (stmt.args.size() == 1) {
+          field.defaultExpr = &stmt.args.front();
+        } else {
+          hasMissingDefaults = true;
+        }
+        fieldParams.push_back(field);
+      }
+      if (hasMissingDefaults && expr.args.empty() && !hasNamedArguments(expr.argNames)) {
+        if (hasStructZeroArgConstructor(resolved)) {
+          return true;
+        }
+      }
+      if (!validateNamedArgumentsAgainstParams(fieldParams, expr.argNames, error_)) {
+        if (error_.find("argument count mismatch") != std::string::npos) {
+          error_ = "argument count mismatch for " + diagnosticResolved;
+        }
+        return false;
+      }
+      std::vector<const Expr *> orderedArgs;
+      std::string orderError;
+      if (!buildOrderedArguments(fieldParams, expr.args, expr.argNames, orderedArgs, orderError)) {
+        if (orderError.find("argument count mismatch") != std::string::npos) {
+          error_ = "argument count mismatch for " + diagnosticResolved;
+        } else {
+          error_ = orderError;
+        }
+        return false;
+      }
+      std::unordered_set<const Expr *> explicitArgs;
+      explicitArgs.reserve(expr.args.size());
+      for (const auto &arg : expr.args) {
+        explicitArgs.insert(&arg);
+      }
+      for (const auto *arg : orderedArgs) {
+        if (!arg || explicitArgs.count(arg) == 0) {
+          continue;
+        }
+        if (!validateExpr(params, locals, *arg)) {
+          return false;
+        }
+      }
+      for (size_t argIndex = 0; argIndex < orderedArgs.size() && argIndex < fieldParams.size(); ++argIndex) {
+        const Expr *arg = orderedArgs[argIndex];
+        if (arg == nullptr || explicitArgs.count(arg) == 0) {
+          continue;
+        }
+        const ParameterInfo &fieldParam = fieldParams[argIndex];
+        const std::string expectedTypeText = expectedBindingTypeText(fieldParam.binding);
+        if (!validateArgumentTypeAgainstParam(
+                *arg, fieldParam, fieldParam.binding.typeName, expectedTypeText)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    Expr reorderedCallExpr;
+    Expr trimmedTypeNamespaceCallExpr;
+    const std::vector<Expr> *orderedCallArgs = &expr.args;
+    const std::vector<std::optional<std::string>> *orderedCallArgNames = &expr.argNames;
+    if (isTypeNamespaceMethodCall(expr, resolved)) {
+      trimmedTypeNamespaceCallExpr = expr;
+      trimmedTypeNamespaceCallExpr.args.erase(trimmedTypeNamespaceCallExpr.args.begin());
+      if (!trimmedTypeNamespaceCallExpr.argNames.empty()) {
+        trimmedTypeNamespaceCallExpr.argNames.erase(trimmedTypeNamespaceCallExpr.argNames.begin());
+      }
+      orderedCallArgs = &trimmedTypeNamespaceCallExpr.args;
+      orderedCallArgNames = &trimmedTypeNamespaceCallExpr.argNames;
+    } else if (hasMethodReceiverIndex && methodReceiverIndex > 0 && methodReceiverIndex < expr.args.size()) {
+      reorderedCallExpr = expr;
+      std::swap(reorderedCallExpr.args[0], reorderedCallExpr.args[methodReceiverIndex]);
+      if (reorderedCallExpr.argNames.size() < reorderedCallExpr.args.size()) {
+        reorderedCallExpr.argNames.resize(reorderedCallExpr.args.size());
+      }
+      std::swap(reorderedCallExpr.argNames[0], reorderedCallExpr.argNames[methodReceiverIndex]);
+      orderedCallArgs = &reorderedCallExpr.args;
+      orderedCallArgNames = &reorderedCallExpr.argNames;
+    }
+    if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, error_)) {
+      if (error_.find("argument count mismatch") != std::string::npos) {
+        error_ = "argument count mismatch for " + diagnosticResolved;
+      }
+      return false;
+    }
+    std::vector<const Expr *> orderedArgs;
+    std::vector<const Expr *> packedArgs;
+    size_t packedParamIndex = calleeParams.size();
+    std::string orderError;
+    if (!buildOrderedArguments(calleeParams,
+                               *orderedCallArgs,
+                               *orderedCallArgNames,
+                               orderedArgs,
+                               packedArgs,
+                               packedParamIndex,
+                               orderError)) {
+      if (orderError.find("argument count mismatch") != std::string::npos) {
+        error_ = "argument count mismatch for " + diagnosticResolved;
+      } else {
+        error_ = orderError;
+      }
+      return false;
+    }
+    for (const auto *arg : orderedArgs) {
+      if (!arg) {
+        continue;
+      }
+      if (!validateExpr(params, locals, *arg)) {
+        return false;
+      }
+    }
+    for (const auto *arg : packedArgs) {
+      if (!arg) {
+        continue;
+      }
+      if (!validateExpr(params, locals, *arg)) {
+        return false;
+      }
+    }
     auto validateSpreadArgumentTypeAgainstParam = [&](const Expr &arg,
                                                       const ParameterInfo &param,
                                                       const std::string &expectedTypeName,

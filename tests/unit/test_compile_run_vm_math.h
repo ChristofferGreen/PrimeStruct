@@ -614,10 +614,11 @@ main() {
   const std::string srcPath = writeTemp("vm_math_support_matrix_implicit_conversion.prime", source);
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_math_support_matrix_implicit_conversion.err").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  if (!runVmCommandOrExpectUnsupported(runCmd, errPath, 1)) {
-    return;
-  }
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got "
+            "/std/math/Mat3") != std::string::npos);
 }
 
 TEST_SUITE_END();

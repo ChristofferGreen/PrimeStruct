@@ -1880,10 +1880,11 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
-    return;
-  }
-  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK_FALSE(std::filesystem::exists(wasmPath));
+  CHECK(readFile(errPath).find(
+            "implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got "
+            "/std/math/Mat3") != std::string::npos);
 }
 
 TEST_CASE("primec emits wasm bytecode for direct callable definitions") {

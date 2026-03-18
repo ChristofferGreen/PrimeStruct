@@ -404,6 +404,9 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   if (name == "int" || name == "i32") {
     return ReturnKind::Int;
   }
+  if (name == "FileError") {
+    return ReturnKind::Int;
+  }
   if (name == "i64") {
     return ReturnKind::Int64;
   }

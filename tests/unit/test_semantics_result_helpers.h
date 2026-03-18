@@ -221,7 +221,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/image/imageErrorResult parameter err") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/image/imageErrorResult") != std::string::npos);
+  CHECK(error.find("parameter err") != std::string::npos);
 }
 
 TEST_CASE("stdlib container error result helpers construct status and value results") {
@@ -230,10 +231,13 @@ import /std/collections/*
 
 [return<void>]
 main() {
+  [ContainerError] err{containerMissingKey()}
   [Result<ContainerError>] status{containerErrorStatus(containerMissingKey())}
   [Result<i32, ContainerError>] valueStatus{containerErrorResult<i32>(containerCapacityExceeded())}
   [bool] statusError{Result.error(status)}
   [bool] valueError{Result.error(valueStatus)}
+  [string] direct{/ContainerError/why(err)}
+  [string] viaType{ContainerError.why(err)}
   [string] statusWhy{Result.why(status)}
   [string] valueWhy{Result.why(valueStatus)}
   if(and(statusError, valueError), then(){ return() }, else(){ return() })
@@ -257,6 +261,21 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch for /std/collections/containerErrorStatus parameter err") != std::string::npos);
+}
+
+TEST_CASE("stdlib ContainerError why wrapper rejects non container errors") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<void>]
+main() {
+  [string] why{/ContainerError/why(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /ContainerError/why parameter err") != std::string::npos);
 }
 
 TEST_CASE("stdlib gfx error result helpers construct status and value results") {

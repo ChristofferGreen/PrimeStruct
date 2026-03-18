@@ -1,4 +1,5 @@
 import /std/math/*
+import /std/file/*
 
 [public return<string>]
 /ImageError/why([/std/image/ImageError] err) {

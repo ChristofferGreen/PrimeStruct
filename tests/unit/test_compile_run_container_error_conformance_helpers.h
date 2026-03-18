@@ -18,6 +18,8 @@ makeUnknown() {
 main() {
   [i32] total{plus(plus(containerMissingKey().code, containerIndexOutOfBounds().code),
                   plus(containerEmpty().code, containerCapacityExceeded().code))}
+  print_line(/ContainerError/why(containerMissingKey()))
+  print_line(ContainerError.why(containerMissingKey()))
   print_line(Result.why(makeMissing()))
   print_line(Result.why(makeUnknown()))
   return(total)
@@ -33,7 +35,11 @@ inline void expectContainerErrorConformance(const std::string &emitMode) {
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
     CHECK(runCommand(runCmd) == 10);
-    CHECK(readFile(outPath) == "container missing key\ncontainer error\n");
+    CHECK(readFile(outPath) ==
+          "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
+          "container error\n");
     return;
   }
 
@@ -44,5 +50,9 @@ inline void expectContainerErrorConformance(const std::string &emitMode) {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == 10);
-  CHECK(readFile(outPath) == "container missing key\ncontainer error\n");
+  CHECK(readFile(outPath) ==
+        "container missing key\n"
+        "container missing key\n"
+        "container missing key\n"
+        "container error\n");
 }

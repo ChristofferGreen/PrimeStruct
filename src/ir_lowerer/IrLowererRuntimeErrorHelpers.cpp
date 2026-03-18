@@ -285,6 +285,20 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(int32_t)> &emitFileErrorWhyFn,
     std::string &error) {
+  if (!expr.isMethodCall && expr.name == "/file_error/why") {
+    if (expr.args.size() != 1) {
+      error = "FileError.why requires exactly one argument";
+      return FileErrorWhyCallEmitResult::Error;
+    }
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return FileErrorWhyCallEmitResult::Error;
+    }
+    const int32_t errorLocal = allocTempLocal();
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+    emitFileErrorWhyFn(errorLocal);
+    return FileErrorWhyCallEmitResult::Emitted;
+  }
+
   if (expr.isMethodCall && expr.name == "why" && !expr.args.empty() &&
       expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "FileError") {
     if (expr.args.size() != 2) {

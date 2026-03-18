@@ -11934,7 +11934,7 @@ main() {
   CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias resolves compatibility template forwarding when unknown expected meets primitive call return") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets primitive call return") {
   const std::string source = R"(
 Marker() {}
 
@@ -11958,13 +11958,13 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(plus(/vector/count(values, makeMarker()), values.count(makeMarker())))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced unknown expected primitive call return resolves canonical helper") {
+TEST_CASE("vector namespaced unknown expected primitive call return keeps compatibility diagnostics") {
   const std::string source = R"(
 Marker() {}
 
@@ -11990,11 +11990,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced alias resolves compatibility template forwarding when unknown expected meets primitive binding") {
+TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets primitive binding") {
   const std::string source = R"(
 Marker() {}
 
@@ -12016,11 +12016,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced unknown expected primitive binding resolves canonical helper") {
+TEST_CASE("vector namespaced unknown expected primitive binding keeps compatibility diagnostics") {
   const std::string source = R"(
 Marker() {}
 
@@ -12042,8 +12042,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets vector envelope binding") {
