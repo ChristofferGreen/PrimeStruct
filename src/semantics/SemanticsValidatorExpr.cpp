@@ -2606,216 +2606,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     };
 
-    auto inferStructFieldBinding = [&](const Definition &def,
-                                       const std::string &fieldName,
-                                       BindingInfo &bindingOut,
-                                       bool allowStatic,
-                                       bool allowPrivate) -> bool {
-      auto isStaticField = [](const Expr &stmt) -> bool {
-        for (const auto &transform : stmt.transforms) {
-          if (transform.name == "static") {
-            return true;
-          }
-        }
-        return false;
-      };
-      auto isPrivateField = [](const Expr &stmt) -> bool {
-        for (const auto &transform : stmt.transforms) {
-          if (transform.name == "private") {
-            return true;
-          }
-        }
-        return false;
-      };
-      for (const auto &stmt : def.statements) {
-        if (!stmt.isBinding) {
-          error_ = "struct definitions may only contain field bindings: " + def.fullPath;
-          return false;
-        }
-        if (stmt.name != fieldName) {
-          continue;
-        }
-        if (isStaticField(stmt) && !allowStatic) {
-          return false;
-        }
-        if (isPrivateField(stmt) && !allowPrivate) {
-          error_ = "private field is not accessible: " + def.fullPath + "/" + fieldName;
-          return false;
-        }
-        BindingInfo fieldBinding;
-        if (!resolveStructFieldBinding(def, stmt, fieldBinding)) {
-          return false;
-        }
-        bindingOut = std::move(fieldBinding);
-        return true;
-      }
-      return false;
-    };
-
-    auto resolveStructFieldReceiverPath =
-        [&](const Expr &receiver, std::string &structPathOut) -> bool {
-      auto resolveStructPathFromType = [&](const std::string &typeName,
-                                           const std::string &namespacePrefix,
-                                           std::string &structPathOut) -> bool {
-        if (typeName.empty() || isPrimitiveBindingTypeName(typeName)) {
-          return false;
-        }
-        if (!typeName.empty() && typeName[0] == '/') {
-          if (structNames_.count(typeName) > 0) {
-            structPathOut = typeName;
-            return true;
-          }
-          return false;
-        }
-        std::string current = namespacePrefix;
-        while (true) {
-          if (!current.empty()) {
-            std::string scoped = current + "/" + typeName;
-            if (structNames_.count(scoped) > 0) {
-              structPathOut = scoped;
-              return true;
-            }
-            if (current.size() > typeName.size()) {
-              const size_t start = current.size() - typeName.size();
-              if (start > 0 && current[start - 1] == '/' &&
-                  current.compare(start, typeName.size(), typeName) == 0 &&
-                  structNames_.count(current) > 0) {
-                structPathOut = current;
-                return true;
-              }
-            }
-          } else {
-            std::string root = "/" + typeName;
-            if (structNames_.count(root) > 0) {
-              structPathOut = root;
-              return true;
-            }
-          }
-          if (current.empty()) {
-            break;
-          }
-          const size_t slash = current.find_last_of('/');
-          if (slash == std::string::npos || slash == 0) {
-            current.clear();
-          } else {
-            current.erase(slash);
-          }
-        }
-        auto importIt = importAliases_.find(typeName);
-        if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
-          structPathOut = importIt->second;
-          return true;
-        }
-        return false;
-      };
-      if (receiver.kind == Expr::Kind::Name) {
-        const BindingInfo *binding = findParamBinding(params, receiver.name);
-        if (!binding) {
-          auto it = locals.find(receiver.name);
-          if (it != locals.end()) {
-            binding = &it->second;
-          }
-        }
-        if (binding) {
-          std::string typeName = binding->typeName;
-          if ((typeName == "Reference" || typeName == "Pointer") && !binding->typeTemplateArg.empty()) {
-            typeName = binding->typeTemplateArg;
-          }
-          (void)resolveStructPathFromType(typeName, receiver.namespacePrefix, structPathOut);
-        } else {
-          (void)resolveStructPathFromType(receiver.name, receiver.namespacePrefix, structPathOut);
-        }
-      } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
-        std::string accessName;
-        if (getBuiltinArrayAccessName(receiver, accessName) && receiver.args.size() == 2) {
-          std::string elemType;
-          if (resolveArgsPackAccessTarget(receiver.args.front(), elemType) ||
-              resolveArrayTarget(receiver.args.front(), elemType) ||
-              resolveVectorTarget(receiver.args.front(), elemType)) {
-            const std::string unwrappedElemType = unwrapReferencePointerTypeText(elemType);
-            (void)resolveStructPathFromType(unwrappedElemType, receiver.namespacePrefix, structPathOut);
-          }
-        }
-        std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
-        if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
-          structPathOut = inferredStruct;
-        } else {
-          std::string resolvedType = resolveCalleePath(receiver);
-          if (structNames_.count(resolvedType) > 0) {
-            structPathOut = resolvedType;
-          }
-        }
-      }
-      return !structPathOut.empty();
-    };
-
-    auto isTypeNamespaceFieldReceiver = [&](const Expr &receiver, std::string &structPathOut) -> bool {
-      structPathOut.clear();
-      if (receiver.kind != Expr::Kind::Name) {
-        return false;
-      }
-      if (findParamBinding(params, receiver.name) != nullptr || locals.find(receiver.name) != locals.end()) {
-        return false;
-      }
-      return resolveStructFieldReceiverPath(receiver, structPathOut);
-    };
-
-    auto resolveStructFieldBinding =
-        [&](const Expr &receiver, const std::string &fieldName, BindingInfo &bindingOut) -> bool {
-      std::string structPath;
-      const bool isTypeReceiver = isTypeNamespaceFieldReceiver(receiver, structPath);
-      if (!isTypeReceiver && !resolveStructFieldReceiverPath(receiver, structPath)) {
-        return false;
-      }
-      auto defIt = defMap_.find(structPath);
-      if (defIt == defMap_.end() || !defIt->second) {
-        return false;
-      }
-      if (isTypeReceiver) {
-        auto isStaticField = [](const Expr &stmt) {
-          for (const auto &transform : stmt.transforms) {
-            if (transform.name == "static") {
-              return true;
-            }
-          }
-          return false;
-        };
-        for (const auto &stmt : defIt->second->statements) {
-          if (!stmt.isBinding || !isStaticField(stmt) || stmt.name != fieldName) {
-            continue;
-          }
-          return SemanticsValidator::resolveStructFieldBinding(*defIt->second, stmt, bindingOut);
-        }
-        return false;
-      }
-      BindingInfo inferred;
-      if (!inferStructFieldBinding(*defIt->second, fieldName, inferred, false, true)) {
-        return false;
-      }
-      bindingOut = std::move(inferred);
-      return true;
-    };
-
-    auto isUnboundMetaReceiver = [&](const Expr &receiver) {
-      if (receiver.kind != Expr::Kind::Name || receiver.name != "meta") {
-        return false;
-      }
-      if (findParamBinding(params, receiver.name) != nullptr) {
-        return false;
-      }
-      return locals.find(receiver.name) == locals.end();
-    };
-    auto describeMethodReflectionTarget = [&](const Expr &callExpr) -> std::string {
-      if (!callExpr.isMethodCall || callExpr.args.empty()) {
-        return "";
-      }
-      const Expr &receiver = callExpr.args.front();
-      if (!isUnboundMetaReceiver(receiver)) {
-        return "";
-      }
-      return "meta." + callExpr.name;
-    };
-
     std::string earlyPointerBuiltin;
     if (getBuiltinPointerName(expr, earlyPointerBuiltin)) {
       if (hasNamedArguments(expr.argNames)) {
@@ -2875,7 +2665,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       hasMethodReceiverIndex = true;
       methodReceiverIndex = vectorHelperCallReceiverIndex;
     }
-    const std::string methodReflectionTarget = describeMethodReflectionTarget(expr);
+    const std::string methodReflectionTarget = describeMethodReflectionTarget(params, locals, expr);
     if (!methodReflectionTarget.empty()) {
       if (methodReflectionTarget == "meta.object" || methodReflectionTarget == "meta.table") {
         error_ = "runtime reflection objects/tables are unsupported: " + methodReflectionTarget;
@@ -3005,15 +2795,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       std::string typeReceiverPath;
-      const bool typeNamespaceReceiver = isTypeNamespaceFieldReceiver(expr.args.front(), typeReceiverPath);
+      const bool typeNamespaceReceiver =
+          isTypeNamespaceFieldReceiver(params, locals, expr.args.front(), typeReceiverPath);
       if (!typeNamespaceReceiver && !validateExpr(params, locals, expr.args.front())) {
         return false;
       }
       BindingInfo fieldBinding;
-      if (!resolveStructFieldBinding(expr.args.front(), expr.name, fieldBinding)) {
+      if (!resolveStructFieldBinding(params, locals, expr.args.front(), expr.name, fieldBinding)) {
         if (error_.empty()) {
           std::string receiverStructPath;
-          if (!resolveStructFieldReceiverPath(expr.args.front(), receiverStructPath)) {
+          if (!resolveStructFieldReceiverPath(params, locals, expr.args.front(), receiverStructPath)) {
             error_ = "field access requires struct receiver";
           } else {
             error_ = "unknown field: " + expr.name;
@@ -6415,7 +6206,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
           BindingInfo fieldBinding;
-          if (!resolveStructFieldBinding(fieldTarget.args.front(), fieldTarget.name, fieldBinding)) {
+          if (!resolveStructFieldBinding(params, locals, fieldTarget.args.front(), fieldTarget.name, fieldBinding)) {
             if (error_.empty()) {
               error_ = "assign target must be a mutable binding";
             }
@@ -7185,7 +6976,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     Expr trimmedTypeNamespaceCallExpr;
     const std::vector<Expr> *orderedCallArgs = &expr.args;
     const std::vector<std::optional<std::string>> *orderedCallArgNames = &expr.argNames;
-    if (isTypeNamespaceMethodCall(expr, resolved)) {
+    if (isTypeNamespaceMethodCall(params, locals, expr, resolved)) {
       trimmedTypeNamespaceCallExpr = expr;
       trimmedTypeNamespaceCallExpr.args.erase(trimmedTypeNamespaceCallExpr.args.begin());
       if (!trimmedTypeNamespaceCallExpr.argNames.empty()) {

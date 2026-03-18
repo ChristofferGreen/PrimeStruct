@@ -63,6 +63,26 @@ private:
   bool resolveStructFieldBinding(const Definition &structDef,
                                  const Expr &fieldStmt,
                                  BindingInfo &bindingOut);
+  bool resolveStructFieldReceiverPath(const std::vector<ParameterInfo> &params,
+                                      const std::unordered_map<std::string, BindingInfo> &locals,
+                                      const Expr &receiver,
+                                      std::string &structPathOut);
+  bool isTypeNamespaceFieldReceiver(const std::vector<ParameterInfo> &params,
+                                    const std::unordered_map<std::string, BindingInfo> &locals,
+                                    const Expr &receiver,
+                                    std::string &structPathOut);
+  bool resolveStructFieldBinding(const std::vector<ParameterInfo> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                 const Expr &receiver,
+                                 const std::string &fieldName,
+                                 BindingInfo &bindingOut);
+  bool isTypeNamespaceMethodCall(const std::vector<ParameterInfo> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                 const Expr &callExpr,
+                                 const std::string &resolvedPath) const;
+  std::string describeMethodReflectionTarget(const std::vector<ParameterInfo> &params,
+                                             const std::unordered_map<std::string, BindingInfo> &locals,
+                                             const Expr &callExpr) const;
   bool validateSoaVectorElementFieldEnvelopes(const std::string &typeArg, const std::string &namespacePrefix);
   bool isDropTrivialContainerElementType(const std::string &typeName,
                                          const std::string &namespacePrefix,
