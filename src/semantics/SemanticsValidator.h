@@ -184,6 +184,13 @@ private:
                           const Expr &expr,
                           const std::vector<Expr> *enclosingStatements,
                           size_t statementIndex);
+  bool validateExprBodyArguments(const std::vector<ParameterInfo> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                 const Expr &expr,
+                                 std::string &resolved,
+                                 bool &resolvedMethod,
+                                 const std::vector<Expr> *enclosingStatements,
+                                 size_t statementIndex);
   ReturnKind inferControlFlowExprReturnKind(const Expr &expr,
                                             const std::vector<ParameterInfo> &params,
                                             const std::unordered_map<std::string, BindingInfo> &locals,

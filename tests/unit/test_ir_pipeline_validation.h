@@ -9234,6 +9234,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
                                                              : std::filesystem::path("..");
 
   const std::filesystem::path semanticsExprPath = repoRoot / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
+  const std::filesystem::path semanticsExprBodyArgumentsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprBodyArguments.cpp";
   const std::filesystem::path semanticsExprBlockPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprBlock.cpp";
   const std::filesystem::path semanticsExprControlFlowPath =
@@ -9249,6 +9251,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::filesystem::path semanticsExprVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprVectorHelpers.cpp";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
+  REQUIRE(std::filesystem::exists(semanticsExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(semanticsExprBlockPath));
   REQUIRE(std::filesystem::exists(semanticsExprControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
@@ -9257,6 +9260,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
+  const std::string semanticsExprBodyArgumentsSource = readText(semanticsExprBodyArgumentsPath);
   const std::string semanticsExprBlockSource = readText(semanticsExprBlockPath);
   const std::string semanticsExprControlFlowSource = readText(semanticsExprControlFlowPath);
   const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
@@ -9286,11 +9290,19 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("auto resolveStructFieldBinding =") == std::string::npos);
   CHECK(semanticsExprSource.find("auto isUnboundMetaReceiver = [&]") == std::string::npos);
   CHECK(semanticsExprSource.find("auto describeMethodReflectionTarget = [&]") == std::string::npos);
+  CHECK(semanticsExprSource.find("auto shouldPreserveBodyArgumentTarget = [&](const std::string &path)") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto remapWrappedMapMethodBodyArgumentTarget = [&]() -> bool") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("resolveMethodTarget(params, locals, expr.namespacePrefix,") != std::string::npos);
   CHECK(semanticsExprSource.find("describeMethodReflectionTarget(params, locals, expr)") != std::string::npos);
   CHECK(semanticsExprSource.find("resolveStructFieldBinding(params, locals, expr.args.front(), expr.name, fieldBinding)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("isTypeNamespaceMethodCall(params, locals, expr, resolved)") != std::string::npos);
+  CHECK(semanticsExprSource.find("if (!validateExprBodyArguments(params, locals, expr, resolved, resolvedMethod, "
+                                 "enclosingStatements,") != std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprValidation.h\"") == std::string::npos);
@@ -9301,6 +9313,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprControlFlowSource.find("bool SemanticsValidator::isStructConstructorValueExpr") !=
         std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("if branches require block envelopes") != std::string::npos);
+  CHECK(semanticsExprBodyArgumentsSource.find("bool SemanticsValidator::validateExprBodyArguments") !=
+        std::string::npos);
+  CHECK(semanticsExprBodyArgumentsSource.find("block arguments require a definition target: ") !=
+        std::string::npos);
+  CHECK(semanticsExprBodyArgumentsSource.find("resolved = preferVectorStdlibHelperPath(resolved);") !=
+        std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::resolveStructFieldReceiverPath") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::isTypeNamespaceFieldReceiver") !=
