@@ -240,13 +240,13 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Extract the shared builtin collection count/capacity resolver from `SemanticsValidatorInfer.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorInferCollectionCountCapacity.cpp`.
 - ✓ Move the remaining direct builtin collection count/capacity branches in `SemanticsValidatorInfer.cpp` onto dedicated helper dispatch paths.
 - ✓ Extract definition/statement return-kind inference helpers from `SemanticsValidatorInfer.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorInferDefinition.cpp`.
-- ◐ Refactor `src/semantics/TemplateMonomorph.cpp` (`3360` lines) below the `700`-line target. Progress: extracted templated fallback type-inference helpers into `src/semantics/TemplateMonomorphFallbackTypeInference.h`, method-call target resolution helpers into `src/semantics/TemplateMonomorphMethodTargets.h`, and block-bodied binding inference into `src/semantics/TemplateMonomorphBindingBlockInference.h`.
+- ◐ Refactor `src/semantics/TemplateMonomorph.cpp` (`3161` lines) below the `700`-line target. Progress: extracted templated fallback type-inference helpers into `src/semantics/TemplateMonomorphFallbackTypeInference.h`, method-call target resolution helpers into `src/semantics/TemplateMonomorphMethodTargets.h`, call/return binding inference into `src/semantics/TemplateMonomorphBindingCallInference.h`, and block-bodied binding inference into `src/semantics/TemplateMonomorphBindingBlockInference.h`.
 - ✓ Extract templated fallback type-inference helpers from `TemplateMonomorph.cpp` into `src/semantics/TemplateMonomorphFallbackTypeInference.h`.
-- ◐ Extract method-call target and binding-type inference helpers from `TemplateMonomorph.cpp` into dedicated helper unit(s). Progress: extracted method-call target resolution helpers into `src/semantics/TemplateMonomorphMethodTargets.h` and block-bodied binding inference into `src/semantics/TemplateMonomorphBindingBlockInference.h`.
+- ✓ Extract method-call target and binding-type inference helpers from `TemplateMonomorph.cpp` into dedicated helper unit(s).
 - ✓ Extract method-call target resolution helpers from `TemplateMonomorph.cpp` into `src/semantics/TemplateMonomorphMethodTargets.h`.
-- ◐ Extract binding-type inference helpers from `TemplateMonomorph.cpp` into dedicated helper unit(s). Progress: extracted block-bodied binding inference into `src/semantics/TemplateMonomorphBindingBlockInference.h`.
+- ✓ Extract binding-type inference helpers from `TemplateMonomorph.cpp` into dedicated helper unit(s).
 - ✓ Extract block-bodied binding inference from `inferBindingTypeForMonomorph(...)` into `src/semantics/TemplateMonomorphBindingBlockInference.h`.
-- ○ Extract call/return-based binding-type inference from `inferBindingTypeForMonomorph(...)` into dedicated helper unit(s).
+- ✓ Extract call/return-based binding-type inference from `inferBindingTypeForMonomorph(...)` into `src/semantics/TemplateMonomorphBindingCallInference.h`.
 - ○ Refactor `src/semantics/SemanticsValidatorPasses.cpp` (`3553` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidate.cpp` (`3499` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorStatement.cpp` (`3351` lines) below the `700`-line target.

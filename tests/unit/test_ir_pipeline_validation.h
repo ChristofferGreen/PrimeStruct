@@ -9302,19 +9302,25 @@ TEST_CASE("template monomorph source delegation stays stable") {
   const std::filesystem::path templateMonomorphPath = repoRoot / "src" / "semantics" / "TemplateMonomorph.cpp";
   const std::filesystem::path templateMonomorphFallbackPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphFallbackTypeInference.h";
+  const std::filesystem::path templateMonomorphBindingCallPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphBindingCallInference.h";
   const std::filesystem::path templateMonomorphBindingBlockPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphBindingBlockInference.h";
   const std::filesystem::path templateMonomorphMethodTargetsPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphMethodTargets.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
   REQUIRE(std::filesystem::exists(templateMonomorphFallbackPath));
+  REQUIRE(std::filesystem::exists(templateMonomorphBindingCallPath));
   REQUIRE(std::filesystem::exists(templateMonomorphBindingBlockPath));
   REQUIRE(std::filesystem::exists(templateMonomorphMethodTargetsPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
+  const std::string templateMonomorphBindingCallSource = readText(templateMonomorphBindingCallPath);
   const std::string templateMonomorphBindingBlockSource = readText(templateMonomorphBindingBlockPath);
   const std::string templateMonomorphMethodTargetsSource = readText(templateMonomorphMethodTargetsPath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphBindingCallInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphBindingBlockInference.h\"") !=
         std::string::npos);
@@ -9334,6 +9340,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool inferBlockBodyBindingTypeForMonomorph(const Expr &initializer,") ==
         std::string::npos);
+  CHECK(templateMonomorphSource.find("bool inferCallBindingTypeForMonomorph(const Expr &initializer,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find(
+            "if (inferCallBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut,") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("if (handledCallInference) {") !=
+        std::string::npos);
   CHECK(templateMonomorphSource.find(
             "return inferBlockBodyBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut);") !=
         std::string::npos);
@@ -9348,6 +9361,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphFallbackSource.find("bool shouldPreferTemplatedVectorFallbackForTypeMismatch(") !=
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find("std::string preferVectorStdlibImplicitTemplatePath(") !=
+        std::string::npos);
+  CHECK(templateMonomorphBindingCallSource.find("bool inferCallBindingTypeForMonomorph(const Expr &initializer,") !=
+        std::string::npos);
+  CHECK(templateMonomorphBindingCallSource.find("handledOut = false;") !=
+        std::string::npos);
+  CHECK(templateMonomorphBindingCallSource.find("inferDefinitionReturnBindingForTemplatedFallback(") !=
         std::string::npos);
   CHECK(templateMonomorphBindingBlockSource.find("bool inferBlockBodyBindingTypeForMonomorph(const Expr &initializer,") !=
         std::string::npos);
