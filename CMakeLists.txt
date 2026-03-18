@@ -266,7 +266,7 @@ primestructEnableWarnings(primec_ir_lib)
 
 add_library(primec_backend_registry_lib ${PRIMESTRUCT_BACKEND_REGISTRY_SOURCES})
 target_include_directories(primec_backend_registry_lib PUBLIC include)
-target_link_libraries(primec_backend_registry_lib PUBLIC primec_backend_emitters_lib primec_runtime_lib)
+target_link_libraries(primec_backend_registry_lib PRIVATE primec_backend_emitters_lib primec_runtime_lib)
 primestructEnableWarnings(primec_backend_registry_lib)
 
 add_library(primec_backend_lib INTERFACE)
