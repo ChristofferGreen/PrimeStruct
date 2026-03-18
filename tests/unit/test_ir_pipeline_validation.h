@@ -9244,6 +9244,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccessValidation.cpp";
   const std::filesystem::path semanticsExprCollectionCountCapacityPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionCountCapacity.cpp";
+  const std::filesystem::path semanticsExprCollectionLiteralsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionLiterals.cpp";
   const std::filesystem::path semanticsExprControlFlowPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprControlFlow.cpp";
   const std::filesystem::path semanticsExprFieldResolutionPath =
@@ -9276,6 +9278,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionCountCapacityPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCollectionLiteralsPath));
   REQUIRE(std::filesystem::exists(semanticsExprControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprGpuBufferPath));
@@ -9297,6 +9300,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       readText(semanticsExprCollectionAccessValidationPath);
   const std::string semanticsExprCollectionCountCapacitySource =
       readText(semanticsExprCollectionCountCapacityPath);
+  const std::string semanticsExprCollectionLiteralsSource =
+      readText(semanticsExprCollectionLiteralsPath);
   const std::string semanticsExprControlFlowSource = readText(semanticsExprControlFlowPath);
   const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
   const std::string semanticsExprGpuBufferSource = readText(semanticsExprGpuBufferPath);
@@ -9399,6 +9404,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto validateMemoryTargetType = [&](const std::string &targetType) -> bool") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("auto validateCollectionElementType = [&](const Expr &arg, const std::string &typeName,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (getBuiltinCollectionName(expr, builtinName)) {") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("(isSimpleCallName(expr, \"get\") || isSimpleCallName(expr, \"ref\")) && expr.args.size() == 2") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("isSimpleCallName(expr, \"contains\") || getBuiltinArrayAccessName(expr, accessHelperName)") ==
@@ -9436,6 +9445,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "validateExprScalarPointerMemoryBuiltins(") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "validateExprCollectionLiteralBuiltins(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "validateExprResultFileBuiltins(params, locals, expr, resolved, resolvedMethod,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("resolveExprCollectionAccessTarget(params, locals, expr, collectionAccessContext,") !=
@@ -9463,6 +9475,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find(
             "unknown call target: /std/collections/map/") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find(
+            "bool SemanticsValidator::validateExprCollectionLiteralBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find(
+            "soa_vector literal requires struct element type") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find(
+            "array<T, N> is unsupported; use array<T> (runtime-count array)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find(
+            "map literal requires exactly two template arguments") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool SemanticsValidator::resolveExprCollectionCountCapacityTarget") !=
