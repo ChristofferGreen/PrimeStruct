@@ -170,6 +170,20 @@ private:
                                             bool &handled);
   std::string normalizeCollectionTypePath(const std::string &typePath) const;
   bool hasImportedDefinitionPath(const std::string &path) const;
+  bool isVectorBuiltinName(const Expr &candidate, const char *helper) const;
+  bool getVectorStatementHelperName(const Expr &candidate, std::string &nameOut) const;
+  bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       const Expr &receiver,
+                                       const std::string &helperName,
+                                       std::string &resolvedOut);
+  std::string getDirectVectorHelperCompatibilityPath(const Expr &candidate) const;
+  bool resolveExprVectorHelperCall(const std::vector<ParameterInfo> &params,
+                                   const std::unordered_map<std::string, BindingInfo> &locals,
+                                   const Expr &expr,
+                                   bool &hasResolutionOut,
+                                   std::string &resolvedPathOut,
+                                   size_t &receiverIndexOut);
   bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);
   bool resolveCallCollectionTypePath(const Expr &target,
                                      const std::vector<ParameterInfo> &params,
