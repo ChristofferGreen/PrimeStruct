@@ -28,6 +28,7 @@ build and layout solidify.
 ## Language/design docs
 - Primary design doc: `docs/PrimeStruct.md`.
 - When semantics change, update docs first (or alongside code) and keep examples aligned.
+- When ownership classification changes for a public type/surface, update the canonical `core` / `hybrid` / `stdlib-owned` matrix in `docs/PrimeStruct.md` and keep the summary note in `docs/todo.md` aligned in the same change.
 - If new public syntax/IR features are added, document them with a minimal runnable
   example and expected IR snippet.
 - When specs change, add a matching TODO entry unless explicitly marked as docs-only/no TODO.

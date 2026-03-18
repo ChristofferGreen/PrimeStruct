@@ -881,10 +881,20 @@ sum_two_files([string] a, [string] b) {
 - Types outside this set are backend-specific and must be rejected by backends that do not support them.
 
 ### Type Ownership Model (architectural direction)
-- **Core language-owned envelopes:** fixed-width scalars, `string`, `array<T>`, `Pointer<T>`, and `Reference<T>` remain language/runtime-owned because they define the portable substrate other features depend on.
-- **Stdlib-owned public container surfaces:** `Maybe<T>` is already intended to be stdlib-owned, and `vector<T>`, `map<K, V>`, plus eventually `soa_vector<T>` should converge on `.prime` implementations that sit on top of minimal generic allocation/access substrate.
-- **Hybrid surfaces:** `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, and the `/std/gfx/*` family keep a minimal builtin/runtime substrate for propagation, host I/O, and device interaction, but their public helper/constructor surface should live in stdlib `.prime` wherever practical.
-- `vector<T>` and `map<K, V>` therefore still appear in the portable type set today, but that should not be read as a permanent compiler-owned collection contract.
+The ownership matrix below is the canonical reference for which public type surfaces stay
+language/runtime-owned, which remain hybrid, and which should move fully into stdlib
+`.prime` implementations.
+
+| Category | Public types/surfaces | Ownership rule | Migration stance |
+| --- | --- | --- | --- |
+| `core` | fixed-width scalars, `string`, `array<T>`, `Pointer<T>`, `Reference<T>` | Language/runtime owns both the public surface and the substrate because other features depend on them directly. | Treat these as stable substrate; delete workaround routing around them instead of trying to de-builtinize them. |
+| `hybrid` | `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, `/std/gfx/*` | Keep only minimal builtin/runtime substrate for propagation, host I/O, and device interaction. | Move public constructors, helper APIs, and error-domain behavior into stdlib `.prime` wherever practical. |
+| `stdlib-owned` | `Maybe<T>`, `vector<T>`, `map<K, V>`, target-state `soa_vector<T>` | Public API should live in stdlib `.prime` on top of minimal generic substrate. | Prefer slices that replace type-named compiler special cases with generic allocation/layout/drop substrate, then delete the old compatibility paths. |
+
+- `vector<T>` and `map<K, V>` therefore still appear in the portable type set today, but that
+  should not be read as a permanent compiler-owned collection contract.
+- `soa_vector<T>` remains a draft extension today, but its intended end-state is the same
+  stdlib-owned public surface with only generic SoA substrate left in C++.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
