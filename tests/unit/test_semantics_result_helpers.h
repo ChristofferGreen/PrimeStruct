@@ -260,6 +260,42 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("canonical stdlib gfx error result helpers construct status and value results") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<void>]
+main() {
+  [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
+  [Result<i32, GfxError>] valueStatus{gfxErrorResult<i32>(framePresentFailed())}
+  [bool] statusError{Result.error(status)}
+  [bool] valueError{Result.error(valueStatus)}
+  [string] statusWhy{Result.why(status)}
+  [string] valueWhy{Result.why(valueStatus)}
+  if(and(statusError, valueError), then(){ return() }, else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical stdlib gfx error status helper rejects non gfx errors") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<void>]
+main() {
+  [Result<GfxError>] status{gfxErrorStatus(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/gfx/gfxErrorStatus parameter err") !=
+        std::string::npos);
+}
+
 TEST_CASE("Result.map inline lambda syntax parses with explicit diagnostics") {
   const std::string source = R"(
 [return<void>]

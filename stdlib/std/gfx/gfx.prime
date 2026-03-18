@@ -143,7 +143,7 @@ namespace std {
     [public return<Result<GfxError>>]
     submit([Queue] queue) {
       if(or(less_than(this.token, 1i32), less_than(queue.token, 1i32))) {
-        return(queueSubmitFailed().code)
+        return(gfxErrorStatus(queueSubmitFailed()))
       }
       return(Result.ok())
     }
@@ -151,7 +151,7 @@ namespace std {
     [public return<Result<GfxError>>]
     present() {
       if(less_than(this.token, 1i32)) {
-        return(framePresentFailed().code)
+        return(gfxErrorStatus(framePresentFailed()))
       }
       return(Result.ok())
     }
@@ -262,6 +262,11 @@ namespace std {
   [return<GfxError>]
   gfxError([i32] code) {
     return(GfxError(code))
+  }
+
+  [public return<Result<GfxError>>]
+  gfxErrorStatus([GfxError] err) {
+    return(err.code)
   }
 
   [public return<Result<T, GfxError>>]
