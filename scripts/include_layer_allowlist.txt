@@ -1,0 +1,11 @@
+# Existing direct tests -> src/private-header dependencies.
+# Keep entries narrow and remove them when a stable testing API replaces them.
+# A target ending with "/" allows the source file to include any header under that prefix.
+
+tests/unit/test_compile_run.cpp -> src/emitter/EmitterHelpers.h
+tests/unit/test_ir_pipeline.cpp -> src/emitter/
+tests/unit/test_ir_pipeline.cpp -> src/ir_lowerer/
+tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorExprCaptureSplitStep.h
+tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorStatementLoopCountStep.h
+tests/unit/test_parser_basic_parser_helpers.h -> src/parser/ParserHelpers.h
+tests/unit/test_text_filter_helpers.cpp -> src/text_filter/TextFilterHelpers.h

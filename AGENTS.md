@@ -110,6 +110,10 @@ build and layout solidify.
 - **Doctest target layout:** when a test source only exercises compile-pipeline/frontend/IR APIs,
   prefer a dedicated doctest binary linked to `primec_ir_lib` or `primec_frontend_lib` instead of
   folding it into the broad `PrimeStruct_tests -> primec_lib` target.
+- **Include-layer guardrails:** `ctest` now runs `scripts/check_include_layers.py`. Public headers
+  must not include `src/` or `tests/` files, production sources must not include `tests/`, and any
+  remaining direct `tests -> src/` includes must be listed narrowly in
+  `scripts/include_layer_allowlist.txt` until a stable testing API replaces them.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **VM/native strings:** string values are represented as string-table indices; dynamic

@@ -218,7 +218,7 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Carve additional frontend/IR-only doctest suites out of `PrimeStruct_tests` so parser/text-filter coverage can link frontend/IR targets without the backend registry umbrella.
 - ✓ Move text-filter doctest suites onto a dedicated `PrimeStruct_text_filter_tests` target linked to `primec_frontend_lib` instead of `primec_lib`.
 - ✓ Move parser/template doctest suites onto a dedicated `PrimeStruct_parser_tests` target linked to `primec_frontend_lib` instead of `primec_lib`.
-- ○ Add CI checks for include-layer violations and direct `tests -> src/` internal header dependencies.
+- ✓ Add CI checks for include-layer violations and direct `tests -> src/` internal header dependencies.
 - ○ Define a stable internal testing API so unit tests stop including `src/` headers directly.
 - ○ Refactor `src/semantics/SemanticsValidatorExpr.cpp` (`9060` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorInfer.cpp` (`6261` lines) below the `700`-line target.

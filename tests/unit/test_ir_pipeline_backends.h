@@ -324,7 +324,37 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("set(PrimeStructParserTestSuites") != std::string::npos);
   CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_parser_tests> \"--test-suite=${suite}\"") !=
         std::string::npos);
+  CHECK(cmake.find("find_package(Python3 REQUIRED COMPONENTS Interpreter)") != std::string::npos);
+  CHECK(cmake.find("NAME PrimeStruct_include_layers") != std::string::npos);
+  CHECK(cmake.find("scripts/check_include_layers.py") != std::string::npos);
+  CHECK(cmake.find("scripts/include_layer_allowlist.txt") != std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)") != std::string::npos);
+}
+
+TEST_CASE("include layer guardrail baseline tracks existing private test headers") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path scriptPath = cwd / "scripts" / "check_include_layers.py";
+  std::filesystem::path allowlistPath = cwd / "scripts" / "include_layer_allowlist.txt";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = cwd.parent_path() / "scripts" / "check_include_layers.py";
+    allowlistPath = cwd.parent_path() / "scripts" / "include_layer_allowlist.txt";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+  REQUIRE(std::filesystem::exists(allowlistPath));
+
+  const std::string script = readTextFile(scriptPath);
+  CHECK(script.find("public headers must not include private src headers") != std::string::npos);
+  CHECK(script.find("production sources must not include test headers") != std::string::npos);
+  CHECK(script.find("direct tests -> src include is not allowlisted") != std::string::npos);
+  CHECK(script.find("stale allowlist entry should be removed") != std::string::npos);
+
+  const std::string allowlist = readTextFile(allowlistPath);
+  CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/emitter/") != std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/ir_lowerer/") != std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_parser_basic_parser_helpers.h -> src/parser/ParserHelpers.h") !=
+        std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_text_filter_helpers.cpp -> src/text_filter/TextFilterHelpers.h") !=
+        std::string::npos);
 }
 
 TEST_CASE("glsl and spirv ir backends use glsl ir validation target") {

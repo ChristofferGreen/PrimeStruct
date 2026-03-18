@@ -249,6 +249,7 @@ target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib)
 primestructEnableWarnings(primevm)
 
 if(PRIMESTRUCT_BUILD_TESTS)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
   enable_testing()
   add_executable(PrimeStruct_tests
     tests/unit/test_main.cpp
@@ -427,6 +428,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
     set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()
+
+  add_test(
+    NAME PrimeStruct_include_layers
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_include_layers.py
+            --root ${CMAKE_SOURCE_DIR}
+            --allowlist ${CMAKE_SOURCE_DIR}/scripts/include_layer_allowlist.txt
+  )
+  set_tests_properties(PrimeStruct_include_layers PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
 
   function(addPrimeStructDoctestSuite suite)
     set(options)
