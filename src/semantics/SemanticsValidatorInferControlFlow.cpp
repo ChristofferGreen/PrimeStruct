@@ -1,0 +1,180 @@
+#include "SemanticsValidator.h"
+
+#include <optional>
+
+namespace primec::semantics {
+namespace {
+
+ReturnKind combineNumericReturnKinds(ReturnKind left, ReturnKind right) {
+  if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
+    return ReturnKind::Unknown;
+  }
+  if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::String ||
+      right == ReturnKind::String || left == ReturnKind::Void || right == ReturnKind::Void ||
+      left == ReturnKind::Array || right == ReturnKind::Array) {
+    return ReturnKind::Unknown;
+  }
+  if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
+    return ReturnKind::Float64;
+  }
+  if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
+    return ReturnKind::Float32;
+  }
+  if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
+    return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;
+  }
+  if (left == ReturnKind::Int64 || right == ReturnKind::Int64) {
+    if ((left == ReturnKind::Int64 || left == ReturnKind::Int) &&
+        (right == ReturnKind::Int64 || right == ReturnKind::Int)) {
+      return ReturnKind::Int64;
+    }
+    return ReturnKind::Unknown;
+  }
+  if (left == ReturnKind::Int && right == ReturnKind::Int) {
+    return ReturnKind::Int;
+  }
+  return ReturnKind::Unknown;
+}
+
+} // namespace
+
+ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
+    const Expr &expr,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    bool &handled) {
+  handled = false;
+
+  if (isMatchCall(expr)) {
+    handled = true;
+    Expr expanded;
+    if (!lowerMatchToIf(expr, expanded, error_)) {
+      return ReturnKind::Unknown;
+    }
+    return inferExprReturnKind(expanded, params, locals);
+  }
+
+  if (isIfCall(expr) && expr.args.size() == 3) {
+    handled = true;
+    auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+        return false;
+      }
+      if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+        return false;
+      }
+      if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+        return false;
+      }
+      return true;
+    };
+    auto inferBlockEnvelopeValue = [&](const Expr &candidate,
+                                       const std::unordered_map<std::string, BindingInfo> &localsIn,
+                                       const Expr *&valueExprOut,
+                                       std::unordered_map<std::string, BindingInfo> &localsOut) -> bool {
+      valueExprOut = nullptr;
+      localsOut = localsIn;
+      if (!isIfBlockEnvelope(candidate)) {
+        return false;
+      }
+      bool sawReturn = false;
+      for (const auto &bodyExpr : candidate.bodyArguments) {
+        if (bodyExpr.isBinding) {
+          BindingInfo binding;
+          std::optional<std::string> restrictType;
+          if (!parseBindingInfo(bodyExpr, candidate.namespacePrefix, structNames_, importAliases_, binding, restrictType,
+                                error_)) {
+            return false;
+          }
+          if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, localsOut, binding);
+          }
+          localsOut.emplace(bodyExpr.name, std::move(binding));
+          continue;
+        }
+        if (isReturnCall(bodyExpr)) {
+          if (bodyExpr.args.size() != 1) {
+            return false;
+          }
+          valueExprOut = &bodyExpr.args.front();
+          sawReturn = true;
+          continue;
+        }
+        if (!sawReturn) {
+          valueExprOut = &bodyExpr;
+        }
+      }
+      return valueExprOut != nullptr;
+    };
+
+    const Expr *thenValueExpr = nullptr;
+    const Expr *elseValueExpr = nullptr;
+    std::unordered_map<std::string, BindingInfo> thenLocals;
+    std::unordered_map<std::string, BindingInfo> elseLocals;
+    if (!inferBlockEnvelopeValue(expr.args[1], locals, thenValueExpr, thenLocals) ||
+        !inferBlockEnvelopeValue(expr.args[2], locals, elseValueExpr, elseLocals)) {
+      return ReturnKind::Unknown;
+    }
+
+    ReturnKind thenKind = inferExprReturnKind(*thenValueExpr, params, thenLocals);
+    ReturnKind elseKind = inferExprReturnKind(*elseValueExpr, params, elseLocals);
+    if (thenKind == elseKind) {
+      return thenKind;
+    }
+    return combineNumericReturnKinds(thenKind, elseKind);
+  }
+
+  if (isBlockCall(expr) && expr.hasBodyArguments) {
+    const std::string resolved = resolveCalleePath(expr);
+    if (defMap_.find(resolved) == defMap_.end() && expr.args.empty() && expr.templateArgs.empty() &&
+        !hasNamedArguments(expr.argNames)) {
+      handled = true;
+      if (expr.bodyArguments.empty()) {
+        return ReturnKind::Unknown;
+      }
+      std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+      ReturnKind result = ReturnKind::Unknown;
+      bool sawReturn = false;
+      for (const auto &bodyExpr : expr.bodyArguments) {
+        if (bodyExpr.isBinding) {
+          BindingInfo info;
+          std::optional<std::string> restrictType;
+          if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, info, restrictType,
+                                error_)) {
+            return ReturnKind::Unknown;
+          }
+          if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
+          }
+          if (restrictType.has_value()) {
+            const bool hasTemplate = !info.typeTemplateArg.empty();
+            if (!restrictMatchesBinding(*restrictType,
+                                        info.typeName,
+                                        info.typeTemplateArg,
+                                        hasTemplate,
+                                        bodyExpr.namespacePrefix)) {
+              return ReturnKind::Unknown;
+            }
+          }
+          blockLocals.emplace(bodyExpr.name, std::move(info));
+          continue;
+        }
+        if (isReturnCall(bodyExpr)) {
+          if (bodyExpr.args.size() == 1) {
+            result = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
+            sawReturn = true;
+          }
+          continue;
+        }
+        if (!sawReturn) {
+          result = inferExprReturnKind(bodyExpr, params, blockLocals);
+        }
+      }
+      return result;
+    }
+  }
+
+  return ReturnKind::Unknown;
+}
+
+} // namespace primec::semantics

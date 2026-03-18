@@ -231,7 +231,10 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Extract control-flow/block expression validation from `SemanticsValidatorExpr.cpp` into dedicated helper units.
 - ✓ Extract builtin `if(...)` expression validation from `SemanticsValidatorExpr.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorExprControlFlow.cpp`.
 - ✓ Extract builtin `block { ... }` expression validation from `SemanticsValidatorExpr.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorExprBlock.cpp`.
-- ○ Refactor `src/semantics/SemanticsValidatorInfer.cpp` (`6261` lines) below the `700`-line target.
+- ◐ Refactor `src/semantics/SemanticsValidatorInfer.cpp` (`6345` lines) below the `700`-line target. Progress: extracted match/if/block return-kind inference into `src/semantics/SemanticsValidatorInferControlFlow.cpp`.
+- ✓ Extract match/if/block return-kind inference from `SemanticsValidatorInfer.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorInferControlFlow.cpp`.
+- ○ Extract collection and call-target return-kind inference from `SemanticsValidatorInfer.cpp` into dedicated helper unit(s).
+- ○ Extract definition/statement return-kind inference helpers from `SemanticsValidatorInfer.cpp` into dedicated helper unit(s).
 - ○ Refactor `src/semantics/TemplateMonomorph.cpp` (`4109` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorPasses.cpp` (`3553` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidate.cpp` (`3499` lines) below the `700`-line target.

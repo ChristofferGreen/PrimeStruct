@@ -9286,6 +9286,38 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK_FALSE(std::filesystem::exists(semanticsExprValidationHeaderPath));
 }
 
+TEST_CASE("semantics validator infer source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path semanticsInferPath = repoRoot / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
+  const std::filesystem::path semanticsInferControlFlowPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferControlFlow.cpp";
+  REQUIRE(std::filesystem::exists(semanticsInferPath));
+  REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
+  const std::string semanticsInferSource = readText(semanticsInferPath);
+  const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
+  CHECK(semanticsInferSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
+  CHECK(semanticsInferSource.find("inferControlFlowExprReturnKind(expr, params, locals, handledControlFlow);") !=
+        std::string::npos);
+  CHECK(semanticsInferControlFlowSource.find("ReturnKind combineNumericReturnKinds") != std::string::npos);
+  CHECK(semanticsInferControlFlowSource.find("ReturnKind SemanticsValidator::inferControlFlowExprReturnKind") !=
+        std::string::npos);
+  CHECK(semanticsInferControlFlowSource.find("if (isMatchCall(expr))") != std::string::npos);
+  CHECK(semanticsInferControlFlowSource.find("if (isIfCall(expr) && expr.args.size() == 3)") != std::string::npos);
+  CHECK(semanticsInferControlFlowSource.find("if (isBlockCall(expr) && expr.hasBodyArguments)") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantics validator statement source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

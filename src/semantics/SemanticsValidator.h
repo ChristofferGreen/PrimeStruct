@@ -144,6 +144,10 @@ private:
                           const Expr &expr,
                           const std::vector<Expr> *enclosingStatements,
                           size_t statementIndex);
+  ReturnKind inferControlFlowExprReturnKind(const Expr &expr,
+                                            const std::vector<ParameterInfo> &params,
+                                            const std::unordered_map<std::string, BindingInfo> &locals,
+                                            bool &handled);
   bool validateStatement(const std::vector<ParameterInfo> &params,
                          std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &stmt,
