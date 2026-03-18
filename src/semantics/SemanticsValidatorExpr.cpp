@@ -5528,7 +5528,25 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = std::string("file operations require ") + requiredEffect + " effect";
           return false;
         }
-        if (!validateExpr(params, locals, expr.args.front())) {
+        const Expr &receiverExpr = expr.args.front();
+        if (isNamedArgsPackWrappedFileBuiltinAccessCall(receiverExpr)) {
+          if (!receiverExpr.templateArgs.empty()) {
+            error_ = "at does not accept template arguments";
+            return false;
+          }
+          if (receiverExpr.hasBodyArguments || !receiverExpr.bodyArguments.empty()) {
+            error_ = "at does not accept block arguments";
+            return false;
+          }
+          if (!isIntegerExpr(receiverExpr.args[1], params, locals)) {
+            error_ = "at requires integer index";
+            return false;
+          }
+          if (!validateExpr(params, locals, receiverExpr.args[0]) ||
+              !validateExpr(params, locals, receiverExpr.args[1])) {
+            return false;
+          }
+        } else if (!validateExpr(params, locals, receiverExpr)) {
           return false;
         }
         auto isFilePrintableExpr = [&](const Expr &arg) -> bool {
@@ -5691,7 +5709,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return true;
         }
       }
-      if (hasNamedArguments(expr.argNames) && resolvedMethod) {
+      const bool allowsNamedArgsPackBuiltinLabels =
+          isNamedArgsPackMethodAccessCall(expr) ||
+          isNamedArgsPackWrappedFileBuiltinAccessCall(expr);
+      if (hasNamedArguments(expr.argNames) && resolvedMethod &&
+          !allowsNamedArgsPackBuiltinLabels) {
         std::string vectorHelperName;
         if (getVectorStatementHelperName(expr, vectorHelperName)) {
           error_ = vectorHelperName + " is only supported as a statement";
@@ -5701,8 +5723,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       if (hasNamedArguments(expr.argNames)) {
-        if (isNamedArgsPackMethodAccessCall(expr) ||
-            isNamedArgsPackWrappedFileBuiltinAccessCall(expr)) {
+        if (allowsNamedArgsPackBuiltinLabels) {
           // Method-style args-pack body access keeps receiver/index order in the AST,
           // and canonical free-builtin wrapped File access keeps [values]/[index]
           // ordering in the AST, so only the validator needs to permit those labels.
