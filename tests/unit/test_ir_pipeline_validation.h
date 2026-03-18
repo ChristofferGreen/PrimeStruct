@@ -9406,6 +9406,10 @@ TEST_CASE("semantics validate source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidateMaybeConstructors.cpp";
   const std::filesystem::path semanticsValidateMaybeConstructorsHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateMaybeConstructors.h";
+  const std::filesystem::path semanticsValidateReflectionGeneratedHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpers.cpp";
+  const std::filesystem::path semanticsValidateReflectionGeneratedHelpersHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpers.h";
   const std::filesystem::path semanticsValidateReflectionMetadataPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateReflectionMetadata.cpp";
   const std::filesystem::path semanticsValidateReflectionMetadataHeaderPath =
@@ -9421,6 +9425,8 @@ TEST_CASE("semantics validate source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsValidateExperimentalGfxConstructorsHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateMaybeConstructorsPath));
   REQUIRE(std::filesystem::exists(semanticsValidateMaybeConstructorsHeaderPath));
+  REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersPath));
+  REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionMetadataPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionMetadataHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateTransformsPath));
@@ -9436,6 +9442,10 @@ TEST_CASE("semantics validate source delegation stays stable") {
   const std::string semanticsValidateMaybeConstructorsSource = readText(semanticsValidateMaybeConstructorsPath);
   const std::string semanticsValidateMaybeConstructorsHeaderSource =
       readText(semanticsValidateMaybeConstructorsHeaderPath);
+  const std::string semanticsValidateReflectionGeneratedHelpersSource =
+      readText(semanticsValidateReflectionGeneratedHelpersPath);
+  const std::string semanticsValidateReflectionGeneratedHelpersHeaderSource =
+      readText(semanticsValidateReflectionGeneratedHelpersHeaderPath);
   const std::string semanticsValidateReflectionMetadataSource = readText(semanticsValidateReflectionMetadataPath);
   const std::string semanticsValidateReflectionMetadataHeaderSource =
       readText(semanticsValidateReflectionMetadataHeaderPath);
@@ -9446,6 +9456,8 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateExperimentalGfxConstructors.h\"") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateMaybeConstructors.h\"") != std::string::npos);
+  CHECK(semanticsValidateSource.find("#include \"SemanticsValidateReflectionGeneratedHelpers.h\"") !=
+        std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateReflectionMetadata.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateTransforms.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("semantics::applySemanticTransforms(program, semanticTransforms, error)") !=
@@ -9455,6 +9467,8 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateSource.find("semantics::rewriteExperimentalGfxConstructors(program, error)") !=
         std::string::npos);
+  CHECK(semanticsValidateSource.find("semantics::rewriteReflectionGeneratedHelpers(program, error)") !=
+        std::string::npos);
   CHECK(semanticsValidateSource.find("semantics::rewriteReflectionMetadataQueries(program, error)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find("bool applySemanticTransforms(Program &program,") == std::string::npos);
@@ -9463,6 +9477,8 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateSource.find("bool rewriteExperimentalGfxConstructors(Program &program, std::string &error)") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteMaybeConstructors(Program &program, std::string &error)") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find("bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error)") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteReflectionMetadataQueries(Program &program, std::string &error)") ==
         std::string::npos);
@@ -9490,6 +9506,15 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateMaybeConstructorsSource.find("const std::string_view base =") != std::string::npos);
   CHECK(semanticsValidateMaybeConstructorsSource.find("call.name = prefix.empty() ? \"/some\" : (prefix + \"/some\");") !=
         std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersHeaderSource.find("bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("generated reflection helper already exists: ") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("DeserializePayloadSizeErrorCode") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitDeserializeHelper") != std::string::npos);
   CHECK(semanticsValidateReflectionMetadataHeaderSource.find("bool rewriteReflectionMetadataQueries(Program &program, std::string &error)") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionMetadataSource.find("bool rewriteReflectionMetadataQueries(Program &program, std::string &error)") !=
