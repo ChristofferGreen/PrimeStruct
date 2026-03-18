@@ -24,6 +24,13 @@ PrimeStruct is organized into four language levels. Each higher level desugars i
 - **Deterministic emission:** canonicalization happens once, before backend selection, so all emitters see the same fully-resolved envelopes and produce consistent results.
 - **Backend boundary policy:** all codegen modes consume canonical IR via `IrBackend` (`docs/adr/0001-backend-ir-boundary.md`), including production aliases (`cpp`, `exe`, `glsl`, `spirv`) that resolve to canonical IR backend kinds before dispatch.
 
+### Planned Type-Resolution Graph
+The planned graph-backed resolver is an internal semantics model built from the canonical AST after semantic transforms and template monomorphization, and before IR lowering. Its purpose is to replace ad hoc inference ordering with one deterministic dependency model without changing the public language surface.
+- **Node kinds:** definition return-kind nodes model the inferred or validated result of each callable definition; call-site constraint nodes model argument/receiver/template constraints that connect a specific call to its callee; local `auto` constraint nodes model each local or omitted-envelope inference site that must converge to one concrete envelope.
+- **Edge kinds:** dependency edges mean the source node must wait for or revisit the target node during solving because the target contributes information needed for convergence; requirement edges mean the source imposes a concrete compatibility requirement on the target and preserve diagnostic provenance even when they do not introduce a new solve-order dependency.
+- **Cycle policy:** strongly connected components are the unit of solving. Cycles that represent real mutual dependencies are legal and are solved to a fixed point across the whole SCC. Cycles that remain ungrounded or collapse to contradictory requirements are illegal and must produce deterministic diagnostics instead of partial inference.
+- **Deterministic ordering guarantees:** for a fixed canonical program, node creation order, node IDs, edge insertion order, SCC member ordering, condensation-DAG traversal order, and emitted diagnostics must be stable. Graph dumps and diagnostics must not depend on hash iteration order, parallel scheduling, or unrelated definitions elsewhere in the program.
+
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
 - **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions, surprising overload rules, or hidden allocations.
