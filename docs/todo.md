@@ -225,7 +225,10 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Expose semantics validation helper declarations via `include/primec/testing/SemanticsValidationHelpers.h` and switch `test_ir_pipeline.cpp` away from direct `src/semantics` includes.
 - ✓ Add stable testing facades for `test_ir_pipeline.cpp` emitter helper access so it can drop its remaining `src/emitter` header dependencies.
 - ✓ Add stable testing facades for `test_ir_pipeline.cpp` IR-lowerer helper access so it can drop its remaining `src/ir_lowerer` header dependencies.
-- ○ Refactor `src/semantics/SemanticsValidatorExpr.cpp` (`9060` lines) below the `700`-line target.
+- ◐ Refactor `src/semantics/SemanticsValidatorExpr.cpp` (`9349` lines) below the `700`-line target. Progress: extracted lambda-expression validation into `src/semantics/SemanticsValidatorExprLambda.cpp`.
+- ✓ Extract lambda-expression validation from `SemanticsValidatorExpr.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorExprLambda.cpp`.
+- ○ Extract numeric and matrix/quaternion expression validation from `SemanticsValidatorExpr.cpp` into a dedicated helper unit.
+- ○ Extract control-flow/block expression validation from `SemanticsValidatorExpr.cpp` into dedicated helper units.
 - ○ Refactor `src/semantics/SemanticsValidatorInfer.cpp` (`6261` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/TemplateMonomorph.cpp` (`4109` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorPasses.cpp` (`3553` lines) below the `700`-line target.

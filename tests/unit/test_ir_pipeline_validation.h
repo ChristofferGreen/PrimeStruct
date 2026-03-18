@@ -9234,12 +9234,22 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
                                                              : std::filesystem::path("..");
 
   const std::filesystem::path semanticsExprPath = repoRoot / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
+  const std::filesystem::path semanticsExprLambdaPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprLambda.cpp";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
+  REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
+  const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
-  CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") != std::string::npos);
+  CHECK(semanticsExprSource.find("return validateLambdaExpr(params, locals, expr, enclosingStatements, statementIndex);") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprValidation.h\"") == std::string::npos);
+  CHECK(semanticsExprLambdaSource.find("bool SemanticsValidator::validateLambdaExpr") != std::string::npos);
+  CHECK(semanticsExprLambdaSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") !=
+        std::string::npos);
+  CHECK(semanticsExprLambdaSource.find("duplicate lambda capture") != std::string::npos);
 
   const std::filesystem::path semanticsExprPredicatesHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPredicates.h";
