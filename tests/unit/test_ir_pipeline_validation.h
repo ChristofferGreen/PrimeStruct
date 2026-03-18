@@ -9406,6 +9406,10 @@ TEST_CASE("semantics validate source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidateMaybeConstructors.cpp";
   const std::filesystem::path semanticsValidateMaybeConstructorsHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateMaybeConstructors.h";
+  const std::filesystem::path semanticsValidateReflectionMetadataPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateReflectionMetadata.cpp";
+  const std::filesystem::path semanticsValidateReflectionMetadataHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateReflectionMetadata.h";
   const std::filesystem::path semanticsValidateTransformsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateTransforms.cpp";
   const std::filesystem::path semanticsValidateTransformsHeaderPath =
@@ -9417,6 +9421,8 @@ TEST_CASE("semantics validate source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsValidateExperimentalGfxConstructorsHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateMaybeConstructorsPath));
   REQUIRE(std::filesystem::exists(semanticsValidateMaybeConstructorsHeaderPath));
+  REQUIRE(std::filesystem::exists(semanticsValidateReflectionMetadataPath));
+  REQUIRE(std::filesystem::exists(semanticsValidateReflectionMetadataHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateTransformsPath));
   REQUIRE(std::filesystem::exists(semanticsValidateTransformsHeaderPath));
   const std::string semanticsValidateSource = readText(semanticsValidatePath);
@@ -9430,6 +9436,9 @@ TEST_CASE("semantics validate source delegation stays stable") {
   const std::string semanticsValidateMaybeConstructorsSource = readText(semanticsValidateMaybeConstructorsPath);
   const std::string semanticsValidateMaybeConstructorsHeaderSource =
       readText(semanticsValidateMaybeConstructorsHeaderPath);
+  const std::string semanticsValidateReflectionMetadataSource = readText(semanticsValidateReflectionMetadataPath);
+  const std::string semanticsValidateReflectionMetadataHeaderSource =
+      readText(semanticsValidateReflectionMetadataHeaderPath);
   const std::string semanticsValidateTransformsSource = readText(semanticsValidateTransformsPath);
   const std::string semanticsValidateTransformsHeaderSource = readText(semanticsValidateTransformsHeaderPath);
 
@@ -9437,6 +9446,7 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateExperimentalGfxConstructors.h\"") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateMaybeConstructors.h\"") != std::string::npos);
+  CHECK(semanticsValidateSource.find("#include \"SemanticsValidateReflectionMetadata.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateTransforms.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("semantics::applySemanticTransforms(program, semanticTransforms, error)") !=
         std::string::npos);
@@ -9445,12 +9455,16 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateSource.find("semantics::rewriteExperimentalGfxConstructors(program, error)") !=
         std::string::npos);
+  CHECK(semanticsValidateSource.find("semantics::rewriteReflectionMetadataQueries(program, error)") !=
+        std::string::npos);
   CHECK(semanticsValidateSource.find("bool applySemanticTransforms(Program &program,") == std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteConvertConstructors(Program &program, std::string &error)") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteExperimentalGfxConstructors(Program &program, std::string &error)") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteMaybeConstructors(Program &program, std::string &error)") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find("bool rewriteReflectionMetadataQueries(Program &program, std::string &error)") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find("bool validateExprTransforms(const Expr &expr,") == std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteEnumDefinitions(Program &program, std::string &error)") ==
@@ -9475,6 +9489,14 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateMaybeConstructorsSource.find("const std::string_view base =") != std::string::npos);
   CHECK(semanticsValidateMaybeConstructorsSource.find("call.name = prefix.empty() ? \"/some\" : (prefix + \"/some\");") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionMetadataHeaderSource.find("bool rewriteReflectionMetadataQueries(Program &program, std::string &error)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionMetadataSource.find("bool rewriteReflectionMetadataQueries(Program &program, std::string &error)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionMetadataSource.find("ParsedStringLiteral parsed;") != std::string::npos);
+  CHECK(semanticsValidateReflectionMetadataSource.find("queryName != \"type_name\"") != std::string::npos);
+  CHECK(semanticsValidateReflectionMetadataSource.find("meta.has_trait requires one or two template arguments") !=
         std::string::npos);
   CHECK(semanticsValidateTransformsHeaderSource.find("bool applySemanticTransforms(Program &program,") !=
         std::string::npos);
