@@ -210,7 +210,9 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Introduce `primec_support_lib`, `primec_frontend_lib`, and `primec_backend_lib`, keeping `primec_lib` as the compatibility umbrella target for executables and tests.
 - ◐ Split `primec_backend_lib` further into narrower IR/emitter/runtime subsystem libraries once the remaining transitive dependencies are reduced. Progress: the first backend-focused split now separates IR/core pipeline code, codegen/backends, and VM runtime/debug code into explicit subsystem targets while keeping `primec_backend_lib` as the backend compatibility umbrella.
 - ✓ Introduce `primec_ir_lib`, `primec_codegen_lib`, and `primec_runtime_lib`, keeping `primec_backend_lib` as the compatibility umbrella target for backend-facing links.
-- ○ Reduce the remaining transitive coupling between `primec_ir_lib` and `primec_codegen_lib` so backend registry/pipeline glue depends on narrower interfaces instead of broad codegen targets.
+- ◐ Reduce the remaining transitive coupling between `primec_ir_lib` and `primec_codegen_lib` so backend registry/pipeline glue depends on narrower interfaces instead of broad codegen targets. Progress: backend registry glue now lives in a dedicated target that depends on codegen/runtime implementations, so the backend umbrella no longer exposes the broad codegen and runtime targets directly.
+- ✓ Introduce `primec_backend_registry_lib` for `IrBackends.cpp`, and route `primec_backend_lib` through that narrower registry target instead of linking `primec_codegen_lib` and `primec_runtime_lib` directly.
+- ○ Continue shrinking backend-registry dependencies so compile-pipeline callers can depend on registry interfaces without pulling unrelated emitter/runtime implementation libraries.
 - ○ Add CI checks for include-layer violations and direct `tests -> src/` internal header dependencies.
 - ○ Define a stable internal testing API so unit tests stop including `src/` headers directly.
 - ○ Refactor `src/semantics/SemanticsValidatorExpr.cpp` (`9060` lines) below the `700`-line target.

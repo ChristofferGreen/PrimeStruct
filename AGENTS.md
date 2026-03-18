@@ -102,9 +102,10 @@ build and layout solidify.
 - **CMake subsystem layout:** place new build sources in the narrowest library that fits:
   `primec_support_lib` (shared utilities), `primec_frontend_lib` (import/parser/semantics/text
   filtering), `primec_ir_lib` (IR preparation/lowering/validation tooling), `primec_codegen_lib`
-  (emitters, backend registry, external tooling), and `primec_runtime_lib` (VM runtime/debugger).
-  Keep `primec_backend_lib` and `primec_lib` as compatibility umbrellas instead of adding new
-  source files to them directly.
+  (emitters and external tooling), `primec_runtime_lib` (VM runtime/debugger), and
+  `primec_backend_registry_lib` (backend registry glue such as `IrBackends.cpp`). Keep
+  `primec_backend_lib` and `primec_lib` as compatibility umbrellas instead of adding new source
+  files to them directly.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **VM/native strings:** string values are represented as string-table indices; dynamic

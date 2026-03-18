@@ -185,7 +185,6 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/glsl_emitter/GlslEmitterExpr.cpp
   src/glsl_emitter/GlslEmitterHelpers.cpp
   src/glsl_emitter/GlslEmitterStatements.cpp
-  src/IrBackends.cpp
   src/IrToCppEmitter.cpp
   src/IrToGlslEmitter.cpp
   src/native_emitter/NativeEmitterHelpers.cpp
@@ -197,6 +196,10 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/Vm.cpp
   src/VmDebugAdapter.cpp
   src/VmDebugDap.cpp
+)
+
+set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES
+  src/IrBackends.cpp
 )
 
 add_library(primec_support_lib ${PRIMESTRUCT_SUPPORT_SOURCES})
@@ -215,7 +218,7 @@ primestructEnableWarnings(primec_runtime_lib)
 
 add_library(primec_codegen_lib ${PRIMESTRUCT_CODEGEN_SOURCES})
 target_include_directories(primec_codegen_lib PUBLIC include)
-target_link_libraries(primec_codegen_lib PUBLIC primec_runtime_lib primec_frontend_lib primec_support_lib)
+target_link_libraries(primec_codegen_lib PUBLIC primec_frontend_lib primec_support_lib)
 primestructEnableWarnings(primec_codegen_lib)
 
 add_library(primec_ir_lib ${PRIMESTRUCT_IR_SOURCES})
@@ -223,9 +226,14 @@ target_include_directories(primec_ir_lib PUBLIC include)
 target_link_libraries(primec_ir_lib PUBLIC primec_frontend_lib primec_support_lib)
 primestructEnableWarnings(primec_ir_lib)
 
+add_library(primec_backend_registry_lib ${PRIMESTRUCT_BACKEND_REGISTRY_SOURCES})
+target_include_directories(primec_backend_registry_lib PUBLIC include)
+target_link_libraries(primec_backend_registry_lib PUBLIC primec_codegen_lib primec_runtime_lib)
+primestructEnableWarnings(primec_backend_registry_lib)
+
 add_library(primec_backend_lib INTERFACE)
 target_include_directories(primec_backend_lib INTERFACE include)
-target_link_libraries(primec_backend_lib INTERFACE primec_ir_lib primec_codegen_lib primec_runtime_lib)
+target_link_libraries(primec_backend_lib INTERFACE primec_ir_lib primec_backend_registry_lib)
 
 add_library(primec_lib INTERFACE)
 target_include_directories(primec_lib INTERFACE include)
