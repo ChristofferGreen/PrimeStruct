@@ -51,6 +51,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateReflectionGeneratedHelpersCompare.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpersSerialization.cpp
+  src/semantics/SemanticsValidateReflectionGeneratedHelpersState.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpersValidate.cpp
   src/semantics/SemanticsValidateReflectionMetadata.cpp
   src/semantics/SemanticsValidateTransforms.cpp

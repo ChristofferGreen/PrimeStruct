@@ -9418,6 +9418,10 @@ TEST_CASE("semantics validate source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpersSerialization.cpp";
   const std::filesystem::path semanticsValidateReflectionGeneratedHelpersSerializationHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpersSerialization.h";
+  const std::filesystem::path semanticsValidateReflectionGeneratedHelpersStatePath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpersState.cpp";
+  const std::filesystem::path semanticsValidateReflectionGeneratedHelpersStateHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpersState.h";
   const std::filesystem::path semanticsValidateReflectionGeneratedHelpersValidatePath =
       repoRoot / "src" / "semantics" / "SemanticsValidateReflectionGeneratedHelpersValidate.cpp";
   const std::filesystem::path semanticsValidateReflectionGeneratedHelpersValidateHeaderPath =
@@ -9443,6 +9447,8 @@ TEST_CASE("semantics validate source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersCompareHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersSerializationPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersSerializationHeaderPath));
+  REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersStatePath));
+  REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersStateHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersValidatePath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionGeneratedHelpersValidateHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionMetadataPath));
@@ -9472,6 +9478,10 @@ TEST_CASE("semantics validate source delegation stays stable") {
       readText(semanticsValidateReflectionGeneratedHelpersSerializationPath);
   const std::string semanticsValidateReflectionGeneratedHelpersSerializationHeaderSource =
       readText(semanticsValidateReflectionGeneratedHelpersSerializationHeaderPath);
+  const std::string semanticsValidateReflectionGeneratedHelpersStateSource =
+      readText(semanticsValidateReflectionGeneratedHelpersStatePath);
+  const std::string semanticsValidateReflectionGeneratedHelpersStateHeaderSource =
+      readText(semanticsValidateReflectionGeneratedHelpersStateHeaderPath);
   const std::string semanticsValidateReflectionGeneratedHelpersValidateSource =
       readText(semanticsValidateReflectionGeneratedHelpersValidatePath);
   const std::string semanticsValidateReflectionGeneratedHelpersValidateHeaderSource =
@@ -9546,6 +9556,8 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("#include \"SemanticsValidateReflectionGeneratedHelpersSerialization.h\"") !=
         std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("#include \"SemanticsValidateReflectionGeneratedHelpersState.h\"") !=
+        std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("#include \"SemanticsValidateReflectionGeneratedHelpersValidate.h\"") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionComparisonHelper(compareContext, \"Equal\", \"equal\", \"and\", true)") !=
@@ -9555,6 +9567,14 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionCompareHelper(compareContext)") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionHash64Helper(compareContext)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionClearHelper(stateContext)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionCopyFromHelper(stateContext)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionDefaultHelper(stateContext)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionIsDefaultHelper(stateContext)") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionSerializeHelper(serializationContext)") !=
         std::string::npos);
@@ -9567,6 +9587,14 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitCompareHelper = [&]() -> bool {") ==
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitHash64Helper = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitClearHelper = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitCopyFromHelper = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitDefaultHelper = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitIsDefaultHelper = [&]() -> bool {") ==
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitSerializeHelper = [&]() -> bool {") ==
         std::string::npos);
@@ -9595,6 +9623,30 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateReflectionGeneratedHelpersCompareSource.find("helper.name = \"Hash64\";") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersCompareSource.find("helper.parameters.push_back(makeTypeBinding(\"left\", context.def.fullPath, helper.namespacePrefix));") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateHeaderSource.find("bool emitReflectionClearHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateHeaderSource.find("bool emitReflectionCopyFromHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateHeaderSource.find("bool emitReflectionDefaultHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateHeaderSource.find("bool emitReflectionIsDefaultHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateSource.find("bool emitReflectionClearHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateSource.find("bool emitReflectionCopyFromHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateSource.find("bool emitReflectionDefaultHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateSource.find("bool emitReflectionIsDefaultHelper(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateSource.find("helper.name = \"Clear\";") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateSource.find("helper.name = \"CopyFrom\";") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateSource.find("helper.name = \"Default\";") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersStateSource.find("helper.name = \"IsDefault\";") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSerializationHeaderSource.find("struct ReflectionGeneratedHelperContext") !=
         std::string::npos);
