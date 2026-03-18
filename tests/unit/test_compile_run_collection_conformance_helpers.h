@@ -66,8 +66,8 @@ inline void expectSharedVectorConformanceHarness(const std::string &emitMode) {
 }
 
 inline void expectExperimentalVectorRuntimeContracts(const std::string &emitMode) {
-  (void)emitMode;
-  return;
+  expectExperimentalVectorVariadicConstructorConformance(emitMode);
+  expectExperimentalVectorVariadicConstructorMismatchReject(emitMode);
   expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "pop_empty");
   expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "remove_at_oob");
   expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "remove_swap_oob");

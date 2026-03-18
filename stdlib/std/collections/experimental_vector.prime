@@ -26,7 +26,7 @@ namespace std {
   vectorValidateConstructorElementType<T>([T] value) {
     if(false,
        then() {
-         [vector<T> mut] guard{vector<T>(value)}
+         [vector<T> mut] guard{/vector/vector<T>(value)}
          clear(guard)
        },
        else() { })
@@ -36,7 +36,7 @@ namespace std {
   vectorValidatePushElementType<T>([T] value) {
     if(false,
        then() {
-         [vector<T> mut] guard{vector<T>()}
+         [vector<T> mut] guard{/vector/vector<T>()}
          push(guard, value)
        },
        else() { })
@@ -46,7 +46,7 @@ namespace std {
   vectorValidateReserveElementType<T>([i32] capacity) {
     if(false,
        then() {
-         [vector<T> mut] guard{vector<T>()}
+         [vector<T> mut] guard{/vector/vector<T>()}
          reserve(guard, capacity)
        },
        else() { })
@@ -56,7 +56,7 @@ namespace std {
   vectorValidatePopElementType<T>() {
     if(false,
        then() {
-         [vector<T> mut] guard{vector<T>()}
+         [vector<T> mut] guard{/vector/vector<T>()}
          pop(guard)
        },
        else() { })
@@ -66,7 +66,7 @@ namespace std {
   vectorValidateClearElementType<T>() {
     if(false,
        then() {
-         [vector<T> mut] guard{vector<T>()}
+         [vector<T> mut] guard{/vector/vector<T>()}
          clear(guard)
        },
        else() { })
@@ -76,7 +76,7 @@ namespace std {
   vectorValidateRemoveAtElementType<T>([i32] index) {
     if(false,
        then() {
-         [vector<T> mut] guard{vector<T>()}
+         [vector<T> mut] guard{/vector/vector<T>()}
          remove_at(guard, index)
        },
        else() { })
@@ -86,7 +86,7 @@ namespace std {
   vectorValidateRemoveSwapElementType<T>([i32] index) {
     if(false,
        then() {
-         [vector<T> mut] guard{vector<T>()}
+         [vector<T> mut] guard{/vector/vector<T>()}
          remove_swap(guard, index)
        },
        else() { })
@@ -113,100 +113,63 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<Vector<T>>]
+  vector<T>([args<T>] values) {
+    [i32] valueCount{count(values)}
+    if(greater_than(valueCount, 0i32),
+       then() { vectorValidateConstructorElementType<T>(values[0i32]) },
+       else() { })
+    [Vector<T> mut] out{vectorAlloc<T>(valueCount, valueCount)}
+    [i32 mut] index{0i32}
+    while(less_than(index, valueCount), do() {
+      vectorWrite<T>(out, index, values[index])
+      increment(index)
+    })
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<Vector<T>>]
   vectorNew<T>() {
-    return(vectorAlloc<T>(0i32, 0i32))
+    return(vector<T>())
   }
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorSingle<T>([T] value) {
-    vectorValidateConstructorElementType<T>(value)
-    [Vector<T> mut] out{vectorAlloc<T>(1i32, 1i32)}
-    vectorWrite<T>(out, 0i32, value)
-    return(out)
+    return(vector<T>(value))
   }
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorPair<T>([T] first, [T] second) {
-    vectorValidateConstructorElementType<T>(first)
-    [Vector<T> mut] out{vectorAlloc<T>(2i32, 2i32)}
-    vectorWrite<T>(out, 0i32, first)
-    vectorWrite<T>(out, 1i32, second)
-    return(out)
+    return(vector<T>(first, second))
   }
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorTriple<T>([T] first, [T] second, [T] third) {
-    vectorValidateConstructorElementType<T>(first)
-    [Vector<T> mut] out{vectorAlloc<T>(3i32, 3i32)}
-    vectorWrite<T>(out, 0i32, first)
-    vectorWrite<T>(out, 1i32, second)
-    vectorWrite<T>(out, 2i32, third)
-    return(out)
+    return(vector<T>(first, second, third))
   }
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorQuad<T>([T] first, [T] second, [T] third, [T] fourth) {
-    vectorValidateConstructorElementType<T>(first)
-    [Vector<T> mut] out{vectorAlloc<T>(4i32, 4i32)}
-    vectorWrite<T>(out, 0i32, first)
-    vectorWrite<T>(out, 1i32, second)
-    vectorWrite<T>(out, 2i32, third)
-    vectorWrite<T>(out, 3i32, fourth)
-    return(out)
+    return(vector<T>(first, second, third, fourth))
   }
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorQuint<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth) {
-    vectorValidateConstructorElementType<T>(first)
-    [Vector<T> mut] out{vectorAlloc<T>(5i32, 5i32)}
-    vectorWrite<T>(out, 0i32, first)
-    vectorWrite<T>(out, 1i32, second)
-    vectorWrite<T>(out, 2i32, third)
-    vectorWrite<T>(out, 3i32, fourth)
-    vectorWrite<T>(out, 4i32, fifth)
-    return(out)
+    return(vector<T>(first, second, third, fourth, fifth))
   }
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorSext<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth) {
-    vectorValidateConstructorElementType<T>(first)
-    [Vector<T> mut] out{vectorAlloc<T>(6i32, 6i32)}
-    vectorWrite<T>(out, 0i32, first)
-    vectorWrite<T>(out, 1i32, second)
-    vectorWrite<T>(out, 2i32, third)
-    vectorWrite<T>(out, 3i32, fourth)
-    vectorWrite<T>(out, 4i32, fifth)
-    vectorWrite<T>(out, 5i32, sixth)
-    return(out)
+    return(vector<T>(first, second, third, fourth, fifth, sixth))
   }
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorSept<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth, [T] seventh) {
-    vectorValidateConstructorElementType<T>(first)
-    [Vector<T> mut] out{vectorAlloc<T>(7i32, 7i32)}
-    vectorWrite<T>(out, 0i32, first)
-    vectorWrite<T>(out, 1i32, second)
-    vectorWrite<T>(out, 2i32, third)
-    vectorWrite<T>(out, 3i32, fourth)
-    vectorWrite<T>(out, 4i32, fifth)
-    vectorWrite<T>(out, 5i32, sixth)
-    vectorWrite<T>(out, 6i32, seventh)
-    return(out)
+    return(vector<T>(first, second, third, fourth, fifth, sixth, seventh))
   }
 
   [public effects(heap_alloc), return<Vector<T>>]
   vectorOct<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth, [T] seventh, [T] eighth) {
-    vectorValidateConstructorElementType<T>(first)
-    [Vector<T> mut] out{vectorAlloc<T>(8i32, 8i32)}
-    vectorWrite<T>(out, 0i32, first)
-    vectorWrite<T>(out, 1i32, second)
-    vectorWrite<T>(out, 2i32, third)
-    vectorWrite<T>(out, 3i32, fourth)
-    vectorWrite<T>(out, 4i32, fifth)
-    vectorWrite<T>(out, 5i32, sixth)
-    vectorWrite<T>(out, 6i32, seventh)
-    vectorWrite<T>(out, 7i32, eighth)
-    return(out)
+    return(vector<T>(first, second, third, fourth, fifth, sixth, seventh, eighth))
   }
 
   [public return<i32>]

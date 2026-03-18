@@ -127,6 +127,35 @@ inline std::string makeVectorTypeMismatchRejectSource(const std::string &importP
   return source;
 }
 
+inline std::string makeExperimentalVectorVariadicConstructorSource() {
+  std::string source;
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[effects(heap_alloc), return<Vector<T>>]\n";
+  source += "wrapVector<T>([T] first, [T] second, [T] third) {\n";
+  source += "  return(vector<T>(first, second, third))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32>] empty{vector<i32>()}\n";
+  source += "  [Vector<i32>] direct{vector<i32>(2i32, 4i32, 6i32, 8i32)}\n";
+  source += "  [Vector<i32>] wrapped{wrapVector<i32>(3i32, 5i32, 7i32)}\n";
+  source += "  return(plus(plus(vectorCount<i32>(empty), vectorCount<i32>(direct)),\n";
+  source += "      plus(vectorAt<i32>(direct, 2i32), plus(vectorAtUnsafe<i32>(wrapped, 1i32), vectorCount<i32>(wrapped)))))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeExperimentalVectorVariadicConstructorMismatchSource() {
+  std::string source;
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32>] values{vector<i32>(1i32, false)}\n";
+  source += "  return(vectorCount<i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeVectorPopTypeMismatchRejectSource(const std::string &importPath) {
   std::string source;
   source += "import " + importPath + "\n\n";
@@ -905,6 +934,21 @@ inline void expectExperimentalVectorOwnershipReject(const std::string &emitMode,
                                         " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(command) == 2);
   CHECK(readFile(outPath).find(expectedError) != std::string::npos);
+}
+
+inline void expectExperimentalVectorVariadicConstructorConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(makeExperimentalVectorVariadicConstructorSource(),
+                                     "experimental_vector_variadic_ctor_" + emitMode,
+                                     emitMode,
+                                     18);
+}
+
+inline void expectExperimentalVectorVariadicConstructorMismatchReject(const std::string &emitMode) {
+  expectVectorConformanceCompileReject(makeExperimentalVectorVariadicConstructorMismatchSource(),
+                                       "experimental_vector_variadic_ctor_mismatch",
+                                       emitMode,
+                                       "/std/collections/experimental_vector/vector",
+                                       "argument type mismatch");
 }
 
 inline std::string makeVectorIndexedRemovalOwnershipRejectSource(const std::string &mode) {
