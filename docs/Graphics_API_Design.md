@@ -83,6 +83,9 @@ diagnostics.
 contract; only host/shader artifacts vary by profile.
 - Source code should not hardcode backend profile names for device creation;
 profile selection is compile-target driven.
+- Treat `/std/gfx/*` as a hybrid surface: keep the public API contract and most
+wrapper/helper behavior in stdlib `.prime`, while the minimal host/device/present
+substrate remains runtime/backend-owned.
 
 ## Locked Core Surface (v1)
 The locked core object model names are:

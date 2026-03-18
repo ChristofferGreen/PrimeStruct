@@ -279,7 +279,7 @@ module {
 
 ### Backend Type Support (v1)
 - **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64`. `array`/`vector`/`map` support numeric/bool values; map string keys must be string literals or literal-backed bindings. Strings are limited to literals/literal-backed bindings for print/map contexts; string returns are supported for literal-backed values, while string arrays and string pointers/references are rejected. `convert<T>` supports `i32`, `i64`, `u64`, `bool`, `f32`, `f64`.
-- **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++ emitter); string comparisons are rejected and string literals are limited to print/count/index/map contexts; string array returns and string pointer/reference bindings are rejected; block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected; `print*` and vector helper calls are statement-only; `File<Mode>(path)` requires a string literal or literal-backed binding; `Result.ok(value)` only accepts `i32`/`bool` payloads; unsupported math or GPU builtins fail.
+- **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++ emitter); string comparisons are rejected and string literals are limited to print/count/index/map contexts; string array returns and string pointer/reference bindings are rejected; block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected; `print*` and vector helper calls are statement-only; `File<Mode>(path)` requires a string literal or literal-backed binding; `Result.ok(value)` currently accepts `i32`, `bool`, and literal-backed `string` payloads only; unsupported math or GPU builtins fail.
 - **GLSL:** numeric/bool scalar locals (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`) plus nominal `Vec2`, `Vec3`, `Vec4`, `Quat`, `Mat2`, `Mat3`, and `Mat4` bindings; string literals and other non-supported composites are rejected, and entry definitions must return `void`. `convert<T>` targets match the numeric/bool list above.
 - **GLSL emitter restrictions (current):** at most one `return()` statement; static bindings are rejected; assign/increment/decrement require local mutable targets; control flow must use canonical forms (`if(cond, then() { ... }, else() { ... })`, `loop(count, body() { ... })`, `while(cond, body() { ... })`, `for(init, cond, step, body() { ... })`); builtins require positional args with no template/block arguments, and unsupported builtins fail.
 - **GLSL type support (current):** scalar `bool`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64` plus nominal `Vec2`, `Vec3`, `Vec4`, `Quat`, `Mat2`, `Mat3`, and `Mat4`. Using `i64`/`u64` or `f64` emits `GL_ARB_gpu_shader_int64`/`GL_ARB_gpu_shader_fp64` requirements. Arrays, strings, general structs, pointers/references, maps, and other unsupported composites are rejected.
@@ -637,6 +637,7 @@ for(
   - **Ownership helpers:** `move`, `clone`.
   - **Uninitialized helpers (draft):** `init`, `drop`, `take`, `borrow`.
   - **GPU builtins (draft):**
+    - `Buffer<T>` is a hybrid GPU resource-handle surface: allocation, upload/readback, dispatch, and storage access stay in language/runtime substrate, while higher-level wrappers should converge on stdlib `.prime` definitions.
     - `/std/gpu/global_id_x()` → `i32` (kernel invocation x coordinate).
     - `/std/gpu/global_id_y()` → `i32` (kernel invocation y coordinate).
     - `/std/gpu/global_id_z()` → `i32` (kernel invocation z coordinate).
@@ -647,6 +648,7 @@ for(
   - **Comparisons/booleans:** `greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`, `and`, `or`, `not`.
   - **Result helpers (draft):**
   - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
+  - `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract stay language-defined, while constructors, helper combinators, and domain-specific error policy should keep moving into stdlib `.prime`.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
@@ -695,6 +697,7 @@ sum_two_files([string] a, [string] b) {
 
 ### File I/O (draft)
 - **RAII object:** `File<Mode>` is the owning file handle with automatic close on scope exit (`Destroy`).
+  - `File<Mode>` is a hybrid surface: host file open/read/write/close behavior remains effect-gated runtime substrate, while the user-facing helper layer should live in stdlib `.prime`.
   - `File<Mode>` is move-only; `Clone` is a compile-time error.
   - `close()` disarms the handle so `Destroy` becomes a no-op.
 - **Modes:** `Read`, `Write`, `Append`.
@@ -871,6 +874,12 @@ sum_two_files([string] a, [string] b) {
 - `Pointer<T>`, `Reference<T>` where `T` is primitive or a struct type.
 - User-defined structs with layout manifests.
 - Types outside this set are backend-specific and must be rejected by backends that do not support them.
+
+### Type Ownership Model (architectural direction)
+- **Core language-owned envelopes:** fixed-width scalars, `string`, `array<T>`, `Pointer<T>`, and `Reference<T>` remain language/runtime-owned because they define the portable substrate other features depend on.
+- **Stdlib-owned public container surfaces:** `Maybe<T>` is already intended to be stdlib-owned, and `vector<T>`, `map<K, V>`, plus eventually `soa_vector<T>` should converge on `.prime` implementations that sit on top of minimal generic allocation/access substrate.
+- **Hybrid surfaces:** `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, and the `/std/gfx/*` family keep a minimal builtin/runtime substrate for propagation, host I/O, and device interaction, but their public helper/constructor surface should live in stdlib `.prime` wherever practical.
+- `vector<T>` and `map<K, V>` therefore still appear in the portable type set today, but that should not be read as a permanent compiler-owned collection contract.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
@@ -1058,7 +1067,8 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
 - **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)` to destroy.
 - **Ergonomic constructor surface:** `Maybe()` yields empty. Use `some<T>(value)` for a present value and `none<T>()` for empty.
-  - `Maybe(value)` is sugar for `some<T>(value)` when `T` can be inferred; it still depends on uninitialized storage lowering in VM/native.
+  - `Maybe<T>` is intended to be a stdlib-owned optional type, not a permanently compiler-owned special case.
+  - `Maybe(value)` is sugar for `some<T>(value)` when `T` can be inferred; this is transitional convenience, not an architectural reason to keep `Maybe` semantics in C++ long-term.
 - **Helper surface (stdlib):** `is_empty()` / `is_some()`, `set(value)`, `clear()`, `take()` (consumes the stored value and marks empty).
 - **Example shape:**
   ```
@@ -1194,6 +1204,7 @@ bad_use_after_take() {
   - `array<T>` is a fixed-size contiguous value sequence once constructed (C++ `std::array`-like behavior). Arrays support read/write/index helpers but no growth helpers.
   - PrimeStruct keeps `array<T>` as a runtime-count contract; envelope-level length forms like `array<T, N>` are intentionally unsupported.
   - Array helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)` (canonical equivalents: `count(value)`, `at(value, index)`, `at_unsafe(value, index)`).
+  - Ownership direction: keep `array<T>` as language-core substrate, but move the public constructor/helper behavior of `vector<T>` and `map<K, V>` into stdlib `.prime` definitions; `soa_vector<T>` should follow the same model once the generic SoA substrate is ready.
   - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic constructors (0..N). Growth operations require `effects(heap_alloc)` (or the active default effects set), and `push`/`reserve` may reallocate and invalidate references/pointers into vector storage.
   - Planned stdlib-owned constructor surface: once variadic packs land, the intended user-defined shape is `vector(values...)` on the surface and `[args<T>] values` in canonical form rather than fixed arity helper ladders.
   - Vector helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)`, `value.push(item)`, `value.pop()`, `value.reserve(capacity)`, `value.capacity()`, `value.clear()`, `value.remove_at(index)`, `value.remove_swap(index)` (canonical helper equivalents remain `count(value)`, `at(value, index)`, `push(value, item)`, etc.).

@@ -640,6 +640,12 @@ Helpers:
 - `value.at(index)` / `value[index]` (canonical equivalent: `at(value, index)`)
 - `value.at_unsafe(index)` (canonical equivalent: `at_unsafe(value, index)`)
 
+Architectural direction for type ownership:
+- `array<T>` remains a core language/runtime envelope.
+- `vector<T>` and `map<K, V>` remain portable surface envelopes today, but their public constructor/helper behavior should converge on stdlib `.prime` implementations over generic substrate.
+- `soa_vector<T>` should follow that same stdlib-owned end-state once the generic SoA substrate exists.
+- `Maybe<T>` is intended to be stdlib-owned, while `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*` remain hybrid surfaces with minimal builtin/runtime substrate.
+
 ### 8.2 Vectors
 
 ``` 
@@ -651,6 +657,7 @@ vector<i32>[1i32, 2i32]
 Vectors are C++-style dynamic contiguous sequences. Construction is variadic; zero or more arguments are accepted.
 Planned stdlib-owned replacement: the user-defined constructor surface is intended to become `vector(values...)`,
 canonically represented as a trailing `[args<T>]` parameter rather than fixed-arity helper families.
+The current builtin/vector-envelope behavior is transitional; the intended steady state is stdlib-owned public vector behavior over generic allocation/access substrate.
 Growth operations (`push`, `reserve`) may reallocate and invalidate references/pointers into vector storage.
 Binding forms:
 - `[vector<T> mut] v{vector<T>()}`
@@ -685,6 +692,7 @@ map<i32, i32>[1i32=2i32, 3i32=4i32]
 ```
 
 Map literals supply alternating key/value forms; an odd number of entries is a diagnostic.
+Maps likewise remain portable envelopes today, but the intended end-state is a stdlib-owned public map surface over generic memory/error substrate rather than permanent compiler-owned collection semantics.
 
 Helpers:
 - `value.count()` (canonical equivalent: `count(value)`)
@@ -809,6 +817,7 @@ Draft constraints:
 ## 10. Error Handling (Draft)
 
 - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a success value.
+- `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract are language-defined, while constructors/helpers/error-domain policy should live in stdlib `.prime` where practical.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches
@@ -860,7 +869,7 @@ Draft constraints:
   - Block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected.
   - `print*` and vector helper calls are statement-only; expression usage is rejected.
   - `File<Mode>(path)` requires a string literal or literal-backed binding.
-  - `Result.ok(value)` only accepts `i32`/`bool` payloads.
+  - `Result.ok(value)` currently accepts `i32`, `bool`, and literal-backed `string` payloads only.
   - Unsupported math or GPU builtins fail during lowering.
 - Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from the entry definition are lowered.
 - VM/native consume the PSIR v16 opcode set (see design doc) and deserialization rejects unknown opcodes.

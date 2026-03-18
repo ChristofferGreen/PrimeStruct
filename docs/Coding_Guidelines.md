@@ -27,6 +27,11 @@ semantics after canonicalization.
   `value.push(x)`, `value.at(i)`, `value[i]`, `value.count()`.
   Use free-function helper spellings (`push(value, x)`, `at(value, i)`) only when
   demonstrating canonical post-transform forms.
+- Keep examples aligned with the ownership model documented in `docs/PrimeStruct.md`:
+  treat `array<T>`, `string`, `Pointer<T>`, and `Reference<T>` as language-core;
+  treat `Maybe<T>`, `vector<T>`, `map<K, V>`, and planned `soa_vector<T>` as
+  stdlib-facing surfaces; and treat `Result<T, Error>`, `File<Mode>`, `Buffer<T>`,
+  plus `/std/gfx/*` as hybrid surfaces with minimal builtin substrate.
 - Prefer unsuffixed numeric literals in surface examples (`1280`, `0.0166667`).
 - Prefer explicit math-family conversions; never rely on implicit scalar/vector/matrix/quaternion coercions.
 - Prefer `mat * vec` ordering (column-vector convention) and keep transform-composition order explicit at call sites.
@@ -48,6 +53,9 @@ semantics after canonicalization.
 - Prefer compile-target profile deduction over source-level profile literals.
   Canonical `/std/gfx/*` contract example: `device{Device()?}` is preferred
   over `device{Device([profile] "...")?}`.
+  Treat `/std/gfx/*` as a hybrid surface: keep the public API shape in `.prime`
+  wherever practical, while device/window/present substrate stays in host/runtime
+  code.
   Current `/std/gfx/experimental/*` status: the constructor-shaped
   `Window(...)` and `Device()` entry points now rewrite through
   substrate-backed helpers there, the fallible `create_swapchain(...)`,
