@@ -4,5 +4,3 @@
 
 tests/unit/test_ir_pipeline.cpp -> src/emitter/
 tests/unit/test_ir_pipeline.cpp -> src/ir_lowerer/
-tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorExprCaptureSplitStep.h
-tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorStatementLoopCountStep.h

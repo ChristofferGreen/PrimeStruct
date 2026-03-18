@@ -336,26 +336,32 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   std::filesystem::path scriptPath = cwd / "scripts" / "check_include_layers.py";
   std::filesystem::path allowlistPath = cwd / "scripts" / "include_layer_allowlist.txt";
   std::filesystem::path parserTestApiPath = cwd / "include" / "primec" / "testing" / "ParserHelpers.h";
+  std::filesystem::path semanticsTestApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
   std::filesystem::path textFilterTestApiPath = cwd / "include" / "primec" / "testing" / "TextFilterHelpers.h";
   std::filesystem::path parserHelperTestPath = cwd / "tests" / "unit" / "test_parser_basic_parser_helpers.h";
   std::filesystem::path textFilterHelperTestPath = cwd / "tests" / "unit" / "test_text_filter_helpers.cpp";
   std::filesystem::path compileRunTestPath = cwd / "tests" / "unit" / "test_compile_run.cpp";
+  std::filesystem::path irPipelineTestPath = cwd / "tests" / "unit" / "test_ir_pipeline.cpp";
   if (!std::filesystem::exists(scriptPath)) {
     scriptPath = cwd.parent_path() / "scripts" / "check_include_layers.py";
     allowlistPath = cwd.parent_path() / "scripts" / "include_layer_allowlist.txt";
     parserTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "ParserHelpers.h";
+    semanticsTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
     textFilterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "TextFilterHelpers.h";
     parserHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_parser_basic_parser_helpers.h";
     textFilterHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_text_filter_helpers.cpp";
     compileRunTestPath = cwd.parent_path() / "tests" / "unit" / "test_compile_run.cpp";
+    irPipelineTestPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline.cpp";
   }
   REQUIRE(std::filesystem::exists(scriptPath));
   REQUIRE(std::filesystem::exists(allowlistPath));
   REQUIRE(std::filesystem::exists(parserTestApiPath));
+  REQUIRE(std::filesystem::exists(semanticsTestApiPath));
   REQUIRE(std::filesystem::exists(textFilterTestApiPath));
   REQUIRE(std::filesystem::exists(parserHelperTestPath));
   REQUIRE(std::filesystem::exists(textFilterHelperTestPath));
   REQUIRE(std::filesystem::exists(compileRunTestPath));
+  REQUIRE(std::filesystem::exists(irPipelineTestPath));
 
   const std::string script = readTextFile(scriptPath);
   CHECK(script.find("public headers must not include private src headers") != std::string::npos);
@@ -366,6 +372,10 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   const std::string allowlist = readTextFile(allowlistPath);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/emitter/") != std::string::npos);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/ir_lowerer/") != std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorExprCaptureSplitStep.h") ==
+        std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorStatementLoopCountStep.h") ==
+        std::string::npos);
   CHECK(allowlist.find("tests/unit/test_compile_run.cpp -> src/emitter/EmitterHelpers.h") == std::string::npos);
   CHECK(allowlist.find("tests/unit/test_parser_basic_parser_helpers.h -> src/parser/ParserHelpers.h") ==
         std::string::npos);
@@ -382,6 +392,14 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   CHECK(textFilterTestApi.find("bool isSeparator(char c);") != std::string::npos);
   CHECK(textFilterTestApi.find("std::string maybeAppendUtf8(const std::string &token);") != std::string::npos);
 
+  const std::string semanticsTestApi = readTextFile(semanticsTestApiPath);
+  CHECK(semanticsTestApi.find("namespace primec::semantics") != std::string::npos);
+  CHECK(semanticsTestApi.find("std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep") !=
+        std::string::npos);
+  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementKnownIterationCountStep") != std::string::npos);
+  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementCanIterateMoreThanOnceStep") != std::string::npos);
+  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementIsNegativeIntegerLiteralStep") != std::string::npos);
+
   const std::string parserHelperTest = readTextFile(parserHelperTestPath);
   CHECK(parserHelperTest.find("#include \"primec/testing/ParserHelpers.h\"") != std::string::npos);
   CHECK(parserHelperTest.find("#include \"src/parser/ParserHelpers.h\"") == std::string::npos);
@@ -392,6 +410,13 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
 
   const std::string compileRunTest = readTextFile(compileRunTestPath);
   CHECK(compileRunTest.find("#include \"src/emitter/EmitterHelpers.h\"") == std::string::npos);
+
+  const std::string irPipelineTest = readTextFile(irPipelineTestPath);
+  CHECK(irPipelineTest.find("#include \"primec/testing/SemanticsValidationHelpers.h\"") != std::string::npos);
+  CHECK(irPipelineTest.find("#include \"src/semantics/SemanticsValidatorExprCaptureSplitStep.h\"") ==
+        std::string::npos);
+  CHECK(irPipelineTest.find("#include \"src/semantics/SemanticsValidatorStatementLoopCountStep.h\"") ==
+        std::string::npos);
 }
 
 TEST_CASE("glsl and spirv ir backends use glsl ir validation target") {

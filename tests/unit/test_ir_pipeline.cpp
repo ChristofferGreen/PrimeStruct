@@ -33,6 +33,7 @@
 #include "primec/Vm.h"
 #include "primec/VmDebugAdapter.h"
 #include "primec/WasmEmitter.h"
+#include "primec/testing/SemanticsValidationHelpers.h"
 #include "src/emitter/EmitterEmitSetupLifecycleHelperStep.h"
 #include "src/emitter/EmitterEmitSetupMathImport.h"
 #include "src/emitter/EmitterExprControlBuiltinBlockEarlyReturnStep.h"
@@ -131,9 +132,6 @@
 #include "src/ir_lowerer/IrLowererSharedTypes.h"
 #include "src/ir_lowerer/IrLowererStringCallHelpers.h"
 #include "src/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
-#include "src/semantics/SemanticsValidatorExprCaptureSplitStep.h"
-#include "src/semantics/SemanticsValidatorStatementLoopCountStep.h"
-
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>
 #endif
