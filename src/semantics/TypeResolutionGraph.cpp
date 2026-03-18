@@ -9,6 +9,7 @@
 #include "primec/testing/SemanticsValidationHelpers.h"
 
 #include <optional>
+#include <sstream>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
@@ -457,18 +458,52 @@ TypeResolutionGraph buildTypeResolutionGraph(const Program &program) {
   return builder.build();
 }
 
-bool buildTypeResolutionGraphForTesting(Program program,
+bool buildTypeResolutionGraphForProgram(Program program,
                                         const std::string &entryPath,
+                                        const std::vector<std::string> &semanticTransforms,
                                         std::string &error,
-                                        TypeResolutionGraphSnapshot &out,
-                                        const std::vector<std::string> &semanticTransforms) {
+                                        TypeResolutionGraph &out) {
   error.clear();
   out = {};
   if (!prepareProgramForTypeResolutionGraph(program, entryPath, semanticTransforms, error)) {
     return false;
   }
+  out = buildTypeResolutionGraph(program);
+  return true;
+}
 
-  const TypeResolutionGraph graph = buildTypeResolutionGraph(program);
+std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
+  std::ostringstream out;
+  out << "type_graph {\n";
+  for (const auto &node : graph.nodes) {
+    out << "  node " << node.id << " kind=" << typeResolutionNodeKindName(node.kind)
+        << " label=\"" << node.label << "\""
+        << " scope=\"" << node.scopePath << "\""
+        << " path=\"" << node.resolvedPath << "\""
+        << " line=" << node.sourceLine
+        << " column=" << node.sourceColumn << "\n";
+  }
+  for (size_t edgeIndex = 0; edgeIndex < graph.edges.size(); ++edgeIndex) {
+    const auto &edge = graph.edges[edgeIndex];
+    out << "  edge " << edgeIndex << " kind=" << typeResolutionEdgeKindName(edge.kind)
+        << " source=" << edge.sourceId
+        << " target=" << edge.targetId << "\n";
+  }
+  out << "}\n";
+  return out.str();
+}
+
+bool buildTypeResolutionGraphForTesting(Program program,
+                                        const std::string &entryPath,
+                                        std::string &error,
+                                        TypeResolutionGraphSnapshot &out,
+                                        const std::vector<std::string> &semanticTransforms) {
+  TypeResolutionGraph graph;
+  if (!buildTypeResolutionGraphForProgram(std::move(program), entryPath, semanticTransforms, error, graph)) {
+    out = {};
+    return false;
+  }
+  out = {};
   out.nodes.reserve(graph.nodes.size());
   for (const auto &node : graph.nodes) {
     out.nodes.push_back(TypeResolutionGraphSnapshotNode{
@@ -489,6 +524,20 @@ bool buildTypeResolutionGraphForTesting(Program program,
         std::string(typeResolutionEdgeKindName(edge.kind)),
     });
   }
+  return true;
+}
+
+bool dumpTypeResolutionGraphForTesting(Program program,
+                                       const std::string &entryPath,
+                                       std::string &error,
+                                       std::string &out,
+                                       const std::vector<std::string> &semanticTransforms) {
+  TypeResolutionGraph graph;
+  if (!buildTypeResolutionGraphForProgram(std::move(program), entryPath, semanticTransforms, error, graph)) {
+    out.clear();
+    return false;
+  }
+  out = formatTypeResolutionGraph(graph);
   return true;
 }
 

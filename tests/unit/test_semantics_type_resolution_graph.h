@@ -14,6 +14,18 @@ const primec::semantics::TypeResolutionGraphSnapshotEdge &requireGraphEdge(
   return graph.edges.at(index);
 }
 
+std::string requireTypeResolutionGraphDump(const std::string &source, const std::string &entryPath) {
+  std::string error;
+  std::string dump;
+  const bool ok = primec::semantics::dumpTypeResolutionGraphForTesting(parseProgram(source), entryPath, error, dump);
+  CHECK(ok);
+  if (!ok) {
+    return {};
+  }
+  CHECK(error.empty());
+  return dump;
+}
+
 } // namespace
 
 TEST_CASE("type resolution graph builder keeps stable node and edge order for return and local auto dependencies") {
@@ -134,6 +146,111 @@ main() {
   CHECK(requireGraphEdge(graph, 1).kind == "dependency");
   CHECK(requireGraphEdge(graph, 1).sourceId == 1);
   CHECK(requireGraphEdge(graph, 1).targetId == 2);
+}
+
+TEST_CASE("type resolution graph dump stays stable for a simple call chain") {
+  const std::string source =
+      "[return<auto>]\n"
+      "leaf() {\n"
+      "  return(1i32)\n"
+      "}\n"
+      "\n"
+      "[return<auto>]\n"
+      "main() {\n"
+      "  return(leaf())\n"
+      "}\n";
+
+  const std::string expected =
+      "type_graph {\n"
+      "  node 0 kind=definition_return label=\"/leaf\" scope=\"/leaf\" path=\"/leaf\" line=2 column=1\n"
+      "  node 1 kind=definition_return label=\"/main\" scope=\"/main\" path=\"/main\" line=7 column=1\n"
+      "  node 2 kind=call_constraint label=\"/main::call#0\" scope=\"/main\" path=\"/leaf\" line=8 column=10\n"
+      "  edge 0 kind=dependency source=2 target=0\n"
+      "  edge 1 kind=dependency source=1 target=2\n"
+      "}\n";
+
+  CHECK(requireTypeResolutionGraphDump(source, "/main") == expected);
+}
+
+TEST_CASE("type resolution graph dump stays stable for mutual recursion") {
+  const std::string source =
+      "[return<auto>]\n"
+      "alpha() {\n"
+      "  return(beta())\n"
+      "}\n"
+      "\n"
+      "[return<auto>]\n"
+      "beta() {\n"
+      "  return(alpha())\n"
+      "}\n";
+
+  const std::string expected =
+      "type_graph {\n"
+      "  node 0 kind=definition_return label=\"/alpha\" scope=\"/alpha\" path=\"/alpha\" line=2 column=1\n"
+      "  node 1 kind=definition_return label=\"/beta\" scope=\"/beta\" path=\"/beta\" line=7 column=1\n"
+      "  node 2 kind=call_constraint label=\"/alpha::call#0\" scope=\"/alpha\" path=\"/beta\" line=3 column=10\n"
+      "  node 3 kind=call_constraint label=\"/beta::call#0\" scope=\"/beta\" path=\"/alpha\" line=8 column=10\n"
+      "  edge 0 kind=dependency source=2 target=1\n"
+      "  edge 1 kind=dependency source=0 target=2\n"
+      "  edge 2 kind=dependency source=3 target=0\n"
+      "  edge 3 kind=dependency source=1 target=3\n"
+      "}\n";
+
+  CHECK(requireTypeResolutionGraphDump(source, "/alpha") == expected);
+}
+
+TEST_CASE("type resolution graph dump stays stable for namespace import resolution") {
+  const std::string source =
+      "import /pkg/leaf\n"
+      "\n"
+      "[public return<auto>]\n"
+      "/pkg/leaf() {\n"
+      "  return(1i32)\n"
+      "}\n"
+      "\n"
+      "[return<auto>]\n"
+      "main() {\n"
+      "  return(leaf())\n"
+      "}\n";
+
+  const std::string expected =
+      "type_graph {\n"
+      "  node 0 kind=definition_return label=\"/pkg/leaf\" scope=\"/pkg/leaf\" path=\"/pkg/leaf\" line=4 column=1\n"
+      "  node 1 kind=definition_return label=\"/main\" scope=\"/main\" path=\"/main\" line=9 column=1\n"
+      "  node 2 kind=call_constraint label=\"/main::call#0\" scope=\"/main\" path=\"/pkg/leaf\" line=10 column=10\n"
+      "  edge 0 kind=dependency source=2 target=0\n"
+      "  edge 1 kind=dependency source=1 target=2\n"
+      "}\n";
+
+  CHECK(requireTypeResolutionGraphDump(source, "/main") == expected);
+}
+
+TEST_CASE("type resolution graph dump stays stable for template specialization expansion") {
+  const std::string source =
+      "[return<auto>]\n"
+      "id<T>(value:[T]) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<auto>]\n"
+      "main() {\n"
+      "  [auto] value{id(1i32)}\n"
+      "  return(value)\n"
+      "}\n";
+
+  const std::string expected =
+      "type_graph {\n"
+      "  node 0 kind=definition_return label=\"/id__t25a78a513414c3bf\" scope=\"/id__t25a78a513414c3bf\" "
+      "path=\"/id__t25a78a513414c3bf\" line=2 column=1\n"
+      "  node 1 kind=definition_return label=\"/main\" scope=\"/main\" path=\"/main\" line=7 column=1\n"
+      "  node 2 kind=call_constraint label=\"/main::call#0\" scope=\"/main\" path=\"/id__t25a78a513414c3bf\" "
+      "line=8 column=16\n"
+      "  node 3 kind=local_auto label=\"/main::auto:value#0\" scope=\"/main\" path=\"\" line=8 column=3\n"
+      "  edge 0 kind=dependency source=2 target=0\n"
+      "  edge 1 kind=dependency source=3 target=2\n"
+      "}\n";
+
+  CHECK(requireTypeResolutionGraphDump(source, "/main") == expected);
 }
 
 TEST_SUITE_END();
