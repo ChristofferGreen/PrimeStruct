@@ -41,5 +41,10 @@ bool buildTypeResolutionGraphForTesting(Program program,
                                         std::string &error,
                                         TypeResolutionGraphSnapshot &out,
                                         const std::vector<std::string> &semanticTransforms = {});
+bool dumpTypeResolutionGraphForTesting(Program program,
+                                       const std::string &entryPath,
+                                       std::string &error,
+                                       std::string &out,
+                                       const std::vector<std::string> &semanticTransforms = {});
 
 } // namespace primec::semantics

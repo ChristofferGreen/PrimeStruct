@@ -112,6 +112,39 @@ main() {
   CHECK(readFile(hyphenOut) == readFile(underscoreOut));
 }
 
+TEST_CASE("dump type_graph alias works and prints graph output") {
+  const std::string source = R"(
+[return<auto>]
+leaf() {
+  return(1i32)
+}
+
+[return<auto>]
+main() {
+  return(leaf())
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_type_graph_alias.prime", source);
+  const std::string hyphenOut =
+      (std::filesystem::temp_directory_path() / "primec_dump_type_graph_hyphen.txt").string();
+  const std::string underscoreOut =
+      (std::filesystem::temp_directory_path() / "primec_dump_type_graph_underscore.txt").string();
+
+  const std::string hyphenCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage type-graph > " + quoteShellArg(hyphenOut);
+  const std::string underscoreCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage type_graph > " + quoteShellArg(underscoreOut);
+  CHECK(runCommand(hyphenCmd) == 0);
+  CHECK(runCommand(underscoreCmd) == 0);
+
+  const std::string dump = readFile(hyphenOut);
+  CHECK(dump == readFile(underscoreOut));
+  CHECK(dump.find("type_graph {") != std::string::npos);
+  CHECK(dump.find("kind=definition_return label=\"/leaf\"") != std::string::npos);
+  CHECK(dump.find("kind=call_constraint label=\"/main::call#0\"") != std::string::npos);
+  CHECK(dump.find("path=\"/leaf\"") != std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic reports semantic errors") {
   const std::string source = R"(
 [return<int>]
@@ -193,6 +226,33 @@ main() {
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(primecOut);
   const std::string primevmCmd =
       "./primevm " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(primevmOut);
+  CHECK(runCommand(primecCmd) == 0);
+  CHECK(runCommand(primevmCmd) == 0);
+  CHECK(readFile(primecOut) == readFile(primevmOut));
+}
+
+TEST_CASE("primec and primevm dump type-graph match") {
+  const std::string source = R"(
+[return<auto>]
+leaf() {
+  return(1i32)
+}
+
+[return<auto>]
+main() {
+  return(leaf())
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_shared_type_graph.prime", source);
+  const std::string primecOut =
+      (std::filesystem::temp_directory_path() / "primec_dump_shared_type_graph.txt").string();
+  const std::string primevmOut =
+      (std::filesystem::temp_directory_path() / "primevm_dump_shared_type_graph.txt").string();
+
+  const std::string primecCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage type-graph > " + quoteShellArg(primecOut);
+  const std::string primevmCmd =
+      "./primevm " + quoteShellArg(srcPath) + " --dump-stage type-graph > " + quoteShellArg(primevmOut);
   CHECK(runCommand(primecCmd) == 0);
   CHECK(runCommand(primevmCmd) == 0);
   CHECK(readFile(primecOut) == readFile(primevmOut));

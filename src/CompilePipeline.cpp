@@ -8,6 +8,7 @@
 #include "primec/Semantics.h"
 #include "primec/TextFilterPipeline.h"
 #include "primec/TransformRules.h"
+#include "semantics/TypeResolutionGraph.h"
 
 #include <algorithm>
 #include <cctype>
@@ -27,6 +28,7 @@ enum class DumpStage {
   Ast,
   Ir,
   AstSemantic,
+  TypeGraph,
   Unsupported,
 };
 
@@ -45,6 +47,9 @@ DumpStage parseDumpStage(const std::string &dumpStage) {
   }
   if (dumpStage == "ast_semantic" || dumpStage == "ast-semantic") {
     return DumpStage::AstSemantic;
+  }
+  if (dumpStage == "type_graph" || dumpStage == "type-graph") {
+    return DumpStage::TypeGraph;
   }
   return DumpStage::Unsupported;
 }
@@ -454,7 +459,7 @@ bool runCompilePipeline(const Options &options,
     return false;
   }
 
-  if (dumpStage != DumpStage::None && dumpStage != DumpStage::AstSemantic) {
+  if (dumpStage != DumpStage::None && dumpStage != DumpStage::AstSemantic && dumpStage != DumpStage::TypeGraph) {
     if (dumpStage == DumpStage::Ast) {
       AstPrinter printer;
       output.dumpOutput = printer.print(output.program);
@@ -475,6 +480,19 @@ bool runCompilePipeline(const Options &options,
 
   if (!options.semanticTransformRules.empty()) {
     applySemanticTransformRules(output.program, options.semanticTransformRules);
+  }
+
+  if (dumpStage == DumpStage::TypeGraph) {
+    semantics::TypeResolutionGraph graph;
+    if (!semantics::buildTypeResolutionGraphForProgram(
+            output.program, options.entryPath, options.semanticTransforms, error, graph)) {
+      errorStage = CompilePipelineErrorStage::Semantic;
+      diagnosticSink.setSummary(error);
+      return false;
+    }
+    output.dumpOutput = semantics::formatTypeResolutionGraph(graph);
+    output.hasDumpOutput = true;
+    return true;
   }
 
   Semantics semantics;

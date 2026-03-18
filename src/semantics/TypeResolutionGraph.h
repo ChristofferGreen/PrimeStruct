@@ -44,5 +44,11 @@ struct TypeResolutionGraph {
 std::string_view typeResolutionNodeKindName(TypeResolutionNodeKind kind);
 std::string_view typeResolutionEdgeKindName(TypeResolutionEdgeKind kind);
 TypeResolutionGraph buildTypeResolutionGraph(const Program &program);
+bool buildTypeResolutionGraphForProgram(Program program,
+                                        const std::string &entryPath,
+                                        const std::vector<std::string> &semanticTransforms,
+                                        std::string &error,
+                                        TypeResolutionGraph &out);
+std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph);
 
 } // namespace primec::semantics

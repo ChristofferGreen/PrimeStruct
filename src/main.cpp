@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
                 << "[--no-transforms] [--out-dir <dir>] [--list-transforms] [--emit-diagnostics] "
                 << "[--collect-diagnostics] "
                 << "[--default-effects <list>] [--ir-inline] "
-                << "[--dump-stage pre_ast|ast|ast-semantic|ir] [-- <program args...>]\n";
+                << "[--dump-stage pre_ast|ast|ast-semantic|type-graph|ir] [-- <program args...>]\n";
     }
     return 2;
   }
