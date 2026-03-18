@@ -622,7 +622,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!validateVectorHelperTarget(stmt.args.front(), "push", binding)) {
       return false;
     }
-    if (activeEffects_.count("heap_alloc") == 0) {
+    if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
       error_ = "push requires heap_alloc effect";
       return false;
     }
@@ -649,7 +649,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!validateVectorHelperTarget(stmt.args.front(), "reserve", binding)) {
       return false;
     }
-    if (activeEffects_.count("heap_alloc") == 0) {
+    if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
       error_ = "reserve requires heap_alloc effect";
       return false;
     }

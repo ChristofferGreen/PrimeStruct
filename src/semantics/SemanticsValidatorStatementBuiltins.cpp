@@ -166,11 +166,11 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
 
   if (isSimpleCallName(stmt, "dispatch")) {
     handled = true;
-    if (currentDefinitionIsCompute_) {
+    if (currentValidationContext_.definitionIsCompute) {
       error_ = "dispatch is not allowed in compute definitions";
       return false;
     }
-    if (activeEffects_.count("gpu_dispatch") == 0) {
+    if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
       error_ = "dispatch requires gpu_dispatch effect";
       return false;
     }
@@ -241,7 +241,7 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
 
   if (isSimpleCallName(stmt, "buffer_store")) {
     handled = true;
-    if (!currentDefinitionIsCompute_) {
+    if (!currentValidationContext_.definitionIsCompute) {
       error_ = "buffer_store requires a compute definition";
       return false;
     }
@@ -308,7 +308,7 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
                " argument" + (pathSpaceBuiltin.argumentCount == 1 ? "" : "s");
       return false;
     }
-    if (activeEffects_.count(pathSpaceBuiltin.requiredEffect) == 0) {
+    if (currentValidationContext_.activeEffects.count(pathSpaceBuiltin.requiredEffect) == 0) {
       error_ = pathSpaceBuiltin.name + " requires " + pathSpaceBuiltin.requiredEffect + " effect";
       return false;
     }

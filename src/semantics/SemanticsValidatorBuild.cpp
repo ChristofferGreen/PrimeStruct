@@ -16,6 +16,9 @@ bool SemanticsValidator::buildDefinitionMaps() {
   structNames_.clear();
   publicDefinitions_.clear();
   paramsByDef_.clear();
+  definitionValidationContexts_.clear();
+  executionValidationContexts_.clear();
+  currentValidationContext_ = {};
 
   auto isMathBuiltinName = [&](const std::string &name) -> bool {
     Expr probe;
@@ -51,6 +54,14 @@ bool SemanticsValidator::buildDefinitionMaps() {
       return false;
     }
     entryDefaultEffectSet_.insert(effect);
+  }
+  definitionValidationContexts_.reserve(program_.definitions.size());
+  for (const auto &def : program_.definitions) {
+    definitionValidationContexts_.try_emplace(def.fullPath, makeDefinitionValidationContext(def));
+  }
+  executionValidationContexts_.reserve(program_.executions.size());
+  for (const auto &exec : program_.executions) {
+    executionValidationContexts_.try_emplace(exec.fullPath, makeExecutionValidationContext(exec));
   }
 
   std::unordered_set<std::string> explicitStructs;
@@ -1937,11 +1948,11 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       return false;
     }
     auto inferCurrentErrorType = [&]() -> std::string {
-      if (currentResultType_.has_value() && currentResultType_->isResult && !currentResultType_->errorType.empty()) {
-        return currentResultType_->errorType;
+      if (currentValidationContext_.resultType.has_value() && currentValidationContext_.resultType->isResult && !currentValidationContext_.resultType->errorType.empty()) {
+        return currentValidationContext_.resultType->errorType;
       }
-      if (currentOnError_.has_value() && !currentOnError_->errorType.empty()) {
-        return currentOnError_->errorType;
+      if (currentValidationContext_.onError.has_value() && !currentValidationContext_.onError->errorType.empty()) {
+        return currentValidationContext_.onError->errorType;
       }
       return "_";
     };
@@ -2089,8 +2100,8 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
         expr.args.size() == 1;
     const bool isMapContainsLike =
         !expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
-        (currentDefinitionPath_ == "/std/collections/mapContains" ||
-         currentDefinitionPath_ == "/std/collections/mapTryAt");
+        (currentValidationContext_.definitionPath == "/std/collections/mapContains" ||
+         currentValidationContext_.definitionPath == "/std/collections/mapTryAt");
     if (isMapContainsLike) {
       BindingInfo collectionBinding;
       if (!inferCollectionBindingFromExpr(expr.args.front())) {
