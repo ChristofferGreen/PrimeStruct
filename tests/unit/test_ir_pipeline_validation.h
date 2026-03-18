@@ -9286,6 +9286,50 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK_FALSE(std::filesystem::exists(semanticsExprValidationHeaderPath));
 }
 
+TEST_CASE("template monomorph source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path templateMonomorphPath = repoRoot / "src" / "semantics" / "TemplateMonomorph.cpp";
+  const std::filesystem::path templateMonomorphFallbackPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphFallbackTypeInference.h";
+  REQUIRE(std::filesystem::exists(templateMonomorphPath));
+  REQUIRE(std::filesystem::exists(templateMonomorphFallbackPath));
+  const std::string templateMonomorphSource = readText(templateMonomorphPath);
+  const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
+  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind)") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("std::string inferExprTypeTextForTemplatedVectorFallback(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool shouldPreferTemplatedVectorFallbackForTypeMismatch(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("std::string preferVectorStdlibImplicitTemplatePath(") ==
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find("bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind)") !=
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find("std::string resolveStructLikeExprPathForTemplatedVectorFallback(") !=
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find("bool inferDefinitionReturnBindingForTemplatedFallback(") !=
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find("std::string inferExprTypeTextForTemplatedVectorFallback(") !=
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find("bool shouldPreferTemplatedVectorFallbackForTypeMismatch(") !=
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find("std::string preferVectorStdlibImplicitTemplatePath(") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantics validator infer source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

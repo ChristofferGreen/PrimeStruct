@@ -240,7 +240,9 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Extract the shared builtin collection count/capacity resolver from `SemanticsValidatorInfer.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorInferCollectionCountCapacity.cpp`.
 - ✓ Move the remaining direct builtin collection count/capacity branches in `SemanticsValidatorInfer.cpp` onto dedicated helper dispatch paths.
 - ✓ Extract definition/statement return-kind inference helpers from `SemanticsValidatorInfer.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorInferDefinition.cpp`.
-- ○ Refactor `src/semantics/TemplateMonomorph.cpp` (`4109` lines) below the `700`-line target.
+- ◐ Refactor `src/semantics/TemplateMonomorph.cpp` (`3583` lines) below the `700`-line target. Progress: extracted templated fallback type-inference helpers into `src/semantics/TemplateMonomorphFallbackTypeInference.h`.
+- ✓ Extract templated fallback type-inference helpers from `TemplateMonomorph.cpp` into `src/semantics/TemplateMonomorphFallbackTypeInference.h`.
+- ○ Extract method-call target and binding-type inference helpers from `TemplateMonomorph.cpp` into dedicated helper unit(s).
 - ○ Refactor `src/semantics/SemanticsValidatorPasses.cpp` (`3553` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidate.cpp` (`3499` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorStatement.cpp` (`3351` lines) below the `700`-line target.
