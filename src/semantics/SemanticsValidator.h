@@ -210,6 +210,18 @@ private:
                               const Expr &expr,
                               const ExprTryBuiltinContext &context,
                               bool &handledOut);
+  struct ExprNamedArgumentBuiltinContext {
+    std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
+    std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
+    std::function<bool(const Expr &)> isArrayNamespacedVectorCountCompatibilityCall;
+  };
+  bool validateExprNamedArgumentBuiltins(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      bool resolvedMethod,
+      const ExprNamedArgumentBuiltinContext &context);
   std::string normalizeCollectionMethodName(const std::string &methodName) const;
   std::string inferPointerLikeCallReturnType(
       const Expr &receiverExpr,

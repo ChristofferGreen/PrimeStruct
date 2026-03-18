@@ -9250,6 +9250,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLambda.cpp";
   const std::filesystem::path semanticsExprMethodResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
+  const std::filesystem::path semanticsExprNamedArgumentBuiltinsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprNamedArgumentBuiltins.cpp";
   const std::filesystem::path semanticsExprNumericPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
@@ -9269,6 +9271,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
+  REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
   REQUIRE(std::filesystem::exists(semanticsExprResultFilePath));
@@ -9284,6 +9287,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
   const std::string semanticsExprMethodResolutionSource = readText(semanticsExprMethodResolutionPath);
+  const std::string semanticsExprNamedArgumentBuiltinsSource =
+      readText(semanticsExprNamedArgumentBuiltinsPath);
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
   const std::string semanticsExprResultFileSource = readText(semanticsExprResultFilePath);
@@ -9329,6 +9334,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("const bool allowsNamedArgsPackBuiltinLabels =") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isLegacyCollectionBuiltinCall = [&]() {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isLegacyArrayAccessBuiltinCall = [&]() {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isLegacyCountLikeBuiltinCall = [&](const char *helperName)") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveLegacyVectorHelperName = [&](std::string &nameOut) -> bool") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isLegacyVectorHelperBuiltinCall = [&]() {") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"File\")) {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"try\")) {") ==
@@ -9357,6 +9374,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprTryBuiltin(params, locals, expr, tryContext,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprNamedArgumentBuiltins(params, locals, expr, resolved,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprResultFileBuiltins(params, locals, expr, resolved, resolvedMethod,") !=
@@ -9431,6 +9451,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprMethodResolutionSource.find("bool SemanticsValidator::resolveMethodTarget") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find("unknown method target for ") != std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "bool SemanticsValidator::validateExprNamedArgumentBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "auto isLegacyCollectionBuiltinCall = [&]() {") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "auto resolveLegacyVectorHelperName = [&](std::string &nameOut) -> bool") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "named arguments not supported for builtin calls") !=
+        std::string::npos);
   CHECK(semanticsExprNumericSource.find("bool SemanticsValidator::validateNumericBuiltinExpr") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("multiply requires scalar scaling") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("implicit matrix/quaternion family conversion requires explicit helper") !=
