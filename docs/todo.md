@@ -259,12 +259,12 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Extract reflection metadata/generated-helper rewrites from `SemanticsValidate.cpp` into dedicated helper unit(s).
 - ✓ Extract reflection metadata query rewriting from `SemanticsValidate.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionMetadata.cpp`.
 - ✓ Extract reflection generated-helper rewriting from `SemanticsValidate.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp`.
-- ✓ Refactor `src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp` (`466` lines) below the `700`-line target.
+- ✓ Refactor `src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp` (`326` lines) below the `700`-line target.
 - ✓ Extract reflection serialize/deserialize helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpersSerialization.cpp`.
 - ✓ Extract reflection validate/result helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpersValidate.cpp`.
 - ✓ Extract reflection compare/equality/hash helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpersCompare.cpp`.
 - ✓ Extract remaining reflection state/default helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpersState.cpp`.
-- ○ Extract remaining reflection clone/debug helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit(s).
+- ✓ Extract remaining reflection clone/debug helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpersCloneDebug.cpp`.
 - ○ Refactor `src/semantics/SemanticsValidatorStatement.cpp` (`3351` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererCallHelpers.cpp` (`3053` lines) below the `700`-line target.
 - ○ Refactor `src/Vm.cpp` (`3050` lines) below the `700`-line target.

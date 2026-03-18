@@ -1,6 +1,7 @@
 #include "SemanticsValidateReflectionGeneratedHelpers.h"
 
 #include "SemanticsHelpers.h"
+#include "SemanticsValidateReflectionGeneratedHelpersCloneDebug.h"
 #include "SemanticsValidateReflectionGeneratedHelpersCompare.h"
 #include "SemanticsValidateReflectionGeneratedHelpersSerialization.h"
 #include "SemanticsValidateReflectionGeneratedHelpersState.h"
@@ -100,81 +101,6 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     definitionPaths.insert(def.fullPath);
   }
 
-  auto makeTypeBinding = [](const std::string &bindingName,
-                            const std::string &typeName,
-                            const std::string &namespacePrefix,
-                            bool isMutable = false) {
-    Expr binding;
-    binding.isBinding = true;
-    binding.name = bindingName;
-    binding.namespacePrefix = namespacePrefix;
-    Transform typeTransform;
-    std::string typeBase;
-    std::string typeArgText;
-    if (semantics::splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty() &&
-        !typeArgText.empty()) {
-      typeTransform.name = typeBase;
-      std::vector<std::string> typeArgs;
-      if (semantics::splitTopLevelTemplateArgs(typeArgText, typeArgs)) {
-        typeTransform.templateArgs = std::move(typeArgs);
-      } else {
-        typeTransform.templateArgs.push_back(typeArgText);
-      }
-    } else {
-      typeTransform.name = typeName;
-    }
-    binding.transforms.push_back(std::move(typeTransform));
-    if (isMutable) {
-      Transform mutTransform;
-      mutTransform.name = "mut";
-      binding.transforms.push_back(std::move(mutTransform));
-    }
-    return binding;
-  };
-  auto makeNameExpr = [](const std::string &name) {
-    Expr expr;
-    expr.kind = Expr::Kind::Name;
-    expr.name = name;
-    return expr;
-  };
-  auto makeStringLiteralExpr = [](const std::string &value) {
-    Expr expr;
-    expr.kind = Expr::Kind::StringLiteral;
-    std::string encoded;
-    encoded.reserve(value.size() + 8);
-    encoded.push_back('"');
-    for (const char ch : value) {
-      if (ch == '"' || ch == '\\') {
-        encoded.push_back('\\');
-      }
-      encoded.push_back(ch);
-    }
-    encoded += "\"utf8";
-    expr.stringValue = std::move(encoded);
-    return expr;
-  };
-  auto makeCallExpr = [](const std::string &name, Expr arg) {
-    Expr call;
-    call.kind = Expr::Kind::Call;
-    call.name = name;
-    call.args.push_back(std::move(arg));
-    call.argNames.push_back(std::nullopt);
-    return call;
-  };
-  auto appendPublicVisibility = [](Definition &helper) {
-    Transform visibilityTransform;
-    visibilityTransform.name = "public";
-    helper.transforms.push_back(std::move(visibilityTransform));
-  };
-  auto makeFieldAccessExpr = [&](const std::string &receiverName, const std::string &fieldName) {
-    Expr fieldAccess;
-    fieldAccess.kind = Expr::Kind::Call;
-    fieldAccess.isFieldAccess = true;
-    fieldAccess.name = fieldName;
-    fieldAccess.args.push_back(makeNameExpr(receiverName));
-    fieldAccess.argNames.push_back(std::nullopt);
-    return fieldAccess;
-  };
   auto bindingTypeFromField = [](const Expr &fieldBindingExpr, bool &ambiguousOut) -> std::string {
     ambiguousOut = false;
     std::optional<std::string> typeName;
@@ -298,76 +224,6 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       return false;
     }
 
-    auto emitDebugPrintHelper = [&]() -> bool {
-      const std::string helperPath = def.fullPath + "/DebugPrint";
-      if (definitionPaths.count(helperPath) > 0) {
-        error = "generated reflection helper already exists: " + helperPath;
-        return false;
-      }
-
-      Definition helper;
-      helper.name = "DebugPrint";
-      helper.fullPath = helperPath;
-      helper.namespacePrefix = def.fullPath;
-      helper.sourceLine = def.sourceLine;
-      helper.sourceColumn = def.sourceColumn;
-
-      appendPublicVisibility(helper);
-      Transform returnTransform;
-      returnTransform.name = "return";
-      returnTransform.templateArgs.push_back("void");
-      helper.transforms.push_back(std::move(returnTransform));
-      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix));
-
-      if (fieldNames.empty()) {
-        helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr(def.fullPath + " {}")));
-      } else {
-        helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr(def.fullPath + " {")));
-        for (const auto &fieldName : fieldNames) {
-          helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr("  " + fieldName)));
-        }
-        helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr("}")));
-      }
-
-      rewrittenDefinitions.push_back(std::move(helper));
-      definitionPaths.insert(helperPath);
-      return true;
-    };
-    auto emitCloneHelper = [&]() -> bool {
-      const std::string helperPath = def.fullPath + "/Clone";
-      if (definitionPaths.count(helperPath) > 0) {
-        error = "generated reflection helper already exists: " + helperPath;
-        return false;
-      }
-
-      Definition helper;
-      helper.name = "Clone";
-      helper.fullPath = helperPath;
-      helper.namespacePrefix = def.fullPath;
-      helper.sourceLine = def.sourceLine;
-      helper.sourceColumn = def.sourceColumn;
-
-      appendPublicVisibility(helper);
-      Transform returnTransform;
-      returnTransform.name = "return";
-      returnTransform.templateArgs.push_back(def.fullPath);
-      helper.transforms.push_back(std::move(returnTransform));
-      helper.parameters.push_back(makeTypeBinding("value", def.fullPath, helper.namespacePrefix));
-
-      Expr cloneCall;
-      cloneCall.kind = Expr::Kind::Call;
-      cloneCall.name = def.fullPath;
-      for (const auto &fieldName : fieldNames) {
-        cloneCall.args.push_back(makeFieldAccessExpr("value", fieldName));
-        cloneCall.argNames.push_back(std::nullopt);
-      }
-      helper.returnExpr = std::move(cloneCall);
-      helper.hasReturnStatement = true;
-
-      rewrittenDefinitions.push_back(std::move(helper));
-      definitionPaths.insert(helperPath);
-      return true;
-    };
     if (shouldGenerateEqual) {
       ReflectionGeneratedHelperContext compareContext{
           def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
@@ -446,12 +302,16 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       }
     }
     if (shouldGenerateClone) {
-      if (!emitCloneHelper()) {
+      ReflectionGeneratedHelperContext cloneDebugContext{
+          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+      if (!emitReflectionCloneHelper(cloneDebugContext)) {
         return false;
       }
     }
     if (shouldGenerateDebugPrint) {
-      if (!emitDebugPrintHelper()) {
+      ReflectionGeneratedHelperContext cloneDebugContext{
+          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+      if (!emitReflectionDebugPrintHelper(cloneDebugContext)) {
         return false;
       }
     }
