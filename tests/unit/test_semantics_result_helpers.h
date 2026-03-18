@@ -176,6 +176,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib ImageError why wrapper covers direct and Result-based access") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<void>]
+main() {
+  [ImageError] err{imageReadUnsupported()}
+  [string] direct{/ImageError/why(err)}
+  [string] viaType{ImageError.why(err)}
+  [string] viaResult{Result.why(imageErrorStatus(err))}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib ImageError why wrapper rejects non image errors") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<void>]
+main() {
+  [string] why{/ImageError/why(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /ImageError/why parameter err") != std::string::npos);
+}
+
 TEST_CASE("stdlib image error result helpers reject non image errors") {
   const std::string source = R"(
 import /std/image/*

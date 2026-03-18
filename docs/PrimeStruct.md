@@ -695,7 +695,8 @@ sum_two_files([string] a, [string] b) {
     wrapper that `Result.why(...)` now prefers when available.
     Import `/std/image/*` to use `.prime`-authored `imageReadUnsupported()`, `imageWriteUnsupported()`,
     `imageInvalidOperation()`, `imageErrorStatus(err)`, and `imageErrorResult<T>(err)` helpers instead of
-    hand-packing `ImageError` result codes. Import `/std/gfx/*` or `/std/gfx/experimental/*` to use
+    hand-packing `ImageError` result codes, and load the public `/ImageError/why([ImageError] err)` wrapper for
+    explicit type-owned access to the current stdlib error strings. Import `/std/gfx/*` or `/std/gfx/experimental/*` to use
     `.prime`-authored `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` helpers instead of manually packing
     `GfxError` result codes inside graphics helpers.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
@@ -766,6 +767,8 @@ sum_two_files([string] a, [string] b) {
   - Import `/std/image/*` for the current stdlib-authored ImageError helper layer:
     `imageReadUnsupported()`, `imageWriteUnsupported()`, `imageInvalidOperation()`,
     `imageErrorStatus(err)`, and `imageErrorResult<T>(err)`.
+  - The image stdlib layer also defines `/ImageError/why([ImageError] err)` as the public wrapper over the
+    current `ImageError.why(err)` mapping so explicit type-owned calls stay on the stdlib surface.
 - **Example:**
   ```
   import /std/image/*

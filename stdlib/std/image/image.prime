@@ -1,5 +1,10 @@
 import /std/math/*
 
+[public return<string>]
+/ImageError/why([/std/image/ImageError] err) {
+  return(/std/image/ImageError/why(err))
+}
+
 namespace std {
   namespace image {
   [public struct]

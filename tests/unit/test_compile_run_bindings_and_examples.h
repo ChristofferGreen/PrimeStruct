@@ -4881,6 +4881,8 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`ImageError.why()` currently returns `image_read_unsupported`, `image_write_unsupported`, or `image_invalid_operation`") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("The image stdlib layer also defines `/ImageError/why([ImageError] err)` as the public wrapper over the") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("print_line(Result.why(ppm.read(width, height, pixels, \"input.ppm\"utf8)))") !=
         std::string::npos);
   CHECK(primeStructDoc.find("print_line(Result.why(png.write(\"output.png\"utf8, width, height, pixels)))") !=
