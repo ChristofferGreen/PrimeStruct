@@ -986,6 +986,9 @@
         << ")";
     return out.str();
   };
+  auto isNoHelperExplicitMapAccessCountReceiver = [&](const Expr &candidate) {
+    return isNoHelperExplicitMapAccessCallFallback(candidate);
+  };
   auto isNoHelperExplicitVectorAccessCountReceiver = [&](const Expr &candidate) {
     if (isExplicitVectorAccessDirectCall(candidate)) {
       return explicitVectorAccessResolvedTypePath(candidate).empty();
@@ -1104,6 +1107,14 @@
     }
     if (isNoHelperExplicitMapAccessCallFallback(expr)) {
       return emitMissingExplicitMapAccessCall(expr);
+    }
+    if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+        isNoHelperExplicitMapAccessCountReceiver(expr.args.front())) {
+      std::ostringstream out;
+      out << "ps_missing_map_access_count_receiver_helper("
+          << emitMissingExplicitMapAccessCall(expr.args.front())
+          << ")";
+      return out.str();
     }
     if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         isNoHelperExplicitVectorAccessCountReceiver(expr.args.front())) {
