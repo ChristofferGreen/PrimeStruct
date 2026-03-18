@@ -274,7 +274,7 @@ target_include_directories(primec_lib INTERFACE include)
 target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_lib primec_support_lib)
 
 add_executable(primec src/main.cpp)
-target_link_libraries(primec PRIVATE primec_backend_lib)
+target_link_libraries(primec PRIVATE primec_ir_lib primec_backend_registry_lib)
 primestructEnableWarnings(primec)
 
 add_executable(primevm src/primevm_main.cpp)
@@ -307,7 +307,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run.cpp
   )
   target_include_directories(PrimeStruct_backend_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
-  target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_backend_lib)
+  target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_ir_lib primec_backend_registry_lib)
   primestructEnableWarnings(PrimeStruct_backend_tests)
 
   add_executable(PrimeStruct_semantics_tests

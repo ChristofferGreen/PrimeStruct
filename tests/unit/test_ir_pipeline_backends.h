@@ -343,7 +343,9 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
         std::string::npos);
   CHECK(cmake.find("target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_lib primec_support_lib)") !=
         std::string::npos);
-  CHECK(cmake.find("target_link_libraries(primec PRIVATE primec_backend_lib)") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec PRIVATE primec_backend_lib)") == std::string::npos);
   CHECK(cmake.find("target_link_libraries(primec PRIVATE primec_lib)") == std::string::npos);
   CHECK(cmake.find("target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib)") != std::string::npos);
   CHECK(cmake.find("add_executable(PrimeStruct_misc_tests") != std::string::npos);
@@ -352,7 +354,9 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_misc_tests> \"--test-suite=${suite}\"") !=
         std::string::npos);
   CHECK(cmake.find("add_executable(PrimeStruct_backend_tests") != std::string::npos);
-  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_backend_lib)") !=
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_backend_lib)") ==
         std::string::npos);
   CHECK(cmake.find("set(PrimeStructBackendTestSuites") != std::string::npos);
   CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_backend_tests> \"--test-suite=${suite}\"") !=
