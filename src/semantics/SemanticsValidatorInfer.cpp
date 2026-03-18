@@ -46,26 +46,6 @@ std::string formatReturnInferenceCycleDiagnostic(const std::vector<const Definit
   return message.str();
 }
 
-using GraphLocalAutoBindingExprMap = std::unordered_map<std::string, const Expr *>;
-
-std::string makeGraphLocalAutoBindingKey(const std::string &scopePath, int sourceLine, int sourceColumn) {
-  return scopePath + "@" + std::to_string(sourceLine) + ":" + std::to_string(sourceColumn);
-}
-
-void collectGraphLocalAutoBindingExprs(const Expr &expr,
-                                       const std::string &scopePath,
-                                       GraphLocalAutoBindingExprMap &out) {
-  if (expr.isBinding) {
-    out.try_emplace(makeGraphLocalAutoBindingKey(scopePath, expr.sourceLine, expr.sourceColumn), &expr);
-  }
-  for (const auto &arg : expr.args) {
-    collectGraphLocalAutoBindingExprs(arg, scopePath, out);
-  }
-  for (const auto &bodyExpr : expr.bodyArguments) {
-    collectGraphLocalAutoBindingExprs(bodyExpr, scopePath, out);
-  }
-}
-
 } // namespace
 
 bool SemanticsValidator::inferUnknownReturnKinds() {
@@ -199,70 +179,221 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
 }
 
 void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph &graph) {
-  GraphLocalAutoBindingExprMap bindingExprs;
-  for (const auto &def : program_.definitions) {
-    for (const auto &param : def.parameters) {
-      for (const auto &arg : param.args) {
-        collectGraphLocalAutoBindingExprs(arg, def.fullPath, bindingExprs);
-      }
-      for (const auto &bodyExpr : param.bodyArguments) {
-        collectGraphLocalAutoBindingExprs(bodyExpr, def.fullPath, bindingExprs);
-      }
-    }
-    for (const auto &stmt : def.statements) {
-      collectGraphLocalAutoBindingExprs(stmt, def.fullPath, bindingExprs);
-    }
-    if (def.returnExpr.has_value()) {
-      collectGraphLocalAutoBindingExprs(*def.returnExpr, def.fullPath, bindingExprs);
-    }
-  }
-
-  std::unordered_map<uint32_t, std::vector<uint32_t>> dependencyTargetsByLocalNodeId;
-  for (const TypeResolutionGraphEdge &edge : graph.edges) {
-    if (edge.kind != TypeResolutionEdgeKind::Dependency) {
-      continue;
-    }
-    dependencyTargetsByLocalNodeId[edge.sourceId].push_back(edge.targetId);
-  }
-
+  std::unordered_map<std::string, size_t> dependencyCountByBindingKey;
   for (const TypeResolutionGraphNode &node : graph.nodes) {
     if (node.kind != TypeResolutionNodeKind::LocalAuto) {
       continue;
     }
+    dependencyCountByBindingKey.try_emplace(
+        graphLocalAutoBindingKey(node.scopePath, node.sourceLine, node.sourceColumn), 0);
+  }
+  for (const TypeResolutionGraphEdge &edge : graph.edges) {
+    if (edge.kind != TypeResolutionEdgeKind::Dependency || edge.sourceId >= graph.nodes.size() ||
+        edge.targetId >= graph.nodes.size()) {
+      continue;
+    }
+    const TypeResolutionGraphNode &sourceNode = graph.nodes[edge.sourceId];
+    const TypeResolutionGraphNode &targetNode = graph.nodes[edge.targetId];
+    if (sourceNode.kind != TypeResolutionNodeKind::LocalAuto ||
+        targetNode.kind != TypeResolutionNodeKind::CallConstraint) {
+      continue;
+    }
+    ++dependencyCountByBindingKey[graphLocalAutoBindingKey(
+        sourceNode.scopePath, sourceNode.sourceLine, sourceNode.sourceColumn)];
+  }
 
-    const auto edgeIt = dependencyTargetsByLocalNodeId.find(node.id);
-    if (edgeIt == dependencyTargetsByLocalNodeId.end() || edgeIt->second.size() != 1) {
-      continue;
-    }
-    const uint32_t targetNodeId = edgeIt->second.front();
-    if (targetNodeId >= graph.nodes.size()) {
-      continue;
-    }
-    const TypeResolutionGraphNode &callNode = graph.nodes[targetNodeId];
-    if (callNode.kind != TypeResolutionNodeKind::CallConstraint) {
-      continue;
-    }
+  using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;
 
-    const std::string bindingKey = graphLocalAutoBindingKey(node.scopePath, node.sourceLine, node.sourceColumn);
-    const auto bindingIt = bindingExprs.find(bindingKey);
-    if (bindingIt == bindingExprs.end() || bindingIt->second == nullptr) {
-      continue;
-    }
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
 
-    const Expr &bindingExpr = *bindingIt->second;
-    if (bindingExpr.args.size() != 1) {
-      continue;
+  auto shouldCaptureGraphBinding = [&](const Definition &def, const Expr &bindingExpr) {
+    const std::string bindingKey =
+        graphLocalAutoBindingKey(def.fullPath, bindingExpr.sourceLine, bindingExpr.sourceColumn);
+    const auto dependencyIt = dependencyCountByBindingKey.find(bindingKey);
+    if (dependencyIt == dependencyCountByBindingKey.end() || bindingExpr.args.size() != 1) {
+      return false;
     }
     const Expr &initializer = bindingExpr.args.front();
-    if (initializer.kind != Expr::Kind::Call || initializer.isBinding || initializer.isMethodCall) {
-      continue;
+    if (initializer.kind != Expr::Kind::Call || initializer.isBinding) {
+      return false;
+    }
+    if (dependencyIt->second == 1 && !initializer.isMethodCall && !isIfCall(initializer) &&
+        !isMatchCall(initializer) && !isBuiltinBlockCall(initializer)) {
+      return true;
+    }
+    return dependencyIt->second > 0 &&
+           (isIfCall(initializer) || isMatchCall(initializer) || isBuiltinBlockCall(initializer));
+  };
+
+  auto inferBindingForLocals = [&](const Definition &def,
+                                   const std::vector<ParameterInfo> &defParams,
+                                   const ActiveLocalBindings &activeLocals,
+                                   const Expr &bindingExpr,
+                                   BindingInfo &bindingOut) {
+    const std::string namespacePrefix =
+        bindingExpr.namespacePrefix.empty() ? def.namespacePrefix : bindingExpr.namespacePrefix;
+    std::optional<std::string> restrictType;
+    if (!withPreservedError([&]() {
+          return parseBindingInfo(
+              bindingExpr, namespacePrefix, structNames_, importAliases_, bindingOut, restrictType, error_);
+        })) {
+      return false;
+    }
+    if (!hasExplicitBindingTypeTransform(bindingExpr) && bindingExpr.args.size() == 1) {
+      BindingInfo inferred = bindingOut;
+      if (withPreservedError([&]() {
+            return inferBindingTypeFromInitializer(
+                bindingExpr.args.front(), defParams, activeLocals, inferred, &bindingExpr);
+          })) {
+        bindingOut = std::move(inferred);
+      }
+    }
+    if (!restrictType.has_value()) {
+      return true;
+    }
+    const bool hasTemplate = !bindingOut.typeTemplateArg.empty();
+    return restrictMatchesBinding(
+        *restrictType, bindingOut.typeName, bindingOut.typeTemplateArg, hasTemplate, namespacePrefix);
+  };
+
+  std::function<void(const Definition &, const std::vector<ParameterInfo> &, const Expr &, ActiveLocalBindings &)>
+      visitExpr;
+  std::function<void(const Definition &, const std::vector<ParameterInfo> &, const std::vector<Expr> &, ActiveLocalBindings &)>
+      visitExprSequence;
+
+  visitExprSequence = [&](const Definition &def,
+                          const std::vector<ParameterInfo> &defParams,
+                          const std::vector<Expr> &exprs,
+                          ActiveLocalBindings &activeLocals) {
+    for (const auto &expr : exprs) {
+      visitExpr(def, defParams, expr, activeLocals);
+    }
+  };
+
+  visitExpr = [&](const Definition &def,
+                  const std::vector<ParameterInfo> &defParams,
+                  const Expr &expr,
+                  ActiveLocalBindings &activeLocals) {
+    if (expr.isBinding) {
+      for (const auto &arg : expr.args) {
+        ActiveLocalBindings argLocals = activeLocals;
+        visitExpr(def, defParams, arg, argLocals);
+      }
+      if (!expr.bodyArguments.empty()) {
+        ActiveLocalBindings bodyLocals = activeLocals;
+        visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+      }
+
+      BindingInfo binding;
+      if (!inferBindingForLocals(def, defParams, activeLocals, expr, binding)) {
+        return;
+      }
+      if (shouldCaptureGraphBinding(def, expr)) {
+        const std::string bindingKey =
+            graphLocalAutoBindingKey(def.fullPath, expr.sourceLine, expr.sourceColumn);
+        graphLocalAutoBindings_.try_emplace(bindingKey, binding);
+      }
+      activeLocals.emplace(expr.name, std::move(binding));
+      return;
     }
 
-    BindingInfo binding;
-    if (!inferResolvedDirectCallBindingType(callNode.resolvedPath, binding)) {
+    if (isMatchCall(expr)) {
+      Expr expanded;
+      if (withPreservedError([&]() { return lowerMatchToIf(expr, expanded, error_); })) {
+        visitExpr(def, defParams, expanded, activeLocals);
+        return;
+      }
+    }
+
+    if (isIfCall(expr) && expr.args.size() == 3) {
+      ActiveLocalBindings conditionLocals = activeLocals;
+      visitExpr(def, defParams, expr.args.front(), conditionLocals);
+
+      ActiveLocalBindings thenLocals = activeLocals;
+      visitExpr(def, defParams, expr.args[1], thenLocals);
+
+      ActiveLocalBindings elseLocals = activeLocals;
+      visitExpr(def, defParams, expr.args[2], elseLocals);
+      return;
+    }
+
+    if ((isLoopCall(expr) || isWhileCall(expr)) && expr.args.size() == 2) {
+      ActiveLocalBindings loopLocals = activeLocals;
+      visitExpr(def, defParams, expr.args.front(), loopLocals);
+      visitExpr(def, defParams, expr.args[1], loopLocals);
+      return;
+    }
+
+    if (isForCall(expr) && expr.args.size() == 4) {
+      ActiveLocalBindings loopLocals = activeLocals;
+      visitExpr(def, defParams, expr.args[0], loopLocals);
+      if (expr.args[1].isBinding) {
+        visitExpr(def, defParams, expr.args[1], loopLocals);
+      } else {
+        ActiveLocalBindings indexLocals = loopLocals;
+        visitExpr(def, defParams, expr.args[1], indexLocals);
+      }
+      ActiveLocalBindings limitLocals = loopLocals;
+      visitExpr(def, defParams, expr.args[2], limitLocals);
+      visitExpr(def, defParams, expr.args[3], loopLocals);
+      return;
+    }
+
+    if (isRepeatCall(expr)) {
+      ActiveLocalBindings repeatLocals = activeLocals;
+      visitExprSequence(def, defParams, expr.bodyArguments, repeatLocals);
+      return;
+    }
+
+    if (isBuiltinBlockCall(expr) && expr.hasBodyArguments) {
+      ActiveLocalBindings blockLocals = activeLocals;
+      visitExprSequence(def, defParams, expr.bodyArguments, blockLocals);
+      return;
+    }
+
+    for (const auto &arg : expr.args) {
+      ActiveLocalBindings argLocals = activeLocals;
+      visitExpr(def, defParams, arg, argLocals);
+    }
+    if (!expr.bodyArguments.empty()) {
+      ActiveLocalBindings bodyLocals = activeLocals;
+      visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+    }
+  };
+
+  for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
+    ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
+    const auto paramsIt = paramsByDef_.find(def.fullPath);
+    if (paramsIt == paramsByDef_.end()) {
       continue;
     }
-    graphLocalAutoBindings_.try_emplace(bindingKey, std::move(binding));
+    const auto &defParams = paramsIt->second;
+
+    for (const auto &param : def.parameters) {
+      for (const auto &arg : param.args) {
+        ActiveLocalBindings paramLocals;
+        visitExpr(def, defParams, arg, paramLocals);
+      }
+      if (!param.bodyArguments.empty()) {
+        ActiveLocalBindings paramLocals;
+        visitExprSequence(def, defParams, param.bodyArguments, paramLocals);
+      }
+    }
+
+    ActiveLocalBindings definitionLocals;
+    visitExprSequence(def, defParams, def.statements, definitionLocals);
+    if (def.returnExpr.has_value()) {
+      ActiveLocalBindings returnLocals = definitionLocals;
+      visitExpr(def, defParams, *def.returnExpr, returnLocals);
+    }
   }
 }
 

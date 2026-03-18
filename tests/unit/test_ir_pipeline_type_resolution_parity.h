@@ -81,6 +81,54 @@ main() {
 }
 )",
       },
+      {
+          "block_local_auto_struct",
+          R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<Pair>]
+makePair() {
+  return(Pair())
+}
+
+[return<i32>]
+main() {
+  [auto] pair{
+    block {
+      return(makePair())
+    }
+  }
+  return(pair.value)
+}
+)",
+      },
+      {
+          "if_local_auto_collection",
+          R"(
+[return<array<i32>>]
+valuesA() {
+  return(array<i32>(1i32, 2i32))
+}
+
+[return<array<i32>>]
+valuesB() {
+  return(array<i32>(3i32, 4i32, 5i32))
+}
+
+[return<i32>]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(count(values))
+}
+)",
+      },
   };
 
   for (const ParityCase &testCase : cases) {

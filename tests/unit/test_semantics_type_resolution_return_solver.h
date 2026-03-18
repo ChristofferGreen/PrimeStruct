@@ -131,6 +131,68 @@ main() {
   CHECK(legacyError.empty());
 }
 
+TEST_CASE("graph type resolver infers block-valued auto binding from helper-returned struct") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{7i32}
+}
+
+[return<Pair>]
+makePair() {
+  return(Pair())
+}
+
+[return<i32>]
+main() {
+  [auto] pair{
+    block {
+      return(makePair())
+    }
+  }
+  return(pair.value)
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
+TEST_CASE("graph type resolver infers control-flow auto binding from helper-returned collection") {
+  const std::string source = R"(
+[return<array<i32>>]
+valuesA() {
+  return(array<i32>(1i32, 2i32))
+}
+
+[return<array<i32>>]
+valuesB() {
+  return(array<i32>(3i32, 4i32, 5i32))
+}
+
+[return<i32>]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(count(values))
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
 TEST_CASE("default semantics path uses graph resolver while legacy remains available for rollback") {
   const std::string source = R"(
 [return<auto>]
