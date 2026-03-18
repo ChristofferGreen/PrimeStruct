@@ -388,7 +388,11 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("buildTypeResolutionGraph(program_)") != std::string::npos);
   CHECK(validatorInfer.find("collectGraphLocalAutoBindings(graph);") != std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoBindings_.try_emplace(bindingKey, std::move(binding));") !=
+  CHECK(validatorInfer.find("dependencyCountByBindingKey") != std::string::npos);
+  CHECK(validatorInfer.find("dependencyIt->second > 0 &&") != std::string::npos);
+  CHECK(validatorInfer.find("isIfCall(initializer) || isMatchCall(initializer) || isBuiltinBlockCall(initializer)") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("graphLocalAutoBindings_.try_emplace(bindingKey, binding);") !=
         std::string::npos);
   CHECK(validatorInfer.find("computeCondensationDag(") != std::string::npos);
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
@@ -422,6 +426,8 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
         std::string::npos);
   CHECK(parityHeader.find("direct_call_local_auto_struct") != std::string::npos);
   CHECK(parityHeader.find("direct_call_local_auto_collection") != std::string::npos);
+  CHECK(parityHeader.find("block_local_auto_struct") != std::string::npos);
+  CHECK(parityHeader.find("if_local_auto_collection") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally corrects grounded mutual recursion") !=
