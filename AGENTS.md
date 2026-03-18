@@ -111,7 +111,8 @@ build and layout solidify.
   needs IR preparation plus backend dispatch, prefer linking `primec_ir_lib` +
   `primec_backend_registry_lib` directly; when a target only needs IR preparation plus VM
   execution, prefer linking `primec_ir_lib` + `primec_runtime_lib` over the broader backend
-  umbrellas.
+  umbrellas. When a registry/adapter target only uses implementation libraries behind its `.cpp`
+  boundary, keep those dependencies `PRIVATE` unless its public headers require them.
 - **Doctest target layout:** when a test source only exercises compile-pipeline/frontend/IR APIs,
   prefer a dedicated doctest binary linked to `primec_ir_lib` or `primec_frontend_lib` instead of
   routing it through `PrimeStruct_backend_tests` or the `primec_lib` compatibility umbrella.

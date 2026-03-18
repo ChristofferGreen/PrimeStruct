@@ -337,7 +337,9 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
         std::string::npos);
   CHECK(cmake.find("target_link_libraries(primec_ir_lib PUBLIC primec_frontend_lib primec_support_lib)") !=
         std::string::npos);
-  CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PUBLIC primec_codegen_lib primec_runtime_lib)") !=
+  CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PRIVATE primec_codegen_lib primec_runtime_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PUBLIC primec_codegen_lib primec_runtime_lib)") ==
         std::string::npos);
   CHECK(cmake.find("target_link_libraries(primec_backend_lib INTERFACE primec_ir_lib primec_backend_registry_lib)") !=
         std::string::npos);
