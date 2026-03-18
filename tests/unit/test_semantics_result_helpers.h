@@ -475,6 +475,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib gfx Buffer upload helpers cover experimental slash-call wrappers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [Buffer<i32>] data{/std/gfx/experimental/Buffer/upload(values)}
+  [array<i32>] out{data.readback()}
+  return(plus(out.count(), out[0i32]))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical stdlib gfx Buffer upload helpers cover slash-call wrappers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [Buffer<i32>] data{/std/gfx/Buffer/upload(values)}
+  [array<i32>] out{data.readback()}
+  return(plus(out.count(), out[0i32]))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical stdlib gfx Buffer slash-call helpers require stdlib import") {
   const std::string source = R"(
 [effects(gpu_dispatch) return<int>]
@@ -486,6 +520,20 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/gfx/Buffer/count") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx Buffer upload slash-call helpers require stdlib import") {
+  const std::string source = R"(
+[effects(gpu_dispatch), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [Buffer<i32>] data{/std/gfx/Buffer/upload(values)}
+  return(data.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/gfx/Buffer/upload") != std::string::npos);
 }
 
 TEST_CASE("canonical stdlib gfx Buffer readback slash-call helpers require stdlib import") {
@@ -516,6 +564,22 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("readback requires numeric/bool element type") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx Buffer upload helper rejects unsupported element type") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [array<string>] values{array<string>("x"utf8)}
+  [Buffer<string>] data{/std/gfx/Buffer/upload(values)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("upload requires numeric/bool element type") != std::string::npos);
 }
 
 TEST_CASE("Result.map inline lambda syntax parses with explicit diagnostics") {

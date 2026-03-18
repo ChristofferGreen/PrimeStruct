@@ -1608,6 +1608,40 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("vm uses stdlib experimental Buffer upload helpers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  [Buffer<i32>] data{/std/gfx/experimental/Buffer/upload(values)}
+  [array<i32>] out{data.readback()}
+  return(plus(plus(out.count(), out[0i32]), out[2i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_upload_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
+}
+
+TEST_CASE("vm uses canonical stdlib Buffer upload helpers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  [Buffer<i32>] data{/std/gfx/Buffer/upload(values)}
+  [array<i32>] out{data.readback()}
+  return(plus(plus(out.count(), out[0i32]), out[2i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_upload_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
+}
+
 TEST_CASE("vm uses stdlib FileError why wrapper") {
   const std::string source = R"(
 import /std/file/*

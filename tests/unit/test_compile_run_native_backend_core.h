@@ -3130,6 +3130,48 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("native uses stdlib experimental Buffer upload helpers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  [Buffer<i32>] data{/std/gfx/experimental/Buffer/upload(values)}
+  [array<i32>] out{data.readback()}
+  return(plus(plus(out.count(), out[0i32]), out[2i32]))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_experimental_gfx_buffer_upload_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_experimental_gfx_buffer_upload_helpers").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("native uses canonical stdlib Buffer upload helpers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  [Buffer<i32>] data{/std/gfx/Buffer/upload(values)}
+  [array<i32>] out{data.readback()}
+  return(plus(plus(out.count(), out[0i32]), out[2i32]))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_canonical_gfx_buffer_upload_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_canonical_gfx_buffer_upload_helpers").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("compiles and runs native ppm read for ascii p3 inputs") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_native_image_read.ppm").string();
   {

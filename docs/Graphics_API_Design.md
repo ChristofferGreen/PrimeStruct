@@ -182,6 +182,7 @@ Buffer.count(self) -> i32
 Buffer.empty(self) -> bool
 Buffer.is_valid(self) -> bool
 Buffer.readback(self) -> array<T>
+/std/gfx/Buffer/upload(values) -> Buffer<T>
 ```
 
 ### Locked Profile-Deduction Rule
