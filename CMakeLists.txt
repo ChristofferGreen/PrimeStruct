@@ -250,10 +250,14 @@ target_include_directories(primec_runtime_lib PUBLIC include)
 target_link_libraries(primec_runtime_lib PUBLIC primec_frontend_lib primec_support_lib)
 primestructEnableWarnings(primec_runtime_lib)
 
-add_library(primec_codegen_lib ${PRIMESTRUCT_CODEGEN_SOURCES})
-target_include_directories(primec_codegen_lib PUBLIC include)
-target_link_libraries(primec_codegen_lib PUBLIC primec_frontend_lib primec_support_lib)
-primestructEnableWarnings(primec_codegen_lib)
+add_library(primec_backend_emitters_lib ${PRIMESTRUCT_CODEGEN_SOURCES})
+target_include_directories(primec_backend_emitters_lib PUBLIC include)
+target_link_libraries(primec_backend_emitters_lib PUBLIC primec_frontend_lib primec_support_lib)
+primestructEnableWarnings(primec_backend_emitters_lib)
+
+add_library(primec_codegen_lib INTERFACE)
+target_include_directories(primec_codegen_lib INTERFACE include)
+target_link_libraries(primec_codegen_lib INTERFACE primec_backend_emitters_lib)
 
 add_library(primec_ir_lib ${PRIMESTRUCT_IR_SOURCES})
 target_include_directories(primec_ir_lib PUBLIC include)
@@ -262,7 +266,7 @@ primestructEnableWarnings(primec_ir_lib)
 
 add_library(primec_backend_registry_lib ${PRIMESTRUCT_BACKEND_REGISTRY_SOURCES})
 target_include_directories(primec_backend_registry_lib PUBLIC include)
-target_link_libraries(primec_backend_registry_lib PRIVATE primec_codegen_lib primec_runtime_lib)
+target_link_libraries(primec_backend_registry_lib PUBLIC primec_backend_emitters_lib primec_runtime_lib)
 primestructEnableWarnings(primec_backend_registry_lib)
 
 add_library(primec_backend_lib INTERFACE)

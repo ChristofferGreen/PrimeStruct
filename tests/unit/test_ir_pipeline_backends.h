@@ -325,7 +325,8 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("add_library(primec_support_lib") != std::string::npos);
   CHECK(cmake.find("add_library(primec_frontend_lib") != std::string::npos);
   CHECK(cmake.find("add_library(primec_ir_lib") != std::string::npos);
-  CHECK(cmake.find("add_library(primec_codegen_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_backend_emitters_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_codegen_lib INTERFACE)") != std::string::npos);
   CHECK(cmake.find("add_library(primec_runtime_lib") != std::string::npos);
   CHECK(cmake.find("add_library(primec_backend_registry_lib") != std::string::npos);
   CHECK(cmake.find("add_library(primec_backend_lib INTERFACE)") != std::string::npos);
@@ -333,11 +334,15 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("target_link_libraries(primec_frontend_lib PUBLIC primec_support_lib)") != std::string::npos);
   CHECK(cmake.find("target_link_libraries(primec_runtime_lib PUBLIC primec_frontend_lib primec_support_lib)") !=
         std::string::npos);
-  CHECK(cmake.find("target_link_libraries(primec_codegen_lib PUBLIC primec_frontend_lib primec_support_lib)") !=
+  CHECK(cmake.find("target_link_libraries(primec_backend_emitters_lib PUBLIC primec_frontend_lib primec_support_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_codegen_lib INTERFACE primec_backend_emitters_lib)") !=
         std::string::npos);
   CHECK(cmake.find("target_link_libraries(primec_ir_lib PUBLIC primec_frontend_lib primec_support_lib)") !=
         std::string::npos);
-  CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PRIVATE primec_codegen_lib primec_runtime_lib)") !=
+  CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PUBLIC primec_backend_emitters_lib primec_runtime_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PRIVATE primec_codegen_lib primec_runtime_lib)") ==
         std::string::npos);
   CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PUBLIC primec_codegen_lib primec_runtime_lib)") ==
         std::string::npos);

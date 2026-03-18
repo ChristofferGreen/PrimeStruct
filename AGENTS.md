@@ -102,17 +102,19 @@ build and layout solidify.
   explicit `.h/.cpp` units with clear interfaces instead of adding new include-only fragments.
 - **CMake subsystem layout:** place new build sources in the narrowest library that fits:
   `primec_support_lib` (shared utilities), `primec_frontend_lib` (import/parser/semantics/text
-  filtering), `primec_ir_lib` (IR preparation/lowering/validation tooling), `primec_codegen_lib`
-  (emitters and external tooling), `primec_runtime_lib` (VM runtime/debugger), and
-  `primec_backend_registry_lib` (backend registry glue such as `IrBackends.cpp`). Keep
-  `primec_backend_lib` and `primec_lib` as compatibility umbrellas instead of adding new source
-  files to them directly. Internal executables/tests should prefer direct subsystem links over
-  `primec_lib` and `primec_backend_lib` once their dependencies are explicit. When a target only
-  needs IR preparation plus backend dispatch, prefer linking `primec_ir_lib` +
-  `primec_backend_registry_lib` directly; when a target only needs IR preparation plus VM
-  execution, prefer linking `primec_ir_lib` + `primec_runtime_lib` over the broader backend
-  umbrellas. When a registry/adapter target only uses implementation libraries behind its `.cpp`
-  boundary, keep those dependencies `PRIVATE` unless its public headers require them.
+  filtering), `primec_ir_lib` (IR preparation/lowering/validation tooling),
+  `primec_backend_emitters_lib` (IR backend emitters and backend-only external tooling),
+  `primec_runtime_lib` (VM runtime/debugger), and `primec_backend_registry_lib` (backend registry
+  glue such as `IrBackends.cpp`). Keep `primec_codegen_lib`, `primec_backend_lib`, and
+  `primec_lib` as compatibility umbrellas instead of adding new source files to them directly.
+  Internal executables/tests should prefer direct subsystem links over those umbrella targets once
+  their dependencies are explicit. When a target only needs IR preparation plus backend dispatch,
+  prefer linking `primec_ir_lib` + `primec_backend_registry_lib` directly; when a target only
+  needs IR preparation plus VM execution, prefer linking `primec_ir_lib` + `primec_runtime_lib`
+  over the broader backend umbrellas. When a registry/adapter target only uses implementation
+  libraries behind its `.cpp` boundary, prefer a narrower dedicated implementation target over a
+  broad compatibility umbrella; use `PRIVATE` only when consumers do not need that implementation
+  target propagated onto their final link surface.
 - **Doctest target layout:** when a test source only exercises compile-pipeline/frontend/IR APIs,
   prefer a dedicated doctest binary linked to `primec_ir_lib` or `primec_frontend_lib` instead of
   routing it through `PrimeStruct_backend_tests` or the `primec_lib` compatibility umbrella.
