@@ -243,6 +243,31 @@ private:
                                   bool resolvedMethod,
                                   const ExprMapSoaBuiltinContext &context,
                                   bool &handledOut);
+  struct ExprCollectionAccessValidationContext {
+    bool isStdNamespacedVectorAccessCall = false;
+    bool shouldAllowStdAccessCompatibilityFallback = false;
+    bool hasStdNamespacedVectorAccessDefinition = false;
+    bool isStdNamespacedMapAccessCall = false;
+    bool hasStdNamespacedMapAccessDefinition = false;
+    bool shouldBuiltinValidateBareMapAccessCall = false;
+    std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
+    std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
+    std::function<bool(const Expr &)> resolveStringTarget;
+    std::function<bool(const Expr &, std::string &)> resolveMapKeyType;
+    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
+    std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
+    std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
+    std::function<bool(const std::string &)> isNonCollectionStructAccessTarget;
+    std::function<bool(const Expr &, const std::string &, Expr &)> tryRewriteBareMapHelperCall;
+  };
+  bool validateExprCollectionAccessFallbacks(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      bool resolvedMethod,
+      const ExprCollectionAccessValidationContext &context,
+      bool &handledOut);
   std::string normalizeCollectionMethodName(const std::string &methodName) const;
   std::string inferPointerLikeCallReturnType(
       const Expr &receiverExpr,

@@ -3466,136 +3466,45 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (handledNumericBuiltin) {
         return true;
       }
-      auto getRemovedVectorAccessBuiltinName = [&](const Expr &candidate, std::string &helperOut) -> bool {
-        helperOut.clear();
-        if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-          return false;
-        }
-        std::string normalized = candidate.name;
-        if (!normalized.empty() && normalized.front() == '/') {
-          normalized.erase(normalized.begin());
-        }
-        if (normalized == "vector/at") {
-          helperOut = "at";
-          return true;
-        }
-        if (normalized == "vector/at_unsafe") {
-          helperOut = "at_unsafe";
-          return true;
-        }
+      ExprCollectionAccessValidationContext collectionAccessValidationContext;
+      collectionAccessValidationContext.isStdNamespacedVectorAccessCall =
+          isStdNamespacedVectorAccessCall;
+      collectionAccessValidationContext.shouldAllowStdAccessCompatibilityFallback =
+          shouldAllowStdAccessCompatibilityFallback;
+      collectionAccessValidationContext.hasStdNamespacedVectorAccessDefinition =
+          hasStdNamespacedVectorAccessDefinition;
+      collectionAccessValidationContext.isStdNamespacedMapAccessCall =
+          isStdNamespacedMapAccessCall;
+      collectionAccessValidationContext.hasStdNamespacedMapAccessDefinition =
+          hasStdNamespacedMapAccessDefinition;
+      collectionAccessValidationContext.shouldBuiltinValidateBareMapAccessCall =
+          shouldBuiltinValidateBareMapAccessCall;
+      collectionAccessValidationContext.resolveArgsPackAccessTarget =
+          resolveArgsPackAccessTarget;
+      collectionAccessValidationContext.resolveArrayTarget = resolveArrayTarget;
+      collectionAccessValidationContext.resolveStringTarget = resolveStringTarget;
+      collectionAccessValidationContext.resolveMapKeyType = resolveMapKeyType;
+      collectionAccessValidationContext.isIndexedArgsPackMapReceiverTarget =
+          isIndexedArgsPackMapReceiverTarget;
+      collectionAccessValidationContext.isNamedArgsPackMethodAccessCall =
+          isNamedArgsPackMethodAccessCall;
+      collectionAccessValidationContext.isNamedArgsPackWrappedFileBuiltinAccessCall =
+          isNamedArgsPackWrappedFileBuiltinAccessCall;
+      collectionAccessValidationContext.isNonCollectionStructAccessTarget =
+          isNonCollectionStructAccessTarget;
+      collectionAccessValidationContext.tryRewriteBareMapHelperCall =
+          [&](const Expr &candidate, const std::string &helperName,
+              Expr &rewrittenOut) {
+            return tryRewriteBareMapHelperCall(candidate, helperName, rewrittenOut);
+          };
+      bool handledCollectionAccessFallbacks = false;
+      if (!validateExprCollectionAccessFallbacks(
+              params, locals, expr, resolved, resolvedMethod,
+              collectionAccessValidationContext,
+              handledCollectionAccessFallbacks)) {
         return false;
-      };
-      if (!resolvedMethod && it == defMap_.end() &&
-          !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames))) {
-        std::string removedVectorAccessBuiltinName;
-        if (getRemovedVectorAccessBuiltinName(expr, removedVectorAccessBuiltinName)) {
-          if (hasNamedArguments(expr.argNames)) {
-            error_ = "named arguments not supported for builtin calls";
-            return false;
-          }
-          if (!expr.templateArgs.empty()) {
-            error_ = removedVectorAccessBuiltinName + " does not accept template arguments";
-            return false;
-          }
-          if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-            error_ = removedVectorAccessBuiltinName + " does not accept block arguments";
-            return false;
-          }
-          if (expr.args.size() != 2) {
-            error_ = "argument count mismatch for builtin " + removedVectorAccessBuiltinName;
-            return false;
-          }
-        }
       }
-      if (getBuiltinArrayAccessName(expr, builtinName) &&
-          (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback ||
-           hasStdNamespacedVectorAccessDefinition) &&
-          (!isStdNamespacedMapAccessCall || hasStdNamespacedMapAccessDefinition) &&
-          !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames))) {
-        if (!shouldBuiltinValidateBareMapAccessCall) {
-          Expr rewrittenMapHelperCall;
-          if (tryRewriteBareMapHelperCall(expr, builtinName, rewrittenMapHelperCall)) {
-            return validateExpr(params, locals, rewrittenMapHelperCall);
-          }
-        }
-        if (hasNamedArguments(expr.argNames) && !isNamedArgsPackMethodAccessCall(expr) &&
-            !isNamedArgsPackWrappedFileBuiltinAccessCall(expr)) {
-          error_ = "named arguments not supported for builtin calls";
-          return false;
-        }
-        if (!expr.templateArgs.empty()) {
-          error_ = builtinName + " does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = builtinName + " does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 2) {
-          error_ = "argument count mismatch for builtin " + builtinName;
-          return false;
-        }
-        std::string elemType;
-        bool isArrayOrString = resolveArgsPackAccessTarget(expr.args.front(), elemType) ||
-                               resolveArrayTarget(expr.args.front(), elemType) ||
-                               resolveStringTarget(expr.args.front());
-        std::string mapKeyType;
-        bool isMap = resolveMapKeyType(expr.args.front(), mapKeyType);
-        if (!isArrayOrString && !isMap) {
-          if (!validateExpr(params, locals, expr.args.front())) {
-            return false;
-          }
-          bool isBuiltinMethod = false;
-          std::string methodResolved;
-          if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), builtinName,
-                                  methodResolved, isBuiltinMethod) &&
-              !isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
-              isNonCollectionStructAccessTarget(methodResolved)) {
-            error_ = "unknown method: " + methodResolved;
-            return false;
-          }
-          error_ = builtinName + " requires array, vector, map, or string target";
-          return false;
-        }
-        if (isMap && !shouldBuiltinValidateBareMapAccessCall &&
-            !isIndexedArgsPackMapReceiverTarget(expr.args.front()) &&
-            !hasDeclaredDefinitionPath("/map/" + builtinName) &&
-            !hasImportedDefinitionPath("/std/collections/map/" + builtinName) &&
-            !hasDeclaredDefinitionPath("/std/collections/map/" + builtinName)) {
-          error_ = "unknown call target: /std/collections/map/" + builtinName;
-          return false;
-        }
-        if (!isMap) {
-          if (!isIntegerExpr(expr.args[1], params, locals)) {
-            error_ = builtinName + " requires integer index";
-            return false;
-          }
-        } else if (!mapKeyType.empty()) {
-          if (normalizeBindingTypeName(mapKeyType) == "string") {
-            if (!isStringExpr(expr.args[1])) {
-              error_ = builtinName + " requires string map key";
-              return false;
-            }
-          } else {
-            ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
-            if (keyKind != ReturnKind::Unknown) {
-              if (resolveStringTarget(expr.args[1])) {
-                error_ = builtinName + " requires map key type " + mapKeyType;
-                return false;
-              }
-              ReturnKind indexKind = inferExprReturnKind(expr.args[1], params, locals);
-              if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-                error_ = builtinName + " requires map key type " + mapKeyType;
-                return false;
-              }
-            }
-          }
-        }
-        for (const auto &arg : expr.args) {
-          if (!validateExpr(params, locals, arg)) {
-            return false;
-          }
-        }
+      if (handledCollectionAccessFallbacks) {
         return true;
       }
       if (getBuiltinConvertName(expr, builtinName)) {

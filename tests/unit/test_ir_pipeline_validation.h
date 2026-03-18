@@ -9240,6 +9240,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprBlock.cpp";
   const std::filesystem::path semanticsExprCollectionAccessPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccess.cpp";
+  const std::filesystem::path semanticsExprCollectionAccessValidationPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccessValidation.cpp";
   const std::filesystem::path semanticsExprCollectionCountCapacityPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionCountCapacity.cpp";
   const std::filesystem::path semanticsExprControlFlowPath =
@@ -9270,6 +9272,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(semanticsExprBlockPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsExprControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
@@ -9287,6 +9290,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprBodyArgumentsSource = readText(semanticsExprBodyArgumentsPath);
   const std::string semanticsExprBlockSource = readText(semanticsExprBlockPath);
   const std::string semanticsExprCollectionAccessSource = readText(semanticsExprCollectionAccessPath);
+  const std::string semanticsExprCollectionAccessValidationSource =
+      readText(semanticsExprCollectionAccessValidationPath);
   const std::string semanticsExprCollectionCountCapacitySource =
       readText(semanticsExprCollectionCountCapacityPath);
   const std::string semanticsExprControlFlowSource = readText(semanticsExprControlFlowPath);
@@ -9377,6 +9382,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("if (resolvedMethod && resolved.rfind(\"/soa_vector/field_view/\", 0) == 0)") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("auto getRemovedVectorAccessBuiltinName = [&](const Expr &candidate, std::string &helperOut) -> bool") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (getBuiltinArrayAccessName(expr, builtinName) &&") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("(isSimpleCallName(expr, \"get\") || isSimpleCallName(expr, \"ref\")) && expr.args.size() == 2") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("isSimpleCallName(expr, \"contains\") || getBuiltinArrayAccessName(expr, accessHelperName)") ==
@@ -9408,6 +9417,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "validateExprMapSoaBuiltins(params, locals, expr, resolved,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "validateExprCollectionAccessFallbacks(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "validateExprResultFileBuiltins(params, locals, expr, resolved, resolvedMethod,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("resolveExprCollectionAccessTarget(params, locals, expr, collectionAccessContext,") !=
@@ -9423,6 +9435,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprCollectionAccessSource.find("unknown call target: /std/collections/map/") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find("isSimpleCallName(expr, \"get\") || isSimpleCallName(expr, \"ref\")") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "bool SemanticsValidator::validateExprCollectionAccessFallbacks") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "getRemovedVectorAccessBuiltinName(expr, removedVectorAccessBuiltinName)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "requires array, vector, map, or string target") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "unknown call target: /std/collections/map/") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool SemanticsValidator::resolveExprCollectionCountCapacityTarget") !=
