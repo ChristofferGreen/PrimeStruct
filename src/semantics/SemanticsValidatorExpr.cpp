@@ -1907,7 +1907,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           const std::string resolvedTarget = resolveCalleePath(target);
           auto defIt = defMap_.find(resolvedTarget);
           if (defIt != defMap_.end() && defIt->second != nullptr) {
-            if (!inferDefinitionReturnKind(*defIt->second)) {
+            if (!ensureDefinitionReturnKindReady(*defIt->second)) {
               return false;
             }
             auto kindIt = returnKinds_.find(resolvedTarget);

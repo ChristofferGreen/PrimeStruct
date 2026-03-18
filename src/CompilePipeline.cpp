@@ -504,7 +504,8 @@ bool runCompilePipeline(const Options &options,
                           options.entryDefaultEffects,
                           options.semanticTransforms,
                           &semanticDiagnosticInfo,
-                          options.collectDiagnostics)) {
+                          options.collectDiagnostics,
+                          options.typeResolver)) {
     errorStage = CompilePipelineErrorStage::Semantic;
     if (diagnosticInfo != nullptr) {
       *diagnosticInfo = semanticDiagnosticInfo;

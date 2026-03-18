@@ -383,7 +383,8 @@ int main(int argc, char **argv) {
                    "[--debug-json] [--debug-json-snapshots [none|stop|all]] [--debug-trace <path>] [--debug-dap] "
                    "[--debug-replay <trace>] [--debug-replay-sequence <n>] "
                    "[--collect-diagnostics] "
-                   "[--default-effects <list>] [--ir-inline] [--dump-stage pre_ast|ast|ast-semantic|type-graph|ir] "
+                   "[--default-effects <list>] [--type-resolver legacy|graph] [--ir-inline] "
+                   "[--dump-stage pre_ast|ast|ast-semantic|type-graph|ir] "
                    "[-- <program args...>]\n";
     }
     return 2;

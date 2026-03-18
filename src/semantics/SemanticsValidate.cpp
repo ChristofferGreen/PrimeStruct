@@ -219,7 +219,8 @@ bool Semantics::validate(Program &program,
                          const std::vector<std::string> &entryDefaultEffects,
                          const std::vector<std::string> &semanticTransforms,
                          SemanticDiagnosticInfo *diagnosticInfo,
-                         bool collectDiagnostics) const {
+                         bool collectDiagnostics,
+                         const std::string &typeResolver) const {
   error.clear();
   DiagnosticSink diagnosticSink(diagnosticInfo);
   diagnosticSink.reset();
@@ -254,7 +255,7 @@ bool Semantics::validate(Program &program,
     return false;
   }
   semantics::SemanticsValidator validator(
-      program, entryPath, error, defaultEffects, entryDefaultEffects, diagnosticInfo, collectDiagnostics);
+      program, entryPath, error, defaultEffects, entryDefaultEffects, diagnosticInfo, collectDiagnostics, typeResolver);
   if (!validator.run()) {
     return false;
   }

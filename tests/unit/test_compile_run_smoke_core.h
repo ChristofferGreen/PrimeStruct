@@ -3604,6 +3604,48 @@ TEST_CASE("primec options parse wasm profile aliases and validate values") {
   }
 }
 
+TEST_CASE("primec options parse type resolver flag and validate values") {
+  auto parsePrimec = [](std::vector<std::string> args, primec::Options &options, std::string &error) {
+    std::vector<char *> argv;
+    argv.reserve(args.size());
+    for (std::string &arg : args) {
+      argv.push_back(arg.data());
+    }
+    return primec::parseOptions(
+        static_cast<int>(argv.size()), argv.data(), primec::OptionsParserMode::Primec, options, error);
+  };
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK(parsePrimec({"primec", "--emit=ir", "--type-resolver=graph", "/tmp/input.prime"}, options, error));
+    CHECK(error.empty());
+    CHECK(options.typeResolver == "graph");
+  }
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK(parsePrimec({"primec", "--emit=ir", "--type-resolver", "legacy", "/tmp/input.prime"}, options, error));
+    CHECK(error.empty());
+    CHECK(options.typeResolver == "legacy");
+  }
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK_FALSE(parsePrimec({"primec", "--emit=ir", "--type-resolver=fast", "/tmp/input.prime"}, options, error));
+    CHECK(error.find("unsupported --type-resolver value: fast (expected legacy|graph)") != std::string::npos);
+  }
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK_FALSE(parsePrimec({"primec", "--emit=ir", "--type-resolver"}, options, error));
+    CHECK(error.find("--type-resolver requires a value") != std::string::npos);
+  }
+}
+
 TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
 [return<int>]
