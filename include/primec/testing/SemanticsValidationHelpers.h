@@ -9,6 +9,20 @@
 
 namespace primec::semantics {
 
+struct StronglyConnectedComponentsTestEdge {
+  uint32_t sourceId = 0;
+  uint32_t targetId = 0;
+};
+
+struct StronglyConnectedComponentSnapshot {
+  std::vector<uint32_t> nodeIds;
+};
+
+struct StronglyConnectedComponentsSnapshot {
+  std::vector<StronglyConnectedComponentSnapshot> components;
+  std::vector<uint32_t> componentIdByNodeId;
+};
+
 struct TypeResolutionGraphSnapshotNode {
   uint32_t id = 0;
   std::string kind;
@@ -36,6 +50,9 @@ std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(co
                                                                               bool allowBoolCount);
 bool runSemanticsValidatorStatementCanIterateMoreThanOnceStep(const Expr &countExpr, bool allowBoolCount);
 bool runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(const Expr &expr);
+StronglyConnectedComponentsSnapshot computeStronglyConnectedComponentsForTesting(
+    uint32_t nodeCount,
+    const std::vector<StronglyConnectedComponentsTestEdge> &edges);
 bool buildTypeResolutionGraphForTesting(Program program,
                                         const std::string &entryPath,
                                         std::string &error,

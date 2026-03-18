@@ -198,5 +198,6 @@ bool validateProgramCollectingDiagnostics(const std::string &source,
 #include "test_semantics_lambdas.h"
 #include "test_semantics_move.h"
 #include "test_semantics_maybe.h"
+#include "test_semantics_strongly_connected_components.h"
 #include "test_semantics_type_resolution_graph.h"
 #include "test_semantics_uninitialized_fields.h"
